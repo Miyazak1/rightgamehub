@@ -46,8 +46,8 @@ if ($HostName -in @('cursor', 'code')) {
     if ($actual -ne $extension.sha256.ToLowerInvariant()) { throw 'GameHub VSIX SHA-256 verification failed.' }
     & $HostName --install-extension $tempFile --force
     if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
-    Write-Host "GameHub $($extension.version) installed for $HostName. Reload the editor and open GameHub from the Activity Bar."
-    Enable-GameHubUpdates
+    Write-Host "GameHub $($extension.version) installed for $HostName. Future updates download silently inside the extension and activate after the editor restarts."
+    Write-Host "Reload the editor and open GameHub from the Activity Bar."
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
