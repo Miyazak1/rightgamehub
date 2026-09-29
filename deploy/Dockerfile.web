@@ -20,12 +20,14 @@ COPY packages/player-core packages/player-core
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
 COPY plugins plugins
+COPY poc/m0 poc/m0
 COPY .agents .agents
 COPY .claude-plugin .claude-plugin
 COPY scripts/build-extension.mjs scripts/build-extension.mjs
+COPY scripts/build-harness.mjs scripts/build-harness.mjs
 COPY scripts/package-vscode-extension.mjs scripts/package-vscode-extension.mjs
 COPY scripts/prepare-agent-downloads.mjs scripts/prepare-agent-downloads.mjs
-RUN node scripts/build-extension.mjs && node scripts/package-vscode-extension.mjs && node scripts/prepare-agent-downloads.mjs
+RUN node scripts/build-extension.mjs && node scripts/package-vscode-extension.mjs && node scripts/build-harness.mjs && npm pack ./extensions/harness --ignore-scripts --pack-destination ./artifacts --cache ./.runtime/npm-cache && node scripts/prepare-agent-downloads.mjs
 ARG VITE_RUNTIME_DOMAIN
 ENV VITE_RUNTIME_DOMAIN=$VITE_RUNTIME_DOMAIN
 RUN pnpm --filter @gamehub/web build
