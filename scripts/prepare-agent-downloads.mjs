@@ -7,6 +7,7 @@ const sha256 = content => createHash('sha256').update(content).digest('hex');
 
 await mkdir(publicRoot, { recursive: true });
 const updaterContent = await readFile(new URL('apps/web/public/agent-update.ps1', root));
+const portableUpdaterContent = await readFile(new URL('apps/web/public/agent-update.mjs', root));
 
 const extensionPackage = JSON.parse(await readFile(new URL('extensions/vscode/package.json', root), 'utf8'));
 const filename = `${extensionPackage.name}-${extensionPackage.version}.vsix`;
@@ -57,9 +58,8 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
   },
   updater: {
     version: 1,
-    filename: 'agent-update.ps1',
-    url: 'https://mooyu.fun/agent-update.ps1',
-    sha256: sha256(updaterContent),
+    windows: { filename: 'agent-update.ps1', url: 'https://mooyu.fun/agent-update.ps1', sha256: sha256(updaterContent) },
+    portable: { filename: 'agent-update.mjs', url: 'https://mooyu.fun/agent-update.mjs', sha256: sha256(portableUpdaterContent) },
   },
   hostAdapters: {
     harness: { strategy: 'gamehub-staged-package', artifact: 'harnessPlugin', restartRequired: true },
