@@ -2,7 +2,7 @@
   "name": "gamehub-agent",
   "displayName": "GameHub for AI Coding",
   "description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "gamehub-local",
   "private": true,
   "engines": {
@@ -69,6 +69,12 @@
           "default": "https://mooyu.fun/",
           "scope": "application",
           "description": "无法使用侧栏时打开的 GameHub 页面。"
+        },
+        "gamehub.runtimeDomain": {
+          "type": "string",
+          "default": "runtime.mooyu.fun",
+          "scope": "application",
+          "description": "GameHub 隔离 Web 游戏的受信任运行域名。"
         }
       }
     }
