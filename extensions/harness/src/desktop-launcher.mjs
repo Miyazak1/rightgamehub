@@ -185,11 +185,25 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
     pending = promise;
     try { return await promise; } finally { if (pending === promise) pending = null; }
   }
-  return { enabled,
-    status: record => ({ enabled: enabled && !disposed, prepared: prepared.has(record.id),
+  const status = record => ({ enabled: enabled && !disposed, prepared: prepared.has(record.id),
       state: running.get(record.id)?.state || 'idle', startedAt: running.get(record.id)?.startedAt || null,
-      download: downloads.get(record.id) || { state: prepared.has(record.id) ? 'ready' : 'idle', receivedBytes: prepared.has(record.id) ? record.size : 0, totalBytes: record.size, percent: prepared.has(record.id) ? 100 : 0, error: null } }),
-    prepare, launch,
+      download: downloads.get(record.id) || { state: prepared.has(record.id) ? 'ready' : 'idle', receivedBytes: prepared.has(record.id) ? record.size : 0, totalBytes: record.size, percent: prepared.has(record.id) ? 100 : 0, error: null } });
+  async function restore(record) {
+    assertEnabled(); checkRecord(record);
+    if (prepared.has(record.id) || pending) return status(record);
+    try {
+      const existing = await verify(record, lifetime.signal);
+      lifetime.signal.throwIfAborted();
+      prepared.set(record.id, existing);
+      downloads.set(record.id, { state: 'ready', receivedBytes: record.size, totalBytes: record.size, percent: 100, error: null });
+    } catch (cause) {
+      prepared.delete(record.id);
+      if (cause.code !== 'ENOENT' && cause.status !== 409) throw cause;
+      if (cause.code !== 'ENOENT') downloads.set(record.id, { state: 'failed', receivedBytes: 0, totalBytes: record.size, percent: 0, error: cause.publicMessage || cause.message });
+    }
+    return status(record);
+  }
+  return { enabled, status, restore, prepare, launch,
     // These are independent desktop programs: closing the tab/service never kills them.
     async close() { disposed = true; lifetime.abort(); await pending?.catch(() => {}); prepared.clear(); downloads.clear(); } };
 }

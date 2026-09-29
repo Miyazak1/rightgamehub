@@ -228,7 +228,7 @@ async function activate(context) {
           else if (message.operation === 'desktop.status') {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
             const release = desktopRelease(message.payload?.release);
-            result = desktopLauncher.status(release.record);
+            result = await desktopLauncher.restore(release.record);
           } else if (message.operation === 'desktop.prepare') {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
             const release = desktopRelease(message.payload?.release);

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { createHash, randomUUID } = require('node:crypto');
 const { EventEmitter } = require('node:events');
 
 // Structural bytes only. They have no game or working entrypoint and are NEVER run.
@@ -114,6 +114,23 @@ test('closing a service does not terminate independent games and restart never l
   assert.equal((await f.call('desktop-launch', record.id, launchOptions())).status, 409);
   assert.equal((await (await f.call('desktop-prepare', record.id, post)).json()).reused, true);
   assert.equal(f.calls.length, 1);
+});
+
+test('editor launcher restores a verified downloaded game after the extension reloads', async t => {
+  const base = path.resolve('.runtime/desktop-launch-tests'); await fs.mkdir(base, { recursive: true });
+  const root = await fs.mkdtemp(path.join(base, 'restore-'));
+  const bytes = peFixture();
+  const record = { id: randomUUID(), name: 'game.exe', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), kind: 'exe' };
+  const { createDesktopLauncher } = await import('../extensions/harness/src/desktop-launcher.mjs');
+  let launcher = createDesktopLauncher({ root, enabled: true, platform: 'win32' });
+  t.after(async () => { await launcher.close(); await fs.rm(root, { recursive: true, force: true }); });
+  await launcher.prepare(record, async () => new Response(bytes, { status: 200, headers: { 'content-length': String(bytes.length) } }));
+  await launcher.close();
+  launcher = createDesktopLauncher({ root, enabled: true, platform: 'win32' });
+  const restored = await launcher.restore(record);
+  assert.equal(restored.prepared, true);
+  assert.equal(restored.download.state, 'ready');
+  assert.equal(restored.download.percent, 100);
 });
 
 test('modified EXE copy is blocked before execution; re-download preserves local saves', async t => {
