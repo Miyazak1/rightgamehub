@@ -70,6 +70,6 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     guessBaikeAutomationIntervalMinutes: integer(env.GUESS_BAIKE_AUTOMATION_INTERVAL_MINUTES, 360, 'GUESS_BAIKE_AUTOMATION_INTERVAL_MINUTES', 15, 1440),
     guessBaikeAutomationBatchSize: integer(env.GUESS_BAIKE_AUTOMATION_BATCH_SIZE, 20, 'GUESS_BAIKE_AUTOMATION_BATCH_SIZE', 1, 20),
     guessBaikeScheduleDays: integer(env.GUESS_BAIKE_SCHEDULE_DAYS, 14, 'GUESS_BAIKE_SCHEDULE_DAYS', 3, 60),
-    guessBaikeWikipediaUserAgent: env.GUESS_BAIKE_WIKIPEDIA_USER_AGENT?.trim() || 'GameHub-GuessBaike/0.2 (local development; automated daily puzzle)',
+    guessBaikeWikipediaUserAgent: env.GUESS_BAIKE_WIKIPEDIA_USER_AGENT?.trim() || 'GameHub-GuessBaikeBot/0.3 (https://mooyu.fun/; automated daily puzzle) Node.js',
   });
 }
