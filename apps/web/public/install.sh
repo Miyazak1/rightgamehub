@@ -27,7 +27,7 @@ if (host === 'cursor' || host === 'code') {
   if (!response.ok) throw new Error('Unable to download the GameHub VSIX.');
   const bytes = Buffer.from(await response.arrayBuffer());
   if (hash(bytes) !== item.sha256.toLowerCase()) throw new Error('GameHub VSIX SHA-256 verification failed.');
-  const output = join(dataRoot, item.filename);
+  const output = join(dataRoot, 'gamehub-agent-current.vsix');
   await writeFile(output, bytes);
   console.log(output);
 } else {
@@ -51,13 +51,15 @@ if (host === 'cursor' || host === 'code') {
 }
 NODE
 if [ "$host" = cursor ] || [ "$host" = code ]; then
-  vsix="$(find "$data_root" -maxdepth 1 -type f -name 'gamehub-agent-*.vsix' | sort | tail -n 1)"
-  [ -n "$vsix" ] || { echo "Verified VSIX was not created." >&2; exit 1; }
+  vsix="$data_root/gamehub-agent-current.vsix"
+  [ -f "$vsix" ] || { echo "Verified VSIX was not created." >&2; exit 1; }
   "$host" --install-extension "$vsix" --force
   echo "GameHub installed for $host. Reload the editor and open GameHub from the Activity Bar."
 else
   marketplace_root="$data_root/agent-marketplace"
-  "$host" plugin marketplace add "$marketplace_root"
+  if ! "$host" plugin marketplace add "$marketplace_root"; then
+    "$host" plugin marketplace list | grep -qi gamehub || { echo "$host could not add the GameHub marketplace." >&2; exit 1; }
+  fi
   if [ "$host" = claude ]; then
     claude plugin install gamehub@gamehub
     echo "GameHub installed for Claude Code. Start a new session or reload plugins."
