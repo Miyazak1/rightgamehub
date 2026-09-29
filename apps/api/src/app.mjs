@@ -19,7 +19,7 @@ const readLimitedBody = async (stream, limit) => {
   }
   return Buffer.concat(chunks);
 };
-const githubCallbackPage = success => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0;color:#aaa4b9;line-height:1.7}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '可以关闭此页面并返回你的 AI Agent，登录会自动完成。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p></main></body></html>`;
+const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
 export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, logger = false }) {
   const app = Fastify({
@@ -99,9 +99,10 @@ export function createApp({ config, database, migrations, authService, workServi
     schema: { querystring: { type: 'object', additionalProperties: false, required: ['state'], properties: { code: { type: 'string', minLength: 1, maxLength: 512 }, state: { type: 'string', minLength: 20, maxLength: 256 }, error: { type: 'string', maxLength: 120 }, error_description: { type: 'string', maxLength: 500 }, iss: { type: 'string', enum: ['https://github.com', 'https://github.com/login/oauth'] } } } },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+    const scriptNonce = crypto.randomBytes(18).toString('base64url');
+    reply.header('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; base-uri 'none'; form-action 'none'`);
     const result = await authService.completeGitHubWeb(request.query);
-    return reply.type('text/html; charset=utf-8').send(githubCallbackPage(result.status === 'complete'));
+    return reply.type('text/html; charset=utf-8').send(githubCallbackPage(result.status === 'complete', scriptNonce));
   });
 
   app.post('/v1/auth/github/web/:challengeId/poll', {
