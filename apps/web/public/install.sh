@@ -15,12 +15,21 @@ mkdir -p "$data_root"
 node - "$base_url" "$host" "$data_root" <<'NODE'
 const [baseUrl, host, dataRoot] = process.argv.slice(2);
 const { createHash } = await import('node:crypto');
-const { mkdir, writeFile } = await import('node:fs/promises');
+const { chmod, mkdir, writeFile } = await import('node:fs/promises');
 const { dirname, isAbsolute, join, sep } = await import('node:path');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const manifestResponse = await fetch(baseUrl + '/downloads/manifest.json');
 if (!manifestResponse.ok) throw new Error('Unable to download the GameHub manifest.');
 const manifest = await manifestResponse.json();
+const updater = manifest.updater?.portable;
+if (!updater) throw new Error('Portable GameHub updater metadata is missing.');
+const updaterResponse = await fetch(updater.url);
+if (!updaterResponse.ok) throw new Error('Unable to download the GameHub updater.');
+const updaterBytes = Buffer.from(await updaterResponse.arrayBuffer());
+if (hash(updaterBytes) !== updater.sha256.toLowerCase()) throw new Error('GameHub updater SHA-256 verification failed.');
+const updaterPath = join(dataRoot, 'agent-update.mjs');
+await writeFile(updaterPath, updaterBytes);
+await chmod(updaterPath, 0o700);
 if (host === 'cursor' || host === 'code') {
   const item = manifest.editorExtension;
   if (!item.supportedHosts.includes(host)) throw new Error('Unsupported editor host: ' + host);
@@ -79,4 +88,14 @@ else
   else
     echo "GameHub marketplace added to Codex. Open the Plugins Directory, select GameHub Plugins, and install gamehub."
   fi
+fi
+
+updater="$data_root/agent-update.mjs"
+if command -v crontab >/dev/null 2>&1; then
+  marker="# GameHub-Agent-Update-$host"
+  schedule="17 */6 * * * /usr/bin/env node '$updater' '$host' '$data_root' --quiet $marker"
+  { crontab -l 2>/dev/null | grep -v "GameHub-Agent-Update-$host" || true; echo "$schedule"; } | crontab -
+  echo "Automatic GameHub updates enabled for $host. Updates activate after the Agent restarts."
+else
+  echo "GameHub installed, but cron is unavailable; run $updater manually to update." >&2
 fi
