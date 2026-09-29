@@ -662,3 +662,6 @@ button { cursor: pointer; }
   .agent-install-card__head { align-items: flex-start; }
   .agent-install-card__actions { flex-direction: column; }
 }
+
+.native-download-progress { width: min(420px, 100%); height: 7px; overflow: hidden; border: 1px solid var(--gh-border); border-radius: 999px; background: color-mix(in srgb, var(--gh-panel) 78%, transparent); }
+.native-download-progress > i { display: block; height: 100%; border-radius: inherit; background: var(--gh-action); box-shadow: 0 0 14px var(--gh-glow); transition: width .2s ease; }
