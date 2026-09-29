@@ -360,6 +360,35 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       if (!avatar) throw new AuthError('AVATAR_NOT_FOUND', 404, '头像不存在。');
       return avatar;
     },
+    async getCreatorApplication(actor) {
+      const result = await repository.getCreatorApplication({ userId: actor.userId });
+      if (!result) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication is required.');
+      return result;
+    },
+    async applyForCreator(actor, { statement }) {
+      const normalized = String(statement ?? '').trim().replace(/\s+/gu, ' ');
+      if (normalized.length < 20 || normalized.length > 1000) throw new AuthError('SCHEMA_INVALID', 400, '申请说明应为 20 到 1000 个字符。');
+      const result = await repository.createCreatorApplication({ id: ids(), userId: actor.userId, statement: normalized, now: clock() });
+      if (!result) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication is required.');
+      return result;
+    },
+    async listCreatorApplications(actor, query = {}) {
+      if (actor.profile?.role !== 'admin') throw new AuthError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      const status = query.status || 'pending';
+      if (!['pending', 'approved', 'rejected', 'all'].includes(status)) throw new AuthError('SCHEMA_INVALID', 400, '无效的申请状态。');
+      return repository.listCreatorApplications({ status: status === 'all' ? null : status, limit: Math.min(100, Math.max(1, Number(query.limit) || 50)) });
+    },
+    async decideCreatorApplication(actor, { applicationId }, { decision, note }) {
+      if (actor.profile?.role !== 'admin') throw new AuthError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      if (!['approve', 'reject'].includes(decision)) throw new AuthError('SCHEMA_INVALID', 400, '无效的审核决定。');
+      const normalized = String(note ?? '').trim().replace(/\s+/gu, ' ');
+      if (normalized.length < 1 || normalized.length > 1000) throw new AuthError('SCHEMA_INVALID', 400, '审核说明应为 1 到 1000 个字符。');
+      const result = await repository.decideCreatorApplication({
+        applicationId, decision, note: normalized, actorUserId: actor.userId, now: clock(),
+      });
+      if (!result.ok) throw new AuthError(result.code, result.code === 'CREATOR_APPLICATION_NOT_FOUND' ? 404 : 409, result.message);
+      return result.application;
+    },
     async listDevices(actor) {
       return repository.listDeviceGrants({ userId: actor.userId, currentGrantId: actor.grantId, now: clock() });
     },

@@ -151,6 +151,44 @@ export function createApp({ config, database, migrations, authService, workServi
     });
   }
   app.get('/v1/me', { preHandler: requireAuth }, async request => envelope(await authService.getProfile(request.actor)));
+  app.get('/v1/me/creator-application', { preHandler: requireAuth }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return envelope(await authService.getCreatorApplication(request.actor));
+  });
+  app.post('/v1/me/creator-application', {
+    preHandler: requireAuth,
+    schema: { body: { type: 'object', additionalProperties: false, required: ['statement'], properties: {
+      statement: { type: 'string', minLength: 20, maxLength: 1000 },
+    } } },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return envelope(await authService.applyForCreator(request.actor, request.body));
+  });
+  app.get('/v1/admin/creator-applications', {
+    preHandler: requireAuth,
+    schema: { querystring: { type: 'object', additionalProperties: false, properties: {
+      status: { type: 'string', enum: ['pending','approved','rejected','all'] },
+      limit: { type: 'integer', minimum: 1, maximum: 100 },
+    } } },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return envelope(await authService.listCreatorApplications(request.actor, request.query));
+  });
+  app.post('/v1/admin/creator-applications/:applicationId/decision', {
+    preHandler: requireAuth,
+    schema: {
+      params: { type: 'object', additionalProperties: false, required: ['applicationId'], properties: {
+        applicationId: { type: 'string', format: 'uuid' },
+      } },
+      body: { type: 'object', additionalProperties: false, required: ['decision','note'], properties: {
+        decision: { type: 'string', enum: ['approve','reject'] },
+        note: { type: 'string', minLength: 1, maxLength: 1000 },
+      } },
+    },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return envelope(await authService.decideCreatorApplication(request.actor, request.params, request.body));
+  });
   app.patch('/v1/me', {
     preHandler: requireAuth,
     schema: { body: { type: 'object', additionalProperties: false, required: ['displayName'], properties: { displayName: { type: 'string', minLength: 1, maxLength: 40 } } } },

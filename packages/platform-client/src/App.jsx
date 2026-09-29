@@ -437,15 +437,41 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
 
 function CreatorPage({ api, demo, go }) {
   const [state, setState] = useState({ status: 'loading', works: [] });
+  const [access, setAccess] = useState(null);
+  const [statement, setStatement] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [applicationError, setApplicationError] = useState('');
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
-    try { const works = demo ? demoWorks.slice(0, 2) : (await api.listCreatorWorks()).data; setState({ status: 'ready', works }); }
-    catch (error) { setState({ status: error.status === 401 ? 'auth' : error.status === 403 ? 'forbidden' : 'error', works: [] }); }
+    try {
+      const works = demo ? demoWorks.slice(0, 2) : (await api.listCreatorWorks()).data;
+      setAccess(null); setState({ status: 'ready', works });
+    } catch (error) {
+      if (error.status === 401) return setState({ status: 'auth', works: [] });
+      if (error.status === 403) {
+        try {
+          const result = (await api.getCreatorApplication()).data;
+          setAccess(result); setState({ status: 'forbidden', works: [] });
+        } catch (caught) { setState({ status: caught.status === 401 ? 'auth' : 'error', works: [] }); }
+        return;
+      }
+      setState({ status: 'error', works: [] });
+    }
   };
   useEffect(() => { load(); }, [demo]);
+  const apply = async event => {
+    event.preventDefault(); setBusy(true); setApplicationError('');
+    try { const result = (await api.applyForCreator(statement)).data; setAccess(result); setStatement(''); }
+    catch (caught) { setApplicationError(caught.message || '申请暂时无法提交。'); }
+    finally { setBusy(false); }
+  };
   if (state.status === 'loading') return <main className="page"><LoadingCards /></main>;
   if (state.status === 'auth') return <main className="page"><StatePanel title="登录后管理作品" body="作者操作需要当前设备中的 GameHub 账号授权。" action="前往登录" onAction={() => go('/account')} /></main>;
-  if (state.status === 'forbidden') return <main className="page"><StatePanel title="尚未开通创作者权限" body="当前账号已经登录，但还没有创作和发布权限。" action="查看账号" onAction={() => go('/account')} /></main>;
+  if (state.status === 'forbidden') {
+    const application = access?.application;
+    if (application?.status === 'pending') return <main className="page"><StatePanel title="创作者申请审核中" body="管理员审核通过后，当前设备会自动获得创作与发布权限。" action="重新检查" onAction={load} /></main>;
+    return <main className="page narrow-page"><form className="panel new-work-form" onSubmit={apply}><span className="kicker">CREATOR ACCESS</span><h1>{application?.status === 'rejected' ? '重新申请创作者权限' : '申请成为创作者'}</h1><p>{application?.status === 'rejected' ? `上次申请未通过：${application.reviewNote || '管理员未填写原因'}` : '说明你准备创作的内容。管理员审核通过后即可创建、上传并发布作品。'}</p><label>申请说明<textarea required minLength="20" maxLength="1000" value={statement} onChange={event => setStatement(event.target.value)} placeholder="例如：我计划制作可在浏览器运行的独立小游戏，并遵守平台内容规范。"/></label>{applicationError && <p className="form-error" role="alert">{applicationError}</p>}<Button type="submit" disabled={busy || statement.trim().length < 20}>{busy ? '正在提交…' : '提交申请'}</Button></form></main>;
+  }
   if (state.status === 'error') return <main className="page"><StatePanel title="暂时无法载入创作中心" body="API 或数据库可能还没有准备好。" action="重新连接" onAction={load} /></main>;
   const published = state.works.filter(work => work.state === 'published').length;
   const withdrawn = state.works.filter(work => work.state === 'withdrawn').length;
@@ -780,17 +806,17 @@ function AdminPage({ api, demo, go }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
   const demoPuzzles = [{ id: 'wikipedia-4723', title: '足球', aliases: ['协会足球','英式足球'], category: '体育', sourceKind: 'wikipedia-lead', sourceTitle: '足球', sourceUrl: 'https://zh.wikipedia.org/wiki/%E8%B6%B3%E7%90%83', sourceRevision: 94245396, sourceUpdatedAt: '2026-09-27T15:22:05Z', license: 'CC BY-SA 4.0', introHanCount: 364, content: '足球主要专指英式足球，官方名为协会足球，是一种世界流行的团体球类运动。', status: 'ready', qualityReason: null, scheduledDates: [today] }];
   const demoAutomation = { enabled: true, running: false, intervalMinutes: 360, batchSize: 20, scheduleDays: 14, readyCount: 18, scheduledCount: 14, lastRun: { status: 'succeeded', startedAt: new Date().toISOString(), finishedAt: new Date().toISOString(), fetchedCount: 20, acceptedCount: 7, scheduledCount: 4, errorCode: null, errorMessage: null } };
-  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], puzzles: [], automation: null });
+  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], puzzles: [], automation: null });
   const [notes, setNotes] = useState({}); const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
     try {
-      if (demo) return setState({ status: 'ready', reports: [], audit: [], puzzles: demoPuzzles, automation: demoAutomation });
+      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], puzzles: demoPuzzles, automation: demoAutomation });
       const profile = (await api.getProfile()).data;
-      if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], puzzles: [], automation: null });
-      const [reports, audit, puzzles, automation] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus()]);
-      setState({ status: 'ready', reports: reports.data, audit: audit.data, puzzles: puzzles.data, automation: automation.data });
-    } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], puzzles: [], automation: null }); }
+      if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], applications: [], puzzles: [], automation: null });
+      const [reports, audit, applications, puzzles, automation] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus()]);
+      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, puzzles: puzzles.data, automation: automation.data });
+    } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], applications: [], puzzles: [], automation: null }); }
   };
   useEffect(() => { load(); }, [api, demo]);
   const decide = async (report, action) => {
@@ -799,6 +825,16 @@ function AdminPage({ api, demo, go }) {
     setBusy(report.id); setError('');
     try { await api.decideReport(report.id, { action, note }); await load(); }
     catch (caught) { setError(caught.message || '处置未完成。'); }
+    finally { setBusy(''); }
+  };
+  const decideCreator = async (application, decision) => {
+    const note = (notes[application.id] || '').trim(); if (!note) return setError('请先填写审核说明。');
+    setBusy(application.id); setError(''); setNotice('');
+    try {
+      await api.decideCreatorApplication(application.id, { decision, note });
+      setNotice(`${application.displayName} 的创作者申请已${decision === 'approve' ? '通过' : '拒绝'}。`);
+      await load();
+    } catch (caught) { setError(caught.message || '审核没有完成。'); }
     finally { setBusy(''); }
   };
   const togglePuzzle = async puzzle => {
@@ -810,8 +846,9 @@ function AdminPage({ api, demo, go }) {
   if (state.status === 'loading') return <main className="page admin-page"><LoadingCards/></main>;
   if (state.status === 'forbidden') return <main className="page"><StatePanel title="仅管理员可访问" body="这个页面包含举报内容与处置记录。" action="返回发现" onAction={() => go('/discover')}/></main>;
   if (state.status === 'error') return <main className="page"><StatePanel title="治理队列暂时不可用" body="没有执行任何处置，请稍后重试。" action="重新加载" onAction={load}/></main>;
-  return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>管理官方日题、内容质量与举报处置。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
+  return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>管理官方日题、内容质量与举报处置。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
     {state.automation && <section className={`automation-health automation-health--${state.automation.lastRun?.status || 'idle'}`}><div className="automation-health__pulse"/><div><span className="kicker">AUTONOMOUS SUPPLY</span><h2>{state.automation.running ? '正在自动补充题库' : state.automation.lastRun?.status === 'failed' ? '最近一次同步失败，库存仍可用' : '全自动内容流水线正常'}</h2><p>每 {Math.round(state.automation.intervalMinutes / 60)} 小时自动抓取、筛选、去重，并补齐未来 {state.automation.scheduleDays} 天。无需人工审核或排期。</p>{state.automation.lastRun?.errorMessage && <small>{state.automation.lastRun.errorCode} · {state.automation.lastRun.errorMessage}</small>}</div><dl><div><dt>可用题</dt><dd>{state.automation.readyCount}</dd></div><div><dt>已排期</dt><dd>{state.automation.scheduledCount}/{state.automation.scheduleDays}</dd></div><div><dt>上次通过</dt><dd>{state.automation.lastRun?.acceptedCount ?? '—'}</dd></div></dl></section>}
+    <section className="admin-queue"><div className="puzzle-ops__head"><div><span className="kicker">CREATOR REVIEW</span><h2>创作者申请</h2><p>审核申请说明；通过后申请人的当前登录设备会立即获得创作与发布权限。</p></div><span>{state.applications.length} 份待审</span></div>{state.applications.length ? state.applications.map(application => <article className="report-card" key={application.id}><div className="report-card__head"><div><span>申请账号</span><h3>{application.displayName}</h3></div><time>{new Date(application.createdAt).toLocaleString('zh-CN')}</time></div><p>{application.statement}</p><label>审核说明<textarea maxLength="1000" value={notes[application.id] || ''} onChange={event => setNotes(current => ({ ...current, [application.id]: event.target.value }))} placeholder="说明通过条件或拒绝原因。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === application.id} onClick={() => decideCreator(application, 'reject')}>拒绝</Button><Button disabled={busy === application.id} onClick={() => decideCreator(application, 'approve')}>{busy === application.id ? '处理中…' : '通过申请'}</Button></div></article>) : <div className="admin-empty"><span>✓</span><strong>没有待审核申请</strong><p>新的创作者申请会显示在这里。</p></div>}</section>
     <section className="puzzle-ops"><div className="puzzle-ops__head"><div><span className="kicker">OFFICIAL INVENTORY</span><h2>猜百科自动题库</h2><p>这里用于观察自动产出的结果。日常不需要操作；停用仅用于发现错误内容后的紧急止损。</p></div><span>{state.puzzles.length} 道题</span></div><div className="puzzle-ops__list">{state.puzzles.map(puzzle => <article className={`puzzle-op ${puzzle.status === 'disabled' ? 'is-disabled' : ''}`} key={puzzle.id}><div className="puzzle-op__top"><div><span className="puzzle-op__category">{puzzle.category}</span><h3>{puzzle.title}</h3><small>{puzzle.introHanCount} 汉字 · 修订 {puzzle.sourceRevision}</small></div><span className={`puzzle-status puzzle-status--${puzzle.status}`}>{puzzle.status === 'ready' ? '自动可用' : '已停用'}</span></div>{puzzle.qualityReason && <p className="puzzle-quality">质量检查：{puzzle.qualityReason}</p>}<details><summary>查看完整导言与来源</summary><p>{puzzle.content}</p><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">查看来源 · {puzzle.license}</a></details><div className="puzzle-op__emergency"><span>{puzzle.scheduledDates.length ? `未来排期 ${puzzle.scheduledDates.length} 天` : '自动轮换库存'}</span><button className="puzzle-toggle" disabled={busy === `puzzle-${puzzle.id}`} onClick={() => togglePuzzle(puzzle)}>{puzzle.status === 'ready' ? '紧急停用' : '纠正后恢复'}</button></div></article>)}</div></section>
     <section className="admin-grid"><div className="admin-queue"><h2>待处理举报</h2>{state.reports.length ? state.reports.map(report => <article className="report-card" key={report.id}><div className="report-card__head"><div><span>{reportCategoryLabels[report.category]}</span><h3>{report.workTitle}</h3></div><time>{new Date(report.createdAt).toLocaleString('zh-CN')}</time></div><p>{report.details || '举报者没有补充说明。'}</p><label>处置说明<textarea maxLength="1000" value={notes[report.id] || ''} onChange={event => setNotes(current => ({ ...current, [report.id]: event.target.value }))} placeholder="记录判断依据；该内容会进入审计记录。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === report.id} onClick={() => decide(report, 'dismiss')}>驳回举报</Button><button className="danger-button" disabled={busy === report.id} onClick={() => decide(report, 'suspend')}>{busy === report.id ? '处理中…' : '暂停作品'}</button></div></article>) : <div className="admin-empty"><span>✓</span><strong>队列已清空</strong><p>目前没有待处理举报。</p></div>}</div><aside className="audit-panel"><span className="kicker">APPEND-ONLY AUDIT</span><h2>最近处置</h2>{state.audit.length ? <ol>{state.audit.map(event => <li key={event.id}><span className={`audit-action audit-action--${event.action}`}>{event.action === 'suspend' ? '暂停' : '驳回'}</span><strong>{event.workTitle}</strong><p>{event.reason}</p><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p className="audit-empty">还没有管理处置记录。</p>}<small>审计表由数据库触发器禁止更新和删除。</small></aside></section></main>;
 }

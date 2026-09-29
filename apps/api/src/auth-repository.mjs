@@ -4,6 +4,17 @@ import { withTransaction } from './database.mjs';
 const safeDisplayName = email => email.split('@')[0].slice(0, 120) || 'Creator';
 const avatarKeys = ['cat', 'robot', 'sprout', 'fox', 'ghost', 'wizard'];
 const randomAvatarKey = () => avatarKeys[crypto.randomInt(avatarKeys.length)];
+const creatorApplicationView = row => ({
+  id: row.id,
+  userId: row.user_id,
+  displayName: row.display_name,
+  statement: row.statement,
+  status: row.status,
+  reviewNote: row.review_note,
+  createdAt: new Date(row.created_at).toISOString(),
+  reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
+  reviewedBy: row.reviewed_by,
+});
 
 export class PostgresAuthRepository {
   constructor(pool, avatarStore = null) { this.pool = pool; this.avatarStore = avatarStore; }
@@ -367,6 +378,78 @@ export class PostgresAuthRepository {
     }
     const body = row.body_key && this.avatarStore ? await this.avatarStore.get(row.body_key) : Buffer.from(row.body);
     return { mediaType: row.media_type, body, sha256: Buffer.from(row.sha256), animated: row.animated };
+  }
+
+  async getCreatorApplication(input) {
+    const user = (await this.pool.query('SELECT can_publish FROM users WHERE id=$1 AND status=\'active\'', [input.userId])).rows[0];
+    if (!user) return null;
+    const row = (await this.pool.query(
+      `SELECT a.*,u.display_name FROM creator_applications a JOIN users u ON u.id=a.user_id
+        WHERE a.user_id=$1 ORDER BY a.created_at DESC,a.id DESC LIMIT 1`,
+      [input.userId],
+    )).rows[0];
+    return { canPublish: user.can_publish, application: row ? creatorApplicationView(row) : null };
+  }
+
+  async createCreatorApplication(input) {
+    return withTransaction(this.pool, async client => {
+      const user = (await client.query(
+        "SELECT id,display_name,can_publish FROM users WHERE id=$1 AND status='active' FOR UPDATE",
+        [input.userId],
+      )).rows[0];
+      if (!user) return null;
+      if (user.can_publish) return { canPublish: true, application: null };
+      const pending = (await client.query(
+        "SELECT * FROM creator_applications WHERE user_id=$1 AND status='pending' ORDER BY created_at DESC LIMIT 1",
+        [input.userId],
+      )).rows[0];
+      if (pending) return { canPublish: false, application: creatorApplicationView({ ...pending, display_name: user.display_name }) };
+      const row = (await client.query(
+        `INSERT INTO creator_applications(id,user_id,statement,created_at)
+         VALUES ($1,$2,$3,$4) RETURNING *`,
+        [input.id, input.userId, input.statement, input.now],
+      )).rows[0];
+      return { canPublish: false, application: creatorApplicationView({ ...row, display_name: user.display_name }) };
+    });
+  }
+
+  async listCreatorApplications(input) {
+    const rows = (await this.pool.query(
+      `SELECT a.*,u.display_name FROM creator_applications a JOIN users u ON u.id=a.user_id
+        WHERE ($1::text IS NULL OR a.status=$1)
+        ORDER BY CASE WHEN a.status='pending' THEN 0 ELSE 1 END,a.created_at ASC,a.id ASC LIMIT $2`,
+      [input.status, input.limit],
+    )).rows;
+    return rows.map(creatorApplicationView);
+  }
+
+  async decideCreatorApplication(input) {
+    return withTransaction(this.pool, async client => {
+      const row = (await client.query(
+        `SELECT a.*,u.display_name FROM creator_applications a JOIN users u ON u.id=a.user_id
+          WHERE a.id=$1 FOR UPDATE OF a,u`,
+        [input.applicationId],
+      )).rows[0];
+      if (!row) return { ok: false, code: 'CREATOR_APPLICATION_NOT_FOUND', message: '创作者申请不存在。' };
+      if (row.status !== 'pending') return { ok: false, code: 'CREATOR_APPLICATION_DECIDED', message: '这份申请已经审核。' };
+      const status = input.decision === 'approve' ? 'approved' : 'rejected';
+      const decided = (await client.query(
+        `UPDATE creator_applications
+            SET status=$2,review_note=$3,reviewed_at=$4,reviewed_by=$5
+          WHERE id=$1 RETURNING *`,
+        [input.applicationId, status, input.note, input.now, input.actorUserId],
+      )).rows[0];
+      if (status === 'approved') {
+        await client.query('UPDATE users SET can_publish=true,updated_at=$2 WHERE id=$1', [row.user_id, input.now]);
+        await client.query(
+          `UPDATE device_grants
+              SET scopes=ARRAY['profile:read','works:read','works:write','publish','upload']::text[]
+            WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>$2`,
+          [row.user_id, input.now],
+        );
+      }
+      return { ok: true, application: creatorApplicationView({ ...decided, display_name: row.display_name }) };
+    });
   }
 
   async listDeviceGrants(input) {
