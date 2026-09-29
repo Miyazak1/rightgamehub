@@ -2,7 +2,7 @@
   "name": "gamehub-agent",
   "displayName": "GameHub for AI Coding",
   "description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "publisher": "gamehub-local",
   "private": true,
   "engines": {
@@ -14,6 +14,7 @@
   "main": "./gamehub-extension.cjs",
   "activationEvents": [
     "onCommand:gamehub.open",
+    "onCommand:gamehub.checkForUpdates",
     "onView:gamehub.platform"
   ],
   "contributes": {
@@ -26,6 +27,11 @@
         "command": "gamehub.openBrowser",
         "title": "GameHub: 在内置浏览器打开",
         "icon": "$(globe)"
+      },
+      {
+        "command": "gamehub.checkForUpdates",
+        "title": "GameHub: 检查更新",
+        "icon": "$(sync)"
       }
     ],
     "viewsContainers": {
@@ -50,6 +56,11 @@
       "view/title": [
         {
           "command": "gamehub.openBrowser",
+          "when": "view == gamehub.platform",
+          "group": "navigation"
+        },
+        {
+          "command": "gamehub.checkForUpdates",
           "when": "view == gamehub.platform",
           "group": "navigation"
         }
