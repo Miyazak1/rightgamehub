@@ -248,6 +248,18 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     '/api/gamehub/upload': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, false) },
     '/api/gamehub/verify': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, true) },
     '/api/gamehub/download': { methods: ['GET', 'HEAD'], requestBody: 'buffered', run: download },
+    '/api/gamehub/platform-desktop-status': { methods: ['POST'], requestBody: 'buffered', run: async request => {
+      const { record } = await readPlatformExecutable(request);
+      return json({ ok: true, ...desktop.status(record) });
+    } },
+    '/api/gamehub/platform-desktop-prepare': { methods: ['POST'], requestBody: 'buffered', run: async request => {
+      const { record, downloadUrl } = await readPlatformExecutable(request);
+      return json({ ok: true, ...await desktop.prepare(record, () => fetch(downloadUrl, { signal: request.signal, cache: 'no-store' }), request.signal) });
+    } },
+    '/api/gamehub/platform-desktop-run': { methods: ['POST'], requestBody: 'buffered', run: async request => {
+      const { record } = await readPlatformExecutable(request);
+      return json({ ok: true, ...await desktop.launch(record, randomUUID(), request.signal) });
+    } },
     '/api/gamehub/platform-desktop-launch': { methods: ['POST'], requestBody: 'buffered', run: async request => {
       const { record, downloadUrl } = await readPlatformExecutable(request);
       await desktop.prepare(record, () => fetch(downloadUrl, { signal: request.signal, cache: 'no-store' }), request.signal);
