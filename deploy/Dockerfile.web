@@ -19,6 +19,9 @@ COPY packages/host-contract packages/host-contract
 COPY packages/player-core packages/player-core
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
+COPY plugins plugins
+COPY .agents .agents
+COPY .claude-plugin .claude-plugin
 COPY scripts/build-extension.mjs scripts/build-extension.mjs
 COPY scripts/package-vscode-extension.mjs scripts/package-vscode-extension.mjs
 COPY scripts/prepare-agent-downloads.mjs scripts/prepare-agent-downloads.mjs
