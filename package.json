@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node poc/server.mjs",
     "build:extension": "node scripts/build-extension.mjs",
-    "pack:vscode": "npm run build:extension && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-vscode-extension.ps1",
+    "pack:vscode": "npm run build:extension && node scripts/package-vscode-extension.mjs",
+    "pack:vscode:windows": "npm run build:extension && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-vscode-extension.ps1",
+    "prepare:agent-downloads": "npm run pack:vscode && node scripts/prepare-agent-downloads.mjs",
     "build:harness": "node scripts/build-harness.mjs",
     "build:offscreen-package": "node scripts/build-offscreen-package.mjs",
     "start:harness-m0": "node scripts/start-harness-m0.mjs",
