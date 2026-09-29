@@ -33,7 +33,7 @@ function Install-PortablePlugin($Item) {
   $bundle = Get-Content -LiteralPath $bundleFile -Raw -Encoding UTF8 | ConvertFrom-Json
   $marketplaceRoot = Join-Path $dataRoot 'agent-marketplace'
   foreach ($file in $bundle.files) {
-    if ($file.path -match '(^|/)..(/|$)' -or [System.IO.Path]::IsPathRooted($file.path)) { throw "Unsafe plugin path: $($file.path)" }
+    if ($file.path -match '(^|/)\.\.(/|$)' -or [System.IO.Path]::IsPathRooted($file.path)) { throw "Unsafe plugin path: $($file.path)" }
     $bytes = [Convert]::FromBase64String($file.contentBase64)
     $hash = [System.Security.Cryptography.SHA256]::Create()
     try { $fileHash = ([BitConverter]::ToString($hash.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
@@ -46,6 +46,23 @@ function Install-PortablePlugin($Item) {
 }
 
 $manifest = Invoke-RestMethod -Uri "$baseUrl/downloads/manifest.json"
+if ($manifest.updater -and $manifest.updater.windows) {
+  $updater = $manifest.updater.windows
+  $currentScript = $MyInvocation.MyCommand.Path
+  $currentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $currentScript).Hash.ToLowerInvariant()
+  if ($currentHash -ne $updater.sha256.ToLowerInvariant()) {
+    $nextScript = "$currentScript.next"
+    try {
+      Invoke-WebRequest -UseBasicParsing -Uri $updater.url -OutFile $nextScript
+      $nextHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $nextScript).Hash.ToLowerInvariant()
+      if ($nextHash -ne $updater.sha256.ToLowerInvariant()) { throw 'GameHub updater self-update verification failed.' }
+      Move-Item -LiteralPath $nextScript -Destination $currentScript -Force
+      Write-UpdateMessage 'GameHub updater refreshed; the new updater will be used on the next check.'
+    } finally {
+      if (Test-Path -LiteralPath $nextScript) { Remove-Item -LiteralPath $nextScript -Force }
+    }
+  }
+}
 if ($manifest.channel -ne 'stable') { throw 'GameHub updater only accepts the stable channel.' }
 $previous = if (Test-Path -LiteralPath $stateFile) { Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
 
