@@ -167,3 +167,32 @@ test('auth routes reject unknown fields and keep sensitive responses out of cach
   assert.equal(valid.statusCode, 200);
   assert.equal(valid.headers['cache-control'], 'no-store');
 });
+
+
+test('release content route overrides the small JSON body limit for binary packages', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  let received = 0;
+  const app = createApp({
+    config: { requestBodyLimit: 1024 },
+    database: { ping: async () => true },
+    migrations: { status: async () => ({ ready: true }) },
+    authService: {},
+    uploadService: {
+      receive: async (_uploadId, _authorization, stream) => {
+        for await (const chunk of stream) received += chunk.length;
+        return { id: _uploadId, state: 'uploaded' };
+      },
+    },
+  });
+  t.after(() => app.close());
+  const uploadId = crypto.randomUUID();
+  const payload = Buffer.alloc(2 * 1024 * 1024, 1);
+  const response = await app.inject({
+    method: 'PUT',
+    url: `/v1/creator/uploads/${uploadId}/content`,
+    headers: { authorization: `Upload ${'a'.repeat(43)}`, 'content-type': 'application/octet-stream' },
+    payload,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(received, payload.length);
+});
