@@ -10,12 +10,14 @@
 | Agent | 当前接入方式 | 安装入口 |
 | --- | --- | --- |
 | DeepSeek Harness | 原生右栏（npm 包发布准备中） | `npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin` |
-| VS Code / Cursor | 原生侧栏（源码构建预览，尚未公开发布） | 克隆本仓库，执行 `npm run pack:vscode`，再安装生成的 `artifacts/gamehub-agent-0.3.0.vsix` |
+| VS Code / Cursor | 原生侧栏（`mooyu.fun` 官方安装器） | Windows：`& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName cursor`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- cursor`（将 `cursor` 换成 `code` 即安装 VS Code） |
 | Codex / ChatGPT | 可移植技能预览；MCP App 开发中 | `codex plugin marketplace add Miyazak1/rightgamehub`，随后在插件目录安装 `gamehub` |
 | Claude Code | Agent Plugin 技能预览；MCP 开发中 | `claude plugin marketplace add Miyazak1/rightgamehub && claude plugin install gamehub@gamehub` |
 | Windsurf / OpenCode / 其他 Agent | 检测到兼容原生能力时内置，否则浏览器 | <https://mooyu.fun> |
 
 可移植插件位于 [plugins/gamehub](plugins/gamehub)，Codex marketplace 清单位于 [.agents/plugins/marketplace.json](.agents/plugins/marketplace.json)，Claude Code marketplace 清单位于 [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)。任何 Agent 执行安装命令前都应先解释权限并取得用户确认。
+
+编辑器安装器不会拉取源码。生产镜像构建时会生成 VSIX、`/downloads/manifest.json` 和对应 SHA-256；`install.ps1` / `install.sh` 只从 `https://mooyu.fun` 下载成品，校验后调用宿主的 `--install-extension`。更新使用同一命令，安装器会读取最新清单并以 `--force` 替换旧版本。
 
 2026-09-29：P1.0 单机邀请部署已落地：Docker Compose、PostgreSQL 迁移门禁、API/Worker/Runtime 分进程、Caddy 自动 HTTPS 与通配符运行域、Resend 验证码、邮箱邀请白名单、持久卷备份和管理员提升工具均已提供。生产镜像和真实容器烟雾测试已通过；域名、AliDNS RAM 密钥、邮件密钥及 Linux 服务器配置见 [P1.0 单机部署手册](docs/47-p10-single-host-deployment.zh-CN.md)。开放不受信作者投稿前，仍需补 rootless 二级执行隔离。
 
