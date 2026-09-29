@@ -13,7 +13,8 @@ const bridge = {
   call(operation, payload) {
     const id = ++sequence;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { pending.delete(id); reject(new Error('宿主操作超时。')); }, 10000);
+      const timeoutMs = operation === 'desktop.prepare' ? 31 * 60 * 1000 : operation === 'desktop.launch' ? 30000 : 10000;
+      const timer = setTimeout(() => { pending.delete(id); reject(new Error('宿主操作超时。')); }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
       vscode.postMessage({ type: 'gamehub:request', id, operation, payload });
     });
