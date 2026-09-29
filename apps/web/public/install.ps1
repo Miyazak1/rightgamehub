@@ -13,6 +13,29 @@ if (-not $HostName) {
 }
 $manifest = Invoke-RestMethod -Uri "$baseUrl/downloads/manifest.json"
 
+function Enable-GameHubUpdates {
+  try {
+    $root = Join-Path $env:LOCALAPPDATA 'GameHub'
+    [System.IO.Directory]::CreateDirectory($root) | Out-Null
+    $updaterPath = Join-Path $root 'agent-update.ps1'
+    $partial = "$updaterPath.part"
+    Invoke-WebRequest -UseBasicParsing -Uri $manifest.updater.url -OutFile $partial
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $partial).Hash.ToLowerInvariant()
+    if ($actual -ne $manifest.updater.sha256.ToLowerInvariant()) { throw 'GameHub updater SHA-256 verification failed.' }
+    Move-Item -LiteralPath $partial -Destination $updaterPath -Force
+    $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$updaterPath`" -HostName $HostName -Quiet"
+    $action = New-ScheduledTaskAction -Execute $powershell -Argument $arguments
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(15) -RepetitionInterval (New-TimeSpan -Hours $manifest.updatePolicy.checkIntervalHours)
+    Register-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Action $action -Trigger $trigger -Description 'Downloads verified stable GameHub updates; the Agent activates them after restart.' -Force | Out-Null
+    Write-Host "Automatic GameHub updates enabled for $HostName. Updates activate after the Agent restarts."
+  } catch {
+    Write-Warning "GameHub was installed, but automatic update scheduling was unavailable: $($_.Exception.Message)"
+  } finally {
+    if ($partial -and (Test-Path -LiteralPath $partial)) { Remove-Item -LiteralPath $partial -Force }
+  }
+}
+
 if ($HostName -in @('cursor', 'code')) {
   $extension = $manifest.editorExtension
   if ($extension.supportedHosts -notcontains $HostName) { throw "Unsupported editor host: $HostName" }
@@ -24,6 +47,7 @@ if ($HostName -in @('cursor', 'code')) {
     & $HostName --install-extension $tempFile --force
     if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
     Write-Host "GameHub $($extension.version) installed for $HostName. Reload the editor and open GameHub from the Activity Bar."
+    Enable-GameHubUpdates
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
@@ -41,6 +65,7 @@ if ($HostName -eq 'harness') {
     & dsh plugin --profile web add $tempFile
     if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness rejected the GameHub package.' }
     Write-Host 'GameHub installed for the Harness web profile. Restart dsh web.'
+    Enable-GameHubUpdates
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
@@ -82,3 +107,4 @@ if ($HostName -eq 'claude') {
 } else {
   Write-Host 'GameHub marketplace added to Codex. Open the Plugins Directory, select GameHub Plugins, and install gamehub.'
 }
+Enable-GameHubUpdates
