@@ -23,6 +23,7 @@ const contentTypes = `<?xml version="1.0" encoding="utf-8"?>
   <Default Extension="json" ContentType="application/json" />
   <Default Extension="js" ContentType="application/javascript" />
   <Default Extension="cjs" ContentType="application/javascript" />
+  <Default Extension="mjs" ContentType="application/javascript" />
   <Default Extension="svg" ContentType="image/svg+xml" />
   <Default Extension="map" ContentType="application/json" />
   <Default Extension="md" ContentType="text/markdown" />
@@ -48,6 +49,7 @@ const inputs = [
   ['extension.vsixmanifest', Buffer.from(manifest)],
   ['extension/package.json', await readFile(new URL('package.json', extensionRoot))],
   ['extension/gamehub-extension.cjs', await readFile(new URL('gamehub-extension.cjs', extensionRoot))],
+  ['extension/desktop-launcher.mjs', await readFile(new URL('extensions/harness/src/desktop-launcher.mjs', root))],
   ['extension/media/gamehub.js', await readFile(new URL('media/gamehub.js', extensionRoot))],
   ['extension/media/gamehub.js.map', await readFile(new URL('media/gamehub.js.map', extensionRoot))],
   ['extension/media/arcade.svg', await readFile(new URL('media/arcade.svg', extensionRoot))],
