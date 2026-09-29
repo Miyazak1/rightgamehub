@@ -62,7 +62,7 @@ export function createRuntime({ env = process.env, mailer } = {}) {
     runtimeStore: new LocalRuntimeStore(config.runtimeRoot), validatorRoot: config.validatorRoot,
   });
   const runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
-  const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config });
+  const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config, artifactStore: quarantineStore });
   const engagementService = createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService });
   const guessBaikeRepository = new PostgresGuessBaikeRepository(database.pool);
   const guessBaikeService = createGuessBaikeService({ repository: guessBaikeRepository });
