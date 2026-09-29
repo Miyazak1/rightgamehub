@@ -2,9 +2,10 @@
 const vscode = require('vscode');
 const { createHash, randomBytes, randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
+const { spawn } = require('node:child_process');
 const http = require('node:http');
 const https = require('node:https');
-const { Readable } = require('node:stream');
+const { PassThrough, Readable } = require('node:stream');
 
 const TOKEN_KEY = 'gamehub.session.v1';
 const allowedUrl = (value, label) => {
@@ -65,11 +66,10 @@ const trustedUpdateUrl = value => {
   if (url.protocol !== 'https:' || url.hostname !== 'mooyu.fun' || url.username || url.password) throw new Error('GameHub 更新地址不受信任。');
   return url;
 };
-const requestStream = (value, headers = {}) => new Promise((resolve, reject) => {
-  const url = new URL(String(value));
-  const transport = url.protocol === 'https:' ? https : url.protocol === 'http:' ? http : null;
-  if (!transport) { reject(new Error('GameHub 下载协议不受支持。')); return; }
+const requestWithNode = (url, headers) => new Promise((resolve, reject) => {
+  const transport = url.protocol === 'https:' ? https : http;
   const request = transport.get(url, {
+    agent: false,
     headers: { 'user-agent': `GameHub-Agent/${String(vscode.extensions.getExtension('gamehub-local.gamehub-agent')?.packageJSON?.version || 'unknown')}`, ...headers },
     timeout: 30000,
   }, response => {
@@ -82,6 +82,36 @@ const requestStream = (value, headers = {}) => new Promise((resolve, reject) => 
   request.once('timeout', () => request.destroy(new Error('GameHub 下载连接超时。')));
   request.once('error', reject);
 });
+const requestWithSystemCurl = (url, headers, expectedLength) => new Promise((resolve, reject) => {
+  const command = process.platform === 'win32' ? 'curl.exe' : 'curl';
+  const protocol = url.protocol === 'https:' ? '=https' : '=http';
+  const args = ['--fail', '--silent', '--show-error', '--no-progress-meter', '--proto', protocol, '--max-time', '1800'];
+  for (const [name, value] of Object.entries(headers)) args.push('--header', `${name}: ${value}`);
+  args.push('--', url.href);
+  const child = spawn(command, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const stream = new PassThrough(); let stderr = ''; let settled = false;
+  child.stdout.on('data', chunk => stream.write(chunk));
+  child.stderr.on('data', chunk => { if (stderr.length < 4096) stderr += chunk.toString('utf8'); });
+  child.once('error', error => { stream.destroy(error); if (!settled) { settled = true; reject(error); } });
+  child.once('spawn', () => {
+    settled = true;
+    resolve({ status: 200, headers: { get: name => String(name).toLowerCase() === 'content-length' && expectedLength ? String(expectedLength) : null }, body: Readable.toWeb(stream) });
+  });
+  child.once('close', code => {
+    if (code === 0) stream.end();
+    else stream.destroy(new Error(`GameHub 系统下载失败（curl ${code}）：${stderr.trim() || '未知错误'}`));
+  });
+});
+const requestStream = async (value, headers = {}, expectedLength = 0) => {
+  const url = new URL(String(value));
+  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('GameHub 下载协议不受支持。');
+  try { return await requestWithNode(url, headers); }
+  catch (error) {
+    const code = String(error.code || ''); const message = String(error.message || error);
+    if (!['ENOSERVERS', 'ENOTFOUND', 'EAI_AGAIN'].includes(code) && !/no servers/i.test(message)) throw error;
+    return requestWithSystemCurl(url, headers, expectedLength);
+  }
+};
 const downloadUpdateBytes = async (value, onProgress) => {
   const url = trustedUpdateUrl(value);
   const response = await requestStream(url, { accept: 'application/json, application/octet-stream', 'cache-control': 'no-cache' });
@@ -233,7 +263,7 @@ async function activate(context) {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
             const release = desktopRelease(message.payload?.release);
             const downloadUrl = new URL(`/v1/works/${encodeURIComponent(release.workId)}/releases/${encodeURIComponent(release.releaseId)}/download`, apiUrl.origin);
-            result = await desktopLauncher.prepare(release.record, () => requestStream(downloadUrl, { accept: 'application/octet-stream', 'cache-control': 'no-cache' }));
+            result = await desktopLauncher.prepare(release.record, () => requestStream(downloadUrl, { accept: 'application/octet-stream', 'cache-control': 'no-cache' }, release.sizeBytes));
           } else if (message.operation === 'desktop.launch') {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
             const release = desktopRelease(message.payload?.release);

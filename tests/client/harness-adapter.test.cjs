@@ -125,7 +125,9 @@ test('VS Code extension uses the shared GameHub client and a trusted credential 
   assert.match(extension, /正在检查服务器版本/);
   assert.match(extension, /desktopLauncher\.restore/);
   assert.doesNotMatch(extension, /\bfetch\s*\(/);
-  assert.doesNotMatch(extension, /child_process|workspace\.fs\.readFile|createTerminal/);
+  assert.match(extension, /spawn\(command, args, \{ shell: false, windowsHide: true/);
+  assert.match(extension, /\['ENOSERVERS', 'ENOTFOUND', 'EAI_AGAIN'\]/);
+  assert.doesNotMatch(extension, /workspace\.fs\.readFile|createTerminal|shell: true/);
   assert.match(entry, /createEditorHostAdapter/);
   assert.match(entry, /routing="memory"/);
 });
