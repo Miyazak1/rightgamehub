@@ -705,16 +705,14 @@ const agentInstallTargets = [
     prompt: '请在获得我的确认后，把 gamehub-dsh-plugin 安装到 DeepSeek Harness 的 web profile；安装后检查结果，并提醒我重启 dsh web。',
   },
   {
-    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: 'VSIX 发布准备中',
+    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
     summary: '通过 Activity Bar 打开 GameHub，令牌保存在编辑器 SecretStorage，不读取工作区文件。',
-    command: 'code --install-extension gamehub-agent.vsix',
-    prompt: '请在获得我的确认后安装 GameHub VSIX，验证扩展已启用，并告诉我如何在 Activity Bar 打开 GameHub。',
+    prompt: '请帮我从源码安装 GameHub 的 VS Code 扩展。来源仓库是 https://github.com/Miyazak1/rightgamehub，扩展目录是 extensions/vscode，官方构建命令是 npm run pack:vscode，预期产物是 artifacts/gamehub-agent-0.3.0.vsix。请先检查仓库 README、package.json、锁文件和扩展权限，向我说明将执行的下载、依赖安装、构建和扩展安装操作，并等待我确认；确认后将仓库克隆到安全的临时目录，按锁文件安装依赖并构建，再用 code --install-extension 指向实际生成的 VSIX。最后验证扩展已启用，告诉我如何在 Activity Bar 打开 GameHub。任何步骤或产物名称不一致时停止并询问，不要猜测；无法完成时打开 https://mooyu.fun。',
   },
   {
-    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '复用 VSIX',
+    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
     summary: '与 VS Code 共用扩展，运行时自动识别 Cursor，并跟随编辑器主题。',
-    command: 'cursor --install-extension gamehub-agent.vsix',
-    prompt: '请在获得我的确认后为 Cursor 安装 GameHub VSIX，验证扩展已启用，并告诉我如何打开 GameHub 侧栏。',
+    prompt: '请帮我从源码安装 GameHub 的 Cursor 扩展。来源仓库是 https://github.com/Miyazak1/rightgamehub，扩展目录是 extensions/vscode，官方构建命令是 npm run pack:vscode，预期产物是 artifacts/gamehub-agent-0.3.0.vsix。请先检查仓库 README、package.json、锁文件和扩展权限，向我说明将执行的下载、依赖安装、构建和扩展安装操作，并等待我确认；确认后将仓库克隆到安全的临时目录，按锁文件安装依赖并构建，再用 cursor --install-extension 指向实际生成的 VSIX。最后验证扩展已启用，告诉我如何打开 GameHub 侧栏。任何步骤或产物名称不一致时停止并询问，不要猜测；无法完成时打开 https://mooyu.fun。',
   },
   {
     id: 'windsurf', name: 'Windsurf', badge: '优先内置', tone: 'testing', state: '兼容性验证中',
