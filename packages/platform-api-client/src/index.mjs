@@ -115,7 +115,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         xhr.open('PUT', `${baseUrl}/v1/creator/uploads/${encodeURIComponent(uploadId)}/content`);
         xhr.timeout = 30 * 60 * 1000;
         xhr.setRequestHeader('Authorization', `Upload ${grantToken}`);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
         xhr.upload.onprogress = event => event.lengthComputable && onProgress({ loaded: event.loaded, total: event.total, percent: Math.round(event.loaded / event.total * 100) });
         xhr.onerror = fail;
         xhr.ontimeout = () => reject(new ApiError({ code: 'REQUEST_TIMEOUT', message: '上传超时；任务状态仍需向服务端确认。' }));
