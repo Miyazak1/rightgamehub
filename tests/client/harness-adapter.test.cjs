@@ -120,6 +120,10 @@ test('VS Code extension uses the shared GameHub client and a trusted credential 
   assert.match(extension, /vscode\.env\.openExternal/);
   assert.match(extension, /\['github\.com', 'www\.github\.com'\]/);
   assert.match(extension, /registerWebviewViewProvider/);
+  assert.match(extension, /require\('node:https'\)/);
+  assert.match(extension, /ProgressLocation\.Notification/);
+  assert.match(extension, /正在检查服务器版本/);
+  assert.doesNotMatch(extension, /\bfetch\s*\(/);
   assert.doesNotMatch(extension, /child_process|workspace\.fs\.readFile|createTerminal/);
   assert.match(entry, /createEditorHostAdapter/);
   assert.match(entry, /routing="memory"/);
