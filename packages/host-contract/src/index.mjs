@@ -117,6 +117,17 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
   if (hostWindow.document.body) observer.observe(hostWindow.document.body, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
   darkMedia?.addEventListener?.('change', emit); contrastMedia?.addEventListener?.('change', emit);
   const dispose = () => { observer.disconnect(); darkMedia?.removeEventListener?.('change', emit); contrastMedia?.removeEventListener?.('change', emit); listeners.clear(); credentials = null; };
+  const launchDesktopRelease = async release => {
+    const url = new URL('api/gamehub/platform-desktop-launch', hostWindow.document.baseURI).href;
+    const response = await hostWindow.fetch(url, {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
+      headers: { 'Content-Type': 'application/json', 'X-GameHub-Client': '1', 'X-GameHub-Launch': 'independent-window-v1' },
+      body: JSON.stringify(release),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Windows 游戏未能启动。');
+    return result;
+  };
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
@@ -135,6 +146,7 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
       async getTheme() { return readTheme(); },
       onThemeChanged(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     },
+    desktop: { launchRelease: launchDesktopRelease },
     account: {
       async getAccessToken() { await ensureCredentials(); return credentials?.accessToken ?? null; },
       async getRefreshToken() { await ensureCredentials(); return credentials?.refreshToken ?? null; },
