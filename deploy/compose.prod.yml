@@ -7,7 +7,7 @@ x-api-environment: &api-environment
   DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
   DATABASE_SSL: "false"
   OTP_HMAC_KEY: ${OTP_HMAC_KEY}
-  CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3081
+  CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
   TRUST_EDITOR_WEBVIEWS: "true"
   MAIL_PROVIDER: resend
   RESEND_API_KEY: ${RESEND_API_KEY}
