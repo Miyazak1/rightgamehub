@@ -1,0 +1,19 @@
+{
+  "name": "gamehub",
+  "displayName": "GameHub",
+  "version": "0.1.0",
+  "description": "Discover, launch and publish GameHub experiences from Claude Code.",
+  "author": {
+    "name": "GameHub",
+    "url": "https://mooyu.fun"
+  },
+  "homepage": "https://mooyu.fun/#/install",
+  "repository": "https://github.com/Miyazak1/rightgamehub",
+  "license": "UNLICENSED",
+  "keywords": [
+    "games",
+    "agent",
+    "gamehub"
+  ],
+  "defaultEnabled": true
+}
