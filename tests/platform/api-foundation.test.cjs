@@ -44,6 +44,10 @@ test('GitHub OAuth callback accepts the GitHub authorization issuer', async t =>
   assert.equal(response.statusCode, 200);
   assert.equal(callbackQuery.iss, issuer);
   assert.match(response.body, /已连接 GameHub/);
+  assert.match(response.body, /setTimeout\(closePage,700\)/);
+  const nonce = response.headers['content-security-policy'].match(/script-src 'nonce-([^']+)'/u)?.[1];
+  assert.ok(nonce);
+  assert.match(response.body, new RegExp(`<script nonce="${nonce}">`));
 });
 
 test('explicit development origin receives CORS preflight and creator reads stay authenticated', async t => {
