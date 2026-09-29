@@ -428,7 +428,10 @@ export function createApp({ config, database, migrations, authService, workServi
       estimatedMinutes: { type: 'integer', minimum: 1, maximum: 30 },
       tags: { type: 'array', maxItems: 6, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 20 } },
       agentLabel: { anyOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
-      repositoryUrl: { anyOf: [{ type: 'string', pattern: '^https://github\\.com/[^/\\s]+/[^/\\s]+/?, { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
+      repositoryUrl: { anyOf: [{ type: 'string', pattern: '^https://github\\.com/[^/\\s]+/[^/\\s]+/?$' }, { type: 'null' }] },
+      licenseSpdx: { anyOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
+    };
+    app.get('/v1/creator/works', { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
     app.post('/v1/creator/works', {
       preHandler: requireAuth,
       schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] }, ...workDiscoveryProperties } } },
@@ -442,106 +445,6 @@ export function createApp({ config, database, migrations, authService, workServi
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } },
         body: { type: 'object', additionalProperties: false, properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, ...workDiscoveryProperties } },
-      },
-    }, async (request, reply) => {
-      const result = await workService.update(request.actor, request.params.workId, request.body, request.headers['idempotency-key'], request.headers['if-match']);
-      reply.header('ETag', result.etag);
-      return envelope(result.work);
-    });
-    app.get('/v1/creator/works/:workId/releases', {
-      preHandler: requireAuth,
-      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } } },
-    }, async (request, reply) => {
-      reply.header('Cache-Control', 'no-store');
-      return envelope(await workService.listReleases(request.actor, request.params.workId));
-    });
-    app.put('/v1/creator/works/:workId/cover', {
-      preHandler: requireAuth,
-      bodyLimit: 6 * 1024 * 1024,
-      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } } },
-    }, async (request, reply) => {
-      const body = await readLimitedBody(request.body, 5 * 1024 * 1024);
-      const result = await workService.uploadCover(request.actor, request.params.workId, body);
-      reply.header('Cache-Control', 'no-store'); reply.header('ETag', result.etag);
-      return envelope(result.work);
-    });
-    app.get('/v1/works/:workId/cover', {
-      schema: {
-        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } },
-        querystring: { type: 'object', additionalProperties: false, properties: { v: { type: 'string', maxLength: 64 } } },
-      },
-    }, async (request, reply) => {
-      const cover = await workService.getCover(request.params.workId);
-      reply.header('Cache-Control', 'public, max-age=300'); reply.header('X-Content-Type-Options', 'nosniff'); reply.header('Content-Security-Policy', "default-src 'none'; sandbox");
-      return reply.type(cover.mediaType).send(cover.body);
-    });
-    app.post('/v1/creator/works/:workId/withdraw', {
-      preHandler: requireAuth,
-      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } } },
-    }, async (request, reply) => {
-      const result = await workService.withdraw(request.actor, request.params.workId, request.headers['idempotency-key'], request.headers['if-match']);
-      reply.header('ETag', result.etag);
-      return envelope(result.work);
-    });
-  }
-  if (uploadService) {
-    const uploadParams = { type: 'object', additionalProperties: false, required: ['uploadId'], properties: { uploadId: { type: 'string', format: 'uuid' } } };
-    app.post('/v1/creator/works/:workId/uploads', {
-      preHandler: requireAuth,
-      schema: {
-        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } },
-        body: {
-          type: 'object', additionalProperties: false,
-          required: ['fileName', 'declaredBytes', 'sha256', 'releaseLabel', 'autoPublish', 'targetKey', 'packageType'],
-          properties: {
-            fileName: { type: 'string', minLength: 1, maxLength: 255 },
-            declaredBytes: { type: 'string', pattern: '^(0|[1-9][0-9]*)$' },
-            sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
-            releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
-            autoPublish: { type: 'boolean' },
-            targetKey: { type: 'string', enum: ['web', 'windows-x64', 'windows-x86', 'windows-arm64'] },
-            packageType: { type: 'string', enum: ['web_zip', 'windows_portable_zip', 'windows_standalone_exe', 'windows_installer_exe'] },
-          },
-        },
-      },
-    }, async request => envelope(await uploadService.create(request.actor, request.params.workId, request.body, request.headers['idempotency-key'])));
-
-    app.post('/v1/creator/uploads/:uploadId/grant', { preHandler: requireAuth, schema: { params: uploadParams } }, async (request, reply) => {
-      reply.header('Cache-Control', 'no-store');
-      return envelope(await uploadService.grant(request.actor, request.params.uploadId));
-    });
-
-    app.put('/v1/creator/uploads/:uploadId/content', { schema: { params: uploadParams } }, async request => (
-      envelope(await uploadService.receive(request.params.uploadId, request.headers.authorization, request.body))
-    ));
-
-    app.post('/v1/creator/uploads/:uploadId/complete', { preHandler: requireAuth, schema: { params: uploadParams } }, async request => (
-      envelope(await uploadService.complete(request.actor, request.params.uploadId, request.headers['idempotency-key']))
-    ));
-
-    app.get('/v1/creator/uploads/:uploadId', { preHandler: requireAuth, schema: { params: uploadParams } }, async request => (
-      envelope(await uploadService.get(request.actor, request.params.uploadId))
-    ));
-  }
-  return app;
-}
- }, { type: 'null' }] },
-      licenseSpdx: { anyOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
-    };
-    app.get('/v1/creator/works', { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
-    app.post('/v1/creator/works', {
-      preHandler: requireAuth,
-      schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] } } } },
-    }, async (request, reply) => {
-      const result = await workService.create(request.actor, request.body, request.headers['idempotency-key']);
-      reply.header('ETag', result.etag);
-      return envelope(result.work);
-    });
-    app.patch('/v1/creator/works/:workId', {
-      preHandler: requireAuth,
-      schema: {
-        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } },
-        body: { type: 'object', additionalProperties: false, properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 } } },
       },
     }, async (request, reply) => {
       const result = await workService.update(request.actor, request.params.workId, request.body, request.headers['idempotency-key'], request.headers['if-match']);
