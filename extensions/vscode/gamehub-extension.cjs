@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
-const { createHash, randomBytes } = require('node:crypto');
+const { createHash, randomBytes, randomUUID } = require('node:crypto');
+const { pathToFileURL } = require('node:url');
 
 const TOKEN_KEY = 'gamehub.session.v1';
 const allowedUrl = (value, label) => {
@@ -26,6 +27,20 @@ const trustedExternalUrl = value => {
   const url = new URL(String(value));
   if (url.protocol !== 'https:' || !['github.com', 'www.github.com'].includes(url.hostname)) throw new Error('只允许打开 GitHub HTTPS 授权页面。');
   return url;
+};
+const RELEASE_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+const WORK_ID = /^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/;
+const SHA256 = /^[a-f0-9]{64}$/;
+const desktopRelease = value => {
+  if (!value || !WORK_ID.test(String(value.workId || '').toLowerCase()) || !RELEASE_ID.test(String(value.releaseId || '').toLowerCase()) ||
+      !SHA256.test(String(value.sha256 || '').toLowerCase()) || !Number.isSafeInteger(value.sizeBytes) ||
+      value.sizeBytes < 64 || value.sizeBytes > 500 * 1024 ** 2 || typeof value.fileName !== 'string' ||
+      !/^[^\\/:*?"<>|\x00-\x1f]{1,180}\.exe$/i.test(value.fileName)) throw new Error('Windows 版本信息无效。');
+  return {
+    workId: String(value.workId).toLowerCase(), releaseId: String(value.releaseId).toLowerCase(),
+    fileName: value.fileName, sizeBytes: value.sizeBytes, sha256: String(value.sha256).toLowerCase(),
+    record: { id: String(value.releaseId).toLowerCase(), name: value.fileName, size: value.sizeBytes, sha256: String(value.sha256).toLowerCase(), kind: 'exe' },
+  };
 };
 
 
@@ -84,8 +99,15 @@ async function checkForEditorUpdate(context, output) {
   }
 }
 
-function activate(context) {
+async function activate(context) {
   let currentView;
+  const updateOutput = vscode.window.createOutputChannel('GameHub');
+  let desktopLauncher = null;
+  try {
+    const moduleUri = vscode.Uri.joinPath(context.extensionUri, 'desktop-launcher.mjs');
+    const { createDesktopLauncher } = await import(pathToFileURL(moduleUri.fsPath).href);
+    desktopLauncher = createDesktopLauncher({ root: vscode.Uri.joinPath(context.globalStorageUri, 'desktop-games').fsPath, enabled: process.platform === 'win32' });
+  } catch (error) { updateOutput.appendLine(`GameHub 本机启动组件不可用：${String(error.message || error)}`); }
   const config = () => vscode.workspace.getConfiguration('gamehub');
   const openBrowser = async () => {
     const url = allowedUrl(config().get('browserUrl', 'http://127.0.0.1:3081/'), '浏览器地址');
@@ -105,7 +127,7 @@ function activate(context) {
       view.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] };
       const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'gamehub.js'));
       const nonce = randomBytes(18).toString('base64');
-      const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, theme: { mode: themeMode() } };
+      const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
       view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>GameHub</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
       const subscription = view.webview.onDidReceiveMessage(async message => {
         if (!message || message.type !== 'gamehub:request' || !Number.isSafeInteger(message.id)) return;
@@ -117,7 +139,20 @@ function activate(context) {
             await context.secrets.store(TOKEN_KEY, JSON.stringify(message.payload.tokens));
           } else if (message.operation === 'credentials.clear') await context.secrets.delete(TOKEN_KEY);
           else if (message.operation === 'external.open') result = await vscode.env.openExternal(vscode.Uri.parse(trustedExternalUrl(message.payload?.url).href));
-          else throw new Error('不支持的宿主操作。');
+          else if (message.operation === 'desktop.status') {
+            if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
+            const release = desktopRelease(message.payload?.release);
+            result = desktopLauncher.status(release.record);
+          } else if (message.operation === 'desktop.prepare') {
+            if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
+            const release = desktopRelease(message.payload?.release);
+            const downloadUrl = new URL(`/v1/works/${encodeURIComponent(release.workId)}/releases/${encodeURIComponent(release.releaseId)}/download`, apiUrl.origin);
+            result = await desktopLauncher.prepare(release.record, () => fetch(downloadUrl, { cache: 'no-store', redirect: 'error' }));
+          } else if (message.operation === 'desktop.launch') {
+            if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
+            const release = desktopRelease(message.payload?.release);
+            result = await desktopLauncher.launch(release.record, randomUUID());
+          } else throw new Error('不支持的宿主操作。');
           await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: true, result });
         } catch (error) { await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: false, error: String(error.message || error) }); }
       });
@@ -131,10 +166,9 @@ function activate(context) {
     catch (error) { await vscode.window.showErrorMessage(String(error.message || error)); }
   }));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.openBrowser', () => openBrowser().catch(error => vscode.window.showErrorMessage(String(error.message || error)))));
-  const updateOutput = vscode.window.createOutputChannel('GameHub');
   const updateTimer = setTimeout(() => void checkForEditorUpdate(context, updateOutput), 15000);
   const updateInterval = setInterval(() => void checkForEditorUpdate(context, updateOutput), UPDATE_INTERVAL_MS);
-  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; } });
+  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void desktopLauncher?.close(); } });
 }
 
 module.exports = { activate };
