@@ -80,6 +80,7 @@ function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdenti
       <NavItem active={route === '/library'} onClick={() => go('/library')} icon={icons.library}>游戏库</NavItem>
       <NavItem active={route === '/social'} onClick={() => go('/social')} icon={icons.social}>休息室</NavItem>
       <NavItem active={route.startsWith('/creator')} onClick={() => go('/creator')} icon={icons.creator}>创作中心</NavItem>
+      <NavItem active={route === '/install'} onClick={() => go('/install')} icon="＋">添加到 Agent</NavItem>
       {accountProfile?.role === 'admin' && <NavItem active={route.startsWith('/admin')} onClick={() => go('/admin')} icon="!">治理</NavItem>}
     </nav>
     <div className="header__tools">
@@ -98,6 +99,7 @@ function MobileNav({ route, go }) {
     <NavItem active={route === '/library'} onClick={() => go('/library')} icon={icons.library}>游戏库</NavItem>
     <NavItem active={route === '/social'} onClick={() => go('/social')} icon={icons.social}>休息室</NavItem>
     <NavItem active={route.startsWith('/creator')} onClick={() => go('/creator')} icon={icons.creator}>创作</NavItem>
+    <NavItem active={route === '/install'} onClick={() => go('/install')} icon="＋">安装</NavItem>
   </nav>;
 }
 
@@ -693,6 +695,79 @@ function ChallengePage({ api, go, demo, code }) {
   return <main className="page challenge-page"><section className="challenge-card panel"><span className="kicker">PIXEL CHALLENGE</span><AvatarView avatar={item.creator.avatar} api={api} alt="挑战发起者"/><p><strong>{item.creator.displayName}</strong> 向你发起今日猜百科挑战</p><div className="challenge-score"><span>{item.score.hints}<small>提示</small></span><span>{item.score.guessedCount}<small>字符</small></span><span>{item.score.elapsedSeconds}<small>秒</small></span></div><h1>能超过这个成绩吗？</h1><p className="challenge-note">双方挑战同一天、同一道题。先比提示次数，再比猜字数和用时。</p>{acceptError && <p className="form-error">{acceptError}</p>}<Button icon={icons.play} disabled={accepting || item.status === 'completed'} onClick={accept}>{accepting ? '接收中…' : item.status === 'accepted' && item.acceptedByMe ? '继续挑战' : '接受挑战'}</Button><button className="back-link" onClick={() => go('/social')}>暂时不了</button></section></main>;
 }
 
+
+const agentInstallTargets = [
+  {
+    id: 'harness', name: 'DeepSeek Harness', badge: '原生右栏', tone: 'native', state: 'npm 发布准备中',
+    summary: '完整 GameHub 客户端内置在 Harness 右栏，登录、发现、游玩和发布都不离开 Agent。',
+    command: 'npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin',
+    update: 'npx @deepseek-ai/dsh plugin --profile web update gamehub-dsh-plugin',
+    prompt: '请在获得我的确认后，把 gamehub-dsh-plugin 安装到 DeepSeek Harness 的 web profile；安装后检查结果，并提醒我重启 dsh web。',
+  },
+  {
+    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: 'VSIX 发布准备中',
+    summary: '通过 Activity Bar 打开 GameHub，令牌保存在编辑器 SecretStorage，不读取工作区文件。',
+    command: 'code --install-extension gamehub-agent.vsix',
+    prompt: '请在获得我的确认后安装 GameHub VSIX，验证扩展已启用，并告诉我如何在 Activity Bar 打开 GameHub。',
+  },
+  {
+    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '复用 VSIX',
+    summary: '与 VS Code 共用扩展，运行时自动识别 Cursor，并跟随编辑器主题。',
+    command: 'cursor --install-extension gamehub-agent.vsix',
+    prompt: '请在获得我的确认后为 Cursor 安装 GameHub VSIX，验证扩展已启用，并告诉我如何打开 GameHub 侧栏。',
+  },
+  {
+    id: 'windsurf', name: 'Windsurf', badge: '优先内置', tone: 'testing', state: '兼容性验证中',
+    summary: '优先复用 VS Code 扩展；若宿主 Webview 或密钥存储不兼容，则安全回退浏览器。',
+    prompt: '请检查当前 Windsurf 是否支持安装 VSIX；支持时在获得我的确认后安装 GameHub，否则打开 https://mooyu.fun。',
+  },
+  {
+    id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'building', state: '开发中',
+    summary: '使用可安装插件连接 GameHub MCP，并以 MCP App 提供原生交互界面；未安装时回退网页版。',
+    prompt: '请检查插件目录中是否已有 GameHub。若可用，请先向我说明权限并等待确认后安装；否则打开 https://mooyu.fun。',
+  },
+  {
+    id: 'claude', name: 'Claude Code', badge: 'Agent Plugin', tone: 'building', state: '开发中',
+    summary: '共享可移植技能与 MCP 能力；宿主没有可用游戏面板时在浏览器中启动。',
+    prompt: '请检查是否可以安装 GameHub Agent Plugin；安装前先向我说明权限并等待确认，否则打开 https://mooyu.fun。',
+  },
+  {
+    id: 'opencode', name: 'OpenCode / 终端 Agent', badge: 'MCP + 浏览器', tone: 'browser', state: '规划中',
+    summary: 'Agent 负责搜索、账号与启动指令，视觉游玩界面由系统浏览器承载。',
+    prompt: '请检查当前 Agent 是否支持 GameHub MCP；若尚未支持，请打开 https://mooyu.fun。',
+  },
+];
+
+function AgentInstallCard({ target, copied, onCopy, onOpen }) {
+  return <article className="agent-install-card">
+    <div className="agent-install-card__head"><div><span className={`agent-install-card__badge is-${target.tone}`}>{target.badge}</span><h3>{target.name}</h3></div><small>{target.state}</small></div>
+    <p>{target.summary}</p>
+    {target.command && <div className="agent-command"><code>{target.command}</code><button onClick={() => onCopy(target.command, `${target.id}-command`)}>{copied === `${target.id}-command` ? '已复制' : '复制命令'}</button></div>}
+    {target.update && <details><summary>更新命令</summary><div className="agent-command"><code>{target.update}</code><button onClick={() => onCopy(target.update, `${target.id}-update`)}>{copied === `${target.id}-update` ? '已复制' : '复制'}</button></div></details>}
+    <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? '提示词已复制' : '让 Agent 帮我安装'}</button><button onClick={onOpen}>先用网页版</button></div>
+  </article>;
+}
+
+function InstallPage({ go, hostIdentity }) {
+  const [copied, setCopied] = useState('');
+  const copy = async (value, key) => {
+    try { await globalThis.navigator?.clipboard?.writeText(value); setCopied(key); globalThis.setTimeout?.(() => setCopied(current => current === key ? '' : current), 1800); }
+    catch { globalThis.prompt?.('复制下面的内容', value); }
+  };
+  const detected = agentInstallTargets.find(item => item.id === hostIdentity.id);
+  return <main className="page install-page">
+    <section className="install-hero">
+      <div><span className="kicker">GAMEHUB EVERYWHERE</span><h1>添加到你的 Agent</h1><p>能安全内置就留在 Agent 里；宿主没有稳定界面能力时，再打开浏览器。账号、游戏库和作品数据保持一致。</p></div>
+      <div className="install-detected"><span>当前环境</span><strong>{hostIdentity.label}</strong><small>{detected ? `${detected.badge} · ${detected.state}` : '使用网页版'}</small></div>
+    </section>
+    <section className="install-principles" aria-label="接入原则"><div><b>01</b><strong>原生优先</strong><span>右栏、侧栏或 MCP App</span></div><div><b>02</b><strong>最小权限</strong><span>不读取项目与宿主凭据</span></div><div><b>03</b><strong>始终可用</strong><span>不支持内置时回退网页</span></div></section>
+    {detected && <section className="install-recommended"><span>为当前宿主推荐</span><AgentInstallCard target={detected} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/></section>}
+    <section className="install-catalog"><div className="section-heading"><div><h2>选择你的 Agent</h2><p>安装入口会随着各宿主完成验证逐步开放。</p></div></div><div className="agent-install-grid">{agentInstallTargets.filter(item => item.id !== detected?.id).map(target => <AgentInstallCard key={target.id} target={target} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/>)}</div></section>
+    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>GameHub 登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li></ul></section>
+  </main>;
+}
+
+
 function AdminPage({ api, demo, go }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
   const demoPuzzles = [{ id: 'wikipedia-4723', title: '足球', aliases: ['协会足球','英式足球'], category: '体育', sourceKind: 'wikipedia-lead', sourceTitle: '足球', sourceUrl: 'https://zh.wikipedia.org/wiki/%E8%B6%B3%E7%90%83', sourceRevision: 94245396, sourceUpdatedAt: '2026-09-27T15:22:05Z', license: 'CC BY-SA 4.0', introHanCount: 364, content: '足球主要专指英式足球，官方名为协会足球，是一种世界流行的团体球类运动。', status: 'ready', qualityReason: null, scheduledDates: [today] }];
@@ -754,6 +829,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
+  else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/social') content = <SocialPage api={api} go={go} demo={demo}/>;
   else if (parts[0] === 'challenge' && parts[1]) content = <ChallengePage api={api} go={go} demo={demo} code={parts[1]}/>;
