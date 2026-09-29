@@ -64,6 +64,11 @@ if ($manifest.updater -and $manifest.updater.windows) {
   }
 }
 if ($manifest.channel -ne 'stable') { throw 'GameHub updater only accepts the stable channel.' }
+if ($HostName -in @('cursor', 'code')) {
+  # Editor extensions update inside Cursor/VS Code so users can see progress and receive a restart prompt.
+  Unregister-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Confirm:$false -ErrorAction SilentlyContinue
+  exit 0
+}
 $previous = if (Test-Path -LiteralPath $stateFile) { Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
 
 if ($HostName -in @('cursor', 'code')) {
