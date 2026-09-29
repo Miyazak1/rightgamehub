@@ -91,7 +91,9 @@ else
 fi
 
 updater="$data_root/agent-update.mjs"
-if command -v crontab >/dev/null 2>&1; then
+if [ "$host" = cursor ] || [ "$host" = code ]; then
+  echo "Future GameHub updates download silently inside the editor extension and activate after restart."
+elif command -v crontab >/dev/null 2>&1; then
   marker="# GameHub-Agent-Update-$host"
   schedule="17 */6 * * * /usr/bin/env node '$updater' '$host' '$data_root' --quiet $marker"
   { crontab -l 2>/dev/null | grep -v "GameHub-Agent-Update-$host" || true; echo "$schedule"; } | crontab -
