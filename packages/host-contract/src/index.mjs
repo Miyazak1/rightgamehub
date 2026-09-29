@@ -117,17 +117,34 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
   if (hostWindow.document.body) observer.observe(hostWindow.document.body, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
   darkMedia?.addEventListener?.('change', emit); contrastMedia?.addEventListener?.('change', emit);
   const dispose = () => { observer.disconnect(); darkMedia?.removeEventListener?.('change', emit); contrastMedia?.removeEventListener?.('change', emit); listeners.clear(); credentials = null; };
-  const launchDesktopRelease = async release => {
-    const url = new URL('api/gamehub/platform-desktop-launch', hostWindow.document.baseURI).href;
+  const desktopRequest = async (action, release) => {
+    const url = new URL(`api/gamehub/platform-desktop-${action}`, hostWindow.document.baseURI).href;
     const response = await hostWindow.fetch(url, {
       method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
       headers: { 'Content-Type': 'application/json', 'X-GameHub-Client': '1', 'X-GameHub-Launch': 'independent-window-v1' },
       body: JSON.stringify(release),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.ok) throw new Error(result.error || 'Windows 游戏未能启动。');
+    if (!response.ok || !result.ok) throw new Error(result.error || (action === 'run' ? 'Windows 游戏未能启动。' : 'Windows 游戏未能下载。'));
     return result;
   };
+  const getDesktopReleaseStatus = release => desktopRequest('status', release);
+  const prepareDesktopRelease = async (release, { onProgress } = {}) => {
+    let finished = false;
+    const poll = (async () => {
+      while (!finished) {
+        await new Promise(resolve => hostWindow.setTimeout(resolve, 250));
+        if (finished) break;
+        try { onProgress?.((await getDesktopReleaseStatus(release)).download); } catch {}
+      }
+    })();
+    try {
+      const result = await desktopRequest('prepare', release);
+      onProgress?.(result.progress || { state: 'ready', receivedBytes: release.sizeBytes, totalBytes: release.sizeBytes, percent: 100, error: null });
+      return result;
+    } finally { finished = true; await poll; }
+  };
+  const launchDesktopRelease = release => desktopRequest('run', release);
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
@@ -146,7 +163,7 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
       async getTheme() { return readTheme(); },
       onThemeChanged(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     },
-    desktop: { launchRelease: launchDesktopRelease },
+    desktop: { getReleaseStatus: getDesktopReleaseStatus, prepareRelease: prepareDesktopRelease, launchRelease: launchDesktopRelease },
     account: {
       async getAccessToken() { await ensureCredentials(); return credentials?.accessToken ?? null; },
       async getRefreshToken() { await ensureCredentials(); return credentials?.refreshToken ?? null; },
