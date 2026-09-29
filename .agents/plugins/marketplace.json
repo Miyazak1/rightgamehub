@@ -1,0 +1,20 @@
+{
+  "name": "gamehub",
+  "interface": {
+    "displayName": "GameHub Plugins"
+  },
+  "plugins": [
+    {
+      "name": "gamehub",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gamehub"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_FIRST_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
