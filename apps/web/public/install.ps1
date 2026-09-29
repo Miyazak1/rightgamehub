@@ -1,25 +1,63 @@
 param(
-  [ValidateSet('cursor', 'code')]
+  [ValidateSet('cursor', 'code', 'codex', 'claude')]
   [string]$HostName = ''
 )
 $ErrorActionPreference = 'Stop'
 $baseUrl = 'https://mooyu.fun'
 if (-not $HostName) {
-  if (Get-Command cursor -ErrorAction SilentlyContinue) { $HostName = 'cursor' }
-  elseif (Get-Command code -ErrorAction SilentlyContinue) { $HostName = 'code' }
-  else { throw 'Cursor or VS Code CLI was not found. Install one and ensure its command is on PATH.' }
+  foreach ($candidate in @('cursor', 'code', 'codex', 'claude')) {
+    if (Get-Command $candidate -ErrorAction SilentlyContinue) { $HostName = $candidate; break }
+  }
+  if (-not $HostName) { throw 'No supported Agent CLI was found on PATH.' }
 }
 $manifest = Invoke-RestMethod -Uri "$baseUrl/downloads/manifest.json"
-$extension = $manifest.editorExtension
-if ($extension.supportedHosts -notcontains $HostName) { throw "Unsupported host: $HostName" }
-$tempFile = Join-Path ([System.IO.Path]::GetTempPath()) $extension.filename
+
+if ($HostName -in @('cursor', 'code')) {
+  $extension = $manifest.editorExtension
+  if ($extension.supportedHosts -notcontains $HostName) { throw "Unsupported editor host: $HostName" }
+  $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) $extension.filename
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $extension.url -OutFile $tempFile
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tempFile).Hash.ToLowerInvariant()
+    if ($actual -ne $extension.sha256.ToLowerInvariant()) { throw 'GameHub VSIX SHA-256 verification failed.' }
+    & $HostName --install-extension $tempFile --force
+    if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
+    Write-Host "GameHub $($extension.version) installed for $HostName. Reload the editor and open GameHub from the Activity Bar."
+  } finally {
+    if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
+  }
+  exit 0
+}
+
+$plugin = $manifest.agentPlugin
+if ($plugin.supportedHosts -notcontains $HostName) { throw "Unsupported Agent host: $HostName" }
+$bundleFile = Join-Path ([System.IO.Path]::GetTempPath()) $plugin.filename
+$marketplaceRoot = Join-Path $env:LOCALAPPDATA 'GameHub\agent-marketplace'
 try {
-  Invoke-WebRequest -UseBasicParsing -Uri $extension.url -OutFile $tempFile
-  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tempFile).Hash.ToLowerInvariant()
-  if ($actual -ne $extension.sha256.ToLowerInvariant()) { throw 'GameHub VSIX SHA-256 verification failed.' }
-  & $HostName --install-extension $tempFile --force
-  if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
-  Write-Host "GameHub $($extension.version) installed for $HostName. Reload the editor and open GameHub from the Activity Bar."
+  Invoke-WebRequest -UseBasicParsing -Uri $plugin.url -OutFile $bundleFile
+  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $bundleFile).Hash.ToLowerInvariant()
+  if ($actual -ne $plugin.sha256.ToLowerInvariant()) { throw 'GameHub plugin bundle SHA-256 verification failed.' }
+  $bundle = Get-Content -LiteralPath $bundleFile -Raw -Encoding UTF8 | ConvertFrom-Json
+  foreach ($file in $bundle.files) {
+    if ($file.path -match '(^|/)\.\.(/|$)' -or [System.IO.Path]::IsPathRooted($file.path)) { throw "Unsafe plugin path: $($file.path)" }
+    $bytes = [Convert]::FromBase64String($file.contentBase64)
+    $hash = [System.Security.Cryptography.SHA256]::Create()
+    try { $fileHash = ([BitConverter]::ToString($hash.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
+    if ($fileHash -ne $file.sha256.ToLowerInvariant()) { throw "Plugin file verification failed: $($file.path)" }
+    $destination = Join-Path $marketplaceRoot ($file.path.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($destination)) | Out-Null
+    [System.IO.File]::WriteAllBytes($destination, $bytes)
+  }
 } finally {
-  if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
+  if (Test-Path -LiteralPath $bundleFile) { Remove-Item -LiteralPath $bundleFile -Force }
+}
+if (-not (Get-Command $HostName -ErrorAction SilentlyContinue)) { throw "$HostName CLI was not found on PATH." }
+& $HostName plugin marketplace add $marketplaceRoot
+if ($LASTEXITCODE -ne 0) { throw "$HostName could not add the GameHub marketplace." }
+if ($HostName -eq 'claude') {
+  & claude plugin install gamehub@gamehub
+  if ($LASTEXITCODE -ne 0) { throw 'Claude Code could not install the GameHub plugin.' }
+  Write-Host 'GameHub installed for Claude Code. Start a new session or reload plugins.'
+} else {
+  Write-Host 'GameHub marketplace added to Codex. Open the Plugins Directory, select GameHub Plugins, and install gamehub.'
 }
