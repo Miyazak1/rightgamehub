@@ -41,7 +41,7 @@ export class PostgresUploadRepository {
       if (work.state === 'suspended') throw new UploadError('STATE_CONFLICT', 409, 'The work is suspended.');
       await expireStaleCreated(client, input.actor.userId);
       const usage = (await client.query('SELECT * FROM creator_usage WHERE user_id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
-      const reserve = input.declaredBytes + WEB_EXPANDED_RESERVE;
+      const reserve = input.declaredBytes + (input.body.packageType === 'web_zip' ? WEB_EXPANDED_RESERVE : 0);
       if (usage.active_uploads >= 1) throw new UploadError('UPLOAD_BUSY', 409, 'Another upload is active.');
       if (Number(usage.stored_bytes) + Number(usage.reserved_bytes) + reserve > FIVE_GIB) throw new UploadError('QUOTA_EXCEEDED', 429, 'Storage quota would be exceeded.');
       await client.query("INSERT INTO work_targets(work_id,target_key) VALUES ($1,$2) ON CONFLICT DO NOTHING", [input.workId, input.body.targetKey]);
