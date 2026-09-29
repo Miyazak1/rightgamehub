@@ -10,7 +10,7 @@ const releaseHost = (releaseId, config) => {
   return `${config.runtimeScheme}://${label}${port}`;
 };
 
-export function createCatalogService({ repository, config }) {
+export function createCatalogService({ repository, config, artifactStore }) {
   return {
     async list(query = {}) {
       const limit = query.limit == null ? 20 : Number(query.limit);
@@ -23,6 +23,22 @@ export function createCatalogService({ repository, config }) {
       const work = await repository.get(workId);
       if (!work) throw new CatalogError('NOT_FOUND', 404, 'Work not found.');
       return work;
+    },
+    async download(workId, releaseId) {
+      const release = await repository.getDownload(workId, releaseId);
+      if (!release) throw new CatalogError('NOT_FOUND', 404, 'Downloadable Windows release not found.');
+      if (!artifactStore) throw new CatalogError('DOWNLOAD_UNAVAILABLE', 503, 'Download storage is unavailable.');
+      return {
+        releaseId: release.id,
+        targetKey: release.target_key,
+        packageType: release.package_type,
+        os: release.os,
+        arch: release.arch,
+        fileName: release.file_name,
+        sizeBytes: Number(release.actual_bytes),
+        sha256: release.artifact_sha256,
+        filePath: artifactStore.pathFor(release.object_key),
+      };
     },
     async launch(workId, releaseId) {
       if (workId === GUESS_BAIKE_WORK_ID) throw new CatalogError('BUILT_IN_GAME', 409, '内置游戏不需要远程启动描述。');
