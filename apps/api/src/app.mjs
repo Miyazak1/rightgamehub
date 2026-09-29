@@ -96,7 +96,7 @@ export function createApp({ config, database, migrations, authService, workServi
   });
 
   app.get('/v1/auth/github/web/callback', {
-    schema: { querystring: { type: 'object', additionalProperties: false, required: ['state'], properties: { code: { type: 'string', minLength: 1, maxLength: 512 }, state: { type: 'string', minLength: 20, maxLength: 256 }, error: { type: 'string', maxLength: 120 }, error_description: { type: 'string', maxLength: 500 } } } },
+    schema: { querystring: { type: 'object', additionalProperties: false, required: ['state'], properties: { code: { type: 'string', minLength: 1, maxLength: 512 }, state: { type: 'string', minLength: 20, maxLength: 256 }, error: { type: 'string', maxLength: 120 }, error_description: { type: 'string', maxLength: 500 }, iss: { type: 'string', const: 'https://github.com' } } } },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
