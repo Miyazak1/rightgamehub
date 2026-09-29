@@ -201,6 +201,9 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(app, /添加到你的 Agent/);
   assert.match(app, /codex plugin marketplace add Miyazak1\/rightgamehub/);
   assert.match(app, /claude plugin install gamehub@gamehub/);
+  assert.match(app, /https:\/\/github\.com\/Miyazak1\/rightgamehub/);
+  assert.match(app, /artifacts\/gamehub-agent-0\.3\.0\.vsix/);
+  assert.doesNotMatch(app, /command: 'cursor --install-extension gamehub-agent\.vsix'/);
   assert.match(css, /\.agent-install-grid/);
 });
 
