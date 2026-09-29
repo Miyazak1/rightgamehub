@@ -6,6 +6,7 @@ const puzzles = puzzleBank.puzzles;
 
 const normalize = value => value.replace(/[\s·・—–\-_，。！？（）()]/g, '').toLowerCase();
 const secondsLabel = seconds => seconds < 60 ? `${seconds}秒` : `${Math.floor(seconds / 60)}分${String(seconds % 60).padStart(2, '0')}秒`;
+const GUESS_BAIKE_SHARE_URL = 'https://mooyu.fun/#/play/gamehub-guess-baike';
 const fireworkPieces = Array.from({ length: 24 }, (_, index) => {
   const ray = index % 12;
   const angle = ray * Math.PI / 6;
@@ -65,6 +66,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   const allChars = useMemo(() => uniqueGuessCharacters(allText), [allText]);
   const revealed = allChars.filter(char => guessed.has(char)).length;
   const progress = phase === 'won' ? 100 : Math.round(revealed / allChars.length * 100);
+  const guessAttempts = history.filter(item => !item.hint).length;
 
   useEffect(() => {
     const saved = loadGame(storageKey);
@@ -165,7 +167,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
 
   const share = async () => {
     const grid = Array.from(puzzle.title).filter(char => normalizeGuessCharacter(char) !== null).map(char => guessed.has(normalizeGuessCharacter(char)) ? '🟪' : '⬛').join('');
-    const text = `猜百科 · 今日挑战\n${grid}\n${guessed.size} 个字符 · ${secondsLabel(elapsed)} · ${hints} 提示\nGameHub 官方出品`;
+    const text = `猜百科 · 今日挑战\n${grid}\n${guessAttempts} 次猜测 · ${guessed.size} 个字符 · ${secondsLabel(elapsed)} · ${hints} 提示\nGameHub 官方出品\n${GUESS_BAIKE_SHARE_URL}`;
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }
     catch { setFeedback({ kind: 'repeat', text: '暂时无法复制，请手动截图分享。' }); }
   };
@@ -207,7 +209,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
     </div>
 
     {showResult && <div className="guess-result" role="dialog" aria-modal="true" aria-label="挑战完成" onClick={event => { if (event.target === event.currentTarget) setShowResult(false); }}>
-      <div className="guess-result__panel"><span className="guess-result__badge">档案已解密</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? (challengeResult.outcome === 'win' ? '挑战胜出！' : challengeResult.outcome === 'loss' ? '差一点点' : '势均力敌') : puzzle.title}</h2><p>{guessed.size} 个猜字 · {secondsLabel(elapsed)} · {hints} 次提示</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? '结算暂时未完成，稍后可从挑战记录继续。' : challengeResult ? <><span>我：{challengeResult.participant.hints} 提示 · {challengeResult.participant.guessedCount} 字 · {challengeResult.participant.elapsedSeconds} 秒</span><span>对手：{challengeResult.creator.hints} 提示 · {challengeResult.creator.guessedCount} 字 · {challengeResult.creator.elapsedSeconds} 秒</span></> : '正在结算挑战…'}</div>}<div className="guess-result__actions"><button className="is-primary" onClick={share}>{copied ? '已复制成绩 ✓' : '复制像素成绩'}</button><button onClick={() => setShowResult(false)}>查看全文</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">阅读中文维基百科原文 ↗</a></div>
+      <div className="guess-result__panel"><span className="guess-result__badge">档案已解密</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? (challengeResult.outcome === 'win' ? '挑战胜出！' : challengeResult.outcome === 'loss' ? '差一点点' : '势均力敌') : puzzle.title}</h2><p>{guessAttempts} 次猜测 · {guessed.size} 个猜字 · {secondsLabel(elapsed)} · {hints} 次提示</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? '结算暂时未完成，稍后可从挑战记录继续。' : challengeResult ? <><span>我：{challengeResult.participant.hints} 提示 · {challengeResult.participant.guessedCount} 字 · {challengeResult.participant.elapsedSeconds} 秒</span><span>对手：{challengeResult.creator.hints} 提示 · {challengeResult.creator.guessedCount} 字 · {challengeResult.creator.elapsedSeconds} 秒</span></> : '正在结算挑战…'}</div>}<div className="guess-result__actions"><button className="is-primary" onClick={share}>{copied ? '已复制成绩 ✓' : '复制像素成绩'}</button><button onClick={() => setShowResult(false)}>查看全文</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">阅读中文维基百科原文 ↗</a></div>
     </div>}
   </section>;
 }
