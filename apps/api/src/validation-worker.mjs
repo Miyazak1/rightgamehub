@@ -5,9 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { validateAssetPath, mimeFor, WEB_LIMITS } from './web-package-policy.mjs';
+import { validateWindowsExecutable } from './windows-exe-validator.mjs';
 
 const cliPath = fileURLToPath(new URL('./web-zip-validator-cli.mjs', import.meta.url));
-const permanentError = code => /^(ARCHIVE_INTEGRITY_CHANGED|UPLOAD_TOO_LARGE|ZIP_|MANIFEST_|CAPABILITY_|ENTRY_|PACKAGE_INVALID|VALIDATOR_REPORT_INVALID)/.test(code ?? '');
+const permanentError = code => /^(ARCHIVE_INTEGRITY_CHANGED|UPLOAD_TOO_LARGE|ZIP_|MANIFEST_|CAPABILITY_|ENTRY_|PACKAGE_INVALID|VALIDATOR_REPORT_INVALID|EXE_)/.test(code ?? '');
 const sha256File = input => new Promise((resolve, reject) => {
   const hash = crypto.createHash('sha256');
   let bytes = 0;
@@ -77,9 +78,18 @@ export function createValidationWorker({ repository, quarantineStore, runtimeSto
         const input = quarantineStore.pathFor(claim.objectKey);
         const archive = await sha256File(input);
         if (archive.bytes !== claim.actualBytes || archive.sha256 !== claim.actualSha256) throw Object.assign(new Error('Quarantine object changed after upload.'), { code: 'ARCHIVE_INTEGRITY_CHANGED' });
-        const output = path.join(working, 'output');
-        const report = await runParser({ input, output, onHeartbeat: () => repository.renewLease({ jobId: claim.jobId, leaseToken: claim.leaseToken }) });
-        const published = await runtimeStore.publishAttempt({ releaseId: claim.releaseId, attemptId: claim.leaseToken, sourceDirectory: output, report });
+        let published;
+        if (claim.targetKey === 'web' && claim.packageType === 'web_zip') {
+          const output = path.join(working, 'output');
+          const report = await runParser({ input, output, onHeartbeat: () => repository.renewLease({ jobId: claim.jobId, leaseToken: claim.leaseToken }) });
+          published = await runtimeStore.publishAttempt({ releaseId: claim.releaseId, attemptId: claim.leaseToken, sourceDirectory: output, report });
+        } else if (claim.targetKey === 'windows-x64' && claim.packageType === 'windows_standalone_exe') {
+          const manifest = await validateWindowsExecutable(input, claim.fileName);
+          await repository.renewLease({ jobId: claim.jobId, leaseToken: claim.leaseToken });
+          published = { prefix: null, manifest, manifestSha256: null };
+        } else {
+          throw Object.assign(new Error('Package target is unsupported.'), { code: 'PACKAGE_INVALID' });
+        }
         return await repository.complete({ claim, published });
       } catch (error) {
         const failure = { jobId: claim.jobId, leaseToken: claim.leaseToken, uploadId: claim.uploadId, errorCode: error.code ?? 'VALIDATION_FAILED' };
