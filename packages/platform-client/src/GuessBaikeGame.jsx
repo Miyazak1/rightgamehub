@@ -53,7 +53,8 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   const [phase, setPhase] = useState(() => restored?.phase ?? 'playing');
   const [hints, setHints] = useState(() => restored?.hints ?? 0);
   const [startedAt, setStartedAt] = useState(() => restored?.startedAt ?? Date.now());
-  const [elapsed, setElapsed] = useState(0);
+  const [completedElapsed, setCompletedElapsed] = useState(() => Number.isSafeInteger(restored?.completedElapsed) ? restored.completedElapsed : null);
+  const [elapsed, setElapsed] = useState(() => Number.isSafeInteger(restored?.completedElapsed) ? restored.completedElapsed : 0);
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [recent, setRecent] = useState(new Set());
@@ -75,25 +76,31 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
     setPhase(saved?.phase ?? 'playing');
     setHints(saved?.hints ?? 0);
     setStartedAt(saved?.startedAt ?? Date.now());
+    setCompletedElapsed(Number.isSafeInteger(saved?.completedElapsed) ? saved.completedElapsed : null);
+    setElapsed(Number.isSafeInteger(saved?.completedElapsed) ? saved.completedElapsed : 0);
     setInput(''); setFeedback(null); setRecent(new Set()); setCopied(false); setShowResult(false); setChallengeResult(null);
   }, [storageKey, challengeCode]);
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify({ guessed: [...guessed], history, phase, hints, startedAt }));
-  }, [storageKey, guessed, history, phase, hints, startedAt]);
+    localStorage.setItem(storageKey, JSON.stringify({ guessed: [...guessed], history, phase, hints, startedAt, completedElapsed }));
+  }, [storageKey, guessed, history, phase, hints, startedAt, completedElapsed]);
 
   useEffect(() => {
+    if (phase !== 'playing') {
+      if (Number.isSafeInteger(completedElapsed)) setElapsed(completedElapsed);
+      return undefined;
+    }
     setElapsed(Math.floor((Date.now() - startedAt) / 1000));
-    if (phase !== 'playing') return undefined;
     const timer = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     return () => clearInterval(timer);
-  }, [startedAt, phase]);
+  }, [startedAt, phase, completedElapsed]);
 
   useEffect(() => {
     if (phase !== 'playing' || !isGuessTitleSolved(puzzle.title, guessed)) return;
     setFeedback({ kind: 'win', text: '标题已完整揭开！百科档案已解密。' });
+    setCompletedElapsed(current => current ?? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
     setPhase('won');
-  }, [puzzle.title, guessed, phase]);
+  }, [puzzle.title, guessed, phase, startedAt]);
 
   useEffect(() => {
     if (phase !== 'won') { setShowResult(false); return undefined; }
@@ -137,6 +144,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
       pulseReveal(answerChars);
       setHistory(current => [{ value: raw, hits: answerChars.length, answer: true }, ...current]);
       setFeedback({ kind: 'win', text: '标题命中！百科档案已解密。' });
+      setCompletedElapsed(current => current ?? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
       setPhase('won'); setInput('');
       return;
     }
@@ -199,7 +207,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
           <div className="guess-input-wrap"><span aria-hidden="true">&gt;_</span><input ref={inputRef} value={input} maxLength={10} disabled={phase !== 'playing'} onChange={event => setInput(event.target.value)} placeholder="输入中文、英文或数字，也可直接猜标题" autoComplete="off"/></div>
           <button type="submit" disabled={!input.trim() || phase !== 'playing'}>揭开 <span>↵</span></button>
         </form>
-        <div className="guess-feedback" aria-live="polite">{feedback ? <><i/>{feedback.text}</> : '中文、英文字母和数字都可以猜；英文不区分大小写。'}</div>
+        <div className="guess-feedback" aria-live="polite">{feedback ? <><i/>{feedback.text}</> : phase === 'won' ? '今日档案已经解密。' : '中文、英文字母和数字都可以猜；英文不区分大小写。'}{phase === 'won' && !showResult && <button className="guess-result-reopen" onClick={() => setShowResult(true)}>查看本局成绩</button>}</div>
       </main>
 
       <aside className="guess-sidebar">
