@@ -735,7 +735,12 @@ function AdminPage({ api, demo, go }) {
 
 export default function App({ hostAdapter, apiClient, demo = new URLSearchParams(location.search).has('demo'), routing = 'hash' }) {
   const host = useMemo(() => hostAdapter ?? createBrowserHostAdapter(), [hostAdapter]);
-  const api = useMemo(() => apiClient ?? createApiClient(), [apiClient]);
+  const api = useMemo(() => apiClient ?? createApiClient({
+    baseUrl: host.apiBaseUrl ?? '',
+    getAccessToken: () => host.account?.getAccessToken?.(),
+    getRefreshToken: () => host.account?.getRefreshToken?.(),
+    setTokens: tokens => host.account?.setTokens?.(tokens),
+  }), [apiClient, host]);
   const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
   useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) setHostIdentity(resolveHostIdentity(capabilities)); }); return () => { live = false; }; }, [host]);
   useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host]);
