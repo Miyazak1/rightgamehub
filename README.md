@@ -10,7 +10,7 @@
 | Agent | 当前接入方式 | 安装入口 |
 | --- | --- | --- |
 | DeepSeek Harness | 原生右栏（npm 包发布准备中） | `npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin` |
-| VS Code / Cursor | 原生侧栏（VSIX 发布准备中） | `code --install-extension gamehub-agent.vsix` / `cursor --install-extension gamehub-agent.vsix` |
+| VS Code / Cursor | 原生侧栏（源码构建预览，尚未公开发布） | 克隆本仓库，执行 `npm run pack:vscode`，再安装生成的 `artifacts/gamehub-agent-0.3.0.vsix` |
 | Codex / ChatGPT | 可移植技能预览；MCP App 开发中 | `codex plugin marketplace add Miyazak1/rightgamehub`，随后在插件目录安装 `gamehub` |
 | Claude Code | Agent Plugin 技能预览；MCP 开发中 | `claude plugin marketplace add Miyazak1/rightgamehub && claude plugin install gamehub@gamehub` |
 | Windsurf / OpenCode / 其他 Agent | 检测到兼容原生能力时内置，否则浏览器 | <https://mooyu.fun> |
