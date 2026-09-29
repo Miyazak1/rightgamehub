@@ -52,8 +52,11 @@ try {
   if (Test-Path -LiteralPath $bundleFile) { Remove-Item -LiteralPath $bundleFile -Force }
 }
 if (-not (Get-Command $HostName -ErrorAction SilentlyContinue)) { throw "$HostName CLI was not found on PATH." }
-& $HostName plugin marketplace add $marketplaceRoot
-if ($LASTEXITCODE -ne 0) { throw "$HostName could not add the GameHub marketplace." }
+$marketplaceOutput = & $HostName plugin marketplace add $marketplaceRoot 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0) {
+  $knownMarketplaces = & $HostName plugin marketplace list 2>&1 | Out-String
+  if ($knownMarketplaces -notmatch 'gamehub') { throw "$HostName could not add the GameHub marketplace: $marketplaceOutput" }
+}
 if ($HostName -eq 'claude') {
   & claude plugin install gamehub@gamehub
   if ($LASTEXITCODE -ne 0) { throw 'Claude Code could not install the GameHub plugin.' }
