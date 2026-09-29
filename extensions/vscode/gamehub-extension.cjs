@@ -1,6 +1,6 @@
 'use strict';
 const vscode = require('vscode');
-const { randomBytes } = require('node:crypto');
+const { createHash, randomBytes } = require('node:crypto');
 
 const TOKEN_KEY = 'gamehub.session.v1';
 const allowedUrl = (value, label) => {
@@ -27,6 +27,62 @@ const trustedExternalUrl = value => {
   if (url.protocol !== 'https:' || !['github.com', 'www.github.com'].includes(url.hostname)) throw new Error('只允许打开 GitHub HTTPS 授权页面。');
   return url;
 };
+
+
+const UPDATE_MANIFEST_URL = 'https://mooyu.fun/downloads/manifest.json';
+const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const UPDATE_RETRY_MS = 30 * 60 * 1000;
+const MAX_UPDATE_BYTES = 64 * 1024 * 1024;
+const versionParts = value => String(value).split('.').map(part => Number.parseInt(part, 10) || 0);
+const compareVersions = (left, right) => {
+  const a = versionParts(left); const b = versionParts(right);
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const delta = (a[index] || 0) - (b[index] || 0);
+    if (delta) return delta;
+  }
+  return 0;
+};
+const trustedUpdateUrl = value => {
+  const url = new URL(String(value));
+  if (url.protocol !== 'https:' || url.hostname !== 'mooyu.fun' || url.username || url.password) throw new Error('GameHub 更新地址不受信任。');
+  return url;
+};
+const downloadUpdateBytes = async value => {
+  const url = trustedUpdateUrl(value);
+  const response = await fetch(url, { cache: 'no-store', redirect: 'error', headers: { accept: 'application/json, application/octet-stream' } });
+  if (!response.ok) throw new Error(`GameHub 更新下载失败（${response.status}）。`);
+  const declared = Number(response.headers.get('content-length') || 0);
+  if (declared > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
+  return bytes;
+};
+async function checkForEditorUpdate(context, output) {
+  const config = vscode.workspace.getConfiguration('gamehub');
+  if (!config.get('autoUpdate', true)) return;
+  const now = Date.now();
+  if (Number(context.globalState.get('gamehub.update.nextCheckAt', 0)) > now) return;
+  await context.globalState.update('gamehub.update.nextCheckAt', now + UPDATE_INTERVAL_MS);
+  try {
+    const manifest = JSON.parse((await downloadUpdateBytes(UPDATE_MANIFEST_URL)).toString('utf8'));
+    const item = manifest.editorExtension;
+    if (manifest.channel !== 'stable' || !item?.supportedHosts?.includes(hostId())) throw new Error('GameHub 稳定版更新清单无效。');
+    const currentVersion = String(context.extension?.packageJSON?.version || '0.0.0');
+    if (compareVersions(item.version, currentVersion) <= 0) return;
+    const bytes = await downloadUpdateBytes(item.url);
+    const actual = createHash('sha256').update(bytes).digest('hex');
+    if (actual !== String(item.sha256).toLowerCase()) throw new Error('GameHub VSIX SHA-256 校验失败。');
+    await vscode.workspace.fs.createDirectory(context.globalStorageUri);
+    const target = vscode.Uri.joinPath(context.globalStorageUri, item.filename);
+    await vscode.workspace.fs.writeFile(target, bytes);
+    await vscode.commands.executeCommand('workbench.extensions.installExtension', target);
+    await context.globalState.update('gamehub.update.stagedVersion', item.version);
+    output.appendLine(`GameHub ${item.version} 已在后台安装，将在 Cursor/VS Code 重启后生效。`);
+  } catch (error) {
+    await context.globalState.update('gamehub.update.nextCheckAt', Date.now() + UPDATE_RETRY_MS);
+    output.appendLine(`GameHub 自动更新检查失败：${String(error.message || error)}`);
+  }
+}
 
 function activate(context) {
   let currentView;
@@ -75,7 +131,10 @@ function activate(context) {
     catch (error) { await vscode.window.showErrorMessage(String(error.message || error)); }
   }));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.openBrowser', () => openBrowser().catch(error => vscode.window.showErrorMessage(String(error.message || error)))));
-  context.subscriptions.push({ dispose() { currentView = undefined; } });
+  const updateOutput = vscode.window.createOutputChannel('GameHub');
+  const updateTimer = setTimeout(() => void checkForEditorUpdate(context, updateOutput), 15000);
+  const updateInterval = setInterval(() => void checkForEditorUpdate(context, updateOutput), UPDATE_INTERVAL_MS);
+  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; } });
 }
 
 module.exports = { activate };
