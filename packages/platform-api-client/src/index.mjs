@@ -45,6 +45,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     listWorks: ({ limit = 20, kind } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
+    releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
     createChallenge: (body, options) => request('/v1/auth/email/challenges', { ...options, method: 'POST', body }),
     verifyChallenge: (body, options) => request('/v1/auth/email/verify', { ...options, method: 'POST', body }),
     startGitHubDevice: (body, options) => request('/v1/auth/github/device', { ...options, method: 'POST', body }),
