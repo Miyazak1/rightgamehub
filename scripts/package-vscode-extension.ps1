@@ -36,6 +36,7 @@ $contentTypes = @'
   <Default Extension="json" ContentType="application/json" />
   <Default Extension="js" ContentType="application/javascript" />
   <Default Extension="cjs" ContentType="application/javascript" />
+  <Default Extension="mjs" ContentType="application/javascript" />
   <Default Extension="svg" ContentType="image/svg+xml" />
   <Default Extension="md" ContentType="text/markdown" />
   <Default Extension="vsixmanifest" ContentType="text/xml" />
@@ -65,6 +66,7 @@ try {
   Add-TextEntry 'extension.vsixmanifest' $manifest
   Add-FileEntry 'extension/package.json' (Join-Path $extensionRoot 'package.json')
   Add-FileEntry 'extension/gamehub-extension.cjs' (Join-Path $extensionRoot 'gamehub-extension.cjs')
+  Add-FileEntry 'extension/desktop-launcher.mjs' (Join-Path $projectRoot 'extensions\harness\src\desktop-launcher.mjs')
   Add-FileEntry 'extension/media/gamehub.js' (Join-Path $extensionRoot 'media\gamehub.js')
   Add-FileEntry 'extension/media/arcade.svg' (Join-Path $extensionRoot 'media\arcade.svg')
 } finally {
