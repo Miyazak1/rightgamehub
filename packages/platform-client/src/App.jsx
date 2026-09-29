@@ -698,11 +698,11 @@ function ChallengePage({ api, go, demo, code }) {
 
 const agentInstallTargets = [
   {
-    id: 'harness', name: 'DeepSeek Harness', badge: '原生右栏', tone: 'native', state: 'npm 发布准备中',
+    id: 'harness', name: 'DeepSeek Harness', badge: '原生右栏', tone: 'native', state: '官方安装器',
     summary: '完整 GameHub 客户端内置在 Harness 右栏，登录、发现、游玩和发布都不离开 Agent。',
-    command: 'npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin',
-    update: 'npx @deepseek-ai/dsh plugin --profile web update gamehub-dsh-plugin',
-    prompt: '请在获得我的确认后，把 gamehub-dsh-plugin 安装到 DeepSeek Harness 的 web profile；安装后检查结果，并提醒我重启 dsh web。',
+    command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName harness',
+    alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- harness',
+    prompt: '请帮我把 GameHub 安装到 DeepSeek Harness 的 web profile。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并校验构建好的插件 tarball，再调用 dsh plugin --profile web add，然后等待我确认；确认后执行适合当前系统的命令，验证安装结果，并提醒我重启 dsh web。',
   },
   {
     id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: '官方安装器',
