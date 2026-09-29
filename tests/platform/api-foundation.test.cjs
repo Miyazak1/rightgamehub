@@ -19,6 +19,33 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_CLIENT_SECRET: 'secret' }), /GITHUB_CLIENT_ID/);
 });
 
+test('GitHub OAuth callback accepts the GitHub authorization issuer', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  let callbackQuery;
+  const app = createApp({
+    config: { requestBodyLimit: 65536 },
+    database: { ping: async () => true },
+    migrations: { status: async () => ({ ready: true }) },
+    authService: {
+      completeGitHubWeb: async query => {
+        callbackQuery = query;
+        return { status: 'complete' };
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const issuer = 'https://github.com/login/oauth';
+  const response = await app.inject({
+    method: 'GET',
+    url: `/v1/auth/github/web/callback?code=oauth-code&state=${'s'.repeat(32)}&iss=${encodeURIComponent(issuer)}`,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(callbackQuery.iss, issuer);
+  assert.match(response.body, /已连接 GameHub/);
+});
+
 test('explicit development origin receives CORS preflight and creator reads stay authenticated', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const works = [{ id: crypto.randomUUID(), title: 'Real work' }];
