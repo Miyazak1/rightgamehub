@@ -192,26 +192,59 @@ function StatePanel({ title, body, action, onAction }) { return <div className="
 function DetailPage({ workId, api, host, demo, go }) {
   const [state, setState] = useState({ status: 'loading' });
   const [library, setLibrary] = useState(null); const [libraryBusy, setLibraryBusy] = useState(false);
-  const [reporting, setReporting] = useState(false); const [nativeBusy, setNativeBusy] = useState(false); const [nativeMessage, setNativeMessage] = useState('');
+  const [reporting, setReporting] = useState(false); const [nativeBusy, setNativeBusy] = useState(false); const [nativeMessage, setNativeMessage] = useState(''); const [nativeDownload, setNativeDownload] = useState({ phase: 'idle', percent: 0 });
   useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.find(w => w.id === workId) : (await api.getWork(workId)).data; if (live) setState(data ? { status: 'ready', data } : { status: 'missing' }); } catch { if (live) setState({ status: 'error' }); } })(); return () => { live = false; }; }, [workId, demo]);
   useEffect(() => { let live = true; if (demo) { setLibrary({ savedAt: null }); return undefined; } api.getLibraryState(workId).then(({ data }) => { if (live) setLibrary(data); }).catch(() => {}); return () => { live = false; }; }, [workId, demo, api]);
+  useEffect(() => {
+    if (state.status !== 'ready' || !host?.desktop?.getReleaseStatus) return undefined;
+    const target = state.data.targets?.find(item => item.targetKey === 'windows-x64' && item.currentReleaseId);
+    if (!target) return undefined;
+    const release = { workId: state.data.id, releaseId: target.currentReleaseId, fileName: target.fileName, sizeBytes: target.sizeBytes, sha256: target.sha256 };
+    let live = true;
+    host.desktop.getReleaseStatus(release).then(status => {
+      if (!live) return;
+      const progress = status.download;
+      if (status.prepared || progress?.state === 'ready') setNativeDownload({ phase: 'ready', percent: 100 });
+      else if (progress && ['checking', 'downloading', 'verifying'].includes(progress.state)) setNativeDownload({ phase: progress.state, percent: progress.percent || 0 });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [state.status, state.data, host]);
   if (state.status === 'loading') return <main className="page"><LoadingCards /></main>;
   if (state.status !== 'ready') return <main className="page"><StatePanel title={state.status === 'missing' ? '作品不存在或已撤下' : '无法打开作品'} body="回到发现页看看其他作品。" action="返回发现" onAction={() => go('/discover')} /></main>;
   const work = state.data; const builtIn = work.id === GUESS_BAIKE_WORK_ID; const web = builtIn ? { currentReleaseId: '' } : work.targets.find(x => x.targetKey === 'web' && x.currentReleaseId); const windows = builtIn ? null : work.targets.find(x => x.targetKey === 'windows-x64' && x.currentReleaseId);
   const toggleLibrary = async () => { setLibraryBusy(true); try { const result = demo ? { data: { savedAt: library?.savedAt ? null : new Date().toISOString() } } : library?.savedAt ? await api.removeFromLibrary(work.id) : await api.saveToLibrary(work.id); setLibrary(result.data); } catch (caught) { if (caught.status === 401) go('/account'); } finally { setLibraryBusy(false); } };
   const launchWindows = async () => {
     if (!windows) return;
-    if (!host?.desktop?.launchRelease) { location.href = api.releaseDownloadUrl(work.id, windows.currentReleaseId); return; }
-    if (!globalThis.confirm?.('下载、校验并启动这个 Windows EXE？原生程序将以当前 Windows 用户权限在独立窗口运行。只继续运行你信任的作品。')) return;
-    setNativeBusy(true); setNativeMessage('正在下载并校验 Windows 版本…');
+    const release = { workId: work.id, releaseId: windows.currentReleaseId, fileName: windows.fileName, sizeBytes: windows.sizeBytes, sha256: windows.sha256 };
+    if (!host?.desktop?.prepareRelease || !host?.desktop?.launchRelease) {
+      setNativeMessage('普通浏览器不能直接运行本地 EXE。请在已安装 GameHub 插件的 Agent 中打开此作品。');
+      return;
+    }
+    if (nativeDownload.phase === 'ready') {
+      setNativeBusy(true); setNativeDownload(current => ({ ...current, phase: 'launching' })); setNativeMessage('正在启动游戏…');
+      try {
+        await host.desktop.launchRelease(release);
+        setNativeDownload({ phase: 'ready', percent: 100 });
+        setNativeMessage('游戏已启动，请查看独立窗口。');
+      } catch (caught) {
+        setNativeDownload({ phase: 'ready', percent: 100 });
+        setNativeMessage(caught.message || 'Windows 游戏未能启动。');
+      } finally { setNativeBusy(false); }
+      return;
+    }
+    if (!globalThis.confirm?.('将这个 Windows 游戏下载到 GameHub 本地游戏库？下载后仍需点击“启动游戏”，原生程序将以当前 Windows 用户权限运行。只下载你信任的作品。')) return;
+    setNativeBusy(true); setNativeDownload({ phase: 'downloading', percent: 0 }); setNativeMessage('正在下载到 GameHub 本地游戏库…');
     try {
-      await host.desktop.launchRelease({ workId: work.id, releaseId: windows.currentReleaseId, fileName: windows.fileName, sizeBytes: windows.sizeBytes, sha256: windows.sha256 });
-      setNativeMessage('已请求启动，请查看独立游戏窗口。');
-    } catch (caught) { setNativeMessage(caught.message || 'Windows 游戏未能启动。'); }
-    finally { setNativeBusy(false); }
+      await host.desktop.prepareRelease(release, { onProgress: progress => setNativeDownload({ phase: progress?.state || 'downloading', percent: progress?.percent || 0 }) });
+      setNativeDownload({ phase: 'ready', percent: 100 });
+      setNativeMessage('下载和校验已完成，可以启动游戏。');
+    } catch (caught) {
+      setNativeDownload(current => ({ ...current, phase: 'failed' }));
+      setNativeMessage(caught.message || 'Windows 游戏下载失败。');
+    } finally { setNativeBusy(false); }
   };
 
-  return <main className="page detail-page"><button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button><section className="detail-hero"><Art work={work} large /><div className="detail-copy"><div className="badge-row"><span className="status-badge">{icons.check} {builtIn ? 'GameHub 官方游戏' : web ? '已验证 Web 版本' : '已验证 Windows 版本'}</span><span>{work.kind === 'game' ? '游戏' : '互动作品'}</span></div><h1>{work.title}</h1><p className="detail-byline">by {work.creatorDisplayName ?? (builtIn ? 'GameHub' : '社区作者')} · 约 {work.estimatedMinutes ?? 3} 分钟{work.agentLabel ? ` · ${work.agentLabel} 共创` : ''}</p><p className="detail-lead">{work.description}</p>{!!work.tags?.length && <div className="detail-tags">{work.tags.map(tag => <span key={tag}>{tag}</span>)}</div>}<div className="detail-actions">{web && <Button icon={icons.play} onClick={() => go(`/play/${work.id}/${web.currentReleaseId ?? ''}`)}>立即游玩</Button>}{windows && <Button icon={host?.desktop?.launchRelease ? icons.play : "↓"} disabled={nativeBusy} onClick={launchWindows}>{nativeBusy ? "正在准备…" : host?.desktop?.launchRelease ? "下载并启动 Windows 版" : "下载 Windows 版"}</Button>}<Button kind="secondary" disabled={libraryBusy} onClick={toggleLibrary}>{library?.savedAt ? '移出游戏库' : '加入游戏库'}</Button></div><p className="friendly-note">{windows && !web ? '下载后由 Windows 确认并在独立窗口运行 · 仅运行你信任的作品' : '隔离运行 · 不读取项目文件与宿主凭据'}</p>{nativeMessage && <p className="friendly-note" role="status">{nativeMessage}</p>}{!builtIn && <button className="report-link" onClick={() => setReporting(true)}>举报这个作品</button>}</div></section><section className="detail-columns"><div className="panel"><span className="kicker">HOW TO PLAY</span><h2>玩法说明</h2><p>{work.instructions || '作者暂未提供额外说明。打开游戏后跟随画面提示即可。'}</p>{work.repositoryUrl && <p className="source-link"><a href={work.repositoryUrl} target="_blank" rel="noreferrer">在 GitHub 查看源码 ↗</a><small>{work.licenseSpdx} 开源许可</small></p>}</div><div className="panel facts"><span className="kicker">COMPATIBILITY</span><h2>运行信息</h2><dl><div><dt>运行方式</dt><dd>{web ? '侧栏 Web' : 'Windows 独立窗口'}</dd></div><div><dt>当前版本</dt><dd>修订 {work.revision}</dd></div><div><dt>社区数据</dt><dd>{workPlays(work)} · {work.saveCount ?? 0} 收藏</dd></div><div><dt>数据权限</dt><dd>无项目文件权限</dd></div></dl></div></section>{reporting && <ReportDialog work={work} api={api} demo={demo} go={go} onClose={() => setReporting(false)}/>}</main>;
+  return <main className="page detail-page"><button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button><section className="detail-hero"><Art work={work} large /><div className="detail-copy"><div className="badge-row"><span className="status-badge">{icons.check} {builtIn ? 'GameHub 官方游戏' : web ? '已验证 Web 版本' : '已验证 Windows 版本'}</span><span>{work.kind === 'game' ? '游戏' : '互动作品'}</span></div><h1>{work.title}</h1><p className="detail-byline">by {work.creatorDisplayName ?? (builtIn ? 'GameHub' : '社区作者')} · 约 {work.estimatedMinutes ?? 3} 分钟{work.agentLabel ? ` · ${work.agentLabel} 共创` : ''}</p><p className="detail-lead">{work.description}</p>{!!work.tags?.length && <div className="detail-tags">{work.tags.map(tag => <span key={tag}>{tag}</span>)}</div>}<div className="detail-actions">{web && <Button icon={icons.play} onClick={() => go(`/play/${work.id}/${web.currentReleaseId ?? ''}`)}>立即游玩</Button>}{windows && <Button icon={nativeDownload.phase === 'ready' ? icons.play : "↓"} disabled={nativeBusy} onClick={launchWindows}>{nativeDownload.phase === 'launching' ? '正在启动…' : ['checking','downloading','verifying'].includes(nativeDownload.phase) ? `下载中 ${nativeDownload.percent}%` : nativeDownload.phase === 'ready' ? '启动游戏' : host?.desktop?.prepareRelease ? '下载 Windows 版' : '需要 GameHub Agent'}</Button>}<Button kind="secondary" disabled={libraryBusy} onClick={toggleLibrary}>{library?.savedAt ? '移出游戏库' : '加入游戏库'}</Button></div>{windows && ['checking','downloading','verifying'].includes(nativeDownload.phase) && <div className="native-download-progress" role="progressbar" aria-label="Windows 游戏下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={nativeDownload.percent}><i style={{ width: `${nativeDownload.percent}%` }}/></div>}<p className="friendly-note">{windows && !web ? (host?.desktop?.prepareRelease ? '保存到 GameHub 本地游戏库 · 校验通过后可反复启动' : '请在已安装 GameHub 插件的 Agent 中下载并启动') : '隔离运行 · 不读取项目文件与宿主凭据'}</p>{nativeMessage && <p className="friendly-note" role="status">{nativeMessage}</p>}{!builtIn && <button className="report-link" onClick={() => setReporting(true)}>举报这个作品</button>}</div></section><section className="detail-columns"><div className="panel"><span className="kicker">HOW TO PLAY</span><h2>玩法说明</h2><p>{work.instructions || '作者暂未提供额外说明。打开游戏后跟随画面提示即可。'}</p>{work.repositoryUrl && <p className="source-link"><a href={work.repositoryUrl} target="_blank" rel="noreferrer">在 GitHub 查看源码 ↗</a><small>{work.licenseSpdx} 开源许可</small></p>}</div><div className="panel facts"><span className="kicker">COMPATIBILITY</span><h2>运行信息</h2><dl><div><dt>运行方式</dt><dd>{web ? '侧栏 Web' : 'Windows 独立窗口'}</dd></div><div><dt>当前版本</dt><dd>修订 {work.revision}</dd></div><div><dt>社区数据</dt><dd>{workPlays(work)} · {work.saveCount ?? 0} 收藏</dd></div><div><dt>数据权限</dt><dd>无项目文件权限</dd></div></dl></div></section>{reporting && <ReportDialog work={work} api={api} demo={demo} go={go} onClose={() => setReporting(false)}/>}</main>;
 }
 
 function ReportDialog({ work, api, demo, go, onClose }) {
