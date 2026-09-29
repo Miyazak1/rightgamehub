@@ -613,42 +613,42 @@ button { cursor: pointer; }
 @container (max-width: 520px) { .social-board li { grid-template-columns: 30px 34px minmax(0, 1fr); padding: 9px; } .social-board .avatar-sprite, .social-board .avatar-image { width: 34px; height: 34px; } .social-actions { grid-column: 2 / -1; justify-content: flex-end; } .social-board__head { align-items: start; flex-direction: column; } }
 
 .install-page { padding-bottom: 96px; }
-.install-hero { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; align-items: stretch; margin: 18px 0 20px; padding: 34px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, var(--surface) 58%); box-shadow: 7px 7px 0 var(--shadow); }
+.install-hero { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; align-items: stretch; margin: 18px 0 20px; padding: 34px; border: 1px solid var(--gh-border); background: linear-gradient(135deg, color-mix(in srgb, var(--gh-action) 16%, var(--gh-panel)) 0%, var(--gh-panel) 58%); box-shadow: 7px 7px 0 var(--gh-border); }
 .install-hero h1 { margin: 8px 0 10px; font-size: clamp(30px, 5vw, 54px); letter-spacing: -.055em; }
-.install-hero p { max-width: 720px; margin: 0; color: var(--muted); line-height: 1.75; }
-.install-detected { display: flex; flex-direction: column; justify-content: center; padding: 20px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 86%, transparent); }
-.install-detected span, .install-detected small { color: var(--muted); }
+.install-hero p { max-width: 720px; margin: 0; color: var(--gh-secondary); line-height: 1.75; }
+.install-detected { display: flex; flex-direction: column; justify-content: center; padding: 20px; border: 1px solid var(--gh-border); background: color-mix(in srgb, var(--gh-panel) 86%, transparent); }
+.install-detected span, .install-detected small { color: var(--gh-secondary); }
 .install-detected strong { margin: 9px 0; font-size: 22px; }
 .install-principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 34px; }
-.install-principles > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; padding: 18px; border: 1px solid var(--border); background: var(--surface); }
-.install-principles b { grid-row: 1 / 3; color: var(--accent); font-size: 22px; }
-.install-principles span { color: var(--muted); font-size: 12px; }
-.install-recommended { margin-bottom: 36px; padding: 18px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.install-recommended > span { display: block; margin-bottom: 12px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.install-principles > div { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; padding: 18px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
+.install-principles b { grid-row: 1 / 3; color: var(--gh-action); font-size: 22px; }
+.install-principles span { color: var(--gh-secondary); font-size: 12px; }
+.install-recommended { margin-bottom: 36px; padding: 18px; border: 2px solid var(--gh-action); background: color-mix(in srgb, var(--gh-action) 7%, var(--gh-panel)); }
+.install-recommended > span { display: block; margin-bottom: 12px; color: var(--gh-action); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .agent-install-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.agent-install-card { display: flex; min-width: 0; flex-direction: column; gap: 14px; padding: 22px; border: 1px solid var(--border); background: var(--surface); box-shadow: 4px 4px 0 color-mix(in srgb, var(--border) 55%, transparent); }
+.agent-install-card { display: flex; min-width: 0; flex-direction: column; gap: 14px; padding: 22px; border: 1px solid var(--gh-border); background: var(--gh-panel); box-shadow: 4px 4px 0 color-mix(in srgb, var(--gh-border) 55%, transparent); }
 .install-recommended .agent-install-card { box-shadow: none; }
 .agent-install-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .agent-install-card__head h3 { margin: 7px 0 0; font-size: 19px; }
-.agent-install-card__head small { color: var(--muted); text-align: right; }
-.agent-install-card__badge { display: inline-flex; padding: 4px 7px; border: 1px solid currentColor; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.agent-install-card__head small { color: var(--gh-secondary); text-align: right; }
+.agent-install-card__badge { display: inline-flex; padding: 4px 7px; border: 1px solid currentColor; color: var(--gh-secondary); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
 .agent-install-card__badge.is-native { color: #43c98b; }
-.agent-install-card__badge.is-building { color: var(--accent); }
+.agent-install-card__badge.is-building { color: var(--gh-action); }
 .agent-install-card__badge.is-testing { color: #e7ad48; }
 .agent-install-card__badge.is-browser { color: #6fa9ff; }
-.agent-install-card > p { min-height: 52px; margin: 0; color: var(--muted); line-height: 1.65; }
-.agent-command { display: flex; min-width: 0; align-items: stretch; border: 1px solid var(--border); background: var(--background); }
-.agent-command code { flex: 1; min-width: 0; padding: 12px; overflow: auto; color: var(--text); font-size: 11px; white-space: nowrap; }
-.agent-command button, .agent-install-card__actions button { border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.agent-command button { flex: 0 0 auto; padding: 0 12px; border-left: 1px solid var(--border); }
-.agent-install-card details summary { color: var(--muted); cursor: pointer; font-size: 12px; }
+.agent-install-card > p { min-height: 52px; margin: 0; color: var(--gh-secondary); line-height: 1.65; }
+.agent-command { display: flex; min-width: 0; align-items: stretch; border: 1px solid var(--gh-border); background: var(--gh-canvas); }
+.agent-command code { flex: 1; min-width: 0; padding: 12px; overflow: auto; color: var(--gh-primary); font-size: 11px; white-space: nowrap; }
+.agent-command button, .agent-install-card__actions button { border: 0; background: transparent; color: var(--gh-action); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.agent-command button { flex: 0 0 auto; padding: 0 12px; border-left: 1px solid var(--gh-border); }
+.agent-install-card details summary { color: var(--gh-secondary); cursor: pointer; font-size: 12px; }
 .agent-install-card details .agent-command { margin-top: 9px; }
 .agent-install-card__actions { display: flex; gap: 9px; margin-top: auto; }
-.agent-install-card__actions button { flex: 1; padding: 11px 12px; border: 1px solid var(--accent); }
-.agent-install-card__actions button:last-child { border-color: var(--border); color: var(--muted); }
-.install-security { display: grid; grid-template-columns: .7fr 1.3fr; gap: 26px; margin-top: 38px; padding: 26px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.agent-install-card__actions button { flex: 1; padding: 11px 12px; border: 1px solid var(--gh-action); }
+.agent-install-card__actions button:last-child { border-color: var(--gh-border); color: var(--gh-secondary); }
+.install-security { display: grid; grid-template-columns: .7fr 1.3fr; gap: 26px; margin-top: 38px; padding: 26px; border-top: 1px solid var(--gh-border); border-bottom: 1px solid var(--gh-border); }
 .install-security h2 { margin: 8px 0 0; }
-.install-security ul { display: grid; gap: 11px; margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.6; }
+.install-security ul { display: grid; gap: 11px; margin: 0; padding-left: 20px; color: var(--gh-secondary); line-height: 1.6; }
 @container (max-width: 767px) {
   .install-hero { grid-template-columns: 1fr; padding: 24px; }
   .install-principles, .agent-install-grid { grid-template-columns: 1fr; }
@@ -657,7 +657,7 @@ button { cursor: pointer; }
 }
 @container (max-width: 479px) {
   .install-page { padding-bottom: 118px; }
-  .install-hero { margin-top: 8px; padding: 18px; box-shadow: 4px 4px 0 var(--shadow); }
+  .install-hero { margin-top: 8px; padding: 18px; box-shadow: 4px 4px 0 var(--gh-border); }
   .agent-install-card { padding: 17px; }
   .agent-install-card__head { align-items: flex-start; }
   .agent-install-card__actions { flex-direction: column; }
