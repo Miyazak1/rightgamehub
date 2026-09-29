@@ -5,9 +5,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $baseUrl = 'https://mooyu.fun'
 if (-not $HostName) {
-  foreach ($candidate in @('cursor', 'code', 'harness', 'codex', 'claude')) {
+  foreach ($candidate in @('cursor', 'code', 'codex', 'claude')) {
     if (Get-Command $candidate -ErrorAction SilentlyContinue) { $HostName = $candidate; break }
   }
+  if (-not $HostName -and (Get-Command dsh -ErrorAction SilentlyContinue)) { $HostName = 'harness' }
   if (-not $HostName) { throw 'No supported Agent CLI was found on PATH.' }
 }
 $manifest = Invoke-RestMethod -Uri "$baseUrl/downloads/manifest.json"
