@@ -21,16 +21,19 @@ export function createUploadService({ repository, objectStore, ids = () => crypt
   return {
     async create(actor, workId, body, idempotencyKey) {
       if (!actor.scopes.includes('upload')) throw new UploadError('FORBIDDEN', 403, 'This device cannot upload.');
-      if (body.targetKey !== 'web' || body.packageType !== 'web_zip') throw new UploadError('UNSUPPORTED_PACKAGE', 422, 'This stage accepts web ZIP uploads only.');
+      const webPackage = body.targetKey === 'web' && body.packageType === 'web_zip';
+      const windowsExe = body.targetKey === 'windows-x64' && body.packageType === 'windows_standalone_exe';
+      if (!webPackage && !windowsExe) throw new UploadError('UNSUPPORTED_PACKAGE', 422, 'Only Web ZIP and single-file Windows x64 EXE uploads are supported.');
       const declaredBytes = Number(body.declaredBytes);
-      if (!Number.isSafeInteger(declaredBytes) || declaredBytes < 1 || declaredBytes > 100 * 1024 * 1024) throw new UploadError('UPLOAD_TOO_LARGE', 413, 'Declared upload size is invalid.');
+      const maxBytes = webPackage ? 100 * 1024 * 1024 : 500 * 1024 * 1024;
+      if (!Number.isSafeInteger(declaredBytes) || declaredBytes < 1 || declaredBytes > maxBytes) throw new UploadError('UPLOAD_TOO_LARGE', 413, 'Declared upload size is invalid.');
       if (!/^[a-f0-9]{64}$/.test(body.sha256)) throw new UploadError('SCHEMA_INVALID', 400, 'SHA-256 is invalid.');
       requireIdempotencyKey(idempotencyKey);
       const uploadId = ids();
       return repository.createIdempotent({
         actor, workId, body, declaredBytes, uploadId, idempotencyKey,
         requestHash: requestHash({ workId, body }),
-        objectKey: `quarantine/${uploadId}/${ids()}.zip`,
+        objectKey: `quarantine/${uploadId}/${ids()}.${body.packageType === 'web_zip' ? 'zip' : 'bin'}`,
       });
     },
     async grant(actor, uploadId) {
