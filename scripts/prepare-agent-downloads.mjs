@@ -43,8 +43,25 @@ const pluginFilename = `gamehub-agent-plugin-${portablePlugin.version}.json`;
 await writeFile(new URL(pluginFilename, publicRoot), pluginBundle);
 
 await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
+  channel: 'stable',
+  updatePolicy: {
+    consent: 'on-first-install',
+    checkIntervalHours: 6,
+    download: 'background',
+    apply: 'on-host-restart',
+    rollbackVersions: 1,
+    integrity: ['sha256'],
+  },
+  hostAdapters: {
+    harness: { strategy: 'gamehub-staged-package', artifact: 'harnessPlugin', restartRequired: true },
+    code: { strategy: 'editor-extension', artifact: 'editorExtension', restartRequired: true },
+    cursor: { strategy: 'editor-extension', artifact: 'editorExtension', restartRequired: true },
+    codex: { strategy: 'native-marketplace', marketplace: 'gamehub', restartRequired: true },
+    claude: { strategy: 'native-marketplace', marketplace: 'gamehub', restartRequired: true },
+    opencode: { strategy: 'browser-fallback', restartRequired: false },
+  },
   editorExtension: {
     version: extensionPackage.version,
     extensionId: `${extensionPackage.publisher}.${extensionPackage.name}`,
