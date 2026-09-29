@@ -775,24 +775,27 @@ function ChallengePage({ api, go, demo, code }) {
 
 const agentInstallTargets = [
   {
-    id: 'harness', name: 'DeepSeek Harness', badge: '原生右栏', tone: 'native', state: '官方安装器',
-    summary: '完整 GameHub 客户端内置在 Harness 右栏，登录、发现、游玩和发布都不离开 Agent。',
+    id: 'harness', name: 'DeepSeek Harness', badge: '原生右栏', tone: 'native', state: '官方安装器 · 自动更新',
+    summary: '完整 GameHub 客户端内置在 Harness 右栏；首次确认安装后每 6 小时后台校验更新，重启 Harness 生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName harness',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- harness',
+    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName harness',
     prompt: '请帮我把 GameHub 安装到 DeepSeek Harness 的 web profile。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并校验构建好的插件 tarball，再调用 dsh plugin --profile web add，然后等待我确认；确认后执行适合当前系统的命令，验证安装结果，并提醒我重启 dsh web。',
   },
   {
-    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: '官方安装器',
-    summary: '通过 Activity Bar 打开 GameHub，令牌保存在编辑器 SecretStorage，不读取工作区文件。',
+    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: '官方安装器 · 自动更新',
+    summary: '通过 Activity Bar 打开 GameHub，令牌保存在 SecretStorage；首次安装后后台下载校验过的 VSIX，重启编辑器生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName code',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- code',
+    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName code',
     prompt: '请帮我安装 GameHub 的 VS Code 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 code --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何在 Activity Bar 打开 GameHub。',
   },
   {
-    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '官方安装器',
-    summary: '与 VS Code 共用扩展，运行时自动识别 Cursor，并跟随编辑器主题。',
+    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '官方安装器 · 自动更新',
+    summary: '与 VS Code 共用扩展并自动识别 Cursor；首次安装后后台下载校验过的 VSIX，重启编辑器生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName cursor',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- cursor',
+    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName cursor',
     prompt: '请帮我安装 GameHub 的 Cursor 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 cursor --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何打开 GameHub 侧栏。',
   },
   {
@@ -802,16 +805,18 @@ const agentInstallTargets = [
   },
   {
     id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'building', state: '官方技能安装器 · MCP App 开发中',
-    summary: '官方安装器添加本地 GameHub marketplace；随后在插件目录安装技能。原生 MCP App 上线后再启用内置交互。',
+    summary: '官方安装器添加本地 GameHub marketplace，并注册后台更新；新版本在 Codex 重启后从插件缓存加载。原生 MCP App 上线后再启用内置交互。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName codex',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- codex',
+    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName codex',
     prompt: '请帮我安装 GameHub 的 Codex 插件。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并逐文件校验插件包、添加本地 GameHub marketplace，然后等待我确认；确认后执行适合当前系统的命令。完成后请引导我在 Plugins Directory 的 GameHub Plugins 来源中安装 gamehub。',
   },
   {
     id: 'claude', name: 'Claude Code', badge: 'Agent Plugin', tone: 'building', state: '官方技能安装器 · MCP 开发中',
-    summary: '官方安装器下载并校验可移植技能，通过 Claude Code marketplace 安装；MCP 面板仍在开发。',
+    summary: '官方安装器下载并校验可移植技能，通过 Claude Code marketplace 安装；后台会暂存新版，重启并刷新插件后生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName claude',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- claude',
+    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName claude',
     prompt: '请帮我安装 GameHub 的 Claude Code 插件。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并逐文件校验插件包、添加本地 marketplace 并调用 claude plugin install gamehub@gamehub，然后等待我确认；确认后执行适合当前系统的命令并验证插件已启用。',
   },
   {
@@ -841,13 +846,13 @@ function InstallPage({ go, hostIdentity }) {
   const detected = agentInstallTargets.find(item => item.id === hostIdentity.id);
   return <main className="page install-page">
     <section className="install-hero">
-      <div><span className="kicker">GAMEHUB EVERYWHERE</span><h1>添加到你的 Agent</h1><p>能安全内置就留在 Agent 里；宿主没有稳定界面能力时，再打开浏览器。账号、游戏库和作品数据保持一致。</p></div>
+      <div><span className="kicker">GAMEHUB EVERYWHERE</span><h1>添加到你的 Agent</h1><p>能安全内置就留在 Agent 里；宿主没有稳定界面能力时，再打开浏览器。首次安装需你确认，之后后台下载校验过的稳定版，并在宿主重启后生效。</p></div>
       <div className="install-detected"><span>当前环境</span><strong>{hostIdentity.label}</strong><small>{detected ? `${detected.badge} · ${detected.state}` : '使用网页版'}</small></div>
     </section>
     <section className="install-principles" aria-label="接入原则"><div><b>01</b><strong>原生优先</strong><span>右栏、侧栏或 MCP App</span></div><div><b>02</b><strong>最小权限</strong><span>不读取项目与宿主凭据</span></div><div><b>03</b><strong>始终可用</strong><span>不支持内置时回退网页</span></div></section>
     {detected && <section className="install-recommended"><span>为当前宿主推荐</span><AgentInstallCard target={detected} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/></section>}
     <section className="install-catalog"><div className="section-heading"><div><h2>选择你的 Agent</h2><p>安装入口会随着各宿主完成验证逐步开放。</p></div></div><div className="agent-install-grid">{agentInstallTargets.filter(item => item.id !== detected?.id).map(target => <AgentInstallCard key={target.id} target={target} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/>)}</div></section>
-    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>GameHub 登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li></ul></section>
+    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>GameHub 登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li><li>安装器只从 mooyu.fun 下载版本清单和制品，并逐个校验 SHA-256。</li><li>Windows 使用当前用户的计划任务，macOS / Linux 使用当前用户的 cron；没有调度能力时仍可手动更新。</li></ul></section>
   </main>;
 }
 
