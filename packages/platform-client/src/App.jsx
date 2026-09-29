@@ -257,7 +257,7 @@ function ReportDialog({ work, api, demo, go, onClose }) {
   return <div className="modal-backdrop" role="presentation" onClick={event => { if (event.target === event.currentTarget) onClose(); }}><form className="report-dialog" role="dialog" aria-modal="true" aria-label="举报作品" onSubmit={submit}><button type="button" className="modal-close" onClick={onClose} aria-label="关闭">×</button><span className="kicker">CONTENT REPORT</span>{state === 'sent' ? <><h2>已收到举报</h2><p>管理员会根据作品当前版本和你提供的信息进行判断。</p><Button type="button" onClick={onClose}>完成</Button></> : <><h2>举报《{work.title}》</h2><p>请选择最接近的问题。举报不会自动下架作品。</p><label>问题类型<select value={category} onChange={event => setCategory(event.target.value)}><option value="unsafe">不安全或越权行为</option><option value="malware">恶意代码或欺骗</option><option value="harassment">骚扰或仇恨内容</option><option value="copyright">版权问题</option><option value="other">其他问题</option></select></label><label>补充说明<textarea value={details} maxLength="1000" onChange={event => setDetails(event.target.value)} placeholder="可选：说明发生了什么，以及如何复现。"/></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><Button type="button" kind="secondary" onClick={onClose}>取消</Button><Button type="submit" disabled={state === 'sending'}>{state === 'sending' ? '提交中…' : '提交举报'}</Button></div></>}</form></div>;
 }
 
-function PlayerPage({ workId, releaseId, challengeCode, api, demo, go }) {
+function PlayerPage({ workId, releaseId, challengeCode, api, host, demo, go }) {
   const mount = useRef(null); const core = useRef(null); const [state, setState] = useState('loading'); const [launchError, setLaunchError] = useState('');
   const builtIn = workId === GUESS_BAIKE_WORK_ID;
   useEffect(() => { if (!demo) api.recordPlay(workId).catch(() => {}); }, [api, demo, workId]);
@@ -923,7 +923,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
   if (parts[0] === 'works' && parts[1]) content = <DetailPage workId={parts[1]} api={api} host={host} demo={demo} go={go}/>;
-  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} api={api} demo={demo} go={go}/>;
+  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} api={api} host={host} demo={demo} go={go}/>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={setAccountProfile}/>;
   else if (route === '/creator/works/new') content = <NewWorkPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;
