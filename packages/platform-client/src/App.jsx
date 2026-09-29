@@ -707,12 +707,14 @@ const agentInstallTargets = [
   {
     id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
     summary: '通过 Activity Bar 打开 GameHub，令牌保存在编辑器 SecretStorage，不读取工作区文件。',
-    prompt: '请帮我从源码安装 GameHub 的 VS Code 扩展。来源仓库是 https://github.com/Miyazak1/rightgamehub，扩展目录是 extensions/vscode，官方构建命令是 npm run pack:vscode，预期产物是 artifacts/gamehub-agent-0.3.0.vsix。请先检查仓库 README、package.json、锁文件和扩展权限，向我说明将执行的下载、依赖安装、构建和扩展安装操作，并等待我确认；确认后将仓库克隆到安全的临时目录，按锁文件安装依赖并构建，再用 code --install-extension 指向实际生成的 VSIX。最后验证扩展已启用，告诉我如何在 Activity Bar 打开 GameHub。任何步骤或产物名称不一致时停止并询问，不要猜测；无法完成时打开 https://mooyu.fun。',
+    actionLabel: '复制接入说明',
+    prompt: 'GameHub 的 VS Code 官方安装器尚未公开发布。不要克隆源码仓库，也不要从非官方地址下载 VSIX。请先打开 https://mooyu.fun 使用网页版；正式安装器发布后，只使用 mooyu.fun 提供的安装命令，并在执行前向我说明下载来源、权限和校验结果。',
   },
   {
     id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
     summary: '与 VS Code 共用扩展，运行时自动识别 Cursor，并跟随编辑器主题。',
-    prompt: '请帮我从源码安装 GameHub 的 Cursor 扩展。来源仓库是 https://github.com/Miyazak1/rightgamehub，扩展目录是 extensions/vscode，官方构建命令是 npm run pack:vscode，预期产物是 artifacts/gamehub-agent-0.3.0.vsix。请先检查仓库 README、package.json、锁文件和扩展权限，向我说明将执行的下载、依赖安装、构建和扩展安装操作，并等待我确认；确认后将仓库克隆到安全的临时目录，按锁文件安装依赖并构建，再用 cursor --install-extension 指向实际生成的 VSIX。最后验证扩展已启用，告诉我如何打开 GameHub 侧栏。任何步骤或产物名称不一致时停止并询问，不要猜测；无法完成时打开 https://mooyu.fun。',
+    actionLabel: '复制接入说明',
+    prompt: 'GameHub 的 Cursor 官方安装器尚未公开发布。不要克隆源码仓库，也不要从非官方地址下载 VSIX。请先打开 https://mooyu.fun 使用网页版；正式安装器发布后，只使用 mooyu.fun 提供的安装命令，并在执行前向我说明下载来源、权限和校验结果。',
   },
   {
     id: 'windsurf', name: 'Windsurf', badge: '优先内置', tone: 'testing', state: '兼容性验证中',
@@ -745,7 +747,7 @@ function AgentInstallCard({ target, copied, onCopy, onOpen }) {
     <p>{target.summary}</p>
     {target.command && <div className="agent-command"><code>{target.command}</code><button onClick={() => onCopy(target.command, `${target.id}-command`)}>{copied === `${target.id}-command` ? '已复制' : '复制命令'}</button></div>}
     {target.update && <details><summary>更新命令</summary><div className="agent-command"><code>{target.update}</code><button onClick={() => onCopy(target.update, `${target.id}-update`)}>{copied === `${target.id}-update` ? '已复制' : '复制'}</button></div></details>}
-    <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? '提示词已复制' : '让 Agent 帮我安装'}</button><button onClick={onOpen}>先用网页版</button></div>
+    <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? '提示词已复制' : (target.actionLabel ?? '让 Agent 帮我安装')}</button><button onClick={onOpen}>先用网页版</button></div>
   </article>;
 }
 
