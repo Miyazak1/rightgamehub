@@ -251,14 +251,17 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(dockerfile, /prepare-agent-downloads\.mjs/);
   assert.match(packer, /0x06054b50/);
   assert.match(downloads, /createHash\('sha256'\)/);
+  assert.match(downloads, /harnessPlugin/);
   assert.match(downloads, /agentPlugin/);
   assert.match(downloads, /contentBase64/);
   assert.match(powershell, /Get-FileHash -Algorithm SHA256/);
+  assert.match(powershell, /dsh plugin --profile web add/);
   assert.match(powershell, /plugin marketplace add/);
   assert.match(powershell, /claude plugin install gamehub@gamehub/);
   assert.match(powershell, /--install-extension/);
   assert.match(shell, /createHash\('sha256'\)/);
   assert.match(shell, /--install-extension/);
+  assert.match(shell, /dsh plugin --profile web add/);
   assert.match(shell, /plugin marketplace add/);
   assert.match(shell, /claude plugin install gamehub@gamehub/);
   assert.doesNotMatch(powershell, /github\.com/);
