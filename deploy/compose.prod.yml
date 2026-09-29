@@ -24,6 +24,7 @@ x-api-environment: &api-environment
   RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
   RUNTIME_SCHEME: https
   GUESS_BAIKE_AUTOMATION_ENABLED: "true"
+  GUESS_BAIKE_WIKIPEDIA_USER_AGENT: "${GUESS_BAIKE_WIKIPEDIA_USER_AGENT:-GameHub-GuessBaikeBot/0.3 (https://mooyu.fun/; automated daily puzzle) Node.js}"
   NODE_OPTIONS: --max-old-space-size=320
 
 services:
