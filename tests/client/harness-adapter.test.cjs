@@ -112,6 +112,8 @@ test('VS Code extension uses the shared GameHub client and a trusted credential 
   const entry = await readFile('extensions/vscode/src/platform-client.jsx', 'utf8');
   assert.equal(manifest.main, './gamehub-extension.cjs');
   assert.equal(manifest.contributes.views.gamehub[0].id, 'gamehub.platform');
+  assert.equal(manifest.contributes.configuration.properties['gamehub.apiUrl'].default, 'https://mooyu.fun');
+  assert.equal(manifest.contributes.configuration.properties['gamehub.browserUrl'].default, 'https://mooyu.fun/');
   assert.match(extension, /context\.secrets\.get/);
   assert.match(extension, /context\.secrets\.store/);
   assert.match(extension, /context\.secrets\.delete/);
@@ -195,6 +197,11 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(css, /\.detail-hero \{ margin-top: 12px/);
   assert.match(css, /\.detail-hero \.art__pixel \{ background-size: 200% 200%; \}/);
   assert.match(css, /\.daily-pick__body > button \{ height: 36px/);
+  assert.match(app, /function InstallPage/);
+  assert.match(app, /添加到你的 Agent/);
+  assert.match(app, /codex plugin marketplace add Miyazak1\/rightgamehub/);
+  assert.match(app, /claude plugin install gamehub@gamehub/);
+  assert.match(css, /\.agent-install-grid/);
 });
 
 test('Harness navigation remains inside the plugin surface', async () => {
