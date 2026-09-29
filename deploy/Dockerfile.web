@@ -20,7 +20,7 @@ ENV VITE_RUNTIME_DOMAIN=$VITE_RUNTIME_DOMAIN
 RUN pnpm --filter @gamehub/web build
 
 FROM caddy:2-builder-alpine AS caddy-build
-RUN xcaddy build --with github.com/caddy-dns/cloudflare
+RUN xcaddy build --with github.com/caddy-dns/alidns@v1.0.29
 
 FROM caddy:2-alpine
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy

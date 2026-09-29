@@ -131,7 +131,8 @@ services:
       APP_DOMAIN: ${APP_DOMAIN}
       RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET}
     depends_on:
       api: { condition: service_healthy }
       runtime: { condition: service_started }

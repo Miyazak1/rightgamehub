@@ -4,7 +4,10 @@
 
 {$APP_DOMAIN} {
   tls {
-    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    dns alidns {
+      access_key_id {env.ALIYUN_ACCESS_KEY_ID}
+      access_key_secret {env.ALIYUN_ACCESS_KEY_SECRET}
+    }
   }
   encode zstd gzip
 
@@ -32,9 +35,22 @@
   }
 }
 
+www.{$APP_DOMAIN} {
+  tls {
+    dns alidns {
+      access_key_id {env.ALIYUN_ACCESS_KEY_ID}
+      access_key_secret {env.ALIYUN_ACCESS_KEY_SECRET}
+    }
+  }
+  redir https://{$APP_DOMAIN}{uri} permanent
+}
+
 *.{$RUNTIME_DOMAIN} {
   tls {
-    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    dns alidns {
+      access_key_id {env.ALIYUN_ACCESS_KEY_ID}
+      access_key_secret {env.ALIYUN_ACCESS_KEY_SECRET}
+    }
   }
   reverse_proxy runtime:3092
 }

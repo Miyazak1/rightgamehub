@@ -55,26 +55,28 @@ cp .env.prod.example .env.prod
 chmod 600 .env.prod
 ```
 
-## 5. 域名与 Cloudflare
+## 5. 域名与阿里云 DNS
 
-将域名 DNS 托管到 Cloudflare，并添加两条“仅 DNS（灰云）”记录：
+在阿里云云解析 DNS 添加两条记录：
 
 ```text
-play.example.com              A  ECS公网IP
-*.runtime.play.example.com    A  ECS公网IP
+@                  A  ECS公网IP
+www                A  ECS公网IP
+*.runtime          A  ECS公网IP
 ```
 
-创建仅具有该 Zone `DNS:Edit` 权限的 Cloudflare API Token。不要使用 Global API Key。
+创建独立 RAM 用户，只授予目标域名所需的 AliDNS 查询、添加、更新和删除解析记录权限，然后生成 AccessKey。不要使用主账号 AccessKey。
 
 ## 6. 填写生产配置
 
 用宝塔文件编辑器打开 `/www/gamehub/deploy/.env.prod`：
 
 ```dotenv
-APP_DOMAIN=play.example.com
-RUNTIME_DOMAIN=runtime.play.example.com
+APP_DOMAIN=example.com
+RUNTIME_DOMAIN=runtime.example.com
 ACME_EMAIL=你的管理邮箱
-CLOUDFLARE_API_TOKEN=Cloudflare最小权限Token
+ALIYUN_ACCESS_KEY_ID=RAM用户AccessKey ID
+ALIYUN_ACCESS_KEY_SECRET=RAM用户AccessKey Secret
 
 POSTGRES_PASSWORD=64位随机十六进制值
 OTP_HMAC_KEY=另一组64位随机十六进制值

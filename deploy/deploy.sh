@@ -11,7 +11,7 @@ fi
 set -a
 . "./$ENV_FILE"
 set +a
-for name in APP_DOMAIN RUNTIME_DOMAIN ACME_EMAIL CLOUDFLARE_API_TOKEN POSTGRES_PASSWORD OTP_HMAC_KEY MAIL_FROM RESEND_API_KEY; do
+for name in APP_DOMAIN RUNTIME_DOMAIN ACME_EMAIL ALIYUN_ACCESS_KEY_ID ALIYUN_ACCESS_KEY_SECRET POSTGRES_PASSWORD OTP_HMAC_KEY MAIL_FROM RESEND_API_KEY; do
   eval "value=\${$name:-}"
   if [ -z "$value" ] || echo "$value" | grep -qi 'replace'; then
     echo "$name is missing or still uses an example value." >&2

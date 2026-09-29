@@ -6,12 +6,12 @@
 
 - Linux x86_64，建议 2 vCPU、4 GB 内存、80 GB SSD。
 - 安装 Docker Engine 与 Compose v2。
-- Cloudflare 托管域名；准备两个名称，例如 `play.example.com` 和 `runtime.play.example.com`。
+- 阿里云云解析 DNS 托管域名；准备两个名称，例如 `play.example.com` 和 `runtime.play.example.com`。
 - 添加 `play` 与 `*.runtime.play` 的 DNS 记录并指向服务器。
-- 创建仅能编辑该 Zone DNS 的 Cloudflare API Token。
+- 创建独立 RAM 用户，只授予目标域名所需的 AliDNS 查询、添加、更新和删除解析记录权限，并生成 AccessKey。
 - 防火墙只公开 TCP 80、TCP/UDP 443；SSH 限制为管理来源。PostgreSQL 不映射宿主端口。
 
-运行域必须使用独立通配子域，因为每个发布版本都有独立 origin。Caddy 镜像包含 Cloudflare DNS 模块，用 DNS challenge 自动签发应用域和运行通配证书。
+运行域必须使用独立通配子域，因为每个发布版本都有独立 origin。Caddy 镜像包含 AliDNS 模块，用 DNS challenge 自动签发应用域和运行通配证书。
 
 ## 2. 首次部署
 
@@ -19,7 +19,7 @@
 cd deploy
 cp .env.prod.example .env.prod
 chmod 600 .env.prod
-# 填写域名、Cloudflare、数据库、OTP、Resend 与邀请邮箱
+# 填写域名、AliDNS RAM AccessKey、数据库、OTP、Resend 与邀请邮箱
 ./deploy.sh
 ```
 
