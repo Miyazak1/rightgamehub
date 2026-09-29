@@ -1,11 +1,11 @@
 param(
-  [ValidateSet('cursor', 'code', 'codex', 'claude')]
+  [ValidateSet('cursor', 'code', 'harness', 'codex', 'claude')]
   [string]$HostName = ''
 )
 $ErrorActionPreference = 'Stop'
 $baseUrl = 'https://mooyu.fun'
 if (-not $HostName) {
-  foreach ($candidate in @('cursor', 'code', 'codex', 'claude')) {
+  foreach ($candidate in @('cursor', 'code', 'harness', 'codex', 'claude')) {
     if (Get-Command $candidate -ErrorAction SilentlyContinue) { $HostName = $candidate; break }
   }
   if (-not $HostName) { throw 'No supported Agent CLI was found on PATH.' }
@@ -23,6 +23,23 @@ if ($HostName -in @('cursor', 'code')) {
     & $HostName --install-extension $tempFile --force
     if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
     Write-Host "GameHub $($extension.version) installed for $HostName. Reload the editor and open GameHub from the Activity Bar."
+  } finally {
+    if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
+  }
+  exit 0
+}
+
+if ($HostName -eq 'harness') {
+  if (-not (Get-Command dsh -ErrorAction SilentlyContinue)) { throw 'DeepSeek Harness CLI (dsh) was not found on PATH.' }
+  $item = $manifest.harnessPlugin
+  $tempFile = Join-Path ([System.IO.Path]::GetTempPath()) $item.filename
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $item.url -OutFile $tempFile
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tempFile).Hash.ToLowerInvariant()
+    if ($actual -ne $item.sha256.ToLowerInvariant()) { throw 'GameHub Harness package SHA-256 verification failed.' }
+    & dsh plugin --profile web add $tempFile
+    if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness rejected the GameHub package.' }
+    Write-Host 'GameHub installed for the Harness web profile. Restart dsh web.'
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
