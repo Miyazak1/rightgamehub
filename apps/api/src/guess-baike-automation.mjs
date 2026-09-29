@@ -25,8 +25,15 @@ export function wikipediaCandidateUrl(batchSize) {
 }
 
 export async function fetchWikipediaCandidates({ fetchImpl = fetch, batchSize = 20, userAgent, signal } = {}) {
-  const response = await fetchImpl(wikipediaCandidateUrl(batchSize), { signal, headers: { Accept: 'application/json', 'User-Agent': userAgent, 'Api-User-Agent': userAgent } });
-  if (!response.ok) { const error = new Error(`Wikipedia API returned HTTP ${response.status}`); error.code = `WIKIPEDIA_HTTP_${response.status}`; throw error; }
+  const agent = String(userAgent || 'GameHub-GuessBaikeBot/0.3 (https://mooyu.fun/; automated daily puzzle) Node.js').trim();
+  const response = await fetchImpl(wikipediaCandidateUrl(batchSize), { signal, headers: {
+    Accept: 'application/json', 'Accept-Language': 'zh-CN,zh;q=0.9', 'User-Agent': agent, 'Api-User-Agent': agent,
+  } });
+  if (!response.ok) {
+    const detail = String(await response.text?.().catch(() => '') || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+    const error = new Error(`Wikipedia API returned HTTP ${response.status}${detail ? `: ${detail}` : ''}`);
+    error.code = `WIKIPEDIA_HTTP_${response.status}`; throw error;
+  }
   const payload = await response.json();
   if (payload.error) { const error = new Error(payload.error.info || 'Wikipedia API rejected the request'); error.code = `WIKIPEDIA_${String(payload.error.code || 'API_ERROR').toUpperCase()}`; throw error; }
   return payload.query?.pages ?? [];
