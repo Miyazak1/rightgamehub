@@ -2,6 +2,7 @@
 const vscode = require('vscode');
 const { createHash, randomBytes, randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
+const { execFile } = require('node:child_process');
 
 const TOKEN_KEY = 'gamehub.session.v1';
 const allowedUrl = (value, label) => {
@@ -62,15 +63,35 @@ const trustedUpdateUrl = value => {
   if (url.protocol !== 'https:' || url.hostname !== 'mooyu.fun' || url.username || url.password) throw new Error('GameHub 更新地址不受信任。');
   return url;
 };
-const downloadUpdateBytes = async value => {
+const downloadUpdateBytes = async (value, onProgress) => {
   const url = trustedUpdateUrl(value);
   const response = await fetch(url, { cache: 'no-store', redirect: 'error', headers: { accept: 'application/json, application/octet-stream' } });
   if (!response.ok) throw new Error(`GameHub 更新下载失败（${response.status}）。`);
   const declared = Number(response.headers.get('content-length') || 0);
   if (declared > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.length > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
-  return bytes;
+  if (!response.body?.getReader || !onProgress) {
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
+    return bytes;
+  }
+  const reader = response.body.getReader(); const chunks = []; let received = 0;
+  try {
+    while (true) {
+      const { value: chunk, done } = await reader.read();
+      if (done) break;
+      received += chunk.byteLength;
+      if (received > MAX_UPDATE_BYTES || (declared && received > declared)) throw new Error('GameHub 更新包超过声明大小。');
+      chunks.push(Buffer.from(chunk));
+      onProgress({ received, total: declared, percent: declared ? Math.min(100, Math.floor(received * 100 / declared)) : null });
+    }
+  } finally { reader.releaseLock(); }
+  if (declared && received !== declared) throw new Error('GameHub 更新下载不完整。');
+  return Buffer.concat(chunks, received);
+};
+const removeLegacyEditorUpdateTask = () => {
+  if (process.platform !== 'win32') return;
+  const taskName = `GameHub Agent Update (${hostId()})`;
+  execFile('schtasks.exe', ['/Delete', '/TN', taskName, '/F'], { windowsHide: true, timeout: 15000 }, () => {});
 };
 async function checkForEditorUpdate(context, output) {
   const config = vscode.workspace.getConfiguration('gamehub');
@@ -84,15 +105,37 @@ async function checkForEditorUpdate(context, output) {
     if (manifest.channel !== 'stable' || !item?.supportedHosts?.includes(hostId())) throw new Error('GameHub 稳定版更新清单无效。');
     const currentVersion = String(context.extension?.packageJSON?.version || '0.0.0');
     if (compareVersions(item.version, currentVersion) <= 0) return;
-    const bytes = await downloadUpdateBytes(item.url);
-    const actual = createHash('sha256').update(bytes).digest('hex');
-    if (actual !== String(item.sha256).toLowerCase()) throw new Error('GameHub VSIX SHA-256 校验失败。');
-    await vscode.workspace.fs.createDirectory(context.globalStorageUri);
-    const target = vscode.Uri.joinPath(context.globalStorageUri, item.filename);
-    await vscode.workspace.fs.writeFile(target, bytes);
-    await vscode.commands.executeCommand('workbench.extensions.installExtension', target);
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `GameHub ${item.version} 更新`,
+      cancellable: false,
+    }, async progress => {
+      let lastPercent = 0;
+      progress.report({ message: '正在下载…' });
+      const bytes = await downloadUpdateBytes(item.url, state => {
+        const message = state.percent == null
+          ? `已下载 ${(state.received / 1024 / 1024).toFixed(1)} MB`
+          : `已下载 ${state.percent}%`;
+        const increment = state.percent == null ? 0 : Math.max(0, state.percent - lastPercent);
+        if (state.percent != null) lastPercent = state.percent;
+        progress.report({ message, increment });
+      });
+      progress.report({ message: '正在校验更新…' });
+      const actual = createHash('sha256').update(bytes).digest('hex');
+      if (actual !== String(item.sha256).toLowerCase()) throw new Error('GameHub VSIX SHA-256 校验失败。');
+      await vscode.workspace.fs.createDirectory(context.globalStorageUri);
+      const target = vscode.Uri.joinPath(context.globalStorageUri, item.filename);
+      await vscode.workspace.fs.writeFile(target, bytes);
+      progress.report({ message: '正在安装，重启后生效…' });
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', target);
+    });
     await context.globalState.update('gamehub.update.stagedVersion', item.version);
-    output.appendLine(`GameHub ${item.version} 已在后台安装，将在 Cursor/VS Code 重启后生效。`);
+    output.appendLine(`GameHub ${item.version} 已下载并安装，等待重启生效。`);
+    const choice = await vscode.window.showInformationMessage(
+      `GameHub ${item.version} 已更新完成，重启 ${hostId() === 'cursor' ? 'Cursor' : 'VS Code'} 后生效。`,
+      '立即重启', '稍后'
+    );
+    if (choice === '立即重启') await vscode.commands.executeCommand('workbench.action.reloadWindow');
   } catch (error) {
     await context.globalState.update('gamehub.update.nextCheckAt', Date.now() + UPDATE_RETRY_MS);
     output.appendLine(`GameHub 自动更新检查失败：${String(error.message || error)}`);
@@ -102,6 +145,7 @@ async function checkForEditorUpdate(context, output) {
 async function activate(context) {
   let currentView;
   const updateOutput = vscode.window.createOutputChannel('GameHub');
+  removeLegacyEditorUpdateTask();
   let desktopLauncher = null;
   try {
     const moduleUri = vscode.Uri.joinPath(context.extensionUri, 'desktop-launcher.mjs');
