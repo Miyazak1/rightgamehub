@@ -215,6 +215,7 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
+    runtimeDomain: String(bootstrap.runtimeDomain || '').trim() || undefined,
     async getCapabilities() {
       return {
         protocolVersion: 1, host, hostVersion: String(bootstrap.hostVersion || 'unknown'), surface: 'sidebar',
