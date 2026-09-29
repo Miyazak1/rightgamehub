@@ -14,6 +14,13 @@ const extensionContent = await readFile(artifact);
 await copyFile(artifact, new URL(filename, publicRoot));
 await copyFile(artifact, new URL('gamehub-agent-latest.vsix', publicRoot));
 
+const harnessPackage = JSON.parse(await readFile(new URL('extensions/harness/package.json', root), 'utf8'));
+const harnessFilename = `${harnessPackage.name}-${harnessPackage.version}.tgz`;
+const harnessArtifact = new URL(`artifacts/${harnessFilename}`, root);
+const harnessContent = await readFile(harnessArtifact);
+await copyFile(harnessArtifact, new URL(harnessFilename, publicRoot));
+await copyFile(harnessArtifact, new URL('gamehub-dsh-plugin-latest.tgz', publicRoot));
+
 const portablePlugin = JSON.parse(await readFile(new URL('plugins/gamehub/plugin.json', root), 'utf8'));
 const pluginPaths = [
   '.agents/plugins/marketplace.json',
@@ -46,6 +53,13 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     sha256: sha256(extensionContent),
     supportedHosts: ['cursor', 'code'],
   },
+  harnessPlugin: {
+    version: harnessPackage.version,
+    filename: harnessFilename,
+    url: `https://mooyu.fun/downloads/${harnessFilename}`,
+    sha256: sha256(harnessContent),
+    supportedHosts: ['harness'],
+  },
   agentPlugin: {
     version: portablePlugin.version,
     filename: pluginFilename,
@@ -54,4 +68,4 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     supportedHosts: ['codex', 'claude'],
   },
 }, null, 2) + '\n');
-console.log(`Prepared GameHub downloads: ${filename} and ${pluginFilename}`);
+console.log(`Prepared GameHub downloads: ${filename}, ${harnessFilename}, and ${pluginFilename}`);
