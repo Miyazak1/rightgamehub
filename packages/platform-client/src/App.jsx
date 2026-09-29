@@ -722,14 +722,17 @@ const agentInstallTargets = [
     prompt: '请检查当前 Windsurf 是否支持安装 VSIX；支持时在获得我的确认后安装 GameHub，否则打开 https://mooyu.fun。',
   },
   {
-    id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'building', state: '开发中',
-    summary: '使用可安装插件连接 GameHub MCP，并以 MCP App 提供原生交互界面；未安装时回退网页版。',
-    prompt: '请检查插件目录中是否已有 GameHub。若可用，请先向我说明权限并等待确认后安装；否则打开 https://mooyu.fun。',
+    id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'building', state: '技能预览可安装 · MCP App 开发中',
+    summary: '先安装可移植 GameHub 技能，用 Agent 自动打开正确入口；原生交互界面将在 MCP App 上线后启用。',
+    command: 'codex plugin marketplace add Miyazak1/rightgamehub',
+    prompt: '请先说明 GameHub 插件将获得的权限并等待我的确认，然后执行 codex plugin marketplace add Miyazak1/rightgamehub；在插件目录安装 gamehub。若当前 Codex 不支持插件，请打开 https://mooyu.fun。',
   },
   {
-    id: 'claude', name: 'Claude Code', badge: 'Agent Plugin', tone: 'building', state: '开发中',
-    summary: '共享可移植技能与 MCP 能力；宿主没有可用游戏面板时在浏览器中启动。',
-    prompt: '请检查是否可以安装 GameHub Agent Plugin；安装前先向我说明权限并等待确认，否则打开 https://mooyu.fun。',
+    id: 'claude', name: 'Claude Code', badge: 'Agent Plugin', tone: 'building', state: '技能预览可安装 · MCP 开发中',
+    summary: '当前可安装可移植技能并由 Agent 打开网页版；MCP 与宿主内置面板完成后自动升级体验。',
+    command: 'claude plugin marketplace add Miyazak1/rightgamehub && claude plugin install gamehub@gamehub',
+    update: 'claude plugin marketplace update gamehub',
+    prompt: '请先说明 GameHub 插件将获得的权限并等待我的确认，然后从 Miyazak1/rightgamehub marketplace 安装 gamehub；如果当前 Claude Code 不支持插件，请打开 https://mooyu.fun。',
   },
   {
     id: 'opencode', name: 'OpenCode / 终端 Agent', badge: 'MCP + 浏览器', tone: 'browser', state: '规划中',
