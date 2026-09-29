@@ -2,14 +2,16 @@
 
 这是 GameHub 共享客户端的编辑器宿主。VS Code 与 Cursor 使用同一份 VSIX；运行时会根据 `vscode.env.appName` 显示真实宿主，并跟随编辑器主题。
 
-## 本地安装
+## 安装
 
-1. 在仓库根目录运行 `npm run pack:vscode`。
-2. 先运行 `start-gamehub-full.bat`，保持 API `http://127.0.0.1:3090` 可用。
-3. 在 VS Code 或 Cursor 的扩展面板菜单中选择 **Install from VSIX...**。
-4. 选择 `artifacts/gamehub-agent-0.1.1.vsix`，重载编辑器，然后点击 Activity Bar 的 GameHub 图标。
+正式发布前可在仓库根目录运行 `npm run pack:vscode`，然后在 VS Code、Cursor 或兼容编辑器的扩展面板菜单中选择 **Install from VSIX...**，安装 `artifacts/gamehub-agent-0.3.0.vsix`。也可以使用宿主 CLI：
 
-若本地端口被修改，在编辑器设置中调整 `gamehub.apiUrl` 和 `gamehub.browserUrl`。
+```bash
+code --install-extension gamehub-agent-0.3.0.vsix
+cursor --install-extension gamehub-agent-0.3.0.vsix
+```
+
+重载编辑器后，点击 Activity Bar 的 GameHub 图标。扩展默认连接 `https://mooyu.fun`；私有部署可在编辑器设置中调整 `gamehub.apiUrl` 和 `gamehub.browserUrl`。
 
 ## 当前能力
 
