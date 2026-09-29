@@ -217,3 +217,17 @@ test('Harness navigation remains inside the plugin surface', async () => {
   assert.match(app, /data\.state === 'uploaded'/);
   assert.match(app, /\['127\.0\.0\.1', 'localhost'\]\.includes\(location\.hostname\)/);
 });
+
+
+test('portable Agent plugin manifests keep Codex and Claude Code installable', async () => {
+  const portable = JSON.parse(await readFile('plugins/gamehub/plugin.json', 'utf8'));
+  const codexMarketplace = JSON.parse(await readFile('.agents/plugins/marketplace.json', 'utf8'));
+  const claudeManifest = JSON.parse(await readFile('plugins/gamehub/.claude-plugin/plugin.json', 'utf8'));
+  const claudeMarketplace = JSON.parse(await readFile('.claude-plugin/marketplace.json', 'utf8'));
+  assert.equal(portable.name, 'gamehub');
+  assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
+  assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
+  assert.equal(claudeManifest.name, 'gamehub');
+  assert.equal(claudeMarketplace.owner.name, 'GameHub');
+  assert.equal(claudeMarketplace.plugins[0].source, './plugins/gamehub');
+});
