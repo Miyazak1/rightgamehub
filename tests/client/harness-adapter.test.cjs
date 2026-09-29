@@ -201,9 +201,10 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(app, /添加到你的 Agent/);
   assert.match(app, /codex plugin marketplace add Miyazak1\/rightgamehub/);
   assert.match(app, /claude plugin install gamehub@gamehub/);
-  assert.match(app, /官方安装器尚未公开发布/);
+  assert.match(app, /https:\/\/mooyu\.fun\/install\.ps1/);
+  assert.match(app, /https:\/\/mooyu\.fun\/install\.sh/);
   assert.match(app, /不要克隆源码仓库/);
-  assert.match(app, /复制接入说明/);
+  assert.match(app, /SHA-256/);
   assert.doesNotMatch(app, /command: 'cursor --install-extension gamehub-agent\.vsix'/);
   assert.match(css, /\.agent-install-grid/);
 });
@@ -234,4 +235,24 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   assert.equal(claudeManifest.name, 'gamehub');
   assert.equal(claudeMarketplace.owner.name, 'GameHub');
   assert.equal(claudeMarketplace.plugins[0].source, './plugins/gamehub');
+});
+
+
+test('official editor installers use verified mooyu.fun artifacts without source checkout', async () => {
+  const rootPackage = JSON.parse(await readFile('package.json', 'utf8'));
+  const dockerfile = await readFile('deploy/Dockerfile.web', 'utf8');
+  const packer = await readFile('scripts/package-vscode-extension.mjs', 'utf8');
+  const downloads = await readFile('scripts/prepare-agent-downloads.mjs', 'utf8');
+  const powershell = await readFile('apps/web/public/install.ps1', 'utf8');
+  const shell = await readFile('apps/web/public/install.sh', 'utf8');
+  assert.match(rootPackage.scripts['pack:vscode'], /package-vscode-extension\.mjs/);
+  assert.match(dockerfile, /prepare-agent-downloads\.mjs/);
+  assert.match(packer, /0x06054b50/);
+  assert.match(downloads, /createHash\('sha256'\)/);
+  assert.match(powershell, /Get-FileHash -Algorithm SHA256/);
+  assert.match(powershell, /--install-extension/);
+  assert.match(shell, /createHash\('sha256'\)/);
+  assert.match(shell, /--install-extension/);
+  assert.doesNotMatch(powershell, /github\.com/);
+  assert.doesNotMatch(shell, /github\.com/);
 });
