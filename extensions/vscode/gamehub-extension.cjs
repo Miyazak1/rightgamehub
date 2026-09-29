@@ -46,7 +46,7 @@ const desktopRelease = value => {
 
 
 const UPDATE_MANIFEST_URL = 'https://mooyu.fun/downloads/manifest.json';
-const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const UPDATE_INTERVAL_MS = 30 * 60 * 1000;
 const UPDATE_RETRY_MS = 30 * 60 * 1000;
 const MAX_UPDATE_BYTES = 64 * 1024 * 1024;
 const versionParts = value => String(value).split('.').map(part => Number.parseInt(part, 10) || 0);
@@ -93,18 +93,21 @@ const removeLegacyEditorUpdateTask = () => {
   const taskName = `GameHub Agent Update (${hostId()})`;
   execFile('schtasks.exe', ['/Delete', '/TN', taskName, '/F'], { windowsHide: true, timeout: 15000 }, () => {});
 };
-async function checkForEditorUpdate(context, output) {
+async function checkForEditorUpdate(context, output, { force = false, userInitiated = false } = {}) {
   const config = vscode.workspace.getConfiguration('gamehub');
-  if (!config.get('autoUpdate', true)) return;
+  if (!config.get('autoUpdate', true) && !userInitiated) return;
   const now = Date.now();
-  if (Number(context.globalState.get('gamehub.update.nextCheckAt', 0)) > now) return;
+  if (!force && Number(context.globalState.get('gamehub.update.nextCheckAt', 0)) > now) return;
   await context.globalState.update('gamehub.update.nextCheckAt', now + UPDATE_INTERVAL_MS);
   try {
     const manifest = JSON.parse((await downloadUpdateBytes(UPDATE_MANIFEST_URL)).toString('utf8'));
     const item = manifest.editorExtension;
     if (manifest.channel !== 'stable' || !item?.supportedHosts?.includes(hostId())) throw new Error('GameHub 稳定版更新清单无效。');
     const currentVersion = String(context.extension?.packageJSON?.version || '0.0.0');
-    if (compareVersions(item.version, currentVersion) <= 0) return;
+    if (compareVersions(item.version, currentVersion) <= 0) {
+      if (userInitiated) await vscode.window.showInformationMessage(`GameHub 已是最新版本（${currentVersion}）。`);
+      return;
+    }
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: `GameHub ${item.version} 更新`,
@@ -138,9 +141,17 @@ async function checkForEditorUpdate(context, output) {
     if (choice === '立即重启') await vscode.commands.executeCommand('workbench.action.reloadWindow');
   } catch (error) {
     await context.globalState.update('gamehub.update.nextCheckAt', Date.now() + UPDATE_RETRY_MS);
-    output.appendLine(`GameHub 自动更新检查失败：${String(error.message || error)}`);
+    const message = `GameHub 自动更新检查失败：${String(error.message || error)}`;
+    output.appendLine(message);
+    if (userInitiated) await vscode.window.showErrorMessage(message);
   }
 }
+let editorUpdateCheck = null;
+const runEditorUpdateCheck = (context, output, options) => {
+  if (editorUpdateCheck) return editorUpdateCheck;
+  editorUpdateCheck = checkForEditorUpdate(context, output, options).finally(() => { editorUpdateCheck = null; });
+  return editorUpdateCheck;
+};
 
 async function activate(context) {
   let currentView;
@@ -210,8 +221,9 @@ async function activate(context) {
     catch (error) { await vscode.window.showErrorMessage(String(error.message || error)); }
   }));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.openBrowser', () => openBrowser().catch(error => vscode.window.showErrorMessage(String(error.message || error)))));
-  const updateTimer = setTimeout(() => void checkForEditorUpdate(context, updateOutput), 15000);
-  const updateInterval = setInterval(() => void checkForEditorUpdate(context, updateOutput), UPDATE_INTERVAL_MS);
+  context.subscriptions.push(vscode.commands.registerCommand('gamehub.checkForUpdates', () => runEditorUpdateCheck(context, updateOutput, { force: true, userInitiated: true })));
+  const updateTimer = setTimeout(() => void runEditorUpdateCheck(context, updateOutput, { force: true }), 15000);
+  const updateInterval = setInterval(() => void runEditorUpdateCheck(context, updateOutput), UPDATE_INTERVAL_MS);
   context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void desktopLauncher?.close(); } });
 }
 
