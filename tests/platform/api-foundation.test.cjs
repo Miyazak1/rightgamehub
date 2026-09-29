@@ -50,6 +50,38 @@ test('GitHub OAuth callback accepts the GitHub authorization issuer', async t =>
   assert.match(response.body, new RegExp(`<script nonce="${nonce}">`));
 });
 
+test('creator work routes accept discovery metadata from the creation form', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  let received;
+  const app = createApp({
+    config: { requestBodyLimit: 65536 },
+    database: { ping: async () => true },
+    migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async () => ({ userId: crypto.randomUUID(), scopes: ['works:write'], profile: { canPublish: true } }) },
+    workService: {
+      create: async (_actor, body) => {
+        received = body;
+        return { work: { id: crypto.randomUUID(), ...body }, etag: '"work-test-1"' };
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const payload = {
+    title: '弹盒游戏', description: '弹盘游戏', instructions: '11', kind: 'game',
+    estimatedMinutes: 3, tags: ['弹盘游戏'], agentLabel: null,
+    repositoryUrl: null, licenseSpdx: null,
+  };
+  const response = await app.inject({
+    method: 'POST', url: '/v1/creator/works',
+    headers: { authorization: 'Bearer test-token-value-that-is-long-enough', 'idempotency-key': 'creator-form-test-key' },
+    payload,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(received, payload);
+});
+
 test('explicit development origin receives CORS preflight and creator reads stay authenticated', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const works = [{ id: crypto.randomUUID(), title: 'Real work' }];
