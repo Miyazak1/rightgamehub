@@ -118,7 +118,7 @@ function WorkCard({ work, go, featured = false }) {
   return <article className={`work-card ${featured ? 'work-card--featured' : ''}`}>
     <button className="card-open" onClick={() => go(`/works/${work.id}`)} aria-label={`查看 ${work.title}`}><Art work={work} large={featured} /></button>
     <div className="work-card__body"><div><span className="eyebrow">{work.tag ?? (work.kind === 'game' ? '游戏' : '创意')}</span><h3>{work.title}</h3></div><p>{work.description}</p><div className="card-meta"><span>{icons.globe} {workPlatformLabel(work)}</span><span>{icons.play} {work.plays ?? '新作'}</span></div></div>
-    <button className="round-play" onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
+    <button className="round-play" onClick={() => go(workActionPath(work))} aria-label={`${workHasWebRelease(work) ? '开始玩' : '查看 Windows 启动方式'} ${work.title}`}>{icons.play}</button>
   </article>;
 }
 
@@ -132,7 +132,7 @@ function QuietWorkRow({ work, go }) {
       <Art work={work} />
       <span className="quiet-work-row__copy"><strong>{work.title}</strong><small>{workTag(work)} · {work.estimatedMinutes ?? 3} 分钟 · {work.creatorDisplayName ?? '社区作者'}</small></span>
     </button>
-    <button className="quiet-play" onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
+    <button className="quiet-play" onClick={() => go(workActionPath(work))} aria-label={`${workHasWebRelease(work) ? '开始玩' : '查看 Windows 启动方式'} ${work.title}`}>{icons.play}</button>
   </article>;
 }
 
@@ -145,7 +145,7 @@ function DailyPick({ work, go, index }) {
     <div className="daily-pick__body">
       <div><span>{workTag(work)}</span><small>约 {work.estimatedMinutes ?? 3} 分钟</small></div>
       <strong>{work.title}</strong>
-      <button onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}<span>开始</span></button>
+      <button onClick={() => go(workActionPath(work))} aria-label={`${workHasWebRelease(work) ? '开始玩' : '查看 Windows 启动方式'} ${work.title}`}>{icons.play}<span>{workHasWebRelease(work) ? '开始' : 'Windows'}</span></button>
     </div>
   </article>;
 }
@@ -157,7 +157,7 @@ function CommunityProject({ work, go }) {
       <div className="project-badges"><span>{workTag(work)}</span>{work.agentLabel && <span>{work.agentLabel}</span>}{work.repositoryUrl && <span>OPEN SOURCE</span>}</div>
       <button onClick={() => go(`/works/${work.id}`)}><strong>{work.title}</strong><small>by {work.creatorDisplayName ?? '社区作者'}</small></button>
       <p>{work.description}</p>
-      <div><span>{work.estimatedMinutes ?? 3} MIN</span><span>{workPlays(work)}</span><button onClick={() => go(workActionPath(work))}>{icons.play} 玩一下</button></div>
+      <div><span>{work.estimatedMinutes ?? 3} MIN</span><span>{workPlays(work)}</span><button onClick={() => go(workActionPath(work))}>{icons.play} {workHasWebRelease(work) ? '玩一下' : 'Windows 版'}</button></div>
     </div>
   </article>;
 }
