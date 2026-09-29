@@ -2,6 +2,21 @@
 
 本项目已经具备单机邀请内测部署基线；仍不是可直接开放匿名投稿的公测生产平台。
 
+
+## 添加到 Agent
+
+生产站内提供统一安装页：<https://mooyu.fun/#/install>。原则是“能内置就内置，不能稳定内置才打开浏览器”，并在页面上明确区分已可用、预览可用与开发中。
+
+| Agent | 当前接入方式 | 安装入口 |
+| --- | --- | --- |
+| DeepSeek Harness | 原生右栏（npm 包发布准备中） | `npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin` |
+| VS Code / Cursor | 原生侧栏（VSIX 发布准备中） | `code --install-extension gamehub-agent.vsix` / `cursor --install-extension gamehub-agent.vsix` |
+| Codex / ChatGPT | 可移植技能预览；MCP App 开发中 | `codex plugin marketplace add Miyazak1/rightgamehub`，随后在插件目录安装 `gamehub` |
+| Claude Code | Agent Plugin 技能预览；MCP 开发中 | `claude plugin marketplace add Miyazak1/rightgamehub && claude plugin install gamehub@gamehub` |
+| Windsurf / OpenCode / 其他 Agent | 检测到兼容原生能力时内置，否则浏览器 | <https://mooyu.fun> |
+
+可移植插件位于 [plugins/gamehub](plugins/gamehub)，Codex marketplace 清单位于 [.agents/plugins/marketplace.json](.agents/plugins/marketplace.json)，Claude Code marketplace 清单位于 [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)。任何 Agent 执行安装命令前都应先解释权限并取得用户确认。
+
 2026-09-29：P1.0 单机邀请部署已落地：Docker Compose、PostgreSQL 迁移门禁、API/Worker/Runtime 分进程、Caddy 自动 HTTPS 与通配符运行域、Resend 验证码、邮箱邀请白名单、持久卷备份和管理员提升工具均已提供。生产镜像和真实容器烟雾测试已通过；域名、AliDNS RAM 密钥、邮件密钥及 Linux 服务器配置见 [P1.0 单机部署手册](docs/47-p10-single-host-deployment.zh-CN.md)。开放不受信作者投稿前，仍需补 rootless 二级执行隔离。
 
 2026-09-29：P0.1 邀请内测闭环已完成，P0.2 已加入头像真实解码/重编码、静态降级图、内容寻址存储、设备会话管理与 Harness 系统凭据库适配；P0.3 已贯通作者版本历史、整件作品撤下、安全封面，以及举报、管理员处置和只追加审计记录。账号级收藏、最近游玩、官方“猜百科”真实目录、服务端中国日期每日题与完成成绩已经贯通；Harness 0.0.51、数据库迁移 20/20，状态与后续阻塞项见 [38 P0 邀请内测闭环](docs/38-p0-invite-loop.zh-CN.md)。
