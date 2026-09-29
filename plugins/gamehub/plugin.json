@@ -1,0 +1,42 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "gamehub",
+  "version": "0.1.0",
+  "description": "Discover, launch and publish GameHub experiences from supported AI agents.",
+  "author": {
+    "name": "GameHub",
+    "url": "https://mooyu.fun"
+  },
+  "homepage": "https://mooyu.fun/#/install",
+  "repository": "https://github.com/Miyazak1/rightgamehub",
+  "license": "UNLICENSED",
+  "keywords": [
+    "games",
+    "agent",
+    "mcp",
+    "codex",
+    "claude-code"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "GameHub",
+        "shortDescription": "Discover and launch lightweight Agent games",
+        "longDescription": "Use GameHub from supported Agent surfaces, with a safe browser fallback when the host cannot embed the full experience.",
+        "developerName": "GameHub",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Discover games",
+          "Open GameHub",
+          "Publish games"
+        ],
+        "websiteURL": "https://mooyu.fun",
+        "defaultPrompt": [
+          "Open GameHub and help me choose a short game.",
+          "Show me how to publish a web game to GameHub."
+        ],
+        "brandColor": "#8B5CF6"
+      }
+    }
+  }
+}
