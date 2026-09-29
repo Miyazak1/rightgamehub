@@ -27,6 +27,8 @@ test('launch descriptor accepts release origin and rejects mismatched origin', a
   assert.equal(validateLaunchDescriptor(base).entry.pathname, '/index.html');
   assert.throws(() => validateLaunchDescriptor({ ...base, entryUrl: 'https://evil.example/index.html' }), /不一致/);
   assert.throws(() => validateLaunchDescriptor({ ...base, runtimeOrigin: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.evil.example', entryUrl: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.evil.example/index.html' }), /受信任/);
+  const production = { ...base, runtimeOrigin: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.runtime.mooyu.fun', entryUrl: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.runtime.mooyu.fun/index.html' };
+  assert.equal(validateLaunchDescriptor(production, { runtimeDomain: 'runtime.mooyu.fun' }).entry.pathname, '/index.html');
   const local = { ...base, runtimeOrigin: 'http://r-27c4a881871a4ae18201ed0f4ecbe12a.localhost:3092', entryUrl: 'http://r-27c4a881871a4ae18201ed0f4ecbe12a.localhost:3092/index.html' };
   assert.equal(validateLaunchDescriptor(local, { allowLocalhost: true }).entry.pathname, '/index.html');
   assert.throws(() => validateLaunchDescriptor(local, { allowLocalhost: false }), /安全来源/);
