@@ -17,14 +17,6 @@
     "README.md"
   ],
   "homepage": "https://mooyu.fun",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Miyazak1/rightgamehub.git",
-    "directory": "extensions/harness"
-  },
-  "bugs": {
-    "url": "https://github.com/Miyazak1/rightgamehub/issues"
-  },
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",
