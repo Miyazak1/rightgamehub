@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const [host, rootArg, quietArg] = process.argv.slice(2);
 const supported = new Set(['cursor', 'code', 'harness', 'codex', 'claude']);
@@ -54,6 +55,21 @@ async function installPortable(item) {
 }
 
 const manifest = await fetchJson('https://mooyu.fun/downloads/manifest.json');
+const updater = manifest.updater?.portable;
+if (updater) {
+  const currentPath = fileURLToPath(import.meta.url);
+  const currentBytes = await readFile(currentPath);
+  if (hash(currentBytes) !== String(updater.sha256).toLowerCase()) {
+    const response = await fetch(updater.url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Unable to refresh the GameHub updater.');
+    const nextBytes = Buffer.from(await response.arrayBuffer());
+    if (hash(nextBytes) !== String(updater.sha256).toLowerCase()) throw new Error('GameHub updater self-update verification failed.');
+    const nextPath = currentPath + '.next';
+    await writeFile(nextPath, nextBytes, { mode: 0o700 });
+    await rename(nextPath, currentPath);
+    log('GameHub updater refreshed; the new updater will be used on the next check.');
+  }
+}
 if (manifest.channel !== 'stable') throw new Error('GameHub updater only accepts the stable channel.');
 let previous = null;
 try { previous = JSON.parse(await readFile(stateFile, 'utf8')); } catch {}
