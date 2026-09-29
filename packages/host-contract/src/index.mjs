@@ -212,6 +212,24 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
     const current = readTheme(); listeners.forEach(listener => listener(current));
   }) ?? (() => {});
   const dispose = () => { offTheme(); listeners.clear(); };
+  const desktopEnabled = bootstrap.canLaunchDesktop === true;
+  const getDesktopReleaseStatus = release => bridge.call('desktop.status', { release });
+  const prepareDesktopRelease = async (release, { onProgress } = {}) => {
+    let finished = false;
+    const poll = (async () => {
+      while (!finished) {
+        await new Promise(resolve => hostWindow.setTimeout(resolve, 250));
+        if (finished) break;
+        try { onProgress?.((await getDesktopReleaseStatus(release)).download); } catch {}
+      }
+    })();
+    try {
+      const result = await bridge.call('desktop.prepare', { release });
+      onProgress?.(result.progress || { state: 'ready', receivedBytes: release.sizeBytes, totalBytes: release.sizeBytes, percent: 100, error: null });
+      return result;
+    } finally { finished = true; await poll; }
+  };
+  const launchDesktopRelease = release => bridge.call('desktop.launch', { release });
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
@@ -220,12 +238,14 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
       return {
         protocolVersion: 1, host, hostVersion: String(bootstrap.hostVersion || 'unknown'), surface: 'sidebar',
         uiDevice: 'editor-ui', fileDevice: bootstrap.remoteName ? 'remote-workspace' : 'ui-device', runDevice: 'ui-device',
-        canSelectFile: true, canManageDownloads: false, canRevealDownload: false,
-        canPersistCredential: true, canPlayWeb: true, canLaunchDesktop: false, canPlayNativeInPanel: false,
+        canSelectFile: true, canManageDownloads: desktopEnabled, canRevealDownload: false,
+        canPersistCredential: true, canPlayWeb: true, canLaunchDesktop: desktopEnabled, canPlayNativeInPanel: false,
         unavailableReasons: {
-          canManageDownloads: '下载管理尚未接入编辑器文件系统。',
-          canLaunchDesktop: '编辑器适配器当前仅运行隔离的 Web 作品。',
-          canPlayNativeInPanel: '原生程序不能在 Webview 中运行。',
+          ...(!desktopEnabled ? {
+            canManageDownloads: bootstrap.remoteName ? '远程编辑器窗口不能管理本机游戏下载。' : 'Windows 本机启动能力不可用。',
+            canLaunchDesktop: bootstrap.remoteName ? '请在本机 Cursor 或 VS Code 窗口中打开 GameHub。' : 'Windows 本机启动能力不可用。',
+          } : {}),
+          canPlayNativeInPanel: '原生程序将在独立窗口运行。',
         },
       };
     },
@@ -238,6 +258,7 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
       async clearTokens() { await bridge.call('credentials.clear'); },
       async persistence() { return { kind: 'secret-storage', description: `${host === 'cursor' ? 'Cursor' : 'VS Code'} SecretStorage` }; },
     },
+    ...(desktopEnabled ? { desktop: { getReleaseStatus: getDesktopReleaseStatus, prepareRelease: prepareDesktopRelease, launchRelease: launchDesktopRelease } } : {}),
     navigation: { async openExternal(url) { return bridge.call('external.open', { url }); } },
     diagnostics: { async snapshot() { return { host, hostVersion: String(bootstrap.hostVersion || 'unknown'), surface: 'sidebar', theme: readTheme().mode, credentialPersistence: 'secret-storage', remoteName: bootstrap.remoteName || null }; } },
     dispose,
