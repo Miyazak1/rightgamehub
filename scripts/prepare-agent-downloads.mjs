@@ -58,7 +58,7 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     integrity: ['sha256'],
   },
   updater: {
-    version: 1,
+    version: 2,
     windows: { filename: 'agent-update.ps1', url: 'https://mooyu.fun/agent-update.ps1', sha256: sha256(updaterContent) },
     portable: { filename: 'agent-update.mjs', url: 'https://mooyu.fun/agent-update.mjs', sha256: sha256(portableUpdaterContent) },
   },
