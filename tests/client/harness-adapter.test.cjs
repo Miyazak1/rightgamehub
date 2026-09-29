@@ -199,8 +199,10 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(css, /\.daily-pick__body > button \{ height: 36px/);
   assert.match(app, /function InstallPage/);
   assert.match(app, /添加到你的 Agent/);
-  assert.match(app, /codex plugin marketplace add Miyazak1\/rightgamehub/);
+  assert.match(app, /-HostName codex/);
+  assert.match(app, /-HostName claude/);
   assert.match(app, /claude plugin install gamehub@gamehub/);
+  assert.doesNotMatch(app, /Miyazak1\/rightgamehub/);
   assert.match(app, /https:\/\/mooyu\.fun\/install\.ps1/);
   assert.match(app, /https:\/\/mooyu\.fun\/install\.sh/);
   assert.match(app, /不要克隆源码仓库/);
@@ -249,10 +251,16 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(dockerfile, /prepare-agent-downloads\.mjs/);
   assert.match(packer, /0x06054b50/);
   assert.match(downloads, /createHash\('sha256'\)/);
+  assert.match(downloads, /agentPlugin/);
+  assert.match(downloads, /contentBase64/);
   assert.match(powershell, /Get-FileHash -Algorithm SHA256/);
+  assert.match(powershell, /plugin marketplace add/);
+  assert.match(powershell, /claude plugin install gamehub@gamehub/);
   assert.match(powershell, /--install-extension/);
   assert.match(shell, /createHash\('sha256'\)/);
   assert.match(shell, /--install-extension/);
+  assert.match(shell, /plugin marketplace add/);
+  assert.match(shell, /claude plugin install gamehub@gamehub/);
   assert.doesNotMatch(powershell, /github\.com/);
   assert.doesNotMatch(shell, /github\.com/);
 });
