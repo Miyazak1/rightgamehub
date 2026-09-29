@@ -22,9 +22,12 @@ export async function validateWindowsExecutable(input, fileName) {
     const characteristics = pe.readUInt16LE(22);
     const magic = pe.readUInt16LE(24);
     const subsystem = pe.readUInt16LE(92);
-    if (machine !== 0x8664) throw invalid('EXE_ARCH_UNSUPPORTED', 'The first release supports Windows x64 executables only.');
+    const architecture = machine === 0x8664 ? { arch: 'x64', magic: 0x20b, minimumOptionalSize: 112 } : machine === 0x14c ? { arch: 'x86', magic: 0x10b, minimumOptionalSize: 96 } : null;
+    if (!architecture) throw invalid('EXE_ARCH_UNSUPPORTED', 'Only Windows x64 and x86 executables are supported.');
     if (!(characteristics & 2) || (characteristics & 0x2000)) throw invalid('EXE_TYPE_UNSUPPORTED', 'DLLs and non-executable PE files are not supported.');
-    if (magic !== 0x20b || optionalSize < 112 || offset + 24 + optionalSize > info.size) throw invalid('EXE_FORMAT_INVALID', 'The PE32+ optional header is invalid.');
+    if (magic !== architecture.magic || optionalSize < architecture.minimumOptionalSize || offset + 24 + optionalSize > info.size) {
+      throw invalid('EXE_FORMAT_INVALID', `The ${architecture.arch} optional header is invalid.`);
+    }
     if (subsystem !== 2) throw invalid('EXE_TYPE_UNSUPPORTED', 'Only graphical Windows executables are supported; console programs and drivers are rejected.');
     const safeName = String(fileName || 'game.exe').replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 180);
     return {
@@ -34,7 +37,7 @@ export async function validateWindowsExecutable(input, fileName) {
       totalBytes: info.size,
       fileCount: 1,
       assets: {},
-      native: { os: 'windows', arch: 'x64', subsystem: 'windows', packageType: 'windows_standalone_exe' },
+      native: { os: 'windows', arch: architecture.arch, subsystem: 'windows', packageType: 'windows_standalone_exe' },
     };
   } finally {
     await handle.close();
