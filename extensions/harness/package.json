@@ -2,7 +2,7 @@
   "name": "gamehub-dsh-plugin",
   "version": "0.1.0",
   "description": "GameHub game discovery, publishing and play experience for DeepSeek Harness",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
