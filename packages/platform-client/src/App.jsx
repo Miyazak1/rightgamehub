@@ -440,11 +440,12 @@ function CreatorPage({ api, demo, go }) {
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
     try { const works = demo ? demoWorks.slice(0, 2) : (await api.listCreatorWorks()).data; setState({ status: 'ready', works }); }
-    catch (error) { setState({ status: error.status === 401 || error.status === 403 ? 'auth' : 'error', works: [] }); }
+    catch (error) { setState({ status: error.status === 401 ? 'auth' : error.status === 403 ? 'forbidden' : 'error', works: [] }); }
   };
   useEffect(() => { load(); }, [demo]);
   if (state.status === 'loading') return <main className="page"><LoadingCards /></main>;
-  if (state.status === 'auth') return <main className="page"><StatePanel title="登录后管理作品" body="作者操作需要当前 Harness 会话中的 GameHub 账号授权。" action="前往登录" onAction={() => go('/account')} /></main>;
+  if (state.status === 'auth') return <main className="page"><StatePanel title="登录后管理作品" body="作者操作需要当前设备中的 GameHub 账号授权。" action="前往登录" onAction={() => go('/account')} /></main>;
+  if (state.status === 'forbidden') return <main className="page"><StatePanel title="尚未开通创作者权限" body="当前账号已经登录，但还没有创作和发布权限。" action="查看账号" onAction={() => go('/account')} /></main>;
   if (state.status === 'error') return <main className="page"><StatePanel title="暂时无法载入创作中心" body="API 或数据库可能还没有准备好。" action="重新连接" onAction={load} /></main>;
   const published = state.works.filter(work => work.state === 'published').length;
   const withdrawn = state.works.filter(work => work.state === 'withdrawn').length;
