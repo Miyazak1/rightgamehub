@@ -21,15 +21,17 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const manifestResponse = await fetch(baseUrl + '/downloads/manifest.json');
 if (!manifestResponse.ok) throw new Error('Unable to download the GameHub manifest.');
 const manifest = await manifestResponse.json();
-const updater = manifest.updater?.portable;
-if (!updater) throw new Error('Portable GameHub updater metadata is missing.');
-const updaterResponse = await fetch(updater.url);
-if (!updaterResponse.ok) throw new Error('Unable to download the GameHub updater.');
-const updaterBytes = Buffer.from(await updaterResponse.arrayBuffer());
-if (hash(updaterBytes) !== updater.sha256.toLowerCase()) throw new Error('GameHub updater SHA-256 verification failed.');
-const updaterPath = join(dataRoot, 'agent-update.mjs');
-await writeFile(updaterPath, updaterBytes);
-await chmod(updaterPath, 0o700);
+if (host !== 'cursor' && host !== 'code') {
+  const updater = manifest.updater?.portable;
+  if (!updater) throw new Error('Portable GameHub updater metadata is missing.');
+  const updaterResponse = await fetch(updater.url);
+  if (!updaterResponse.ok) throw new Error('Unable to download the GameHub updater.');
+  const updaterBytes = Buffer.from(await updaterResponse.arrayBuffer());
+  if (hash(updaterBytes) !== updater.sha256.toLowerCase()) throw new Error('GameHub updater SHA-256 verification failed.');
+  const updaterPath = join(dataRoot, 'agent-update.mjs');
+  await writeFile(updaterPath, updaterBytes);
+  await chmod(updaterPath, 0o700);
+}
 if (host === 'cursor' || host === 'code') {
   const item = manifest.editorExtension;
   if (!item.supportedHosts.includes(host)) throw new Error('Unsupported editor host: ' + host);
