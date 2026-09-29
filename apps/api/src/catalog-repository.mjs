@@ -1,4 +1,4 @@
-const targetView = row => ({ targetKey: row.target_key, state: row.target_state, currentReleaseId: row.current_release_id, revision: String(row.target_revision) });
+const targetView = row => ({ targetKey: row.target_key, state: row.target_state, currentReleaseId: row.current_release_id, revision: String(row.target_revision), packageType: row.package_type, releaseLabel: row.release_label, os: row.release_os, arch: row.release_arch });
 const workView = rows => ({
   id: rows[0].id, ownerUserId: rows[0].owner_user_id, title: rows[0].title, description: rows[0].description,
   instructions: rows[0].instructions, kind: rows[0].kind, state: rows[0].state, visibility: rows[0].visibility,
@@ -17,7 +17,8 @@ export class PostgresCatalogRepository {
   async list({ limit, kind }) {
     const result = await this.pool.query(
       `SELECT w.*,u.display_name AS creator_display_name,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
-              t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision
+              t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
+              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id
          LEFT JOIN LATERAL (SELECT COALESCE(SUM(play_count),0)::integer AS play_count,COUNT(*) FILTER (WHERE saved_at IS NOT NULL)::integer AS save_count FROM user_library WHERE work_key=w.id::text) e ON true
@@ -40,7 +41,8 @@ export class PostgresCatalogRepository {
   async get(workId) {
     const rows = (await this.pool.query(
       `SELECT w.*,u.display_name AS creator_display_name,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
-              t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision
+              t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
+              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id
          LEFT JOIN LATERAL (SELECT COALESCE(SUM(play_count),0)::integer AS play_count,COUNT(*) FILTER (WHERE saved_at IS NOT NULL)::integer AS save_count FROM user_library WHERE work_key=w.id::text) e ON true
@@ -50,6 +52,21 @@ export class PostgresCatalogRepository {
         ORDER BY t.target_key`, [workId],
     )).rows;
     return rows.length ? workView(rows) : null;
+  }
+
+  async getDownload(workId, releaseId) {
+    return (await this.pool.query(
+      `SELECT r.id,r.work_id,r.target_key,r.package_type,r.os,r.arch,r.entry_path,r.artifact_sha256,
+              u.object_key,u.file_name,u.actual_bytes
+         FROM releases r
+         JOIN works w ON w.id=r.work_id
+         JOIN work_targets t ON t.work_id=r.work_id AND t.target_key=r.target_key AND t.current_release_id=r.id
+         JOIN upload_jobs u ON u.id=r.upload_job_id
+        WHERE r.work_id=$1 AND r.id=$2 AND r.target_key LIKE 'windows-%'
+          AND r.validation_state='ready' AND r.serving_state='enabled'
+          AND w.state='published' AND w.visibility='public' AND t.state='published'`,
+      [workId, releaseId],
+    )).rows[0] ?? null;
   }
 
   async getLaunch(workId, releaseId = null) {
