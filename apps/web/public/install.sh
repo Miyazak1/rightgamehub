@@ -3,11 +3,12 @@ set -eu
 host="${1:-}"
 base_url="https://mooyu.fun"
 if [ -z "$host" ]; then
-  for candidate in cursor code codex claude; do
+  for candidate in cursor code dsh codex claude; do
     if command -v "$candidate" >/dev/null 2>&1; then host="$candidate"; break; fi
   done
 fi
-case "$host" in cursor|code|codex|claude) ;; *) echo "No supported Agent CLI was selected or found on PATH." >&2; exit 1 ;; esac
+[ "$host" = dsh ] && host=harness
+case "$host" in cursor|code|harness|codex|claude) ;; *) echo "No supported Agent CLI was selected or found on PATH." >&2; exit 1 ;; esac
 command -v node >/dev/null 2>&1 || { echo "Node.js is required to verify and install GameHub." >&2; exit 1; }
 data_root="${XDG_DATA_HOME:-$HOME/.local/share}/gamehub"
 mkdir -p "$data_root"
@@ -30,6 +31,14 @@ if (host === 'cursor' || host === 'code') {
   const output = join(dataRoot, 'gamehub-agent-current.vsix');
   await writeFile(output, bytes);
   console.log(output);
+} else if (host === 'harness') {
+  const item = manifest.harnessPlugin;
+  if (!item.supportedHosts.includes(host)) throw new Error('Unsupported Harness host.');
+  const response = await fetch(item.url);
+  if (!response.ok) throw new Error('Unable to download the GameHub Harness package.');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (hash(bytes) !== item.sha256.toLowerCase()) throw new Error('GameHub Harness package SHA-256 verification failed.');
+  await writeFile(join(dataRoot, 'gamehub-dsh-plugin-current.tgz'), bytes);
 } else {
   const item = manifest.agentPlugin;
   if (!item.supportedHosts.includes(host)) throw new Error('Unsupported Agent host: ' + host);
@@ -55,6 +64,10 @@ if [ "$host" = cursor ] || [ "$host" = code ]; then
   [ -f "$vsix" ] || { echo "Verified VSIX was not created." >&2; exit 1; }
   "$host" --install-extension "$vsix" --force
   echo "GameHub installed for $host. Reload the editor and open GameHub from the Activity Bar."
+elif [ "$host" = harness ]; then
+  command -v dsh >/dev/null 2>&1 || { echo "DeepSeek Harness CLI (dsh) was not found on PATH." >&2; exit 1; }
+  dsh plugin --profile web add "$data_root/gamehub-dsh-plugin-current.tgz"
+  echo "GameHub installed for the Harness web profile. Restart dsh web."
 else
   marketplace_root="$data_root/agent-marketplace"
   if ! "$host" plugin marketplace add "$marketplace_root"; then
