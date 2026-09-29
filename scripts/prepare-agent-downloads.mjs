@@ -53,7 +53,8 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     checkIntervalHours: 6,
     download: 'background',
     apply: 'on-host-restart',
-    rollbackVersions: 1,
+    rollbackVersions: 0,
+    failurePolicy: 'report-and-retry',
     integrity: ['sha256'],
   },
   updater: {
