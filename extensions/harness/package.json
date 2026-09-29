@@ -1,8 +1,8 @@
 {
-  "name": "@gamehub/harness-plugin",
-  "version": "0.0.59",
-  "description": "GameHub shared platform client and authenticated local game lab for Harness",
-  "private": true,
+  "name": "gamehub-dsh-plugin",
+  "version": "0.1.0",
+  "description": "GameHub game discovery, publishing and play experience for DeepSeek Harness",
+  "license": "MIT",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
@@ -10,9 +10,38 @@
     "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml"
   },
-  "files": ["lib", "vendor", "cordis.patch.yml", "README.md"],
+  "files": [
+    "lib",
+    "vendor",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "homepage": "https://mooyu.fun",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miyazak1/rightgamehub.git",
+    "directory": "extensions/harness"
+  },
+  "bugs": {
+    "url": "https://github.com/Miyazak1/rightgamehub/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "agent",
+    "games",
+    "gamehub"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [
@@ -21,8 +50,14 @@
       ]
     }
   },
-  "peerDependencies": { "react": "^18.2.0" },
-  "peerDependenciesMeta": { "react": { "optional": true } },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@gamehub/host-contract": "workspace:*",
     "@gamehub/platform-api-client": "workspace:*",
