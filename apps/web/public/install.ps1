@@ -19,9 +19,9 @@ function Enable-GameHubUpdates {
     [System.IO.Directory]::CreateDirectory($root) | Out-Null
     $updaterPath = Join-Path $root 'agent-update.ps1'
     $partial = "$updaterPath.part"
-    Invoke-WebRequest -UseBasicParsing -Uri $manifest.updater.url -OutFile $partial
+    Invoke-WebRequest -UseBasicParsing -Uri $manifest.updater.windows.url -OutFile $partial
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $partial).Hash.ToLowerInvariant()
-    if ($actual -ne $manifest.updater.sha256.ToLowerInvariant()) { throw 'GameHub updater SHA-256 verification failed.' }
+    if ($actual -ne $manifest.updater.windows.sha256.ToLowerInvariant()) { throw 'GameHub updater SHA-256 verification failed.' }
     Move-Item -LiteralPath $partial -Destination $updaterPath -Force
     $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
     $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$updaterPath`" -HostName $HostName -Quiet"
