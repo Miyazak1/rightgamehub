@@ -705,16 +705,18 @@ const agentInstallTargets = [
     prompt: '请在获得我的确认后，把 gamehub-dsh-plugin 安装到 DeepSeek Harness 的 web profile；安装后检查结果，并提醒我重启 dsh web。',
   },
   {
-    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
+    id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: '官方安装器',
     summary: '通过 Activity Bar 打开 GameHub，令牌保存在编辑器 SecretStorage，不读取工作区文件。',
-    actionLabel: '复制接入说明',
-    prompt: 'GameHub 的 VS Code 官方安装器尚未公开发布。不要克隆源码仓库，也不要从非官方地址下载 VSIX。请先打开 https://mooyu.fun 使用网页版；正式安装器发布后，只使用 mooyu.fun 提供的安装命令，并在执行前向我说明下载来源、权限和校验结果。',
+    command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName code',
+    alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- code',
+    prompt: '请帮我安装 GameHub 的 VS Code 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 code --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何在 Activity Bar 打开 GameHub。',
   },
   {
-    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'testing', state: '源码构建预览 · 尚未公开发布',
+    id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '官方安装器',
     summary: '与 VS Code 共用扩展，运行时自动识别 Cursor，并跟随编辑器主题。',
-    actionLabel: '复制接入说明',
-    prompt: 'GameHub 的 Cursor 官方安装器尚未公开发布。不要克隆源码仓库，也不要从非官方地址下载 VSIX。请先打开 https://mooyu.fun 使用网页版；正式安装器发布后，只使用 mooyu.fun 提供的安装命令，并在执行前向我说明下载来源、权限和校验结果。',
+    command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName cursor',
+    alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- cursor',
+    prompt: '请帮我安装 GameHub 的 Cursor 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 cursor --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何打开 GameHub 侧栏。',
   },
   {
     id: 'windsurf', name: 'Windsurf', badge: '优先内置', tone: 'testing', state: '兼容性验证中',
@@ -746,6 +748,7 @@ function AgentInstallCard({ target, copied, onCopy, onOpen }) {
     <div className="agent-install-card__head"><div><span className={`agent-install-card__badge is-${target.tone}`}>{target.badge}</span><h3>{target.name}</h3></div><small>{target.state}</small></div>
     <p>{target.summary}</p>
     {target.command && <div className="agent-command"><code>{target.command}</code><button onClick={() => onCopy(target.command, `${target.id}-command`)}>{copied === `${target.id}-command` ? '已复制' : '复制命令'}</button></div>}
+    {target.alternate && <details><summary>macOS / Linux</summary><div className="agent-command"><code>{target.alternate}</code><button onClick={() => onCopy(target.alternate, `${target.id}-alternate`)}>{copied === `${target.id}-alternate` ? '已复制' : '复制'}</button></div></details>}
     {target.update && <details><summary>更新命令</summary><div className="agent-command"><code>{target.update}</code><button onClick={() => onCopy(target.update, `${target.id}-update`)}>{copied === `${target.id}-update` ? '已复制' : '复制'}</button></div></details>}
     <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? '提示词已复制' : (target.actionLabel ?? '让 Agent 帮我安装')}</button><button onClick={onOpen}>先用网页版</button></div>
   </article>;
