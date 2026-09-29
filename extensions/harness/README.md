@@ -1,5 +1,24 @@
 # GameHub Harness Adapter
 
+## 安装到 DeepSeek Harness
+
+正式 npm 包发布后，在安装了 Node.js 22.19+ 和 pnpm 的电脑上执行：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web add gamehub-dsh-plugin
+npx @deepseek-ai/dsh web
+```
+
+插件默认连接 `https://mooyu.fun`。开发或私有部署可以在宿主页面加载插件前设置 `window.GAMEHUB_API_BASE_URL` 覆盖 API 地址。更新和卸载：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web update gamehub-dsh-plugin
+npx @deepseek-ai/dsh plugin --profile web remove gamehub-dsh-plugin
+```
+
+安装、更新或卸载后都需要重启对应的 Harness profile。
+
+
 0.0.51 增加本地内容治理闭环：登录用户可举报公开作品，管理员可驳回举报或立即暂停作品，所有处置进入数据库级禁止更新与删除的审计记录。
 
 0.0.50 增加作品封面上传：静态 PNG、JPEG、WebP 经受限解码、16:9 裁切和去元数据 WebP 重编码后，进入内容寻址存储并用于发现页、详情页和创作中心。
