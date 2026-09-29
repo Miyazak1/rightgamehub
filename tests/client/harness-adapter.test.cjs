@@ -204,7 +204,8 @@ test('Harness navigation remains inside the plugin surface', async () => {
   assert.match(app, /mode === 'hash'/);
   assert.doesNotMatch(app, /history\.back\(\)/);
   assert.match(entry, /routing: 'memory'/);
-  assert.match(entry, /127\.0\.0\.1:3090/);
+  assert.match(entry, /https:\/\/mooyu\.fun/);
+  assert.match(entry, /GAMEHUB_API_BASE_URL/);
   assert.match(app, /\['created', 'receiving'\]\.includes\(data\.state\)/);
   assert.match(app, /data\.state === 'uploaded'/);
   assert.match(app, /\['127\.0\.0\.1', 'localhost'\]\.includes\(location\.hostname\)/);
