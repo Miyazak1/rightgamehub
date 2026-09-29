@@ -52,7 +52,7 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
   quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000 } = {}) {
   enabled = enabled && platform === 'win32';
   const parent = path.resolve(root);
-  const prepared = new Map(), running = new Map(), attempts = new Map();
+  const prepared = new Map(), running = new Map(), attempts = new Map(), downloads = new Map();
   const lifetime = new AbortController();
   let pending, disposed = false;
   const cache = record => {
@@ -89,17 +89,19 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
     if (running.get(record.id)?.state === 'started') throw fail('此程序的启动进程仍在运行，请先在游戏窗口退出。');
     pending = (async () => {
       const signal = AbortSignal.any([lifetime.signal, requestSignal || new AbortController().signal, AbortSignal.timeout(timeoutMs)]);
-      signal.throwIfAborted(); prepared.delete(record.id);
+      signal.throwIfAborted(); prepared.delete(record.id); downloads.set(record.id, { state: 'checking', receivedBytes: 0, totalBytes: record.size, percent: 0, error: null });
       await mkdir(parent, { recursive: true }); await ordinary(parent, true);
       const { directory, executable } = cache(record);
       try {
         const existing = await verify(record, signal);
         signal.throwIfAborted(); prepared.set(record.id, existing);
-        return { prepared: true, reused: true, sha256: record.sha256, architecture: existing.architecture };
+        downloads.set(record.id, { state: 'ready', receivedBytes: record.size, totalBytes: record.size, percent: 100, error: null });
+        return { prepared: true, reused: true, sha256: record.sha256, architecture: existing.architecture, progress: downloads.get(record.id) };
       } catch (cause) {
         signal.throwIfAborted();
         if (cause.code !== 'ENOENT' && cause.status !== 409) throw cause;
       }
+      downloads.set(record.id, { state: 'downloading', receivedBytes: 0, totalBytes: record.size, percent: 0, error: null });
       await checkQuota(record);
       // A replacement only changes game.exe, preserving any local game saves.
       await mkdir(directory, { recursive: true }); await ordinary(directory, true);
@@ -118,15 +120,18 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
             signal.throwIfAborted(); const { value, done } = await reader.read(); signal.throwIfAborted();
             if (done) break;
             size += value.byteLength; if (size > record.size) throw fail('EXE 下载超过声明大小。');
+            downloads.set(record.id, { state: 'downloading', receivedBytes: size, totalBytes: record.size, percent: Math.min(99, Math.floor(size * 100 / record.size)), error: null });
             hash.update(value); await handle.writeFile(value);
           }
           if (size !== record.size || hash.digest('hex') !== record.sha256) throw fail('EXE 下载校验失败。');
           await handle.sync(); await handle.close(); handle = null;
+          downloads.set(record.id, { state: 'verifying', receivedBytes: record.size, totalBytes: record.size, percent: 99, error: null });
           await inspectExecutable(partial); signal.throwIfAborted();
           await rename(partial, executable);
           const verified = await verify(record, signal);
           signal.throwIfAborted(); prepared.set(record.id, verified);
-          return { prepared: true, reused: false, sha256: record.sha256, architecture: verified.architecture };
+          downloads.set(record.id, { state: 'ready', receivedBytes: record.size, totalBytes: record.size, percent: 100, error: null });
+          return { prepared: true, reused: false, sha256: record.sha256, architecture: verified.architecture, progress: downloads.get(record.id) };
         } finally { signal.removeEventListener('abort', abort); }
       } finally {
         await reader?.cancel().catch(() => {}); reader?.releaseLock(); await handle?.close();
@@ -135,7 +140,9 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
     })();
     try { return await pending; }
     catch (cause) {
-      if (requestSignal?.aborted || lifetime.signal.aborted || cause.name === 'TimeoutError') throw fail('下载已取消或超时，没有启动游戏。', 408);
+      const message = requestSignal?.aborted || lifetime.signal.aborted || cause.name === 'TimeoutError' ? '下载已取消或超时，没有启动游戏。' : (cause.publicMessage || cause.message || '下载失败。');
+      downloads.set(record.id, { state: 'failed', receivedBytes: downloads.get(record.id)?.receivedBytes || 0, totalBytes: record.size, percent: downloads.get(record.id)?.percent || 0, error: message });
+      if (requestSignal?.aborted || lifetime.signal.aborted || cause.name === 'TimeoutError') throw fail(message, 408);
       throw cause;
     } finally { pending = null; }
   }
@@ -180,8 +187,9 @@ export function createDesktopLauncher({ root, enabled = process.env.GAMEHUB_DESK
   }
   return { enabled,
     status: record => ({ enabled: enabled && !disposed, prepared: prepared.has(record.id),
-      state: running.get(record.id)?.state || 'idle', startedAt: running.get(record.id)?.startedAt || null }),
+      state: running.get(record.id)?.state || 'idle', startedAt: running.get(record.id)?.startedAt || null,
+      download: downloads.get(record.id) || { state: prepared.has(record.id) ? 'ready' : 'idle', receivedBytes: prepared.has(record.id) ? record.size : 0, totalBytes: record.size, percent: prepared.has(record.id) ? 100 : 0, error: null } }),
     prepare, launch,
     // These are independent desktop programs: closing the tab/service never kills them.
-    async close() { disposed = true; lifetime.abort(); await pending?.catch(() => {}); prepared.clear(); } };
+    async close() { disposed = true; lifetime.abort(); await pending?.catch(() => {}); prepared.clear(); downloads.clear(); } };
 }
