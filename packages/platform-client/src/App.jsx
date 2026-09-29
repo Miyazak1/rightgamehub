@@ -109,11 +109,16 @@ function Art({ work, large = false }) {
   return <div className={`art art--${work.art ?? 'violet'} ${large ? 'art--large' : ''}`}><div className="art__pixel" style={{ backgroundImage: `url(${pixelCoverAtlas})` }} /><span className="art__pixel-corner" aria-hidden="true" /></div>;
 }
 
+const workHasWebRelease = work => work.id === GUESS_BAIKE_WORK_ID || work.targets?.some(target => target.targetKey === 'web' && target.currentReleaseId);
+const workHasWindowsRelease = work => work.targets?.some(target => target.targetKey === 'windows-x64' && target.currentReleaseId);
+const workActionPath = work => workHasWebRelease(work) ? `/play/${work.id}` : `/works/${work.id}`;
+const workPlatformLabel = work => workHasWebRelease(work) ? 'Web' : workHasWindowsRelease(work) ? 'Windows' : '详情';
+
 function WorkCard({ work, go, featured = false }) {
   return <article className={`work-card ${featured ? 'work-card--featured' : ''}`}>
     <button className="card-open" onClick={() => go(`/works/${work.id}`)} aria-label={`查看 ${work.title}`}><Art work={work} large={featured} /></button>
-    <div className="work-card__body"><div><span className="eyebrow">{work.tag ?? (work.kind === 'game' ? '游戏' : '创意')}</span><h3>{work.title}</h3></div><p>{work.description}</p><div className="card-meta"><span>{icons.globe} Web</span><span>{icons.play} {work.plays ?? '新作'}</span></div></div>
-    <button className="round-play" onClick={() => go(`/play/${work.id}`)} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
+    <div className="work-card__body"><div><span className="eyebrow">{work.tag ?? (work.kind === 'game' ? '游戏' : '创意')}</span><h3>{work.title}</h3></div><p>{work.description}</p><div className="card-meta"><span>{icons.globe} {workPlatformLabel(work)}</span><span>{icons.play} {work.plays ?? '新作'}</span></div></div>
+    <button className="round-play" onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
   </article>;
 }
 
@@ -127,7 +132,7 @@ function QuietWorkRow({ work, go }) {
       <Art work={work} />
       <span className="quiet-work-row__copy"><strong>{work.title}</strong><small>{workTag(work)} · {work.estimatedMinutes ?? 3} 分钟 · {work.creatorDisplayName ?? '社区作者'}</small></span>
     </button>
-    <button className="quiet-play" onClick={() => go(`/play/${work.id}`)} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
+    <button className="quiet-play" onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}</button>
   </article>;
 }
 
@@ -140,7 +145,7 @@ function DailyPick({ work, go, index }) {
     <div className="daily-pick__body">
       <div><span>{workTag(work)}</span><small>约 {work.estimatedMinutes ?? 3} 分钟</small></div>
       <strong>{work.title}</strong>
-      <button onClick={() => go(`/play/${work.id}`)} aria-label={`开始玩 ${work.title}`}>{icons.play}<span>开始</span></button>
+      <button onClick={() => go(workActionPath(work))} aria-label={`开始玩 ${work.title}`}>{icons.play}<span>开始</span></button>
     </div>
   </article>;
 }
@@ -152,7 +157,7 @@ function CommunityProject({ work, go }) {
       <div className="project-badges"><span>{workTag(work)}</span>{work.agentLabel && <span>{work.agentLabel}</span>}{work.repositoryUrl && <span>OPEN SOURCE</span>}</div>
       <button onClick={() => go(`/works/${work.id}`)}><strong>{work.title}</strong><small>by {work.creatorDisplayName ?? '社区作者'}</small></button>
       <p>{work.description}</p>
-      <div><span>{work.estimatedMinutes ?? 3} MIN</span><span>{workPlays(work)}</span><button onClick={() => go(`/play/${work.id}`)}>{icons.play} 玩一下</button></div>
+      <div><span>{work.estimatedMinutes ?? 3} MIN</span><span>{workPlays(work)}</span><button onClick={() => go(workActionPath(work))}>{icons.play} 玩一下</button></div>
     </div>
   </article>;
 }
@@ -223,7 +228,7 @@ function PlayerPage({ workId, releaseId, challengeCode, api, demo, go }) {
   const mount = useRef(null); const core = useRef(null); const [state, setState] = useState('loading');
   const builtIn = workId === GUESS_BAIKE_WORK_ID;
   useEffect(() => { if (!demo) api.recordPlay(workId).catch(() => {}); }, [api, demo, workId]);
-  useEffect(() => { if (builtIn) { setState('running'); return undefined; } const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname); core.current = new PlayerCore({ runtimeDomain: loopback ? 'localhost' : import.meta.env?.VITE_RUNTIME_DOMAIN ?? 'gamehubusercontent.example', allowLocalhost: loopback || import.meta.env?.DEV === true }); const off = core.current.onStateChanged(e => setState(e.state)); if (demo) { setState('running'); } else { api.getLaunch(workId, releaseId).then(({ data }) => core.current?.mount(mount.current, data)).catch(() => setState('error')); } return () => { off(); core.current?.dispose(); }; }, [workId, releaseId, demo, builtIn]);
+  useEffect(() => { if (builtIn) { setState('running'); return undefined; } const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname); core.current = new PlayerCore({ runtimeDomain: loopback ? 'localhost' : import.meta.env?.VITE_RUNTIME_DOMAIN ?? 'gamehubusercontent.example', allowLocalhost: loopback || import.meta.env?.DEV === true }); const off = core.current.onStateChanged(e => setState(e.state)); let active = true; if (demo) { setState('running'); } else { api.getWork(workId).then(({ data: work }) => { if (!active) return; if (!workHasWebRelease(work)) { go(`/works/${workId}`); return; } return api.getLaunch(workId, releaseId).then(({ data }) => { if (active) core.current?.mount(mount.current, data); }); }).catch(() => { if (active) setState('error'); }); } return () => { active = false; off(); core.current?.dispose(); }; }, [workId, releaseId, demo, builtIn]);
   return <main className={`player-page ${builtIn ? 'player-page--guess' : ''}`}><div className="player-bar"><button className="back-link" onClick={() => go(challengeCode ? '/social' : `/works/${workId}`)}>{icons.back} 退出游戏</button><span className={`live-state live-state--${state}`}><i />{challengeCode ? '玩家挑战进行中' : builtIn ? 'GameHub 官方出品' : state === 'running' ? '正在运行' : state === 'loading' ? '正在载入' : state === 'error' ? '启动失败' : '已暂停'}</span><div>{!builtIn && <><button className="icon-button" onClick={() => state === 'hidden' ? core.current?.resume() : core.current?.hide()} aria-label="暂停或恢复">{icons.pause}</button><button className="icon-button" onClick={() => core.current?.stop()} aria-label="停止">{icons.stop}</button></>}</div></div><div className="player-stage" ref={mount}>{builtIn ? <GuessBaikeGame api={api} demo={demo} challengeCode={challengeCode}/> : demo ? <div className="demo-game"><div className="demo-planet"/><span className="kicker">DEMO SESSION</span><h1>星港漂移</h1><p>↑ ↓ ← → 驾驶 · 空格推进</p><div className="demo-track"><i/><i/><i/></div></div> : null}{state === 'error' && <StatePanel title="游戏没有成功启动" body="运行地址可能已经失效。返回详情页后再试一次。" action="返回详情" onAction={() => go(`/works/${workId}`)} />}</div></main>;
 }
 
