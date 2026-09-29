@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import crypto from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import { AuthError } from './auth-service.mjs';
 import { WorkError } from './work-service.mjs';
 import { UploadError } from './upload-service.mjs';
@@ -139,6 +140,21 @@ export function createApp({ config, database, migrations, authService, workServi
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.get(request.params.workId));
+    });
+    app.get('/v1/works/:workId/releases/:releaseId/download', {
+      schema: { params: { type: 'object', additionalProperties: false, required: ['workId','releaseId'], properties: {
+        workId: workKeySchema, releaseId: { type: 'string', format: 'uuid' },
+      } } },
+    }, async (request, reply) => {
+      const artifact = await catalogService.download(request.params.workId, request.params.releaseId);
+      const fallback = `gamehub-${artifact.releaseId}.exe`;
+      const fileName = /^[^\\/:*?"<>|\x00-\x1f]{1,180}\.exe$/i.test(artifact.fileName ?? '') ? artifact.fileName : fallback;
+      reply.header('Cache-Control', 'no-store');
+      reply.header('X-Content-Type-Options', 'nosniff');
+      reply.header('Content-Disposition', `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+      reply.header('Content-Length', String(artifact.sizeBytes));
+      reply.header('ETag', `"${artifact.sha256}"`);
+      return reply.type('application/octet-stream').send(createReadStream(artifact.filePath));
     });
     app.get('/v1/works/:workId/launch', {
       schema: {
@@ -514,7 +530,7 @@ export function createApp({ config, database, migrations, authService, workServi
       return envelope(await uploadService.grant(request.actor, request.params.uploadId));
     });
 
-    app.put('/v1/creator/uploads/:uploadId/content', { schema: { params: uploadParams } }, async request => (
+    app.put('/v1/creator/uploads/:uploadId/content', { bodyLimit: 500 * 1024 * 1024, schema: { params: uploadParams } }, async request => (
       envelope(await uploadService.receive(request.params.uploadId, request.headers.authorization, request.body))
     ));
 
