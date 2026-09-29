@@ -784,18 +784,16 @@ const agentInstallTargets = [
   },
   {
     id: 'vscode', name: 'VS Code', badge: '原生侧栏', tone: 'native', state: '官方安装器 · 自动更新',
-    summary: '通过 Activity Bar 打开 GameHub，令牌保存在 SecretStorage；首次安装后后台下载校验过的 VSIX，重启编辑器生效。',
+    summary: '通过 Activity Bar 打开 GameHub，令牌保存在 SecretStorage；扩展自身静默下载并校验新版，重启编辑器生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName code',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- code',
-    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName code',
     prompt: '请帮我安装 GameHub 的 VS Code 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 code --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何在 Activity Bar 打开 GameHub。',
   },
   {
     id: 'cursor', name: 'Cursor', badge: '原生侧栏', tone: 'native', state: '官方安装器 · 自动更新',
-    summary: '与 VS Code 共用扩展并自动识别 Cursor；首次安装后后台下载校验过的 VSIX，重启编辑器生效。',
+    summary: '与 VS Code 共用扩展并自动识别 Cursor；扩展自身静默下载并校验新版，重启编辑器生效。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName cursor',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- cursor',
-    update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName cursor',
     prompt: '请帮我安装 GameHub 的 Cursor 扩展。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查安装脚本，向我说明它会从 mooyu.fun 下载 VSIX、校验 SHA-256 并调用 cursor --install-extension，然后等待我确认；确认后使用适合当前系统的命令安装，验证扩展已启用，并告诉我如何打开 GameHub 侧栏。',
   },
   {
@@ -852,7 +850,7 @@ function InstallPage({ go, hostIdentity }) {
     <section className="install-principles" aria-label="接入原则"><div><b>01</b><strong>原生优先</strong><span>右栏、侧栏或 MCP App</span></div><div><b>02</b><strong>最小权限</strong><span>不读取项目与宿主凭据</span></div><div><b>03</b><strong>始终可用</strong><span>不支持内置时回退网页</span></div></section>
     {detected && <section className="install-recommended"><span>为当前宿主推荐</span><AgentInstallCard target={detected} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/></section>}
     <section className="install-catalog"><div className="section-heading"><div><h2>选择你的 Agent</h2><p>安装入口会随着各宿主完成验证逐步开放。</p></div></div><div className="agent-install-grid">{agentInstallTargets.filter(item => item.id !== detected?.id).map(target => <AgentInstallCard key={target.id} target={target} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/>)}</div></section>
-    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>GameHub 登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li><li>安装器只从 mooyu.fun 下载版本清单和制品，并逐个校验 SHA-256。</li><li>Windows 使用当前用户的计划任务，macOS / Linux 使用当前用户的 cron；没有调度能力时仍可手动更新。</li></ul></section>
+    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>GameHub 登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li><li>安装器只从 mooyu.fun 下载版本清单和制品，并逐个校验 SHA-256。</li><li>Cursor / VS Code 由扩展自身静默更新；其他 Agent 使用当前用户的计划任务或 cron，不需要每次手动执行命令。</li></ul></section>
   </main>;
 }
 
