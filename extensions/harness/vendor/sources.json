@@ -1,0 +1,34 @@
+{
+  "packages": [
+    {
+      "name": "yauzl",
+      "version": "3.4.0",
+      "repository": "https://github.com/thejoshwolfe/yauzl"
+    },
+    {
+      "name": "pend",
+      "version": "1.2.0",
+      "repository": "https://github.com/andrewrk/node-pend"
+    }
+  ],
+  "builder": "esbuild@0.28.1",
+  "bundleSha256": "9dc6ef84ed0fa1a7ef2e0ba1c59e29675cff0c63935b9eca2526489b3cb62c9e",
+  "sources": [
+    {
+      "source": "yauzl@3.4.0/index.js",
+      "sha256": "8cccdd25e8bb5516572c09072324876860c8de5898c0b8b7070f0e660b35a0ec"
+    },
+    {
+      "source": "yauzl@3.4.0/fd-slicer.js",
+      "sha256": "fa8868a9879ce50db8cbec36d487424af112bd5b0c433831968441ec50d7616a"
+    },
+    {
+      "source": "yauzl@3.4.0/crc32.js",
+      "sha256": "7bf6476c8e4984418943aa4eb6743c859d723d5e9a7278d61d34457d2554cec4"
+    },
+    {
+      "source": "pend@1.2.0/index.js",
+      "sha256": "4b991290680d9027dd786493c6e816900355956d88afb6ae4d97b5ac5a3ee0f5"
+    }
+  ]
+}

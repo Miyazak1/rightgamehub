@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-09-24T21:11:39.6165806+08:00",
+  "pluginVersion": "0.0.11",
+  "tests": {
+    "passed": 61,
+    "skipped": 0,
+    "failed": 0
+  },
+  "runtimeLaunchInNewTests": "test-double",
+  "guiAcceptance": "not-run",
+  "artifacts": [
+    {
+      "file": "gamehub-harness-plugin-0.0.11.tgz",
+      "bytes": 43966,
+      "sha256": "4d35c0f2c7dde9c82ff4abd7a11420a884be5ae75f72c79d64920e6a7bd53b31"
+    },
+    {
+      "file": "gamehub-owned-sidebar-1.0.0.zip",
+      "bytes": 2855,
+      "sha256": "e15998e76c53ee32d7d39e50e2db1d4aeac507816158920fffafd567c3134dfe"
+    }
+  ]
+}

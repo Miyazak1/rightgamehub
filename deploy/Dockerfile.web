@@ -1,0 +1,29 @@
+FROM node:22-bookworm-slim AS web-build
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/platform-client/package.json packages/platform-client/package.json
+COPY packages/platform-api-client/package.json packages/platform-api-client/package.json
+COPY packages/host-contract/package.json packages/host-contract/package.json
+COPY packages/player-core/package.json packages/player-core/package.json
+RUN pnpm install --frozen-lockfile --filter @gamehub/web...
+COPY apps/web apps/web
+COPY packages/platform-client packages/platform-client
+COPY packages/platform-api-client packages/platform-api-client
+COPY packages/host-contract packages/host-contract
+COPY packages/player-core packages/player-core
+ARG VITE_RUNTIME_DOMAIN
+ENV VITE_RUNTIME_DOMAIN=$VITE_RUNTIME_DOMAIN
+RUN pnpm --filter @gamehub/web build
+
+FROM caddy:2-builder-alpine AS caddy-build
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
+COPY --from=web-build /app/apps/web/dist /srv/gamehub
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443

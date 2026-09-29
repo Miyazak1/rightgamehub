@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 游乐场 · 右侧栏技术验证</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,"Microsoft YaHei",system-ui,sans-serif;background:#101215;color:#f2f4f3}*{box-sizing:border-box}body{margin:0}main{max-width:780px;margin:auto;padding:28px 22px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #34383b;padding-bottom:20px}.brand{font-size:13px;letter-spacing:3px;color:#d2f699}small,.muted{color:#a6acb0}h1{font-size:clamp(25px,6vw,40px);letter-spacing:-1px;margin:32px 0 12px}p{line-height:1.8;font-size:14px}.tag{border:1px solid #424a42;color:#d2f699;padding:5px 9px;border-radius:20px;font-size:11px}.card{margin:25px 0;background:#1b1e22;border:1px solid #34383b;border-radius:18px;overflow:hidden}.art{height:180px;background:radial-gradient(ellipse at 50% 100%,#719564 0,transparent 62%),#20272a;position:relative;overflow:hidden;display:grid;place-items:center}.planet{width:94px;height:94px;background:radial-gradient(circle at 30% 25%,#e6ffc2,#90b775 60%,#405940);border-radius:50%;box-shadow:0 0 65px #bedb6755}.ring{position:absolute;width:210px;height:52px;border:3px solid #cbea9a;border-radius:50%;transform:rotate(-22deg)}.content{padding:20px}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}h2{font-size:21px;margin:0 0 6px}button{font:inherit;cursor:pointer;border:0;border-radius:9px;padding:12px 17px;background:#d2f699;color:#17210e;font-weight:600}button:focus-visible{outline:3px solid #fafafa;outline-offset:4px}.secondary{background:#333a40;color:#f1f5ef}.description{margin:13px 0 20px;color:#bbc1c4}#play[hidden],#catalog[hidden]{display:none}#stage{position:relative;min-height:310px;overflow:hidden;background:#141f26;border:1px solid #394950;border-radius:16px;margin:20px 0}canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}#star{position:absolute;top:45%;left:45%;background:#d2f699;border-radius:50%;height:64px;width:64px;font-size:29px;padding:0;transform:translate(-50%,-50%);box-shadow:0 0 28px #d2f69955}.stats{display:flex;gap:22px;padding:16px;background:#1d2428;border-radius:12px}.stat b{display:block;font-size:24px;color:#d2f699;margin-top:4px}footer{margin-top:30px;font-size:12px;line-height:1.8;color:#899197}details{border-top:1px solid #34383b;margin-top:24px;padding-top:18px;font-size:12px;line-height:1.8}summary{cursor:pointer}#status{min-height:24px;color:#d2f699}#checks{white-space:pre-wrap}a{color:#d2f699}
+</style>
+<main>
+<header><span class="brand">LIGHT ARCADE</span><span class="tag" id="surface">本地概念验证</span></header>
+<p id="browser-option" hidden><button class="secondary" id="open-browser">在内置浏览器中打开</button></p>
+<section id="catalog">
+<h1>灵感，变成可以玩的东西。</h1>
+<p class="muted">AI 创作者的小小宇宙。打开，试玩，发现下一个有趣的创意。</p>
+<article class="card"><div class="art"><div class="planet"></div><div class="ring"></div></div><div class="content"><div class="row"><h2>拾星计划</h2><span class="tag">HTML5</span></div><small>演示作品 · 轻量互动</small><p class="description">点击发光的星星，收集自己的星光。支持鼠标和键盘，最高分保存在这个浏览器。</p><div class="row"><span>免费试玩</span><button id="launch">开始试玩</button></div></div></article>
+</section>
+<section id="play" hidden>
+<div class="row" style="margin-top:24px"><h2>拾星计划</h2><button class="secondary" id="back">返回游戏库</button></div>
+<p class="muted">点击星星收集星光；星星获得焦点后，也可以按 Enter 或空格。</p>
+<div class="stats"><div class="stat">本局星光<b id="score">0</b></div><div class="stat">本地最高分<b id="best">0</b></div></div>
+<div id="stage"><canvas id="sky" aria-label="动态星空背景"></canvas><button id="star" aria-label="收集星星">✦</button></div>
+<div class="row"><button class="secondary" id="restart">重新开始</button><button class="secondary" id="save">保存试玩进度</button></div><p id="status" role="status"></p>
+</section>
+<details><summary>查看验证范围</summary><p>同一套界面支持浏览器和已注册的宿主功能区。入口优先使用宿主功能区，接口不可用或页面未就绪时回退到内置浏览器。普通网页本身不会获得原生面板权限。</p><pre id="checks"></pre><p>未接入账号、上传、交易、分账、远程托管或 MCP。本地存档按入口分别保存，尚未实现跨入口云存档同步。</p></details>
+<footer>技术验证 / 2026.09.20<br>运行于本机，仅供验证 agent 内的游玩体验。</footer>
+</main>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const hostApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
+$('surface').textContent = hostApi ? '功能区模式' : '浏览器模式';
+$('browser-option').hidden = !hostApi;
+if (hostApi) {
+  $('open-browser').onclick = () => hostApi.postMessage({ type: 'arcade:browser' });
+  window.addEventListener('message', event => {
+    if (event.data?.type === 'arcade:probe') hostApi.postMessage({ type: 'arcade:ready' });
+  });
+}
+const key = 'light-arcade-poc-v1';
+let score = 0, best = 0, storageOK = true, active = false, frame = 0, animationId;
+try { const s = (hostApi ? hostApi.getState() : JSON.parse(localStorage.getItem(key) || '{}')) || {}; score = Number.isSafeInteger(s.score) && s.score >= 0 ? s.score : 0; best = Number.isSafeInteger(s.best) && s.best >= 0 ? Math.max(s.best, score) : score; } catch { storageOK = false; }
+const ctx = $('sky').getContext('2d');
+function render(){ $('score').textContent = score; $('best').textContent = best; }
+function save(){ try { if(hostApi) hostApi.setState({score,best}); else localStorage.setItem(key, JSON.stringify({score,best})); $('status').textContent = '试玩进度已保存在当前入口。'; } catch { storageOK = false; $('status').textContent = '当前入口未允许保存本地进度。'; } }
+function animate(){
+  if (!active || !ctx || document.hidden) return;
+  const c = $('sky'), w = c.clientWidth, h = c.clientHeight;
+  if(c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+  ctx.clearRect(0,0,w,h);
+  for(let i=0;i<45;i++){ctx.fillStyle = `rgba(203,232,246,${.25+.5*(.5+.5*Math.sin(frame/60+i))})`;ctx.beginPath();ctx.arc(((i*139)%997)/997*w,((i*271)%991)/991*h,1+i%2,0,Math.PI*2);ctx.fill();}
+  frame++; animationId = requestAnimationFrame(animate);
+}
+$('launch').onclick=()=>{ $('catalog').hidden = true; $('play').hidden = false; active = true;render();cancelAnimationFrame(animationId);animate();$('star').focus(); };
+$('back').onclick=()=>{ active = false;cancelAnimationFrame(animationId);$('catalog').hidden = false;$('play').hidden = true;$('launch').focus(); };
+document.addEventListener('visibilitychange', () => { cancelAnimationFrame(animationId);if(active && !document.hidden) animate(); });
+$('star').onclick=()=>{ score++;best = Math.max(best,score);$('star').style.left=(18+(score*29)%65)+'%';$('star').style.top=(20+(score*23)%62)+'%';$('status').textContent='已收集 '+score+' 颗星星';render(); };
+$('save').onclick=save;
+$('restart').onclick=()=>{ score=0;render();$('status').textContent='新一局开始，最高分保留。'; };
+$('checks').textContent = `Canvas 2D: ${ctx ? '可用' : '不可用'}\nrequestAnimationFrame: ${typeof requestAnimationFrame === 'function' ? '可用' : '不可用'}\n本地存档读取: ${storageOK ? '可用' : '不可用'}`;
+render();
+if(hostApi) hostApi.postMessage({ type: 'arcade:ready' });
+})();
+</script>
+</html>

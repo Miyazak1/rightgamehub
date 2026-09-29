@@ -1,0 +1,30 @@
+{
+  "name": "light-arcade-poc",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "start": "node poc/server.mjs",
+    "build:extension": "node scripts/build-extension.mjs",
+    "pack:vscode": "npm run build:extension && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-vscode-extension.ps1",
+    "build:harness": "node scripts/build-harness.mjs",
+    "build:offscreen-package": "node scripts/build-offscreen-package.mjs",
+    "start:harness-m0": "node scripts/start-harness-m0.mjs",
+    "pack:harness": "npm run build:harness && npm pack ./extensions/harness --ignore-scripts --pack-destination ./artifacts --cache ./.runtime/npm-cache",
+    "guess-baike:generate": "node scripts/generate-guess-baike-puzzles.mjs",
+    "contracts:generate": "node scripts/generate-contracts.mjs",
+    "contracts:check": "node scripts/generate-contracts.mjs --check",
+    "test:legacy": "node --test tests/*.test.cjs",
+    "test:platform": "node --test tests/platform/*.test.cjs",
+    "test": "npm run test:legacy && npm run test:platform && npm run test:client",
+    "verify:m1-foundation": "npm run contracts:check && npm run test",
+    "api:migrate": "npm --prefix apps/api run migrate",
+    "api:start": "npm --prefix apps/api run start",
+    "api:validate:once": "npm --prefix apps/api run validate:once",
+    "api:validate:social": "node scripts/validate-social-e2e.mjs",
+    "runtime:start": "npm --prefix apps/api run runtime:start",
+    "e2e:start": "npm --prefix apps/api run dev:e2e",
+    "web:dev": "pnpm --filter @gamehub/web dev",
+    "web:build": "pnpm --filter @gamehub/web build",
+    "test:client": "node --test tests/client/*.test.cjs"
+  }
+}

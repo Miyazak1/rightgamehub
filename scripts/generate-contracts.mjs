@@ -1,0 +1,79 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import process from 'node:process';
+import { createOpenApiDocument, enums, operations, schemas } from '../packages/contracts/src/schema.mjs';
+
+const root = path.resolve(import.meta.dirname, '..');
+const outputDir = path.join(root, 'packages', 'contracts', 'generated');
+const openApiPath = path.join(outputDir, 'openapi.json');
+const typesPath = path.join(outputDir, 'index.d.ts');
+
+function validateSource() {
+  assert.equal(new Set(operations.map(item => item.operationId)).size, operations.length, 'operationId must be unique');
+  for (const [name, schema] of Object.entries(schemas)) {
+    assert.equal(schema.type, 'object', `${name} must be a strict object schema`);
+    assert.equal(schema.additionalProperties, false, `${name} must reject unknown fields`);
+  }
+  for (const operation of operations) {
+    if (operation.request) assert.ok(schemas[operation.request], `missing request schema ${operation.request}`);
+    if (!operation.binaryResponse) assert.ok(schemas[operation.response], `missing response schema ${operation.response}`);
+  }
+}
+
+function generateTypes() {
+  const lines = [
+    '// Generated from src/schema.mjs. Do not edit by hand.',
+    '',
+  ];
+  for (const [name, values] of Object.entries(enums)) {
+    lines.push(`export type ${name} = ${values.map(value => JSON.stringify(value)).join(' | ')};`);
+  }
+  lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
+  lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
+  lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
+  lines.push('export interface WorkTarget { targetKey: TargetKey; state: WorkState; currentReleaseId: UUID | null; revision: UIntString }');
+  lines.push('export interface Work { id: UUID; ownerUserId: UUID; title: string; description: string; instructions: string; kind: WorkKind; state: WorkState; visibility: Visibility; revision: UIntString; firstPublishedAt: string | null; coverUrl: string | null; estimatedMinutes: number; tags: string[]; agentLabel: string | null; repositoryUrl: string | null; licenseSpdx: string | null; creatorDisplayName: string | null; playCount: number; saveCount: number; targets: WorkTarget[] }');
+  lines.push('export interface ReleaseSummary { id: UUID; targetKey: TargetKey; label: string; packageType: PackageType; validationState: ReleaseValidationState; servingState: ReleaseServingState; createdAt: string }');
+  lines.push('export interface UploadJob { id: UUID; workId: UUID; targetKey: TargetKey; packageType: PackageType; state: UploadState; publicationOutcome: PublicationOutcome; declaredBytes: UIntString; actualBytes: UIntString | null; createdAt: string; expiresAt: string; errorCode: string | null }');
+  lines.push('export interface LaunchDescriptor { apiVersion: 1; workId: UUID; releaseId: UUID; releaseLabel: string; entryUrl: string; runtimeOrigin: string; playerProtocol: { min: number; max: number }; capabilities: { fullscreen: boolean; pointerLock: boolean } }');
+  lines.push('export interface ContentReport { id: UUID; workId: UUID; workTitle: string; reporterUserId: UUID; category: "unsafe" | "malware" | "harassment" | "copyright" | "other"; details: string; status: "open" | "resolved" | "dismissed"; resolutionAction: "suspend" | "dismiss" | null; resolutionNote: string | null; createdAt: string; resolvedAt: string | null }');
+  lines.push('export interface ModerationAuditEvent { id: UUID; reportId: UUID; workId: UUID; workTitle: string; actorUserId: UUID; action: "suspend" | "dismiss"; reason: string; beforeState: Record<string, unknown>; afterState: Record<string, unknown>; createdAt: string }');
+  lines.push('export interface AccountAvatar { kind: "preset" | "upload"; presetKey: "cat" | "robot" | "sprout" | "fox" | "ghost" | "wizard" | null; url: string | null; staticUrl: string | null; mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" | null; animated: boolean }');
+  lines.push('export interface SocialProfile { id: UUID; displayName: string; bio: string; visibility: "public" | "followers" | "private"; avatar: AccountAvatar; followerCount: number; followingCount: number; isFollowing: boolean; isMe: boolean }');
+  lines.push('export type GuessBaikeReaction = "gg" | "spark" | "wow" | "coffee";');
+  lines.push('export interface GuessBaikeLeaderboardEntry { rank: number; player: SocialProfile; guessedCount: number; elapsedSeconds: number; hints: number; completedAt: string; reactions: Partial<Record<GuessBaikeReaction, number>>; myReaction: GuessBaikeReaction | null }');
+  lines.push('export interface GuessBaikePuzzle { id: string; title: string; aliases: string[]; category: string; sourceKind: string; sourceTitle: string; sourceUrl: string; sourceRevision: number; sourceUpdatedAt: string; license: string; introHanCount: number; content: string }');
+  lines.push('export interface GuessBaikeAdminPuzzle extends GuessBaikePuzzle { status: "ready" | "disabled"; qualityReason: string | null; scheduledDates: string[] }');
+  lines.push('export interface GuessBaikeSchedule { date: string; puzzleId: string }');
+  lines.push('export interface GuessBaikeAutomationRun { id: UUID; status: "running" | "succeeded" | "failed"; startedAt: string; finishedAt: string | null; fetchedCount: number; acceptedCount: number; scheduledCount: number; errorCode: string | null; errorMessage: string | null }');
+  lines.push('export interface GuessBaikeAutomationStatus { enabled: boolean; running: boolean; intervalMinutes: number; batchSize: number; scheduleDays: number; readyCount: number; scheduledCount: number; lastRun: GuessBaikeAutomationRun | null }');
+  lines.push('export interface SocialNotification { id: UUID; type: "follow" | "reaction" | "challenge_complete"; actor: SocialProfile; puzzleDate: string | null; reaction: GuessBaikeReaction | null; challengeCode: string | null; outcome: "win" | "loss" | "draw" | null; read: boolean; createdAt: string }');
+  lines.push('export interface GuessBaikeChallenge { code: string; puzzleDate: string; expiresAt: string }');
+  lines.push('export interface GuessBaikeChallengeDetail extends GuessBaikeChallenge { creator: SocialProfile; score: { guessedCount: number; elapsedSeconds: number; hints: number }; status: "open" | "accepted" | "completed"; acceptedByMe: boolean }');
+  lines.push('export interface GuessBaikeChallengeState { accepted: boolean; completed: boolean; outcome: "win" | "loss" | "draw" | null }');
+  lines.push('export interface GuessBaikeChallengeComparison { outcome: "win" | "loss" | "draw"; creator: { guessedCount: number; elapsedSeconds: number; hints: number }; participant: { guessedCount: number; elapsedSeconds: number; hints: number } }');
+  lines.push('export interface GuessBaikeChallengeHistory extends GuessBaikeChallenge { role: "creator" | "participant"; status: "pending" | "completed" | "expired"; outcome: "win" | "loss" | "draw" | null; opponent: SocialProfile | null; myScore: { guessedCount: number; elapsedSeconds: number; hints: number }; opponentScore: { guessedCount: number; elapsedSeconds: number; hints: number } | null }');
+  lines.push('export interface RetentionBadge { key: "first_break" | "streak_3" | "streak_7" | "challenger" | "duel_winner"; name: string; description: string; unlocked: boolean }');
+  lines.push('export interface PlayerRetention { currentStreak: number; longestStreak: number; totalDays: number; completedChallenges: number; badges: RetentionBadge[] }');
+  lines.push('export interface NotificationPreferences { follow: boolean; reaction: boolean; challenge: boolean }');
+  lines.push('');
+  return `${lines.join('\n')}\n`;
+}
+
+validateSource();
+const openApi = `${JSON.stringify(createOpenApiDocument(), null, 2)}\n`;
+const types = generateTypes();
+
+await fs.mkdir(outputDir, { recursive: true });
+if (process.argv.includes('--check')) {
+  const [existingOpenApi, existingTypes] = await Promise.all([
+    fs.readFile(openApiPath, 'utf8'), fs.readFile(typesPath, 'utf8'),
+  ]);
+  assert.equal(existingOpenApi, openApi, 'generated openapi.json is stale; run npm run contracts:generate');
+  assert.equal(existingTypes, types, 'generated index.d.ts is stale; run npm run contracts:generate');
+  process.stdout.write('Contract artifacts are current.\n');
+} else {
+  await Promise.all([fs.writeFile(openApiPath, openApi), fs.writeFile(typesPath, types)]);
+  process.stdout.write('Generated GameHub OpenAPI and TypeScript declarations.\n');
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@gamehub/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GameHub modular API",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "migrate": "node src/migrate-cli.mjs",
+    "validate:once": "node src/validate-once-cli.mjs",
+    "runtime:start": "node src/runtime-edge-server.mjs",
+    "worker:start": "node src/validation-worker-cli.mjs",
+    "admin:promote": "node src/promote-admin-cli.mjs",
+    "dev:e2e": "node src/dev-e2e-server.mjs"
+  },
+  "dependencies": {
+    "fastify": "5.12.5",
+    "pg": "8.23.0",
+    "sharp": "0.35.5",
+    "yauzl": "3.4.0"
+  }
+}

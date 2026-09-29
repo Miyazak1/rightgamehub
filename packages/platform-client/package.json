@@ -1,0 +1,17 @@
+{
+  "name": "@gamehub/platform-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/App.jsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@gamehub/host-contract": "workspace:*",
+    "@gamehub/platform-api-client": "workspace:*",
+    "@gamehub/player-core": "workspace:*",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

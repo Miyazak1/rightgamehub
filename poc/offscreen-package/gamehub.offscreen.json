@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "gamehub.owned-sidebar-sample",
+  "version": "1.0.0",
+  "title": "下载适配包 · 侧栏样本",
+  "runtime": "electron-offscreen-v1",
+  "entry": "index.html",
+  "viewport": { "width": 640, "height": 360 },
+  "input": "gamehub-input-v1",
+  "permissions": { "network": false, "audio": false }
+}

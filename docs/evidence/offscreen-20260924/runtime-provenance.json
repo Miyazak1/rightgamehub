@@ -1,0 +1,11 @@
+{
+  "version": "44.4.5",
+  "source": "https://github.com/electron/electron/releases/download/v44.4.5/electron-v44.4.5-win32-x64.zip",
+  "archiveSha256": "11c395820a5aaa8ebcc0686b476d0ac98a730274ebfbdc8cf5538a7c2815cb5d",
+  "executableSha256": "bd14928e0728366fd3f41499cb398ff3f4304dab259a3e605077899a6f8c748e",
+  "authenticodeStatus": "NotSigned",
+  "signer": null,
+  "preparedAt": "2026-09-24T11:18:23.7500293Z",
+  "executable": "E:\\CODE\\Right\\.runtime\\electron-v44.4.5-win32-x64\\electron.exe",
+  "launched": false
+}

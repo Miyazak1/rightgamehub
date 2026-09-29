@@ -1,0 +1,38 @@
+{
+  "status": "probe-checks-passed",
+  "productAcceptance": "not-tested",
+  "originalExe": false,
+  "sidebarIntegration": "not-tested",
+  "desktopWindowObservation": "not-collected",
+  "audio": "not-implemented",
+  "electronWindowState": {
+    "hiddenUnfocusedFrameChecks": 321,
+    "unexpectedShowOrFocusEvent": false
+  },
+  "runtime": {
+    "type": "runtime",
+    "electron": "44.4.5",
+    "platform": "win32",
+    "sample": "platform-owned-fixture",
+    "originalExe": false
+  },
+  "checks": {
+    "click": true,
+    "text": true,
+    "directionAndRelease": true,
+    "changingFrames": true
+  },
+  "frames": {
+    "count": 321,
+    "spanMs": 10618,
+    "largestGapMs": 50
+  },
+  "process": {
+    "code": 0,
+    "signal": null,
+    "forcedTermination": false,
+    "descendantCleanup": "not-observed"
+  },
+  "error": null,
+  "stderr": ""
+}

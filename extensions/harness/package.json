@@ -1,0 +1,32 @@
+{
+  "name": "@gamehub/harness-plugin",
+  "version": "0.0.59",
+  "description": "GameHub shared platform client and authenticated local game lab for Harness",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": ["lib", "vendor", "cordis.patch.yml", "README.md"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "peerDependencies": { "react": "^18.2.0" },
+  "peerDependenciesMeta": { "react": { "optional": true } },
+  "devDependencies": {
+    "@gamehub/host-contract": "workspace:*",
+    "@gamehub/platform-api-client": "workspace:*",
+    "@gamehub/platform-client": "workspace:*",
+    "esbuild": "0.24.2"
+  }
+}

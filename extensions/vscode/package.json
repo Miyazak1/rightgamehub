@@ -1,0 +1,37 @@
+{
+  "name": "gamehub-agent",
+  "displayName": "GameHub for AI Coding",
+  "description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
+  "version": "0.2.6",
+  "publisher": "gamehub-local",
+  "private": true,
+  "engines": { "vscode": "^1.85.0" },
+  "extensionKind": ["ui"],
+  "main": "./gamehub-extension.cjs",
+  "activationEvents": ["onCommand:gamehub.open", "onView:gamehub.platform"],
+  "contributes": {
+    "commands": [
+      { "command": "gamehub.open", "title": "GameHub: 打开游戏平台" },
+      { "command": "gamehub.openBrowser", "title": "GameHub: 在内置浏览器打开", "icon": "$(globe)" }
+    ],
+    "viewsContainers": {
+      "activitybar": [{ "id": "gamehub", "title": "GameHub", "icon": "media/arcade.svg" }]
+    },
+    "views": { "gamehub": [{ "type": "webview", "id": "gamehub.platform", "name": "GameHub" }] },
+    "menus": { "view/title": [{ "command": "gamehub.openBrowser", "when": "view == gamehub.platform", "group": "navigation" }] },
+    "configuration": {
+      "title": "GameHub",
+      "properties": {
+        "gamehub.apiUrl": {
+          "type": "string", "default": "http://127.0.0.1:3090",
+          "scope": "application", "description": "GameHub API 地址。开发阶段仅使用本机服务。"
+        },
+        "gamehub.browserUrl": {
+          "type": "string", "default": "http://127.0.0.1:3081/",
+          "scope": "application",
+          "description": "无法使用侧栏时打开的 GameHub 页面。"
+        }
+      }
+    }
+  }
+}

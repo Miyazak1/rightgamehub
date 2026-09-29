@@ -1,0 +1,17 @@
+{
+  "name": "@gamehub/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./generated/index.d.ts",
+      "default": "./src/schema.mjs"
+    },
+    "./openapi": "./generated/openapi.json"
+  },
+  "scripts": {
+    "generate": "node ../../scripts/generate-contracts.mjs",
+    "check": "node ../../scripts/generate-contracts.mjs --check"
+  }
+}

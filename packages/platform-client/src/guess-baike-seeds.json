@@ -1,0 +1,11 @@
+[
+  { "title": "足球", "aliases": ["协会足球", "英式足球"], "category": "体育" },
+  { "title": "活字印刷术", "aliases": ["活字印刷"], "category": "发明" },
+  { "title": "九寨沟", "aliases": ["九寨沟风景名胜区"], "category": "地理" },
+  { "title": "图灵测试", "aliases": ["模仿游戏"], "category": "科技" },
+  { "title": "国际象棋", "aliases": ["西洋棋"], "category": "游戏" },
+  { "title": "故宫", "aliases": ["北京故宫", "紫禁城"], "category": "建筑" },
+  { "title": "太阳系", "aliases": [], "category": "天文" },
+  { "title": "咖啡", "aliases": [], "category": "饮食" }
+]
+

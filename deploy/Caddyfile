@@ -1,0 +1,40 @@
+{
+  email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+  tls {
+    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+  }
+  encode zstd gzip
+
+  handle /health {
+    reverse_proxy api:3090
+  }
+  handle /ready {
+    reverse_proxy api:3090
+  }
+
+  handle /v1/* {
+    reverse_proxy api:3090
+  }
+
+  handle {
+    root * /srv/gamehub
+    try_files {path} /index.html
+    header {
+      Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src https://*.{$RUNTIME_DOMAIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' vscode-webview:"
+      Referrer-Policy "no-referrer"
+      X-Content-Type-Options "nosniff"
+      Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=()"
+    }
+    file_server
+  }
+}
+
+*.{$RUNTIME_DOMAIN} {
+  tls {
+    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+  }
+  reverse_proxy runtime:3092
+}

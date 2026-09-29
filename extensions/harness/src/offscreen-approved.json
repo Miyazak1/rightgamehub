@@ -1,0 +1,16 @@
+{
+  "packages": [{
+    "id": "gamehub.owned-sidebar-sample",
+    "version": "1.0.0",
+    "sha256": "e15998e76c53ee32d7d39e50e2db1d4aeac507816158920fffafd567c3134dfe",
+    "size": 2855,
+    "assets": {
+      "gamehub.offscreen.json": { "size": 329, "sha256": "96678bea523103150f25f965d4acf1698c7af278451fe739cd02f9635dde0944" },
+      "index.html": { "size": 683, "sha256": "17c3a231dba86c0bff3ac646e4a90f362ce7255aef899e2225b1048632ab6758" },
+      "assets/sdk.js": { "size": 553, "sha256": "5aad630571fd46491417e5e621aba0659f76bf0aca25948a5d3cae05d6c6f92b" },
+      "assets/game.js": { "size": 991, "sha256": "b3e794699a6ebce18be7d1410456d829823e668050c282fff0eb936f937a54ca" },
+      "assets/model.js": { "size": 1216, "sha256": "115d94a882371abfa6c28e981d226c8cfd892d269e667e9952a1440e1a5a21e9" },
+      "assets/style.css": { "size": 150, "sha256": "0ccbd6305bfdc71b57c1d2c45695d9d27fc5fee960d8e7dd6fbf3d27be7f4784" }
+    }
+  }]
+}

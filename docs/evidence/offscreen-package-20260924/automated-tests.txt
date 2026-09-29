@@ -1,0 +1,380 @@
+
+> test
+> node --test tests/*.test.cjs
+
+TAP version 13
+# Subtest: streamed upload persists exact bytes, private metadata and restart listing
+ok 1 - streamed upload persists exact bytes, private metadata and restart listing
+  ---
+  duration_ms: 273.4461
+  type: 'test'
+  ...
+# Subtest: download supports full bytes, HEAD, bounded ranges and safe attachment filename
+ok 2 - download supports full bytes, HEAD, bounded ranges and safe attachment filename
+  ---
+  duration_ms: 71.0854
+  type: 'test'
+  ...
+# Subtest: manual verification detects tampered downloads without saving another copy
+ok 3 - manual verification detects tampered downloads without saving another copy
+  ---
+  duration_ms: 58.9861
+  type: 'test'
+  ...
+# Subtest: unsafe names, unsupported formats and missing UI marker are rejected
+ok 4 - unsafe names, unsupported formats and missing UI marker are rejected
+  ---
+  duration_ms: 189.7685
+  type: 'test'
+  ...
+# Subtest: declared and streamed size limits prevent partial or oversized commits
+ok 5 - declared and streamed size limits prevent partial or oversized commits
+  ---
+  duration_ms: 7.2275
+  type: 'test'
+  ...
+# Subtest: quota blocks additional uploads and leaves first file readable
+ok 6 - quota blocks additional uploads and leaves first file readable
+  ---
+  duration_ms: 60.4103
+  type: 'test'
+  ...
+# Subtest: cancel and timeout clean temporary bytes, release slot and allow retry
+ok 7 - cancel and timeout clean temporary bytes, release slot and allow retry
+  ---
+  duration_ms: 173.6077
+  type: 'test'
+  ...
+# Subtest: unsupported sidebar goes directly to the embedded browser
+ok 8 - unsupported sidebar goes directly to the embedded browser
+  ---
+  duration_ms: 2.4888
+  type: 'test'
+  ...
+# Subtest: ready sidebar does not open a duplicate browser
+ok 9 - ready sidebar does not open a duplicate browser
+  ---
+  duration_ms: 0.3182
+  type: 'test'
+  ...
+# Subtest: sidebar permission or registration error falls back to the browser
+ok 10 - sidebar permission or registration error falls back to the browser
+  ---
+  duration_ms: 0.3494
+  type: 'test'
+  ...
+# Subtest: unready sidebar falls back instead of claiming successful launch
+ok 11 - unready sidebar falls back instead of claiming successful launch
+  ---
+  duration_ms: 0.1346
+  type: 'test'
+  ...
+# Subtest: explicit browser preference is honored on a sidebar-capable host
+ok 12 - explicit browser preference is honored on a sidebar-capable host
+  ---
+  duration_ms: 0.217
+  type: 'test'
+  ...
+# Subtest: missing or unsuccessful browser adapter is reported as failure
+ok 13 - missing or unsuccessful browser adapter is reported as failure
+  ---
+  duration_ms: 0.4746
+  type: 'test'
+  ...
+# Subtest: native restart waits for previous process cleanup and revoked sessions cannot forward input
+ok 14 - native restart waits for previous process cleanup and revoked sessions cannot forward input
+  ---
+  duration_ms: 35.5578
+  type: 'test'
+  ...
+# Subtest: native EXE launch is disabled unless explicitly enabled and never follows an uploaded path
+ok 15 - native EXE launch is disabled unless explicitly enabled and never follows an uploaded path
+  ---
+  duration_ms: 0.3174
+  type: 'test'
+  ...
+# Subtest: native probe rejects a modified EXE before spawning any process
+ok 16 - native probe rejects a modified EXE before spawning any process
+  ---
+  duration_ms: 9.9522
+  type: 'test'
+  ...
+# Subtest: unstarted local player requires session capability, correct Origin and explicit input marker
+ok 17 - unstarted local player requires session capability, correct Origin and explicit input marker
+  ---
+  duration_ms: 179.808
+  type: 'test'
+  ...
+# Subtest: owned package upload, real download, verified cache and launch handoff preserve exact renderer bytes
+ok 18 - owned package upload, real download, verified cache and launch handoff preserve exact renderer bytes
+  ---
+  duration_ms: 641.0192
+  type: 'test'
+  ...
+# Subtest: service restart requires manual cache preparation and reuses a still-verified download
+ok 19 - service restart requires manual cache preparation and reuses a still-verified download
+  ---
+  duration_ms: 378.922
+  type: 'test'
+  ...
+# Subtest: altered cache resources are rejected before launch and explicit preparation repairs them
+ok 20 - altered cache resources are rejected before launch and explicit preparation repairs them
+  ---
+  duration_ms: 523.4219
+  type: 'test'
+  ...
+# Subtest: corrupt source download never commits a runnable cache and retry succeeds
+ok 21 - corrupt source download never commits a runnable cache and retry succeeds
+  ---
+  duration_ms: 340.424
+  type: 'test'
+  ...
+# Subtest: recognized author packages and EXEs stay download-only until separately approved
+ok 22 - recognized author packages and EXEs stay download-only until separately approved
+  ---
+  duration_ms: 258.3448
+  type: 'test'
+  ...
+# Subtest: invalid adaptation manifests do not fall back to normal web-game launch
+ok 23 - invalid adaptation manifests do not fall back to normal web-game launch
+  ---
+  duration_ms: 796.1583
+  type: 'test'
+  ...
+# Subtest: aborting a partial package download cancels its stream and removes staging bytes
+ok 24 - aborting a partial package download cancels its stream and removes staging bytes
+  ---
+  duration_ms: 157.4727
+  type: 'test'
+  ...
+# Subtest: cache receipt cannot approve modified files, extra scripts, or a different archive
+ok 25 - cache receipt cannot approve modified files, extra scripts, or a different archive
+  ---
+  duration_ms: 337.2573
+  type: 'test'
+  ...
+# Subtest: package SDK exposes game input acknowledgements without sample-specific state or host capabilities
+ok 26 - package SDK exposes game input acknowledgements without sample-specific state or host capabilities
+  ---
+  duration_ms: 1.1034
+  type: 'test'
+  ...
+# Subtest: renderer request policy permits only the verified local asset list
+ok 27 - renderer request policy permits only the verified local asset list
+  ---
+  duration_ms: 0.3509
+  type: 'test'
+  ...
+# Subtest: offscreen sidebar is disabled by default and missing runtime keeps regular features available
+ok 28 - offscreen sidebar is disabled by default and missing runtime keeps regular features available
+  ---
+  duration_ms: 37.7859
+  type: 'test'
+  ...
+# Subtest: offscreen launch is explicit and only returns a lease for the fixed owned sample
+ok 29 - offscreen launch is explicit and only returns a lease for the fixed owned sample
+  ---
+  duration_ms: 18.9104
+  type: 'test'
+  ...
+# Subtest: trusted offscreen player stays on authenticated host routes and never exposes pipe credentials
+ok 30 - trusted offscreen player stays on authenticated host routes and never exposes pipe credentials
+  ---
+  duration_ms: 5.7366
+  type: 'test'
+  ...
+# Subtest: offscreen input validates marker, size and game-only schema before forwarding
+ok 31 - offscreen input validates marker, size and game-only schema before forwarding
+  ---
+  duration_ms: 6.7425
+  type: 'test'
+  ...
+# Subtest: replaced offscreen leases cannot send input or stop their successor
+ok 32 - replaced offscreen leases cannot send input or stop their successor
+  ---
+  duration_ms: 3.8406
+  type: 'test'
+  ...
+# Subtest: restart waits for old process cleanup and service close cancels a pending startup
+ok 33 - restart waits for old process cleanup and service close cancels a pending startup
+  ---
+  duration_ms: 3.5172
+  type: 'test'
+  ...
+# Subtest: aborted startup and unattended sidebar sessions are reclaimed
+ok 34 - aborted startup and unattended sidebar sessions are reclaimed
+  ---
+  duration_ms: 24.7183
+  type: 'test'
+  ...
+# Subtest: failed game input revokes and stops its session instead of leaving held controls active
+ok 35 - failed game input revokes and stops its session instead of leaving held controls active
+  ---
+  duration_ms: 2.3853
+  type: 'test'
+  ...
+# Subtest: Harness offscreen routes keep method guards and generic stop closes the matching lease
+ok 36 - Harness offscreen routes keep method guards and generic stop closes the matching lease
+  ---
+  duration_ms: 10.6063
+  type: 'test'
+  ...
+# Subtest: sidebar runtime refuses a modified executable before creating a profile or starting a process
+ok 37 - sidebar runtime refuses a modified executable before creating a profile or starting a process
+  ---
+  duration_ms: 6.9951
+  type: 'test'
+  ...
+# Subtest: player sends keys only from its game surface, releases on blur and stops on page exit
+ok 38 - player sends keys only from its game surface, releases on blur and stops on page exit
+  ---
+  duration_ms: 5.2809
+  type: 'test'
+  ...
+# Subtest: offscreen input changes the sample model and acknowledges only the intended renderer
+ok 39 - offscreen input changes the sample model and acknowledges only the intended renderer
+  ---
+  duration_ms: 4.17
+  type: 'test'
+  ...
+# Subtest: offscreen rejects commands that could escape the game API or corrupt input state
+ok 40 - offscreen rejects commands that could escape the game API or corrupt input state
+  ---
+  duration_ms: 0.6803
+  type: 'test'
+  ...
+# Subtest: offscreen release clears held controls and text edits use game logic without OS input
+ok 41 - offscreen release clears held controls and text edits use game logic without OS input
+  ---
+  duration_ms: 0.4043
+  type: 'test'
+  ...
+# Subtest: offscreen rejects new windows, navigation and permission requests
+ok 42 - offscreen rejects new windows, navigation and permission requests
+  ---
+  duration_ms: 0.4704
+  type: 'test'
+  ...
+# Subtest: offscreen visibility/focus violation or renderer crash destroys the session once
+ok 43 - offscreen visibility/focus violation or renderer crash destroys the session once
+  ---
+  duration_ms: 0.6272
+  type: 'test'
+  ...
+# Subtest: offscreen load failure cleans up, and a stopped session never starts loading
+ok 44 - offscreen load failure cleans up, and a stopped session never starts loading
+  ---
+  duration_ms: 6.8397
+  type: 'test'
+  ...
+# Subtest: offscreen frames come from paint, never from polling the same image as new
+ok 45 - offscreen frames come from paint, never from polling the same image as new
+  ---
+  duration_ms: 0.6595
+  type: 'test'
+  ...
+# Subtest: offscreen pending input is bounded if the game stops acknowledging
+ok 46 - offscreen pending input is bounded if the game stops acknowledging
+  ---
+  duration_ms: 0.4204
+  type: 'test'
+  ...
+# Subtest: author SDK acknowledgements need no game-specific score and cannot acknowledge stale commands
+ok 47 - author SDK acknowledgements need no game-specific score and cannot acknowledge stale commands
+  ---
+  duration_ms: 0.776
+  type: 'test'
+  ...
+# Subtest: package request filtering is attached to the isolated session and removed on stop
+ok 48 - package request filtering is attached to the isolated session and removed on stop
+  ---
+  duration_ms: 1.0439
+  type: 'test'
+  ...
+# Subtest: offscreen piped commands preserve split UTF-8 and stop on oversized or malformed lines
+ok 49 - offscreen piped commands preserve split UTF-8 and stop on oversized or malformed lines
+  ---
+  duration_ms: 0.9241
+  type: 'test'
+  ...
+# Subtest: offscreen slow consumers receive the latest image, with bounded control queue
+ok 50 - offscreen slow consumers receive the latest image, with bounded control queue
+  ---
+  duration_ms: 0.3654
+  type: 'test'
+  ...
+# Subtest: Electron startup blank lines are ignored but malformed runtime messages fail closed
+ok 51 - Electron startup blank lines are ignored but malformed runtime messages fail closed
+  ---
+  duration_ms: 15.4271
+  type: 'test'
+  ...
+# Subtest: offscreen entry refuses to start without explicit experiment opt-in before loading Electron
+ok 52 - offscreen entry refuses to start without explicit experiment opt-in before loading Electron
+  ---
+  duration_ms: 59.6789
+  type: 'test'
+  ...
+# Subtest: Windows control pipe rejects the wrong token and accepts split authenticated messages
+ok 53 - Windows control pipe rejects the wrong token and accepts split authenticated messages
+  ---
+  duration_ms: 7.2894
+  type: 'test'
+  ...
+# Subtest: Windows control pipe reports peer disconnect and close removes the endpoint
+ok 54 - Windows control pipe reports peer disconnect and close removes the endpoint
+  ---
+  duration_ms: 2.2616
+  type: 'test'
+  ...
+# Subtest: web ZIP becomes a persistent playable record without exposing asset manifests
+ok 55 - web ZIP becomes a persistent playable record without exposing asset manifests
+  ---
+  duration_ms: 336.1268
+  type: 'test'
+  ...
+# Subtest: runtime serves token-scoped HTML/module/data/WASM with opaque sandbox and exact MIME
+ok 56 - runtime serves token-scoped HTML/module/data/WASM with opaque sandbox and exact MIME
+  ---
+  duration_ms: 283.355
+  type: 'test'
+  ...
+# Subtest: runtime rejects unissued tokens, traversal, workspace access and mutations; stop revokes assets
+ok 57 - runtime rejects unissued tokens, traversal, workspace access and mutations; stop revokes assets
+  ---
+  duration_ms: 247.4214
+  type: 'test'
+  ...
+# Subtest: unsafe ZIP paths and collisions stay download-only and leave no partial extraction
+ok 58 - unsafe ZIP paths and collisions stay download-only and leave no partial extraction
+  ---
+  duration_ms: 2312.5673
+  type: 'test'
+  ...
+# Subtest: bad CRC, lying expansion size, encrypted files, native files and nested ZIP cannot play
+ok 59 - bad CRC, lying expansion size, encrypted files, native files and nested ZIP cannot play
+  ---
+  duration_ms: 1080.8409
+  type: 'test'
+  ...
+# Subtest: missing root index gives a useful reason; extracted bytes count against storage quota
+ok 60 - missing root index gives a useful reason; extracted bytes count against storage quota
+  ---
+  duration_ms: 466.3139
+  type: 'test'
+  ...
+# Subtest: each launch gets a separate capability and expired leases stop serving
+ok 61 - each launch gets a separate capability and expired leases stop serving
+  ---
+  duration_ms: 165.3957
+  type: 'test'
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 61
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5067.0304

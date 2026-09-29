@@ -1,0 +1,65 @@
+[
+  {
+    "run": "083f3886-fec3-49fb-b5c7-d96e75afc4c3",
+    "events": [
+      {
+        "at": "2026-09-24T12:02:50.771Z",
+        "event": "entry-loaded",
+        "detail": {
+          "electron": "44.4.5"
+        }
+      },
+      {
+        "at": "2026-09-24T12:02:50.92Z",
+        "event": "app-ready"
+      },
+      {
+        "at": "2026-09-24T12:03:21.647Z",
+        "event": "stop",
+        "detail": "requested"
+      }
+    ]
+  },
+  {
+    "run": "a8534af6-6b34-4557-b087-9964e4469119",
+    "events": [
+      {
+        "at": "2026-09-24T12:03:41.719Z",
+        "event": "entry-loaded",
+        "detail": {
+          "electron": "44.4.5"
+        }
+      },
+      {
+        "at": "2026-09-24T12:03:41.859Z",
+        "event": "app-ready"
+      },
+      {
+        "at": "2026-09-24T12:03:59.874Z",
+        "event": "stop",
+        "detail": "requested"
+      }
+    ]
+  },
+  {
+    "run": "d0b1b34d-2ef0-4b95-8838-c163dd5db717",
+    "events": [
+      {
+        "at": "2026-09-24T11:58:54.122Z",
+        "event": "entry-loaded",
+        "detail": {
+          "electron": "44.4.5"
+        }
+      },
+      {
+        "at": "2026-09-24T11:58:54.266Z",
+        "event": "app-ready"
+      },
+      {
+        "at": "2026-09-24T12:02:49.284Z",
+        "event": "stop",
+        "detail": "requested"
+      }
+    ]
+  }
+]

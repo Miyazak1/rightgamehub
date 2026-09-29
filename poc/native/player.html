@@ -1,0 +1,38 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>原生 EXE 侧栏实验</title><style>
+body{margin:0;background:#111827;color:#e5edf8;font:13px system-ui}header{padding:10px;line-height:1.7}p{margin:4px 0}#surface{outline:2px solid transparent;width:100%;max-width:520px;margin:auto;display:block;touch-action:none;user-select:none}#surface:focus{outline-color:#67e8f9}img{display:block;width:100%;height:auto;pointer-events:none}small{color:#a9bacf}button{padding:7px 12px;margin:4px}
+</style><header><b>桌猫 EXE · 本机原生窗口实验</b><p>已验证鼠标操作。键盘输入仍在测试；未接入音频串流。游戏窗口保持还原状态，最小化会停帧。</p><small id="status">等待游戏窗口…</small><p><button id="release">释放操作</button><button id="stop">结束原生游戏</button></p></header>
+<p><button id="minimize">最小化游戏窗口</button><button id="restore">还原游戏窗口（不激活）</button></p>
+<div id="surface" tabindex="0" role="application" aria-label="桌猫原生游戏操作区"><img id="frame" alt="桌猫 EXE 实时画面" draggable="false"></div>
+<script nonce="__NONCE__">
+const base=location.href.split(/[?#]/)[0].replace(/\/$/,'');
+const routes = __ROUTES__;
+const endpoint=name=>routes?new URL(routes[name],location.href).href:base+'/'+name;
+const surface=document.getElementById('surface'),frame=document.getElementById('frame'),status=document.getElementById('status');
+let stopped=false,busy=false,width=900,height=862,frames=0,start=performance.now(),lastMove=0,queue=Promise.resolve(),blob,lastFrame;
+function send(value){ queue=queue.catch(()=>{}).then(()=>fetch(endpoint('input'),{method:'POST',headers:{'Content-Type':'application/json','X-GameHub-Input':'1'},body:JSON.stringify(value),keepalive:value.type==='release'})); return queue; }
+function release(){void send({type:'release'});}
+function point(e){const r=frame.getBoundingClientRect();return {x:Math.round((e.clientX-r.left)*width/r.width),y:Math.round((e.clientY-r.top)*height/r.height)};}
+surface.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();surface.focus({preventScroll:true});surface.setPointerCapture(e.pointerId);void send({type:'mouse',action:'down',...point(e)});});
+surface.addEventListener('pointerup',e=>{if(e.button!==0)return;e.preventDefault();void send({type:'mouse',action:'up',...point(e)});});
+surface.addEventListener('pointermove',e=>{if(document.activeElement!==surface||performance.now()-lastMove<40)return;lastMove=performance.now();void send({type:'mouse',action:'move',...point(e)});});
+surface.addEventListener('pointercancel',release);surface.addEventListener('blur',release);window.addEventListener('blur',release);window.addEventListener('pagehide',release);
+const keys={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Backspace:8,Enter:13,Escape:27,Tab:9,Delete:46,Home:36,End:35,PageUp:33,PageDown:34,Shift:16,Control:17};
+const virtualKey=e=>keys[e.key]||(e.code.startsWith('Key')?e.code.charCodeAt(3):e.code.startsWith('Digit')?e.code.charCodeAt(5):e.code==='Space'?32:0);
+surface.addEventListener('keydown',e=>{if(e.altKey||e.metaKey)return;e.preventDefault();const vk=virtualKey(e);if(vk)void send({type:'key',vk,down:true});else if(e.key.length===1&&!e.ctrlKey)void send({type:'text',text:e.key});});
+surface.addEventListener('keyup',e=>{e.preventDefault();const vk=virtualKey(e);if(vk)void send({type:'key',vk,down:false});});
+document.getElementById('release').onclick=release;
+document.getElementById('minimize').onclick=()=>send({type:'window',action:'minimize'});
+document.getElementById('restore').onclick=()=>send({type:'window',action:'restore'});
+document.getElementById('stop').onclick=async()=>{release();stopped=true;await fetch(endpoint('stop'),{method:'POST',headers:{'X-GameHub-Input':'1'}});status.textContent='原生游戏已结束';frame.removeAttribute('src');};
+async function update(){if(stopped||busy)return;busy=true;try{
+ const r=await fetch(endpoint('frame'),{cache:'no-store'});
+ if(r.status===202){status.textContent='正在启动下载后的 EXE…';return;}
+ if(!r.ok)throw Error('会话结束或捕获失败：'+r.status);
+ width=Number(r.headers.get('X-Width'));height=Number(r.headers.get('X-Height'));
+ const next=URL.createObjectURL(await r.blob());frame.src=next;if(blob)URL.revokeObjectURL(blob);blob=next;
+ const id=r.headers.get('X-Frame');if(id!==lastFrame){lastFrame=id;frames++;}
+ status.textContent=Number(r.headers.get('X-Frame-Age'))>2000?'画面停止更新，请还原游戏窗口；若未恢复请结束并重试。':`原生帧 ${id} · ${width}×${height} · 接收 ${(frames*1000/(performance.now()-start)).toFixed(1)} fps · 游戏${r.headers.get('X-Foreground')==='true'?'在前台':'在后台'} · 捕获 ${r.headers.get('X-Capture-Ms')} ms`;
+ }catch(e){status.textContent=e.message;stopped=true;}finally{busy=false;}}
+setInterval(update,120);void update();
+</script></html>

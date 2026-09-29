@@ -1,0 +1,12 @@
+{
+  "scope": "Get-Process filtered by the exact test runtime executable path, before and after the successful test",
+  "windowsBuild": "10.0.26200.0",
+  "runtimePath": "E:\\CODE\\Right\\.runtime\\electron-v44.4.5-win32-x64\\electron.exe",
+  "runtimeProcessesBefore": 0,
+  "runtimeProcessesAfter": 0,
+  "remainingPids": [],
+  "probeExit": 0,
+  "desktopCapture": false,
+  "systemInputInjection": false,
+  "allDescendantExecutablePathsObserved": false
+}

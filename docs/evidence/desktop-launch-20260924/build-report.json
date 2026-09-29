@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-09-24T22:01:10.9531214+08:00",
+  "pluginVersion": "0.0.12",
+  "tests": {
+    "skipped": 0,
+    "failed": 0,
+    "passed": 73
+  },
+  "runtimeLaunchInTests": "test-double",
+  "realExeLaunched": false,
+  "guiAcceptance": "not-run",
+  "plugin": {
+    "bytes": 48398,
+    "sha256": "ce767d1520e4b5d344ba8a550678b442563b91c270ca4ccd70eb1e68c3cfc2e1",
+    "file": "gamehub-harness-plugin-0.0.12.tgz"
+  },
+  "readOnlySampleCheck": {
+    "check": "PE header only; not executed",
+    "subsystem": "windows",
+    "sha256": "4967f9e183a311193f8b2f0fd33f5a40b8b2a1ff7a575c2d412b2e4640c69912",
+    "architecture": "x86",
+    "bytes": 61151835,
+    "file": "E:\\GAME\\桌猫.exe"
+  }
+}

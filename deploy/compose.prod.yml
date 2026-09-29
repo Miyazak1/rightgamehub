@@ -1,0 +1,159 @@
+name: gamehub-production
+
+x-api-environment: &api-environment
+  NODE_ENV: production
+  API_HOST: 0.0.0.0
+  API_PORT: 3090
+  DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+  DATABASE_SSL: "false"
+  OTP_HMAC_KEY: ${OTP_HMAC_KEY}
+  CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3081
+  TRUST_EDITOR_WEBVIEWS: "true"
+  MAIL_PROVIDER: resend
+  RESEND_API_KEY: ${RESEND_API_KEY}
+  MAIL_FROM: ${MAIL_FROM}
+  LOGIN_EMAIL_ALLOWLIST: ${LOGIN_EMAIL_ALLOWLIST:-}
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+  GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-}
+  QUARANTINE_ROOT: /data/quarantine
+  AVATAR_ROOT: /data/avatars
+  COVER_ROOT: /data/covers
+  RUNTIME_ROOT: /data/runtime
+  VALIDATOR_ROOT: /data/validator
+  RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
+  RUNTIME_SCHEME: https
+  GUESS_BAIKE_AUTOMATION_ENABLED: "true"
+  NODE_OPTIONS: --max-old-space-size=320
+
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gamehub
+      POSTGRES_USER: gamehub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gamehub -d gamehub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    mem_limit: 640m
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    environment: *api-environment
+    command: ["node", "apps/api/src/migrate-cli.mjs"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    volumes:
+      - avatars:/data/avatars
+      - covers:/data/covers
+      - quarantine:/data/quarantine
+      - runtime-assets:/data/runtime
+      - validator:/data/validator
+    networks: [backend]
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment: *api-environment
+    command: ["node", "apps/api/src/server.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    volumes:
+      - avatars:/data/avatars
+      - covers:/data/covers
+      - quarantine:/data/quarantine
+      - runtime-assets:/data/runtime
+      - validator:/data/validator
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+    mem_limit: 384m
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment: *api-environment
+    command: ["node", "apps/api/src/validation-worker-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    volumes:
+      - quarantine:/data/quarantine
+      - runtime-assets:/data/runtime
+      - validator:/data/validator
+      - avatars:/data/avatars
+      - covers:/data/covers
+    networks: [backend]
+    mem_limit: 512m
+
+  runtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment: *api-environment
+    command: ["node", "apps/api/src/runtime-edge-server.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    volumes:
+      - runtime-assets:/data/runtime:ro
+      - avatars:/data/avatars
+      - covers:/data/covers
+      - quarantine:/data/quarantine
+      - validator:/data/validator
+    networks: [backend]
+    mem_limit: 256m
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+    depends_on:
+      api: { condition: service_healthy }
+      runtime: { condition: service_started }
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [backend]
+    mem_limit: 128m
+
+networks:
+  backend:
+
+volumes:
+  postgres-data:
+  avatars:
+  covers:
+  quarantine:
+  runtime-assets:
+  validator:
+  caddy-data:
+  caddy-config:

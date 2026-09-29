@@ -1,0 +1,9 @@
+.git
+.runtime
+artifacts
+node_modules
+**/node_modules
+**/dist
+**/*.vsix
+**/*.tgz
+docs/evidence

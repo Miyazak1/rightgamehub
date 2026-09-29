@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'">
+<title>GameHub WebGL2 sample</title><style>
+*{box-sizing:border-box}body{margin:0;padding:12px;color:#e5edf8;background:#101827;font:14px system-ui}h3{margin:0 0 6px}p{font-size:12px;line-height:1.6}canvas{display:block;width:100%;height:240px;border-radius:8px}button{padding:7px 12px;color:#fff;background:#25364e;border:1px solid #607089;border-radius:6px}
+</style></head><body>
+<h3>旋转立方体 · WebGL2</h3><p id="status" role="status">正在检测 WebGL2</p>
+<canvas aria-label="WebGL2 渲染画布"></canvas><button id="toggle">暂停旋转</button>
+<script>
+const canvas=document.querySelector('canvas'),status=document.getElementById('status'),gl=canvas.getContext('webgl2',{antialias:true});
+if(!gl){status.textContent='此环境未取得 WebGL2 上下文，不能标为通过。';document.getElementById('toggle').disabled=true;}
+else{try{
+  const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;};
+  const vs=shader(gl.VERTEX_SHADER,`#version 300 es
+  in vec3 p;uniform float angle;uniform float ratio;out vec3 colour;
+  void main(){float c=cos(angle),s=sin(angle);vec3 q=vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);float yy=.86*q.y-.5*q.z;float zz=.5*q.y+.86*q.z+4.;gl_Position=vec4(q.x*1.8/ratio,yy*1.8,1.02*zz-.202,zz);colour=p*.32+.6;}`);
+  const fs=shader(gl.FRAGMENT_SHADER,`#version 300 es
+  precision highp float;in vec3 colour;out vec4 outColour;void main(){outColour=vec4(colour,1.);}`);
+  const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,-1,1,-1,-1,1,1,-1,-1,1,-1,-1,-1,1,1,-1,1,1,1,1,-1,1,1]),gl.STATIC_DRAW);
+  const p=gl.getAttribLocation(program,'p');gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array([0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,3,7,6,3,6,2,0,4,7,0,7,3,1,2,6,1,6,5]),gl.STATIC_DRAW);
+  gl.enable(gl.DEPTH_TEST);const angleLoc=gl.getUniformLocation(program,'angle'),ratioLoc=gl.getUniformLocation(program,'ratio');let angle=0,playing=true,frames=0,lost=false;
+  document.getElementById('toggle').onclick=()=>{playing=!playing;document.getElementById('toggle').textContent=playing?'暂停旋转':'继续旋转';};
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;status.textContent='WebGL 上下文丢失，请结束并重新开始样本。';});
+  function draw(){if(lost)return;const r=canvas.getBoundingClientRect();const width=Math.max(1,Math.round(r.width*Math.min(devicePixelRatio,2))),height=Math.max(1,Math.round(r.height*Math.min(devicePixelRatio,2)));if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.055,.09,.15,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);if(playing)angle+=.014;gl.uniform1f(angleLoc,angle);gl.uniform1f(ratioLoc,canvas.width/canvas.height);gl.drawElements(gl.TRIANGLES,36,gl.UNSIGNED_SHORT,0);frames++;if(frames%30===1)status.textContent='WebGL2 已绘制 · 帧 '+frames+' · '+canvas.width+' × '+canvas.height;requestAnimationFrame(draw);}draw();
+}catch(error){status.textContent='渲染失败：'+error.message;}}
+</script></body></html>
