@@ -5,13 +5,13 @@ import { createApiClient } from '@gamehub/platform-api-client';
 import legacyClient from './client.cjs';
 
 const ID = '@gamehub/harness-plugin';
-const localApiBaseUrl = () => ['127.0.0.1', 'localhost'].includes(window.location.hostname) ? 'http://127.0.0.1:3090' : '';
+const defaultApiBaseUrl = () => window.GAMEHUB_API_BASE_URL ?? 'https://mooyu.fun';
 
 function HarnessPlatform({ useTabInfo }) {
   const { tab } = useTabInfo();
   const host = useMemo(() => createHarnessHostAdapter({
     signal: tab.signal,
-    apiBaseUrl: window.GAMEHUB_API_BASE_URL ?? localApiBaseUrl(),
+    apiBaseUrl: defaultApiBaseUrl(),
   }), [tab.signal]);
   const api = useMemo(() => createApiClient({
     baseUrl: host.apiBaseUrl,
