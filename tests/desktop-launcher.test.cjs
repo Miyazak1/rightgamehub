@@ -62,7 +62,10 @@ test('upload and verified EXE download do not execute; explicit launch uses only
   assert.equal((await f.call('desktop-launch', record.id, launchOptions())).status, 409);
   const result = await (await f.call('desktop-prepare', record.id, post)).json();
   assert.equal(result.ok, true); assert.equal(result.architecture, 'x64'); assert.equal(result.reused, false);
+  assert.equal(result.progress.state, 'ready'); assert.equal(result.progress.percent, 100);
   assert.deepEqual(await fs.readFile(f.cache(record)), bytes); assert.equal(f.calls.length, 0);
+  const preparedState = (await (await f.call('files')).json()).files[0].desktopLaunch;
+  assert.equal(preparedState.prepared, true); assert.equal(preparedState.download.state, 'ready'); assert.equal(preparedState.download.percent, 100);
   const launched = await (await f.call('desktop-launch', record.id, launchOptions())).json();
   assert.equal(launched.ok, true); assert.equal(launched.mode, 'independent-window');
   assert.equal(f.calls.length, 1);
