@@ -34,7 +34,7 @@ function validName(name) {
 
 // Only the trusted plugin UI uses these routes. Harness authenticates the operator,
 // Host, Origin and Fetch Metadata before dispatching its connection.fetch handlers.
-export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024, quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000, offscreenOptions, desktopOptions, credentialStore = null }) {
+export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024, quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000, offscreenOptions, desktopOptions, credentialStore = null, platformOrigin = process.env.GAMEHUB_API_BASE_URL || 'https://mooyu.fun' }) {
   await mkdir(root, { recursive: true });
   const records = new Map();
   for (const filename of await readdir(root)) {
@@ -76,6 +76,21 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     ...(record.web?.offscreen ? { offscreenPackage: offscreen.packageStatus?.(record) ||
       { approved: !!approvedPackage(record.sha256), enabled: false, prepared: false } } : {}) });
   const usedBytes = () => [...records.values()].reduce((total, record) => total + record.size + (record.web?.state === 'ready' ? record.web.totalBytes : 0), 0);
+  const platformBase = new URL(platformOrigin);
+  if (!['https:', 'http:'].includes(platformBase.protocol) || platformBase.pathname !== '/' || platformBase.search || platformBase.hash) throw new Error('GAMEHUB_API_BASE_URL must be an HTTP origin.');
+  const readPlatformExecutable = async request => {
+    if (request.headers.get('x-gamehub-client') !== '1' || request.headers.get('x-gamehub-launch') !== 'independent-window-v1') fail(403, '请从 GameHub 作品页点击“下载并启动”。');
+    const text = await request.text();
+    if (Buffer.byteLength(text) > 4096) fail(413, '启动请求过大。');
+    let body;
+    try { body = JSON.parse(text); } catch { fail(400, '启动请求格式无效。'); }
+    if (!UUID.test(body?.workId || '') || !UUID.test(body?.releaseId || '') || !SHA256.test(body?.sha256 || '') ||
+        !Number.isSafeInteger(body?.sizeBytes) || body.sizeBytes < 64 || body.sizeBytes > maxBytes ||
+        typeof body?.fileName !== 'string' || !body.fileName.toLowerCase().endsWith('.exe') || !validName(body.fileName)) fail(400, 'Windows 版本信息无效。');
+    const record = { id: body.releaseId, name: body.fileName, size: body.sizeBytes, sha256: body.sha256, kind: 'exe' };
+    const downloadUrl = new URL(`/v1/works/${body.workId}/releases/${body.releaseId}/download`, platformBase);
+    return { record, downloadUrl };
+  };
   const getRecord = url => {
     const id = url.searchParams.get('id');
     if (!UUID.test(id || '') || !records.has(id)) fail(404, '文件不存在。');
@@ -233,6 +248,11 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     '/api/gamehub/upload': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, false) },
     '/api/gamehub/verify': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, true) },
     '/api/gamehub/download': { methods: ['GET', 'HEAD'], requestBody: 'buffered', run: download },
+    '/api/gamehub/platform-desktop-launch': { methods: ['POST'], requestBody: 'buffered', run: async request => {
+      const { record, downloadUrl } = await readPlatformExecutable(request);
+      await desktop.prepare(record, () => fetch(downloadUrl, { signal: request.signal, cache: 'no-store' }), request.signal);
+      return json({ ok: true, ...await desktop.launch(record, randomUUID(), request.signal) });
+    } },
     '/api/gamehub/desktop-prepare': { methods: ['POST'], requestBody: 'buffered', run: async (request, url) => {
       if (request.headers.get('x-gamehub-client') !== '1') fail(403, '请从游戏大厅下载文件。');
       if (request.body || [...url.searchParams.keys()].some(key => key !== 'id')) fail(400, '只接受已上传文件的 ID。');
