@@ -24,7 +24,7 @@ function Enable-GameHubUpdates {
     if ($actual -ne $manifest.updater.windows.sha256.ToLowerInvariant()) { throw 'GameHub updater SHA-256 verification failed.' }
     Move-Item -LiteralPath $partial -Destination $updaterPath -Force
     $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
-    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$updaterPath`" -HostName $HostName -Quiet"
+    $arguments = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$updaterPath`" -HostName $HostName -Quiet"
     $action = New-ScheduledTaskAction -Execute $powershell -Argument $arguments
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(15) -RepetitionInterval (New-TimeSpan -Hours $manifest.updatePolicy.checkIntervalHours)
     Register-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Action $action -Trigger $trigger -Description 'Downloads verified stable GameHub updates; the Agent activates them after restart.' -Force | Out-Null
