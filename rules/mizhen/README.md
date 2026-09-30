@@ -23,7 +23,7 @@ RULES_TRUSTED_KEYS_JSON='{"mizhen-release-2026-09":"MCowBQYDK2VwAyEANV5dtIf2p6Fv
 
 ```sh
 cd /www/gamehub
-npm run rules:manifest -- verify rules/manifest.json /path/to/rules-public.json
+npm run rules:manifest -- verify rules/manifest.json rules/trusted-public-keys.json
 cd deploy
 ./deploy.sh
 docker compose --env-file .env.prod -f compose.prod.yml logs --tail=100 api realtime
