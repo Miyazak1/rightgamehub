@@ -1,6 +1,7 @@
 import { createRuntime } from './runtime.mjs';
 
 const runtime = createRuntime();
+process.stdout.write(`GameHub API loaded ${runtime.rulesRegistry.list().length} trusted rules adapter(s).\n`);
 await runtime.guessBaikeService.seedBuiltIns();
 await runtime.app.listen({ host: runtime.config.host, port: runtime.config.port });
 runtime.guessBaikeAutomation.start();

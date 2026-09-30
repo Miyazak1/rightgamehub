@@ -7,7 +7,7 @@ import { createRedisRoomCoordinator } from './redis-room-coordinator.mjs';
 import { createRoomSessionManager } from './room-session-manager.mjs';
 import { PostgresRealtimeMatchRepository } from './match-repository.mjs';
 import { createMatchSessionManager } from './match-session-manager.mjs';
-import { createRulesRegistry } from '@gamehub/rules-sdk';
+import { loadRulesRegistry } from '@gamehub/rules-sdk';
 import { createMatchTimeoutWorker } from './match-timeout-worker.mjs';
 
 const config = loadRealtimeConfig();
@@ -19,7 +19,7 @@ const roomSessionManager = createRoomSessionManager({
   repository: new PostgresRealtimeRoomRepository(database.pool), coordinator: roomCoordinator,
   heartbeatIntervalMs: config.heartbeatIntervalMs, reconnectGraceMs: config.reconnectGraceMs,
 });
-const rulesRegistry = createRulesRegistry();
+const rulesRegistry = loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned });
 const matchRepository = new PostgresRealtimeMatchRepository(database.pool);
 const matchSessionManager = createMatchSessionManager({ repository: matchRepository,coordinator: matchCoordinator,rulesRegistry });
 const matchTimeoutWorker = createMatchTimeoutWorker({
@@ -29,6 +29,7 @@ const matchTimeoutWorker = createMatchTimeoutWorker({
 const realtime = createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, ...config });
 await realtime.listen({ host: config.host, port: config.port });
 process.stdout.write(`GameHub realtime listening on ${config.host}:${config.port}\n`);
+process.stdout.write(`GameHub realtime loaded ${rulesRegistry.list().length} trusted rules adapter(s).\n`);
 
 const shutdown = async signal => {
   process.stderr.write(`GameHub realtime received ${signal}; shutting down.\n`);

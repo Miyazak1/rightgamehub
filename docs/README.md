@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [54 受信规则适配器发布与回滚](./54-trusted-rules-adapter-release.zh-CN.md) | **离线 Ed25519 签名、bundle 摘要、只读部署、双服务一致加载、版本保留与回滚流程** |
 | [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md) | **面向游戏设计者的包格式、SDK 流程、权威命令、隐藏信息、重连与规则交付清单** |
 | [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md) | **版本化 MessageChannel SDK、作品作用域、最小身份、房间/对局方法与安全边界** |
 | [多人平台基础设施设计](./multiplayer-platform-infrastructure-design.md) | **通用房间、realtime、权威规则、持久化、治理、扩容与分阶段完成定义** |

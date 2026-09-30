@@ -15,6 +15,7 @@
     "guess-baike:generate": "node scripts/generate-guess-baike-puzzles.mjs",
     "contracts:generate": "node scripts/generate-contracts.mjs",
     "contracts:check": "node scripts/generate-contracts.mjs --check",
+    "rules:manifest": "node scripts/rules-manifest-cli.mjs",
     "test:legacy": "node --test tests/*.test.cjs",
     "test:platform": "node --test tests/platform/*.test.cjs",
     "test": "npm run test:legacy && npm run test:platform && npm run test:client",

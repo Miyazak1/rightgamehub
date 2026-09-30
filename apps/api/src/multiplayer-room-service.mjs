@@ -24,7 +24,7 @@ const requireIdempotencyKey = key => {
   if (!/^[\x21-\x7e]{16,128}$/.test(key ?? '')) throw new MultiplayerRoomError('IDEMPOTENCY_KEY_REQUIRED', 400, '需要有效的 Idempotency-Key。');
 };
 
-export function createMultiplayerRoomService({ repository, roomCodeHmacKey, ids = () => crypto.randomUUID(), clock = () => new Date() }) {
+export function createMultiplayerRoomService({ repository, roomCodeHmacKey, rulesRegistry = null, ids = () => crypto.randomUUID(), clock = () => new Date() }) {
   if (Buffer.byteLength(roomCodeHmacKey ?? '', 'utf8') < 32) throw new TypeError('roomCodeHmacKey must contain at least 32 UTF-8 bytes.');
   const codeFor = roomId => crypto.createHmac('sha256', roomCodeHmacKey).update(`gamehub:room-code:${roomId}`).digest('base64url').slice(0, 12);
   const digestFor = code => crypto.createHmac('sha256', roomCodeHmacKey).update(`gamehub:room-code-value:${code}`).digest();
@@ -36,6 +36,7 @@ export function createMultiplayerRoomService({ repository, roomCodeHmacKey, ids 
       requireActor(actor);
       if (actor.profile?.role !== 'admin') throw new MultiplayerRoomError('ADMIN_REQUIRED', 403, '需要管理员权限。');
       if (input.minPlayers > input.maxPlayers) throw new MultiplayerRoomError('PLAYER_RANGE_INVALID', 400, '最少人数不能超过最多人数。');
+      if (input.authority === 'platform_authoritative' && rulesRegistry && !rulesRegistry.get({ workId: input.workId,modeKey: input.key,rulesetVersion: input.rulesetVersion })) throw new MultiplayerRoomError('RULESET_NOT_AVAILABLE', 409, '服务器尚未安装并信任这个规则版本。');
       const mode = await repository.createMode({ id: ids(), ...input, now: clock() });
       if (!mode) throw new MultiplayerRoomError('WORK_NOT_ELIGIBLE', 409, '只有已发布的游戏作品可以启用多人模式。');
       return mode;

@@ -788,5 +788,11 @@ interface MultiplayerRulesAdapter<State, Command, Event, Result> {
 
 通用 Web 游戏多人安全桥已经实现：`@gamehub/web-game-sdk` 提供无凭据的作者 API，可信播放器持有 API token、一次性 realtime ticket 与 WebSocket，并按当前作品限制 mode、room 和 match。Web 发布包通过 `platform.json` 声明 `multiplayer`；未声明的版本不创建桥。房间启动会在 room 频道广播 `match.started`，参与者据此订阅同一权威对局。
 
-作者接入要求与示例见 [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md)，协议、安全边界与验收见 [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md)。服务端规则适配器仍是受信部署单元；作者 ZIP 不得动态装载服务器代码。规则适配器注册和发布信任链作为后续独立增量建设。
+作者接入要求与示例见 [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md)，协议、安全边界与验收见 [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md)。服务端规则适配器仍是受信部署单元；作者 ZIP 不得动态装载服务器代码。
+
+### 23.3 规则适配器发布信任链（2026-09-30）
+
+API 与 Realtime 现使用同一规则清单加载器。清单采用离线 Ed25519 签名，每个单文件 bundle 绑定 SHA-256、`workId`、`modeKey` 和不可变 `rulesetVersion`；生产禁止未签名模式，规则目录只读挂载。签名、摘要、路径、导出接口或身份任一不符都会使进程启动失败。管理员创建 `platform_authoritative` 模式时也会检查该版本已安装，避免配置到运行时才失败。
+
+密钥建立、签名、双服务部署、旧版本保留和回滚步骤见 [54 受信规则适配器发布与回滚](./54-trusted-rules-adapter-release.zh-CN.md)。具体游戏仍需提供规则 bundle 和确定性测试向量；平台信任链本身不包含任何虚构游戏规则。
 

@@ -11,6 +11,8 @@ x-api-environment: &api-environment
   REALTIME_TICKET_TTL_SECONDS: "30"
   OTP_HMAC_KEY: ${OTP_HMAC_KEY}
   ROOM_CODE_HMAC_KEY: ${ROOM_CODE_HMAC_KEY:-}
+  RULES_MANIFEST_PATH: ${RULES_MANIFEST_PATH:-}
+  RULES_TRUSTED_KEYS_JSON: ${RULES_TRUSTED_KEYS_JSON:-}
   CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
   TRUST_EDITOR_WEBVIEWS: "true"
   MAIL_PROVIDER: resend
@@ -95,6 +97,7 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     volumes:
+      - ../rules:/app/rules:ro
       - avatars:/data/avatars
       - covers:/data/covers
       - quarantine:/data/quarantine
@@ -125,9 +128,13 @@ services:
       REALTIME_MATCH_TIMEOUT_BATCH_SIZE: "50"
       REALTIME_ALLOWED_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
       TRUST_EDITOR_WEBVIEWS: "true"
+      RULES_MANIFEST_PATH: ${RULES_MANIFEST_PATH:-}
+      RULES_TRUSTED_KEYS_JSON: ${RULES_TRUSTED_KEYS_JSON:-}
     depends_on:
       redis: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
+    volumes:
+      - ../rules:/app/rules:ro
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s

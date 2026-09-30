@@ -1,0 +1,15 @@
+{
+  "protocol": "gamehub.rules-manifest.v1",
+  "createdAt": "2026-09-30T00:00:00.000Z",
+  "keyId": "replace-with-release-key-id",
+  "entries": [
+    {
+      "workId": "00000000-0000-4000-8000-000000000000",
+      "modeKey": "duel",
+      "rulesetVersion": "1.0.0",
+      "bundle": "example/duel-1.0.0.cjs",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "signature": "replace-after-running-the-sign-command"
+}

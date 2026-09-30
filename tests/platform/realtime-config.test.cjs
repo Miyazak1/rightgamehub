@@ -16,4 +16,7 @@ test('realtime configuration requires Redis and PostgreSQL and bounds reconnect 
   assert.equal(config.reconnectGraceMs, 90_000);
   assert.equal(config.matchTimeoutSweepMs, 1_000);
   assert.equal(config.matchTimeoutBatchSize, 75);
+  assert.equal(config.rulesManifestPath, null);
+  assert.deepEqual(config.rulesTrustedKeys, {});
+  assert.throws(() => loadRealtimeConfig({ NODE_ENV: 'production', REDIS_URL: 'redis://localhost:6379', DATABASE_URL: 'postgresql://localhost/gamehub', RULES_ALLOW_UNSIGNED: 'true' }), /cannot be enabled/u);
 });

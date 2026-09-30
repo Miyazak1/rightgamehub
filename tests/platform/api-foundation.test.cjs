@@ -17,6 +17,8 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(config.validatorExecutionMode, 'local');
   assert.equal(config.storageWarnPercent, 70);
   assert.equal(config.storageBlockPercent, 85);
+  assert.equal(config.rulesManifestPath, null);
+  assert.deepEqual(config.rulesTrustedKeys, {});
   assert.deepEqual(config.corsOrigins, []);
   const production = loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime' });
   assert.equal(production.validatorExecutionMode, 'isolated');
@@ -25,6 +27,8 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), STORAGE_WARN_PERCENT: '90', STORAGE_BLOCK_PERCENT: '85' }), /must be lower/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), CORS_ORIGINS: 'http://127.0.0.1:3081/path' }), /without paths/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_CLIENT_SECRET: 'secret' }), /GITHUB_CLIENT_ID/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', RULES_ALLOW_UNSIGNED: 'true' }), /cannot be enabled/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RULES_TRUSTED_KEYS_JSON: '{bad' }), /valid JSON/u);
 });
 
 test('GitHub OAuth callback accepts the GitHub authorization issuer', async t => {

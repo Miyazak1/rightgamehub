@@ -38,14 +38,14 @@ import { PostgresMultiplayerRoomRepository } from './multiplayer-room-repository
 import { createMultiplayerRoomService } from './multiplayer-room-service.mjs';
 import { PostgresMultiplayerMatchRepository } from './multiplayer-match-repository.mjs';
 import { createMultiplayerMatchService } from './multiplayer-match-service.mjs';
-import { createRulesRegistry } from '@gamehub/rules-sdk';
+import { createRulesRegistry, loadRulesRegistry } from '@gamehub/rules-sdk';
 import { createRedisMatchPublisher } from './redis-match-publisher.mjs';
 import { createWebValidationRunner } from './web-validation-runner.mjs';
 import { createStorageCapacityService } from './storage-capacity-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
-export function createRuntime({ env = process.env, mailer } = {}) {
+export function createRuntime({ env = process.env, mailer, loadTrustedRules = true } = {}) {
   const config = loadConfig(env);
   const database = createDatabase(config);
   const migrations = {
@@ -111,12 +111,13 @@ export function createRuntime({ env = process.env, mailer } = {}) {
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
-  const multiplayerRoomService = createMultiplayerRoomService({ repository: new PostgresMultiplayerRoomRepository(database.pool), roomCodeHmacKey: config.roomCodeHmacKey });
+  const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
+  const multiplayerRoomService = createMultiplayerRoomService({ repository: new PostgresMultiplayerRoomRepository(database.pool), roomCodeHmacKey: config.roomCodeHmacKey,rulesRegistry });
   const multiplayerMatchPublisher = createRedisMatchPublisher({ url: config.redisUrl });
   const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
-  const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry: createRulesRegistry(), publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
+  const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry, publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
   const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, runtimeEdgeApp, app };
 }

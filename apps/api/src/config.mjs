@@ -1,3 +1,5 @@
+import { parseTrustedRulesKeys } from '@gamehub/rules-sdk';
+
 const integer = (value, fallback, name, min, max) => {
   const parsed = value === undefined ? fallback : Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new Error(`${name} must be an integer between ${min} and ${max}`);
@@ -47,6 +49,10 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const storageWarnPercent = integer(env.STORAGE_WARN_PERCENT, 70, 'STORAGE_WARN_PERCENT', 1, 98);
   const storageBlockPercent = integer(env.STORAGE_BLOCK_PERCENT, 85, 'STORAGE_BLOCK_PERCENT', 2, 99);
   if (storageWarnPercent >= storageBlockPercent) throw new Error('STORAGE_WARN_PERCENT must be lower than STORAGE_BLOCK_PERCENT');
+  const rulesManifestPath = env.RULES_MANIFEST_PATH?.trim() || null;
+  const rulesAllowUnsigned = boolean(env.RULES_ALLOW_UNSIGNED, false, 'RULES_ALLOW_UNSIGNED');
+  if (nodeEnv === 'production' && rulesAllowUnsigned) throw new Error('RULES_ALLOW_UNSIGNED cannot be enabled in production');
+  const rulesTrustedKeys = parseTrustedRulesKeys(env.RULES_TRUSTED_KEYS_JSON);
   let realtimePublicUrl;
   try { realtimePublicUrl = new URL(env.REALTIME_PUBLIC_URL?.trim() || 'ws://127.0.0.1:3093/v1/realtime'); }
   catch { throw new Error('REALTIME_PUBLIC_URL must be a valid WebSocket URL'); }
@@ -84,6 +90,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     loginEmailAllowlist: Object.freeze(loginEmailAllowlist),
     trustEditorWebviews: boolean(env.TRUST_EDITOR_WEBVIEWS, false, 'TRUST_EDITOR_WEBVIEWS'),
     redisUrl,
+    rulesManifestPath,
+    rulesAllowUnsigned,
+    rulesTrustedKeys,
     realtimePublicUrl: realtimePublicUrl.toString(),
     realtimeTicketTtlSeconds: integer(env.REALTIME_TICKET_TTL_SECONDS, 30, 'REALTIME_TICKET_TTL_SECONDS', 5, 120),
     guessBaikeAutomationEnabled: boolean(env.GUESS_BAIKE_AUTOMATION_ENABLED, nodeEnv !== 'test', 'GUESS_BAIKE_AUTOMATION_ENABLED'),

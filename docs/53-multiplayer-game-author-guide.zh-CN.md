@@ -124,7 +124,7 @@ await gamehub.multiplayer.matches.command(currentMatchId, {
 6. 回合/总局/掉线超时策略；
 7. 至少包含合法局、非法命令、重复命令、断线恢复和回放重建测试向量。
 
-平台据此实现并部署受信规则适配器。适配器升级不得悄悄改变旧对局；进行中对局继续绑定创建时的 `rulesVersion`。
+平台据此实现并部署受信规则适配器。适配器升级不得悄悄改变旧对局；进行中对局继续绑定创建时的 `rulesVersion`。平台侧签名、安装、版本保留和回滚流程见 [54 受信规则适配器发布与回滚](./54-trusted-rules-adapter-release.zh-CN.md)。
 
 ## 8. 发布前检查表
 

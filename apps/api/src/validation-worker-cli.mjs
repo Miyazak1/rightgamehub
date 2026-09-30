@@ -1,6 +1,6 @@
 import { createRuntime } from './runtime.mjs';
 
-const runtime = createRuntime();
+const runtime = createRuntime({ loadTrustedRules: false });
 let stopping = false;
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const stop = () => { stopping = true; };

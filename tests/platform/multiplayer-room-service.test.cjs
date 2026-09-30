@@ -35,6 +35,18 @@ test('room service restricts mode creation to admins and validates player range'
   assert.equal((await service.createMode({ userId: id(1), profile: { role: 'admin' } }, input)).key, 'classic');
 });
 
+test('room service refuses a platform-authoritative mode whose rules are not trusted', async () => {
+  const { createMultiplayerRoomService } = await import(modulePath);
+  let created = false;
+  const service = createMultiplayerRoomService({
+    repository: { createMode: async input => { created = true; return input; } },roomCodeHmacKey: key,
+    rulesRegistry: { get: () => null },
+  });
+  const input = { workId: id(1),key: 'classic',name: '经典',authority: 'platform_authoritative',minPlayers: 2,maxPlayers: 2,rulesetVersion: '1' };
+  await assert.rejects(service.createMode({ userId: id(1),profile: { role: 'admin' } }, input), error => error.code === 'RULESET_NOT_AVAILABLE' && error.statusCode === 409);
+  assert.equal(created,false);
+});
+
 test('room service maps repository join and state failures to stable API errors', async () => {
   const { createMultiplayerRoomService } = await import(modulePath);
   let result = { error: 'full' };
