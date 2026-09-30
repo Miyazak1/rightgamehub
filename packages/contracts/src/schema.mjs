@@ -93,6 +93,42 @@ export const schemas = Object.freeze({
     expiresAt: dateTime,
     protocol: { type: 'string', const: 'gamehub.realtime.v1' },
   }),
+  MultiplayerRoomSettings: object({
+    turnSeconds: { type: 'integer', minimum: 10, maximum: 3600 },
+    spectators: { type: 'boolean' },
+    reconnectGraceSeconds: { type: 'integer', minimum: 15, maximum: 600 },
+  }, []),
+  MultiplayerMode: object({
+    id, workId: id, key: { type: 'string' }, name: { type: 'string' },
+    authority: stringEnum(['platform_authoritative','external_authoritative','relay_unverified']),
+    minPlayers: { type: 'integer', minimum: 2, maximum: 8 }, maxPlayers: { type: 'integer', minimum: 2, maximum: 8 },
+    rulesetVersion: { type: 'string' }, config: { $ref: '#/components/schemas/MultiplayerRoomSettings' }, enabled: { type: 'boolean' },
+  }),
+  MultiplayerRoomMember: object({
+    userId: id, displayName: { type: 'string' }, seat: { type: 'integer', minimum: 0, maximum: 7 }, role: stringEnum(['player','spectator']),
+    ready: { type: 'boolean' }, connectionState: stringEnum(['online','offline','grace']), joinedAt: dateTime,
+  }),
+  MultiplayerRoom: object({
+    id, modeId: id, ownerUserId: id, visibility: stringEnum(['public','private','invite_only']), status: stringEnum(['open','starting','in_match','closed']),
+    capacity: { type: 'integer', minimum: 2, maximum: 8 }, settings: { $ref: '#/components/schemas/MultiplayerRoomSettings' }, revision: uintString,
+    expiresAt: dateTime, createdAt: dateTime, members: { type: 'array', maxItems: 8, items: { $ref: '#/components/schemas/MultiplayerRoomMember' } },
+  }),
+  MultiplayerRoomCreated: object({
+    id, modeId: id, ownerUserId: id, visibility: stringEnum(['public','private','invite_only']), status: stringEnum(['open','starting','in_match','closed']),
+    capacity: { type: 'integer', minimum: 2, maximum: 8 }, settings: { $ref: '#/components/schemas/MultiplayerRoomSettings' }, revision: uintString,
+    expiresAt: dateTime, createdAt: dateTime, members: { type: 'array', maxItems: 8, items: { $ref: '#/components/schemas/MultiplayerRoomMember' } },
+    joinCode: { oneOf: [{ type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' }, { type: 'null' }] },
+  }),
+  CreateMultiplayerModeRequest: object({
+    workId: id, key: { type: 'string', pattern: '^[a-z][a-z0-9_]{1,63}$' }, name: { type: 'string', minLength: 1, maxLength: 80 },
+    authority: stringEnum(['platform_authoritative','external_authoritative','relay_unverified']), minPlayers: { type: 'integer', minimum: 2, maximum: 8 }, maxPlayers: { type: 'integer', minimum: 2, maximum: 8 },
+    rulesetVersion: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' }, config: { $ref: '#/components/schemas/MultiplayerRoomSettings' },
+  }, ['workId','key','name','authority','minPlayers','maxPlayers','rulesetVersion']),
+  CreateMultiplayerRoomRequest: object({
+    modeId: id, visibility: stringEnum(['public','invite_only']), capacity: { type: 'integer', minimum: 2, maximum: 8 }, settings: { $ref: '#/components/schemas/MultiplayerRoomSettings' },
+  }, ['modeId','visibility','capacity']),
+  JoinMultiplayerRoomRequest: object({ joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' } }, []),
+  SetMultiplayerReadyRequest: object({ ready: { type: 'boolean' } }),
   GitHubDevicePoll: object({
     status: stringEnum(['pending', 'complete']),
     retryAfter: { type: 'integer', minimum: 0, maximum: 120 },
@@ -357,6 +393,14 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/auth/github/web/{challengeId}/poll', operationId: 'pollGitHubWeb', auth: 'anonymous', response: 'GitHubWebPoll', pathId: 'challengeId' },
   { method: 'post', path: '/v1/auth/refresh', operationId: 'refreshDeviceGrant', auth: 'anonymous', request: 'RefreshRequest', response: 'AuthTokens' },
   { method: 'post', path: '/v1/realtime/tickets', operationId: 'createRealtimeTicket', auth: 'bearer', response: 'RealtimeTicket' },
+  { method: 'get', path: '/v1/works/{workId}/multiplayer-modes', operationId: 'listMultiplayerModes', auth: 'anonymous', response: 'MultiplayerMode', responseArray: true, pathWorkKey: true },
+  { method: 'post', path: '/v1/admin/multiplayer/modes', operationId: 'createMultiplayerMode', auth: 'bearer', request: 'CreateMultiplayerModeRequest', response: 'MultiplayerMode' },
+  { method: 'get', path: '/v1/multiplayer/rooms', operationId: 'listMultiplayerRooms', auth: 'anonymous', response: 'MultiplayerRoom', responseArray: true, queryMultiplayerRooms: true },
+  { method: 'post', path: '/v1/multiplayer/rooms', operationId: 'createMultiplayerRoom', auth: 'bearer', request: 'CreateMultiplayerRoomRequest', response: 'MultiplayerRoomCreated', idempotent: true },
+  { method: 'get', path: '/v1/multiplayer/rooms/{roomId}', operationId: 'getMultiplayerRoom', auth: 'bearer', response: 'MultiplayerRoom', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/join', operationId: 'joinMultiplayerRoom', auth: 'bearer', request: 'JoinMultiplayerRoomRequest', response: 'MultiplayerRoom', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/leave', operationId: 'leaveMultiplayerRoom', auth: 'bearer', response: 'MultiplayerRoom', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/ready', operationId: 'setMultiplayerReady', auth: 'bearer', request: 'SetMultiplayerReadyRequest', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
   { method: 'post', path: '/v1/auth/devices/logout-all', operationId: 'logoutAllDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
@@ -428,10 +472,15 @@ export function createOpenApiDocument() {
     if (operation.pathCode) parameters.push({ name: 'code', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{10,24}$' } });
       if (operation.pathPuzzleId) parameters.push({ name: 'puzzleId', in: 'path', required: true, schema: { type: 'string', minLength: 1, maxLength: 120 } });
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });
+    if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
     if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: 7 } });
+    if (operation.queryMultiplayerRooms) parameters.push(
+      { name: 'modeId', in: 'query', required: true, schema: id },
+      { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 50, default: 30 } },
+    );
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
       { name: 'scope', in: 'query', required: true, schema: stringEnum(['global','following']) },

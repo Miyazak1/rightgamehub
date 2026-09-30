@@ -1,0 +1,59 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+
+const root = path.resolve(__dirname, '../..');
+const source = relative => pathToFileURL(path.join(root, relative));
+const databaseUrl = process.env.GAMEHUB_TEST_DATABASE_URL;
+
+test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { skip: !databaseUrl }, async t => {
+  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }] = await Promise.all([
+    import(source('apps/api/src/database.mjs')),
+    import(source('apps/api/src/multiplayer-room-repository.mjs')),
+    import(source('apps/api/src/multiplayer-room-service.mjs')),
+  ]);
+  const database = createDatabase({ databaseUrl, databaseSsl: false });
+  const ownerId = crypto.randomUUID(); const guestId = crypto.randomUUID(); const thirdId = crypto.randomUUID(); const workId = crypto.randomUUID();
+  const repository = new PostgresMultiplayerRoomRepository(database.pool);
+  const service = createMultiplayerRoomService({ repository, roomCodeHmacKey: 'integration-room-code-key-at-least-32-bytes' });
+  const admin = { userId: ownerId, profile: { role: 'admin' } };
+  const owner = { userId: ownerId }; const guest = { userId: guestId }; const third = { userId: thirdId };
+  t.after(async () => {
+    try {
+      await database.pool.query('DELETE FROM idempotency_keys WHERE actor_id = ANY($1::uuid[])', [[ownerId,guestId,thirdId]]);
+      await database.pool.query('DELETE FROM multiplayer_rooms WHERE mode_id IN (SELECT id FROM multiplayer_game_modes WHERE work_id=$1)', [workId]);
+      await database.pool.query('DELETE FROM works WHERE id=$1', [workId]);
+      await database.pool.query('DELETE FROM users WHERE id = ANY($1::uuid[])', [[ownerId,guestId,thirdId]]);
+    } finally {
+      await database.close();
+    }
+  });
+  await database.pool.query(
+    `INSERT INTO users(id,display_name,role,can_publish) VALUES ($1,'Owner','admin',true),($2,'Guest','user',false),($3,'Third','user',false)`,
+    [ownerId,guestId,thirdId],
+  );
+  await database.pool.query(
+    `INSERT INTO works(id,owner_user_id,title,kind,state,visibility) VALUES ($1,$2,'Room integration game','game','published','public')`,
+    [workId,ownerId],
+  );
+  const mode = await service.createMode(admin, { workId, key: 'classic', name: '经典模式', authority: 'platform_authoritative', minPlayers: 2, maxPlayers: 2, rulesetVersion: '1', config: { turnSeconds: 60 } });
+  const room = await service.createRoom(owner, { modeId: mode.id, visibility: 'public', capacity: 2, settings: { turnSeconds: 60 } }, `room-${crypto.randomUUID()}`);
+  const joined = await service.joinRoom(guest, room.id);
+  assert.equal(joined.members.length, 2);
+  assert.deepEqual(joined.members.map(member => member.seat), [0,1]);
+  await assert.rejects(service.joinRoom(third, room.id), error => error.code === 'ROOM_FULL');
+  const ready = await service.setReady(guest, room.id, true);
+  assert.equal(ready.members.find(member => member.userId === guestId).ready, true);
+  const transferred = await service.leaveRoom(owner, room.id);
+  assert.equal(transferred.ownerUserId, guestId);
+  const closed = await service.leaveRoom(guest, room.id);
+  assert.equal(closed.status, 'closed');
+
+  const invited = await service.createRoom(owner, { modeId: mode.id, visibility: 'invite_only', capacity: 2, settings: {} }, `room-${crypto.randomUUID()}`);
+  await assert.rejects(service.joinRoom(guest, invited.id, { joinCode: 'BADCODE12345' }), error => error.code === 'ROOM_CODE_REQUIRED');
+  const invitedJoined = await service.joinRoom(guest, invited.id, { joinCode: invited.joinCode });
+  assert.equal(invitedJoined.members.length, 2);
+  assert.equal((await service.getRoom(guest, invited.id)).id, invited.id);
+});

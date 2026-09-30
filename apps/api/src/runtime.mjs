@@ -34,6 +34,8 @@ import { PostgresAnalyticsRepository } from './analytics-repository.mjs';
 import { createAnalyticsService } from './analytics-service.mjs';
 import { createRealtimeTicketService } from './realtime-ticket-service.mjs';
 import { createRedisRealtimeTicketStore } from './redis-realtime-ticket-store.mjs';
+import { PostgresMultiplayerRoomRepository } from './multiplayer-room-repository.mjs';
+import { createMultiplayerRoomService } from './multiplayer-room-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -80,8 +82,9 @@ export function createRuntime({ env = process.env, mailer } = {}) {
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
-  const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, logger: config.nodeEnv !== 'test' });
+  const multiplayerRoomService = createMultiplayerRoomService({ repository: new PostgresMultiplayerRoomRepository(database.pool), roomCodeHmacKey: config.roomCodeHmacKey });
+  const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, multiplayerRoomService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, multiplayerRoomService, runtimeEdgeApp, app };
 }

@@ -10,6 +10,7 @@ x-api-environment: &api-environment
   REALTIME_PUBLIC_URL: wss://${APP_DOMAIN}/v1/realtime
   REALTIME_TICKET_TTL_SECONDS: "30"
   OTP_HMAC_KEY: ${OTP_HMAC_KEY}
+  ROOM_CODE_HMAC_KEY: ${ROOM_CODE_HMAC_KEY:-}
   CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
   TRUST_EDITOR_WEBVIEWS: "true"
   MAIL_PROVIDER: resend

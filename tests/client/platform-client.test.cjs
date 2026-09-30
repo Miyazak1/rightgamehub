@@ -113,6 +113,30 @@ test('API client creates an authenticated realtime connection ticket', async () 
   assert.equal(request.init.headers.Authorization, 'Bearer realtime-token');
 });
 
+test('API client exposes multiplayer mode and room lifecycle operations', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const roomId = '00000000-0000-4000-8000-000000000301';
+  const modeId = '00000000-0000-4000-8000-000000000302';
+  const client = createApiClient({ getAccessToken: () => 'room-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  await client.listMultiplayerModes('gamehub-example');
+  await client.listMultiplayerRooms(modeId);
+  await client.createMultiplayerRoom({ modeId, visibility: 'public', capacity: 2 });
+  await client.getMultiplayerRoom(roomId);
+  await client.joinMultiplayerRoom(roomId, 'ABCDEFGHIJKL');
+  await client.setMultiplayerReady(roomId, true);
+  await client.leaveMultiplayerRoom(roomId);
+  assert.deepEqual(requests.map(item => item.init.method), ['GET','GET','POST','GET','POST','POST','POST']);
+  assert.equal(requests[0].init.headers.Authorization, undefined);
+  assert.equal(requests[1].init.headers.Authorization, undefined);
+  assert.ok(requests.slice(2).every(item => item.init.headers.Authorization === 'Bearer room-token'));
+  assert.ok(requests[2].init.headers['Idempotency-Key'].length >= 16);
+  assert.equal(requests[4].init.body, JSON.stringify({ joinCode: 'ABCDEFGHIJKL' }));
+});
+
 test('API client reads the authenticated creator collection', async () => {
   let request;
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');

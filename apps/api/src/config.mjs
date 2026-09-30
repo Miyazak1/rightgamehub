@@ -53,6 +53,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     databaseUrl: databaseUrl ?? '',
     databaseSsl: env.DATABASE_SSL === 'true',
     otpHmacKey,
+    roomCodeHmacKey: env.ROOM_CODE_HMAC_KEY?.trim() || otpHmacKey,
     githubClientId,
     githubClientSecret,
     githubCallbackUrl,

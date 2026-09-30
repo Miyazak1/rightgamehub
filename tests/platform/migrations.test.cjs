@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 29);
+  assert.equal(files.length, 30);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -40,6 +40,10 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(analytics, /CREATE TABLE analytics_events/);
   assert.match(analytics, /download_complete/);
   assert.doesNotMatch(analytics, /\b(ip_address|user_agent|full_url|project_path|prompt)\b/i);
+  const multiplayer = fs.readFileSync(path.join(migrationDir, '0030_multiplayer_rooms.sql'), 'utf8');
+  assert.match(multiplayer, /CREATE TABLE multiplayer_game_modes/);
+  assert.match(multiplayer, /CREATE TABLE multiplayer_rooms/);
+  assert.match(multiplayer, /CREATE TABLE multiplayer_room_members/);
   files.forEach((name, index) => assert.match(name, new RegExp(`^${String(index + 1).padStart(4, '0')}_`)));
   for (const migration of migrations) {
     assert.match(migration.sql, /^BEGIN;/);
@@ -56,6 +60,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'upload_jobs', 'upload_grants', 'jobs', 'idempotency_keys', 'user_library', 'guess_baike_results', 'user_follows', 'user_blocks',
     'guess_baike_reactions', 'social_notifications', 'game_challenges', 'challenge_participations', 'user_notification_preferences',
     'guess_baike_puzzles', 'guess_baike_schedule', 'guess_baike_automation_runs', 'creator_applications', 'analytics_events',
+    'multiplayer_game_modes', 'multiplayer_rooms', 'multiplayer_room_members',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

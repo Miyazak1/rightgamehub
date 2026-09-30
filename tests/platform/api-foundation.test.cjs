@@ -172,6 +172,35 @@ test('authenticated users can create no-store realtime connection tickets', asyn
   assert.equal(response.json().data.protocol, 'gamehub.realtime.v1');
 });
 
+test('multiplayer room routes keep creation authenticated and idempotent', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const actor = { userId: crypto.randomUUID(), profile: { role: 'user' } };
+  const modeId = crypto.randomUUID();
+  let creation;
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async () => actor },
+    multiplayerRoomService: {
+      listRooms: async () => [],
+      createRoom: async (receivedActor, body, idempotencyKey) => {
+        creation = { receivedActor, body, idempotencyKey };
+        return { id: crypto.randomUUID(), ...body, ownerUserId: receivedActor.userId, status: 'open', settings: body.settings ?? {}, revision: '0', expiresAt: new Date().toISOString(), createdAt: new Date().toISOString(), members: [], joinCode: null };
+      },
+    },
+  });
+  t.after(() => app.close());
+  const listed = await app.inject({ url: `/v1/multiplayer/rooms?modeId=${modeId}` });
+  assert.equal(listed.statusCode, 200);
+  const created = await app.inject({
+    method: 'POST', url: '/v1/multiplayer/rooms', headers: { authorization: 'Bearer valid', 'idempotency-key': 'room-create-test-0001' },
+    payload: { modeId, visibility: 'public', capacity: 2, settings: { turnSeconds: 60 } },
+  });
+  assert.equal(created.statusCode, 200);
+  assert.equal(created.headers['cache-control'], 'no-store');
+  assert.equal(creation.receivedActor, actor);
+  assert.equal(creation.idempotencyKey, 'room-create-test-0001');
+});
+
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const app = createApp({
