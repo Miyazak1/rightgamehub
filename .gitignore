@@ -6,6 +6,7 @@ poc/deskcat-server.err.log
 .runtime/
 .m0-config-check.tmp
 artifacts/
+apps/web/public/downloads/
 extensions/harness/lib/
 node_modules/
 .pnpm-store/

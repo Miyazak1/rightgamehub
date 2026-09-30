@@ -1,0 +1,6 @@
+{
+  "players": [{"userId":"player-a","seat":0},{"userId":"player-b","seat":1}],
+  "seed": "official-starter-v1",
+  "validCommand": {"type":"score","value":"EMBER-7"},
+  "privateLeakSentinels": ["EMBER-7","TIDE-4"]
+}

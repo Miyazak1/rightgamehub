@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "workId": "sample-work",
+  "modeKey": "duel",
+  "rulesetVersion": "1.0.0",
+  "authority": "platform_authoritative",
+  "players": { "min": 2, "max": 2 },
+  "commands": [{ "type": "score", "fields": ["value"] }],
+  "views": {
+    "public": "分数、当前座位、回合号",
+    "player": "公开状态加当前玩家自己的秘密口令",
+    "spectator": "只包含公开状态",
+    "publicEvents": "行动座位、是否得分、公开分数；不包含口令"
+  },
+  "timeouts": { "turnSeconds": 30, "result": "当前行动玩家负" },
+  "resignation": "认输玩家负",
+  "reconnect": "以最新权威 snapshot 覆盖本地状态"
+}

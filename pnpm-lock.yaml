@@ -88,6 +88,12 @@ importers:
 
   packages/contracts: {}
 
+  packages/creator-tools:
+    dependencies:
+      '@gamehub/rules-sdk':
+        specifier: workspace:*
+        version: link:../rules-sdk
+
   packages/host-contract: {}
 
   packages/multiplayer-protocol: {}

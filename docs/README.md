@@ -28,6 +28,12 @@
 | --- | --- |
 | [56 作者 GitHub 导入指南](./56-github-import-author-guide.zh-CN.md) | **作者连接只读 GitHub App、预览来源、创建草稿、上传 ZIP、权限与许可证说明** |
 | [55 G1 GitHub 只读来源导入](./55-g1-github-source-import.zh-CN.md) | **独立 GitHub App、固定 Commit、README 清洗、许可证证据、Webhook 去重、部署与验收** |
+| [62 联网游戏本地测试与排障](./62-multiplayer-local-test.zh-CN.md) | **Creator Doctor、双账号命令/重连/终局验收与常见错误处置** |
+| [61 联网游戏发布检查清单](./61-multiplayer-release-checklist.zh-CN.md) | **客户端、规则、隐私、审核签名、模式注册与发布验收门槛** |
+| [60 私密信息设计与安全禁区](./60-private-information-security.zh-CN.md) | **玩家视图裁剪、公开事件、token 边界与离线签名禁区** |
+| [59 服务端权威规则适配器教程](./59-rules-adapter-tutorial.zh-CN.md) | **确定性接口、identity、终局、版本与受控发布** |
+| [58 联网 SDK、事件与错误参考](./58-multiplayer-api-reference.zh-CN.md) | **真实 SDK 方法、事件、常见错误与消息上限** |
+| [57 联网游戏 15 分钟快速开始](./57-multiplayer-quickstart.zh-CN.md) | **官方模板、Doctor、双账号路径与规则审核交付** |
 | [54 受信规则适配器发布与回滚](./54-trusted-rules-adapter-release.zh-CN.md) | **离线 Ed25519 签名、bundle 摘要、只读部署、双服务一致加载、版本保留与回滚流程** |
 | [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md) | **面向游戏设计者的包格式、SDK 流程、权威命令、隐藏信息、重连与规则交付清单** |
 | [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md) | **版本化 MessageChannel SDK、作品作用域、最小身份、房间/对局方法与安全边界** |

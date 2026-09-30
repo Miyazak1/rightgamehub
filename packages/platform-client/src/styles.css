@@ -704,3 +704,48 @@ button { cursor: pointer; }
 .source-operations details time { color: var(--gh-secondary); font-size: 9px; }
 @media (max-width: 680px) { .github-repository-picker,.github-preview dl > div { grid-template-columns: 1fr; }.creator-heading-actions { width: 100%; }.creator-heading-actions .button { flex: 1; } }
 @media (max-width: 680px) { .source-operation-kpis { grid-template-columns: 1fr; }.source-operations details li { grid-template-columns: 1fr; } }
+.multiplayer-creator-gateway { display: grid; grid-template-columns: auto 1fr auto; gap: 13px; align-items: center; width: 100%; margin: 2px 0 18px; padding: 16px; border: 1px solid var(--gh-action); background: color-mix(in srgb,var(--gh-action) 7%,var(--gh-panel)); color: var(--gh-primary); text-align: left; cursor: pointer; }
+.multiplayer-creator-gateway > span { display: grid; place-items: center; width: 34px; height: 34px; background: var(--gh-action); color: var(--gh-action-text); font-weight: 900; }
+.multiplayer-creator-gateway div { display: grid; gap: 4px; }
+.multiplayer-creator-gateway small { color: var(--gh-secondary); }
+.multiplayer-creator-gateway em { color: var(--gh-action); font-style: normal; font-weight: 800; }
+
+.multiplayer-dev-page { padding-bottom: 96px; scroll-behavior: smooth; }
+.multiplayer-dev-hero { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(250px,.6fr); gap: 28px; margin: 18px 0; padding: 30px; border: 2px solid var(--gh-action); background: linear-gradient(135deg,color-mix(in srgb,var(--gh-action) 13%,var(--gh-panel)),var(--gh-panel)); box-shadow: 7px 7px 0 color-mix(in srgb,var(--gh-action) 35%,var(--gh-border)); }
+.multiplayer-dev-hero h1 { margin: 8px 0 12px; font-size: clamp(30px,5vw,50px); letter-spacing: -.05em; }
+.multiplayer-dev-hero p { max-width: 700px; color: var(--gh-secondary); line-height: 1.7; }
+.multiplayer-dev-hero dl { margin: 0; border: 1px solid var(--gh-border); background: var(--gh-canvas); }
+.multiplayer-dev-hero dl div { display: grid; gap: 4px; padding: 11px; border-top: 1px dashed var(--gh-border); }
+.multiplayer-dev-hero dl div:first-child { border-top: 0; }
+.multiplayer-dev-hero dt { color: var(--gh-secondary); font-size: 9px; }
+.multiplayer-dev-hero dd { margin: 0; overflow-wrap: anywhere; font: 700 10px ui-monospace,monospace; }
+.multiplayer-dev-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.multiplayer-dev-nav { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin: 22px 0; }
+.multiplayer-dev-nav a { padding: 10px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font: 700 9px ui-monospace,monospace; text-decoration: none; }
+.multiplayer-dev-nav a:hover { border-color: var(--gh-action); color: var(--gh-action); }
+.multiplayer-progress { display: grid; grid-template-columns: 130px 1fr; gap: 18px; padding: 20px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
+.multiplayer-progress > div { display: grid; align-content: center; }
+.multiplayer-progress > div strong { color: var(--gh-action); font-size: 34px; }
+.multiplayer-progress ol { display: grid; grid-template-columns: repeat(2,1fr); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.multiplayer-progress label { display: flex; gap: 8px; align-items: center; color: var(--gh-secondary); font-size: 10px; }
+.multiplayer-dev-section { margin-top: 18px; padding: 24px; border: 1px solid var(--gh-border); background: var(--gh-panel); scroll-margin-top: 20px; }
+.multiplayer-dev-section h2,.multiplayer-boundary h2 { margin: 7px 0 12px; }
+.multiplayer-dev-section p,.multiplayer-dev-section li,.multiplayer-boundary p { color: var(--gh-secondary); line-height: 1.65; }
+.multiplayer-dev-section pre,.wizard-output pre { max-height: 360px; padding: 14px; overflow: auto; border: 1px solid var(--gh-border); background: var(--gh-canvas); color: var(--gh-primary); font-size: 10px; white-space: pre-wrap; }
+.multiplayer-boundary { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 18px; scroll-margin-top: 20px; }
+.multiplayer-boundary article { padding: 20px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
+.multiplayer-boundary article > span { color: var(--gh-action); font: 800 9px ui-monospace,monospace; }
+.multiplayer-boundary .is-danger { border-color: #dc6b7b; }
+.multiplayer-boundary .is-danger > span { color: #dc6b7b; }
+.multiplayer-wizard { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.multiplayer-wizard label { display: grid; gap: 6px; color: var(--gh-secondary); font-size: 9px; }
+.multiplayer-wizard input,.multiplayer-wizard textarea { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); font: inherit; }
+.multiplayer-wizard textarea { min-height: 70px; resize: vertical; }
+.wizard-output { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 18px; }
+.wizard-output > div { min-width: 0; padding: 14px; border: 1px dashed var(--gh-border); }
+.wizard-output button { margin-right: 7px; padding: 7px 9px; border: 1px solid var(--gh-action); background: transparent; color: var(--gh-action); cursor: pointer; }
+.dev-note { padding: 10px 12px; border-left: 3px solid var(--gh-action); background: color-mix(in srgb,var(--gh-action) 7%,transparent); }
+.reference-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 7px; }
+.reference-grid span { padding: 10px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font-size: 10px; }
+@container (max-width: 720px) { .multiplayer-dev-hero,.multiplayer-progress { grid-template-columns: 1fr; } .multiplayer-boundary { grid-template-columns: 1fr; } .multiplayer-dev-nav { grid-template-columns: repeat(2,1fr); } }
+ @container (max-width: 520px) { .multiplayer-wizard,.wizard-output,.reference-grid,.multiplayer-progress ol { grid-template-columns: 1fr; } .multiplayer-dev-hero,.multiplayer-dev-section { padding: 18px; } }

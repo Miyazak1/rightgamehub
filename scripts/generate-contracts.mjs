@@ -76,14 +76,15 @@ function generateTypes() {
 validateSource();
 const openApi = `${JSON.stringify(createOpenApiDocument(), null, 2)}\n`;
 const types = generateTypes();
+const normalizeLineEndings = value => value.replace(/\r\n/gu, '\n');
 
 await fs.mkdir(outputDir, { recursive: true });
 if (process.argv.includes('--check')) {
   const [existingOpenApi, existingTypes] = await Promise.all([
     fs.readFile(openApiPath, 'utf8'), fs.readFile(typesPath, 'utf8'),
   ]);
-  assert.equal(existingOpenApi, openApi, 'generated openapi.json is stale; run npm run contracts:generate');
-  assert.equal(existingTypes, types, 'generated index.d.ts is stale; run npm run contracts:generate');
+  assert.equal(normalizeLineEndings(existingOpenApi), openApi, 'generated openapi.json is stale; run npm run contracts:generate');
+  assert.equal(normalizeLineEndings(existingTypes), types, 'generated index.d.ts is stale; run npm run contracts:generate');
   process.stdout.write('Contract artifacts are current.\n');
 } else {
   await Promise.all([fs.writeFile(openApiPath, openApi), fs.writeFile(typesPath, types)]);
