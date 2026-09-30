@@ -312,6 +312,24 @@ export const schemas = Object.freeze({
     action: stringEnum(['suspend','dismiss']), reason: { type: 'string', minLength: 1, maxLength: 1000 },
     beforeState: { type: 'object', additionalProperties: true }, afterState: { type: 'object', additionalProperties: true }, createdAt: dateTime,
   }),
+  AnalyticsEventsRequest: object({
+    events: { type: 'array', minItems: 1, maxItems: 20, items: object({
+      type: stringEnum(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']),
+      anonymousId: id, sessionId: id,
+      hostKind: stringEnum(['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown']),
+      route: stringEnum(['discover','library','social','creator','admin','work','play','auth','settings','unknown']),
+      workId: workKey, releaseId: id, durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: dateTime,
+    }, ['type','anonymousId','sessionId','hostKind','occurredAt']) },
+  }),
+  AnalyticsAccepted: object({ accepted: { type: 'integer', minimum: 1, maximum: 20 } }),
+  AdminAnalyticsOverview: object({
+    range: object({ days: { type: 'integer', enum: [7,30,90] }, since: dateTime, until: dateTime }),
+    totals: object(Object.fromEntries(['totalUsers','newUsers','activeAccounts','publishedWorks','recordedPlays','librarySaves','uploads','uploadSuccesses','uploadFailures','visitors','pageViews','workViews','downloadStarts','downloadCompletes','gameStarts','siteDurationMs','gameDurationMs'].map(key => [key, { type: 'integer', minimum: 0 }]))),
+    daily: { type: 'array', items: object({ day: { type: 'string', format: 'date' }, visitors: { type: 'integer', minimum: 0 }, pageViews: { type: 'integer', minimum: 0 }, downloads: { type: 'integer', minimum: 0 }, gameStarts: { type: 'integer', minimum: 0 }, newUsers: { type: 'integer', minimum: 0 } }) },
+    hosts: { type: 'array', items: object({ hostKind: { type: 'string' }, visitors: { type: 'integer', minimum: 0 }, pageViews: { type: 'integer', minimum: 0 } }) },
+    works: { type: 'array', items: object({ workId: workKey, title: { type: 'string' }, views: { type: 'integer', minimum: 0 }, starts: { type: 'integer', minimum: 0 }, downloads: { type: 'integer', minimum: 0 } }) },
+    measurement: object({ timeZone: { type: 'string' }, siteDuration: { type: 'string' }, browserDownloads: { type: 'string' }, managedDownloads: { type: 'string' } }),
+  }),
 });
 
 const json = schema => ({ 'application/json': { schema } });
@@ -379,6 +397,8 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/reports', operationId: 'listContentReports', auth: 'bearer', response: 'ContentReport', responseArray: true },
   { method: 'post', path: '/v1/admin/reports/{reportId}/decision', operationId: 'decideContentReport', auth: 'bearer', request: 'ModerationDecisionRequest', response: 'ContentReport', pathId: 'reportId' },
   { method: 'get', path: '/v1/admin/audit', operationId: 'listModerationAudit', auth: 'bearer', response: 'ModerationAuditEvent', responseArray: true },
+  { method: 'post', path: '/v1/analytics/events', operationId: 'recordAnalyticsEvents', auth: 'anonymous', request: 'AnalyticsEventsRequest', response: 'AnalyticsAccepted', successStatus: '202' },
+  { method: 'get', path: '/v1/admin/analytics', operationId: 'getAdminAnalytics', auth: 'bearer', response: 'AdminAnalyticsOverview', queryAnalyticsDays: true },
   { method: 'get', path: '/v1/creator/works', operationId: 'listCreatorWorks', auth: 'bearer', response: 'Work', responseArray: true },
   { method: 'post', path: '/v1/creator/works', operationId: 'createWork', auth: 'bearer', request: 'CreateWorkRequest', response: 'Work', idempotent: true },
   { method: 'patch', path: '/v1/creator/works/{workId}', operationId: 'updateWork', auth: 'bearer', request: 'UpdateWorkRequest', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },
@@ -404,6 +424,7 @@ export function createOpenApiDocument() {
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
+    if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: 7 } });
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
       { name: 'scope', in: 'query', required: true, schema: stringEnum(['global','following']) },
@@ -416,7 +437,7 @@ export function createOpenApiDocument() {
       ...(parameters.length ? { parameters } : {}),
       ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : {}),
       responses: {
-        '200': operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : response(operation.responseArray
+        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })
           : object({ data: { $ref: `#/components/schemas/${operation.response}` } })),
         ...errorResponses,

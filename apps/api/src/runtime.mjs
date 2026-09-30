@@ -30,6 +30,8 @@ import { PostgresModerationRepository, createModerationService } from './moderat
 import { PostgresSocialRepository } from './social-repository.mjs';
 import { createSocialService } from './social-service.mjs';
 import { createConfiguredMailer } from './mailer.mjs';
+import { PostgresAnalyticsRepository } from './analytics-repository.mjs';
+import { createAnalyticsService } from './analytics-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -73,8 +75,9 @@ export function createRuntime({ env = process.env, mailer } = {}) {
   });
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
-  const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, logger: config.nodeEnv !== 'test' });
+  const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
+  const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, runtimeEdgeApp, app };
 }

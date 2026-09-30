@@ -9,6 +9,7 @@ import { EngagementError } from './engagement-service.mjs';
 import { ModerationError } from './moderation-service.mjs';
 import { SocialError } from './social-service.mjs';
 import { GuessBaikeError } from './guess-baike-service.mjs';
+import { AnalyticsError } from './analytics-service.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -22,7 +23,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -43,7 +44,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -121,7 +122,36 @@ export function createApp({ config, database, migrations, authService, workServi
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  const identifyOptional = async request => {
+    request.actor = request.headers.authorization ? await authService.authenticateBearer(request.headers.authorization) : null;
+  };
   const workKeySchema = { type: 'string', pattern: '^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$' };
+  if (analyticsService) {
+    const analyticsEvent = {
+      type: 'object', additionalProperties: false, required: ['type','anonymousId','sessionId','hostKind','occurredAt'], properties: {
+        type: { type: 'string', enum: ['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end'] },
+        anonymousId: { type: 'string', format: 'uuid' }, sessionId: { type: 'string', format: 'uuid' },
+        hostKind: { type: 'string', enum: ['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown'] },
+        route: { type: 'string', enum: ['discover','library','social','creator','admin','work','play','auth','settings','unknown'] },
+        workId: workKeySchema, releaseId: { type: 'string', format: 'uuid' },
+        durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: { type: 'string', format: 'date-time' },
+      },
+    };
+    app.post('/v1/analytics/events', {
+      preHandler: identifyOptional,
+      schema: { body: { type: 'object', additionalProperties: false, required: ['events'], properties: { events: { type: 'array', minItems: 1, maxItems: 20, items: analyticsEvent } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return reply.status(202).send(envelope(await analyticsService.record(request.actor, request.body)));
+    });
+    app.get('/v1/admin/analytics', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { days: { type: 'integer', enum: [7,30,90] } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await analyticsService.overview(request.actor, request.query));
+    });
+  }
   if (guessBaikeService) {
     app.get('/v1/games/guess-baike/daily', async (_request, reply) => {
       reply.header('Cache-Control', 'public, max-age=60');

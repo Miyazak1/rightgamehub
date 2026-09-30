@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 27);
+  assert.equal(files.length, 29);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -36,6 +36,10 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(discovery, /ADD COLUMN estimated_minutes/);
   assert.match(discovery, /ADD COLUMN repository_url/);
   assert.match(discovery, /works_public_discovery_idx/);
+  const analytics = fs.readFileSync(path.join(migrationDir, '0029_analytics_foundation.sql'), 'utf8');
+  assert.match(analytics, /CREATE TABLE analytics_events/);
+  assert.match(analytics, /download_complete/);
+  assert.doesNotMatch(analytics, /\b(ip_address|user_agent|full_url|project_path|prompt)\b/i);
   files.forEach((name, index) => assert.match(name, new RegExp(`^${String(index + 1).padStart(4, '0')}_`)));
   for (const migration of migrations) {
     assert.match(migration.sql, /^BEGIN;/);
@@ -51,7 +55,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'access_tokens', 'refresh_tokens', 'github_device_challenges', 'github_web_challenges', 'creator_usage', 'works', 'work_targets', 'releases',
     'upload_jobs', 'upload_grants', 'jobs', 'idempotency_keys', 'user_library', 'guess_baike_results', 'user_follows', 'user_blocks',
     'guess_baike_reactions', 'social_notifications', 'game_challenges', 'challenge_participations', 'user_notification_preferences',
-    'guess_baike_puzzles', 'guess_baike_schedule', 'guess_baike_automation_runs',
+    'guess_baike_puzzles', 'guess_baike_schedule', 'guess_baike_automation_runs', 'creator_applications', 'analytics_events',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

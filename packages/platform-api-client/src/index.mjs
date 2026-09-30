@@ -7,14 +7,14 @@ export class ApiError extends Error {
 const randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {}, timeoutMs = 15000, xhrFactory = () => new XMLHttpRequest() } = {}) {
-  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true } = {}) {
+  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false } = {}) {
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(new Error('timeout')), timeoutMs);
     const combined = globalThis.AbortSignal?.any ? AbortSignal.any([timeout.signal, ...(signal ? [signal] : [])]) : timeout.signal;
     const token = auth ? await getAccessToken() : null;
     try {
       const response = await fetchImpl(`${baseUrl}${path}`, {
-        method, signal: combined,
+        method, signal: combined, keepalive,
         headers: {
           Accept: 'application/json',
           ...(body != null ? { 'Content-Type': 'application/json' } : {}),
@@ -29,7 +29,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         if (refreshToken) {
           const refreshed = await request('/v1/auth/refresh', { method: 'POST', body: { refreshToken }, signal, allowRefresh: false });
           await setTokens(refreshed.data);
-          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false });
+          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive });
         }
       }
       const payload = await response.json().catch(() => ({}));
@@ -46,6 +46,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
+    trackAnalytics: (events, options) => request('/v1/analytics/events', { ...options, method: 'POST', body: { events }, auth: true, keepalive: true }),
+    getAdminAnalytics: (days = 7, options) => request(`/v1/admin/analytics?days=${encodeURIComponent(days)}`, { ...options, auth: true }),
     createChallenge: (body, options) => request('/v1/auth/email/challenges', { ...options, method: 'POST', body }),
     verifyChallenge: (body, options) => request('/v1/auth/email/verify', { ...options, method: 'POST', body }),
     startGitHubDevice: (body, options) => request('/v1/auth/github/device', { ...options, method: 'POST', body }),

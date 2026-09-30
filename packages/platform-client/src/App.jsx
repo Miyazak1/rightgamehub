@@ -25,6 +25,24 @@ const avatarPresets = [
 const GUESS_BAIKE_WORK_ID = 'gamehub-guess-baike';
 const demoAccountProfile = { id: 'demo-user', displayName: '休息玩家', role: 'user', canPublish: true, createdAt: '2026-09-28T00:00:00.000Z', avatar: { kind: 'preset', presetKey: 'cat', url: null, staticUrl: null, mediaType: null, animated: false }, linkedAccounts: [{ provider: 'github', label: 'GitHub', linkedAt: '2026-09-28T00:00:00.000Z' }] };
 
+const analyticsId = (storage, key) => {
+  try { const current = storage?.getItem(key); if (current) return current; const next = globalThis.crypto?.randomUUID?.(); if (next) storage?.setItem(key, next); return next; } catch { return null; }
+};
+const analyticsIdentity = () => ({
+  anonymousId: analyticsId(globalThis.localStorage, 'gamehub.analytics.anonymous') ?? globalThis.crypto?.randomUUID?.(),
+  sessionId: analyticsId(globalThis.sessionStorage, 'gamehub.analytics.session') ?? globalThis.crypto?.randomUUID?.(),
+});
+const routeCategory = route => {
+  const head = String(route || '').split('/').filter(Boolean)[0];
+  return ({ discover: 'discover', library: 'library', social: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings' })[head] ?? 'unknown';
+};
+const emitAnalytics = (api, hostKind, event, demo = false) => {
+  if (demo || !api?.trackAnalytics) return;
+  const identity = analyticsIdentity();
+  if (!identity.anonymousId || !identity.sessionId) return;
+  api.trackAnalytics([{ ...identity, hostKind: hostKind || 'unknown', occurredAt: new Date().toISOString(), ...event }]).catch(() => {});
+};
+
 function resolveHostIdentity(capabilities = {}) {
   const id = String(capabilities.host || 'browser').toLowerCase();
   return hostIdentities[id] ?? { id, label: capabilities.host || '未知宿主', short: id.slice(0, 3).toUpperCase() };
@@ -52,8 +70,8 @@ function Button({ children, kind = 'primary', icon, className = '', ...props }) 
   return <button className={`button button--${kind} ${className}`} {...props}>{icon && <span aria-hidden="true">{icon}</span>}<span>{children}</span></button>;
 }
 
-function DownloadLink({ children, href, fileName }) {
-  return <a className="button button--primary" href={href} download={fileName || undefined}><span aria-hidden="true">↓</span><span>{children}</span></a>;
+function DownloadLink({ children, href, fileName, onClick }) {
+  return <a className="button button--primary" href={href} download={fileName || undefined} onClick={onClick}><span aria-hidden="true">↓</span><span>{children}</span></a>;
 }
 
 function Logo() {
@@ -193,12 +211,13 @@ function DiscoverPage({ api, demo, go, hostIdentity }) {
 
 function StatePanel({ title, body, action, onAction }) { return <div className="state-panel"><span>{icons.spark}</span><h3>{title}</h3><p>{body}</p>{action && <Button kind="secondary" onClick={onAction}>{action}</Button>}</div>; }
 
-function DetailPage({ workId, api, host, demo, go }) {
+function DetailPage({ workId, api, host, hostKind, demo, go }) {
   const [state, setState] = useState({ status: 'loading' });
   const [library, setLibrary] = useState(null); const [libraryBusy, setLibraryBusy] = useState(false);
   const [reporting, setReporting] = useState(false); const [nativeBusy, setNativeBusy] = useState(false); const [nativeMessage, setNativeMessage] = useState(''); const [nativeDownload, setNativeDownload] = useState({ phase: 'idle', percent: 0 });
   useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.find(w => w.id === workId) : (await api.getWork(workId)).data; if (live) setState(data ? { status: 'ready', data } : { status: 'missing' }); } catch { if (live) setState({ status: 'error' }); } })(); return () => { live = false; }; }, [workId, demo]);
   useEffect(() => { let live = true; if (demo) { setLibrary({ savedAt: null }); return undefined; } api.getLibraryState(workId).then(({ data }) => { if (live) setLibrary(data); }).catch(() => {}); return () => { live = false; }; }, [workId, demo, api]);
+  useEffect(() => { if (state.status === 'ready' && hostKind) emitAnalytics(api, hostKind, { type: 'work_view', route: 'work', workId }, demo); }, [state.status, workId, api, hostKind, demo]);
   useEffect(() => {
     if (state.status !== 'ready' || !host?.desktop?.getReleaseStatus) return undefined;
     const target = state.data.targets?.find(item => item.targetKey === 'windows-x64' && item.currentReleaseId);
@@ -227,6 +246,7 @@ function DetailPage({ workId, api, host, demo, go }) {
       setNativeBusy(true); setNativeDownload(current => ({ ...current, phase: 'launching' })); setNativeMessage('正在启动游戏…');
       try {
         await host.desktop.launchRelease(release);
+        emitAnalytics(api, hostKind, { type: 'game_start', route: 'work', workId: work.id, releaseId: windows.currentReleaseId }, demo);
         setNativeDownload({ phase: 'ready', percent: 100 });
         setNativeMessage('游戏已启动，请查看独立窗口。');
       } catch (caught) {
@@ -236,8 +256,10 @@ function DetailPage({ workId, api, host, demo, go }) {
       return;
     }
     setNativeBusy(true); setNativeDownload({ phase: 'downloading', percent: 0 }); setNativeMessage('正在下载到 GameHub 本地游戏库…');
+    emitAnalytics(api, hostKind, { type: 'download_start', route: 'work', workId: work.id, releaseId: windows.currentReleaseId }, demo);
     try {
       await host.desktop.prepareRelease(release, { onProgress: progress => setNativeDownload({ phase: progress?.state || 'downloading', percent: progress?.percent || 0 }) });
+      emitAnalytics(api, hostKind, { type: 'download_complete', route: 'work', workId: work.id, releaseId: windows.currentReleaseId }, demo);
       setNativeDownload({ phase: 'ready', percent: 100 });
       setNativeMessage('下载和校验已完成，可以启动游戏。');
     } catch (caught) {
@@ -246,7 +268,7 @@ function DetailPage({ workId, api, host, demo, go }) {
     } finally { setNativeBusy(false); }
   };
 
-  return <main className="page detail-page"><button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button><section className="detail-hero"><Art work={work} large /><div className="detail-copy"><div className="badge-row"><span className="status-badge">{icons.check} {builtIn ? 'GameHub 官方游戏' : web ? '已验证 Web 版本' : '已验证 Windows 版本'}</span><span>{work.kind === 'game' ? '游戏' : '互动作品'}</span></div><h1>{work.title}</h1><p className="detail-byline">by {work.creatorDisplayName ?? (builtIn ? 'GameHub' : '社区作者')} · 约 {work.estimatedMinutes ?? 3} 分钟{work.agentLabel ? ` · ${work.agentLabel} 共创` : ''}</p><p className="detail-lead">{work.description}</p>{!!work.tags?.length && <div className="detail-tags">{work.tags.map(tag => <span key={tag}>{tag}</span>)}</div>}<div className="detail-actions">{web && <Button icon={icons.play} onClick={() => go(`/play/${work.id}/${web.currentReleaseId ?? ''}`)}>立即游玩</Button>}{windows && (managedWindows ? <Button icon={nativeDownload.phase === 'ready' ? icons.play : "↓"} disabled={nativeBusy} onClick={launchWindows}>{nativeDownload.phase === 'launching' ? '正在启动…' : ['checking','downloading','verifying'].includes(nativeDownload.phase) ? `下载中 ${nativeDownload.percent}%` : nativeDownload.phase === 'ready' ? '启动游戏' : '下载 Windows 版'}</Button> : <DownloadLink href={windowsDownloadUrl} fileName={windows.fileName}>下载 Windows 版</DownloadLink>)}<Button kind="secondary" disabled={libraryBusy} onClick={toggleLibrary}>{library?.savedAt ? '移出游戏库' : '加入游戏库'}</Button></div>{managedWindows && windows && ['checking','downloading','verifying'].includes(nativeDownload.phase) && <div className="native-download-progress" role="progressbar" aria-label="Windows 游戏下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={nativeDownload.percent}><i style={{ width: `${nativeDownload.percent}%` }}/></div>}<p className="friendly-note">{windows && !web ? (managedWindows ? '保存到 GameHub 本地游戏库 · 下载后校验完整性 · 只运行你信任的作品' : '由浏览器下载 Windows 游戏文件 · 下载后请手动运行 · 只运行你信任的作品') : '隔离运行 · 不读取项目文件与宿主凭据'}</p>{nativeMessage && <p className="friendly-note" role="status">{nativeMessage}</p>}{!builtIn && <button className="report-link" onClick={() => setReporting(true)}>举报这个作品</button>}</div></section><section className="detail-columns"><div className="panel"><span className="kicker">HOW TO PLAY</span><h2>玩法说明</h2><p>{work.instructions || '作者暂未提供额外说明。打开游戏后跟随画面提示即可。'}</p>{work.repositoryUrl && <p className="source-link"><a href={work.repositoryUrl} target="_blank" rel="noreferrer">在 GitHub 查看源码 ↗</a><small>{work.licenseSpdx} 开源许可</small></p>}</div><div className="panel facts"><span className="kicker">COMPATIBILITY</span><h2>运行信息</h2><dl><div><dt>运行方式</dt><dd>{web ? '侧栏 Web' : 'Windows 独立窗口'}</dd></div><div><dt>当前版本</dt><dd>修订 {work.revision}</dd></div><div><dt>社区数据</dt><dd>{workPlays(work)} · {work.saveCount ?? 0} 收藏</dd></div><div><dt>数据权限</dt><dd>无项目文件权限</dd></div></dl></div></section>{reporting && <ReportDialog work={work} api={api} demo={demo} go={go} onClose={() => setReporting(false)}/>}</main>;
+  return <main className="page detail-page"><button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button><section className="detail-hero"><Art work={work} large /><div className="detail-copy"><div className="badge-row"><span className="status-badge">{icons.check} {builtIn ? 'GameHub 官方游戏' : web ? '已验证 Web 版本' : '已验证 Windows 版本'}</span><span>{work.kind === 'game' ? '游戏' : '互动作品'}</span></div><h1>{work.title}</h1><p className="detail-byline">by {work.creatorDisplayName ?? (builtIn ? 'GameHub' : '社区作者')} · 约 {work.estimatedMinutes ?? 3} 分钟{work.agentLabel ? ` · ${work.agentLabel} 共创` : ''}</p><p className="detail-lead">{work.description}</p>{!!work.tags?.length && <div className="detail-tags">{work.tags.map(tag => <span key={tag}>{tag}</span>)}</div>}<div className="detail-actions">{web && <Button icon={icons.play} onClick={() => go(`/play/${work.id}/${web.currentReleaseId ?? ''}`)}>立即游玩</Button>}{windows && (managedWindows ? <Button icon={nativeDownload.phase === 'ready' ? icons.play : "↓"} disabled={nativeBusy} onClick={launchWindows}>{nativeDownload.phase === 'launching' ? '正在启动…' : ['checking','downloading','verifying'].includes(nativeDownload.phase) ? `下载中 ${nativeDownload.percent}%` : nativeDownload.phase === 'ready' ? '启动游戏' : '下载 Windows 版'}</Button> : <DownloadLink href={windowsDownloadUrl} fileName={windows.fileName} onClick={() => emitAnalytics(api, hostKind, { type: 'download_start', route: 'work', workId: work.id, releaseId: windows.currentReleaseId }, demo)}>下载 Windows 版</DownloadLink>)}<Button kind="secondary" disabled={libraryBusy} onClick={toggleLibrary}>{library?.savedAt ? '移出游戏库' : '加入游戏库'}</Button></div>{managedWindows && windows && ['checking','downloading','verifying'].includes(nativeDownload.phase) && <div className="native-download-progress" role="progressbar" aria-label="Windows 游戏下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow={nativeDownload.percent}><i style={{ width: `${nativeDownload.percent}%` }}/></div>}<p className="friendly-note">{windows && !web ? (managedWindows ? '保存到 GameHub 本地游戏库 · 下载后校验完整性 · 只运行你信任的作品' : '由浏览器下载 Windows 游戏文件 · 下载后请手动运行 · 只运行你信任的作品') : '隔离运行 · 不读取项目文件与宿主凭据'}</p>{nativeMessage && <p className="friendly-note" role="status">{nativeMessage}</p>}{!builtIn && <button className="report-link" onClick={() => setReporting(true)}>举报这个作品</button>}</div></section><section className="detail-columns"><div className="panel"><span className="kicker">HOW TO PLAY</span><h2>玩法说明</h2><p>{work.instructions || '作者暂未提供额外说明。打开游戏后跟随画面提示即可。'}</p>{work.repositoryUrl && <p className="source-link"><a href={work.repositoryUrl} target="_blank" rel="noreferrer">在 GitHub 查看源码 ↗</a><small>{work.licenseSpdx} 开源许可</small></p>}</div><div className="panel facts"><span className="kicker">COMPATIBILITY</span><h2>运行信息</h2><dl><div><dt>运行方式</dt><dd>{web ? '侧栏 Web' : 'Windows 独立窗口'}</dd></div><div><dt>当前版本</dt><dd>修订 {work.revision}</dd></div><div><dt>社区数据</dt><dd>{workPlays(work)} · {work.saveCount ?? 0} 收藏</dd></div><div><dt>数据权限</dt><dd>无项目文件权限</dd></div></dl></div></section>{reporting && <ReportDialog work={work} api={api} demo={demo} go={go} onClose={() => setReporting(false)}/>}</main>;
 }
 
 function ReportDialog({ work, api, demo, go, onClose }) {
@@ -259,10 +281,15 @@ function ReportDialog({ work, api, demo, go, onClose }) {
   return <div className="modal-backdrop" role="presentation" onClick={event => { if (event.target === event.currentTarget) onClose(); }}><form className="report-dialog" role="dialog" aria-modal="true" aria-label="举报作品" onSubmit={submit}><button type="button" className="modal-close" onClick={onClose} aria-label="关闭">×</button><span className="kicker">CONTENT REPORT</span>{state === 'sent' ? <><h2>已收到举报</h2><p>管理员会根据作品当前版本和你提供的信息进行判断。</p><Button type="button" onClick={onClose}>完成</Button></> : <><h2>举报《{work.title}》</h2><p>请选择最接近的问题。举报不会自动下架作品。</p><label>问题类型<select value={category} onChange={event => setCategory(event.target.value)}><option value="unsafe">不安全或越权行为</option><option value="malware">恶意代码或欺骗</option><option value="harassment">骚扰或仇恨内容</option><option value="copyright">版权问题</option><option value="other">其他问题</option></select></label><label>补充说明<textarea value={details} maxLength="1000" onChange={event => setDetails(event.target.value)} placeholder="可选：说明发生了什么，以及如何复现。"/></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><Button type="button" kind="secondary" onClick={onClose}>取消</Button><Button type="submit" disabled={state === 'sending'}>{state === 'sending' ? '提交中…' : '提交举报'}</Button></div></>}</form></div>;
 }
 
-function PlayerPage({ workId, releaseId, challengeCode, api, host, demo, go }) {
+function PlayerPage({ workId, releaseId, challengeCode, api, host, hostKind, demo, go }) {
   const mount = useRef(null); const core = useRef(null); const [state, setState] = useState('loading'); const [launchError, setLaunchError] = useState('');
   const builtIn = workId === GUESS_BAIKE_WORK_ID;
   useEffect(() => { if (!demo) api.recordPlay(workId).catch(() => {}); }, [api, demo, workId]);
+  useEffect(() => {
+    if (!hostKind) return undefined;
+    const started = Date.now(); emitAnalytics(api, hostKind, { type: 'game_start', route: 'play', workId, ...(releaseId ? { releaseId } : {}) }, demo);
+    return () => emitAnalytics(api, hostKind, { type: 'game_end', route: 'play', workId, ...(releaseId ? { releaseId } : {}), durationMs: Math.min(600000, Date.now() - started) }, demo);
+  }, [api, hostKind, workId, releaseId, demo]);
   useEffect(() => { if (builtIn) { setState('running'); return undefined; } const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname); core.current = new PlayerCore({ runtimeDomain: loopback ? 'localhost' : host?.runtimeDomain || import.meta.env?.VITE_RUNTIME_DOMAIN || 'runtime.mooyu.fun', allowLocalhost: loopback || import.meta.env?.DEV === true }); const off = core.current.onStateChanged(e => { setState(e.state); if (e.message) setLaunchError(e.message); }); let active = true; if (demo) { setState('running'); } else { api.getWork(workId).then(({ data: work }) => { if (!active) return; if (!workHasWebRelease(work)) { go(`/works/${workId}`); return; } return api.getLaunch(workId, releaseId).then(({ data }) => { if (active) core.current?.mount(mount.current, data); }); }).catch(caught => { if (active) { setLaunchError(caught.message || '游戏启动失败。'); setState('error'); } }); } return () => { active = false; off(); core.current?.dispose(); }; }, [workId, releaseId, demo, builtIn, host]);
   return <main className={`player-page ${builtIn ? 'player-page--guess' : ''}`}><div className="player-bar"><button className="back-link" onClick={() => go(challengeCode ? '/social' : `/works/${workId}`)}>{icons.back} 退出游戏</button><span className={`live-state live-state--${state}`}><i />{challengeCode ? '玩家挑战进行中' : builtIn ? 'GameHub 官方出品' : state === 'running' ? '正在运行' : state === 'loading' ? '正在载入' : state === 'error' ? '启动失败' : '已暂停'}</span><div>{!builtIn && <><button className="icon-button" onClick={() => state === 'hidden' ? core.current?.resume() : core.current?.hide()} aria-label="暂停或恢复">{icons.pause}</button><button className="icon-button" onClick={() => core.current?.stop()} aria-label="停止">{icons.stop}</button></>}</div></div><div className="player-stage" ref={mount}>{builtIn ? <GuessBaikeGame api={api} demo={demo} challengeCode={challengeCode}/> : demo ? <div className="demo-game"><div className="demo-planet"/><span className="kicker">DEMO SESSION</span><h1>星港漂移</h1><p>↑ ↓ ← → 驾驶 · 空格推进</p><div className="demo-track"><i/><i/><i/></div></div> : null}{state === 'error' && <StatePanel title="游戏没有成功启动" body={launchError || '运行地址可能已经失效。返回详情页后再试一次。'} action="返回详情" onAction={() => go(`/works/${workId}`)} />}</div></main>;
 }
@@ -857,23 +884,40 @@ function InstallPage({ go, hostIdentity }) {
 }
 
 
+const compactNumber = value => new Intl.NumberFormat('zh-CN', { notation: Number(value) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(Number(value || 0));
+const hours = milliseconds => `${(Number(milliseconds || 0) / 3_600_000).toFixed(Number(milliseconds || 0) >= 3_600_000 ? 1 : 2)} 小时`;
+
+function AdminAnalytics({ analytics, days, onDays }) {
+  const totals = analytics?.totals ?? {}; const daily = analytics?.daily ?? [];
+  const maxViews = Math.max(1, ...daily.map(item => item.pageViews || 0));
+  const cards = [
+    ['访问用户', compactNumber(totals.visitors), '匿名去重设备'], ['页面浏览', compactNumber(totals.pageViews), '页面类别访问'],
+    ['新增注册', compactNumber(totals.newUsers), `累计 ${compactNumber(totals.totalUsers)}`], ['活跃账号', compactNumber(totals.activeAccounts), '登录设备近期活跃'],
+    ['游戏启动', compactNumber(totals.gameStarts), `历史游玩 ${compactNumber(totals.recordedPlays)}`], ['下载请求', compactNumber(totals.downloadStarts), `Agent 完成 ${compactNumber(totals.downloadCompletes)}`],
+    ['站内时长', hours(totals.siteDurationMs), '前台心跳估算'], ['游戏时长', hours(totals.gameDurationMs), 'Web 会话统计'],
+  ];
+  return <section className="analytics-board"><div className="analytics-head"><div><span className="kicker">DATA CENTER</span><h2>平台数据中心</h2><p>掌握增长、访问、游玩与分发；统计不读取项目、输入内容或完整网址。</p></div><div className="analytics-range" aria-label="统计周期">{[7,30,90].map(value => <button key={value} className={days === value ? 'is-active' : ''} onClick={() => onDays(value)}>{value} 天</button>)}</div></div><div className="analytics-kpis">{cards.map(([label,value,note]) => <article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</div><div className="analytics-grid"><div className="analytics-trend"><div className="analytics-subhead"><h3>访问趋势</h3><span>上海时区</span></div><div className="analytics-bars">{daily.map(item => <div key={item.day} title={`${item.day} · ${item.pageViews} 次浏览 · ${item.visitors} 位访客`}><i style={{ height: `${Math.max(4, Math.round(item.pageViews / maxViews * 100))}%` }}/><small>{item.day.slice(5)}</small></div>)}</div></div><div className="analytics-hosts"><div className="analytics-subhead"><h3>使用入口</h3><span>去重访客</span></div>{analytics?.hosts?.length ? analytics.hosts.map(item => <div className="analytics-row" key={item.hostKind}><span>{item.hostKind}</span><strong>{compactNumber(item.visitors)}</strong><small>{compactNumber(item.pageViews)} PV</small></div>) : <p>新埋点上线后，这里会显示 Web、Cursor、Harness 等入口。</p>}</div></div><div className="analytics-works"><div className="analytics-subhead"><h3>热门作品</h3><span>浏览 / 启动 / 下载请求</span></div>{analytics?.works?.length ? <div className="analytics-table">{analytics.works.map((item,index) => <div key={item.workId}><b>{String(index + 1).padStart(2,'0')}</b><strong>{item.title}</strong><span>{compactNumber(item.views)}</span><span>{compactNumber(item.starts)}</span><span>{compactNumber(item.downloads)}</span></div>)}</div> : <p>暂无作品事件；部署后访问和启动会开始累计。</p>}</div><p className="analytics-footnote">浏览器只能确认“开始下载”；Agent 校验并入库后才计入“完成下载”。站内时长来自前台可见状态心跳，Windows 游戏运行时长暂不估算。</p></section>;
+}
+
 function AdminPage({ api, demo, go }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
   const demoPuzzles = [{ id: 'wikipedia-4723', title: '足球', aliases: ['协会足球','英式足球'], category: '体育', sourceKind: 'wikipedia-lead', sourceTitle: '足球', sourceUrl: 'https://zh.wikipedia.org/wiki/%E8%B6%B3%E7%90%83', sourceRevision: 94245396, sourceUpdatedAt: '2026-09-27T15:22:05Z', license: 'CC BY-SA 4.0', introHanCount: 364, content: '足球主要专指英式足球，官方名为协会足球，是一种世界流行的团体球类运动。', status: 'ready', qualityReason: null, scheduledDates: [today] }];
   const demoAutomation = { enabled: true, running: false, intervalMinutes: 360, batchSize: 20, scheduleDays: 14, readyCount: 18, scheduledCount: 14, lastRun: { status: 'succeeded', startedAt: new Date().toISOString(), finishedAt: new Date().toISOString(), fetchedCount: 20, acceptedCount: 7, scheduledCount: 4, errorCode: null, errorMessage: null } };
-  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], puzzles: [], automation: null });
+  const demoAnalytics = { totals: { visitors: 1264, pageViews: 4812, newUsers: 86, totalUsers: 2341, activeAccounts: 734, gameStarts: 1960, recordedPlays: 9204, downloadStarts: 318, downloadCompletes: 241, siteDurationMs: 304560000, gameDurationMs: 196740000 }, daily: Array.from({ length: 7 }, (_, index) => ({ day: new Date(Date.now() - (6-index)*86400000).toLocaleDateString('en-CA'), visitors: 120+index*13, pageViews: 410+index*47, downloads: 20+index*5, gameStarts: 160+index*18, newUsers: 8+index })), hosts: [{ hostKind: 'browser', visitors: 812, pageViews: 3204 }, { hostKind: 'cursor', visitors: 336, pageViews: 1208 }, { hostKind: 'harness', visitors: 116, pageViews: 400 }], works: [{ workId: 'gamehub-guess-baike', title: '猜百科', views: 1240, starts: 988, downloads: 0 }, { workId: 'demo-space', title: '宇宙巡航机', views: 706, starts: 462, downloads: 318 }] };
+  const [days, setDays] = useState(7);
+  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null });
   const [notes, setNotes] = useState({}); const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
     try {
-      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], puzzles: demoPuzzles, automation: demoAutomation });
+      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], puzzles: demoPuzzles, automation: demoAutomation, analytics: demoAnalytics });
       const profile = (await api.getProfile()).data;
-      if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], applications: [], puzzles: [], automation: null });
-      const [reports, audit, applications, puzzles, automation] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus()]);
-      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, puzzles: puzzles.data, automation: automation.data });
-    } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], applications: [], puzzles: [], automation: null }); }
+      if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null });
+      const [reports, audit, applications, puzzles, automation, analytics] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus(), api.getAdminAnalytics(days)]);
+      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, puzzles: puzzles.data, automation: automation.data, analytics: analytics.data });
+    } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null }); }
   };
-  useEffect(() => { load(); }, [api, demo]);
+  useEffect(() => { load(); }, [api, demo, days]);
   const decide = async (report, action) => {
     const note = (notes[report.id] || '').trim(); if (!note) return setError('请先填写处置说明。');
     if (action === 'suspend' && !globalThis.confirm?.(`暂停《${report.workTitle}》？当前公开版本将立即失效。`)) return;
@@ -901,7 +945,8 @@ function AdminPage({ api, demo, go }) {
   if (state.status === 'loading') return <main className="page admin-page"><LoadingCards/></main>;
   if (state.status === 'forbidden') return <main className="page"><StatePanel title="仅管理员可访问" body="这个页面包含举报内容与处置记录。" action="返回发现" onAction={() => go('/discover')}/></main>;
   if (state.status === 'error') return <main className="page"><StatePanel title="治理队列暂时不可用" body="没有执行任何处置，请稍后重试。" action="重新加载" onAction={load}/></main>;
-  return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>管理官方日题、内容质量与举报处置。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
+  return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>掌握平台增长、内容分发与治理状态。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
+    <AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/>
     {state.automation && <section className={`automation-health automation-health--${state.automation.lastRun?.status || 'idle'}`}><div className="automation-health__pulse"/><div><span className="kicker">AUTONOMOUS SUPPLY</span><h2>{state.automation.running ? '正在自动补充题库' : state.automation.lastRun?.status === 'failed' ? '最近一次同步失败，库存仍可用' : '全自动内容流水线正常'}</h2><p>每 {Math.round(state.automation.intervalMinutes / 60)} 小时自动抓取、筛选、去重，并补齐未来 {state.automation.scheduleDays} 天。无需人工审核或排期。</p>{state.automation.lastRun?.errorMessage && <small>{state.automation.lastRun.errorCode} · {state.automation.lastRun.errorMessage}</small>}</div><dl><div><dt>可用题</dt><dd>{state.automation.readyCount}</dd></div><div><dt>已排期</dt><dd>{state.automation.scheduledCount}/{state.automation.scheduleDays}</dd></div><div><dt>上次通过</dt><dd>{state.automation.lastRun?.acceptedCount ?? '—'}</dd></div></dl></section>}
     <section className="admin-queue"><div className="puzzle-ops__head"><div><span className="kicker">CREATOR REVIEW</span><h2>创作者申请</h2><p>审核申请说明；通过后申请人的当前登录设备会立即获得创作与发布权限。</p></div><span>{state.applications.length} 份待审</span></div>{state.applications.length ? state.applications.map(application => <article className="report-card" key={application.id}><div className="report-card__head"><div><span>申请账号</span><h3>{application.displayName}</h3></div><time>{new Date(application.createdAt).toLocaleString('zh-CN')}</time></div><p>{application.statement}</p><label>审核说明<textarea maxLength="1000" value={notes[application.id] || ''} onChange={event => setNotes(current => ({ ...current, [application.id]: event.target.value }))} placeholder="说明通过条件或拒绝原因。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === application.id} onClick={() => decideCreator(application, 'reject')}>拒绝</Button><Button disabled={busy === application.id} onClick={() => decideCreator(application, 'approve')}>{busy === application.id ? '处理中…' : '通过申请'}</Button></div></article>) : <div className="admin-empty"><span>✓</span><strong>没有待审核申请</strong><p>新的创作者申请会显示在这里。</p></div>}</section>
     <section className="puzzle-ops"><div className="puzzle-ops__head"><div><span className="kicker">OFFICIAL INVENTORY</span><h2>猜百科自动题库</h2><p>这里用于观察自动产出的结果。日常不需要操作；停用仅用于发现错误内容后的紧急止损。</p></div><span>{state.puzzles.length} 道题</span></div><div className="puzzle-ops__list">{state.puzzles.map(puzzle => <article className={`puzzle-op ${puzzle.status === 'disabled' ? 'is-disabled' : ''}`} key={puzzle.id}><div className="puzzle-op__top"><div><span className="puzzle-op__category">{puzzle.category}</span><h3>{puzzle.title}</h3><small>{puzzle.introHanCount} 汉字 · 修订 {puzzle.sourceRevision}</small></div><span className={`puzzle-status puzzle-status--${puzzle.status}`}>{puzzle.status === 'ready' ? '自动可用' : '已停用'}</span></div>{puzzle.qualityReason && <p className="puzzle-quality">质量检查：{puzzle.qualityReason}</p>}<details><summary>查看完整导言与来源</summary><p>{puzzle.content}</p><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">查看来源 · {puzzle.license}</a></details><div className="puzzle-op__emergency"><span>{puzzle.scheduledDates.length ? `未来排期 ${puzzle.scheduledDates.length} 天` : '自动轮换库存'}</span><button className="puzzle-toggle" disabled={busy === `puzzle-${puzzle.id}`} onClick={() => togglePuzzle(puzzle)}>{puzzle.status === 'ready' ? '紧急停用' : '纠正后恢复'}</button></div></article>)}</div></section>
@@ -916,14 +961,20 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
     getRefreshToken: () => host.account?.getRefreshToken?.(),
     setTokens: tokens => host.account?.setTokens?.(tokens),
   }), [apiClient, host]);
-  const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
-  useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) setHostIdentity(resolveHostIdentity(capabilities)); }); return () => { live = false; }; }, [host]);
+  const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [hostReady, setHostReady] = useState(false); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
+  useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) { setHostIdentity(resolveHostIdentity(capabilities)); setHostReady(true); } }).catch(() => { if (live) setHostReady(true); }); return () => { live = false; }; }, [host]);
   useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host]);
   useEffect(() => { if (demo) return undefined; let live = true; api.getProfile().then(({ data }) => { if (live) setAccountProfile(data); }).catch(() => {}); return () => { live = false; }; }, [api, demo]);
+  useEffect(() => { if (hostReady) emitAnalytics(api, hostIdentity.id, { type: 'page_view', route: routeCategory(route) }, demo); }, [api, hostIdentity.id, hostReady, route, demo]);
+  useEffect(() => {
+    if (demo || !hostReady) return undefined;
+    const timer = setInterval(() => { if (globalThis.document?.visibilityState === 'visible') emitAnalytics(api, hostIdentity.id, { type: 'session_ping', route: routeCategory(route), durationMs: 30000 }, false); }, 30000);
+    return () => clearInterval(timer);
+  }, [api, hostIdentity.id, hostReady, route, demo]);
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
-  if (parts[0] === 'works' && parts[1]) content = <DetailPage workId={parts[1]} api={api} host={host} demo={demo} go={go}/>;
-  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} api={api} host={host} demo={demo} go={go}/>;
+  if (parts[0] === 'works' && parts[1]) content = <DetailPage workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
+  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={setAccountProfile}/>;
   else if (route === '/creator/works/new') content = <NewWorkPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;

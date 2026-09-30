@@ -5,10 +5,19 @@ const fs = require('node:fs/promises');
 test('Windows releases download directly outside managed Agent hosts', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /const managedWindows = Boolean\(host\?\.desktop\?\.prepareRelease && host\?\.desktop\?\.launchRelease\)/);
-  assert.match(source, /<DownloadLink href=\{windowsDownloadUrl\} fileName=\{windows\.fileName\}>下载 Windows 版<\/DownloadLink>/);
+  assert.match(source, /<DownloadLink href=\{windowsDownloadUrl\} fileName=\{windows\.fileName\} onClick=.*?>下载 Windows 版<\/DownloadLink>/);
   assert.match(source, /api\.releaseDownloadUrl\(work\.id, windows\.currentReleaseId\)/);
   assert.match(source, /由浏览器下载 Windows 游戏文件/);
   assert.doesNotMatch(source, /需要 GameHub Agent/);
+});
+
+test('privacy-preserving analytics distinguish download requests from Agent completion', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /type: 'download_start'/);
+  assert.match(source, /type: 'download_complete'/);
+  assert.match(source, /type: 'session_ping'/);
+  assert.match(source, /document\?\.visibilityState === 'visible'/);
+  assert.doesNotMatch(source, /analytics.*projectPath/i);
 });
 
 test('theme adapter maps modes to complete semantic tokens', async () => {
@@ -73,6 +82,21 @@ test('API client exposes catalog data without inventing local works', async () =
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const client = createApiClient({ fetchImpl: async () => new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } }) });
   assert.deepEqual((await client.listWorks()).data, []);
+});
+
+test('API client submits analytics and reads the administrator overview', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({ getAccessToken: () => 'analytics-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify({ data: {} }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  await client.trackAnalytics([{ type: 'page_view' }]);
+  await client.getAdminAnalytics(30);
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET']);
+  assert.match(requests[0].url, /\/v1\/analytics\/events$/);
+  assert.match(requests[1].url, /\/v1\/admin\/analytics\?days=30$/);
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
 });
 
 test('API client reads the authenticated creator collection', async () => {
