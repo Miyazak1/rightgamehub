@@ -114,10 +114,14 @@ services:
       REALTIME_HOST: 0.0.0.0
       REALTIME_PORT: 3093
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      REALTIME_RECONNECT_GRACE_MS: "120000"
       REALTIME_ALLOWED_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
       TRUST_EDITOR_WEBVIEWS: "true"
     depends_on:
       redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s

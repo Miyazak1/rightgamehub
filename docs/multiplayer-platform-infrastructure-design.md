@@ -710,6 +710,14 @@ interface MultiplayerRulesAdapter<State, Command, Event, Result> {
 - 压测、滚动发布、故障注入和容量基线。
 - 评估外部权威服务器接入协议。
 
+### 20.1 当前实施状态（2026-09-30）
+
+- 阶段 0 已完成：独立 realtime 服务、一次性 ticket、Redis、Caddy 路由、v1 信封和心跳已落地。
+- 阶段 1 的控制面已完成：模式、公开/邀请房间、成员、席位、准备、房主转移和邀请码均由 PostgreSQL/API 管理。
+- 阶段 1 的实时层已完成：房间订阅与快照、跨实例 Redis Pub/Sub、连接 presence、online/grace/offline、可配置重连宽限和 revision 冲突检测已落地。
+- 通用客户端会话模块已完成：自动换取一次性 ticket、心跳、状态缓存、断线重连和 `session.resume` 可供 Web、Agent 与 Windows 壳复用。
+- 阶段 1 尚余产品 UI 与双真实账号浏览器验收；阶段 2 的权威规则、对局事件、快照、计时、结算和回放尚未开始。
+
 ## 21. 建议的仓库改动清单
 
 实施时优先按小型可审查 PR 拆分：

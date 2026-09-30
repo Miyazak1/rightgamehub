@@ -71,5 +71,16 @@ export function parseClientMessage(input, { maxBytes = REALTIME_MAX_MESSAGE_BYTE
   for (const key of ['roomId', 'matchId']) if (message[key] !== undefined && !uuid.test(message[key])) throw new RealtimeProtocolError('MESSAGE_REFERENCE_INVALID', `${key} must be a UUID.`);
   for (const key of ['clientSeq', 'expectedRevision']) if (message[key] !== undefined && (!Number.isSafeInteger(message[key]) || message[key] < 0)) throw new RealtimeProtocolError('MESSAGE_SEQUENCE_INVALID', `${key} must be a non-negative safe integer.`);
   if (message.payload !== undefined && (!message.payload || typeof message.payload !== 'object' || Array.isArray(message.payload))) throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'payload must be an object.');
+  if (message.type.startsWith('room.') && !message.roomId) throw new RealtimeProtocolError('MESSAGE_REFERENCE_REQUIRED', 'roomId is required for room commands.');
+  if (message.type === 'room.ready') {
+    const keys = Object.keys(message.payload ?? {});
+    if (keys.length !== 1 || keys[0] !== 'ready' || typeof message.payload.ready !== 'boolean') throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'room.ready payload must contain only a boolean ready field.');
+  }
+  if (message.type === 'session.resume') {
+    const keys = Object.keys(message.payload ?? {});
+    if (keys.some(key => key !== 'roomIds') || !Array.isArray(message.payload?.roomIds) || message.payload.roomIds.length > 8 || message.payload.roomIds.some(roomId => !uuid.test(roomId))) {
+      throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'session.resume payload must contain up to eight roomIds.');
+    }
+  }
   return message;
 }

@@ -9,6 +9,8 @@ export function loadRealtimeConfig(env = process.env) {
   if (!['development', 'test', 'production'].includes(nodeEnv)) throw new Error('NODE_ENV must be development, test or production');
   const redisUrl = env.REDIS_URL?.trim();
   if (!redisUrl) throw new Error('REDIS_URL is required');
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) throw new Error('DATABASE_URL is required');
   const allowedOrigins = (env.REALTIME_ALLOWED_ORIGINS ?? env.CORS_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
   for (const origin of allowedOrigins) {
     let parsed;
@@ -20,8 +22,11 @@ export function loadRealtimeConfig(env = process.env) {
     host: env.REALTIME_HOST ?? '127.0.0.1',
     port: integer(env.REALTIME_PORT, 3093, 'REALTIME_PORT', 1, 65535),
     redisUrl,
+    databaseUrl,
+    databaseSsl: env.DATABASE_SSL === 'true',
     allowedOrigins: Object.freeze(allowedOrigins),
     trustEditorWebviews: env.TRUST_EDITOR_WEBVIEWS === 'true',
     heartbeatIntervalMs: integer(env.REALTIME_HEARTBEAT_INTERVAL_MS, 20_000, 'REALTIME_HEARTBEAT_INTERVAL_MS', 5_000, 60_000),
+    reconnectGraceMs: integer(env.REALTIME_RECONNECT_GRACE_MS, 120_000, 'REALTIME_RECONNECT_GRACE_MS', 15_000, 600_000),
   });
 }

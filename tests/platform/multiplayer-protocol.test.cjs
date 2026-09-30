@@ -29,3 +29,15 @@ test('server messages always carry protocol metadata', async () => {
   assert.equal(message.type, 'session.ready');
   assert.ok(Number.isFinite(Date.parse(message.sentAt)));
 });
+
+test('room commands require bounded semantic payloads', async () => {
+  const { parseClientMessage } = await import(protocolUrl);
+  const roomId = crypto.randomUUID();
+  const base = { v: 1, id: crypto.randomUUID(), type: 'room.ready', roomId, payload: { ready: true } };
+  assert.equal(parseClientMessage(JSON.stringify(base)).payload.ready, true);
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...base, roomId: undefined })), error => error.code === 'MESSAGE_REFERENCE_REQUIRED');
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...base, payload: { ready: true, admin: true } })), error => error.code === 'MESSAGE_PAYLOAD_INVALID');
+  const resume = { v: 1, id: crypto.randomUUID(), type: 'session.resume', payload: { roomIds: [roomId] } };
+  assert.deepEqual(parseClientMessage(JSON.stringify(resume)).payload.roomIds, [roomId]);
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...resume, payload: { roomIds: ['bad'] } })), error => error.code === 'MESSAGE_PAYLOAD_INVALID');
+});

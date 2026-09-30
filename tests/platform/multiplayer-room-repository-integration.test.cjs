@@ -9,15 +9,17 @@ const source = relative => pathToFileURL(path.join(root, relative));
 const databaseUrl = process.env.GAMEHUB_TEST_DATABASE_URL;
 
 test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { skip: !databaseUrl }, async t => {
-  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }] = await Promise.all([
+  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }, { PostgresRealtimeRoomRepository }] = await Promise.all([
     import(source('apps/api/src/database.mjs')),
     import(source('apps/api/src/multiplayer-room-repository.mjs')),
     import(source('apps/api/src/multiplayer-room-service.mjs')),
+    import(source('apps/realtime/src/room-repository.mjs')),
   ]);
   const database = createDatabase({ databaseUrl, databaseSsl: false });
   const ownerId = crypto.randomUUID(); const guestId = crypto.randomUUID(); const thirdId = crypto.randomUUID(); const workId = crypto.randomUUID();
   const repository = new PostgresMultiplayerRoomRepository(database.pool);
   const service = createMultiplayerRoomService({ repository, roomCodeHmacKey: 'integration-room-code-key-at-least-32-bytes' });
+  const realtimeRepository = new PostgresRealtimeRoomRepository(database.pool);
   const admin = { userId: ownerId, profile: { role: 'admin' } };
   const owner = { userId: ownerId }; const guest = { userId: guestId }; const third = { userId: thirdId };
   t.after(async () => {
@@ -44,6 +46,14 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   assert.equal(joined.members.length, 2);
   assert.deepEqual(joined.members.map(member => member.seat), [0,1]);
   await assert.rejects(service.joinRoom(third, room.id), error => error.code === 'ROOM_FULL');
+  const connected = await realtimeRepository.connectMember({ roomId: room.id, userId: guestId, now: new Date() });
+  assert.equal(connected.room.members.find(member => member.userId === guestId).connectionState, 'online');
+  const realtimeReady = await realtimeRepository.setReady({ roomId: room.id, userId: guestId, ready: true, expectedRevision: connected.room.revision, now: new Date() });
+  assert.equal(realtimeReady.room.members.find(member => member.userId === guestId).ready, true);
+  const conflict = await realtimeRepository.setReady({ roomId: room.id, userId: guestId, ready: false, expectedRevision: connected.room.revision, now: new Date() });
+  assert.equal(conflict.error, 'revision_conflict');
+  assert.equal((await realtimeRepository.setMemberGrace({ roomId: room.id, userId: guestId, now: new Date() })).room.members.find(member => member.userId === guestId).connectionState, 'grace');
+  assert.equal((await realtimeRepository.setMemberOffline({ roomId: room.id, userId: guestId, now: new Date() })).room.members.find(member => member.userId === guestId).connectionState, 'offline');
   const ready = await service.setReady(guest, room.id, true);
   assert.equal(ready.members.find(member => member.userId === guestId).ready, true);
   const transferred = await service.leaveRoom(owner, room.id);

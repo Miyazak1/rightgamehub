@@ -54,3 +54,30 @@ test('realtime server exposes liveness and Redis-backed readiness', async t => {
   assert.equal(ready.status, 200);
   assert.equal((await ready.json()).data.redis, true);
 });
+
+test('realtime server serializes room commands through the room session manager', async t => {
+  const [{ createRealtimeServer }, { WebSocket }] = await Promise.all([
+    import(serverUrl),
+    import(pathToFileURL(path.join(root, 'apps/realtime/node_modules/ws/wrapper.mjs'))),
+  ]);
+  const handled = [];
+  const roomSessionManager = {
+    start: async () => {}, ping: async () => true, refresh: async () => {}, close() {}, disconnect: async () => {},
+    supports: message => message.type.startsWith('room.'),
+    handle: async (socket, message) => { handled.push(message); socket.send(JSON.stringify({ v: 1, id: crypto.randomUUID(), type: 'command.ack', sentAt: new Date().toISOString(), causedBy: message.id, payload: {} })); },
+  };
+  const ticketStore = { ping: async () => true, consume: async () => ({ userId: crypto.randomUUID(), expiresAt: new Date(Date.now() + 30_000).toISOString() }) };
+  const realtime = createRealtimeServer({ ticketStore, roomSessionManager, heartbeatIntervalMs: 5_000, logger: { error() {}, warn() {} } });
+  t.after(() => realtime.close());
+  const address = await realtime.listen({ host: '127.0.0.1', port: 0 });
+  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/v1/realtime?ticket=${crypto.randomBytes(32).toString('base64url')}`);
+  t.after(() => socket.close());
+  await nextMessage(socket);
+  const roomId = crypto.randomUUID();
+  const commandId = crypto.randomUUID();
+  socket.send(JSON.stringify({ v: 1, id: commandId, type: 'room.subscribe', roomId, payload: {} }));
+  const ack = await nextMessage(socket);
+  assert.equal(ack.type, 'command.ack');
+  assert.equal(handled.length, 1);
+  assert.equal(handled[0].roomId, roomId);
+});
