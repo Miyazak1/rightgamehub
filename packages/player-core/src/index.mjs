@@ -13,7 +13,7 @@ export function validateLaunchDescriptor(descriptor, { runtimeDomain = 'gamehubu
 }
 
 export class PlayerCore {
-  #state = 'idle'; #frame = null; #launchId = null; #listeners = new Set();
+  #state = 'idle'; #frame = null; #launchId = null; #listeners = new Set(); #bridge = null;
   constructor(options = {}) { this.options = options; }
   get state() { return this.#state; }
   get launchId() { return this.#launchId; }
@@ -29,12 +29,13 @@ export class PlayerCore {
     frame.setAttribute('sandbox', ['allow-scripts', descriptor.capabilities?.pointerLock && 'allow-pointer-lock'].filter(Boolean).join(' '));
     frame.setAttribute('allow', [descriptor.capabilities?.fullscreen && 'fullscreen', descriptor.capabilities?.pointerLock && 'pointer-lock'].filter(Boolean).join('; '));
     frame.referrerPolicy = 'no-referrer';
+    if (descriptor.capabilities?.multiplayer && this.options.createBridge) this.#bridge = this.options.createBridge({ frame,launchId: this.#launchId,descriptor });
     frame.addEventListener('load', () => this.#frame === frame && this.#setState('running'), { once: true });
     frame.addEventListener('error', () => this.#frame === frame && this.#setState('error', { message: '游戏加载失败。' }), { once: true });
     container.replaceChildren(frame); this.#frame = frame; this.#setState('loading'); return this.#launchId;
   }
   hide() { if (this.#state === 'running') { this.#frame.hidden = true; this.#setState('hidden'); } }
   resume() { if (this.#state === 'hidden') { this.#frame.hidden = false; this.#setState('running'); } }
-  stop() { if (this.#frame) { this.#frame.src = 'about:blank'; this.#frame.remove(); this.#frame = null; } if (this.#state !== 'disposed') this.#setState('idle'); }
+  stop() { this.#bridge?.close?.(); this.#bridge = null; if (this.#frame) { this.#frame.src = 'about:blank'; this.#frame.remove(); this.#frame = null; } if (this.#state !== 'disposed') this.#setState('idle'); }
   dispose() { this.stop(); this.#setState('disposed'); this.#listeners.clear(); }
 }

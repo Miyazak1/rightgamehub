@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 export const REALTIME_PROTOCOL = 'gamehub.realtime.v1';
 export const REALTIME_PROTOCOL_VERSION = 1;
 export const REALTIME_MAX_MESSAGE_BYTES = 16 * 1024;
@@ -49,7 +47,7 @@ export function createServerMessage(type, payload = {}, fields = {}) {
   if (!serverMessageTypes.includes(type)) throw new RealtimeProtocolError('SERVER_MESSAGE_TYPE_INVALID', `Unsupported server message type: ${type}`);
   return {
     v: REALTIME_PROTOCOL_VERSION,
-    id: crypto.randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     type,
     sentAt: new Date().toISOString(),
     ...fields,

@@ -19,7 +19,7 @@ const context = overrides => ({
 test('match service creates a server-seeded initial snapshot without persisting the seed', async () => {
   const { createMultiplayerMatchService } = await import('../../apps/api/src/multiplayer-match-service.mjs');
   const inputContext = context();
-  let adapterInput; let persisted;
+  let adapterInput; let persisted; const roomPublished = [];
   const adapter = {
     createInitialState(input) { adapterInput = input; return { turn: input.players[0].userId, seedDigest: crypto.createHash('sha256').update(input.seed).digest('hex') }; },
     serializeState: value => value,
@@ -30,10 +30,10 @@ test('match service creates a server-seeded initial snapshot without persisting 
   };
   const repository = {
     getStartContext: async () => inputContext,
-    startMatchIdempotent: async value => { persisted = value; return { id: value.matchId, status: 'active' }; },
+    startMatchIdempotent: async value => { persisted = value; return { id: value.matchId,roomId: value.roomId,modeId: value.modeId,revision: '0',status: 'active' }; },
   };
   const service = createMultiplayerMatchService({
-    repository, rulesRegistry: { get: () => adapter },
+    repository, rulesRegistry: { get: () => adapter },roomPublisher: { publish: async (...args) => roomPublished.push(args) },
     ids: () => '00000000-0000-4000-8000-000000000106',
     randomBytes: () => Buffer.alloc(32, 7), clock: () => new Date('2026-09-30T00:00:00.000Z'),
   });
@@ -44,6 +44,9 @@ test('match service creates a server-seeded initial snapshot without persisting 
   assert.equal(Buffer.isBuffer(persisted.seedHash), true);
   assert.equal(persisted.turnDeadlineAt.toISOString(), '2026-09-30T00:00:45.000Z');
   assert.deepEqual(persisted.publicState, { turn: inputContext.players[0].userId });
+  assert.equal(roomPublished[0][0],inputContext.roomId);
+  assert.equal(roomPublished[0][1].type,'match.started');
+  assert.equal(roomPublished[0][1].payload.match.id,result.id);
 });
 
 test('match service refuses unready rooms and unavailable rulesets', async () => {

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { canonicalJson } from '@gamehub/rules-sdk';
+import { createServerMessage } from '@gamehub/multiplayer-protocol';
 
 export class MultiplayerMatchError extends Error {
   constructor(code, statusCode, message, retryable = false) {
@@ -15,7 +16,7 @@ const objectState = (value, name) => {
   return value;
 };
 
-export function createMultiplayerMatchService({ repository, rulesRegistry, publisher = null, ids = () => crypto.randomUUID(), randomBytes = size => crypto.randomBytes(size), clock = () => new Date() }) {
+export function createMultiplayerMatchService({ repository, rulesRegistry, publisher = null, roomPublisher = null, ids = () => crypto.randomUUID(), randomBytes = size => crypto.randomBytes(size), clock = () => new Date() }) {
   return Object.freeze({
     async startRoom(actor, roomId, idempotencyKey) {
       requireActor(actor); requireIdempotency(idempotencyKey);
@@ -41,12 +42,14 @@ export function createMultiplayerMatchService({ repository, rulesRegistry, publi
       if (!turn || !context.players.some(player => player.userId === turn.userId)) throw new MultiplayerMatchError('ADAPTER_OUTPUT_INVALID', 500, '规则适配器返回了无效的行动玩家。');
       const turnSeconds = Number(turn.seconds ?? context.settings.turnSeconds ?? 60);
       if (!Number.isInteger(turnSeconds) || turnSeconds < 10 || turnSeconds > 3600) throw new MultiplayerMatchError('ADAPTER_OUTPUT_INVALID', 500, '规则适配器返回了无效的回合时间。');
-      return repository.startMatchIdempotent({
+      const match = await repository.startMatchIdempotent({
         userId: actor.userId,roomId,modeId: context.modeId,rulesetVersion: context.rulesetVersion,players: context.players.map(({ userId,seat }) => ({ userId,seat })),
         idempotencyKey,requestHash: requestHash({ roomId }),matchId,seedHash: crypto.createHash('sha256').update(seed).digest(),
         state,publicState,stateHash,turnUserId: turn.userId,turnDeadlineAt: new Date(now.getTime() + turnSeconds * 1_000),now,
         startedEvent: { rulesetVersion: context.rulesetVersion, players: context.players.map(({ userId,seat }) => ({ userId,seat })) },
       });
+      await roomPublisher?.publish(roomId, createServerMessage('match.started', { match }, { roomId,matchId: match.id,revision: Number(match.revision) }));
+      return match;
     },
     async getMatch(actor, matchId) {
       requireActor(actor); const match = await repository.getVisibleMatch({ matchId,userId: actor.userId });

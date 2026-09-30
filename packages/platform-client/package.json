@@ -6,11 +6,13 @@
   "exports": {
     ".": "./src/App.jsx",
     "./multiplayer-session": "./src/multiplayer-session.mjs",
+    "./web-game-multiplayer-host": "./src/web-game-multiplayer-host.mjs",
     "./styles.css": "./src/styles.css"
   },
   "dependencies": {
     "@gamehub/host-contract": "workspace:*",
     "@gamehub/multiplayer-protocol": "workspace:*",
+    "@gamehub/web-game-sdk": "workspace:*",
     "@gamehub/platform-api-client": "workspace:*",
     "@gamehub/player-core": "workspace:*",
     "react": "18.3.1",

@@ -128,7 +128,7 @@ export const schemas = Object.freeze({
   CreateMultiplayerRoomRequest: object({
     modeId: id, visibility: stringEnum(['public','invite_only']), capacity: { type: 'integer', minimum: 2, maximum: 8 }, settings: { $ref: '#/components/schemas/MultiplayerRoomSettings' },
   }, ['modeId','visibility','capacity']),
-  JoinMultiplayerRoomRequest: object({ joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' } }, []),
+  JoinMultiplayerRoomRequest: object({ joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' }, modeId: id }, []),
   SetMultiplayerReadyRequest: object({ ready: { type: 'boolean' } }),
   MultiplayerMatchPlayer: object({
     userId: id, displayName: { type: 'string' }, seat: { type: 'integer', minimum: 0, maximum: 7 },
@@ -274,7 +274,7 @@ export const schemas = Object.freeze({
     releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
     entryUrl: { type: 'string', format: 'uri' }, runtimeOrigin: { type: 'string', format: 'uri' },
     playerProtocol: object({ min: { type: 'integer', minimum: 1 }, max: { type: 'integer', minimum: 1 } }),
-    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' } }),
+    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' } }),
   }),
   LibraryState: object({
     workId: workKey,

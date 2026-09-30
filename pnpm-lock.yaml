@@ -10,6 +10,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@gamehub/multiplayer-protocol':
+        specifier: workspace:*
+        version: link:../../packages/multiplayer-protocol
       '@gamehub/rules-sdk':
         specifier: workspace:*
         version: link:../../packages/rules-sdk
@@ -105,6 +108,9 @@ importers:
       '@gamehub/player-core':
         specifier: workspace:*
         version: link:../player-core
+      '@gamehub/web-game-sdk':
+        specifier: workspace:*
+        version: link:../web-game-sdk
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -115,6 +121,8 @@ importers:
   packages/player-core: {}
 
   packages/rules-sdk: {}
+
+  packages/web-game-sdk: {}
 
 packages:
 

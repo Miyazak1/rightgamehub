@@ -113,6 +113,7 @@ export class PostgresMultiplayerRoomRepository {
     return withTransaction(this.pool, async client => {
       const room = (await client.query('SELECT * FROM multiplayer_rooms WHERE id=$1 FOR UPDATE', [input.roomId])).rows[0];
       if (!room || new Date(room.expires_at) <= input.now) return { error: 'not_found' };
+      if (input.expectedModeId && room.mode_id !== input.expectedModeId) return { error: 'not_found' };
       if (room.status !== 'open') return { error: 'not_open' };
       const existing = (await client.query('SELECT * FROM multiplayer_room_members WHERE room_id=$1 AND user_id=$2', [input.roomId,input.userId])).rows[0];
       if (existing && existing.left_at == null) return hydrate(client, room);

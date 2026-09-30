@@ -784,3 +784,9 @@ interface MultiplayerRulesAdapter<State, Command, Event, Result> {
 
 以下验收必须等具体游戏存在后执行，不能以虚构棋规或虚构客户端代替：规则确定性测试、真实玩家完整对局、游戏画面与输入、Windows 游戏进程内的短期会话交换，以及该游戏选择启用的排位/匹配。它们是首款游戏的接入工作，不再阻塞通用基础设施完工。
 
+### 23.2 Web 游戏接入增量（2026-09-30）
+
+通用 Web 游戏多人安全桥已经实现：`@gamehub/web-game-sdk` 提供无凭据的作者 API，可信播放器持有 API token、一次性 realtime ticket 与 WebSocket，并按当前作品限制 mode、room 和 match。Web 发布包通过 `platform.json` 声明 `multiplayer`；未声明的版本不创建桥。房间启动会在 room 频道广播 `match.started`，参与者据此订阅同一权威对局。
+
+作者接入要求与示例见 [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md)，协议、安全边界与验收见 [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md)。服务端规则适配器仍是受信部署单元；作者 ZIP 不得动态装载服务器代码。规则适配器注册和发布信任链作为后续独立增量建设。
+

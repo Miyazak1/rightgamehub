@@ -26,6 +26,9 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md) | **面向游戏设计者的包格式、SDK 流程、权威命令、隐藏信息、重连与规则交付清单** |
+| [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md) | **版本化 MessageChannel SDK、作品作用域、最小身份、房间/对局方法与安全边界** |
+| [多人平台基础设施设计](./multiplayer-platform-infrastructure-design.md) | **通用房间、realtime、权威规则、持久化、治理、扩容与分阶段完成定义** |
 | [51 G0 存储容量门禁](./51-g0-storage-capacity-guard.zh-CN.md) | **70/85 容量阈值、活动上传预留、同盘合并、管理员可见性、残留清理、部署与故障处置** |
 | [50 G0 Web ZIP 隔离校验器](./50-g0-isolated-web-validator.zh-CN.md) | **独立无网络容器、原子信箱、生产 fail-closed、残留清理、状态指标、部署与验收** |
 | [49 GitHub 开源作品导入与共建路线](./49-github-open-source-import-roadmap.zh-CN.md) | **作者授权、GitHub App、来源证明、隔离 Builder、许可证治理、G0—G4 实施顺序与验收门槛** |

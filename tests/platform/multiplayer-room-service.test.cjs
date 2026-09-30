@@ -48,6 +48,19 @@ test('room service maps repository join and state failures to stable API errors'
   await assert.rejects(service.setReady(actor, crypto.randomUUID(), true), error => error.code === 'ROOM_NOT_OPEN');
 });
 
+test('room service scopes joins to the caller supplied multiplayer mode', async () => {
+  const { createMultiplayerRoomService } = await import(modulePath);
+  let received;
+  const repository = { joinRoom: async input => { received = input; return { error: 'not_found' }; } };
+  const service = createMultiplayerRoomService({ repository, roomCodeHmacKey: key, clock: () => new Date('2026-09-30T00:00:00.000Z') });
+  const actor = { userId: id(1) };
+  const roomId = id(3);
+  const modeId = id(2);
+  await assert.rejects(service.joinRoom(actor, roomId, { modeId }), error => error.code === 'ROOM_NOT_FOUND' && error.statusCode === 404);
+  assert.equal(received.roomId, roomId);
+  assert.equal(received.expectedModeId, modeId);
+});
+
 test('built-in non-UUID work keys return no database-backed multiplayer modes', async () => {
   const { createMultiplayerRoomService } = await import(modulePath);
   let called = false;

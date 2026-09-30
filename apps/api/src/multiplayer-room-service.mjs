@@ -61,7 +61,7 @@ export function createMultiplayerRoomService({ repository, roomCodeHmacKey, ids 
     },
     async joinRoom(actor, roomId, input = {}) {
       requireActor(actor);
-      const room = await repository.joinRoom({ userId: actor.userId, roomId, joinCodeDigest: input.joinCode ? digestFor(input.joinCode) : null, now: clock() });
+      const room = await repository.joinRoom({ userId: actor.userId, roomId, expectedModeId: input.modeId ?? null, joinCodeDigest: input.joinCode ? digestFor(input.joinCode) : null, now: clock() });
       if (room?.error === 'not_found') throw new MultiplayerRoomError('ROOM_NOT_FOUND', 404, '房间不存在或不可加入。');
       if (room?.error === 'code_required') throw new MultiplayerRoomError('ROOM_CODE_REQUIRED', 403, '需要正确的邀请码。');
       if (room?.error === 'private') throw new MultiplayerRoomError('ROOM_PRIVATE', 403, '这是私密房间。');

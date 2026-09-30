@@ -15,6 +15,7 @@
     "dev:e2e": "node src/dev-e2e-server.mjs"
   },
   "dependencies": {
+    "@gamehub/multiplayer-protocol": "workspace:*",
     "@gamehub/rules-sdk": "workspace:*",
     "fastify": "5.12.5",
     "pg": "8.23.0",

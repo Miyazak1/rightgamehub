@@ -8,6 +8,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY extensions/harness/package.json extensions/harness/package.json
 COPY extensions/vscode/package.json extensions/vscode/package.json
 COPY packages/platform-client/package.json packages/platform-client/package.json
+COPY packages/web-game-sdk/package.json packages/web-game-sdk/package.json
 COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json
 COPY packages/platform-api-client/package.json packages/platform-api-client/package.json
 COPY packages/host-contract/package.json packages/host-contract/package.json
@@ -15,6 +16,7 @@ COPY packages/player-core/package.json packages/player-core/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin...
 COPY apps/web apps/web
 COPY packages/platform-client packages/platform-client
+COPY packages/web-game-sdk packages/web-game-sdk
 COPY packages/multiplayer-protocol packages/multiplayer-protocol
 COPY packages/platform-api-client packages/platform-api-client
 COPY packages/host-contract packages/host-contract

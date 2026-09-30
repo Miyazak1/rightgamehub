@@ -9038,6 +9038,10 @@
           "joinCode": {
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{12}$"
+          },
+          "modeId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": []
@@ -10330,11 +10334,15 @@
               },
               "pointerLock": {
                 "type": "boolean"
+              },
+              "multiplayer": {
+                "type": "boolean"
               }
             },
             "required": [
               "fullscreen",
-              "pointerLock"
+              "pointerLock",
+              "multiplayer"
             ]
           }
         },

@@ -113,9 +113,10 @@ export function createRuntime({ env = process.env, mailer } = {}) {
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const multiplayerRoomService = createMultiplayerRoomService({ repository: new PostgresMultiplayerRoomRepository(database.pool), roomCodeHmacKey: config.roomCodeHmacKey });
   const multiplayerMatchPublisher = createRedisMatchPublisher({ url: config.redisUrl });
-  const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry: createRulesRegistry(), publisher: multiplayerMatchPublisher });
+  const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
+  const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry: createRulesRegistry(), publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
   const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, runtimeEdgeApp, app };
 }
