@@ -1,5 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+
+test('Windows releases download directly outside managed Agent hosts', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /const managedWindows = Boolean\(host\?\.desktop\?\.prepareRelease && host\?\.desktop\?\.launchRelease\)/);
+  assert.match(source, /<DownloadLink href=\{windowsDownloadUrl\} fileName=\{windows\.fileName\}>下载 Windows 版<\/DownloadLink>/);
+  assert.match(source, /api\.releaseDownloadUrl\(work\.id, windows\.currentReleaseId\)/);
+  assert.match(source, /由浏览器下载 Windows 游戏文件/);
+  assert.doesNotMatch(source, /需要 GameHub Agent/);
+});
 
 test('theme adapter maps modes to complete semantic tokens', async () => {
   const { themeToTokens } = await import('../../packages/host-contract/src/index.mjs');
