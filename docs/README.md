@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [49 GitHub 开源作品导入与共建路线](./49-github-open-source-import-roadmap.zh-CN.md) | **作者授权、GitHub App、来源证明、隔离 Builder、许可证治理、G0—G4 实施顺序与验收门槛** |
 | [45 P0.8 猜百科全自动供给](./45-p08-automated-baike-supply.zh-CN.md) | **自动发现、完整导言筛选、修订追溯、故障回退与未来 14 天无人值守排期** |
 | [44 P0.7 官方题库供给](./44-p07-content-pipeline.zh-CN.md) | **数据库题库、完整导言质量门槛、每日确定性选题、管理员启停与人工排期** |
 | [43 P0.6 轻量留存层](./43-p06-retention-layer.zh-CN.md) | **连续参与、自动像素徽章、通知偏好，以及完全由真实游戏行为推导的留存状态** |
