@@ -6838,6 +6838,90 @@
         }
       }
     },
+    "/v1/admin/storage": {
+      "get": {
+        "operationId": "getAdminStorage",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/StorageCapacityOverview"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/creator/works": {
       "get": {
         "operationId": "listCreatorWorks",
@@ -12084,6 +12168,208 @@
           "hosts",
           "works",
           "measurement"
+        ]
+      },
+      "StorageCapacityOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "warning",
+              "blocked",
+              "unavailable"
+            ]
+          },
+          "acceptingUploads": {
+            "type": "boolean"
+          },
+          "usedPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "thresholds": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "warnPercent": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 98
+              },
+              "blockPercent": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 99
+              }
+            },
+            "required": [
+              "warnPercent",
+              "blockPercent"
+            ]
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "enum": [
+                        "quarantine",
+                        "validator",
+                        "runtime",
+                        "avatars",
+                        "covers"
+                      ]
+                    },
+                    "available": {
+                      "const": true
+                    },
+                    "level": {
+                      "type": "string",
+                      "enum": [
+                        "healthy",
+                        "warning",
+                        "blocked"
+                      ]
+                    },
+                    "totalBytes": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$"
+                    },
+                    "availableBytes": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$"
+                    },
+                    "usedBytes": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$"
+                    },
+                    "usedPercent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "projectedUsedPercent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "reservedBytes": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$"
+                    },
+                    "logicalBytes": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^(0|[1-9][0-9]*)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "available",
+                    "level",
+                    "totalBytes",
+                    "availableBytes",
+                    "usedBytes",
+                    "usedPercent",
+                    "projectedUsedPercent",
+                    "reservedBytes",
+                    "logicalBytes"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "enum": [
+                        "quarantine",
+                        "validator",
+                        "runtime",
+                        "avatars",
+                        "covers"
+                      ]
+                    },
+                    "available": {
+                      "const": false
+                    },
+                    "level": {
+                      "const": "unavailable"
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "available",
+                    "level",
+                    "errorCode"
+                  ]
+                }
+              ]
+            }
+          },
+          "lastCleanup": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "filesRemoved": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bytesReclaimed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "at",
+              "filesRemoved",
+              "bytesReclaimed"
+            ]
+          }
+        },
+        "required": [
+          "checkedAt",
+          "level",
+          "acceptingUploads",
+          "usedPercent",
+          "thresholds",
+          "stores",
+          "lastCleanup"
         ]
       }
     }

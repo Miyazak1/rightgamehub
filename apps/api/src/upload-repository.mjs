@@ -28,6 +28,29 @@ const expireStaleCreated = async (client, ownerUserId) => {
 export class PostgresUploadRepository {
   constructor(pool) { this.pool = pool; }
 
+  async replayCreate(input) {
+    const previous = (await this.pool.query("SELECT request_hash,result_json FROM idempotency_keys WHERE actor_id=$1 AND operation='upload.create' AND key=$2", [input.actor.userId, input.idempotencyKey])).rows[0];
+    if (!previous) return null;
+    if (previous.request_hash !== input.requestHash) throw new UploadError('IDEMPOTENCY_CONFLICT', 409, 'The idempotency key was used for another request.');
+    return previous.result_json;
+  }
+
+  async globalCapacityReservations() {
+    const row = (await this.pool.query(
+      `SELECT COALESCE(SUM(declared_bytes),0) AS quarantine_bytes,
+              COALESCE(SUM(CASE WHEN package_type='web_zip' THEN $1 ELSE declared_bytes END),0) AS validator_bytes,
+              COALESCE(SUM(CASE WHEN package_type='web_zip' THEN $1 ELSE declared_bytes END),0) AS runtime_bytes
+         FROM upload_jobs
+        WHERE state IN ('created','receiving','uploaded','queued','validating','scanning')`,
+      [WEB_EXPANDED_RESERVE],
+    )).rows[0];
+    return {
+      quarantine: Number(row.quarantine_bytes),
+      validator: Number(row.validator_bytes),
+      runtime: Number(row.runtime_bytes),
+    };
+  }
+
   async createIdempotent(input) {
     return withTransaction(this.pool, async client => {
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`upload:${input.actor.userId}:${input.idempotencyKey}`]);

@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [51 G0 存储容量门禁](./51-g0-storage-capacity-guard.zh-CN.md) | **70/85 容量阈值、活动上传预留、同盘合并、管理员可见性、残留清理、部署与故障处置** |
 | [50 G0 Web ZIP 隔离校验器](./50-g0-isolated-web-validator.zh-CN.md) | **独立无网络容器、原子信箱、生产 fail-closed、残留清理、状态指标、部署与验收** |
 | [49 GitHub 开源作品导入与共建路线](./49-github-open-source-import-roadmap.zh-CN.md) | **作者授权、GitHub App、来源证明、隔离 Builder、许可证治理、G0—G4 实施顺序与验收门槛** |
 | [45 P0.8 猜百科全自动供给](./45-p08-automated-baike-supply.zh-CN.md) | **自动发现、完整导言筛选、修订追溯、故障回退与未来 14 天无人值守排期** |

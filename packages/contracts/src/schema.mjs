@@ -408,6 +408,25 @@ export const schemas = Object.freeze({
     works: { type: 'array', items: object({ workId: workKey, title: { type: 'string' }, views: { type: 'integer', minimum: 0 }, starts: { type: 'integer', minimum: 0 }, downloads: { type: 'integer', minimum: 0 } }) },
     measurement: object({ timeZone: { type: 'string' }, siteDuration: { type: 'string' }, browserDownloads: { type: 'string' }, managedDownloads: { type: 'string' } }),
   }),
+  StorageCapacityOverview: object({
+    checkedAt: dateTime,
+    level: stringEnum(['healthy','warning','blocked','unavailable']),
+    acceptingUploads: { type: 'boolean' },
+    usedPercent: { type: 'number', minimum: 0, maximum: 100 },
+    thresholds: object({ warnPercent: { type: 'integer', minimum: 1, maximum: 98 }, blockPercent: { type: 'integer', minimum: 2, maximum: 99 } }),
+    stores: { type: 'array', items: {
+      oneOf: [
+        object({
+          id: stringEnum(['quarantine','validator','runtime','avatars','covers']), available: { const: true }, level: stringEnum(['healthy','warning','blocked']),
+          totalBytes: uintString, availableBytes: uintString, usedBytes: uintString,
+          usedPercent: { type: 'number', minimum: 0, maximum: 100 }, projectedUsedPercent: { type: 'number', minimum: 0, maximum: 100 },
+          reservedBytes: uintString, logicalBytes: { oneOf: [uintString,{ type: 'null' }] },
+        }),
+        object({ id: stringEnum(['quarantine','validator','runtime','avatars','covers']), available: { const: false }, level: { const: 'unavailable' }, errorCode: { type: 'string', minLength: 1, maxLength: 80 } }),
+      ],
+    } },
+    lastCleanup: object({ at: nullableDateTime, filesRemoved: { type: 'integer', minimum: 0 }, bytesReclaimed: { type: 'integer', minimum: 0 } }),
+  }),
 });
 
 const json = schema => ({ 'application/json': { schema } });
@@ -494,6 +513,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/audit', operationId: 'listModerationAudit', auth: 'bearer', response: 'ModerationAuditEvent', responseArray: true },
   { method: 'post', path: '/v1/analytics/events', operationId: 'recordAnalyticsEvents', auth: 'anonymous', request: 'AnalyticsEventsRequest', response: 'AnalyticsAccepted', successStatus: '202' },
   { method: 'get', path: '/v1/admin/analytics', operationId: 'getAdminAnalytics', auth: 'bearer', response: 'AdminAnalyticsOverview', queryAnalyticsDays: true },
+  { method: 'get', path: '/v1/admin/storage', operationId: 'getAdminStorage', auth: 'bearer', response: 'StorageCapacityOverview' },
   { method: 'get', path: '/v1/creator/works', operationId: 'listCreatorWorks', auth: 'bearer', response: 'Work', responseArray: true },
   { method: 'post', path: '/v1/creator/works', operationId: 'createWork', auth: 'bearer', request: 'CreateWorkRequest', response: 'Work', idempotent: true },
   { method: 'patch', path: '/v1/creator/works/{workId}', operationId: 'updateWork', auth: 'bearer', request: 'UpdateWorkRequest', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },

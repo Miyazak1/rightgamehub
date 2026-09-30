@@ -17,7 +17,14 @@ const requireIdempotencyKey = value => {
   return value;
 };
 
-export function createUploadService({ repository, objectStore, ids = () => crypto.randomUUID() }) {
+export function createUploadService({ repository, objectStore, storageCapacityService = null, ids = () => crypto.randomUUID() }) {
+  let capacityQueue = Promise.resolve();
+  const withCapacityReservation = task => {
+    const previous = capacityQueue;
+    let release;
+    capacityQueue = new Promise(resolve => { release = resolve; });
+    return previous.then(task).finally(release);
+  };
   return {
     async create(actor, workId, body, idempotencyKey) {
       if (!actor.scopes.includes('upload')) throw new UploadError('FORBIDDEN', 403, 'This device cannot upload.');
@@ -29,11 +36,18 @@ export function createUploadService({ repository, objectStore, ids = () => crypt
       if (!Number.isSafeInteger(declaredBytes) || declaredBytes < 1 || declaredBytes > maxBytes) throw new UploadError('UPLOAD_TOO_LARGE', 413, 'Declared upload size is invalid.');
       if (!/^[a-f0-9]{64}$/.test(body.sha256)) throw new UploadError('SCHEMA_INVALID', 400, 'SHA-256 is invalid.');
       requireIdempotencyKey(idempotencyKey);
-      const uploadId = ids();
-      return repository.createIdempotent({
-        actor, workId, body, declaredBytes, uploadId, idempotencyKey,
-        requestHash: requestHash({ workId, body }),
-        objectKey: `quarantine/${uploadId}/${ids()}.${body.packageType === 'web_zip' ? 'zip' : 'bin'}`,
+      const digest = requestHash({ workId, body });
+      return withCapacityReservation(async () => {
+        const replay = await repository.replayCreate?.({ actor, idempotencyKey, requestHash: digest });
+        if (replay) return replay;
+        const existingReservations = await repository.globalCapacityReservations?.() ?? {};
+        await storageCapacityService?.assertCanAccept({ packageType: body.packageType, declaredBytes, existingReservations });
+        const uploadId = ids();
+        return repository.createIdempotent({
+          actor, workId, body, declaredBytes, uploadId, idempotencyKey,
+          requestHash: digest,
+          objectKey: `quarantine/${uploadId}/${ids()}.${body.packageType === 'web_zip' ? 'zip' : 'bin'}`,
+        });
       });
     },
     async grant(actor, uploadId) {

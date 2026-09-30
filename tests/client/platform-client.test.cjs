@@ -101,9 +101,11 @@ test('API client submits analytics and reads the administrator overview', async 
   } });
   await client.trackAnalytics([{ type: 'page_view' }]);
   await client.getAdminAnalytics(30);
-  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET']);
+  await client.getAdminStorage();
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET']);
   assert.match(requests[0].url, /\/v1\/analytics\/events$/);
   assert.match(requests[1].url, /\/v1\/admin\/analytics\?days=30$/);
+  assert.match(requests[2].url, /\/v1\/admin\/storage$/);
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
 });
 

@@ -44,6 +44,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
   if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
   if (nodeEnv === 'production' && validatorExecutionMode !== 'isolated') throw new Error('VALIDATOR_EXECUTION_MODE must be isolated in production');
+  const storageWarnPercent = integer(env.STORAGE_WARN_PERCENT, 70, 'STORAGE_WARN_PERCENT', 1, 98);
+  const storageBlockPercent = integer(env.STORAGE_BLOCK_PERCENT, 85, 'STORAGE_BLOCK_PERCENT', 2, 99);
+  if (storageWarnPercent >= storageBlockPercent) throw new Error('STORAGE_WARN_PERCENT must be lower than STORAGE_BLOCK_PERCENT');
   let realtimePublicUrl;
   try { realtimePublicUrl = new URL(env.REALTIME_PUBLIC_URL?.trim() || 'ws://127.0.0.1:3093/v1/realtime'); }
   catch { throw new Error('REALTIME_PUBLIC_URL must be a valid WebSocket URL'); }
@@ -70,6 +73,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     runtimeRoot: env.RUNTIME_ROOT ?? '.runtime/platform/published',
     validatorRoot: env.VALIDATOR_ROOT ?? '.runtime/platform/validator',
     validatorExecutionMode,
+    storageWarnPercent,
+    storageBlockPercent,
+    storageMonitorIntervalSeconds: integer(env.STORAGE_MONITOR_INTERVAL_SECONDS, 60, 'STORAGE_MONITOR_INTERVAL_SECONDS', 30, 3600),
     runtimePort: integer(env.RUNTIME_PORT, 3092, 'RUNTIME_PORT', 1, 65535),
     runtimeDomain,
     runtimeScheme,

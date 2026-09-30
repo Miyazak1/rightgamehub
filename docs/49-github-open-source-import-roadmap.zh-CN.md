@@ -72,7 +72,7 @@ GitHub App
 
 目标：在执行任何第三方源码前，确认现有校验与存储链路能安全承接构建产物。
 
-当前进展：不可信 Web ZIP 的独立无网络校验器、原子信箱、生产 fail-closed 和残留清理已经实现，具体边界与部署方式见 [50 G0 Web ZIP 隔离校验器](./50-g0-isolated-web-validator.zh-CN.md)。备份恢复演练、集中告警、Runtime Edge 策略复核和生产等价故障演练仍未完成，因此 G0 尚未整体关闭。
+当前进展：不可信 Web ZIP 的独立无网络校验器、原子信箱、生产 fail-closed 和残留清理已经实现，具体边界与部署方式见 [50 G0 Web ZIP 隔离校验器](./50-g0-isolated-web-validator.zh-CN.md)。应用层 70/85 磁盘阈值门禁、活动上传预留、同盘合并计量、管理员容量面板与隔离区残留清理也已实现，见 [51 G0 存储容量门禁](./51-g0-storage-capacity-guard.zh-CN.md)。备份恢复演练、外部集中告警、Runtime Edge 策略复核和生产等价故障演练仍未完成，因此 G0 尚未整体关闭。
 
 工作项：
 
