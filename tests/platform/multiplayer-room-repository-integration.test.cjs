@@ -29,6 +29,10 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   t.after(async () => {
     try {
       await database.pool.query('DELETE FROM idempotency_keys WHERE actor_id = ANY($1::uuid[])', [[ownerId,guestId,thirdId]]);
+      await database.pool.query('ALTER TABLE multiplayer_admin_events DISABLE TRIGGER multiplayer_admin_events_no_delete');
+      try {
+        await database.pool.query('DELETE FROM multiplayer_admin_events WHERE match_id IN (SELECT mt.id FROM multiplayer_matches mt JOIN multiplayer_game_modes gm ON gm.id=mt.mode_id WHERE gm.work_id=$1)', [workId]);
+      } finally { await database.pool.query('ALTER TABLE multiplayer_admin_events ENABLE TRIGGER multiplayer_admin_events_no_delete'); }
       await database.pool.query('DELETE FROM multiplayer_matches WHERE mode_id IN (SELECT id FROM multiplayer_game_modes WHERE work_id=$1)', [workId]);
       await database.pool.query('DELETE FROM multiplayer_rooms WHERE mode_id IN (SELECT id FROM multiplayer_game_modes WHERE work_id=$1)', [workId]);
       await database.pool.query('DELETE FROM works WHERE id=$1', [workId]);
@@ -136,4 +140,15 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   assert.equal((await database.pool.query('SELECT status FROM multiplayer_rooms WHERE id=$1', [matchRoom.id])).rows[0].status, 'closed');
   assert.equal((await database.pool.query('SELECT termination_reason FROM multiplayer_matches WHERE id=$1', [match.id])).rows[0].termination_reason, 'timeout');
   assert.equal((await realtimeMatchRepository.applyTimeout({ matchId: match.id,now: timeoutTime,transition: async () => { throw new Error('must not run twice'); } })).stale, true);
+
+  const abortRoom = await service.createRoom(owner, { modeId: mode.id,visibility: 'public',capacity: 2,settings: { turnSeconds: 60 } }, `room-${crypto.randomUUID()}`);
+  await service.joinRoom(guest, abortRoom.id); await service.setReady(owner,abortRoom.id,true); await service.setReady(guest,abortRoom.id,true);
+  const abortMatch = await matchService.startRoom(owner, abortRoom.id, `match-${crypto.randomUUID()}`);
+  const aborted = await new PostgresMultiplayerMatchRepository(database.pool).abortMatch({
+    matchId: abortMatch.id,actorUserId: ownerId,reason: 'integration governance test',auditId: crypto.randomUUID(),now: new Date(),
+  });
+  assert.equal(aborted.match.status, 'aborted');
+  assert.equal(aborted.event.type, 'match.aborted');
+  assert.equal((await database.pool.query('SELECT count(*)::int AS count FROM multiplayer_admin_events WHERE match_id=$1', [abortMatch.id])).rows[0].count, 1);
+  await assert.rejects(database.pool.query("UPDATE multiplayer_admin_events SET reason='changed' WHERE match_id=$1", [abortMatch.id]), /append-only/u);
 });

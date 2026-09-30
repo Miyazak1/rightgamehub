@@ -15,7 +15,7 @@ const objectState = (value, name) => {
   return value;
 };
 
-export function createMultiplayerMatchService({ repository, rulesRegistry, ids = () => crypto.randomUUID(), randomBytes = size => crypto.randomBytes(size), clock = () => new Date() }) {
+export function createMultiplayerMatchService({ repository, rulesRegistry, publisher = null, ids = () => crypto.randomUUID(), randomBytes = size => crypto.randomBytes(size), clock = () => new Date() }) {
   return Object.freeze({
     async startRoom(actor, roomId, idempotencyKey) {
       requireActor(actor); requireIdempotency(idempotencyKey);
@@ -57,6 +57,38 @@ export function createMultiplayerMatchService({ repository, rulesRegistry, ids =
       requireActor(actor); const events = await repository.listEvents({ matchId,userId: actor.userId,afterSeq,limit });
       if (!events) throw new MultiplayerMatchError('MATCH_NOT_FOUND', 404, '对局不存在或不可见。');
       return events;
+    },
+    async getReplay(actor, matchId) {
+      requireActor(actor); const replay = await repository.getReplay({ matchId,userId: actor.userId });
+      if (!replay) throw new MultiplayerMatchError('MATCH_NOT_FOUND', 404, '对局不存在或不可见。');
+      return replay;
+    },
+    async adminOverview(actor) {
+      requireActor(actor);
+      if (actor.profile?.role !== 'admin') throw new MultiplayerMatchError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      return repository.adminOverview();
+    },
+    async adminList(actor, { status = 'all',limit = 50 } = {}) {
+      requireActor(actor);
+      if (actor.profile?.role !== 'admin') throw new MultiplayerMatchError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      if (!['all','pending','active','finishing','completed','aborted'].includes(status)) throw new MultiplayerMatchError('STATUS_INVALID', 400, '无效的对局状态。');
+      return repository.listAdminMatches({ status: status === 'all' ? null : status,limit: Math.min(100,Math.max(1,Number(limit) || 50)) });
+    },
+    async adminAbort(actor, matchId, body) {
+      requireActor(actor);
+      if (actor.profile?.role !== 'admin') throw new MultiplayerMatchError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      const reason = String(body?.reason ?? '').trim();
+      if (!reason || reason.length > 1000) throw new MultiplayerMatchError('REASON_REQUIRED', 400, '终止原因需要填写，且不能超过 1000 个字符。');
+      const result = await repository.abortMatch({ matchId,actorUserId: actor.userId,reason,auditId: ids(),now: clock() });
+      if (result.error === 'not_found') throw new MultiplayerMatchError('MATCH_NOT_FOUND', 404, '对局不存在。');
+      if (result.error === 'terminal') throw new MultiplayerMatchError('MATCH_ALREADY_TERMINAL', 409, '对局已经结束。');
+      await publisher?.publish(matchId, { kind: 'match.changed',event: result.event,causedBy: null });
+      return result;
+    },
+    async adminAudit(actor, { limit = 50 } = {}) {
+      requireActor(actor);
+      if (actor.profile?.role !== 'admin') throw new MultiplayerMatchError('ADMIN_REQUIRED', 403, '需要管理员权限。');
+      return repository.listAdminAudit(Math.min(100,Math.max(1,Number(limit) || 50)));
     },
   });
 }

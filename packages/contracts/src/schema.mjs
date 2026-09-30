@@ -147,6 +147,24 @@ export const schemas = Object.freeze({
     seq: uintString, type: { type: 'string' }, actorUserId: { oneOf: [id, { type: 'null' }] }, commandId: { oneOf: [id, { type: 'null' }] },
     payload: { type: 'object', additionalProperties: true }, stateHash: { type: 'string', pattern: '^[a-f0-9]{64}$' }, createdAt: dateTime,
   }),
+  MultiplayerReplay: object({
+    match: { $ref: '#/components/schemas/MultiplayerMatch' },
+    events: { type: 'array',maxItems: 10000,items: { $ref: '#/components/schemas/MultiplayerMatchEvent' } },
+  }),
+  MultiplayerAdminOverview: object({
+    rooms: { type: 'object',additionalProperties: { type: 'integer',minimum: 0 } },
+    matches: { type: 'object',additionalProperties: { type: 'integer',minimum: 0 } },
+    overdueMatches: { type: 'integer',minimum: 0 },matchesCreated24h: { type: 'integer',minimum: 0 },
+    matchesCompleted24h: { type: 'integer',minimum: 0 },matchesAborted24h: { type: 'integer',minimum: 0 },
+  }),
+  AbortMultiplayerMatchRequest: object({ reason: { type: 'string',minLength: 1,maxLength: 1000 } }),
+  MultiplayerAbortResult: object({
+    match: { $ref: '#/components/schemas/MultiplayerMatch' },event: { $ref: '#/components/schemas/MultiplayerMatchEvent' },
+  }),
+  MultiplayerAdminEvent: object({
+    id,actorUserId: id,actorDisplayName: { type: 'string' },matchId: id,action: stringEnum(['abort']),reason: { type: 'string' },
+    beforeState: { type: 'object',additionalProperties: true },afterState: { type: 'object',additionalProperties: true },createdAt: dateTime,
+  }),
   GitHubDevicePoll: object({
     status: stringEnum(['pending', 'complete']),
     retryAfter: { type: 'integer', minimum: 0, maximum: 120 },
@@ -422,6 +440,11 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/start', operationId: 'startMultiplayerRoom', auth: 'bearer', response: 'MultiplayerMatch', pathRoomId: true, idempotent: true },
   { method: 'get', path: '/v1/multiplayer/matches/{matchId}', operationId: 'getMultiplayerMatch', auth: 'bearer', response: 'MultiplayerMatch', pathMatchId: true },
   { method: 'get', path: '/v1/multiplayer/matches/{matchId}/events', operationId: 'listMultiplayerMatchEvents', auth: 'bearer', response: 'MultiplayerMatchEvent', responseArray: true, pathMatchId: true, queryMatchEvents: true },
+  { method: 'get', path: '/v1/multiplayer/matches/{matchId}/replay', operationId: 'getMultiplayerReplay', auth: 'bearer', response: 'MultiplayerReplay', pathMatchId: true },
+  { method: 'get', path: '/v1/admin/multiplayer/overview', operationId: 'getAdminMultiplayerOverview', auth: 'bearer', response: 'MultiplayerAdminOverview' },
+  { method: 'get', path: '/v1/admin/multiplayer/matches', operationId: 'listAdminMultiplayerMatches', auth: 'bearer', response: 'MultiplayerMatch', responseArray: true, queryAdminMatches: true },
+  { method: 'post', path: '/v1/admin/multiplayer/matches/{matchId}/abort', operationId: 'abortAdminMultiplayerMatch', auth: 'bearer', request: 'AbortMultiplayerMatchRequest', response: 'MultiplayerAbortResult', pathMatchId: true },
+  { method: 'get', path: '/v1/admin/multiplayer/audit', operationId: 'listAdminMultiplayerAudit', auth: 'bearer', response: 'MultiplayerAdminEvent', responseArray: true, queryLimit: true },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
   { method: 'post', path: '/v1/auth/devices/logout-all', operationId: 'logoutAllDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
@@ -506,6 +529,11 @@ export function createOpenApiDocument() {
       { name: 'afterSeq', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 } },
       { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 500, default: 100 } },
     );
+    if (operation.queryAdminMatches) parameters.push(
+      { name: 'status', in: 'query', required: false, schema: stringEnum(['all','pending','active','finishing','completed','aborted']) },
+      { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
+    );
+    if (operation.queryLimit) parameters.push({ name: 'limit', in: 'query', required: false, schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } });
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
       { name: 'scope', in: 'query', required: true, schema: stringEnum(['global','following']) },

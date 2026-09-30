@@ -54,3 +54,25 @@ test('match service refuses unready rooms and unavailable rulesets', async () =>
   const unready = createMultiplayerMatchService({ repository: { getStartContext: async () => context({ players: context().players.map((player, index) => ({ ...player, ready: index === 0 })) }) }, rulesRegistry: { get: () => ({}) } });
   await assert.rejects(unready.startRoom(actor, context().roomId, 'match-start-test-0003'), error => error instanceof MultiplayerMatchError && error.code === 'PLAYERS_NOT_READY');
 });
+
+test('match service protects replay and administrator governance operations', async () => {
+  const { createMultiplayerMatchService, MultiplayerMatchError } = await import('../../apps/api/src/multiplayer-match-service.mjs');
+  const matchId = '00000000-0000-4000-8000-000000000120';
+  const published = [];
+  const repository = {
+    getReplay: async ({ userId }) => userId === 'player' ? { match: { id: matchId },events: [] } : null,
+    adminOverview: async () => ({ overdueMatches: 0 }),listAdminMatches: async input => [input],listAdminAudit: async () => [],
+    abortMatch: async input => ({ match: { id: input.matchId,status: 'aborted' },event: { seq: '2',type: 'match.aborted' } }),
+  };
+  const service = createMultiplayerMatchService({ repository,rulesRegistry: { get: () => null },publisher: { publish: async (...args) => published.push(args) },ids: () => '00000000-0000-4000-8000-000000000121' });
+  assert.equal((await service.getReplay({ userId: 'player' }, matchId)).match.id, matchId);
+  await assert.rejects(service.getReplay({ userId: 'outsider' }, matchId), error => error instanceof MultiplayerMatchError && error.code === 'MATCH_NOT_FOUND');
+  await assert.rejects(service.adminOverview({ userId: 'player',profile: { role: 'user' } }), error => error.code === 'ADMIN_REQUIRED');
+  const admin = { userId: 'admin',profile: { role: 'admin' } };
+  assert.equal((await service.adminOverview(admin)).overdueMatches, 0);
+  assert.equal((await service.adminList(admin, { status: 'active',limit: 500 }))[0].limit, 100);
+  const aborted = await service.adminAbort(admin, matchId, { reason: 'stuck match' });
+  assert.equal(aborted.match.status, 'aborted');
+  assert.equal(published[0][0], matchId);
+  assert.equal(published[0][1].event.type, 'match.aborted');
+});

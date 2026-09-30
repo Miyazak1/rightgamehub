@@ -194,6 +194,23 @@ export function createApp({ config, database, migrations, authService, workServi
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.listEvents(request.actor, request.params.matchId, request.query));
     });
+    app.get('/v1/multiplayer/matches/:matchId/replay', { preHandler: requireAuth, schema: { params: matchParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.getReplay(request.actor, request.params.matchId));
+    });
+    app.get('/v1/admin/multiplayer/overview', { preHandler: requireAuth }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.adminOverview(request.actor));
+    });
+    app.get('/v1/admin/multiplayer/matches', {
+      preHandler: requireAuth,schema: { querystring: { type: 'object',additionalProperties: false,properties: {
+        status: { type: 'string',enum: ['all','pending','active','finishing','completed','aborted'] },limit: { type: 'integer',minimum: 1,maximum: 100 },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.adminList(request.actor,request.query)); });
+    app.post('/v1/admin/multiplayer/matches/:matchId/abort', {
+      preHandler: requireAuth,schema: { params: matchParams,body: { type: 'object',additionalProperties: false,required: ['reason'],properties: { reason: { type: 'string',minLength: 1,maxLength: 1000 } } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.adminAbort(request.actor,request.params.matchId,request.body)); });
+    app.get('/v1/admin/multiplayer/audit', {
+      preHandler: requireAuth,schema: { querystring: { type: 'object',additionalProperties: false,properties: { limit: { type: 'integer',minimum: 1,maximum: 100 } } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.adminAudit(request.actor,request.query)); });
   }
   if (analyticsService) {
     const analyticsEvent = {

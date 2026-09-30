@@ -149,10 +149,18 @@ test('API client starts and recovers authoritative multiplayer matches', async (
   await client.startMultiplayerRoom(roomId);
   await client.getMultiplayerMatch(matchId);
   await client.listMultiplayerMatchEvents(matchId, 8, 40);
-  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET']);
+  await client.getMultiplayerReplay(matchId);
+  await client.getAdminMultiplayerOverview();
+  await client.listAdminMultiplayerMatches('active', 25);
+  await client.abortAdminMultiplayerMatch(matchId, 'stuck');
+  await client.listAdminMultiplayerAudit(20);
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET','GET','GET','GET','POST','GET']);
   assert.match(requests[0].url, new RegExp(`/v1/multiplayer/rooms/${roomId}/start$`));
   assert.ok(requests[0].init.headers['Idempotency-Key'].length >= 16);
   assert.match(requests[2].url, /afterSeq=8&limit=40$/u);
+  assert.match(requests[3].url, new RegExp(`/v1/multiplayer/matches/${matchId}/replay$`));
+  assert.match(requests[5].url, /status=active&limit=25$/u);
+  assert.equal(requests[6].init.body, JSON.stringify({ reason: 'stuck' }));
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer match-token'));
 });
 

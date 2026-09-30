@@ -23,6 +23,10 @@ async function hydrate(client, row) {
 }
 
 const samePlayers = (actual, expected) => actual.length === expected.length && actual.every((player, index) => player.user_id === expected[index].userId && Number(player.seat) === expected[index].seat);
+const eventView = row => ({
+  seq: String(row.seq),type: row.event_type,actorUserId: row.actor_user_id,commandId: row.command_id,
+  payload: row.payload,stateHash: row.state_hash,createdAt: new Date(row.created_at).toISOString(),
+});
 
 export class PostgresMultiplayerMatchRepository {
   constructor(pool) { this.pool = pool; }
@@ -116,9 +120,95 @@ export class PostgresMultiplayerMatchRepository {
     return (await this.pool.query(
       `SELECT seq,event_type,actor_user_id,command_id,payload,state_hash,created_at FROM multiplayer_match_events
         WHERE match_id=$1 AND seq>$2 ORDER BY seq LIMIT $3`, [matchId,afterSeq,limit],
+    )).rows.map(eventView);
+  }
+
+  async getReplay({ matchId, userId }) {
+    const match = await this.getVisibleMatch({ matchId,userId });
+    if (!match) return null;
+    const events = (await this.pool.query(
+      `SELECT seq,event_type,actor_user_id,command_id,payload,state_hash,created_at
+         FROM multiplayer_match_events WHERE match_id=$1 ORDER BY seq LIMIT 10000`, [matchId],
+    )).rows.map(eventView);
+    return { match,events };
+  }
+
+  async adminOverview() {
+    const [rooms,matches,recent] = await Promise.all([
+      this.pool.query('SELECT status,count(*)::int AS count FROM multiplayer_rooms GROUP BY status'),
+      this.pool.query(`SELECT status,count(*)::int AS count FROM multiplayer_matches GROUP BY status`),
+      this.pool.query(
+        `SELECT
+          count(*) FILTER (WHERE status='active' AND turn_deadline_at<now())::int AS overdue_matches,
+          count(*) FILTER (WHERE created_at>=now()-interval '24 hours')::int AS matches_created_24h,
+          count(*) FILTER (WHERE ended_at>=now()-interval '24 hours' AND status='completed')::int AS matches_completed_24h,
+          count(*) FILTER (WHERE ended_at>=now()-interval '24 hours' AND status='aborted')::int AS matches_aborted_24h
+         FROM multiplayer_matches`,
+      ),
+    ]);
+    return {
+      rooms: Object.fromEntries(rooms.rows.map(row => [row.status,Number(row.count)])),
+      matches: Object.fromEntries(matches.rows.map(row => [row.status,Number(row.count)])),
+      overdueMatches: Number(recent.rows[0].overdue_matches),matchesCreated24h: Number(recent.rows[0].matches_created_24h),
+      matchesCompleted24h: Number(recent.rows[0].matches_completed_24h),matchesAborted24h: Number(recent.rows[0].matches_aborted_24h),
+    };
+  }
+
+  async listAdminMatches({ status, limit }) {
+    const rows = (await this.pool.query(
+      `SELECT mt.* FROM multiplayer_matches mt WHERE ($1::text IS NULL OR mt.status=$1)
+        ORDER BY mt.updated_at DESC,mt.id DESC LIMIT $2`, [status,limit],
+    )).rows;
+    return Promise.all(rows.map(row => hydrate(this.pool, row)));
+  }
+
+  async abortMatch({ matchId, actorUserId, reason, auditId, now }) {
+    return withTransaction(this.pool, async client => {
+      const row = (await client.query('SELECT * FROM multiplayer_matches WHERE id=$1 FOR UPDATE', [matchId])).rows[0];
+      if (!row) return { error: 'not_found' };
+      if (['completed','aborted'].includes(row.status)) return { error: 'terminal',match: await hydrate(client,row) };
+      const snapshot = (await client.query(
+        'SELECT * FROM multiplayer_match_snapshots WHERE match_id=$1 ORDER BY event_seq DESC LIMIT 1', [matchId],
+      )).rows[0];
+      if (!snapshot) throw new MultiplayerMatchError('MATCH_STATE_MISSING', 500, '对局缺少可恢复状态。', true);
+      const seq = String(row.next_event_seq); const revision = String(BigInt(row.revision) + 1n); const nextEventSeq = String(BigInt(seq) + 1n);
+      const result = { abortedBy: actorUserId,reason };
+      await client.query(
+        `INSERT INTO multiplayer_match_events(match_id,seq,event_type,actor_user_id,command_id,payload,state_hash,created_at)
+         VALUES ($1,$2,'match.aborted',$3,NULL,$4,$5,$6)`, [matchId,seq,actorUserId,{ reason },snapshot.state_hash,now],
+      );
+      await client.query(
+        `INSERT INTO multiplayer_match_snapshots(match_id,event_seq,ruleset_version,state,public_state,state_hash,created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`, [matchId,seq,row.ruleset_version,snapshot.state,snapshot.public_state,snapshot.state_hash,now],
+      );
+      const updated = (await client.query(
+        `UPDATE multiplayer_matches SET status='aborted',revision=$2,next_event_seq=$3,turn_user_id=NULL,turn_deadline_at=NULL,
+          ended_at=$4,termination_reason='admin_abort',result=$5,updated_at=$4 WHERE id=$1 RETURNING *`,
+        [matchId,revision,nextEventSeq,now,result],
+      )).rows[0];
+      await client.query("UPDATE multiplayer_match_players SET result='none' WHERE match_id=$1 AND result IS NULL", [matchId]);
+      if (row.room_id) await client.query(
+        "UPDATE multiplayer_rooms SET status='closed',closed_at=$2,revision=revision+1,updated_at=$2 WHERE id=$1 AND status<>'closed'", [row.room_id,now],
+      );
+      await client.query(
+        `INSERT INTO multiplayer_admin_events(id,actor_user_id,match_id,action,reason,before_state,after_state,created_at)
+         VALUES ($1,$2,$3,'abort',$4,$5,$6,$7)`,
+        [auditId,actorUserId,matchId,reason,{ status: row.status,revision: String(row.revision) },{ status: 'aborted',revision },now],
+      );
+      return {
+        match: await hydrate(client,updated),
+        event: { seq,type: 'match.aborted',actorUserId,commandId: null,payload: { reason },stateHash: snapshot.state_hash,createdAt: now.toISOString() },
+      };
+    });
+  }
+
+  async listAdminAudit(limit) {
+    return (await this.pool.query(
+      `SELECT e.*,u.display_name AS actor_display_name FROM multiplayer_admin_events e JOIN users u ON u.id=e.actor_user_id
+        ORDER BY e.created_at DESC,e.id DESC LIMIT $1`, [limit],
     )).rows.map(row => ({
-      seq: String(row.seq), type: row.event_type, actorUserId: row.actor_user_id, commandId: row.command_id,
-      payload: row.payload, stateHash: row.state_hash, createdAt: new Date(row.created_at).toISOString(),
+      id: row.id,actorUserId: row.actor_user_id,actorDisplayName: row.actor_display_name,matchId: row.match_id,
+      action: row.action,reason: row.reason,beforeState: row.before_state,afterState: row.after_state,createdAt: new Date(row.created_at).toISOString(),
     }));
   }
 }

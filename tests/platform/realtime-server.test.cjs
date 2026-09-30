@@ -50,9 +50,12 @@ test('realtime server exposes liveness and Redis-backed readiness', async t => {
   const address = await realtime.listen({ host: '127.0.0.1', port: 0 });
   const health = await fetch(`http://127.0.0.1:${address.port}/health`);
   const ready = await fetch(`http://127.0.0.1:${address.port}/ready`);
+  const metrics = await fetch(`http://127.0.0.1:${address.port}/metrics`);
   assert.equal(health.status, 200);
   assert.equal(ready.status, 200);
   assert.equal((await ready.json()).data.redis, true);
+  assert.equal(metrics.status, 200);
+  assert.match(await metrics.text(), /gamehub_realtime_connections 0/u);
 });
 
 test('realtime server serializes room commands through the room session manager', async t => {

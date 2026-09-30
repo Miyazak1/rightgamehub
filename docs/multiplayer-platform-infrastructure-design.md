@@ -720,6 +720,8 @@ interface MultiplayerRulesAdapter<State, Command, Event, Result> {
 - `packages/rules-sdk` 已提供版本化适配器注册、确定性序列化与状态哈希接口；生产注册表当前保持为空，未安装真实规则适配器时启动会安全拒绝，不会创建不可恢复对局。
 - 通用权威命令链路已完成：严格 WebSocket 命令协议、按连接串行、PostgreSQL 行锁、revision 冲突、commandId 幂等、事件/快照原子提交和 Redis 跨实例通知均已落地。
 - 通用恢复与终态已完成：客户端按事件序号增量恢复、服务端按用户生成私有视图；认输由适配器结算，超时 worker 通过数据库截止时间安全抢占并幂等结束对局。
+- 通用回放与治理已完成：参与者可读取经过隐私裁剪的事件回放；管理员可查看多人概览与对局列表、强制中止异常对局，所有强制操作写入数据库不可更新/删除的追加式审计表。
+- 实时服务基础指标已完成：`/metrics` 暴露当前连接、累计连接、消息和命令失败计数，可由现有监控系统抓取；API 与 realtime 生产镜像均已完成构建验证。
 - 阶段 1 尚余产品 UI 与双真实账号浏览器验收；阶段 2 尚余具体游戏适配器和使用真实适配器完成的端到端完整对局/回放验收。具体棋规不属于平台基础设施，将随游戏开发接入。
 
 ## 21. 建议的仓库改动清单
@@ -728,16 +730,17 @@ interface MultiplayerRulesAdapter<State, Command, Event, Result> {
 
 1. `apps/api/migrations/0030_multiplayer_core.sql`：模式、房间和成员。
 2. `apps/api/migrations/0031_multiplayer_matches.sql`：对局、事件和快照。
-3. `apps/api/migrations/0032_multiplayer_ratings.sql`：赛季、积分和评分流水。
-4. `apps/api/src/`：REST 控制面、ticket、查询与管理员接口。
-5. `apps/realtime/`：WebSocket 网关、房间协调器、命令处理、恢复和健康检查。
-6. `packages/multiplayer-protocol/`：消息 schema、错误码和生成类型。
-7. `packages/game-sdk/`：浏览器及 Windows 游戏接入 SDK。
-8. `packages/rules-sdk/`：服务端规则适配器接口和测试工具。
-9. `packages/platform-client/`：大厅、房间、匹配和对局入口 UI。
-10. GameHub Agent/Harness：launch ticket、进程启动、session 吊销与无敏感信息日志。
-11. `deploy/compose.prod.yml` 与 Caddy 配置：Redis、realtime、WebSocket 路由和健康检查。
-12. OpenAPI/契约测试、CI、负载测试和运维手册。
+3. `apps/api/migrations/0032_multiplayer_operations.sql`：管理员操作审计与治理约束。
+4. 后续按已确认的排位产品规则新增赛季、积分和评分流水迁移；不得与基础对局事务耦合。
+5. `apps/api/src/`：REST 控制面、ticket、查询与管理员接口。
+6. `apps/realtime/`：WebSocket 网关、房间协调器、命令处理、恢复和健康检查。
+7. `packages/multiplayer-protocol/`：消息 schema、错误码和生成类型。
+8. `packages/game-sdk/`：浏览器及 Windows 游戏接入 SDK。
+9. `packages/rules-sdk/`：服务端规则适配器接口和测试工具。
+10. `packages/platform-client/`：大厅、房间、匹配和对局入口 UI。
+11. GameHub Agent/Harness：launch ticket、进程启动、session 吊销与无敏感信息日志。
+12. `deploy/compose.prod.yml` 与 Caddy 配置：Redis、realtime、WebSocket 路由和健康检查。
+13. OpenAPI/契约测试、CI、负载测试和运维手册。
 
 具体文件名若与仓库当前约定不同，以现有 workspace 和契约生成规则为准；不得复制第二套客户端类型或绕过现有 API client。
 

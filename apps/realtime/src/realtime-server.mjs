@@ -12,8 +12,23 @@ const rejectUpgrade = (socket, statusCode, message) => {
 export function createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
   if (!ticketStore?.consume || !ticketStore?.ping) throw new TypeError('A realtime ticket store is required.');
   const trustedOrigins = new Set(allowedOrigins);
+  const metrics = { connectionsTotal: 0,messagesTotal: 0,commandFailuresTotal: 0 };
   const server = createServer(async (request, response) => {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname;
+    if (path === '/metrics') {
+      response.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+      return response.end([
+        '# TYPE gamehub_realtime_connections gauge',
+        `gamehub_realtime_connections ${sockets.size}`,
+        '# TYPE gamehub_realtime_connections_total counter',
+        `gamehub_realtime_connections_total ${metrics.connectionsTotal}`,
+        '# TYPE gamehub_realtime_messages_total counter',
+        `gamehub_realtime_messages_total ${metrics.messagesTotal}`,
+        '# TYPE gamehub_realtime_command_failures_total counter',
+        `gamehub_realtime_command_failures_total ${metrics.commandFailuresTotal}`,
+        '',
+      ].join('\n'));
+    }
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
     if (path === '/health') return response.end(json({ data: { status: 'ok' } }));
     if (path === '/ready') {
@@ -63,6 +78,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, matchSes
     socket.matchIds = new Set();
     socket.commandQueue = Promise.resolve();
     sockets.add(socket);
+    metrics.connectionsTotal += 1;
     socket.send(json(createServerMessage('session.ready', {
       connectionId,
       userId: session.userId,
@@ -75,6 +91,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, matchSes
       roomSessionManager?.refresh(socket).catch(error => logger?.warn?.({ error, connectionId }, 'Realtime presence refresh failed'));
     });
     socket.on('message', raw => {
+      metrics.messagesTotal += 1;
       socket.commandQueue = socket.commandQueue.then(async () => {
         let message;
         try { message = parseClientMessage(raw); }
@@ -92,6 +109,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, matchSes
         if (matchSessionManager?.supports(message)) return matchSessionManager.handle(socket, message);
         socket.send(json(createServerMessage('command.rejected', { code: 'NOT_IMPLEMENTED', message: 'This command is not available in the current milestone.' }, { causedBy: message.id })));
       }).catch(error => {
+        metrics.commandFailuresTotal += 1;
         logger?.error?.({ error, connectionId }, 'Realtime command failed');
         if (socket.readyState === WebSocket.OPEN) socket.send(json(createServerMessage('error', { code: 'COMMAND_FAILED', message: '命令处理失败，请重试。' })));
       });

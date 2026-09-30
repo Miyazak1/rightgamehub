@@ -214,18 +214,32 @@ test('multiplayer match routes authenticate starts and expose participant recove
       startRoom: async (...args) => { calls.push(['start', ...args]); return { id: matchId, status: 'active' }; },
       getMatch: async (...args) => { calls.push(['get', ...args]); return { id: matchId, status: 'active' }; },
       listEvents: async (...args) => { calls.push(['events', ...args]); return [{ seq: '1', type: 'match.started' }]; },
+      getReplay: async (...args) => { calls.push(['replay', ...args]); return { match: { id: matchId },events: [] }; },
+      adminOverview: async (...args) => { calls.push(['overview', ...args]); return { overdueMatches: 0 }; },
+      adminList: async (...args) => { calls.push(['adminList', ...args]); return []; },
+      adminAbort: async (...args) => { calls.push(['abort', ...args]); return { match: { id: matchId,status: 'aborted' },event: {} }; },
+      adminAudit: async (...args) => { calls.push(['audit', ...args]); return []; },
     },
   });
   t.after(() => app.close());
   const started = await app.inject({ method: 'POST', url: `/v1/multiplayer/rooms/${roomId}/start`, headers: { authorization: 'Bearer valid', 'idempotency-key': 'match-start-route-0001' } });
   const match = await app.inject({ url: `/v1/multiplayer/matches/${matchId}`, headers: { authorization: 'Bearer valid' } });
   const events = await app.inject({ url: `/v1/multiplayer/matches/${matchId}/events?afterSeq=7&limit=25`, headers: { authorization: 'Bearer valid' } });
-  assert.deepEqual([started.statusCode, match.statusCode, events.statusCode], [200, 200, 200]);
-  assert.ok([started, match, events].every(response => response.headers['cache-control'] === 'no-store'));
+  const replay = await app.inject({ url: `/v1/multiplayer/matches/${matchId}/replay`, headers: { authorization: 'Bearer valid' } });
+  const overview = await app.inject({ url: '/v1/admin/multiplayer/overview',headers: { authorization: 'Bearer valid' } });
+  const listed = await app.inject({ url: '/v1/admin/multiplayer/matches?status=active&limit=25',headers: { authorization: 'Bearer valid' } });
+  const aborted = await app.inject({ method: 'POST',url: `/v1/admin/multiplayer/matches/${matchId}/abort`,headers: { authorization: 'Bearer valid' },payload: { reason: 'stuck' } });
+  const audit = await app.inject({ url: '/v1/admin/multiplayer/audit?limit=20',headers: { authorization: 'Bearer valid' } });
+  assert.deepEqual([started,match,events,replay,overview,listed,aborted,audit].map(response => response.statusCode), [200,200,200,200,200,200,200,200]);
+  assert.ok([started,match,events,replay,overview,listed,aborted,audit].every(response => response.headers['cache-control'] === 'no-store'));
   assert.equal(calls[0][1], actor);
   assert.equal(calls[0][2], roomId);
   assert.equal(calls[0][3], 'match-start-route-0001');
   assert.deepEqual({ ...calls[2][3] }, { afterSeq: 7, limit: 25 });
+  assert.deepEqual({ ...calls.find(call => call[0] === 'adminList')[2] }, { status: 'active',limit: 25 });
+    const abortCall = calls.find(call => call[0] === 'abort');
+    assert.equal(abortCall[2], matchId);
+    assert.deepEqual(abortCall[3], { reason: 'stuck' });
 });
 
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {
