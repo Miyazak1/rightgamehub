@@ -34,6 +34,9 @@ importers:
       '@gamehub/multiplayer-protocol':
         specifier: workspace:*
         version: link:../../packages/multiplayer-protocol
+      '@gamehub/rules-sdk':
+        specifier: workspace:*
+        version: link:../../packages/rules-sdk
       pg:
         specifier: ^8.16.3
         version: 8.23.0

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@gamehub/multiplayer-protocol": "workspace:*",
+    "@gamehub/rules-sdk": "workspace:*",
     "pg": "^8.16.3",
     "redis": "^5.8.2",
     "ws": "^8.18.3"

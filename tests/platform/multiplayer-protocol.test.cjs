@@ -41,3 +41,17 @@ test('room commands require bounded semantic payloads', async () => {
   assert.deepEqual(parseClientMessage(JSON.stringify(resume)).payload.roomIds, [roomId]);
   assert.throws(() => parseClientMessage(JSON.stringify({ ...resume, payload: { roomIds: ['bad'] } })), error => error.code === 'MESSAGE_PAYLOAD_INVALID');
 });
+
+test('match commands require a match, revision and bounded command envelope', async () => {
+  const { parseClientMessage } = await import(protocolUrl);
+  const matchId = crypto.randomUUID();
+  const command = { v: 1, id: crypto.randomUUID(), type: 'match.command', matchId, expectedRevision: 3, payload: { command: { type: 'move', from: 'a1', to: 'a2' } } };
+  assert.equal(parseClientMessage(JSON.stringify(command)).expectedRevision, 3);
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...command, matchId: undefined })), error => error.code === 'MESSAGE_REFERENCE_REQUIRED');
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...command, expectedRevision: undefined })), error => error.code === 'MESSAGE_PAYLOAD_INVALID');
+  assert.throws(() => parseClientMessage(JSON.stringify({ ...command, payload: { command: {}, secret: true } })), error => error.code === 'MESSAGE_PAYLOAD_INVALID');
+  const resign = { v: 1, id: crypto.randomUUID(), type: 'match.resign', matchId, expectedRevision: 4, payload: {} };
+  assert.equal(parseClientMessage(JSON.stringify(resign)).type, 'match.resign');
+  const sync = { v: 1, id: crypto.randomUUID(), type: 'match.sync.request', matchId, payload: { afterSeq: 9 } };
+  assert.equal(parseClientMessage(JSON.stringify(sync)).payload.afterSeq, 9);
+});

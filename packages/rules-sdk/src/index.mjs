@@ -11,7 +11,7 @@ export const canonicalJson = value => {
 export const hashRulesState = state => crypto.createHash('sha256').update(canonicalJson(state)).digest('hex');
 
 const adapterKey = ({ workId,modeKey,rulesetVersion }) => `${workId}:${modeKey}:${rulesetVersion}`;
-const requiredFunctions = ['createInitialState','getTurn','getPlayerView','getSpectatorView','serializeState','deserializeState','hashState','validateCommand','applyCommand','handleTimeout'];
+const requiredFunctions = ['createInitialState','getTurn','getPlayerView','getSpectatorView','serializeState','deserializeState','hashState','validateCommand','applyCommand','handleResign','handleTimeout'];
 
 export function validateRulesAdapter(adapter) {
   if (!adapter || typeof adapter !== 'object') throw new TypeError('Rules adapter must be an object.');

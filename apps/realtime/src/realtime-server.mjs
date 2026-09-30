@@ -9,7 +9,7 @@ const rejectUpgrade = (socket, statusCode, message) => {
   if (!socket.destroyed) socket.end(`HTTP/1.1 ${statusCode} ${message}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
 };
 
-export function createRealtimeServer({ ticketStore, roomSessionManager, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
+export function createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
   if (!ticketStore?.consume || !ticketStore?.ping) throw new TypeError('A realtime ticket store is required.');
   const trustedOrigins = new Set(allowedOrigins);
   const server = createServer(async (request, response) => {
@@ -20,7 +20,8 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, allowedO
       try {
         const redis = await ticketStore.ping();
         const rooms = !roomSessionManager || await roomSessionManager.ping();
-        if (redis && rooms) return response.end(json({ data: { status: 'ready', redis: true, rooms } }));
+        const matches = !matchSessionManager || await matchSessionManager.ping();
+        if (redis && rooms && matches) return response.end(json({ data: { status: 'ready', redis: true, rooms, matches } }));
       } catch (error) { logger?.error?.({ error }, 'Realtime readiness failed'); }
       response.statusCode = 503;
       return response.end(json({ data: { status: 'not-ready', redis: false, rooms: false } }));
@@ -59,6 +60,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, allowedO
     socket.isAlive = true;
     socket.session = session;
     socket.roomIds = new Set();
+    socket.matchIds = new Set();
     socket.commandQueue = Promise.resolve();
     sockets.add(socket);
     socket.send(json(createServerMessage('session.ready', {
@@ -87,6 +89,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, allowedO
           return;
         }
         if (roomSessionManager?.supports(message)) return roomSessionManager.handle(socket, message);
+        if (matchSessionManager?.supports(message)) return matchSessionManager.handle(socket, message);
         socket.send(json(createServerMessage('command.rejected', { code: 'NOT_IMPLEMENTED', message: 'This command is not available in the current milestone.' }, { causedBy: message.id })));
       }).catch(error => {
         logger?.error?.({ error, connectionId }, 'Realtime command failed');
@@ -95,7 +98,10 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, allowedO
     });
     socket.on('close', () => {
       sockets.delete(socket);
-      socket.commandQueue = socket.commandQueue.then(() => roomSessionManager?.disconnect(socket)).catch(error => logger?.error?.({ error, connectionId }, 'Realtime disconnect cleanup failed'));
+      socket.commandQueue = socket.commandQueue.then(async () => {
+        await roomSessionManager?.disconnect(socket);
+        await matchSessionManager?.disconnect(socket);
+      }).catch(error => logger?.error?.({ error, connectionId }, 'Realtime disconnect cleanup failed'));
     });
     socket.on('error', error => logger?.warn?.({ error, connectionId }, 'Realtime socket error'));
   });
@@ -114,11 +120,15 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, allowedO
     websocketServer,
     async listen(options) {
       await roomSessionManager?.start();
+      await matchSessionManager?.start();
+      matchTimeoutWorker?.start();
       return new Promise((resolve, reject) => { server.once('error', reject); server.listen(options, () => { server.off('error', reject); resolve(server.address()); }); });
     },
     async close() {
       clearInterval(heartbeat);
       roomSessionManager?.close();
+      matchSessionManager?.close();
+      matchTimeoutWorker?.stop();
       for (const socket of sockets) socket.close(1001, 'server shutdown');
       await new Promise(resolve => websocketServer.close(() => resolve()));
       if (server.listening) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

@@ -20,6 +20,8 @@ export function createMultiplayerSession({
   const listeners = new Map();
   const rooms = new Map();
   const desiredRooms = new Set();
+  const matches = new Map();
+  const desiredMatches = new Map();
   let socket;
   let generation = 0;
   let reconnectAttempt = 0;
@@ -56,6 +58,7 @@ export function createMultiplayerSession({
         try { send('heartbeat.ping'); } catch (error) { logger?.warn?.({ error }, 'GameHub realtime heartbeat failed'); }
       }, interval);
       if (desiredRooms.size) send('session.resume', { payload: { roomIds: [...desiredRooms] } });
+      for (const [matchId,afterSeq] of desiredMatches) send('match.sync.request', { matchId,payload: { afterSeq } });
       pendingConnect?.resolve(message.payload);
       pendingConnect = undefined;
       return;
@@ -64,6 +67,18 @@ export function createMultiplayerSession({
       rooms.set(message.payload.room.id, message.payload.room);
       emit('room', message.payload.room);
     }
+    if (message.type === 'match.event' && message.matchId && message.payload?.event) {
+      const eventSeq = Number(message.payload.event.seq);
+      if (Number.isSafeInteger(eventSeq)) desiredMatches.set(message.matchId, Math.max(desiredMatches.get(message.matchId) ?? 0, eventSeq));
+      emit('matchEvent', { matchId: message.matchId,event: message.payload.event });
+    }
+    if (message.type === 'match.snapshot' && message.payload?.match?.id) {
+      matches.set(message.payload.match.id, message.payload);
+      const lastSeq = Number(message.payload.match.nextEventSeq) - 1;
+      if (Number.isSafeInteger(lastSeq) && lastSeq >= 0) desiredMatches.set(message.payload.match.id, Math.max(desiredMatches.get(message.payload.match.id) ?? 0, lastSeq));
+      emit('match', message.payload);
+    }
+    if ((message.type === 'match.completed' || message.type === 'match.aborted') && message.matchId) emit('matchTerminal', message);
     if (message.type === 'server.draining') {
       socket?.close(1012, 'server draining');
       return;
@@ -118,9 +133,26 @@ export function createMultiplayerSession({
       const expectedRevision = Number(revision);
       return send('room.ready', { roomId, ...(Number.isSafeInteger(expectedRevision) && expectedRevision >= 0 ? { expectedRevision } : {}), payload: { ready } });
     },
+    subscribeMatch(matchId, afterSeq = desiredMatches.get(matchId) ?? 0) {
+      desiredMatches.set(matchId, afterSeq);
+      return send('match.sync.request', { matchId,payload: { afterSeq } });
+    },
+    unsubscribeMatch(matchId) { desiredMatches.delete(matchId); matches.delete(matchId); },
+    sendMatchCommand(matchId, command) {
+      const revision = Number(matches.get(matchId)?.match?.revision);
+      if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Match must be synchronized before sending a command.');
+      return send('match.command', { matchId,expectedRevision: revision,payload: { command } });
+    },
+    resignMatch(matchId) {
+      const revision = Number(matches.get(matchId)?.match?.revision);
+      if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Match must be synchronized before resigning.');
+      return send('match.resign', { matchId,expectedRevision: revision,payload: {} });
+    },
     getStatus() { return status; },
     getRoom(roomId) { return rooms.get(roomId) ?? null; },
+    getMatch(matchId) { return matches.get(matchId) ?? null; },
     getSubscribedRoomIds() { return [...desiredRooms]; },
+    getSubscribedMatchIds() { return [...desiredMatches.keys()]; },
     on(type, listener) {
       const set = listeners.get(type) ?? new Set();
       set.add(listener); listeners.set(type, set);

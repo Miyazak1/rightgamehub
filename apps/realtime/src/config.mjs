@@ -28,5 +28,7 @@ export function loadRealtimeConfig(env = process.env) {
     trustEditorWebviews: env.TRUST_EDITOR_WEBVIEWS === 'true',
     heartbeatIntervalMs: integer(env.REALTIME_HEARTBEAT_INTERVAL_MS, 20_000, 'REALTIME_HEARTBEAT_INTERVAL_MS', 5_000, 60_000),
     reconnectGraceMs: integer(env.REALTIME_RECONNECT_GRACE_MS, 120_000, 'REALTIME_RECONNECT_GRACE_MS', 15_000, 600_000),
+    matchTimeoutSweepMs: integer(env.REALTIME_MATCH_TIMEOUT_SWEEP_MS, 1_000, 'REALTIME_MATCH_TIMEOUT_SWEEP_MS', 250, 10_000),
+    matchTimeoutBatchSize: integer(env.REALTIME_MATCH_TIMEOUT_BATCH_SIZE, 50, 'REALTIME_MATCH_TIMEOUT_BATCH_SIZE', 1, 500),
   });
 }

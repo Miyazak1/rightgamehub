@@ -9,7 +9,7 @@ const source = relative => pathToFileURL(path.join(root, relative));
 const databaseUrl = process.env.GAMEHUB_TEST_DATABASE_URL;
 
 test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { skip: !databaseUrl }, async t => {
-  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }, { PostgresRealtimeRoomRepository }, { PostgresMultiplayerMatchRepository }, { createMultiplayerMatchService }, { createRulesRegistry, hashRulesState }] = await Promise.all([
+  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }, { PostgresRealtimeRoomRepository }, { PostgresMultiplayerMatchRepository }, { createMultiplayerMatchService }, { createRulesRegistry, hashRulesState }, { PostgresRealtimeMatchRepository }] = await Promise.all([
     import(source('apps/api/src/database.mjs')),
     import(source('apps/api/src/multiplayer-room-repository.mjs')),
     import(source('apps/api/src/multiplayer-room-service.mjs')),
@@ -17,6 +17,7 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
     import(source('apps/api/src/multiplayer-match-repository.mjs')),
     import(source('apps/api/src/multiplayer-match-service.mjs')),
     import(source('packages/rules-sdk/src/index.mjs')),
+    import(source('apps/realtime/src/match-repository.mjs')),
   ]);
   const database = createDatabase({ databaseUrl, databaseSsl: false });
   const ownerId = crypto.randomUUID(); const guestId = crypto.randomUUID(); const thirdId = crypto.randomUUID(); const workId = crypto.randomUUID();
@@ -82,7 +83,7 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
     getPlayerView: state => state,
     getSpectatorView: state => ({ turnUserId: state.turnUserId, moveCount: state.moves.length }),
     serializeState: state => structuredClone(state), deserializeState: state => structuredClone(state), hashState: hashRulesState,
-    validateCommand: () => ({ valid: true }), applyCommand: state => state, handleTimeout: state => state,
+    validateCommand: () => ({ valid: true }), applyCommand: state => state, handleResign: state => state, handleTimeout: state => state,
   }]);
   const matchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry });
   const startKey = `match-${crypto.randomUUID()}`;
@@ -97,4 +98,42 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   assert.equal((await matchService.getMatch(guest, match.id)).id, match.id);
   assert.equal((await matchService.listEvents(guest, match.id))[0].type, 'match.started');
   await assert.rejects(matchService.getMatch(third, match.id), error => error.code === 'MATCH_NOT_FOUND');
+
+  const realtimeMatchRepository = new PostgresRealtimeMatchRepository(database.pool);
+  const commandId = crypto.randomUUID();
+  const commandTime = new Date();
+  const command = await realtimeMatchRepository.applyAction({
+    matchId: match.id,userId: ownerId,commandId,expectedRevision: 1,now: commandTime,
+    transition: async current => {
+      const state = { ...current.state,moves: [{ by: ownerId }] };
+      return { state,publicState: { turnUserId: guestId,moveCount: 1 },stateHash: hashRulesState(state),eventType: 'match.command.applied',eventPayload: { moveNumber: 1 },completed: false,turnUserId: guestId,turnDeadlineAt: new Date(commandTime.getTime() + 60_000) };
+    },
+  });
+  assert.equal(command.context.revision, '2');
+  assert.equal(command.event.seq, '2');
+  const replayedCommand = await realtimeMatchRepository.applyAction({
+    matchId: match.id,userId: ownerId,commandId,expectedRevision: 1,now: commandTime,
+    transition: async () => { throw new Error('duplicate command must not run again'); },
+  });
+  assert.equal(replayedCommand.replay, true);
+  assert.equal(replayedCommand.event.seq, '2');
+  const stale = await realtimeMatchRepository.applyAction({
+    matchId: match.id,userId: guestId,commandId: crypto.randomUUID(),expectedRevision: 1,now: commandTime,transition: async () => ({}),
+  });
+  assert.equal(stale.error, 'revision_conflict');
+  assert.equal((await realtimeMatchRepository.getSyncState({ matchId: match.id,userId: guestId,afterSeq: 1 })).events.length, 1);
+  const timeoutTime = new Date(commandTime.getTime() + 120_000);
+  assert.deepEqual(await realtimeMatchRepository.listDueMatchIds({ now: timeoutTime }), [match.id]);
+  const timedOut = await realtimeMatchRepository.applyTimeout({
+    matchId: match.id,now: timeoutTime,
+    transition: async current => ({
+      state: current.state,publicState: current.publicState,stateHash: current.stateHash,eventType: 'match.timed_out',eventPayload: { userId: guestId },
+      completed: true,terminationReason: 'timeout',result: { timedOutUserId: guestId },playerResults: [{ userId: ownerId,result: 'win' },{ userId: guestId,result: 'loss' }],
+    }),
+  });
+  assert.equal(timedOut.context.status, 'completed');
+  assert.equal(timedOut.event.seq, '3');
+  assert.equal((await database.pool.query('SELECT status FROM multiplayer_rooms WHERE id=$1', [matchRoom.id])).rows[0].status, 'closed');
+  assert.equal((await database.pool.query('SELECT termination_reason FROM multiplayer_matches WHERE id=$1', [match.id])).rows[0].termination_reason, 'timeout');
+  assert.equal((await realtimeMatchRepository.applyTimeout({ matchId: match.id,now: timeoutTime,transition: async () => { throw new Error('must not run twice'); } })).stale, true);
 });

@@ -40,6 +40,14 @@ test('multiplayer client obtains fresh tickets, caches room snapshots and resume
   assert.equal(session.getRoom(roomId).revision, '2');
   session.setReady(roomId, true);
   assert.equal(first.sent.at(-1).expectedRevision, 2);
+  const matchId = crypto.randomUUID();
+  session.subscribeMatch(matchId);
+  assert.equal(first.sent.at(-1).type, 'match.sync.request');
+  first.message({ v: 1,id: crypto.randomUUID(),type: 'match.event',sentAt: new Date().toISOString(),matchId,revision: 3,payload: { event: { seq: '3',type: 'match.command.applied' } } });
+  first.message({ v: 1,id: crypto.randomUUID(),type: 'match.snapshot',sentAt: new Date().toISOString(),matchId,revision: 3,payload: { match: { id: matchId,revision: '3',nextEventSeq: '4' },state: {},publicState: {},stateHash: 'a'.repeat(64) } });
+  session.sendMatchCommand(matchId, { type: 'move' });
+  assert.equal(first.sent.at(-1).type, 'match.command');
+  assert.equal(first.sent.at(-1).expectedRevision, 3);
 
   first.close();
   await new Promise(resolve => setTimeout(resolve, 15));
@@ -50,4 +58,7 @@ test('multiplayer client obtains fresh tickets, caches room snapshots and resume
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(second.sent[0].type, 'session.resume');
   assert.deepEqual(second.sent[0].payload.roomIds, [roomId]);
+  assert.equal(second.sent[1].type, 'match.sync.request');
+  assert.equal(second.sent[1].matchId, matchId);
+  assert.equal(second.sent[1].payload.afterSeq, 3);
 });

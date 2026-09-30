@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const adapter = overrides => ({
   workId: 'work-1', modeKey: 'duel', rulesetVersion: '1.0.0',
   createInitialState() {}, getTurn() {}, getPlayerView() {}, getSpectatorView() {},
-  serializeState() {}, deserializeState() {}, hashState() {}, validateCommand() {}, applyCommand() {}, handleTimeout() {},
+  serializeState() {}, deserializeState() {}, hashState() {}, validateCommand() {}, applyCommand() {}, handleResign() {}, handleTimeout() {},
   ...overrides,
 });
 

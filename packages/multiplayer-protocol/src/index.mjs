@@ -82,5 +82,21 @@ export function parseClientMessage(input, { maxBytes = REALTIME_MAX_MESSAGE_BYTE
       throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'session.resume payload must contain up to eight roomIds.');
     }
   }
+  if (message.type.startsWith('match.') && !message.matchId) throw new RealtimeProtocolError('MESSAGE_REFERENCE_REQUIRED', 'matchId is required for match commands.');
+  if (message.type === 'match.command') {
+    const keys = Object.keys(message.payload ?? {});
+    if (message.expectedRevision === undefined || keys.length !== 1 || keys[0] !== 'command' || !message.payload.command || typeof message.payload.command !== 'object' || Array.isArray(message.payload.command)) {
+      throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'match.command requires expectedRevision and one command object.');
+    }
+  }
+  if (message.type === 'match.resign') {
+    if (message.expectedRevision === undefined || Object.keys(message.payload ?? {}).length !== 0) throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'match.resign requires expectedRevision and an empty payload.');
+  }
+  if (message.type === 'match.sync.request') {
+    const keys = Object.keys(message.payload ?? {});
+    if (keys.some(key => key !== 'afterSeq') || (message.payload?.afterSeq !== undefined && (!Number.isSafeInteger(message.payload.afterSeq) || message.payload.afterSeq < 0))) {
+      throw new RealtimeProtocolError('MESSAGE_PAYLOAD_INVALID', 'match.sync.request accepts only a non-negative afterSeq.');
+    }
+  }
   return message;
 }

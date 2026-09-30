@@ -17,7 +17,7 @@ local count = redis.call('ZCARD', KEYS[1])
 if count == 0 then redis.call('DEL', KEYS[1]) end
 return count`;
 
-export function createRedisRoomCoordinator({ url, namespace = 'gamehub:realtime', logger = console } = {}) {
+export function createRedisRoomCoordinator({ url, namespace = 'gamehub:realtime', channelKind = 'room', logger = console } = {}) {
   if (!url) throw new TypeError('Redis URL is required.');
   const command = createClient({ url });
   const subscriber = command.duplicate();
@@ -38,7 +38,7 @@ export function createRedisRoomCoordinator({ url, namespace = 'gamehub:realtime'
       await subscriberConnection;
     }
     if (!subscribed) {
-      await subscriber.pSubscribe(`${namespace}:room:*`, (message, channel) => {
+      await subscriber.pSubscribe(`${namespace}:${channelKind}:*`, (message, channel) => {
         let event;
         try { event = JSON.parse(message); } catch { return; }
         const roomId = channel.slice(channel.lastIndexOf(':') + 1);
@@ -48,10 +48,10 @@ export function createRedisRoomCoordinator({ url, namespace = 'gamehub:realtime'
     }
     return subscriber;
   };
-  const presenceKey = (roomId,userId) => `${namespace}:presence:${roomId}:${userId}`;
+  const presenceKey = (roomId,userId) => `${namespace}:presence:${channelKind}:${roomId}:${userId}`;
   return Object.freeze({
     async start(listener) { listeners.add(listener); await connectSubscriber(); return () => listeners.delete(listener); },
-    async publish(roomId, event) { return (await connectCommand()).publish(`${namespace}:room:${roomId}`, JSON.stringify(event)); },
+    async publish(roomId, event) { return (await connectCommand()).publish(`${namespace}:${channelKind}:${roomId}`, JSON.stringify(event)); },
     async registerPresence({ roomId, userId, connectionId, ttlMs, now = Date.now() }) {
       return Number(await (await connectCommand()).eval(registerScript, { keys: [presenceKey(roomId,userId)], arguments: [String(now),String(now + ttlMs),connectionId,String(ttlMs * 2)] }));
     },
