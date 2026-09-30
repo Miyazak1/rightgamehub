@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const adapter = require('../../rules/mizhen/duel-1.0.0.cjs');
 
@@ -104,4 +105,12 @@ test('迷阵 production bundle loads through a signed trusted manifest', async t
   assert.ok(loaded);
   const state = loaded.createInitialState(input('vm-seed'));
   assert.match(loaded.hashState(state),/^[a-f0-9]{64}$/);
+});
+
+test('multiplayer mode registration CLI fails closed without an explicit identity', () => {
+  const result = spawnSync(process.execPath,[path.resolve(__dirname,'../../apps/api/src/register-multiplayer-mode-cli.mjs')],{
+    encoding: 'utf8',env: {},windowsHide: true,
+  });
+  assert.notEqual(result.status,0);
+  assert.match(result.stderr,/MULTIPLAYER_WORK_ID is required/);
 });

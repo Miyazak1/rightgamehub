@@ -33,13 +33,16 @@ API 和 Realtime 都应报告加载了 `1` 个可信规则适配器。
 
 ## 创建平台模式
 
-规则加载成功后，用管理员访问令牌执行一次：
+规则加载成功后，在 API 容器执行一次幂等注册命令：
 
 ```sh
-curl -fsS -X POST 'https://mooyu.fun/v1/admin/multiplayer/modes' \
-  -H "Authorization: Bearer $GAMEHUB_ADMIN_ACCESS_TOKEN" \
-  -H 'Content-Type: application/json' \
-  --data '{"workId":"1a13df55-8906-4b03-a19a-5e5a3b776649","key":"duel","name":"双人迷阵","authority":"platform_authoritative","minPlayers":2,"maxPlayers":2,"rulesetVersion":"1.0.0","config":{"turnSeconds":90,"spectators":false,"reconnectGraceSeconds":120}}'
+MULTIPLAYER_WORK_ID=1a13df55-8906-4b03-a19a-5e5a3b776649 \
+MULTIPLAYER_MODE_KEY=duel \
+MULTIPLAYER_MODE_NAME='双人迷阵' \
+MULTIPLAYER_RULESET_VERSION=1.0.0 \
+docker compose --env-file .env.prod -f compose.prod.yml exec -T \
+  -e MULTIPLAYER_WORK_ID -e MULTIPLAYER_MODE_KEY -e MULTIPLAYER_MODE_NAME -e MULTIPLAYER_RULESET_VERSION \
+  api node apps/api/src/register-multiplayer-mode-cli.mjs
 ```
 
 最后上传并发布联机 ZIP。发布清单必须批准 `multiplayer` 能力；客户端在平台外打开时只提供本地练习模式。
