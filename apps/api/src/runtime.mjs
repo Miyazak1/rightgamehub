@@ -40,6 +40,7 @@ import { PostgresMultiplayerMatchRepository } from './multiplayer-match-reposito
 import { createMultiplayerMatchService } from './multiplayer-match-service.mjs';
 import { createRulesRegistry } from '@gamehub/rules-sdk';
 import { createRedisMatchPublisher } from './redis-match-publisher.mjs';
+import { createWebValidationRunner } from './web-validation-runner.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -70,6 +71,11 @@ export function createRuntime({ env = process.env, mailer } = {}) {
   const validationWorker = createValidationWorker({
     repository: new PostgresValidationRepository(database.pool), quarantineStore,
     runtimeStore: new LocalRuntimeStore(config.runtimeRoot), validatorRoot: config.validatorRoot,
+    validationRunner: createWebValidationRunner({
+      mode: config.validatorExecutionMode,
+      validatorRoot: config.validatorRoot,
+      quarantineRoot: config.quarantineRoot,
+    }),
   });
   const runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
   const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config, artifactStore: quarantineStore });

@@ -41,6 +41,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL');
   }
   const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
+  const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
+  if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
+  if (nodeEnv === 'production' && validatorExecutionMode !== 'isolated') throw new Error('VALIDATOR_EXECUTION_MODE must be isolated in production');
   let realtimePublicUrl;
   try { realtimePublicUrl = new URL(env.REALTIME_PUBLIC_URL?.trim() || 'ws://127.0.0.1:3093/v1/realtime'); }
   catch { throw new Error('REALTIME_PUBLIC_URL must be a valid WebSocket URL'); }
@@ -66,6 +69,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     coverRoot: env.COVER_ROOT ?? '.runtime/platform/covers',
     runtimeRoot: env.RUNTIME_ROOT ?? '.runtime/platform/published',
     validatorRoot: env.VALIDATOR_ROOT ?? '.runtime/platform/validator',
+    validatorExecutionMode,
     runtimePort: integer(env.RUNTIME_PORT, 3092, 'RUNTIME_PORT', 1, 65535),
     runtimeDomain,
     runtimeScheme,

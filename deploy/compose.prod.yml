@@ -25,6 +25,7 @@ x-api-environment: &api-environment
   COVER_ROOT: /data/covers
   RUNTIME_ROOT: /data/runtime
   VALIDATOR_ROOT: /data/validator
+  VALIDATOR_EXECUTION_MODE: isolated
   RUNTIME_DOMAIN: ${RUNTIME_DOMAIN}
   RUNTIME_SCHEME: https
   GUESS_BAIKE_AUTOMATION_ENABLED: "true"
@@ -132,6 +133,36 @@ services:
     networks: [backend]
     mem_limit: 192m
 
+  validator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.validator
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      QUARANTINE_ROOT: /data/quarantine
+      VALIDATOR_ROOT: /data/validator
+      NODE_OPTIONS: --max-old-space-size=256
+    command: ["node", "apps/api/src/web-validator-service.mjs"]
+    volumes:
+      - quarantine:/data/quarantine:ro
+      - validator:/data/validator
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    pids_limit: 64
+    cpus: "1.0"
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:fs').statSync('/data/validator/service.ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   worker:
     build:
       context: ..
@@ -141,8 +172,9 @@ services:
     command: ["node", "apps/api/src/validation-worker-cli.mjs"]
     depends_on:
       migrate: { condition: service_completed_successfully }
+      validator: { condition: service_healthy }
     volumes:
-      - quarantine:/data/quarantine
+      - quarantine:/data/quarantine:ro
       - runtime-assets:/data/runtime
       - validator:/data/validator
       - avatars:/data/avatars
