@@ -14,6 +14,7 @@ import { StorageCapacityError } from './storage-capacity-service.mjs';
 import { RealtimeTicketError } from './realtime-ticket-service.mjs';
 import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
 import { MultiplayerMatchError } from './multiplayer-match-service.mjs';
+import { GitHubSourceError } from './github-source-service.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -27,7 +28,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -48,7 +49,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -624,6 +625,75 @@ export function createApp({ config, database, migrations, authService, workServi
       const result = await workService.withdraw(request.actor, request.params.workId, request.headers['idempotency-key'], request.headers['if-match']);
       reply.header('ETag', result.etag);
       return envelope(result.work);
+    });
+  }
+  if (githubSourceService) {
+    const connectionParams = { type: 'object', additionalProperties: false, required: ['connectionId'], properties: { connectionId: { type: 'string', format: 'uuid' } } };
+    const workParams = { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } };
+    app.get('/v1/integrations/github/setup', {
+      schema: { querystring: { type: 'object', additionalProperties: true, required: ['state'], properties: {
+        state: { type: 'string', minLength: 32, maxLength: 128 }, installation_id: { type: 'string', pattern: '^[1-9][0-9]*$' },
+        setup_action: { type: 'string', enum: ['install','update'] },
+      } } },
+    }, async (request, reply) => {
+      if (!config.githubSourceImportEnabled || !config.githubAppCallbackUrl) throw new GitHubSourceError('GITHUB_SOURCE_IMPORT_DISABLED', 404, 'GitHub source import is not enabled.');
+      const target = new URL(config.githubAppCallbackUrl);
+      target.searchParams.set('state', request.query.state);
+      if (request.query.installation_id) target.searchParams.set('installation_id', request.query.installation_id);
+      if (request.query.setup_action) target.searchParams.set('setup_action', request.query.setup_action);
+      return reply.redirect(target.toString());
+    });
+    app.post('/v1/creator/source-connections/github/install', { preHandler: requireAuth }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await githubSourceService.startInstall(request.actor));
+    });
+    app.post('/v1/creator/source-connections/github/complete', {
+      preHandler: requireAuth,
+      schema: { body: { type: 'object', additionalProperties: false, required: ['state','installationId'], properties: {
+        state: { type: 'string', minLength: 32, maxLength: 128 }, installationId: { type: 'string', pattern: '^[1-9][0-9]*$' },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.completeInstall(request.actor, request.body)); });
+    app.get('/v1/creator/source-connections', { preHandler: requireAuth }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.listConnections(request.actor));
+    });
+    app.delete('/v1/creator/source-connections/:connectionId', { preHandler: requireAuth, schema: { params: connectionParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.disconnect(request.actor, request.params.connectionId));
+    });
+    app.get('/v1/creator/source-connections/:connectionId/repositories', { preHandler: requireAuth, schema: { params: connectionParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.listRepositories(request.actor, request.params.connectionId));
+    });
+    app.post('/v1/creator/source-imports/preview', {
+      preHandler: requireAuth,
+      schema: { body: { type: 'object', additionalProperties: false, required: ['connectionId','repositoryId'], properties: {
+        connectionId: { type: 'string', format: 'uuid' }, repositoryId: { type: 'string', pattern: '^[1-9][0-9]*$' },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.preview(request.actor, request.body)); });
+    app.post('/v1/creator/source-imports/drafts', {
+      preHandler: requireAuth,
+      schema: { body: { type: 'object', additionalProperties: false, required: ['importId','title'], properties: {
+        importId: { type: 'string', format: 'uuid' }, title: { type: 'string', minLength: 1, maxLength: 120 },
+        description: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game','creative','tool'] },
+      } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await githubSourceService.createDraft(request.actor, request.body, request.headers['idempotency-key']));
+    });
+    app.get('/v1/creator/works/:workId/source', { preHandler: requireAuth, schema: { params: workParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.getWorkSource(request.actor, request.params.workId));
+    });
+    app.get('/v1/admin/source-imports/overview', { preHandler: requireAuth }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.adminOverview(request.actor));
+    });
+    app.get('/v1/admin/source-imports/audit', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 } } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await githubSourceService.adminAudit(request.actor, request.query.limit)); });
+    app.register(async webhookApp => {
+      webhookApp.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: 1024 * 1024 }, (_request, body, done) => done(null, body));
+      webhookApp.post('/v1/webhooks/github', { bodyLimit: 1024 * 1024 }, async (request, reply) => {
+        reply.header('Cache-Control', 'no-store');
+        return envelope(await githubSourceService.handleWebhook(request.headers, request.body));
+      });
     });
   }
   if (uploadService) {

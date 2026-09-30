@@ -557,7 +557,85 @@ function CreatorPage({ api, demo, go }) {
   const published = state.works.filter(work => work.state === 'published').length;
   const withdrawn = state.works.filter(work => work.state === 'withdrawn').length;
   const replaceWork = next => setState(current => ({ ...current, works: current.works.map(work => work.id === next.id ? { ...work, ...next, targets: next.targets?.length ? next.targets : work.targets } : work) }));
-  return <main className="page creator-page"><div className="section-heading"><div><span className="kicker">CREATOR STUDIO</span><h1>我的作品</h1><p>管理当前版本、历史记录与公开状态。</p></div><Button icon="＋" onClick={() => go('/creator/works/new')}>新建作品</Button></div><div className="creator-summary"><div><span>全部作品</span><strong>{state.works.length}</strong></div><div><span>已发布</span><strong>{published}</strong></div><div><span>已撤下</span><strong>{withdrawn}</strong></div></div>{state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} key={work.id}/>)}</section> : <StatePanel title="还没有作品" body="新建作品后即可上传第一个 Web ZIP。" action="新建作品" onAction={() => go('/creator/works/new')} />}<aside className="creator-tip"><span>{icons.spark}</span><div><strong>发布小贴士</strong><p>撤下会立即阻止新的公开访问；历史版本仍保留，上传并通过检查的新版本可以重新发布。</p></div></aside></main>;
+  return <main className="page creator-page"><div className="section-heading"><div><span className="kicker">CREATOR STUDIO</span><h1>我的作品</h1><p>管理当前版本、历史记录与公开状态。</p></div><div className="creator-heading-actions"><Button kind="secondary" onClick={() => go('/creator/import')}>从 GitHub 导入</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>新建作品</Button></div></div><div className="creator-summary"><div><span>全部作品</span><strong>{state.works.length}</strong></div><div><span>已发布</span><strong>{published}</strong></div><div><span>已撤下</span><strong>{withdrawn}</strong></div></div>{state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} key={work.id}/>)}</section> : <StatePanel title="还没有作品" body="新建作品后即可上传第一个 Web ZIP。" action="新建作品" onAction={() => go('/creator/works/new')} />}<aside className="creator-tip"><span>{icons.spark}</span><div><strong>发布小贴士</strong><p>撤下会立即阻止新的公开访问；历史版本仍保留，上传并通过检查的新版本可以重新发布。</p></div></aside></main>;
+}
+
+function GitHubImportPage({ api, demo, go }) {
+  const [state, setState] = useState({ status: 'loading', connections: [], repositories: [], preview: null });
+  const [selectedConnection, setSelectedConnection] = useState('');
+  const [selectedRepository, setSelectedRepository] = useState('');
+  const [form, setForm] = useState({ title: '', description: '', kind: 'game' });
+  const [busy, setBusy] = useState(''); const [error, setError] = useState('');
+  const loadConnections = async () => {
+    setError('');
+    try {
+      if (demo) return setState({ status: 'ready', connections: [], repositories: [], preview: null });
+      const connections = (await api.listGitHubSourceConnections()).data;
+      setState(current => ({ ...current, status: 'ready', connections }));
+      if (connections.length && !selectedConnection) setSelectedConnection(connections.find(item => item.status === 'active')?.id ?? connections[0].id);
+    } catch (caught) { setState(current => ({ ...current, status: caught.status === 401 ? 'auth' : caught.code === 'GITHUB_SOURCE_IMPORT_DISABLED' ? 'disabled' : 'error' })); setError(caught.message || 'GitHub 连接暂时无法读取。'); }
+  };
+  useEffect(() => {
+    const normal = new URLSearchParams(globalThis.location?.search || '');
+    const hashQuery = new URLSearchParams((globalThis.location?.hash || '').split('?')[1] || '');
+    const installationId = normal.get('installation_id') || hashQuery.get('installation_id');
+    const stateToken = normal.get('state') || hashQuery.get('state') || globalThis.sessionStorage?.getItem('gamehub.github-app-state');
+    if (!installationId || !stateToken || demo) { loadConnections(); return; }
+    setBusy('complete');
+    api.completeGitHubSourceInstall({ state: stateToken, installationId }).then(() => {
+      globalThis.sessionStorage?.removeItem('gamehub.github-app-state');
+      globalThis.history?.replaceState(null, '', `${globalThis.location.pathname}#/creator/import`);
+      return loadConnections();
+    }).catch(caught => { setState(current => ({ ...current, status: 'error' })); setError(caught.message || 'GitHub 安装回调未完成。'); }).finally(() => setBusy(''));
+  }, [api, demo]);
+  useEffect(() => {
+    if (!selectedConnection || demo) return;
+    setBusy('repositories'); setError(''); setSelectedRepository('');
+    api.listGitHubSourceRepositories(selectedConnection).then(({ data }) => setState(current => ({ ...current, repositories: data, preview: null }))).catch(caught => setError(caught.message || '仓库列表读取失败。')).finally(() => setBusy(''));
+  }, [api, demo, selectedConnection]);
+  const install = async () => {
+    setBusy('install'); setError('');
+    try {
+      const result = (await api.startGitHubSourceInstall()).data;
+      const stateToken = new URL(result.installUrl).searchParams.get('state');
+      if (stateToken) globalThis.sessionStorage?.setItem('gamehub.github-app-state', stateToken);
+      globalThis.location.assign(result.installUrl);
+    } catch (caught) { setError(caught.message || 'GitHub App 安装未启动。'); setBusy(''); }
+  };
+  const preview = async () => {
+    if (!selectedConnection || !selectedRepository) return;
+    setBusy('preview'); setError('');
+    try {
+      const result = (await api.previewGitHubSourceImport({ connectionId: selectedConnection, repositoryId: selectedRepository })).data;
+      setState(current => ({ ...current, preview: result }));
+      setForm({ title: result.repository.name || '', description: result.repository.description || '', kind: 'game' });
+    } catch (caught) { setError(caught.message || '仓库预览失败。'); }
+    finally { setBusy(''); }
+  };
+  const createDraft = async event => {
+    event.preventDefault(); if (!state.preview) return;
+    setBusy('draft'); setError('');
+    try { const result = (await api.createGitHubImportedDraft({ importId: state.preview.importId, ...form })).data; go(`/creator/works/${result.work.id}/upload`); }
+    catch (caught) { setError(caught.message || '草稿创建失败。'); }
+    finally { setBusy(''); }
+  };
+  const disconnect = async connection => {
+    if (!globalThis.confirm?.(`断开 ${connection.accountLogin} 的 GitHub 连接？已创建的草稿会保留来源记录。`)) return;
+    setBusy(`disconnect-${connection.id}`); setError('');
+    try { await api.disconnectGitHubSourceConnection(connection.id); setSelectedConnection(''); await loadConnections(); }
+    catch (caught) { setError(caught.message || '连接未能断开。'); }
+    finally { setBusy(''); }
+  };
+  if (state.status === 'loading' || busy === 'complete') return <main className="page"><LoadingCards/></main>;
+  if (state.status === 'auth') return <main className="page"><StatePanel title="登录后连接 GitHub" body="导入仓库需要当前创作者账号授权。" action="前往登录" onAction={() => go('/account')}/></main>;
+  if (state.status === 'disabled') return <main className="page"><StatePanel title="GitHub 导入尚未开放" body="管理员还没有配置独立的只读 GitHub App；你仍可手动新建作品并上传 ZIP。" action="新建作品" onAction={() => go('/creator/works/new')}/></main>;
+  return <main className="page github-import-page"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><div className="section-heading"><div><span className="kicker">READ-ONLY SOURCE IMPORT</span><h1>从 GitHub 建立作品草稿</h1><p>只读取你授权仓库的元数据、README、许可证和固定提交信息，不执行仓库代码。</p></div><Button kind="github" icon={<GitHubLogo/>} onClick={install} disabled={!!busy}>{busy === 'install' ? '正在跳转…' : '连接 GitHub App'}</Button></div>
+    <aside className="github-import-notice"><strong>导入不会自动构建或发布</strong><p>确认来源后只创建私有草稿。下一步仍需上传可运行的 Web ZIP，并经过平台校验；私有仓库地址不会出现在公开作品资料中。</p></aside>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {state.connections.length > 0 && <section className="panel github-connections"><div className="settings-panel__head"><div><h2>1. 选择连接</h2><p>仓库授权可以在 GitHub 中随时收回。</p></div></div><div className="github-connection-list">{state.connections.map(connection => <article className={selectedConnection === connection.id ? 'is-active' : ''} key={connection.id}><button type="button" onClick={() => setSelectedConnection(connection.id)} disabled={connection.status !== 'active'}><strong>{connection.accountLogin}</strong><small>{connection.accountType} · {connection.repositorySelection === 'all' ? '全部仓库' : '选定仓库'} · {connection.status}</small></button><button type="button" className="text-button" disabled={!!busy} onClick={() => disconnect(connection)}>断开</button></article>)}</div></section>}
+    {selectedConnection && <section className="panel github-repositories"><div className="settings-panel__head"><div><h2>2. 选择仓库</h2><p>列表按最多 5 页同步，单次最多显示 500 个授权仓库。</p></div></div>{busy === 'repositories' ? <p>正在同步仓库…</p> : state.repositories.length ? <div className="github-repository-picker"><select value={selectedRepository} onChange={event => setSelectedRepository(event.target.value)}><option value="">请选择仓库</option>{state.repositories.map(repo => <option value={repo.repositoryId} key={repo.id}>{repo.owner}/{repo.name} · {repo.visibility}</option>)}</select><Button type="button" onClick={preview} disabled={!selectedRepository || !!busy}>{busy === 'preview' ? '正在读取…' : '只读预览'}</Button></div> : <p>当前安装没有可读取的仓库。请在 GitHub App 设置中授权至少一个仓库。</p>}</section>}
+    {state.preview && <form className="panel github-preview" onSubmit={createDraft}><div className="settings-panel__head"><div><h2>3. 确认来源并建稿</h2><p>{state.preview.repository.owner}/{state.preview.repository.name} · {state.preview.repository.visibility}</p></div><span className={`github-license is-${state.preview.license.status}`}>{state.preview.license.spdx || state.preview.license.status}</span></div><dl><div><dt>固定提交</dt><dd><code>{state.preview.commitSha}</code></dd></div><div><dt>默认分支</dt><dd>{state.preview.repository.defaultBranch}</dd></div><div><dt>静态信号</dt><dd>{Object.entries(state.preview.staticSignals).filter(([, value]) => value).map(([key]) => key).join(' · ') || '未识别到常见 Web 入口'}</dd></div></dl>{state.preview.readmeExcerpt && <details><summary>查看净化后的 README 摘要</summary><pre>{state.preview.readmeExcerpt}</pre></details>}<label>作品名称<input required maxLength="120" value={form.title} onChange={event => setForm(current => ({ ...current, title: event.target.value }))}/></label><label>一句话介绍<textarea maxLength="4000" value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))}/></label><label>作品类型<select value={form.kind} onChange={event => setForm(current => ({ ...current, kind: event.target.value }))}><option value="game">游戏</option><option value="creative">互动作品</option><option value="tool">创意工具</option></select></label><Button type="submit" disabled={!!busy}>{busy === 'draft' ? '正在创建…' : '创建私有草稿并继续上传 ZIP'}</Button></form>}
+  </main>;
 }
 
 function NewWorkPage({ api, demo, go }) {
@@ -920,17 +998,19 @@ function AdminPage({ api, demo, go }) {
   const demoAutomation = { enabled: true, running: false, intervalMinutes: 360, batchSize: 20, scheduleDays: 14, readyCount: 18, scheduledCount: 14, lastRun: { status: 'succeeded', startedAt: new Date().toISOString(), finishedAt: new Date().toISOString(), fetchedCount: 20, acceptedCount: 7, scheduledCount: 4, errorCode: null, errorMessage: null } };
   const demoAnalytics = { totals: { visitors: 1264, pageViews: 4812, newUsers: 86, totalUsers: 2341, activeAccounts: 734, gameStarts: 1960, recordedPlays: 9204, downloadStarts: 318, downloadCompletes: 241, siteDurationMs: 304560000, gameDurationMs: 196740000 }, daily: Array.from({ length: 7 }, (_, index) => ({ day: new Date(Date.now() - (6-index)*86400000).toLocaleDateString('en-CA'), visitors: 120+index*13, pageViews: 410+index*47, downloads: 20+index*5, gameStarts: 160+index*18, newUsers: 8+index })), hosts: [{ hostKind: 'browser', visitors: 812, pageViews: 3204 }, { hostKind: 'cursor', visitors: 336, pageViews: 1208 }, { hostKind: 'harness', visitors: 116, pageViews: 400 }], works: [{ workId: 'gamehub-guess-baike', title: '猜百科', views: 1240, starts: 988, downloads: 0 }, { workId: 'demo-space', title: '宇宙巡航机', views: 706, starts: 462, downloads: 318 }] };
   const demoStorage = { checkedAt: new Date().toISOString(), level: 'healthy', acceptingUploads: true, usedPercent: 31.42, thresholds: { warnPercent: 70, blockPercent: 85 }, stores: ['quarantine','validator','runtime','avatars','covers'].map((id,index) => ({ id, available: true, level: 'healthy', totalBytes: String(80 * 1024 ** 3), availableBytes: String(54 * 1024 ** 3), usedBytes: String(26 * 1024 ** 3), usedPercent: 31.42, projectedUsedPercent: 31.42, reservedBytes: '0', logicalBytes: String((index + 1) * 42 * 1024 ** 2) })), lastCleanup: { at: new Date().toISOString(), filesRemoved: 0, bytesReclaimed: 0 } };
+  const demoSourceOverview = { activeConnections: 3, activeRepositories: 7, imports24h: 2, failedWebhooks24h: 0 };
+  const demoSourceAudit = [{ id: 'source-audit-demo', actorUserId: null, connectionId: null, importId: null, workId: null, action: 'import.previewed', details: { commitSha: 'a'.repeat(40) }, createdAt: new Date().toISOString() }];
   const [days, setDays] = useState(7);
-  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null });
+  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null, sourceOverview: null, sourceAudit: [] });
   const [notes, setNotes] = useState({}); const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
     try {
-      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], puzzles: demoPuzzles, automation: demoAutomation, analytics: demoAnalytics, storage: demoStorage });
+      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], puzzles: demoPuzzles, automation: demoAutomation, analytics: demoAnalytics, storage: demoStorage, sourceOverview: demoSourceOverview, sourceAudit: demoSourceAudit });
       const profile = (await api.getProfile()).data;
       if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null });
-      const [reports, audit, applications, puzzles, automation, analytics, storage] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus(), api.getAdminAnalytics(days), api.getAdminStorage()]);
-      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, puzzles: puzzles.data, automation: automation.data, analytics: analytics.data, storage: storage.data });
+      const [reports, audit, applications, puzzles, automation, analytics, storage, sourceOverview, sourceAudit] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus(), api.getAdminAnalytics(days), api.getAdminStorage(), api.getGitHubSourceAdminOverview(), api.listGitHubSourceAudit()]);
+      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, puzzles: puzzles.data, automation: automation.data, analytics: analytics.data, storage: storage.data, sourceOverview: sourceOverview.data, sourceAudit: sourceAudit.data });
     } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null }); }
   };
   useEffect(() => { load(); }, [api, demo, days]);
@@ -964,6 +1044,7 @@ function AdminPage({ api, demo, go }) {
   return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>掌握平台增长、内容分发与治理状态。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
     <AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/>
     <AdminStorage storage={state.storage}/>
+    {state.sourceOverview && <section className="source-operations"><div className="puzzle-ops__head"><div><span className="kicker">GITHUB SOURCE CONTROL</span><h2>GitHub 只读导入</h2><p>连接、授权仓库、近 24 小时导入与 Webhook 故障；此面板不提供源码执行能力。</p></div><span>{state.sourceOverview.activeConnections} 个活动连接</span></div><div className="source-operation-kpis"><article><span>授权仓库</span><strong>{state.sourceOverview.activeRepositories}</strong></article><article><span>24h 导入</span><strong>{state.sourceOverview.imports24h}</strong></article><article className={state.sourceOverview.failedWebhooks24h ? 'is-warning' : ''}><span>24h Webhook 失败</span><strong>{state.sourceOverview.failedWebhooks24h}</strong></article></div><details><summary>最近来源审计</summary>{state.sourceAudit.length ? <ol>{state.sourceAudit.slice(0,20).map(event => <li key={event.id}><strong>{event.action}</strong><code>{event.details?.commitSha?.slice(0,12) || event.connectionId || '—'}</code><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p>暂无来源事件。</p>}</details></section>}
     {state.automation && <section className={`automation-health automation-health--${state.automation.lastRun?.status || 'idle'}`}><div className="automation-health__pulse"/><div><span className="kicker">AUTONOMOUS SUPPLY</span><h2>{state.automation.running ? '正在自动补充题库' : state.automation.lastRun?.status === 'failed' ? '最近一次同步失败，库存仍可用' : '全自动内容流水线正常'}</h2><p>每 {Math.round(state.automation.intervalMinutes / 60)} 小时自动抓取、筛选、去重，并补齐未来 {state.automation.scheduleDays} 天。无需人工审核或排期。</p>{state.automation.lastRun?.errorMessage && <small>{state.automation.lastRun.errorCode} · {state.automation.lastRun.errorMessage}</small>}</div><dl><div><dt>可用题</dt><dd>{state.automation.readyCount}</dd></div><div><dt>已排期</dt><dd>{state.automation.scheduledCount}/{state.automation.scheduleDays}</dd></div><div><dt>上次通过</dt><dd>{state.automation.lastRun?.acceptedCount ?? '—'}</dd></div></dl></section>}
     <section className="admin-queue"><div className="puzzle-ops__head"><div><span className="kicker">CREATOR REVIEW</span><h2>创作者申请</h2><p>审核申请说明；通过后申请人的当前登录设备会立即获得创作与发布权限。</p></div><span>{state.applications.length} 份待审</span></div>{state.applications.length ? state.applications.map(application => <article className="report-card" key={application.id}><div className="report-card__head"><div><span>申请账号</span><h3>{application.displayName}</h3></div><time>{new Date(application.createdAt).toLocaleString('zh-CN')}</time></div><p>{application.statement}</p><label>审核说明<textarea maxLength="1000" value={notes[application.id] || ''} onChange={event => setNotes(current => ({ ...current, [application.id]: event.target.value }))} placeholder="说明通过条件或拒绝原因。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === application.id} onClick={() => decideCreator(application, 'reject')}>拒绝</Button><Button disabled={busy === application.id} onClick={() => decideCreator(application, 'approve')}>{busy === application.id ? '处理中…' : '通过申请'}</Button></div></article>) : <div className="admin-empty"><span>✓</span><strong>没有待审核申请</strong><p>新的创作者申请会显示在这里。</p></div>}</section>
     <section className="puzzle-ops"><div className="puzzle-ops__head"><div><span className="kicker">OFFICIAL INVENTORY</span><h2>猜百科自动题库</h2><p>这里用于观察自动产出的结果。日常不需要操作；停用仅用于发现错误内容后的紧急止损。</p></div><span>{state.puzzles.length} 道题</span></div><div className="puzzle-ops__list">{state.puzzles.map(puzzle => <article className={`puzzle-op ${puzzle.status === 'disabled' ? 'is-disabled' : ''}`} key={puzzle.id}><div className="puzzle-op__top"><div><span className="puzzle-op__category">{puzzle.category}</span><h3>{puzzle.title}</h3><small>{puzzle.introHanCount} 汉字 · 修订 {puzzle.sourceRevision}</small></div><span className={`puzzle-status puzzle-status--${puzzle.status}`}>{puzzle.status === 'ready' ? '自动可用' : '已停用'}</span></div>{puzzle.qualityReason && <p className="puzzle-quality">质量检查：{puzzle.qualityReason}</p>}<details><summary>查看完整导言与来源</summary><p>{puzzle.content}</p><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">查看来源 · {puzzle.license}</a></details><div className="puzzle-op__emergency"><span>{puzzle.scheduledDates.length ? `未来排期 ${puzzle.scheduledDates.length} 天` : '自动轮换库存'}</span><button className="puzzle-toggle" disabled={busy === `puzzle-${puzzle.id}`} onClick={() => togglePuzzle(puzzle)}>{puzzle.status === 'ready' ? '紧急停用' : '纠正后恢复'}</button></div></article>)}</div></section>
@@ -993,6 +1074,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   if (parts[0] === 'works' && parts[1]) content = <DetailPage workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={setAccountProfile}/>;
+  else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go}/>;
   else if (route === '/creator/works/new') content = <NewWorkPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go}/>;

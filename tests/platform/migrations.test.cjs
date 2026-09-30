@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 32);
+  assert.equal(files.length, 33);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -53,6 +53,14 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(multiplayerOperations, /CREATE TABLE multiplayer_admin_events/);
   assert.match(multiplayerOperations, /BEFORE UPDATE ON multiplayer_admin_events/);
   assert.match(multiplayerOperations, /BEFORE DELETE ON multiplayer_admin_events/);
+  const githubSource = fs.readFileSync(path.join(migrationDir, '0033_github_source_import.sql'), 'utf8');
+  assert.match(githubSource, /CREATE TABLE github_source_connections/);
+  assert.match(githubSource, /CREATE TABLE github_source_repositories/);
+  assert.match(githubSource, /CREATE TABLE github_source_imports/);
+  assert.match(githubSource, /CREATE TABLE work_sources/);
+  assert.match(githubSource, /CREATE TABLE github_webhook_deliveries/);
+  assert.match(githubSource, /BEFORE UPDATE ON github_source_audit_events/);
+  assert.match(githubSource, /BEFORE DELETE ON github_source_audit_events/);
   files.forEach((name, index) => assert.match(name, new RegExp(`^${String(index + 1).padStart(4, '0')}_`)));
   for (const migration of migrations) {
     assert.match(migration.sql, /^BEGIN;/);
@@ -71,6 +79,8 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'guess_baike_puzzles', 'guess_baike_schedule', 'guess_baike_automation_runs', 'creator_applications', 'analytics_events',
     'multiplayer_game_modes', 'multiplayer_rooms', 'multiplayer_room_members', 'multiplayer_matches',
     'multiplayer_match_players', 'multiplayer_match_events', 'multiplayer_match_snapshots', 'multiplayer_admin_events',
+    'github_source_install_states', 'github_source_connections', 'github_source_repositories', 'github_source_imports',
+    'work_sources', 'github_webhook_deliveries', 'github_source_audit_events',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

@@ -20,6 +20,7 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(config.rulesManifestPath, null);
   assert.deepEqual(config.rulesTrustedKeys, {});
   assert.deepEqual(config.corsOrigins, []);
+  assert.equal(config.githubSourceImportEnabled, false);
   const production = loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime' });
   assert.equal(production.validatorExecutionMode, 'isolated');
   assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), VALIDATOR_EXECUTION_MODE: 'local' }), /must be isolated/);
@@ -29,6 +30,20 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_CLIENT_SECRET: 'secret' }), /GITHUB_CLIENT_ID/);
   assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', RULES_ALLOW_UNSIGNED: 'true' }), /cannot be enabled/u);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RULES_TRUSTED_KEYS_JSON: '{bad' }), /valid JSON/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_SOURCE_IMPORT_ENABLED: 'true' }), /GITHUB_APP_ID/);
+  const privateKey = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const githubImport = loadConfig({
+    NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_SOURCE_IMPORT_ENABLED: 'true',
+    GITHUB_APP_ID: '12345', GITHUB_APP_PRIVATE_KEY: privateKey, GITHUB_APP_WEBHOOK_SECRET: 'w'.repeat(32),
+    GITHUB_APP_SLUG: 'gamehub-source-import', GITHUB_APP_CALLBACK_URL: 'http://127.0.0.1:5173/#/creator/import',
+  });
+  assert.equal(githubImport.githubSourceImportEnabled, true);
+  assert.equal(githubImport.githubAppId, '12345');
+  assert.throws(() => loadConfig({
+    NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', GITHUB_SOURCE_IMPORT_ENABLED: 'true',
+    GITHUB_APP_ID: '12345', GITHUB_APP_PRIVATE_KEY: privateKey, GITHUB_APP_WEBHOOK_SECRET: 'w'.repeat(32),
+    GITHUB_APP_SLUG: 'gamehub-source-import', GITHUB_APP_CALLBACK_URL: 'http://example.com/#/creator/import',
+  }), /must use HTTPS/);
 });
 
 test('GitHub OAuth callback accepts the GitHub authorization issuer', async t => {
@@ -92,6 +107,39 @@ test('creator work routes accept discovery metadata from the creation form', asy
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(received, payload);
+});
+
+test('GitHub source routes authenticate creators and preserve raw webhook bytes', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  let rawBody;
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async () => ({ userId: crypto.randomUUID(), scopes: ['works:write'], profile: { canPublish: true } }) },
+    githubSourceService: {
+      listConnections: async () => [{ id: crypto.randomUUID() }],
+      handleWebhook: async (_headers, body) => { rawBody = body; return { accepted: true, replay: false }; },
+    },
+  });
+  t.after(() => app.close());
+  const list = await app.inject({ method: 'GET', url: '/v1/creator/source-connections', headers: { authorization: 'Bearer test-token-value-that-is-long-enough' } });
+  assert.equal(list.statusCode, 200);
+  const webhook = await app.inject({ method: 'POST', url: '/v1/webhooks/github', headers: { 'content-type': 'application/json' }, payload: '{"installation":{"id":42}}' });
+  assert.equal(webhook.statusCode, 200);
+  assert.ok(Buffer.isBuffer(rawBody));
+  assert.equal(rawBody.toString(), '{"installation":{"id":42}}');
+});
+
+test('GitHub App setup callback safely redirects into the creator import route', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const app = createApp({
+    config: { requestBodyLimit: 65536, githubSourceImportEnabled: true, githubAppCallbackUrl: 'https://mooyu.fun/#/creator/import' },
+    database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) }, authService: {}, githubSourceService: {},
+  });
+  t.after(() => app.close());
+  const state = 's'.repeat(43);
+  const response = await app.inject({ method: 'GET', url: `/v1/integrations/github/setup?installation_id=42&setup_action=install&state=${state}` });
+  assert.equal(response.statusCode, 302);
+  assert.equal(response.headers.location, `https://mooyu.fun/?state=${state}&installation_id=42&setup_action=install#/creator/import`);
 });
 
 test('explicit development origin receives CORS preflight and creator reads stay authenticated', async t => {

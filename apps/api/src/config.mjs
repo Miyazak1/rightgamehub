@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { parseTrustedRulesKeys } from '@gamehub/rules-sdk';
 
 const integer = (value, fallback, name, min, max) => {
@@ -42,6 +43,24 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     try { parsed = new URL(githubCallbackUrl); } catch { throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL'); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL');
   }
+  const githubSourceImportEnabled = boolean(env.GITHUB_SOURCE_IMPORT_ENABLED, false, 'GITHUB_SOURCE_IMPORT_ENABLED');
+  const githubAppId = env.GITHUB_APP_ID?.trim() || null;
+  const githubAppPrivateKey = env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, '\n').trim() || null;
+  const githubAppWebhookSecret = env.GITHUB_APP_WEBHOOK_SECRET ?? '';
+  const githubAppSlug = env.GITHUB_APP_SLUG?.trim() || null;
+  const githubAppCallbackUrl = env.GITHUB_APP_CALLBACK_URL?.trim() || null;
+  const githubAppClientId = env.GITHUB_APP_CLIENT_ID?.trim() || null;
+  if (githubSourceImportEnabled) {
+    if (!/^\d+$/.test(githubAppId ?? '')) throw new Error('GITHUB_APP_ID is required when GitHub source import is enabled');
+    if (!githubAppPrivateKey) throw new Error('GITHUB_APP_PRIVATE_KEY is required when GitHub source import is enabled');
+    try { crypto.createPrivateKey(githubAppPrivateKey); } catch { throw new Error('GITHUB_APP_PRIVATE_KEY must be a valid private key'); }
+    if (Buffer.byteLength(githubAppWebhookSecret, 'utf8') < 32) throw new Error('GITHUB_APP_WEBHOOK_SECRET must contain at least 32 UTF-8 bytes');
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/.test(githubAppSlug ?? '')) throw new Error('GITHUB_APP_SLUG is required and must be a valid GitHub App slug');
+    let parsed;
+    try { parsed = new URL(githubAppCallbackUrl); } catch { throw new Error('GITHUB_APP_CALLBACK_URL must be a valid HTTP URL'); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_APP_CALLBACK_URL must be a valid HTTP URL');
+    if (nodeEnv === 'production' && parsed.protocol !== 'https:') throw new Error('GITHUB_APP_CALLBACK_URL must use HTTPS in production');
+  }
   const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
   const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
   if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
@@ -69,6 +88,13 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     githubClientId,
     githubClientSecret,
     githubCallbackUrl,
+    githubSourceImportEnabled,
+    githubAppId,
+    githubAppPrivateKey,
+    githubAppWebhookSecret: githubAppWebhookSecret || null,
+    githubAppSlug,
+    githubAppCallbackUrl,
+    githubAppClientId,
     mailProvider,
     resendApiKey: env.RESEND_API_KEY?.trim() || null,
     mailFrom: env.MAIL_FROM?.trim() || null,

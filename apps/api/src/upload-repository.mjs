@@ -59,7 +59,11 @@ export class PostgresUploadRepository {
         if (previous.request_hash !== input.requestHash) throw new UploadError('IDEMPOTENCY_CONFLICT', 409, 'The idempotency key was used for another request.');
         return previous.result_json;
       }
-      const work = (await client.query('SELECT id,state FROM works WHERE id=$1 AND owner_user_id=$2 FOR UPDATE', [input.workId, input.actor.userId])).rows[0];
+      const work = (await client.query(
+        `SELECT w.id,w.state,i.id AS source_import_id,i.license_status
+           FROM works w LEFT JOIN work_sources s ON s.work_id=w.id LEFT JOIN github_source_imports i ON i.id=s.source_import_id
+          WHERE w.id=$1 AND w.owner_user_id=$2 FOR UPDATE OF w`, [input.workId, input.actor.userId],
+      )).rows[0];
       if (!work) throw new UploadError('NOT_FOUND', 404, 'Work not found.');
       if (work.state === 'suspended') throw new UploadError('STATE_CONFLICT', 409, 'The work is suspended.');
       await expireStaleCreated(client, input.actor.userId);
@@ -69,12 +73,13 @@ export class PostgresUploadRepository {
       if (Number(usage.stored_bytes) + Number(usage.reserved_bytes) + reserve > FIVE_GIB) throw new UploadError('QUOTA_EXCEEDED', 429, 'Storage quota would be exceeded.');
       await client.query("INSERT INTO work_targets(work_id,target_key) VALUES ($1,$2) ON CONFLICT DO NOTHING", [input.workId, input.body.targetKey]);
       const target = (await client.query('SELECT publish_generation FROM work_targets WHERE work_id=$1 AND target_key=$2 FOR UPDATE', [input.workId, input.body.targetKey])).rows[0];
-      const generation = input.body.autoPublish ? Number(target.publish_generation) + 1 : null;
-      if (input.body.autoPublish) await client.query('UPDATE work_targets SET publish_generation=$3,updated_at=now() WHERE work_id=$1 AND target_key=$2', [input.workId, input.body.targetKey, generation]);
+      const autoPublish = input.body.autoPublish && (!work.source_import_id || work.license_status === 'recognized');
+      const generation = autoPublish ? Number(target.publish_generation) + 1 : null;
+      if (autoPublish) await client.query('UPDATE work_targets SET publish_generation=$3,updated_at=now() WHERE work_id=$1 AND target_key=$2', [input.workId, input.body.targetKey, generation]);
       const row = (await client.query(
         `INSERT INTO upload_jobs(id,owner_user_id,work_id,target_key,package_type,file_name,release_label,state,declared_bytes,declared_sha256,object_key,auto_publish,publish_generation,reserved_bytes,expires_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,'created',$8,$9,$10,$11,$12,$13,now()+interval '30 minutes') RETURNING *`,
-        [input.uploadId, input.actor.userId, input.workId, input.body.targetKey, input.body.packageType, input.body.fileName, input.body.releaseLabel, input.declaredBytes, input.body.sha256, input.objectKey, input.body.autoPublish, generation, reserve],
+        [input.uploadId, input.actor.userId, input.workId, input.body.targetKey, input.body.packageType, input.body.fileName, input.body.releaseLabel, input.declaredBytes, input.body.sha256, input.objectKey, autoPublish, generation, reserve],
       )).rows[0];
       await client.query('UPDATE creator_usage SET reserved_bytes=reserved_bytes+$2,active_uploads=active_uploads+1,updated_at=now() WHERE user_id=$1', [input.actor.userId, reserve]);
       const result = view(row);

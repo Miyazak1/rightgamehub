@@ -1,6 +1,6 @@
 # GitHub 开源作品导入与共建路线
 
-状态：可进入 G0/G1 实施评审
+状态：G1 代码完成，待生产 GitHub App 与真实仓库验收；G2 未开始
 更新日期：2026-09-30
 适用范围：作者主动授权导入的静态网页游戏、网页 3D 和网页工具
 
@@ -88,6 +88,8 @@ GitHub App
 ### G1：GitHub 资料导入，不执行源码
 
 目标：降低作者填写成本，同时保持与现有手动 Web ZIP 发布完全兼容。
+
+实施状态：独立 GitHub App、安装归属、仓库同步、固定 Commit/Tree、README 清洗、许可证证据、私有草稿、作品来源、Webhook 原始体验签与去重、撤销/暂停状态、管理员概览与审计、作者 UI 均已完成。部署和作者操作见 [55 G1 GitHub 只读来源导入](./55-g1-github-source-import.zh-CN.md)与 [56 作者 GitHub 导入指南](./56-github-import-author-guide.zh-CN.md)。当前还不能标记为生产上线：需要配置真实 GitHub App，并用受控公开/私有仓库完成验收。
 
 用户流程：
 
@@ -340,4 +342,4 @@ queued -> preparing -> building -> packaging -> validating -> ready
 
 ## 12. 当前基线
 
-截至 2026-09-30：现有平台全量自动测试、真实 PostgreSQL 多人迁移与事务、契约同步、生产 Compose 配置以及 API/realtime 镜像构建均已通过；多人通用核心已推送到 `main`。GitHub 仓库导入和源码 Builder 尚未实现，本路线文档不将规划描述为已上线能力。
+截至 2026-09-30：G1 GitHub 只读来源导入代码、数据库迁移、API 契约、作者界面和自动测试已经实现；生产 GitHub App 凭据与真实仓库端到端验收仍待完成，因此不描述为已上线。G2 源码 Builder 尚未实现，平台不会克隆、执行或自动构建仓库源码。

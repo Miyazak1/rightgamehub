@@ -26,6 +26,8 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [56 作者 GitHub 导入指南](./56-github-import-author-guide.zh-CN.md) | **作者连接只读 GitHub App、预览来源、创建草稿、上传 ZIP、权限与许可证说明** |
+| [55 G1 GitHub 只读来源导入](./55-g1-github-source-import.zh-CN.md) | **独立 GitHub App、固定 Commit、README 清洗、许可证证据、Webhook 去重、部署与验收** |
 | [54 受信规则适配器发布与回滚](./54-trusted-rules-adapter-release.zh-CN.md) | **离线 Ed25519 签名、bundle 摘要、只读部署、双服务一致加载、版本保留与回滚流程** |
 | [53 联机游戏作者接入指南](./53-multiplayer-game-author-guide.zh-CN.md) | **面向游戏设计者的包格式、SDK 流程、权威命令、隐藏信息、重连与规则交付清单** |
 | [52 Web 游戏多人安全桥](./52-web-game-multiplayer-bridge.zh-CN.md) | **版本化 MessageChannel SDK、作品作用域、最小身份、房间/对局方法与安全边界** |

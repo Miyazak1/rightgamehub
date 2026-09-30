@@ -242,6 +242,51 @@ export const schemas = Object.freeze({
     saveCount: { type: 'integer', minimum: 0 },
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
   }),
+  GitHubSourceInstallStart: object({ installUrl: { type: 'string', pattern: '^https://github\\.com/apps/' }, expiresAt: dateTime }),
+  GitHubSourceInstallCompleteRequest: object({ state: { type: 'string', minLength: 32, maxLength: 128 }, installationId: uintString }),
+  GitHubSourceConnection: object({
+    id, installationId: uintString, accountId: uintString, accountLogin: { type: 'string', minLength: 1, maxLength: 255 },
+    accountType: stringEnum(['User','Organization']), repositorySelection: stringEnum(['all','selected']),
+    status: stringEnum(['active','suspended','revoked']), createdAt: dateTime, updatedAt: dateTime,
+  }),
+  GitHubSourceRepository: object({
+    id, connectionId: id, repositoryId: uintString, nodeId: { type: 'string' }, owner: { type: 'string' }, name: { type: 'string' },
+    defaultBranch: { type: 'string' }, visibility: stringEnum(['public','private','internal']), htmlUrl: { type: 'string', pattern: '^https://github\\.com/' },
+    accessState: stringEnum(['active','removed','connection_suspended','connection_revoked']), lastSeenAt: dateTime,
+  }),
+  GitHubImportPreviewRequest: object({ connectionId: id, repositoryId: uintString }),
+  GitHubLicenseEvidence: object({
+    status: stringEnum(['recognized','missing','unknown','conflict']),
+    spdx: { oneOf: [{ type: 'string', minLength: 1, maxLength: 80 }, { type: 'null' }] },
+    path: { oneOf: [{ type: 'string', minLength: 1, maxLength: 512 }, { type: 'null' }] },
+    sha256: { oneOf: [sha256, { type: 'null' }] },
+  }),
+  GitHubImportPreview: object({
+    importId: id, repository: { type: 'object', additionalProperties: true },
+    commitSha: { type: 'string', pattern: '^[a-f0-9]{40}$' }, treeSha: { type: 'string', pattern: '^[a-f0-9]{40}$' },
+    readmeExcerpt: { type: 'string', maxLength: 12000 }, readmeSha256: { oneOf: [sha256, { type: 'null' }] },
+    license: { $ref: '#/components/schemas/GitHubLicenseEvidence' }, staticSignals: { type: 'object', additionalProperties: { type: 'boolean' } }, createdAt: dateTime,
+  }),
+  CreateGitHubDraftRequest: object({
+    importId: id, title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, kind: stringEnum(enums.WorkKind),
+  }, ['importId','title']),
+  WorkSource: object({
+    workId: id, provider: { type: 'string', const: 'github' }, repositoryId: uintString, repositoryNodeId: { type: 'string' },
+    visibility: stringEnum(['public','private','internal']), owner: { type: 'string' }, name: { type: 'string' }, repositoryUrl: { type: 'string', pattern: '^https://github\\.com/' },
+    defaultBranch: { type: 'string' }, commitSha: { type: 'string', pattern: '^[a-f0-9]{40}$' }, treeSha: { type: 'string', pattern: '^[a-f0-9]{40}$' },
+    status: stringEnum(['active','access_lost','suspended','revoked']), provenance: { type: 'object', additionalProperties: true }, createdAt: dateTime, updatedAt: dateTime,
+  }),
+  GitHubImportedDraft: object({ work: { $ref: '#/components/schemas/Work' }, source: { $ref: '#/components/schemas/WorkSource' } }),
+  GitHubWebhookAccepted: object({ accepted: { type: 'boolean' }, replay: { type: 'boolean' } }),
+  GitHubSourceAdminOverview: object({
+    activeConnections: { type: 'integer', minimum: 0 }, activeRepositories: { type: 'integer', minimum: 0 },
+    imports24h: { type: 'integer', minimum: 0 }, failedWebhooks24h: { type: 'integer', minimum: 0 },
+  }),
+  GitHubSourceAuditEvent: object({
+    id, actorUserId: { oneOf: [id,{ type: 'null' }] }, connectionId: { oneOf: [id,{ type: 'null' }] },
+    importId: { oneOf: [id,{ type: 'null' }] }, workId: { oneOf: [id,{ type: 'null' }] }, action: { type: 'string' },
+    details: { type: 'object', additionalProperties: true }, createdAt: dateTime,
+  }),
   ReleaseSummary: object({
     id,
     targetKey: stringEnum(enums.TargetKey),
@@ -515,6 +560,17 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/analytics', operationId: 'getAdminAnalytics', auth: 'bearer', response: 'AdminAnalyticsOverview', queryAnalyticsDays: true },
   { method: 'get', path: '/v1/admin/storage', operationId: 'getAdminStorage', auth: 'bearer', response: 'StorageCapacityOverview' },
   { method: 'get', path: '/v1/creator/works', operationId: 'listCreatorWorks', auth: 'bearer', response: 'Work', responseArray: true },
+  { method: 'post', path: '/v1/creator/source-connections/github/install', operationId: 'startGitHubSourceInstall', auth: 'bearer', response: 'GitHubSourceInstallStart' },
+  { method: 'post', path: '/v1/creator/source-connections/github/complete', operationId: 'completeGitHubSourceInstall', auth: 'bearer', request: 'GitHubSourceInstallCompleteRequest', response: 'GitHubSourceConnection' },
+  { method: 'get', path: '/v1/creator/source-connections', operationId: 'listGitHubSourceConnections', auth: 'bearer', response: 'GitHubSourceConnection', responseArray: true },
+  { method: 'delete', path: '/v1/creator/source-connections/{connectionId}', operationId: 'disconnectGitHubSourceConnection', auth: 'bearer', response: 'GitHubSourceConnection', pathId: 'connectionId' },
+  { method: 'get', path: '/v1/creator/source-connections/{connectionId}/repositories', operationId: 'listGitHubSourceRepositories', auth: 'bearer', response: 'GitHubSourceRepository', responseArray: true, pathId: 'connectionId' },
+  { method: 'post', path: '/v1/creator/source-imports/preview', operationId: 'previewGitHubSourceImport', auth: 'bearer', request: 'GitHubImportPreviewRequest', response: 'GitHubImportPreview' },
+  { method: 'post', path: '/v1/creator/source-imports/drafts', operationId: 'createGitHubImportedDraft', auth: 'bearer', request: 'CreateGitHubDraftRequest', response: 'GitHubImportedDraft', idempotent: true },
+  { method: 'get', path: '/v1/creator/works/{workId}/source', operationId: 'getWorkSource', auth: 'bearer', response: 'WorkSource', pathId: 'workId' },
+  { method: 'post', path: '/v1/webhooks/github', operationId: 'acceptGitHubWebhook', auth: 'anonymous', response: 'GitHubWebhookAccepted', webhookBody: true },
+  { method: 'get', path: '/v1/admin/source-imports/overview', operationId: 'getGitHubSourceAdminOverview', auth: 'bearer', response: 'GitHubSourceAdminOverview' },
+  { method: 'get', path: '/v1/admin/source-imports/audit', operationId: 'listGitHubSourceAudit', auth: 'bearer', response: 'GitHubSourceAuditEvent', responseArray: true, queryLimit: true },
   { method: 'post', path: '/v1/creator/works', operationId: 'createWork', auth: 'bearer', request: 'CreateWorkRequest', response: 'Work', idempotent: true },
   { method: 'patch', path: '/v1/creator/works/{workId}', operationId: 'updateWork', auth: 'bearer', request: 'UpdateWorkRequest', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },
   { method: 'put', path: '/v1/creator/works/{workId}/cover', operationId: 'uploadWorkCover', auth: 'bearer', response: 'Work', pathId: 'workId', coverBody: true },
@@ -564,7 +620,7 @@ export function createOpenApiDocument() {
       tags: [operation.path.split('/')[2]],
       ...(operation.auth === 'bearer' ? { security: [{ bearerAuth: [] }] } : operation.auth === 'upload' ? { security: [{ uploadGrant: [] }] } : { security: [] }),
       ...(parameters.length ? { parameters } : {}),
-      ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : {}),
+      ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
       responses: {
         [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })

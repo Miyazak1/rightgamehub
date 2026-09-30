@@ -392,6 +392,34 @@ test('API client starts and polls GitHub web authorization without bearer creden
   assert.equal(requests[1].init.headers.Authorization, undefined);
 });
 
+test('GitHub source import UI stays read-only and hands drafts to the existing ZIP upload flow', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /function GitHubImportPage/);
+  assert.match(source, /只读取你授权仓库的元数据、README、许可证和固定提交信息，不执行仓库代码/);
+  assert.match(source, /导入不会自动构建或发布/);
+  assert.match(source, /私有仓库地址不会出现在公开作品资料中/);
+  assert.match(source, /createGitHubImportedDraft/);
+  assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/upload`\)/);
+});
+
+test('API client exposes authenticated GitHub source operations and idempotent draft creation', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({ getAccessToken: () => 'creator-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  const id = '00000000-0000-4000-8000-000000000001';
+  await client.startGitHubSourceInstall();
+  await client.listGitHubSourceConnections();
+  await client.listGitHubSourceRepositories(id);
+  await client.previewGitHubSourceImport({ connectionId: id, repositoryId: '7' });
+  await client.createGitHubImportedDraft({ importId: id, title: 'Desk Cat' });
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer creator-token'));
+  assert.ok(requests.at(-1).init.headers['Idempotency-Key']);
+  assert.match(requests.at(-1).url, /\/v1\/creator\/source-imports\/drafts$/);
+});
+
 test('API client refreshes an expired access token once and updates host memory', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let access = 'expired-access'; let saved; const requests = [];

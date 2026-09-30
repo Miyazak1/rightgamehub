@@ -42,6 +42,8 @@ import { createRulesRegistry, loadRulesRegistry } from '@gamehub/rules-sdk';
 import { createRedisMatchPublisher } from './redis-match-publisher.mjs';
 import { createWebValidationRunner } from './web-validation-runner.mjs';
 import { createStorageCapacityService } from './storage-capacity-service.mjs';
+import { createGitHubAppClient } from './github-app-client.mjs';
+import { PostgresGitHubSourceRepository, createGitHubSourceService } from './github-source-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -64,6 +66,12 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     githubClient: createGitHubOAuthClient({ clientId: config.githubClientId, clientSecret: config.githubClientSecret, callbackUrl: config.githubCallbackUrl }),
   });
   const workService = createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) });
+  const githubSourceService = createGitHubSourceService({
+    repository: new PostgresGitHubSourceRepository(database.pool),
+    githubClient: createGitHubAppClient({ appId: config.githubAppId, privateKey: config.githubAppPrivateKey, slug: config.githubAppSlug }),
+    enabled: config.githubSourceImportEnabled,
+    webhookSecret: config.githubAppWebhookSecret,
+  });
   const quarantineStore = new LocalQuarantineStore(config.quarantineRoot);
   const storageLogger = {
     info: event => process.stdout.write(`${JSON.stringify({ service: 'storage-capacity', ...event })}\n`),
@@ -116,8 +124,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const multiplayerMatchPublisher = createRedisMatchPublisher({ url: config.redisUrl });
   const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
   const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry, publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
-  const app = createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger: config.nodeEnv !== 'test' });
+  const app = createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, runtimeEdgeApp, app };
 }
