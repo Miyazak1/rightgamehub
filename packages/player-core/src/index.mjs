@@ -29,10 +29,16 @@ export class PlayerCore {
     frame.setAttribute('sandbox', ['allow-scripts', descriptor.capabilities?.pointerLock && 'allow-pointer-lock'].filter(Boolean).join(' '));
     frame.setAttribute('allow', [descriptor.capabilities?.fullscreen && 'fullscreen', descriptor.capabilities?.pointerLock && 'pointer-lock'].filter(Boolean).join('; '));
     frame.referrerPolicy = 'no-referrer';
-    if (descriptor.capabilities?.multiplayer && this.options.createBridge) this.#bridge = this.options.createBridge({ frame,launchId: this.#launchId,descriptor });
     frame.addEventListener('load', () => this.#frame === frame && this.#setState('running'), { once: true });
     frame.addEventListener('error', () => this.#frame === frame && this.#setState('error', { message: '游戏加载失败。' }), { once: true });
-    container.replaceChildren(frame); this.#frame = frame; this.#setState('loading'); return this.#launchId;
+    container.replaceChildren(frame); this.#frame = frame;
+    try {
+      if (descriptor.capabilities?.multiplayer && this.options.createBridge) this.#bridge = this.options.createBridge({ frame,launchId: this.#launchId,descriptor });
+    } catch (error) {
+      frame.src = 'about:blank'; frame.remove(); this.#frame = null; this.#launchId = null;
+      throw error;
+    }
+    this.#setState('loading'); return this.#launchId;
   }
   hide() { if (this.#state === 'running') { this.#frame.hidden = true; this.#setState('hidden'); } }
   resume() { if (this.#state === 'hidden') { this.#frame.hidden = false; this.#setState('running'); } }

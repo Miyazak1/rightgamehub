@@ -59,10 +59,10 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
 test('player core creates and closes a bridge only for an approved multiplayer release', async () => {
   const { PlayerCore } = await import('../../packages/player-core/src/index.mjs');
   let created = 0; let closed = 0;
-  const frame = { setAttribute() {},addEventListener() {},remove() {},contentWindow: {} };
-  const container = { ownerDocument: { createElement: () => frame },replaceChildren() {} };
+  const frame = { setAttribute() {},addEventListener() {},remove() {},contentWindow: null };
+  const container = { ownerDocument: { createElement: () => frame },replaceChildren(child) { child.contentWindow = {}; } };
   const descriptor = { apiVersion: 1,runtimeOrigin: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.gamehubusercontent.example',entryUrl: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.gamehubusercontent.example/index.html',capabilities: { multiplayer: true } };
-  const core = new PlayerCore({ createBridge: () => { created += 1; return { close() { closed += 1; } }; } });
+  const core = new PlayerCore({ createBridge: ({ frame: mountedFrame }) => { assert.ok(mountedFrame.contentWindow); created += 1; return { close() { closed += 1; } }; } });
   core.mount(container,descriptor); core.stop();
   assert.equal(created,1); assert.equal(closed,1);
   core.mount(container,{ ...descriptor,capabilities: { multiplayer: false } }); core.stop();
