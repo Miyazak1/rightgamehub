@@ -18,6 +18,7 @@ export const enums = Object.freeze({
 const id = { type: 'string', format: 'uuid' };
 const workKey = { type: 'string', pattern: '^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$' };
 const dateTime = { type: 'string', format: 'date-time' };
+const nullableDateTime = { oneOf: [dateTime, { type: 'null' }] };
 const uintString = { type: 'string', pattern: '^(0|[1-9][0-9]*)$' };
 const sha256 = { type: 'string', pattern: '^[a-f0-9]{64}$' };
 
@@ -129,6 +130,23 @@ export const schemas = Object.freeze({
   }, ['modeId','visibility','capacity']),
   JoinMultiplayerRoomRequest: object({ joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' } }, []),
   SetMultiplayerReadyRequest: object({ ready: { type: 'boolean' } }),
+  MultiplayerMatchPlayer: object({
+    userId: id, displayName: { type: 'string' }, seat: { type: 'integer', minimum: 0, maximum: 7 },
+    team: { oneOf: [{ type: 'integer' }, { type: 'null' }] }, result: { oneOf: [stringEnum(['win','loss','draw','none']), { type: 'null' }] },
+  }),
+  MultiplayerMatch: object({
+    id, roomId: { oneOf: [id, { type: 'null' }] }, modeId: id, rulesetVersion: { type: 'string' },
+    status: stringEnum(['pending','active','finishing','completed','aborted']), revision: uintString, nextEventSeq: uintString,
+    turnUserId: { oneOf: [id, { type: 'null' }] }, turnDeadlineAt: nullableDateTime, startedAt: nullableDateTime, endedAt: nullableDateTime,
+    terminationReason: { oneOf: [stringEnum(['normal','resignation','timeout','disconnect','admin_abort','adapter_error']), { type: 'null' }] },
+    result: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }] },
+    players: { type: 'array', minItems: 2, maxItems: 8, items: { $ref: '#/components/schemas/MultiplayerMatchPlayer' } },
+    publicState: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }] },
+  }),
+  MultiplayerMatchEvent: object({
+    seq: uintString, type: { type: 'string' }, actorUserId: { oneOf: [id, { type: 'null' }] }, commandId: { oneOf: [id, { type: 'null' }] },
+    payload: { type: 'object', additionalProperties: true }, stateHash: { type: 'string', pattern: '^[a-f0-9]{64}$' }, createdAt: dateTime,
+  }),
   GitHubDevicePoll: object({
     status: stringEnum(['pending', 'complete']),
     retryAfter: { type: 'integer', minimum: 0, maximum: 120 },
@@ -401,6 +419,9 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/join', operationId: 'joinMultiplayerRoom', auth: 'bearer', request: 'JoinMultiplayerRoomRequest', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/leave', operationId: 'leaveMultiplayerRoom', auth: 'bearer', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/ready', operationId: 'setMultiplayerReady', auth: 'bearer', request: 'SetMultiplayerReadyRequest', response: 'MultiplayerRoom', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/start', operationId: 'startMultiplayerRoom', auth: 'bearer', response: 'MultiplayerMatch', pathRoomId: true, idempotent: true },
+  { method: 'get', path: '/v1/multiplayer/matches/{matchId}', operationId: 'getMultiplayerMatch', auth: 'bearer', response: 'MultiplayerMatch', pathMatchId: true },
+  { method: 'get', path: '/v1/multiplayer/matches/{matchId}/events', operationId: 'listMultiplayerMatchEvents', auth: 'bearer', response: 'MultiplayerMatchEvent', responseArray: true, pathMatchId: true, queryMatchEvents: true },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
   { method: 'post', path: '/v1/auth/devices/logout-all', operationId: 'logoutAllDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
@@ -480,6 +501,10 @@ export function createOpenApiDocument() {
     if (operation.queryMultiplayerRooms) parameters.push(
       { name: 'modeId', in: 'query', required: true, schema: id },
       { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 50, default: 30 } },
+    );
+    if (operation.queryMatchEvents) parameters.push(
+      { name: 'afterSeq', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 } },
+      { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 500, default: 100 } },
     );
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },

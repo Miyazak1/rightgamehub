@@ -12,6 +12,7 @@ import { GuessBaikeError } from './guess-baike-service.mjs';
 import { AnalyticsError } from './analytics-service.mjs';
 import { RealtimeTicketError } from './realtime-ticket-service.mjs';
 import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
+import { MultiplayerMatchError } from './multiplayer-match-service.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -25,7 +26,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, multiplayerRoomService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -46,7 +47,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -172,6 +173,27 @@ export function createApp({ config, database, migrations, authService, workServi
     app.post('/v1/multiplayer/rooms/:roomId/ready', {
       preHandler: requireAuth, schema: { params: roomParams, body: { type: 'object', additionalProperties: false, required: ['ready'], properties: { ready: { type: 'boolean' } } } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerRoomService.setReady(request.actor, request.params.roomId, request.body.ready)); });
+  }
+  if (multiplayerMatchService) {
+    const matchParams = { type: 'object', additionalProperties: false, required: ['matchId'], properties: { matchId: { type: 'string', format: 'uuid' } } };
+    app.post('/v1/multiplayer/rooms/:roomId/start', {
+      preHandler: requireAuth,
+      schema: { params: { type: 'object', additionalProperties: false, required: ['roomId'], properties: { roomId: { type: 'string', format: 'uuid' } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await multiplayerMatchService.startRoom(request.actor, request.params.roomId, request.headers['idempotency-key']));
+    });
+    app.get('/v1/multiplayer/matches/:matchId', { preHandler: requireAuth, schema: { params: matchParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.getMatch(request.actor, request.params.matchId));
+    });
+    app.get('/v1/multiplayer/matches/:matchId/events', {
+      preHandler: requireAuth,
+      schema: { params: matchParams, querystring: { type: 'object', additionalProperties: false, properties: {
+        afterSeq: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 500 },
+      } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.listEvents(request.actor, request.params.matchId, request.query));
+    });
   }
   if (analyticsService) {
     const analyticsEvent = {

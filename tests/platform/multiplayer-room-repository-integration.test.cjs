@@ -9,11 +9,14 @@ const source = relative => pathToFileURL(path.join(root, relative));
 const databaseUrl = process.env.GAMEHUB_TEST_DATABASE_URL;
 
 test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { skip: !databaseUrl }, async t => {
-  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }, { PostgresRealtimeRoomRepository }] = await Promise.all([
+  const [{ createDatabase }, { PostgresMultiplayerRoomRepository }, { createMultiplayerRoomService }, { PostgresRealtimeRoomRepository }, { PostgresMultiplayerMatchRepository }, { createMultiplayerMatchService }, { createRulesRegistry, hashRulesState }] = await Promise.all([
     import(source('apps/api/src/database.mjs')),
     import(source('apps/api/src/multiplayer-room-repository.mjs')),
     import(source('apps/api/src/multiplayer-room-service.mjs')),
     import(source('apps/realtime/src/room-repository.mjs')),
+    import(source('apps/api/src/multiplayer-match-repository.mjs')),
+    import(source('apps/api/src/multiplayer-match-service.mjs')),
+    import(source('packages/rules-sdk/src/index.mjs')),
   ]);
   const database = createDatabase({ databaseUrl, databaseSsl: false });
   const ownerId = crypto.randomUUID(); const guestId = crypto.randomUUID(); const thirdId = crypto.randomUUID(); const workId = crypto.randomUUID();
@@ -25,6 +28,7 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   t.after(async () => {
     try {
       await database.pool.query('DELETE FROM idempotency_keys WHERE actor_id = ANY($1::uuid[])', [[ownerId,guestId,thirdId]]);
+      await database.pool.query('DELETE FROM multiplayer_matches WHERE mode_id IN (SELECT id FROM multiplayer_game_modes WHERE work_id=$1)', [workId]);
       await database.pool.query('DELETE FROM multiplayer_rooms WHERE mode_id IN (SELECT id FROM multiplayer_game_modes WHERE work_id=$1)', [workId]);
       await database.pool.query('DELETE FROM works WHERE id=$1', [workId]);
       await database.pool.query('DELETE FROM users WHERE id = ANY($1::uuid[])', [[ownerId,guestId,thirdId]]);
@@ -66,4 +70,31 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
   const invitedJoined = await service.joinRoom(guest, invited.id, { joinCode: invited.joinCode });
   assert.equal(invitedJoined.members.length, 2);
   assert.equal((await service.getRoom(guest, invited.id)).id, invited.id);
+
+  const matchRoom = await service.createRoom(owner, { modeId: mode.id, visibility: 'public', capacity: 2, settings: { turnSeconds: 60 } }, `room-${crypto.randomUUID()}`);
+  await service.joinRoom(guest, matchRoom.id);
+  await service.setReady(owner, matchRoom.id, true);
+  await service.setReady(guest, matchRoom.id, true);
+  const rulesRegistry = createRulesRegistry([{
+    workId, modeKey: 'classic', rulesetVersion: '1',
+    createInitialState: input => ({ turnUserId: input.players[0].userId, moves: [] }),
+    getTurn: state => ({ userId: state.turnUserId, seconds: 60 }),
+    getPlayerView: state => state,
+    getSpectatorView: state => ({ turnUserId: state.turnUserId, moveCount: state.moves.length }),
+    serializeState: state => structuredClone(state), deserializeState: state => structuredClone(state), hashState: hashRulesState,
+    validateCommand: () => ({ valid: true }), applyCommand: state => state, handleTimeout: state => state,
+  }]);
+  const matchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry });
+  const startKey = `match-${crypto.randomUUID()}`;
+  const match = await matchService.startRoom(owner, matchRoom.id, startKey);
+  const replayedMatch = await matchService.startRoom(owner, matchRoom.id, startKey);
+  assert.equal(match.id, replayedMatch.id);
+  assert.equal(match.status, 'active');
+  assert.equal(match.publicState.moveCount, 0);
+  assert.equal((await database.pool.query('SELECT status FROM multiplayer_rooms WHERE id=$1', [matchRoom.id])).rows[0].status, 'in_match');
+  assert.equal((await database.pool.query('SELECT count(*)::int AS count FROM multiplayer_match_events WHERE match_id=$1', [match.id])).rows[0].count, 1);
+  assert.equal((await database.pool.query('SELECT count(*)::int AS count FROM multiplayer_match_snapshots WHERE match_id=$1', [match.id])).rows[0].count, 1);
+  assert.equal((await matchService.getMatch(guest, match.id)).id, match.id);
+  assert.equal((await matchService.listEvents(guest, match.id))[0].type, 'match.started');
+  await assert.rejects(matchService.getMatch(third, match.id), error => error.code === 'MATCH_NOT_FOUND');
 });

@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 30);
+  assert.equal(files.length, 31);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -44,6 +44,11 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(multiplayer, /CREATE TABLE multiplayer_game_modes/);
   assert.match(multiplayer, /CREATE TABLE multiplayer_rooms/);
   assert.match(multiplayer, /CREATE TABLE multiplayer_room_members/);
+  const matches = fs.readFileSync(path.join(migrationDir, '0031_multiplayer_matches.sql'), 'utf8');
+  assert.match(matches, /CREATE TABLE multiplayer_matches/);
+  assert.match(matches, /CREATE TABLE multiplayer_match_players/);
+  assert.match(matches, /CREATE TABLE multiplayer_match_events/);
+  assert.match(matches, /CREATE TABLE multiplayer_match_snapshots/);
   files.forEach((name, index) => assert.match(name, new RegExp(`^${String(index + 1).padStart(4, '0')}_`)));
   for (const migration of migrations) {
     assert.match(migration.sql, /^BEGIN;/);
@@ -60,7 +65,8 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'upload_jobs', 'upload_grants', 'jobs', 'idempotency_keys', 'user_library', 'guess_baike_results', 'user_follows', 'user_blocks',
     'guess_baike_reactions', 'social_notifications', 'game_challenges', 'challenge_participations', 'user_notification_preferences',
     'guess_baike_puzzles', 'guess_baike_schedule', 'guess_baike_automation_runs', 'creator_applications', 'analytics_events',
-    'multiplayer_game_modes', 'multiplayer_rooms', 'multiplayer_room_members',
+    'multiplayer_game_modes', 'multiplayer_rooms', 'multiplayer_room_members', 'multiplayer_matches',
+    'multiplayer_match_players', 'multiplayer_match_events', 'multiplayer_match_snapshots',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

@@ -201,6 +201,33 @@ test('multiplayer room routes keep creation authenticated and idempotent', async
   assert.equal(creation.idempotencyKey, 'room-create-test-0001');
 });
 
+test('multiplayer match routes authenticate starts and expose participant recovery reads', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const actor = { userId: crypto.randomUUID(), profile: { role: 'user' } };
+  const roomId = crypto.randomUUID();
+  const matchId = crypto.randomUUID();
+  const calls = [];
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async () => actor },
+    multiplayerMatchService: {
+      startRoom: async (...args) => { calls.push(['start', ...args]); return { id: matchId, status: 'active' }; },
+      getMatch: async (...args) => { calls.push(['get', ...args]); return { id: matchId, status: 'active' }; },
+      listEvents: async (...args) => { calls.push(['events', ...args]); return [{ seq: '1', type: 'match.started' }]; },
+    },
+  });
+  t.after(() => app.close());
+  const started = await app.inject({ method: 'POST', url: `/v1/multiplayer/rooms/${roomId}/start`, headers: { authorization: 'Bearer valid', 'idempotency-key': 'match-start-route-0001' } });
+  const match = await app.inject({ url: `/v1/multiplayer/matches/${matchId}`, headers: { authorization: 'Bearer valid' } });
+  const events = await app.inject({ url: `/v1/multiplayer/matches/${matchId}/events?afterSeq=7&limit=25`, headers: { authorization: 'Bearer valid' } });
+  assert.deepEqual([started.statusCode, match.statusCode, events.statusCode], [200, 200, 200]);
+  assert.ok([started, match, events].every(response => response.headers['cache-control'] === 'no-store'));
+  assert.equal(calls[0][1], actor);
+  assert.equal(calls[0][2], roomId);
+  assert.equal(calls[0][3], 'match-start-route-0001');
+  assert.deepEqual({ ...calls[2][3] }, { afterSeq: 7, limit: 25 });
+});
+
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const app = createApp({

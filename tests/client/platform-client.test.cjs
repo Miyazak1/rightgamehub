@@ -137,6 +137,25 @@ test('API client exposes multiplayer mode and room lifecycle operations', async 
   assert.equal(requests[4].init.body, JSON.stringify({ joinCode: 'ABCDEFGHIJKL' }));
 });
 
+test('API client starts and recovers authoritative multiplayer matches', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const roomId = '00000000-0000-4000-8000-000000000303';
+  const matchId = '00000000-0000-4000-8000-000000000304';
+  const client = createApiClient({ getAccessToken: () => 'match-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  await client.startMultiplayerRoom(roomId);
+  await client.getMultiplayerMatch(matchId);
+  await client.listMultiplayerMatchEvents(matchId, 8, 40);
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET']);
+  assert.match(requests[0].url, new RegExp(`/v1/multiplayer/rooms/${roomId}/start$`));
+  assert.ok(requests[0].init.headers['Idempotency-Key'].length >= 16);
+  assert.match(requests[2].url, /afterSeq=8&limit=40$/u);
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer match-token'));
+});
+
 test('API client reads the authenticated creator collection', async () => {
   let request;
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
