@@ -40,6 +40,12 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     try { parsed = new URL(githubCallbackUrl); } catch { throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL'); }
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL');
   }
+  const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
+  let realtimePublicUrl;
+  try { realtimePublicUrl = new URL(env.REALTIME_PUBLIC_URL?.trim() || 'ws://127.0.0.1:3093/v1/realtime'); }
+  catch { throw new Error('REALTIME_PUBLIC_URL must be a valid WebSocket URL'); }
+  if (!['ws:', 'wss:'].includes(realtimePublicUrl.protocol)) throw new Error('REALTIME_PUBLIC_URL must use ws or wss');
+  if (nodeEnv === 'production' && realtimePublicUrl.protocol !== 'wss:') throw new Error('REALTIME_PUBLIC_URL must use wss in production');
   return Object.freeze({
     nodeEnv,
     host: env.API_HOST ?? '127.0.0.1',
@@ -66,6 +72,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     corsOrigins: Object.freeze(corsOrigins),
     loginEmailAllowlist: Object.freeze(loginEmailAllowlist),
     trustEditorWebviews: boolean(env.TRUST_EDITOR_WEBVIEWS, false, 'TRUST_EDITOR_WEBVIEWS'),
+    redisUrl,
+    realtimePublicUrl: realtimePublicUrl.toString(),
+    realtimeTicketTtlSeconds: integer(env.REALTIME_TICKET_TTL_SECONDS, 30, 'REALTIME_TICKET_TTL_SECONDS', 5, 120),
     guessBaikeAutomationEnabled: boolean(env.GUESS_BAIKE_AUTOMATION_ENABLED, nodeEnv !== 'test', 'GUESS_BAIKE_AUTOMATION_ENABLED'),
     guessBaikeAutomationIntervalMinutes: integer(env.GUESS_BAIKE_AUTOMATION_INTERVAL_MINUTES, 360, 'GUESS_BAIKE_AUTOMATION_INTERVAL_MINUTES', 15, 1440),
     guessBaikeAutomationBatchSize: integer(env.GUESS_BAIKE_AUTOMATION_BATCH_SIZE, 20, 'GUESS_BAIKE_AUTOMATION_BATCH_SIZE', 1, 20),

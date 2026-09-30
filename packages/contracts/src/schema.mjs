@@ -87,6 +87,12 @@ export const schemas = Object.freeze({
     refreshToken: { type: 'string', minLength: 32 }, refreshExpiresAt: dateTime,
     grantId: id, profile: { $ref: '#/components/schemas/Profile' },
   }),
+  RealtimeTicket: object({
+    ticket: { type: 'string', minLength: 32, maxLength: 128 },
+    websocketUrl: { type: 'string', pattern: '^wss?://' },
+    expiresAt: dateTime,
+    protocol: { type: 'string', const: 'gamehub.realtime.v1' },
+  }),
   GitHubDevicePoll: object({
     status: stringEnum(['pending', 'complete']),
     retryAfter: { type: 'integer', minimum: 0, maximum: 120 },
@@ -350,6 +356,7 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/auth/github/web', operationId: 'startGitHubWeb', auth: 'anonymous', request: 'GitHubWebStartRequest', response: 'GitHubWebChallenge' },
   { method: 'post', path: '/v1/auth/github/web/{challengeId}/poll', operationId: 'pollGitHubWeb', auth: 'anonymous', response: 'GitHubWebPoll', pathId: 'challengeId' },
   { method: 'post', path: '/v1/auth/refresh', operationId: 'refreshDeviceGrant', auth: 'anonymous', request: 'RefreshRequest', response: 'AuthTokens' },
+  { method: 'post', path: '/v1/realtime/tickets', operationId: 'createRealtimeTicket', auth: 'bearer', response: 'RealtimeTicket' },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
   { method: 'post', path: '/v1/auth/devices/logout-all', operationId: 'logoutAllDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },

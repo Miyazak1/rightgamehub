@@ -24,6 +24,7 @@
     "api:validate:once": "npm --prefix apps/api run validate:once",
     "api:validate:social": "node scripts/validate-social-e2e.mjs",
     "runtime:start": "npm --prefix apps/api run runtime:start",
+    "realtime:start": "pnpm --filter @gamehub/realtime start",
     "e2e:start": "npm --prefix apps/api run dev:e2e",
     "web:dev": "pnpm --filter @gamehub/web dev",
     "web:build": "pnpm --filter @gamehub/web build",

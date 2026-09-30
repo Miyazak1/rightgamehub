@@ -149,6 +149,29 @@ test('ready returns success only when database and migrations are current', asyn
   assert.equal(response.json().data.status, 'ready');
 });
 
+test('authenticated users can create no-store realtime connection tickets', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const actor = { userId: crypto.randomUUID(), grantId: crypto.randomUUID(), scopes: ['works:read'] };
+  let issuedFor;
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async header => header === 'Bearer valid' ? actor : null },
+    realtimeTicketService: {
+      ready: async () => true,
+      issue: async value => {
+        issuedFor = value;
+        return { ticket: 't'.repeat(43), websocketUrl: 'wss://mooyu.fun/v1/realtime', expiresAt: new Date().toISOString(), protocol: 'gamehub.realtime.v1' };
+      },
+    },
+  });
+  t.after(() => app.close());
+  const response = await app.inject({ method: 'POST', url: '/v1/realtime/tickets', headers: { authorization: 'Bearer valid' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.deepEqual(issuedFor, actor);
+  assert.equal(response.json().data.protocol, 'gamehub.realtime.v1');
+});
+
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const app = createApp({

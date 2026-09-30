@@ -1,4 +1,17 @@
 services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:63799:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - gamehub-redis-dev:/data
+
   postgres:
     image: postgres:16.10-alpine
     environment:
@@ -17,3 +30,4 @@ services:
 
 volumes:
   gamehub-postgres-dev:
+  gamehub-redis-dev:

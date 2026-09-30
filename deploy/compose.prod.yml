@@ -6,6 +6,9 @@ x-api-environment: &api-environment
   API_PORT: 3090
   DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
   DATABASE_SSL: "false"
+  REDIS_URL: redis://redis:6379
+  REALTIME_PUBLIC_URL: wss://${APP_DOMAIN}/v1/realtime
+  REALTIME_TICKET_TTL_SECONDS: "30"
   OTP_HMAC_KEY: ${OTP_HMAC_KEY}
   CORS_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
   TRUST_EDITOR_WEBVIEWS: "true"
@@ -28,6 +31,20 @@ x-api-environment: &api-environment
   NODE_OPTIONS: --max-old-space-size=320
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    mem_limit: 160m
+
   postgres:
     image: postgres:16.10-alpine
     restart: unless-stopped
@@ -71,6 +88,7 @@ services:
     command: ["node", "apps/api/src/server.mjs"]
     depends_on:
       migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
     volumes:
       - avatars:/data/avatars
       - covers:/data/covers
@@ -84,6 +102,28 @@ services:
       retries: 12
     networks: [backend]
     mem_limit: 384m
+
+  realtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.realtime
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REALTIME_HOST: 0.0.0.0
+      REALTIME_PORT: 3093
+      REDIS_URL: redis://redis:6379
+      REALTIME_ALLOWED_ORIGINS: https://${APP_DOMAIN},http://127.0.0.1:3080,http://localhost:3080,http://127.0.0.1:3081
+      TRUST_EDITOR_WEBVIEWS: "true"
+    depends_on:
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+    mem_limit: 192m
 
   worker:
     build:
@@ -136,6 +176,7 @@ services:
       ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET}
     depends_on:
       api: { condition: service_healthy }
+      realtime: { condition: service_healthy }
       runtime: { condition: service_started }
     ports:
       - "80:80"
@@ -152,6 +193,7 @@ networks:
 
 volumes:
   postgres-data:
+  redis-data:
   avatars:
   covers:
   quarantine:

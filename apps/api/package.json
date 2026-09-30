@@ -16,6 +16,7 @@
   "dependencies": {
     "fastify": "5.12.5",
     "pg": "8.23.0",
+    "redis": "^5.8.2",
     "sharp": "0.35.5",
     "yauzl": "3.4.0"
   }

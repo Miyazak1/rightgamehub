@@ -15,6 +15,7 @@ export type UUID = string;
 
 export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }
 export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }
+export interface RealtimeTicket { ticket: string; websocketUrl: string; expiresAt: string; protocol: "gamehub.realtime.v1" }
 export interface WorkTarget { targetKey: TargetKey; state: WorkState; currentReleaseId: UUID | null; revision: UIntString }
 export interface Work { id: UUID; ownerUserId: UUID; title: string; description: string; instructions: string; kind: WorkKind; state: WorkState; visibility: Visibility; revision: UIntString; firstPublishedAt: string | null; coverUrl: string | null; estimatedMinutes: number; tags: string[]; agentLabel: string | null; repositoryUrl: string | null; licenseSpdx: string | null; creatorDisplayName: string | null; playCount: number; saveCount: number; targets: WorkTarget[] }
 export interface ReleaseSummary { id: UUID; targetKey: TargetKey; label: string; packageType: PackageType; validationState: ReleaseValidationState; servingState: ReleaseServingState; createdAt: string }

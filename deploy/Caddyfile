@@ -18,6 +18,10 @@
     reverse_proxy api:3090
   }
 
+  handle /v1/realtime {
+    reverse_proxy realtime:3093
+  }
+
   handle /v1/* {
     reverse_proxy api:3090
   }

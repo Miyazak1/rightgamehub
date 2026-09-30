@@ -48,6 +48,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
     trackAnalytics: (events, options) => request('/v1/analytics/events', { ...options, method: 'POST', body: { events }, auth: true, keepalive: true }),
     getAdminAnalytics: (days = 7, options) => request(`/v1/admin/analytics?days=${encodeURIComponent(days)}`, { ...options, auth: true }),
+    createRealtimeTicket: options => request('/v1/realtime/tickets', { ...options, method: 'POST', auth: true }),
     createChallenge: (body, options) => request('/v1/auth/email/challenges', { ...options, method: 'POST', body }),
     verifyChallenge: (body, options) => request('/v1/auth/email/verify', { ...options, method: 'POST', body }),
     startGitHubDevice: (body, options) => request('/v1/auth/github/device', { ...options, method: 'POST', body }),

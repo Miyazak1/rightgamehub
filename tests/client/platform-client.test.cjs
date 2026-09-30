@@ -99,6 +99,20 @@ test('API client submits analytics and reads the administrator overview', async 
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
 });
 
+test('API client creates an authenticated realtime connection ticket', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  let request;
+  const client = createApiClient({ getAccessToken: () => 'realtime-token', fetchImpl: async (url, init) => {
+    request = { url, init };
+    return new Response(JSON.stringify({ data: { ticket: 't'.repeat(43), websocketUrl: 'wss://mooyu.fun/v1/realtime', expiresAt: '2026-09-30T00:00:30.000Z', protocol: 'gamehub.realtime.v1' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  const result = await client.createRealtimeTicket();
+  assert.equal(result.data.protocol, 'gamehub.realtime.v1');
+  assert.match(request.url, /\/v1\/realtime\/tickets$/u);
+  assert.equal(request.init.method, 'POST');
+  assert.equal(request.init.headers.Authorization, 'Bearer realtime-token');
+});
+
 test('API client reads the authenticated creator collection', async () => {
   let request;
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');

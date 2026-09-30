@@ -1,0 +1,14 @@
+{
+  "name": "@gamehub/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs"
+  },
+  "dependencies": {
+    "@gamehub/multiplayer-protocol": "workspace:*",
+    "redis": "^5.8.2",
+    "ws": "^8.18.3"
+  }
+}
