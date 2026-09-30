@@ -16,6 +16,17 @@ const stateFile = path.join(stateRoot, `${host}.json`);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const log = value => { if (!quiet) console.log(value); };
 await mkdir(stateRoot, { recursive: true });
+let targetVersion = null;
+let targetSha256 = null;
+let previous = null;
+try { previous = JSON.parse(await readFile(stateFile, 'utf8')); } catch {}
+async function writeState(phase, { percent = null, message = null, restartRequired = false } = {}) {
+  const temporary = stateFile + '.tmp';
+  await writeFile(temporary, JSON.stringify({ host, channel: 'stable', phase, version: targetVersion, sha256: targetSha256,
+    percent, message, updatedAt: new Date().toISOString(), restartRequired }, null, 2) + '\n');
+  await rename(temporary, stateFile);
+}
+await writeState('checking');
 
 async function fetchJson(url) {
   const response = await fetch(url, { cache: 'no-store' });
@@ -26,6 +37,7 @@ async function verifiedArtifact(item) {
   const response = await fetch(item.url, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Unable to download ${item.filename}.`);
   const bytes = Buffer.from(await response.arrayBuffer());
+  await writeState('verifying', { percent: 100 });
   if (hash(bytes) !== String(item.sha256).toLowerCase()) throw new Error(`SHA-256 verification failed for ${item.filename}.`);
   const output = path.join(stateRoot, item.filename);
   const partial = output + '.part';
@@ -54,6 +66,7 @@ async function installPortable(item) {
   return marketplaceRoot;
 }
 
+try {
 const manifest = await fetchJson('https://mooyu.fun/downloads/manifest.json');
 const updater = manifest.updater?.portable;
 if (updater) {
@@ -71,24 +84,36 @@ if (updater) {
   }
 }
 if (manifest.channel !== 'stable') throw new Error('GameHub updater only accepts the stable channel.');
-let previous = null;
-try { previous = JSON.parse(await readFile(stateFile, 'utf8')); } catch {}
 let item;
 if (host === 'cursor' || host === 'code') item = manifest.editorExtension;
 else if (host === 'harness') item = manifest.harnessPlugin;
 else item = manifest.agentPlugin;
-if (previous?.version === item.version && previous?.sha256 === item.sha256) process.exit(0);
+targetVersion = item.version; targetSha256 = item.sha256;
+if (previous?.version === item.version && previous?.sha256 === item.sha256) {
+  await writeState(previous.phase === 'ready' ? 'ready' : 'current', { percent: 100, restartRequired: previous.phase === 'ready' });
+  process.exit(0);
+}
 
 if (host === 'cursor' || host === 'code') {
+  await writeState('downloading');
   const { output } = await verifiedArtifact(item);
+  await writeState('installing', { percent: 100 });
   run(host, ['--install-extension', output, '--force']);
 } else if (host === 'harness') {
+  await writeState('downloading');
   const { output } = await verifiedArtifact(item);
+  await writeState('installing', { percent: 100 });
   run('dsh', ['plugin', '--profile', 'web', 'add', output]);
 } else {
+  await writeState('downloading');
   await installPortable(item);
+  await writeState('installing', { percent: 100 });
   if (host === 'codex') run('codex', ['plugin', 'marketplace', 'upgrade', 'gamehub']);
   else log(`GameHub ${item.version} is staged for Claude Code. Restart Claude Code and refresh the GameHub marketplace.`);
 }
-await writeFile(stateFile, JSON.stringify({ host, channel: 'stable', version: item.version, sha256: item.sha256, stagedAt: new Date().toISOString(), restartRequired: true }, null, 2) + '\n');
+await writeState('ready', { percent: 100, restartRequired: true });
 log(`GameHub ${item.version} is installed or staged for ${host}. Restart the host to activate it.`);
+} catch (error) {
+  await writeState('failed', { message: '更新暂未完成，后台稍后会自动重试。' }).catch(() => {});
+  throw error;
+}

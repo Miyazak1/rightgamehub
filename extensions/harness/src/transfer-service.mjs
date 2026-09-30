@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, open, readFile, readdir, rename, stat, unlink, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { prepareWebGame } from './prepare-web-game.mjs';
@@ -13,6 +14,9 @@ import { createDesktopLauncher } from './desktop-launcher.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
+const VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+const UPDATE_PHASES = new Set(['checking', 'downloading', 'verifying', 'installing', 'ready', 'current', 'failed']);
+const CURRENT_PLUGIN_VERSION = JSON.parse((await readFile(new URL('../package.json', import.meta.url), 'utf8')).replace(/^\uFEFF/, '')).version;
 class TransferError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
@@ -34,7 +38,7 @@ function validName(name) {
 
 // Only the trusted plugin UI uses these routes. Harness authenticates the operator,
 // Host, Origin and Fetch Metadata before dispatching its connection.fetch handlers.
-export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024, quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000, offscreenOptions, desktopOptions, credentialStore = null, platformOrigin = process.env.GAMEHUB_API_BASE_URL || 'https://mooyu.fun' }) {
+export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024, quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000, offscreenOptions, desktopOptions, credentialStore = null, platformOrigin = process.env.GAMEHUB_API_BASE_URL || 'https://mooyu.fun', updateStateFile = process.env.GAMEHUB_UPDATE_STATE_FILE || path.join(process.platform === 'win32' ? (process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')) : (process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share')), process.platform === 'win32' ? 'GameHub' : 'gamehub', 'updates', 'harness.json') }) {
   await mkdir(root, { recursive: true });
   const records = new Map();
   for (const filename of await readdir(root)) {
@@ -225,6 +229,29 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     return new Response(body, { status, headers });
   }
 
+  async function updateStatus(request) {
+    if (request.headers.get('x-gamehub-update') !== '1') fail(403, '请从 GameHub 侧栏读取更新状态。');
+    let value;
+    try { value = JSON.parse((await readFile(updateStateFile, 'utf8')).replace(/^\uFEFF/, '')); }
+    catch (error) {
+      if (error.code === 'ENOENT' || error instanceof SyntaxError) return json({ ok: true, enabled: false, phase: 'unavailable', currentVersion: CURRENT_PLUGIN_VERSION });
+      throw error;
+    }
+    const phase = UPDATE_PHASES.has(value?.phase) ? value.phase : value?.phase == null && value?.restartRequired === true ? 'ready' : null;
+    if (value?.host !== 'harness' || !phase || (value.version != null && !VERSION.test(String(value.version)))) {
+      return json({ ok: true, enabled: false, phase: 'unavailable', currentVersion: CURRENT_PLUGIN_VERSION });
+    }
+    const active = phase === 'ready' && value.version === CURRENT_PLUGIN_VERSION;
+    return json({
+      ok: true, enabled: true, phase: active ? 'current' : phase,
+      currentVersion: CURRENT_PLUGIN_VERSION, version: value.version || null,
+      percent: Number.isInteger(value.percent) && value.percent >= 0 && value.percent <= 100 ? value.percent : null,
+      message: typeof value.message === 'string' ? value.message.slice(0, 180) : null,
+      updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null,
+      restartRequired: active ? false : phase === 'ready' && value.restartRequired === true,
+    });
+  }
+
   const handlers = {
     '/api/gamehub/files': { methods: ['GET'], requestBody: 'buffered', run: () => json({ ok: true, files: [...records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(catalogRecord), maxBytes, quotaBytes, usedBytes: usedBytes() }) },
     '/api/gamehub/credentials': { methods: ['GET', 'PUT', 'DELETE'], requestBody: 'buffered', run: async request => {
@@ -248,6 +275,7 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     '/api/gamehub/upload': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, false) },
     '/api/gamehub/verify': { methods: ['POST'], requestBody: 'streaming', run: (request, url) => transfer(request, url, true) },
     '/api/gamehub/download': { methods: ['GET', 'HEAD'], requestBody: 'buffered', run: download },
+    '/api/gamehub/update-status': { methods: ['GET'], requestBody: 'buffered', run: updateStatus },
     '/api/gamehub/platform-desktop-status': { methods: ['POST'], requestBody: 'buffered', run: async request => {
       const { record } = await readPlatformExecutable(request);
       return json({ ok: true, ...desktop.status(record) });
