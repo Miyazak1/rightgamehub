@@ -1,0 +1,15 @@
+{
+  "protocol": "gamehub.rules-manifest.v1",
+  "createdAt": "2026-09-30T00:00:00.000Z",
+  "keyId": "mizhen-release-2026-09",
+  "entries": [
+    {
+      "workId": "1a13df55-8906-4b03-a19a-5e5a3b776649",
+      "modeKey": "duel",
+      "rulesetVersion": "1.0.0",
+      "bundle": "mizhen/duel-1.0.0.cjs",
+      "sha256": "7ea79f58bdff5b7d40e3f320eb7e8e7cab880e0f1d942098545f6a67601544db"
+    }
+  ],
+  "signature": "JPXsiYqIQZG38m6xjAwmaBjj5ShDwxm3C5IGm0fKHSvtet6CKxMrQ1LnFiQxStyybkj-JTyfwH_20dv0utXBDw"
+}
