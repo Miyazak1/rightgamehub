@@ -40,6 +40,14 @@ test('high contrast never lets a host accent replace the action color', async ()
   assert.equal(themeToTokens({ mode: 'high-contrast', colors: { accent: '#9b6cff' } }).action, '#ffff00');
 });
 
+test('upload display reports small and server-confirmed sizes without misleading zero MB', async () => {
+  const { formatBytes, uploadErrorMessage } = await import('../../packages/platform-client/src/upload-display.mjs');
+  assert.equal(formatBytes(0), '0 B');
+  assert.equal(formatBytes(32 * 1024), '32 KB');
+  assert.equal(formatBytes(32 * 1024 * 1024), '32.0 MB');
+  assert.match(uploadErrorMessage('ENTRY_MISSING'), /一个 HTML.*自动识别/);
+});
+
 test('launch descriptor accepts release origin and rejects mismatched origin', async () => {
   const { validateLaunchDescriptor } = await import('../../packages/player-core/src/index.mjs');
   const base = { apiVersion: 1, runtimeOrigin: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.gamehubusercontent.example', entryUrl: 'https://r-27c4a881871a4ae18201ed0f4ecbe12a.gamehubusercontent.example/index.html' };

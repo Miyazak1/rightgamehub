@@ -12,7 +12,17 @@ const invalid = (code, message) => Object.assign(new Error(message), { code });
 const supportedCapabilities = new Set(['fullscreen', 'pointerLock']);
 
 async function readPlatformManifest(output, assets) {
-  if (!assets['platform.json']) return { entry: 'index.html', approvedCapabilities: [] };
+  if (!assets['platform.json']) {
+    if (assets['index.html']?.size > 0) return { entry: 'index.html', approvedCapabilities: [] };
+    const htmlEntries = Object.entries(assets)
+      .filter(([, asset]) => asset.size > 0 && /^text\/html/.test(asset.mime))
+      .map(([name]) => name)
+      .sort();
+    if (htmlEntries.length === 1) return { entry: htmlEntries[0], approvedCapabilities: [] };
+    throw invalid('ENTRY_MISSING', htmlEntries.length
+      ? 'ZIP must contain index.html at its root when it contains multiple HTML files.'
+      : 'ZIP must contain a non-empty HTML entry file.');
+  }
   if (assets['platform.json'].size > WEB_LIMITS.manifestBytes) throw invalid('MANIFEST_INVALID', 'platform.json exceeds 16 KiB.');
   let value;
   try { value = JSON.parse(await readFile(containedPath(output, 'platform.json'), 'utf8')); } catch { throw invalid('MANIFEST_INVALID', 'platform.json is not valid JSON.'); }
@@ -86,7 +96,6 @@ export async function validateWebZip(input, output, totalLimit = WEB_LIMITS.tota
       if (size !== entry.uncompressedSize || crc !== entry.crc32) throw invalid('ZIP_INTEGRITY_INVALID', 'ZIP entry length or CRC is invalid.');
       assets[name] = { size, sha256: hash.digest('hex'), mime };
     }
-    if (!assets['index.html'] || assets['index.html'].size === 0) throw invalid('ENTRY_MISSING', 'ZIP root must contain a non-empty index.html.');
     const platform = await readPlatformManifest(output, assets);
     return { policyVersion: WEB_POLICY_VERSION, ...platform, totalBytes, fileCount: Object.keys(assets).length, assets };
   } finally { zip.close(); }

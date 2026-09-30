@@ -31,3 +31,28 @@ test('web validator extracts a strict immutable asset report and rejects unsafe 
     await assert.rejects(fs.stat(path.join(directory, 'escape.js')), error => error.code === 'ENOENT');
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test('web validator automatically uses the only HTML file as the entry', async () => {
+  const { validateWebZip } = await import(pathToFileURL(path.join(root, 'apps/api/src/web-zip-validator.mjs')));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gamehub-single-html-'));
+  try {
+    const archive = path.join(directory, 'single-html.zip');
+    const output = path.join(directory, 'output');
+    await fs.writeFile(archive, makeZip([{ name: 'game/桌捕.html', data: '<!doctype html><title>桌捕</title>' }]));
+    const report = await validateWebZip(archive, output);
+    assert.equal(report.entry, 'game/桌捕.html');
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('web validator still requires an explicit index when several HTML files exist', async () => {
+  const { validateWebZip } = await import(pathToFileURL(path.join(root, 'apps/api/src/web-zip-validator.mjs')));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gamehub-multiple-html-'));
+  try {
+    const archive = path.join(directory, 'multiple-html.zip');
+    await fs.writeFile(archive, makeZip([
+      { name: 'one.html', data: '<!doctype html><title>One</title>' },
+      { name: 'two.html', data: '<!doctype html><title>Two</title>' },
+    ]));
+    await assert.rejects(validateWebZip(archive, path.join(directory, 'output')), error => error.code === 'ENTRY_MISSING');
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
