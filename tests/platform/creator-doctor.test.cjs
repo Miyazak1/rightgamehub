@@ -39,8 +39,14 @@ test('Creator Doctor rejects missing capability, identity mismatch and private l
 
 test('developer center exposes the real protocol, template downloads and safe release boundary', async () => {
   const source=await fs.readFile(path.join(root,'packages/platform-client/src/MultiplayerDeveloperCenter.jsx'),'utf8');
+  const webDockerfile=await fs.readFile(path.join(root,'deploy/Dockerfile.web'),'utf8');
   assert.match(source,/WEB_GAME_BRIDGE_PROTOCOL/);
   assert.match(source,/gamehub-multiplayer-starter-source\.zip/);
   assert.match(source,/私钥绝不交给作者/);
   assert.match(source,/现有单机作品无需添加 multiplayer capability/);
+  assert.match(webDockerfile,/COPY packages\/rules-sdk\/package\.json packages\/rules-sdk\/package\.json/);
+  assert.match(webDockerfile,/COPY packages\/rules-sdk packages\/rules-sdk/);
+  assert.match(webDockerfile,/COPY templates\/multiplayer-turn-based templates\/multiplayer-turn-based/);
+  assert.match(webDockerfile,/COPY scripts\/build-multiplayer-templates\.mjs scripts\/build-multiplayer-templates\.mjs/);
+  assert.match(webDockerfile,/COPY scripts\/zip-fixture\.cjs scripts\/zip-fixture\.cjs/);
 });
