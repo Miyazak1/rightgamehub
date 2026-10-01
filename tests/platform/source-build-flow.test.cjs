@@ -31,7 +31,7 @@ test('source build worker moves an immutable GitHub archive into validation quar
   const artifact=Buffer.from('web-zip-artifact');
   const digest=crypto.createHash('sha256').update(artifact).digest('hex');
   const calls=[];
-  const claim={ id:crypto.randomUUID(),jobId:crypto.randomUUID(),leaseToken:crypto.randomUUID(),installationId:'12',owner:'owner',name:'repo',commitSha:'a'.repeat(40),config:{ templateKey:'static-v1',templateVersion:'1' } };
+  const claim={ id:crypto.randomUUID(),jobId:crypto.randomUUID(),leaseToken:crypto.randomUUID(),installationId:'12',owner:'owner',name:'repo',commitSha:'a'.repeat(40),builderImageDigest:'sha256:'+'a'.repeat(64),config:{ templateKey:'static-v1',templateVersion:'1' } };
   let counter=0;
   const worker=createSourceBuildWorker({
     repository:{ claimNext:async()=>claim,markBuilding:async()=>calls.push('building'),renewLease:async()=>true,beginArtifact:async input=>calls.push(['begin',input.uploadId]),finishArtifact:async input=>calls.push(['finish',input.uploadId]),fail:async()=>calls.push('failed') },
@@ -39,7 +39,7 @@ test('source build worker moves an immutable GitHub archive into validation quar
     buildRunner:{ run:async({ inputPath,onHeartbeat })=>{ assert.equal((await fs.readFile(inputPath)).toString(),'source'); assert.equal(await onHeartbeat(),true); const outputPath=path.join(directory,'artifact.zip'); await fs.writeFile(outputPath,artifact); return { outputPath,report:{ artifactBytes:artifact.length,artifactSha256:digest },cleanup:async()=>{} }; } },
     quarantineStore:{ putStream:async(_key,stream)=>{ const chunks=[]; for await(const chunk of stream)chunks.push(chunk); const bytes=Buffer.concat(chunks); return { bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex') }; },remove:async()=>{} },
     storageCapacityService:{ assertCanAccept:async input=>calls.push(['capacity',input.declaredBytes]) },uploadRepository:{ globalCapacityReservations:async()=>({ quarantine:0,validator:0,runtime:0 }) },
-    workingRoot:path.join(directory,'working'),ids:()=>`00000000-0000-4000-8000-${String(++counter).padStart(12,'0')}`,
+    workingRoot:path.join(directory,'working'),builderImageDigest:'sha256:'+'a'.repeat(64),ids:()=>`00000000-0000-4000-8000-${String(++counter).padStart(12,'0')}`,
   });
   const result=await worker.runOnce();
   assert.equal(result.state,'validating');
@@ -64,4 +64,16 @@ test('source build API requires creator auth and returns an accepted job',async 
   assert.equal(received[1],workId);
   assert.equal(received[3],'i'.repeat(16));
   assert.equal(response.headers['cache-control'],'no-store');
+});
+
+test('source build worker rejects a queue item recorded for another builder image',async t=>{
+  const { createSourceBuildWorker }=await import(moduleUrl('source-build-worker.mjs'));
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-source-image-'));
+  t.after(()=>fs.rm(directory,{ recursive:true,force:true }));
+  let failure; let downloaded=false;
+  const claim={ id:crypto.randomUUID(),jobId:crypto.randomUUID(),leaseToken:crypto.randomUUID(),builderImageDigest:'sha256:'+'b'.repeat(64) };
+  const worker=createSourceBuildWorker({ enabled:true,builderImageDigest:'sha256:'+'a'.repeat(64),workingRoot:directory,ids:()=>crypto.randomUUID(),repository:{ claimNext:async()=>claim,fail:async input=>{ failure=input.errorCode; } },githubClient:{ downloadRepositoryArchive:async()=>{ downloaded=true; } },buildRunner:{},quarantineStore:{},storageCapacityService:{},uploadRepository:{} });
+  await assert.rejects(worker.runOnce(),error=>error.code==='BUILDER_IMAGE_CHANGED');
+  assert.equal(failure,'BUILDER_IMAGE_CHANGED');
+  assert.equal(downloaded,false);
 });

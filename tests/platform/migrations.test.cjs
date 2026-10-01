@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 36);
+  assert.equal(files.length, 37);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -74,6 +74,8 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(sourceBuilds, /CREATE TABLE source_revisions/);
   assert.match(sourceBuilds, /CREATE TABLE build_jobs/);
   assert.match(sourceBuilds, /CREATE TABLE release_provenance/);
+  const sourceBuildImageIdentity = fs.readFileSync(path.join(migrationDir, '0037_source_build_image_identity.sql'), 'utf8');
+  assert.match(sourceBuildImageIdentity, /build_jobs_revision_config_image_unique/);
   files.forEach((name, index) => assert.match(name, new RegExp(`^${String(index + 1).padStart(4, '0')}_`)));
   for (const migration of migrations) {
     assert.match(migration.sql, /^BEGIN;/);

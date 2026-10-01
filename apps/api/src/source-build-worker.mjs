@@ -15,6 +15,7 @@ export function createSourceBuildWorker({
   uploadRepository,
   workingRoot,
   enabled = true,
+  builderImageDigest,
   ids = () => crypto.randomUUID(),
 }) {
   const root = path.resolve(workingRoot);
@@ -29,6 +30,7 @@ export function createSourceBuildWorker({
       let output = null;
       let objectKey = null;
       try {
+        if (!builderImageDigest || claim.builderImageDigest !== builderImageDigest) throw Object.assign(new Error('Queued build does not match the deployed builder image.'), { code: 'BUILDER_IMAGE_CHANGED' });
         const archive = await githubClient.downloadRepositoryArchive(
           claim.installationId, claim.owner, claim.name, claim.commitSha, SOURCE_BUILD_LIMITS.archiveBytes,
         );

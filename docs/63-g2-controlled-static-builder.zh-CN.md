@@ -59,11 +59,11 @@ SOURCE_BUILDER_EXECUTION_MODE=isolated
 SOURCE_BUILDER_IMAGE_DIGEST=sha256:<已部署镜像的 64 位摘要>
 ```
 
-生产配置拒绝未固定的 Builder 镜像摘要，也拒绝 `local` 执行模式。
+生产配置拒绝未固定的 Builder 镜像摘要，也拒绝 `local` 执行模式。Worker 领取任务时会再次比较任务记录与当前部署摘要；镜像变化后的旧排队任务会失败，新任务使用新摘要重新排队，避免来源证明记录错误镜像。
 
 ## 5. 上线前验收
 
-1. 在测试数据库执行迁移 `0036_github_source_builds.sql` 并验证回滚/恢复方案。
+1. 在测试数据库执行迁移 `0036_github_source_builds.sql` 与 `0037_source_build_image_identity.sql`，并验证回滚/恢复方案。
 2. 构建并部署 Builder 镜像，把实际镜像摘要写入 `SOURCE_BUILDER_IMAGE_DIGEST`。
 3. 用公开和私有仓库各验证一次固定 commit 下载、静态子目录、失败重试与连接撤销。
 4. 验证恶意 ZIP、`package.json`、符号链接、超限文件和缺失入口均不会产生 Release。

@@ -25,7 +25,7 @@ export class PostgresSourceBuildRepository {
     const superseded=(await client.query("UPDATE build_jobs SET state='superseded',completed_at=now(),updated_at=now() WHERE work_id=$1 AND source_revision_id<>$2 AND state IN ('queued','preparing','building','packaging','validating') RETURNING id",[input.workId,revision.id])).rows.map(item=>item.id);
     if(superseded.length) await client.query("UPDATE jobs SET state='cancelled',lease_until=NULL,lease_token=NULL,last_error_code='BUILD_SUPERSEDED',updated_at=now() WHERE kind='source_build' AND target_id=ANY($1::uuid[]) AND state IN('queued','leased')",[superseded]);
     const row=(await client.query(`INSERT INTO build_jobs(id,owner_user_id,work_id,source_revision_id,template_key,template_version,build_config,config_sha256,builder_image_digest,release_label)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(source_revision_id,config_sha256) DO UPDATE SET updated_at=build_jobs.updated_at
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(source_revision_id,config_sha256,builder_image_digest) DO UPDATE SET updated_at=build_jobs.updated_at
       RETURNING *`,[input.buildId,input.actor.userId,input.workId,revision.id,input.plan.templateKey,input.plan.templateVersion,input.plan,input.plan.configSha256,input.builderImageDigest,input.releaseLabel])).rows[0];
     await client.query("INSERT INTO jobs(id,kind,target_id,state) VALUES($1,'source_build',$2,'queued') ON CONFLICT(kind,target_id) DO NOTHING",[input.queueJobId,row.id]);
     const result=view({ ...row,commit_sha:revision.commit_sha,tree_sha:revision.tree_sha });
