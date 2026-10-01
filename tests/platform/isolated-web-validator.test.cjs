@@ -93,6 +93,7 @@ test('production compose constrains the source builder and exposes only a mailbo
 test('production compose isolates the Rule Builder from secrets and networks', async () => {
   const compose=await fs.readFile(path.join(projectRoot,'deploy/compose.prod.yml'),'utf8');
   const dockerfile=await fs.readFile(path.join(projectRoot,'deploy/Dockerfile.rule-builder'),'utf8');
+  const apiDockerfile=await fs.readFile(path.join(projectRoot,'deploy/Dockerfile.api'),'utf8');
   const builder=compose.slice(compose.indexOf('\n  rule-builder:'),compose.indexOf('\n  rule-worker:'));
   const worker=compose.slice(compose.indexOf('\n  rule-worker:'),compose.indexOf('\n  worker:'));
   assert.match(builder,/dockerfile: deploy\/Dockerfile\.rule-builder/u);
@@ -101,6 +102,9 @@ test('production compose isolates the Rule Builder from secrets and networks', a
   assert.match(worker,/multiplayer-rule-build-worker-cli\.mjs/u);assert.match(worker,/rule-builder:\/data\/rule-builder/u);assert.match(worker,/quarantine:\/data\/quarantine(?!:ro)/u);
   assert.doesNotMatch(worker,/(avatars:\/data\/avatars|covers:\/data\/covers|runtime-assets:\/data\/runtime|source-builder:\/data\/builder)/u);
   assert.match(dockerfile,/packages\/creator-tools\/node_modules/u);
+  assert.match(apiDockerfile,/COPY packages\/creator-tools\/package\.json packages\/creator-tools\/package\.json/u);
+  assert.match(apiDockerfile,/packages\/creator-tools\/node_modules/u);
+  assert.match(apiDockerfile,/COPY --chown=node:node packages\/creator-tools \.\/packages\/creator-tools/u);
   assert.match(dockerfile,/USER node/u);
   assert.match(compose,/RULE_BUILDER_EXECUTION_MODE: isolated/u);
 });
