@@ -274,3 +274,23 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.doesNotMatch(powershell, /github\.com/);
   assert.doesNotMatch(shell, /github\.com/);
 });
+
+test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
+  const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
+  const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
+  assert.equal(manifest.version, '0.3.14');
+  assert.match(extension, /runHidden\(process\.execPath, \['--install-extension',target\.fsPath,'--force'\]/);
+  assert.match(extension, /windowsHide: true/);
+  assert.match(extension, /extensionInstallPresent\(context, item\)/);
+  assert.match(extension, /已确认安装，等待重启生效/);
+  assert.match(extension, /跳过重复下载/);
+  assert.match(extension, /downloadUpdateBytesWithPowerShell/);
+  assert.doesNotMatch(extension, /workbench\.extensions\.installExtension/);
+});
+
+test('the packaged Cursor client contains the multiplayer host bridge', async () => {
+  const bundle = await readFile('extensions/vscode/media/gamehub.js', 'utf8');
+  assert.match(bundle, /createWebGameMultiplayerHost/);
+  assert.match(bundle, /createBridge:/);
+  assert.match(bundle, /gamehub\.bridge\.ready/);
+});
