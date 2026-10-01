@@ -286,7 +286,7 @@ export class PostgresAuthRepository {
 
   async getAccountProfile(userId) {
     const user = (await this.pool.query(
-      `SELECT u.id,u.display_name,u.role,u.can_publish,u.created_at,
+      `SELECT u.id,u.profile_handle,u.display_name,u.role,u.can_publish,u.created_at,
               a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key
          FROM users u LEFT JOIN user_avatars a ON a.user_id=u.id
         WHERE u.id=$1 AND u.status='active'`,
@@ -299,6 +299,7 @@ export class PostgresAuthRepository {
     )).rows;
     return {
       id: user.id,
+      profileHandle: user.profile_handle,
       displayName: user.display_name,
       role: user.role,
       canPublish: user.can_publish,

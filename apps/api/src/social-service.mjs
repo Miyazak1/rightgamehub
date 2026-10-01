@@ -10,6 +10,7 @@ const REACTIONS = new Set(['gg','spark','wow','coffee']);
 const chinaDate = now => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 const profileView = row => ({
   id: row.id,
+  handle: row.profile_handle,
   displayName: row.display_name,
   bio: row.bio,
   visibility: row.social_visibility,

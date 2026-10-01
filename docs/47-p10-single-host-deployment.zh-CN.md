@@ -36,8 +36,8 @@ docker compose --env-file .env.prod -f compose.prod.yml logs --tail=100 api work
 
 ## 3. 第一个管理员与作者
 
-1. 把管理员邮箱加入 `LOGIN_EMAIL_ALLOWLIST`。
-2. 使用该邮箱在网站完成一次登录，让系统创建账号。
+1. 保持 `LOGIN_EMAIL_ALLOWLIST=` 为空，允许任何合法邮箱注册和登录。创作者权限仍需单独申请并由管理员批准。
+2. 使用管理员邮箱在网站完成一次登录，让系统创建账号。
 3. 在服务器执行：
 
 ```sh
@@ -45,11 +45,11 @@ docker compose --env-file .env.prod -f compose.prod.yml run --rm \
   -e ADMIN_EMAIL=owner@example.com api node apps/api/src/promote-admin-cli.mjs
 ```
 
-重新登录后新的设备授权会取得管理员及发布权限。邀请测试期不要给不受信任账号开启 `can_publish`；当前单机校验 Worker 有资源边界与严格 ZIP 规则，但还没有生产规划中的 rootless Podman 二次隔离。
+重新登录后新的设备授权会取得管理员权限。普通账号仍只有玩家权限；只有管理员批准创作者申请后，账号才会取得 `can_publish` 以及创作、上传和发布 scope。当前单机校验 Worker 有资源边界与严格 ZIP 规则，但还没有生产规划中的 rootless Podman 二次隔离。
 
 ## 4. 邮件与 GitHub
 
-邮件登录使用 Resend：验证发送域名后填写 `RESEND_API_KEY` 和 `MAIL_FROM`。`LOGIN_EMAIL_ALLOWLIST` 为空会允许任意合法邮箱申请验证码；邀请期必须保留非空名单。
+邮件登录使用 Resend：验证发送域名后填写 `RESEND_API_KEY` 和 `MAIL_FROM`。正式配置保持 `LOGIN_EMAIL_ALLOWLIST=` 为空，允许任意合法邮箱申请验证码。该设置只控制登录，不授予创作者权限；创作者仍需在创作中心提交申请并等待管理员批准。
 
 GitHub OAuth 可稍后启用。启用时三个字段必须一起填写，并在 GitHub OAuth App 登记完全一致的 HTTPS callback：
 
@@ -59,7 +59,7 @@ GITHUB_CLIENT_SECRET=...
 GITHUB_CALLBACK_URL=https://play.example.com/v1/auth/github/web/callback
 ```
 
-邀请期若需要严格邮箱名单，不要启用 GitHub 登录，因为 GitHub 身份当前不套用邮件允许名单。
+如将来临时启用严格邮箱名单，需要同时评估 GitHub 登录，因为 GitHub 身份当前不套用邮件允许名单。
 
 ## 5. Agent 客户端
 
@@ -100,8 +100,10 @@ docker compose --env-file .env.prod -f compose.prod.yml stop web api worker runt
 
 ## 8. 上线前人工验收
 
-- 新邮箱不在 allowlist 时无法申请验证码；受邀邮箱可以登录。
-- 管理员、普通玩家权限区分正确。
+- 任意未注册的合法邮箱都可以申请验证码并创建普通玩家账号。
+- 未获批玩家不能创建作品、上传文件或发布；提交创作者申请后保持待审核状态。
+- 管理员批准后，申请人才取得创作、上传和发布权限；拒绝后仍可作为玩家使用并可重新申请。
+- 管理员、已批准创作者和普通玩家权限区分正确。
 - 创建、上传、校验、发布、游玩、收藏、撤下完整走通。
 - `r-<release>.runtime...` 使用独立 HTTPS origin，不能读取业务域登录态。
 - 作品撤下后新的资源请求失败。

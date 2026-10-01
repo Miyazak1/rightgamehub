@@ -37,7 +37,7 @@ const workView = row => ({
   instructions: row.instructions, kind: row.kind, state: row.state, visibility: row.visibility,
   revision: String(row.revision), firstPublishedAt: iso(row.first_published_at), coverUrl: null,
   estimatedMinutes: row.estimated_minutes, tags: row.tags ?? [], agentLabel: row.agent_label,
-  repositoryUrl: row.repository_url, licenseSpdx: row.license_spdx, creatorDisplayName: null,
+  repositoryUrl: row.repository_url, licenseSpdx: row.license_spdx, creatorDisplayName: null, creatorHandle: null,
   playCount: 0, saveCount: 0, targets: [],
 });
 const sourceView = row => ({

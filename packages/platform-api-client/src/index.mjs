@@ -147,6 +147,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     scheduleGuessBaikePuzzle: (date, puzzleId, options) => request('/v1/admin/games/guess-baike/schedule', { ...options, method: 'PUT', body: { date, puzzleId }, auth: true }),
     getSocialProfile: options => request('/v1/me/social', { ...options, auth: true }),
     updateSocialProfile: (body, options) => request('/v1/me/social', { ...options, method: 'PATCH', body, auth: true }),
+    getPublicUserProfile: (handle, options) => request(`/v1/profiles/${encodeURIComponent(handle)}`, { ...options, auth: true }),
+    updatePublicUserProfile: (body, options) => request('/v1/me/public-profile', { ...options, method: 'PATCH', body, auth: true }),
     getPublicProfile: (userId, options) => request(`/v1/users/${encodeURIComponent(userId)}`, { ...options, auth: true }),
     followUser: (userId, options) => request(`/v1/users/${encodeURIComponent(userId)}/follow`, { ...options, method: 'PUT', auth: true }),
     unfollowUser: (userId, options) => request(`/v1/users/${encodeURIComponent(userId)}/follow`, { ...options, method: 'DELETE', auth: true }),

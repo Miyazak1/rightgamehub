@@ -83,7 +83,8 @@ OTP_HMAC_KEY=另一组64位随机十六进制值
 
 MAIL_FROM='GameHub <login@你的已验证邮件域名>'
 RESEND_API_KEY=re_开头的Resend密钥
-LOGIN_EMAIL_ALLOWLIST=你的邮箱,首批测试邮箱
+# 留空表示任何合法邮箱都能注册登录；创作者权限仍由管理员审批。
+LOGIN_EMAIL_ALLOWLIST=
 
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=

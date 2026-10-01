@@ -28,7 +28,7 @@ const avatarPresets = [
   { key: 'fox', label: '飞行狐狸' }, { key: 'ghost', label: '街机幽灵' }, { key: 'wizard', label: '月光法师' },
 ];
 const GUESS_BAIKE_WORK_ID = 'gamehub-guess-baike';
-const demoAccountProfile = { id: 'demo-user', displayName: '休息玩家', role: 'user', canPublish: true, createdAt: '2026-09-28T00:00:00.000Z', avatar: { kind: 'preset', presetKey: 'cat', url: null, staticUrl: null, mediaType: null, animated: false }, linkedAccounts: [{ provider: 'github', label: 'GitHub', linkedAt: '2026-09-28T00:00:00.000Z' }] };
+const demoAccountProfile = { id: 'demo-user', profileHandle: 'miyazaki1', displayName: '休息玩家', role: 'user', canPublish: true, createdAt: '2026-09-28T00:00:00.000Z', avatar: { kind: 'preset', presetKey: 'cat', url: null, staticUrl: null, mediaType: null, animated: false }, linkedAccounts: [{ provider: 'github', label: 'GitHub', linkedAt: '2026-09-28T00:00:00.000Z' }] };
 
 const analyticsId = (storage, key) => {
   try { const current = storage?.getItem(key); if (current) return current; const next = globalThis.crypto?.randomUUID?.(); if (next) storage?.setItem(key, next); return next; } catch { return null; }
@@ -39,7 +39,7 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', library: 'library', social: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings' })[head] ?? 'unknown';
+  return ({ discover: 'discover', library: 'library', social: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
@@ -499,7 +499,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     const linked = new Map((profile.linkedAccounts || []).map(account => [account.provider, account]));
     return <main className="page account-settings-page">
       <button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button>
-      <header className="settings-heading"><div className="profile-avatar"><AvatarView avatar={profile.avatar} api={api} alt="当前头像"/></div><div><span className="kicker">PLAYER PROFILE</span><h1>个人设置</h1><p>管理 GameHub 资料与这台 Agent 中的登录状态。</p></div></header>
+      <header className="settings-heading"><div className="profile-avatar"><AvatarView avatar={profile.avatar} api={api} alt="当前头像"/></div><div><span className="kicker">PLAYER PROFILE</span><h1>个人设置</h1><p>管理 GameHub 资料与这台 Agent 中的登录状态。</p>{profile.profileHandle && <Button kind="secondary" onClick={() => go(`/u/${profile.profileHandle}`)}>查看我的公开主页</Button>}</div></header>
       <div className="settings-layout">
         <section className="settings-main">
           <form className="settings-panel" onSubmit={saveProfile}><div className="settings-panel__head"><div><h2>个人资料</h2><p>这个昵称会显示在你的作品与公开页面中。</p></div><span className="pixel-label">PROFILE</span></div><label className="settings-field">昵称<div className="settings-input-row"><input required minLength="1" maxLength="40" value={displayName} onChange={event => { setDisplayName(event.target.value); setSaved(''); }}/><Button type="submit" disabled={busy || !displayName.trim() || displayName.trim() === profile.displayName}>{busy ? '保存中…' : '保存'}</Button></div><small>{Array.from(displayName).length}/40</small></label>{saved && <p className="settings-success" role="status">{icons.check} {saved}</p>}{error && <p className="form-error" role="alert">{error}</p>}</form>
@@ -821,6 +821,68 @@ function LibraryPage({ api, go, demo }) {
   return <main className="page library-page"><div className="section-heading"><div><span className="kicker">YOUR SPACE</span><h1>游戏库</h1><p>收藏和最近游玩会在登录的 Agent 之间同步。</p></div></div>{state.status === 'loading' ? <LoadingCards/> : state.status === 'auth' ? <StatePanel title="登录后同步游戏库" body="收藏与游玩记录会跟随你的 GameHub 账号。" action="前往登录" onAction={() => go('/account')}/> : state.status === 'error' ? <StatePanel title="暂时无法读取游戏库" body="连接恢复后再试一次，你的已有记录不会丢失。"/> : !state.items.length ? <StatePanel title="游戏库还是空的" body="收藏作品或开始一局，它们就会出现在这里。" action="去发现" onAction={() => go('/discover')}/> : <>{!!saved.length && <section className="library-section"><h2>已收藏</h2><div className="work-grid">{saved.map(item => <WorkCard key={item.workId} work={item.work} go={go}/>)}</div></section>}{!!recent.length && <section className="library-section"><h2>最近游玩</h2><div className="quiet-work-list">{recent.map(item => <QuietWorkRow key={item.workId} work={item.work} go={go}/>)}</div></section>}</>}</main>;
 }
 
+const profileLinkKinds = { github: 'GitHub', website: '网站', portfolio: '作品集', bilibili: '哔哩哔哩', other: '其他' };
+const demoPublicProfile = handle => ({
+  id: 'demo-user', handle: handle || 'miyazaki1', displayName: 'Miyazaki1', headline: '独立游戏创作者，喜欢把小想法做成可以马上玩的作品。',
+  about: '我在 GameHub 上制作适合工作间隙体验的轻量游戏。关注玩法原型、像素视觉和 Agent 协作开发。\n\n这里展示的是我主动公开的资料与作品；私人游戏库和未发布项目不会出现在主页。',
+  visibility: 'public', creator: true, role: 'user', joinedAt: '2026-09-28T00:00:00.000Z', avatar: demoAccountProfile.avatar,
+  followerCount: 12, followingCount: 5, isFollowing: false, isMe: true,
+  links: [{ kind: 'github', label: 'GitHub', url: 'https://github.com/gamehub-labs' }, { kind: 'portfolio', label: '个人作品集', url: 'https://example.com/' }],
+  featuredWorks: demoWorks.slice(1, 3), works: demoWorks.slice(1, 4),
+});
+
+function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
+  const [state, setState] = useState({ status: 'loading', profile: null });
+  const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
+  const load = async () => {
+    setState(current => ({ ...current, status: 'loading' })); setError('');
+    try {
+      const profile = demo ? demoPublicProfile(handle) : (await api.getPublicUserProfile(handle)).data;
+      setState({ status: 'ready', profile });
+      setDraft({ handle: profile.handle, headline: profile.headline, about: profile.about, visibility: profile.visibility, links: profile.links.map(link => ({ ...link })), featuredWorkIds: profile.featuredWorks.map(work => work.id) });
+    } catch (caught) { setState({ status: caught.status === 404 ? 'missing' : 'error', profile: null }); }
+  };
+  useEffect(() => { load(); }, [handle, api, demo]);
+  const save = async event => {
+    event.preventDefault(); setBusy('save'); setError(''); setNotice('');
+    try {
+      const profile = demo ? { ...state.profile, ...draft, links: draft.links, featuredWorks: state.profile.works.filter(work => draft.featuredWorkIds.includes(work.id)) } : (await api.updatePublicUserProfile(draft)).data;
+      setState({ status: 'ready', profile }); setDraft({ handle: profile.handle, headline: profile.headline, about: profile.about, visibility: profile.visibility, links: profile.links.map(link => ({ ...link })), featuredWorkIds: profile.featuredWorks.map(work => work.id) });
+      onProfileChange?.(current => current ? { ...current, profileHandle: profile.handle } : current);
+      setEditing(false); setNotice('个人主页已保存。'); if (profile.handle !== handle) go(`/u/${profile.handle}`);
+    } catch (caught) { setError(caught.message || '个人主页没有保存。'); }
+    finally { setBusy(''); }
+  };
+  const follow = async () => {
+    const profile = state.profile; setBusy('follow'); setError('');
+    try {
+      if (!demo) await (profile.isFollowing ? api.unfollowUser(profile.id) : api.followUser(profile.id));
+      setState(current => ({ ...current, profile: { ...current.profile, isFollowing: !profile.isFollowing, followerCount: Math.max(0, profile.followerCount + (profile.isFollowing ? -1 : 1)) } }));
+    } catch (caught) { if (caught.status === 401) go('/account'); else setError(caught.message || '关注状态没有更新。'); }
+    finally { setBusy(''); }
+  };
+  const share = async () => {
+    const url = `${location.origin}${location.pathname}#/u/${state.profile.handle}`;
+    try { await navigator.clipboard.writeText(url); setNotice('主页链接已复制。'); } catch { globalThis.prompt?.('复制个人主页链接', url); }
+  };
+  const updateLink = (index, key, value) => setDraft(current => ({ ...current, links: current.links.map((link, at) => at === index ? { ...link, [key]: value } : link) }));
+  const toggleFeatured = workId => setDraft(current => ({ ...current, featuredWorkIds: current.featuredWorkIds.includes(workId) ? current.featuredWorkIds.filter(id => id !== workId) : current.featuredWorkIds.length < 6 ? [...current.featuredWorkIds, workId] : current.featuredWorkIds }));
+  if (state.status === 'loading') return <main className="page public-profile-page"><LoadingCards/></main>;
+  if (state.status === 'missing') return <main className="page"><StatePanel title="找不到这个个人主页" body="主页可能设为私密、地址已更改，或用户不存在。" action="返回发现" onAction={() => go('/discover')}/></main>;
+  if (state.status === 'error') return <main className="page"><StatePanel title="个人主页暂时无法加载" body="连接恢复后再试一次。" action="重新加载" onAction={load}/></main>;
+  const profile = state.profile; const featuredIds = new Set(profile.featuredWorks.map(work => work.id)); const remaining = profile.works.filter(work => !featuredIds.has(work.id));
+  return <main className="page public-profile-page">
+    <button className="back-link" onClick={() => go('/discover')}>{icons.back} 返回发现</button>
+    {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="social-notice" role="status">{notice}</p>}
+    <section className="public-profile-hero panel"><div className="public-profile-avatar"><AvatarView avatar={profile.avatar} api={api} alt={`${profile.displayName} 的头像`}/></div><div className="public-profile-copy"><span className="kicker">{profile.creator ? 'CREATOR PROFILE' : 'PLAYER PROFILE'}</span><h1>{profile.displayName}</h1><p className="public-profile-handle">@{profile.handle}</p><p className="public-profile-headline">{profile.headline || '这位玩家还没有填写一句介绍。'}</p><div className="public-profile-meta"><span>{profile.followerCount} 关注者</span><span>正在关注 {profile.followingCount}</span><span>{profile.works.length} 个公开作品</span></div><div className="public-profile-links">{profile.links.map(link => <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer"><b>{profileLinkKinds[link.kind]}</b>{link.label} ↗</a>)}</div></div><div className="public-profile-actions">{profile.isMe ? <Button onClick={() => setEditing(value => !value)}>{editing ? '收起编辑' : '编辑主页'}</Button> : <Button disabled={busy === 'follow'} onClick={follow}>{profile.isFollowing ? '已关注' : '+ 关注'}</Button>}<Button kind="secondary" onClick={share}>分享主页</Button></div></section>
+    {editing && draft && <form className="public-profile-editor panel" onSubmit={save}><div className="settings-panel__head"><div><span className="kicker">PUBLIC IDENTITY</span><h2>编辑公开主页</h2><p>只填写希望公开的信息。私人仓库、草稿和游戏库不会被展示。</p></div><span className="pixel-label">@{draft.handle}</span></div><div className="form-grid"><label>主页地址<input required pattern="[a-z][a-z0-9-]{2,31}" maxLength="32" value={draft.handle} onChange={event => setDraft(current => ({ ...current, handle: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}/><small>mooyu.fun/#/u/{draft.handle || 'your-name'}</small></label><label>主页可见范围<select value={draft.visibility} onChange={event => setDraft(current => ({ ...current, visibility: event.target.value }))}>{Object.entries(socialVisibilityLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></div><label>一句介绍<textarea maxLength="160" value={draft.headline} onChange={event => setDraft(current => ({ ...current, headline: event.target.value }))}/><small>{Array.from(draft.headline).length}/160</small></label><label>关于我<textarea className="profile-about-input" maxLength="2000" value={draft.about} onChange={event => setDraft(current => ({ ...current, about: event.target.value }))} placeholder="介绍你的方向、经历、擅长领域与正在探索的事情。"/><small>{Array.from(draft.about).length}/2000</small></label><fieldset><legend>外部链接（最多 5 个）</legend>{draft.links.map((link,index) => <div className="profile-link-editor" key={index}><select value={link.kind} onChange={event => updateLink(index, 'kind', event.target.value)}>{Object.entries(profileLinkKinds).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select><input aria-label="链接名称" maxLength="40" value={link.label} onChange={event => updateLink(index, 'label', event.target.value)} placeholder="显示名称"/><input aria-label="链接地址" type="url" pattern="https://.*" value={link.url} onChange={event => updateLink(index, 'url', event.target.value)} placeholder="https://"/><button type="button" onClick={() => setDraft(current => ({ ...current, links: current.links.filter((_,at) => at !== index) }))}>移除</button></div>)}{draft.links.length < 5 && <button className="add-profile-link" type="button" onClick={() => setDraft(current => ({ ...current, links: [...current.links, { kind: 'website', label: '', url: 'https://' }] }))}>＋ 添加链接</button>}</fieldset>{profile.works.length > 0 && <fieldset><legend>精选作品（最多 6 个）</legend><div className="featured-work-picker">{profile.works.map(work => <label key={work.id}><input type="checkbox" checked={draft.featuredWorkIds.includes(work.id)} disabled={!draft.featuredWorkIds.includes(work.id) && draft.featuredWorkIds.length >= 6} onChange={() => toggleFeatured(work.id)}/><span><strong>{work.title}</strong><small>{work.kind === 'game' ? '游戏' : '作品'} · {work.playCount} 次游玩</small></span></label>)}</div></fieldset>}<div className="dialog-actions"><Button type="button" kind="secondary" onClick={() => setEditing(false)}>取消</Button><Button type="submit" disabled={busy === 'save'}>{busy === 'save' ? '保存中…' : '保存公开主页'}</Button></div></form>}
+    <section className="public-profile-body"><article className="panel public-profile-about"><span className="kicker">ABOUT</span><h2>关于 {profile.displayName}</h2><p>{profile.about || '暂时没有更多介绍。'}</p></article><aside className="panel public-profile-summary"><span className="kicker">PROFILE</span><dl><div><dt>身份</dt><dd>{profile.creator ? 'GameHub 创作者' : '玩家'}</dd></div><div><dt>加入时间</dt><dd>{new Date(profile.joinedAt).toLocaleDateString('zh-CN')}</dd></div><div><dt>公开范围</dt><dd>{socialVisibilityLabels[profile.visibility]}</dd></div></dl></aside></section>
+    {!!profile.featuredWorks.length && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">FEATURED WORK</span><h2>精选作品</h2><p>由创作者亲自挑选。</p></div></div><div className="work-grid">{profile.featuredWorks.map(work => <WorkCard key={work.id} work={work} go={go}/>)}</div></section>}
+    <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">PUBLIC WORKS</span><h2>公开作品</h2><p>这里只展示已发布并可正常访问的作品。</p></div></div>{remaining.length ? <div className="work-grid">{remaining.map(work => <WorkCard key={work.id} work={work} go={go}/>)}</div> : !profile.works.length ? <StatePanel title="还没有公开作品" body="创作者发布的作品会自动出现在这里。"/> : <p className="quiet-all-seen">全部公开作品都已在精选区展示。</p>}</section>
+  </main>;
+}
+
 const reportCategoryLabels = { unsafe: '不安全或越权', malware: '恶意代码或欺骗', harassment: '骚扰或仇恨', copyright: '版权问题', other: '其他问题' };
 
 const socialVisibilityLabels = { public: '所有玩家可见', followers: '仅关注者可见', private: '完全私密' };
@@ -837,8 +899,8 @@ function SocialPage({ api, go, demo }) {
     setState(current => ({ ...current, status: 'loading' })); setError('');
     try {
       if (demo) {
-        const profile = { id: 'demo-user', displayName: '休息玩家', bio: '在 Agent 思考时玩一局。', visibility: 'public', avatar: demoAccountProfile.avatar, followerCount: 7, followingCount: 3, isFollowing: false, isMe: true };
-        const pal = { ...profile, id: 'demo-pal', displayName: '像素搭子', isMe: false, isFollowing: true };
+        const profile = { id: 'demo-user', handle: 'miyazaki1', displayName: '休息玩家', bio: '在 Agent 思考时玩一局。', visibility: 'public', avatar: demoAccountProfile.avatar, followerCount: 7, followingCount: 3, isFollowing: false, isMe: true };
+        const pal = { ...profile, id: 'demo-pal', handle: 'pixel-pal', displayName: '像素搭子', isMe: false, isFollowing: true };
         const board = [{ rank: 1, player: pal, guessedCount: 8, elapsedSeconds: 39, hints: 0, reactions: { gg: 3, spark: 2 }, myReaction: 'gg' }, { rank: 2, player: profile, guessedCount: 10, elapsedSeconds: 58, hints: 1, reactions: { coffee: 1 }, myReaction: null }];
         const notifications = [{ id: 'demo-note-1', type: 'reaction', actor: pal, puzzleDate: today, reaction: 'spark', read: false, createdAt: new Date().toISOString() }, { id: 'demo-note-2', type: 'follow', actor: pal, puzzleDate: null, reaction: null, read: true, createdAt: new Date(Date.now() - 3600000).toISOString() }];
         const challenges = [{ code: 'PIXEL-DEMO-1', role: 'participant', status: 'completed', outcome: 'win', opponent: pal, myScore: { hints: 0, guessedCount: 7, elapsedSeconds: 34 }, opponentScore: { hints: 0, guessedCount: 8, elapsedSeconds: 39 } }];
@@ -1130,6 +1192,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
   if (parts[0] === 'works' && parts[1]) content = <DetailPage workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
+  else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[3] === 'room' ? parts[4] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={setAccountProfile}/>;
   else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go}/>;

@@ -1,4 +1,4 @@
-const profileSelect = `SELECT u.id,u.display_name,u.bio,u.social_visibility,
+const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.social_visibility,
   a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,
   (SELECT count(*) FROM user_follows f WHERE f.followed_user_id=u.id)::int AS follower_count,
   (SELECT count(*) FROM user_follows f WHERE f.follower_user_id=u.id)::int AS following_count,

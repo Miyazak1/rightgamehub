@@ -96,6 +96,27 @@ test('GitHub OAuth callback accepts the GitHub authorization issuer', async t =>
   assert.match(response.body, new RegExp(`<script nonce="${nonce}">`));
 });
 
+test('public profile reads are anonymous while profile edits require the current account', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const { AuthError } = await import(moduleUrl('auth-service.mjs'));
+  const actor = { userId: crypto.randomUUID(), scopes: ['profile:read'] }; const calls = [];
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); assert.equal(authorization, 'Bearer token'); return actor; } },
+    publicProfileService: {
+      get: async (viewer, handle) => { calls.push(['get', viewer, handle]); return { handle }; },
+      update: async (viewer, body) => { calls.push(['update', viewer, body]); return body; },
+    },
+  });
+  t.after(() => app.close());
+  const read = await app.inject({ method: 'GET', url: '/v1/profiles/pixel-maker' });
+  assert.equal(read.statusCode, 200); assert.equal(read.headers['cache-control'], 'public, max-age=60'); assert.equal(calls[0][1], null);
+  const denied = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] } });
+  assert.equal(denied.statusCode, 401);
+  const updated = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', headers: { authorization: 'Bearer token' }, payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] } });
+  assert.equal(updated.statusCode, 200); assert.equal(updated.headers['cache-control'], 'no-store'); assert.equal(calls[1][1], actor);
+});
+
 test('creator work routes accept discovery metadata from the creation form', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   let received;

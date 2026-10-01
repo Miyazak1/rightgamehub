@@ -75,6 +75,7 @@ export const schemas = Object.freeze({
   }),
   AccountProfile: object({
     id,
+    profileHandle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' },
     displayName: { type: 'string', minLength: 1, maxLength: 40 },
     role: stringEnum(['user', 'admin']),
     canPublish: { type: 'boolean' },
@@ -261,6 +262,7 @@ export const schemas = Object.freeze({
     repositoryUrl: { oneOf: [{ type: 'string', format: 'uri' }, { type: 'null' }] },
     licenseSpdx: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
     creatorDisplayName: { oneOf: [{ type: 'string', minLength: 1, maxLength: 120 }, { type: 'null' }] },
+    creatorHandle: { oneOf: [{ type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, { type: 'null' }] },
     playCount: { type: 'integer', minimum: 0 },
     saveCount: { type: 'integer', minimum: 0 },
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
@@ -398,12 +400,30 @@ export const schemas = Object.freeze({
   }),
   SaveResultResponse: object({ saved: { type: 'boolean' } }),
   SocialProfile: object({
-    id, displayName: { type: 'string', minLength: 1, maxLength: 120 }, bio: { type: 'string', maxLength: 160 },
+    id, handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, displayName: { type: 'string', minLength: 1, maxLength: 120 }, bio: { type: 'string', maxLength: 160 },
     visibility: stringEnum(['public','followers','private']), avatar: { $ref: '#/components/schemas/AccountAvatar' },
     followerCount: { type: 'integer', minimum: 0 }, followingCount: { type: 'integer', minimum: 0 },
     isFollowing: { type: 'boolean' }, isMe: { type: 'boolean' },
   }),
   UpdateSocialProfileRequest: object({ bio: { type: 'string', maxLength: 160 }, visibility: stringEnum(['public','followers','private']) }),
+  PublicProfileLink: object({
+    kind: stringEnum(['github','website','portfolio','bilibili','other']),
+    label: { type: 'string', minLength: 1, maxLength: 40 }, url: { type: 'string', pattern: '^https://' },
+  }),
+  PublicUserProfile: object({
+    id, handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, displayName: { type: 'string', minLength: 1, maxLength: 120 },
+    headline: { type: 'string', maxLength: 160 }, about: { type: 'string', maxLength: 2000 }, visibility: stringEnum(['public','followers','private']),
+    creator: { type: 'boolean' }, role: stringEnum(['user','admin']), joinedAt: dateTime, avatar: { $ref: '#/components/schemas/AccountAvatar' },
+    followerCount: { type: 'integer', minimum: 0 }, followingCount: { type: 'integer', minimum: 0 }, isFollowing: { type: 'boolean' }, isMe: { type: 'boolean' },
+    links: { type: 'array', maxItems: 5, items: { $ref: '#/components/schemas/PublicProfileLink' } },
+    featuredWorks: { type: 'array', maxItems: 6, items: { $ref: '#/components/schemas/Work' } },
+    works: { type: 'array', maxItems: 100, items: { $ref: '#/components/schemas/Work' } },
+  }),
+  UpdatePublicProfileRequest: object({
+    handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, headline: { type: 'string', maxLength: 160 }, about: { type: 'string', maxLength: 2000 },
+    visibility: stringEnum(['public','followers','private']), links: { type: 'array', maxItems: 5, items: { $ref: '#/components/schemas/PublicProfileLink' } },
+    featuredWorkIds: { type: 'array', maxItems: 6, uniqueItems: true, items: id },
+  }),
   FollowState: object({ following: { type: 'boolean' } }),
   BlockState: object({ blocked: { type: 'boolean' } }),
   GuessBaikeLeaderboardEntry: object({
@@ -577,6 +597,8 @@ export const operations = Object.freeze([
   { method: 'put', path: '/v1/admin/games/guess-baike/schedule', operationId: 'scheduleGuessBaikePuzzle', auth: 'bearer', request: 'GuessBaikeScheduleRequest', response: 'GuessBaikeSchedule' },
   { method: 'get', path: '/v1/me/social', operationId: 'getSocialProfile', auth: 'bearer', response: 'SocialProfile' },
   { method: 'patch', path: '/v1/me/social', operationId: 'updateSocialProfile', auth: 'bearer', request: 'UpdateSocialProfileRequest', response: 'SocialProfile' },
+  { method: 'get', path: '/v1/profiles/{handle}', operationId: 'getPublicUserProfile', auth: 'anonymous', response: 'PublicUserProfile', pathHandle: true },
+  { method: 'patch', path: '/v1/me/public-profile', operationId: 'updatePublicUserProfile', auth: 'bearer', request: 'UpdatePublicProfileRequest', response: 'PublicUserProfile' },
   { method: 'get', path: '/v1/users/{userId}', operationId: 'getPublicProfile', auth: 'bearer', response: 'SocialProfile', pathId: 'userId' },
   { method: 'put', path: '/v1/users/{userId}/follow', operationId: 'followUser', auth: 'bearer', response: 'SocialProfile', pathId: 'userId' },
   { method: 'delete', path: '/v1/users/{userId}/follow', operationId: 'unfollowUser', auth: 'bearer', response: 'FollowState', pathId: 'userId' },
@@ -639,6 +661,7 @@ export function createOpenApiDocument() {
   for (const operation of operations) {
     const parameters = [];
     if (operation.pathId) parameters.push({ name: operation.pathId, in: 'path', required: true, schema: id });
+    if (operation.pathHandle) parameters.push({ name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' } });
     if (operation.pathCode) parameters.push({ name: 'code', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{10,24}$' } });
       if (operation.pathPuzzleId) parameters.push({ name: 'puzzleId', in: 'path', required: true, schema: { type: 'string', minLength: 1, maxLength: 120 } });
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });

@@ -5523,6 +5523,191 @@
         }
       }
     },
+    "/v1/profiles/{handle}": {
+      "get": {
+        "operationId": "getPublicUserProfile",
+        "tags": [
+          "profiles"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,31}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PublicUserProfile"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/public-profile": {
+      "patch": {
+        "operationId": "updatePublicUserProfile",
+        "tags": [
+          "me"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePublicProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PublicUserProfile"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users/{userId}": {
       "get": {
         "operationId": "getPublicProfile",
@@ -11184,6 +11369,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "profileHandle": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,31}$"
+          },
           "displayName": {
             "type": "string",
             "minLength": 1,
@@ -11216,6 +11405,7 @@
         },
         "required": [
           "id",
+          "profileHandle",
           "displayName",
           "role",
           "canPublish",
@@ -13095,6 +13285,17 @@
               }
             ]
           },
+          "creatorHandle": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{2,31}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "playCount": {
             "type": "integer",
             "minimum": 0
@@ -13129,6 +13330,7 @@
           "repositoryUrl",
           "licenseSpdx",
           "creatorDisplayName",
+          "creatorHandle",
           "playCount",
           "saveCount",
           "targets"
@@ -14731,6 +14933,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,31}$"
+          },
           "displayName": {
             "type": "string",
             "minLength": 1,
@@ -14768,6 +14974,7 @@
         },
         "required": [
           "id",
+          "handle",
           "displayName",
           "bio",
           "visibility",
@@ -14798,6 +15005,192 @@
         "required": [
           "bio",
           "visibility"
+        ]
+      },
+      "PublicProfileLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "github",
+              "website",
+              "portfolio",
+              "bilibili",
+              "other"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "url"
+        ]
+      },
+      "PublicUserProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,31}$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "headline": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "about": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "followers",
+              "private"
+            ]
+          },
+          "creator": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ]
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "avatar": {
+            "$ref": "#/components/schemas/AccountAvatar"
+          },
+          "followerCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "followingCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isFollowing": {
+            "type": "boolean"
+          },
+          "isMe": {
+            "type": "boolean"
+          },
+          "links": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PublicProfileLink"
+            }
+          },
+          "featuredWorks": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "$ref": "#/components/schemas/Work"
+            }
+          },
+          "works": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Work"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "handle",
+          "displayName",
+          "headline",
+          "about",
+          "visibility",
+          "creator",
+          "role",
+          "joinedAt",
+          "avatar",
+          "followerCount",
+          "followingCount",
+          "isFollowing",
+          "isMe",
+          "links",
+          "featuredWorks",
+          "works"
+        ]
+      },
+      "UpdatePublicProfileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,31}$"
+          },
+          "headline": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "about": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "followers",
+              "private"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PublicProfileLink"
+            }
+          },
+          "featuredWorkIds": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "handle",
+          "headline",
+          "about",
+          "visibility",
+          "links",
+          "featuredWorkIds"
         ]
       },
       "FollowState": {

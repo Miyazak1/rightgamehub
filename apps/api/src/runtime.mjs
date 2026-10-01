@@ -29,6 +29,8 @@ import { createGuessBaikeAutomation } from './guess-baike-automation.mjs';
 import { PostgresModerationRepository, createModerationService } from './moderation-service.mjs';
 import { PostgresSocialRepository } from './social-repository.mjs';
 import { createSocialService } from './social-service.mjs';
+import { PostgresPublicProfileRepository } from './public-profile-repository.mjs';
+import { createPublicProfileService } from './public-profile-service.mjs';
 import { createConfiguredMailer } from './mailer.mjs';
 import { PostgresAnalyticsRepository } from './analytics-repository.mjs';
 import { createAnalyticsService } from './analytics-service.mjs';
@@ -127,6 +129,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
+  const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool) });
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
@@ -141,8 +144,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildRepository = new PostgresSourceBuildRepository(database.pool);
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
-  const app = createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger: config.nodeEnv !== 'test' });
+  const app = createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, sourceBuildService, sourceBuildWorker, multiplayerRuleBuildWorker, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, sourceBuildService, sourceBuildWorker, multiplayerRuleBuildWorker, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
 }

@@ -5,7 +5,7 @@ const workView = rows => ({
   revision: String(rows[0].revision), firstPublishedAt: new Date(rows[0].first_published_at).toISOString(),
   estimatedMinutes: rows[0].estimated_minutes, tags: rows[0].tags ?? [], agentLabel: rows[0].agent_label,
   repositoryUrl: rows[0].repository_url, licenseSpdx: rows[0].license_spdx,
-  creatorDisplayName: rows[0].creator_display_name ?? null,
+  creatorDisplayName: rows[0].creator_display_name ?? null, creatorHandle: rows[0].creator_handle ?? null,
   playCount: Number(rows[0].play_count ?? 0), saveCount: Number(rows[0].save_count ?? 0),
   coverUrl: rows[0].cover_object_key ? `/v1/works/${rows[0].id}/cover?v=${Buffer.from(rows[0].cover_sha256).toString('hex').slice(0, 12)}` : null,
   targets: rows.map(targetView),
@@ -16,7 +16,7 @@ export class PostgresCatalogRepository {
 
   async list({ limit, kind }) {
     const result = await this.pool.query(
-      `SELECT w.*,u.display_name AS creator_display_name,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
+      `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
               r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes
@@ -42,7 +42,7 @@ export class PostgresCatalogRepository {
 
   async get(workId) {
     const rows = (await this.pool.query(
-      `SELECT w.*,u.display_name AS creator_display_name,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
+      `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
               r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes

@@ -7,7 +7,7 @@ const publicWork = row => ({
   revision: String(row.revision), firstPublishedAt: row.first_published_at?.toISOString?.() ?? row.first_published_at ?? null,
   estimatedMinutes: row.estimated_minutes, tags: row.tags ?? [], agentLabel: row.agent_label,
   repositoryUrl: row.repository_url, licenseSpdx: row.license_spdx,
-  creatorDisplayName: row.creator_display_name ?? null, playCount: Number(row.play_count ?? 0), saveCount: Number(row.save_count ?? 0),
+  creatorDisplayName: row.creator_display_name ?? null, creatorHandle: row.creator_handle ?? null, playCount: Number(row.play_count ?? 0), saveCount: Number(row.save_count ?? 0),
   coverUrl: row.cover_object_key && row.state === 'published' && row.visibility === 'public' ? `/v1/works/${row.id}/cover?v=${Buffer.from(row.cover_sha256).toString('hex').slice(0, 12)}` : null,
   targets: [],
 });
