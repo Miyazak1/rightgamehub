@@ -942,6 +942,15 @@
               "maximum": 50,
               "default": 30
             }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
           }
         ],
         "responses": {
@@ -1357,101 +1366,6 @@
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/MultiplayerInvite"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "State conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/multiplayer/invites/{token}/claim": {
-      "post": {
-        "operationId": "claimMultiplayerInvite",
-        "tags": [
-          "multiplayer"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{32}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MultiplayerInviteClaim"
                     }
                   },
                   "required": [
@@ -10020,6 +9934,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "locator": {
+            "type": "string",
+            "pattern": "^[A-F0-9]{8}$"
+          },
           "visibility": {
             "type": "string",
             "enum": [
@@ -10069,6 +9987,7 @@
           "id",
           "modeId",
           "ownerUserId",
+          "locator",
           "visibility",
           "status",
           "capacity",
@@ -10094,6 +10013,10 @@
           "ownerUserId": {
             "type": "string",
             "format": "uuid"
+          },
+          "locator": {
+            "type": "string",
+            "pattern": "^[A-F0-9]{8}$"
           },
           "visibility": {
             "type": "string",
@@ -10155,6 +10078,7 @@
           "id",
           "modeId",
           "ownerUserId",
+          "locator",
           "visibility",
           "status",
           "capacity",
@@ -10255,7 +10179,7 @@
         "properties": {
           "joinCode": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{12}$"
+            "pattern": "^[A-HJ-NP-Za-hj-np-z2-9]{5}-?[A-HJ-NP-Za-hj-np-z2-9]{5}$"
           },
           "modeId": {
             "type": "string",
@@ -10268,9 +10192,9 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "token": {
+          "code": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{32}$"
+            "pattern": "^[A-HJ-NP-Z2-9]{5}-[A-HJ-NP-Z2-9]{5}$"
           },
           "expiresAt": {
             "type": "string",
@@ -10278,25 +10202,8 @@
           }
         },
         "required": [
-          "token",
+          "code",
           "expiresAt"
-        ]
-      },
-      "MultiplayerInviteClaim": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "room": {
-            "$ref": "#/components/schemas/MultiplayerRoom"
-          },
-          "workId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "room",
-          "workId"
         ]
       },
       "SetMultiplayerReadyRequest": {

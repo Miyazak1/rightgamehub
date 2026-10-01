@@ -57,7 +57,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     });
   };
   const rooms = {
-    list: modeId => request('multiplayer.rooms.list', { modeId }),
+    list: (modeId, query = '') => request('multiplayer.rooms.list', { modeId,query }),
     create: input => request('multiplayer.rooms.create', input),
     get: roomId => request('multiplayer.rooms.get', { roomId }),
     join: (roomId, modeId, joinCode = null) => request('multiplayer.rooms.join', { roomId,modeId,...(joinCode ? { joinCode } : {}) }),

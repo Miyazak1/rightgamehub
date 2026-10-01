@@ -23,7 +23,6 @@ export function createWebGameMultiplayerHost({
   let modesPromise = null;
   const rooms = new Map();
   const matches = new Map();
-  const inviteUrl = token => `${windowImpl.location?.origin ?? 'https://mooyu.fun'}${windowImpl.location?.pathname ?? '/'}#/invite/${token}`;
 
   const loadModes = async () => {
     modesPromise ??= apiClient.listMultiplayerModes(workId).then(response => response.data ?? response).catch(error => { modesPromise = null; throw error; });
@@ -66,13 +65,13 @@ export function createWebGameMultiplayerHost({
   const handlers = {
     'player.get': async () => publicProfile((await apiClient.getProfile()).data),
     'multiplayer.modes.list': loadModes,
-    'multiplayer.rooms.list': async ({ modeId }) => { await requireMode(modeId); const result = (await apiClient.listMultiplayerRooms(modeId)).data; await Promise.all(result.map(trackRoom)); return result; },
+    'multiplayer.rooms.list': async ({ modeId,query = '' }) => { await requireMode(modeId); const result = (await apiClient.listMultiplayerRooms(modeId,30,String(query).slice(0,80))).data; await Promise.all(result.map(trackRoom)); return result; },
     'multiplayer.rooms.create': async params => { await requireMode(params.modeId); return trackRoom((await apiClient.createMultiplayerRoom(params)).data); },
     'multiplayer.rooms.get': async ({ roomId }) => trackRoom((await apiClient.getMultiplayerRoom(requireUuid(roomId, 'roomId'))).data),
     'multiplayer.rooms.join': async ({ roomId,modeId,joinCode }) => { await requireMode(modeId); return trackRoom((await apiClient.joinMultiplayerRoomScoped(requireUuid(roomId, 'roomId'), modeId, joinCode)).data); },
     'multiplayer.rooms.invite': async ({ roomId }) => {
       const id = requireRoom(roomId); const invite = (await apiClient.createMultiplayerInvite(id)).data;
-      return { url: inviteUrl(invite.token),expiresAt: invite.expiresAt };
+      return { code: invite.code,expiresAt: invite.expiresAt };
     },
     'multiplayer.rooms.current': async () => initialRoomId ? trackRoom((await apiClient.getMultiplayerRoom(requireUuid(initialRoomId, 'initialRoomId'))).data) : null,
     'multiplayer.rooms.leave': async ({ roomId }) => trackRoom((await apiClient.leaveMultiplayerRoom(requireRoom(roomId))).data),

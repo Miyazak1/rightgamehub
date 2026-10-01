@@ -242,8 +242,7 @@ test('multiplayer room routes keep creation authenticated and idempotent', async
     authService: { authenticateBearer: async () => actor },
     multiplayerRoomService: {
       listRooms: async () => [],
-      createInvite: async () => ({ token: 'a'.repeat(32),expiresAt: new Date().toISOString() }),
-      claimInvite: async () => ({ room: { id: crypto.randomUUID() },workId: crypto.randomUUID() }),
+      createInvite: async () => ({ code: 'ABCDE-23456',expiresAt: new Date().toISOString() }),
       createRoom: async (receivedActor, body, idempotencyKey) => {
         creation = { receivedActor, body, idempotencyKey };
         return { id: crypto.randomUUID(), ...body, ownerUserId: receivedActor.userId, status: 'open', settings: body.settings ?? {}, revision: '0', expiresAt: new Date().toISOString(), createdAt: new Date().toISOString(), members: [], joinCode: null };
@@ -262,9 +261,7 @@ test('multiplayer room routes keep creation authenticated and idempotent', async
   assert.equal(creation.receivedActor, actor);
   assert.equal(creation.idempotencyKey, 'room-create-test-0001');
   const invited = await app.inject({ method: 'POST',url: `/v1/multiplayer/rooms/${created.json().data.id}/invite`,headers: { authorization: 'Bearer valid' } });
-  assert.equal(invited.statusCode,200); assert.equal(invited.json().data.token.length,32);
-  const claimed = await app.inject({ method: 'POST',url: `/v1/multiplayer/invites/${'a'.repeat(32)}/claim`,headers: { authorization: 'Bearer valid' } });
-  assert.equal(claimed.statusCode,200);
+  assert.equal(invited.statusCode,200); assert.equal(invited.json().data.code,'ABCDE-23456');
 });
 
 test('multiplayer match routes authenticate starts and expose participant recovery reads', async t => {

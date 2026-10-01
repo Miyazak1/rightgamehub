@@ -12,6 +12,7 @@ const roomView = (row, members) => ({
   id: row.id,
   modeId: row.mode_id,
   ownerUserId: row.owner_user_id,
+  locator: row.id.slice(0, 8).toUpperCase(),
   visibility: row.visibility,
   status: row.status,
   capacity: Number(row.capacity),

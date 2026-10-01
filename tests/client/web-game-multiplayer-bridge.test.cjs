@@ -21,7 +21,7 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
   hostWindow.postMessage = data => hostWindow.dispatch('message', { data,source: gameWindow,ports: [] });
   gameWindow.postMessage = (data, _origin, ports = []) => gameWindow.dispatch('message', { data,source: hostWindow,ports });
   const modeId = crypto.randomUUID(); const roomId = crypto.randomUUID(); const matchId = crypto.randomUUID();
-  let scopedJoinCalls = 0; const sessionListeners = new Map(); const sent = [];
+  let scopedJoinCalls = 0; let listArgs = null; const sessionListeners = new Map(); const sent = [];
   const session = {
     on(type, listener) { sessionListeners.set(type, listener); return () => sessionListeners.delete(type); },
     connect: async () => ({ protocol: 'gamehub.realtime.v1' }),close() {},getStatus: () => 'connected',getSubscribedRoomIds: () => [roomId],
@@ -33,8 +33,8 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
   const apiClient = {
     getProfile: async () => ({ data: { id: 'user-1',displayName: 'Player',avatar: { kind: 'preset' },role: 'admin',email: 'private@example.test' } }),
     listMultiplayerModes: async () => ({ data: [{ id: modeId,enabled: true,key: 'duel' }] }),
-    listMultiplayerRooms: async () => ({ data: [room] }),createMultiplayerRoom: async () => ({ data: room }),getMultiplayerRoom: async () => ({ data: room }),
-    createMultiplayerInvite: async () => ({ data: { token: 'a'.repeat(32),expiresAt: '2026-09-30T00:30:00.000Z' } }),
+    listMultiplayerRooms: async (...args) => { listArgs = args; return { data: [room] }; },createMultiplayerRoom: async () => ({ data: room }),getMultiplayerRoom: async () => ({ data: room }),
+    createMultiplayerInvite: async () => ({ data: { code: 'ABCDE-23456',expiresAt: '2026-09-30T00:30:00.000Z' } }),
     joinMultiplayerRoomScoped: async () => { scopedJoinCalls += 1; return { data: room }; },leaveMultiplayerRoom: async () => ({ data: room }),setMultiplayerReady: async () => ({ data: room }),
     startMultiplayerRoom: async () => ({ data: match }),getMultiplayerMatch: async () => ({ data: match }),createRealtimeTicket: async () => ({ data: {} }),
   };
@@ -46,8 +46,10 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
   assert.deepEqual(await client.getPlayer(), { id: 'user-1',displayName: 'Player',avatar: { kind: 'preset' } });
   assert.equal((await client.multiplayer.listModes())[0].id,modeId);
   assert.equal((await client.multiplayer.rooms.current()).id,roomId);
-  assert.equal((await client.multiplayer.rooms.invite(roomId)).url,`https://mooyu.fun/#/invite/${'a'.repeat(32)}`);
-  await client.multiplayer.rooms.join(roomId,modeId,'abcdefghijkl');
+  assert.equal((await client.multiplayer.rooms.invite(roomId)).code,'ABCDE-23456');
+  assert.equal((await client.multiplayer.rooms.list(modeId,'Miyazaki'))[0].id,roomId);
+  assert.deepEqual(listArgs,[modeId,30,'Miyazaki']);
+  await client.multiplayer.rooms.join(roomId,modeId,'ABCDE-23456');
   assert.equal(scopedJoinCalls,1);
   await client.multiplayer.connect();
   const started = await client.multiplayer.rooms.start(roomId);

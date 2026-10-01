@@ -10,7 +10,7 @@ const baseRoom = overrides => ({
   settings: {}, revision: '0', expiresAt: '2026-09-30T00:30:00.000Z', createdAt: '2026-09-30T00:00:00.000Z', members: [], ...overrides,
 });
 
-test('room service creates deterministic invite codes without persisting plaintext', async () => {
+test('room service creates invite rooms without exposing the legacy room digest', async () => {
   const { createMultiplayerRoomService } = await import(modulePath);
   const calls = [];
   const repository = { createRoomIdempotent: async input => { calls.push(input); return baseRoom({ id: input.roomId, visibility: input.visibility }); } };
@@ -19,10 +19,9 @@ test('room service creates deterministic invite codes without persisting plainte
   const input = { modeId: id(2), visibility: 'invite_only', capacity: 2, settings: { turnSeconds: 60 } };
   const first = await make().createRoom(actor, input, 'room-create-key-0001');
   const second = await make().createRoom(actor, input, 'room-create-key-0001');
-  assert.match(first.joinCode, /^[A-Za-z0-9_-]{12}$/u);
-  assert.equal(second.joinCode, first.joinCode);
+  assert.equal(first.joinCode, null);
+  assert.equal(second.joinCode, null);
   assert.ok(Buffer.isBuffer(calls[0].joinCodeDigest));
-  assert.doesNotMatch(JSON.stringify(calls), new RegExp(first.joinCode, 'u'));
   assert.equal(calls[0].expiresAt.toISOString(), '2026-09-30T00:30:00.000Z');
 });
 
@@ -81,20 +80,29 @@ test('built-in non-UUID work keys return no database-backed multiplayer modes', 
   assert.equal(called, false);
 });
 
-test('room invites store only a digest and map first-claim conflicts', async () => {
+test('room service forwards lobby search terms and limits to the repository', async () => {
   const { createMultiplayerRoomService } = await import(modulePath);
-  let rotated; let claimed;
+  let received;
+  const service = createMultiplayerRoomService({ repository: { listPublicRooms: async input => { received = input; return []; } },roomCodeHmacKey: key });
+  assert.deepEqual(await service.listRooms({ modeId: id(2),limit: 12,query: 'Miyazaki' }),[]);
+  assert.deepEqual(received,{ modeId: id(2),limit: 12,query: 'Miyazaki' });
+});
+
+test('room invites return a short code while storing only its digest', async () => {
+  const { createMultiplayerRoomService } = await import(modulePath);
+  let rotated;
   const repository = {
     rotateInvite: async input => { rotated = input; return { expiresAt: '2026-09-30T00:30:00.000Z' }; },
-    claimInvite: async input => { claimed = input; return { room: baseRoom({ visibility: 'invite_only' }),workId: id(9) }; },
   };
   const service = createMultiplayerRoomService({ repository,roomCodeHmacKey: key,ids: () => id(8),clock: () => new Date('2026-09-30T00:00:00.000Z') });
   const created = await service.createInvite({ userId: id(1) },id(3));
-  assert.match(created.token,/^[A-Za-z0-9_-]{32}$/u);
+  assert.match(created.code,/^[A-HJ-NP-Z2-9]{5}-[A-HJ-NP-Z2-9]{5}$/u);
   assert.ok(Buffer.isBuffer(rotated.tokenDigest));
-  assert.doesNotMatch(JSON.stringify(rotated),new RegExp(created.token,'u'));
-  const result = await service.claimInvite({ userId: id(4) },created.token);
-  assert.equal(result.workId,id(9)); assert.ok(Buffer.isBuffer(claimed.tokenDigest));
-  repository.claimInvite = async () => ({ error: 'claimed' });
-  await assert.rejects(service.claimInvite({ userId: id(5) },created.token),error => error.code === 'INVITE_CLAIMED' && error.statusCode === 409);
+  assert.doesNotMatch(JSON.stringify(rotated),new RegExp(created.code,'u'));
+});
+
+test('room service maps an already claimed invitation code', async () => {
+  const { createMultiplayerRoomService } = await import(modulePath);
+  const service = createMultiplayerRoomService({ repository: { joinRoom: async () => ({ error: 'claimed' }) },roomCodeHmacKey: key });
+  await assert.rejects(service.joinRoom({ userId: id(4) },id(3),{ joinCode: 'ABCDE-23456' }),error => error.code === 'INVITE_CLAIMED' && error.statusCode === 409);
 });
