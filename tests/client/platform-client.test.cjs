@@ -403,6 +403,9 @@ test('GitHub source import UI stays read-only and hands drafts to the controlled
   assert.match(source, /私有仓库地址不会出现在公开作品资料中/);
   assert.match(source, /未检测到许可证/);
   assert.match(source, /已找到 index\.html/);
+  assert.match(source, /确认你有权为这个仓库选择或修改许可证/);
+  assert.match(source, /不是仓库权利人？请联系原作者补充许可证/);
+  assert.match(source, /重新检测/);
   assert.match(source, /创建私有草稿并继续/);
   assert.match(source, /createGitHubImportedDraft/);
   assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/builds`\)/);
