@@ -61,6 +61,8 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     create: input => request('multiplayer.rooms.create', input),
     get: roomId => request('multiplayer.rooms.get', { roomId }),
     join: (roomId, modeId, joinCode = null) => request('multiplayer.rooms.join', { roomId,modeId,...(joinCode ? { joinCode } : {}) }),
+    invite: roomId => request('multiplayer.rooms.invite', { roomId }),
+    current: () => request('multiplayer.rooms.current'),
     leave: roomId => request('multiplayer.rooms.leave', { roomId }),
     ready: (roomId, ready) => request('multiplayer.rooms.ready', { roomId,ready }),
     start: roomId => request('multiplayer.rooms.start', { roomId }),

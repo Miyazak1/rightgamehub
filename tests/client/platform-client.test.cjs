@@ -138,15 +138,19 @@ test('API client exposes multiplayer mode and room lifecycle operations', async 
   await client.getMultiplayerRoom(roomId);
   await client.joinMultiplayerRoom(roomId, 'ABCDEFGHIJKL');
   await client.joinMultiplayerRoomScoped(roomId, modeId, 'ABCDEFGHIJKL');
+  await client.createMultiplayerInvite(roomId);
+  await client.claimMultiplayerInvite('a'.repeat(32));
   await client.setMultiplayerReady(roomId, true);
   await client.leaveMultiplayerRoom(roomId);
-  assert.deepEqual(requests.map(item => item.init.method), ['GET','GET','POST','GET','POST','POST','POST','POST']);
+  assert.deepEqual(requests.map(item => item.init.method), ['GET','GET','POST','GET','POST','POST','POST','POST','POST','POST']);
   assert.equal(requests[0].init.headers.Authorization, undefined);
   assert.equal(requests[1].init.headers.Authorization, undefined);
   assert.ok(requests.slice(2).every(item => item.init.headers.Authorization === 'Bearer room-token'));
   assert.ok(requests[2].init.headers['Idempotency-Key'].length >= 16);
   assert.equal(requests[4].init.body, JSON.stringify({ joinCode: 'ABCDEFGHIJKL' }));
   assert.equal(requests[5].init.body, JSON.stringify({ modeId, joinCode: 'ABCDEFGHIJKL' }));
+  assert.match(requests[6].url,/\/rooms\/[^/]+\/invite$/u);
+  assert.match(requests[7].url,/\/invites\/a{32}\/claim$/u);
 });
 
 test('API client starts and recovers authoritative multiplayer matches', async () => {

@@ -9,6 +9,8 @@ export const WEB_GAME_BRIDGE_METHODS = Object.freeze([
   'multiplayer.rooms.create',
   'multiplayer.rooms.get',
   'multiplayer.rooms.join',
+  'multiplayer.rooms.invite',
+  'multiplayer.rooms.current',
   'multiplayer.rooms.leave',
   'multiplayer.rooms.ready',
   'multiplayer.rooms.start',

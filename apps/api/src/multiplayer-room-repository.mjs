@@ -144,6 +144,75 @@ export class PostgresMultiplayerRoomRepository {
     });
   }
 
+  async rotateInvite(input) {
+    return withTransaction(this.pool, async client => {
+      const room = (await client.query('SELECT * FROM multiplayer_rooms WHERE id=$1 FOR UPDATE', [input.roomId])).rows[0];
+      if (!room || new Date(room.expires_at) <= input.now) return { error: 'not_found' };
+      if (room.owner_user_id !== input.userId) return { error: 'not_owner' };
+      if (room.visibility !== 'invite_only') return { error: 'not_invite_only' };
+      if (room.status !== 'open') return { error: 'not_open' };
+      const otherMembers = Number((await client.query(
+        'SELECT count(*)::int AS count FROM multiplayer_room_members WHERE room_id=$1 AND user_id<>$2 AND left_at IS NULL', [input.roomId,input.userId],
+      )).rows[0].count);
+      const claimed = (await client.query(
+        'SELECT 1 FROM multiplayer_room_invites WHERE room_id=$1 AND claimed_at IS NOT NULL LIMIT 1', [input.roomId],
+      )).rowCount > 0;
+      if (otherMembers > 0 || claimed) return { error: 'occupied' };
+      await client.query(
+        'UPDATE multiplayer_room_invites SET revoked_at=$2 WHERE room_id=$1 AND claimed_at IS NULL AND revoked_at IS NULL', [input.roomId,input.now],
+      );
+      const row = (await client.query(
+        `INSERT INTO multiplayer_room_invites(id,room_id,token_digest,created_by,expires_at,created_at)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING expires_at`,
+        [input.id,input.roomId,input.tokenDigest,input.userId,room.expires_at,input.now],
+      )).rows[0];
+      return { expiresAt: new Date(row.expires_at).toISOString() };
+    });
+  }
+
+  async claimInvite(input) {
+    return withTransaction(this.pool, async client => {
+      const invite = (await client.query(
+        `SELECT i.*,r.mode_id,r.owner_user_id,r.status AS room_status,r.capacity,r.expires_at AS room_expires_at,m.work_id
+           FROM multiplayer_room_invites i
+           JOIN multiplayer_rooms r ON r.id=i.room_id
+           JOIN multiplayer_game_modes m ON m.id=r.mode_id
+          WHERE i.token_digest=$1 FOR UPDATE OF i,r`, [input.tokenDigest],
+      )).rows[0];
+      if (!invite || invite.revoked_at || new Date(invite.expires_at) <= input.now || new Date(invite.room_expires_at) <= input.now) return { error: 'not_found' };
+      if (invite.claimed_by && invite.claimed_by !== input.userId) return { error: 'claimed' };
+      if (invite.room_status !== 'open') return { error: 'not_open' };
+      const room = (await client.query('SELECT * FROM multiplayer_rooms WHERE id=$1', [invite.room_id])).rows[0];
+      const existing = (await client.query('SELECT * FROM multiplayer_room_members WHERE room_id=$1 AND user_id=$2', [invite.room_id,input.userId])).rows[0];
+      if (input.userId === invite.owner_user_id || (existing && existing.left_at == null)) {
+        return { room: await hydrate(client, room),workId: invite.work_id };
+      }
+      const blocked = (await client.query(
+        `SELECT 1 FROM multiplayer_room_members m JOIN user_blocks b ON
+          ((b.blocker_user_id=$2 AND b.blocked_user_id=m.user_id) OR (b.blocker_user_id=m.user_id AND b.blocked_user_id=$2))
+          WHERE m.room_id=$1 AND m.left_at IS NULL LIMIT 1`, [invite.room_id,input.userId],
+      )).rowCount > 0;
+      if (blocked) return { error: 'blocked' };
+      const seats = new Set((await client.query(
+        "SELECT seat FROM multiplayer_room_members WHERE room_id=$1 AND left_at IS NULL AND role='player' ORDER BY seat", [invite.room_id],
+      )).rows.map(row => Number(row.seat)));
+      let seat = -1;
+      for (let candidate = 0; candidate < invite.capacity; candidate += 1) if (!seats.has(candidate)) { seat = candidate; break; }
+      if (seat < 0) return { error: 'full' };
+      await client.query(
+        `INSERT INTO multiplayer_room_members(room_id,user_id,seat,role,ready,connection_state,joined_at,left_at)
+         VALUES ($1,$2,$3,'player',false,'offline',$4,NULL)
+         ON CONFLICT (room_id,user_id) DO UPDATE SET seat=EXCLUDED.seat,role='player',ready=false,connection_state='offline',joined_at=EXCLUDED.joined_at,left_at=NULL`,
+        [invite.room_id,input.userId,seat,input.now],
+      );
+      await client.query('UPDATE multiplayer_room_invites SET claimed_by=$2,claimed_at=$3 WHERE id=$1', [invite.id,input.userId,input.now]);
+      const updated = (await client.query(
+        "UPDATE multiplayer_rooms SET revision=revision+1,updated_at=$2::timestamptz,expires_at=$2::timestamptz+interval '30 minutes' WHERE id=$1 RETURNING *", [invite.room_id,input.now],
+      )).rows[0];
+      return { room: await hydrate(client, updated),workId: invite.work_id };
+    });
+  }
+
   async leaveRoom(input) {
     return withTransaction(this.pool, async client => {
       const room = (await client.query('SELECT * FROM multiplayer_rooms WHERE id=$1 FOR UPDATE', [input.roomId])).rows[0];

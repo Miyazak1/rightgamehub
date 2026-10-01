@@ -15,7 +15,7 @@ const eventTarget = () => {
 test('web game bridge exposes scoped multiplayer without credentials', async t => {
   const { createWebGameMultiplayerHost } = await import('../../packages/platform-client/src/web-game-multiplayer-host.mjs');
   const { createGameHubClient } = await import('../../packages/web-game-sdk/src/index.mjs');
-  const hostWindow = eventTarget();
+  const hostWindow = eventTarget(); hostWindow.location = { origin: 'https://mooyu.fun',pathname: '/' };
   const gameWindow = eventTarget();
   gameWindow.parent = hostWindow;
   hostWindow.postMessage = data => hostWindow.dispatch('message', { data,source: gameWindow,ports: [] });
@@ -34,16 +34,19 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
     getProfile: async () => ({ data: { id: 'user-1',displayName: 'Player',avatar: { kind: 'preset' },role: 'admin',email: 'private@example.test' } }),
     listMultiplayerModes: async () => ({ data: [{ id: modeId,enabled: true,key: 'duel' }] }),
     listMultiplayerRooms: async () => ({ data: [room] }),createMultiplayerRoom: async () => ({ data: room }),getMultiplayerRoom: async () => ({ data: room }),
+    createMultiplayerInvite: async () => ({ data: { token: 'a'.repeat(32),expiresAt: '2026-09-30T00:30:00.000Z' } }),
     joinMultiplayerRoomScoped: async () => { scopedJoinCalls += 1; return { data: room }; },leaveMultiplayerRoom: async () => ({ data: room }),setMultiplayerReady: async () => ({ data: room }),
     startMultiplayerRoom: async () => ({ data: match }),getMultiplayerMatch: async () => ({ data: match }),createRealtimeTicket: async () => ({ data: {} }),
   };
-  const bridge = createWebGameMultiplayerHost({ windowImpl: hostWindow,frame: { contentWindow: gameWindow },launchId: crypto.randomUUID(),workId: crypto.randomUUID(),apiClient,sessionFactory: () => session,MessageChannelImpl: MessageChannel,logger: { warn() {} } });
+  const bridge = createWebGameMultiplayerHost({ windowImpl: hostWindow,frame: { contentWindow: gameWindow },launchId: crypto.randomUUID(),workId: crypto.randomUUID(),initialRoomId: roomId,apiClient,sessionFactory: () => session,MessageChannelImpl: MessageChannel,logger: { warn() {} } });
   t.after(() => bridge.close());
   const client = createGameHubClient({ windowImpl: gameWindow,parentWindow: hostWindow,requestTimeoutMs: 1_000 });
   t.after(() => client.close());
   await client.connect();
   assert.deepEqual(await client.getPlayer(), { id: 'user-1',displayName: 'Player',avatar: { kind: 'preset' } });
   assert.equal((await client.multiplayer.listModes())[0].id,modeId);
+  assert.equal((await client.multiplayer.rooms.current()).id,roomId);
+  assert.equal((await client.multiplayer.rooms.invite(roomId)).url,`https://mooyu.fun/#/invite/${'a'.repeat(32)}`);
   await client.multiplayer.rooms.join(roomId,modeId,'abcdefghijkl');
   assert.equal(scopedJoinCalls,1);
   await client.multiplayer.connect();

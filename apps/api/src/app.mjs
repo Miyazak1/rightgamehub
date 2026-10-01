@@ -169,6 +169,13 @@ export function createApp({ config, database, migrations, authService, workServi
     app.post('/v1/multiplayer/rooms/:roomId/join', {
       preHandler: requireAuth, schema: { params: roomParams, body: { type: 'object', additionalProperties: false, properties: { joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' }, modeId: { type: 'string', format: 'uuid' } } } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerRoomService.joinRoom(request.actor, request.params.roomId, request.body)); });
+    app.post('/v1/multiplayer/rooms/:roomId/invite', { preHandler: requireAuth, schema: { params: roomParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerRoomService.createInvite(request.actor, request.params.roomId));
+    });
+    app.post('/v1/multiplayer/invites/:token/claim', {
+      preHandler: requireAuth,
+      schema: { params: { type: 'object', additionalProperties: false, required: ['token'], properties: { token: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerRoomService.claimInvite(request.actor, request.params.token)); });
     app.post('/v1/multiplayer/rooms/:roomId/leave', { preHandler: requireAuth, schema: { params: roomParams } }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerRoomService.leaveRoom(request.actor, request.params.roomId));
     });

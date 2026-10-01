@@ -57,6 +57,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     getMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}`, { ...options, auth: true }),
     joinMultiplayerRoom: (roomId, joinCode, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/join`, { ...options, method: 'POST', body: joinCode ? { joinCode } : {}, auth: true }),
     joinMultiplayerRoomScoped: (roomId, modeId, joinCode, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/join`, { ...options, method: 'POST', body: { modeId,...(joinCode ? { joinCode } : {}) }, auth: true }),
+    createMultiplayerInvite: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/invite`, { ...options, method: 'POST', auth: true }),
+    claimMultiplayerInvite: (token, options) => request(`/v1/multiplayer/invites/${encodeURIComponent(token)}/claim`, { ...options, method: 'POST', auth: true }),
     leaveMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/leave`, { ...options, method: 'POST', auth: true }),
     setMultiplayerReady: (roomId, ready, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/ready`, { ...options, method: 'POST', body: { ready }, auth: true }),
     startMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/start`, { ...options, method: 'POST', auth: true, idempotent: true }),

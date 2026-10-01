@@ -28,6 +28,7 @@ export function createMultiplayerRoomService({ repository, roomCodeHmacKey, rule
   if (Buffer.byteLength(roomCodeHmacKey ?? '', 'utf8') < 32) throw new TypeError('roomCodeHmacKey must contain at least 32 UTF-8 bytes.');
   const codeFor = roomId => crypto.createHmac('sha256', roomCodeHmacKey).update(`gamehub:room-code:${roomId}`).digest('base64url').slice(0, 12);
   const digestFor = code => crypto.createHmac('sha256', roomCodeHmacKey).update(`gamehub:room-code-value:${code}`).digest();
+  const inviteDigestFor = token => crypto.createHmac('sha256', roomCodeHmacKey).update(`gamehub:room-invite:${token}`).digest();
   const withJoinCode = room => room.visibility === 'invite_only' ? { ...room, joinCode: codeFor(room.id) } : { ...room, joinCode: null };
 
   return Object.freeze({
@@ -70,6 +71,28 @@ export function createMultiplayerRoomService({ repository, roomCodeHmacKey, rule
       if (room?.error === 'full') throw new MultiplayerRoomError('ROOM_FULL', 409, '房间已满。');
       if (room?.error === 'not_open') throw new MultiplayerRoomError('ROOM_NOT_OPEN', 409, '房间当前不可加入。');
       return room;
+    },
+    async createInvite(actor, roomId) {
+      requireActor(actor);
+      const token = crypto.randomBytes(24).toString('base64url');
+      const invite = await repository.rotateInvite({ id: ids(),roomId,userId: actor.userId,tokenDigest: inviteDigestFor(token),now: clock() });
+      if (invite?.error === 'not_found') throw new MultiplayerRoomError('ROOM_NOT_FOUND', 404, '房间不存在。');
+      if (invite?.error === 'not_owner') throw new MultiplayerRoomError('ROOM_OWNER_REQUIRED', 403, '只有房主可以生成邀请链接。');
+      if (invite?.error === 'not_invite_only') throw new MultiplayerRoomError('ROOM_INVITE_UNAVAILABLE', 409, '公开房间不需要邀请链接。');
+      if (invite?.error === 'occupied') throw new MultiplayerRoomError('ROOM_INVITE_CLAIMED', 409, '邀请已被玩家领取。');
+      if (invite?.error === 'not_open') throw new MultiplayerRoomError('ROOM_NOT_OPEN', 409, '房间当前不能生成邀请。');
+      return { token,expiresAt: invite.expiresAt };
+    },
+    async claimInvite(actor, token) {
+      requireActor(actor);
+      if (!/^[A-Za-z0-9_-]{32}$/u.test(token ?? '')) throw new MultiplayerRoomError('INVITE_INVALID', 404, '邀请链接无效或已失效。');
+      const result = await repository.claimInvite({ userId: actor.userId,tokenDigest: inviteDigestFor(token),now: clock() });
+      if (result?.error === 'not_found') throw new MultiplayerRoomError('INVITE_INVALID', 404, '邀请链接无效或已失效。');
+      if (result?.error === 'claimed') throw new MultiplayerRoomError('INVITE_CLAIMED', 409, '这份邀请已被其他玩家领取。');
+      if (result?.error === 'blocked') throw new MultiplayerRoomError('ROOM_NOT_FOUND', 404, '房间不存在或不可加入。');
+      if (result?.error === 'full') throw new MultiplayerRoomError('ROOM_FULL', 409, '房间已满。');
+      if (result?.error === 'not_open') throw new MultiplayerRoomError('ROOM_NOT_OPEN', 409, '房间当前不可加入。');
+      return result;
     },
     async leaveRoom(actor, roomId) {
       requireActor(actor);

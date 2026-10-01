@@ -80,3 +80,21 @@ test('built-in non-UUID work keys return no database-backed multiplayer modes', 
   assert.deepEqual(await service.listModes('gamehub-guess-baike'), []);
   assert.equal(called, false);
 });
+
+test('room invites store only a digest and map first-claim conflicts', async () => {
+  const { createMultiplayerRoomService } = await import(modulePath);
+  let rotated; let claimed;
+  const repository = {
+    rotateInvite: async input => { rotated = input; return { expiresAt: '2026-09-30T00:30:00.000Z' }; },
+    claimInvite: async input => { claimed = input; return { room: baseRoom({ visibility: 'invite_only' }),workId: id(9) }; },
+  };
+  const service = createMultiplayerRoomService({ repository,roomCodeHmacKey: key,ids: () => id(8),clock: () => new Date('2026-09-30T00:00:00.000Z') });
+  const created = await service.createInvite({ userId: id(1) },id(3));
+  assert.match(created.token,/^[A-Za-z0-9_-]{32}$/u);
+  assert.ok(Buffer.isBuffer(rotated.tokenDigest));
+  assert.doesNotMatch(JSON.stringify(rotated),new RegExp(created.token,'u'));
+  const result = await service.claimInvite({ userId: id(4) },created.token);
+  assert.equal(result.workId,id(9)); assert.ok(Buffer.isBuffer(claimed.tokenDigest));
+  repository.claimInvite = async () => ({ error: 'claimed' });
+  await assert.rejects(service.claimInvite({ userId: id(5) },created.token),error => error.code === 'INVITE_CLAIMED' && error.statusCode === 409);
+});

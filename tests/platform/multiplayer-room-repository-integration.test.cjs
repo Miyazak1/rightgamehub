@@ -72,9 +72,12 @@ test('PostgreSQL room lifecycle is capacity-safe and transfers ownership', { ski
 
   const invited = await service.createRoom(owner, { modeId: mode.id, visibility: 'invite_only', capacity: 2, settings: {} }, `room-${crypto.randomUUID()}`);
   await assert.rejects(service.joinRoom(guest, invited.id, { joinCode: 'BADCODE12345' }), error => error.code === 'ROOM_CODE_REQUIRED');
-  const invitedJoined = await service.joinRoom(guest, invited.id, { joinCode: invited.joinCode });
-  assert.equal(invitedJoined.members.length, 2);
+  const invite = await service.createInvite(owner, invited.id);
+  const invitedJoined = await service.claimInvite(guest, invite.token);
+  assert.equal(invitedJoined.room.members.length, 2);
   assert.equal((await service.getRoom(guest, invited.id)).id, invited.id);
+  await service.leaveRoom(guest, invited.id);
+  await assert.rejects(service.claimInvite(third, invite.token), error => error.code === 'INVITE_CLAIMED');
 
   const matchRoom = await service.createRoom(owner, { modeId: mode.id, visibility: 'public', capacity: 2, settings: { turnSeconds: 60 } }, `room-${crypto.randomUUID()}`);
   await service.joinRoom(guest, matchRoom.id);

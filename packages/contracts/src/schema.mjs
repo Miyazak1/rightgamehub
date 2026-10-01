@@ -129,6 +129,8 @@ export const schemas = Object.freeze({
     modeId: id, visibility: stringEnum(['public','invite_only']), capacity: { type: 'integer', minimum: 2, maximum: 8 }, settings: { $ref: '#/components/schemas/MultiplayerRoomSettings' },
   }, ['modeId','visibility','capacity']),
   JoinMultiplayerRoomRequest: object({ joinCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' }, modeId: id }, []),
+  MultiplayerInvite: object({ token: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' }, expiresAt: dateTime }),
+  MultiplayerInviteClaim: object({ room: { $ref: '#/components/schemas/MultiplayerRoom' }, workId: id }),
   SetMultiplayerReadyRequest: object({ ready: { type: 'boolean' } }),
   MultiplayerMatchPlayer: object({
     userId: id, displayName: { type: 'string' }, seat: { type: 'integer', minimum: 0, maximum: 7 },
@@ -499,6 +501,8 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/multiplayer/rooms', operationId: 'createMultiplayerRoom', auth: 'bearer', request: 'CreateMultiplayerRoomRequest', response: 'MultiplayerRoomCreated', idempotent: true },
   { method: 'get', path: '/v1/multiplayer/rooms/{roomId}', operationId: 'getMultiplayerRoom', auth: 'bearer', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/join', operationId: 'joinMultiplayerRoom', auth: 'bearer', request: 'JoinMultiplayerRoomRequest', response: 'MultiplayerRoom', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/invite', operationId: 'createMultiplayerInvite', auth: 'bearer', response: 'MultiplayerInvite', pathRoomId: true },
+  { method: 'post', path: '/v1/multiplayer/invites/{token}/claim', operationId: 'claimMultiplayerInvite', auth: 'bearer', response: 'MultiplayerInviteClaim', pathToken: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/leave', operationId: 'leaveMultiplayerRoom', auth: 'bearer', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/ready', operationId: 'setMultiplayerReady', auth: 'bearer', request: 'SetMultiplayerReadyRequest', response: 'MultiplayerRoom', pathRoomId: true },
   { method: 'post', path: '/v1/multiplayer/rooms/{roomId}/start', operationId: 'startMultiplayerRoom', auth: 'bearer', response: 'MultiplayerMatch', pathRoomId: true, idempotent: true },
@@ -593,6 +597,7 @@ export function createOpenApiDocument() {
       if (operation.pathPuzzleId) parameters.push({ name: 'puzzleId', in: 'path', required: true, schema: { type: 'string', minLength: 1, maxLength: 120 } });
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });
     if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
+    if (operation.pathToken) parameters.push({ name: 'token', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } });
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
