@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const fs = require('node:fs/promises');
+const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -23,6 +25,8 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(config.githubSourceImportEnabled, false);
   assert.equal(config.sourceBuildEnabled, false);
   assert.equal(config.sourceBuilderExecutionMode, 'local');
+  assert.equal(config.ruleBuildEnabled, false);
+  assert.equal(config.ruleBuilderExecutionMode, 'local');
   const production = loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime' });
   assert.equal(production.validatorExecutionMode, 'isolated');
   assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), VALIDATOR_EXECUTION_MODE: 'local' }), /must be isolated/);
@@ -49,6 +53,11 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(sourceBuild.sourceBuildEnabled, true);
   assert.equal(sourceBuild.sourceBuilderImageDigest, 'development-unpinned');
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), SOURCE_BUILD_ENABLED: 'true' }), /GITHUB_SOURCE_IMPORT_ENABLED/);
+  const ruleBuild = loadConfig({ NODE_ENV: 'test',DATABASE_URL: 'postgres://db/test',OTP_HMAC_KEY: 'x'.repeat(32),RULE_BUILD_ENABLED: 'true' });
+  assert.equal(ruleBuild.ruleBuildEnabled,true);
+  assert.equal(ruleBuild.ruleBuilderImageDigest,'development-unpinned');
+  assert.throws(() => loadConfig({ NODE_ENV: 'production',DATABASE_URL: 'postgres://db/test',OTP_HMAC_KEY: 'x'.repeat(32),REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime',RULE_BUILD_ENABLED: 'true' }), /RULE_BUILDER_IMAGE_DIGEST/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'production',DATABASE_URL: 'postgres://db/test',OTP_HMAC_KEY: 'x'.repeat(32),REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime',RULE_BUILD_ENABLED: 'true',RULE_BUILDER_EXECUTION_MODE: 'local',RULE_BUILDER_IMAGE_DIGEST: `sha256:${'a'.repeat(64)}` }), /must be isolated/);
   assert.throws(() => loadConfig({
     NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', GITHUB_SOURCE_IMPORT_ENABLED: 'true',
     GITHUB_APP_ID: '12345', GITHUB_APP_PRIVATE_KEY: privateKey, GITHUB_APP_WEBHOOK_SECRET: 'w'.repeat(32),
@@ -318,7 +327,9 @@ test('multiplayer match routes authenticate starts and expose participant recove
 test('multiplayer rule intake routes preserve the quarantine and human review boundary', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const actor = { userId: crypto.randomUUID(),scopes: ['upload'],profile: { role: 'admin',canPublish: true } };
-  const workId = crypto.randomUUID(); const submissionId = crypto.randomUUID(); const calls = [];
+  const workId = crypto.randomUUID(); const submissionId = crypto.randomUUID(); const buildId = crypto.randomUUID(); const calls = [];
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-rule-route-'));
+  const builtPackage = path.join(directory,'adapter.cjs'); const builtBytes = Buffer.from('module.exports={};\n'); await fs.writeFile(builtPackage,builtBytes);
   const app = createApp({
     config: { requestBodyLimit: 65536 },database: { ping: async () => true },migrations: { status: async () => ({ ready: true }) },
     authService: { authenticateBearer: async () => actor },
@@ -329,9 +340,10 @@ test('multiplayer rule intake routes preserve the quarantine and human review bo
       submit: async (...args) => { calls.push(['submit',...args]); return { id: submissionId,state: 'submitted' }; },
       listMine: async () => [],getMine: async () => ({ id: submissionId,state: 'submitted' }),adminList: async () => [{ id: submissionId,state: 'submitted' }],adminGet: async () => ({ id: submissionId,state: 'submitted' }),
       adminReview: async (...args) => { calls.push(['review',...args]); return { id: submissionId,state: 'in_review' }; },
+      adminBuiltPackage: async (...args) => { calls.push(['builtPackage',...args]); return { content: await fs.readFile(builtPackage),fileName: 'duel-1.0.0.cjs',sha256: crypto.createHash('sha256').update(builtBytes).digest('hex'),bytes: String(builtBytes.length) }; },
     },
   });
-  t.after(() => app.close());
+  t.after(async () => { await app.close(); await fs.rm(directory,{ recursive: true,force: true }); });
   const payload = {
     modeKey: 'duel',modeName: '双人对战',rulesetVersion: '1.0.0',minPlayers: 2,maxPlayers: 2,modeConfig: { turnSeconds: 60 },fileName: 'source.zip',declaredBytes: '16',sha256: 'a'.repeat(64),
     creatorSubmission: { version: 1,workId,modeKey: 'duel',rulesetVersion: '1.0.0',authority: 'platform_authoritative',players: { min: 2,max: 2 } },
@@ -343,11 +355,16 @@ test('multiplayer rule intake routes preserve the quarantine and human review bo
   const submitted = await app.inject({ method: 'POST',url: `/v1/creator/multiplayer-rule-submissions/${submissionId}/submit`,headers: { authorization: 'Bearer valid','idempotency-key': 'rules-submit-route-0001' } });
   const queue = await app.inject({ url: '/v1/admin/multiplayer/rule-submissions?state=queue&limit=20',headers: { authorization: 'Bearer valid' } });
   const reviewed = await app.inject({ method: 'POST',url: `/v1/admin/multiplayer/rule-submissions/${submissionId}/review`,headers: { authorization: 'Bearer valid' },payload: { action: 'start' } });
-  assert.deepEqual([created,granted,uploaded,submitted,queue,reviewed].map(response => response.statusCode),[200,200,200,200,200,200]);
+  const downloaded = await app.inject({ url: `/v1/admin/multiplayer/rule-builds/${buildId}/package`,headers: { authorization: 'Bearer valid' } });
+  assert.deepEqual([created,granted,uploaded,submitted,queue,reviewed,downloaded].map(response => response.statusCode),[200,200,200,200,200,200,200]);
   assert.ok([created,granted,uploaded,submitted,queue,reviewed].every(response => response.headers['cache-control'] === 'no-store'));
   assert.equal(calls.find(call => call[0] === 'create')[4],'rules-create-route-0001');
   assert.equal(calls.find(call => call[0] === 'receive')[3],Buffer.byteLength('PK\x03\x04route-test'));
   assert.equal(calls.find(call => call[0] === 'review')[3].action,'start');
+  assert.equal(calls.find(call => call[0] === 'builtPackage')[2],buildId);
+  assert.equal(downloaded.headers['content-type'],'application/javascript');
+  assert.match(downloaded.headers.digest,/^sha-256=/u);
+  assert.deepEqual(downloaded.rawPayload,builtBytes);
 });
 
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {

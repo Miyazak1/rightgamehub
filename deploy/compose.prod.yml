@@ -34,6 +34,11 @@ x-api-environment: &api-environment
   SOURCE_BUILD_WORKING_ROOT: /data/source-worker
   SOURCE_BUILDER_EXECUTION_MODE: isolated
   SOURCE_BUILDER_IMAGE_DIGEST: ${SOURCE_BUILDER_IMAGE_DIGEST:-}
+  RULE_BUILD_ENABLED: ${RULE_BUILD_ENABLED:-false}
+  RULE_BUILDER_ROOT: /data/rule-builder
+  RULE_BUILD_WORKING_ROOT: /data/rule-worker
+  RULE_BUILDER_EXECUTION_MODE: isolated
+  RULE_BUILDER_IMAGE_DIGEST: ${RULE_BUILDER_IMAGE_DIGEST:-}
   QUARANTINE_ROOT: /data/quarantine
   AVATAR_ROOT: /data/avatars
   COVER_ROOT: /data/covers
@@ -233,6 +238,50 @@ services:
     networks: [backend]
     mem_limit: 512m
 
+  rule-builder:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.rule-builder
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      RULE_BUILDER_ROOT: /data/rule-builder
+      NODE_OPTIONS: --max-old-space-size=384
+    volumes:
+      - rule-builder:/data/rule-builder
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    pids_limit: 64
+    cpus: "1.0"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:fs').statSync('/data/rule-builder/service.ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rule-worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment: *api-environment
+    command: ["node", "apps/api/src/multiplayer-rule-build-worker-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rule-builder: { condition: service_healthy }
+    volumes:
+      - quarantine:/data/quarantine
+      - rule-builder:/data/rule-builder
+      - rule-worker:/data/rule-worker
+    networks: [backend]
+    mem_limit: 384m
+
   worker:
     build:
       context: ..
@@ -310,5 +359,7 @@ volumes:
   validator:
   source-builder:
   source-worker:
+  rule-builder:
+  rule-worker:
   caddy-data:
   caddy-config:

@@ -173,12 +173,18 @@ export const schemas = Object.freeze({
     fileName: { type: 'string',minLength: 1,maxLength: 255,pattern: '^[^\\\\/\\u0000]+\\.zip$' },declaredBytes: uintString,sha256,
     creatorSubmission: { type: 'object',additionalProperties: true },doctorReport: { type: 'object',additionalProperties: true },
   }, ['modeKey','modeName','rulesetVersion','minPlayers','maxPlayers','fileName','declaredBytes','sha256','creatorSubmission','doctorReport']),
+  MultiplayerRuleBuild: object({
+    id,state: stringEnum(['queued','preparing','building','ready','failed']),builderImageDigest: { type: 'string' },sourceSha256: sha256,
+    artifactSha256: { oneOf: [sha256,{ type: 'null' }] },artifactBytes: { oneOf: [uintString,{ type: 'null' }] },report: { oneOf: [{ type: 'object',additionalProperties: true },{ type: 'null' }] },
+    errorCode: { oneOf: [{ type: 'string' },{ type: 'null' }] },createdAt: dateTime,startedAt: nullableDateTime,completedAt: nullableDateTime,
+  }),
   MultiplayerRuleSubmission: object({
     id,workId: id,workTitle: { oneOf: [{ type: 'string' },{ type: 'null' }] },ownerUserId: id,ownerDisplayName: { oneOf: [{ type: 'string' },{ type: 'null' }] },
     modeKey: { type: 'string' },modeName: { type: 'string' },rulesetVersion: { type: 'string' },minPlayers: { type: 'integer' },maxPlayers: { type: 'integer' },
     state: stringEnum(['created','receiving','uploaded','submitted','in_review','changes_requested','approved_for_build','rejected','expired','failed']),sourceFileName: { type: 'string' },declaredBytes: uintString,
     actualBytes: { oneOf: [uintString,{ type: 'null' }] },sourceSha256: sha256,errorCode: { oneOf: [{ type: 'string' },{ type: 'null' }] },reviewNote: { oneOf: [{ type: 'string' },{ type: 'null' }] },
     submittedAt: nullableDateTime,reviewedAt: nullableDateTime,createdAt: dateTime,updatedAt: dateTime,doctorSummary: { oneOf: [{ type: 'object',additionalProperties: true },{ type: 'null' }] },
+    build: { oneOf: [{ $ref: '#/components/schemas/MultiplayerRuleBuild' },{ type: 'null' }] },
   }),
   MultiplayerRuleUploadGrant: object({ submissionId: id,token: { type: 'string',minLength: 32 },expiresAt: dateTime }),
   MultiplayerRuleReviewRequest: object({ action: stringEnum(['start','request_changes','approve_for_build','reject']),note: { type: 'string',minLength: 1,maxLength: 2000 } }, ['action']),
@@ -547,6 +553,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/multiplayer/rule-submissions', operationId: 'listAdminMultiplayerRuleSubmissions', auth: 'bearer', response: 'MultiplayerRuleSubmission', responseArray: true, queryRuleSubmissions: true },
   { method: 'get', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}', operationId: 'getAdminMultiplayerRuleSubmission', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId' },
   { method: 'get', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}/package', operationId: 'downloadAdminMultiplayerRulePackage', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId', zipResponse: true },
+  { method: 'get', path: '/v1/admin/multiplayer/rule-builds/{buildId}/package', operationId: 'downloadAdminMultiplayerRuleBuild', auth: 'bearer', response: 'MultiplayerRuleBuild', pathBuildId: true, ruleBundleResponse: true },
   { method: 'post', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}/review', operationId: 'reviewAdminMultiplayerRuleSubmission', auth: 'bearer', request: 'MultiplayerRuleReviewRequest', response: 'MultiplayerRuleSubmission', pathId: 'submissionId' },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
@@ -672,7 +679,7 @@ export function createOpenApiDocument() {
       ...(parameters.length ? { parameters } : {}),
       ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
       responses: {
-        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
+        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : operation.ruleBundleResponse ? { description: 'Controlled rule bundle for offline signing.',content: { 'application/javascript': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })
           : object({ data: { $ref: `#/components/schemas/${operation.response}` } })),
         ...errorResponses,

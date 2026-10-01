@@ -57,7 +57,7 @@ async function verifyZipMagic(objectStore, objectKey) {
   } finally { await handle.close(); }
 }
 
-export function createMultiplayerRuleSubmissionService({ repository, objectStore, storageCapacityService = null, ids = () => crypto.randomUUID() }) {
+export function createMultiplayerRuleSubmissionService({ repository, objectStore, storageCapacityService = null, ruleBuildEnabled = false, ruleBuilderImageDigest = null, ids = () => crypto.randomUUID() }) {
   return Object.freeze({
     async create(actor, workId, body, idempotencyKey) {
       requireCreator(actor);
@@ -106,12 +106,26 @@ export function createMultiplayerRuleSubmissionService({ repository, objectStore
     async adminReview(actor, submissionId, body) {
       requireAdmin(actor);
       if (body.action !== 'start' && !(body.note?.trim())) throw new MultiplayerRuleSubmissionError('REVIEW_NOTE_REQUIRED', 400, '审核结论必须填写说明。');
-      return repository.review({ actor,submissionId,action: body.action,note: body.note?.trim() ?? null,eventId: ids() });
+      if (body.action === 'approve_for_build' && (!ruleBuildEnabled || !ruleBuilderImageDigest)) throw new MultiplayerRuleSubmissionError('RULE_BUILDER_UNAVAILABLE', 503, '规则 Builder 尚未启用，当前不能批准构建。', true);
+      return repository.review({
+        actor,submissionId,action: body.action,note: body.note?.trim() ?? null,eventId: ids(),
+        ...(body.action === 'approve_for_build' ? { buildId: ids(),queueJobId: ids(),buildEventId: ids(),builderImageDigest: ruleBuilderImageDigest } : {}),
+      });
     },
     async adminPackage(actor, submissionId) {
       requireAdmin(actor);
       const item = await repository.packageForAdmin(submissionId);
       return { ...item,path: objectStore.pathFor(item.objectKey) };
+    },
+    async adminBuiltPackage(actor, buildId) {
+      requireAdmin(actor);
+      const item = await repository.builtPackageForAdmin(buildId);
+      let content;
+      try { content = await fs.readFile(objectStore.pathFor(item.objectKey)); }
+      catch { throw new MultiplayerRuleSubmissionError('RULE_BUILD_ARTIFACT_UNAVAILABLE', 503, '规则构建产物当前不可读取。', true); }
+      const actualSha256 = crypto.createHash('sha256').update(content).digest('hex');
+      if (content.length !== Number(item.bytes) || actualSha256 !== item.sha256) throw new MultiplayerRuleSubmissionError('RULE_BUILD_ARTIFACT_INTEGRITY_INVALID', 503, '规则构建产物与已记录摘要不一致。');
+      return { ...item,content };
     },
   });
 }

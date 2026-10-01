@@ -55,7 +55,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
   }
   async function authenticatedDownload(path, options = {}) {
     const token = await getAccessToken();
-    const response = await fetchImpl(`${baseUrl}${path}`, { signal: options.signal,headers: { Accept: 'application/zip',...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    const response = await fetchImpl(`${baseUrl}${path}`, { signal: options.signal,headers: { Accept: options.accept ?? 'application/zip',...(token ? { Authorization: `Bearer ${token}` } : {}) } });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new ApiError({ status: response.status,...(payload.error ?? {}),message: payload.error?.message ?? `下载失败 (${response.status})` });
@@ -118,6 +118,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     getAdminMultiplayerRuleSubmission: (submissionId,options) => request(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}`, { ...options,auth: true }),
     reviewAdminMultiplayerRuleSubmission: (submissionId,body,options) => request(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}/review`, { ...options,method: 'POST',body,auth: true }),
     downloadAdminMultiplayerRulePackage: (submissionId,options) => authenticatedDownload(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}/package`,options),
+    downloadAdminMultiplayerRuleBuild: (buildId,options) => authenticatedDownload(`/v1/admin/multiplayer/rule-builds/${encodeURIComponent(buildId)}/package`,{ ...options,accept: 'application/javascript' }),
     createChallenge: (body, options) => request('/v1/auth/email/challenges', { ...options, method: 'POST', body }),
     verifyChallenge: (body, options) => request('/v1/auth/email/verify', { ...options, method: 'POST', body }),
     startGitHubDevice: (body, options) => request('/v1/auth/github/device', { ...options, method: 'POST', body }),

@@ -464,11 +464,14 @@ test('API client exposes staged multiplayer rule submission and administrative r
   await client.submitMultiplayerRuleSubmission(submissionId);
   await client.listAdminMultiplayerRuleSubmissions('queue',20);
   await client.reviewAdminMultiplayerRuleSubmission(submissionId,{ action: 'start' });
-  assert.deepEqual(requests.map(item => item.init.method),['POST','GET','POST','POST','GET','POST']);
+  await client.downloadAdminMultiplayerRuleBuild(submissionId);
+  assert.deepEqual(requests.map(item => item.init.method),['POST','GET','POST','POST','GET','POST',undefined]);
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer rules-token'));
   assert.ok(requests[0].init.headers['Idempotency-Key']);
   assert.ok(requests[3].init.headers['Idempotency-Key']);
   assert.match(requests[4].url,/state=queue&limit=20$/u);
+  assert.match(requests[6].url,/\/v1\/admin\/multiplayer\/rule-builds\/.+\/package$/u);
+  assert.equal(requests[6].init.headers.Accept,'application/javascript');
 });
 
 test('multiplayer rule UI states that approval is not execution, signing or deployment', async () => {

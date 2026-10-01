@@ -72,11 +72,35 @@ test('rule source upload verifies exact bytes, SHA-256 and ZIP magic without exe
 test('rule review keeps creator and administrator capabilities separated', async () => {
   const { createMultiplayerRuleSubmissionService } = await import(moduleUrl('multiplayer-rule-submission-service.mjs'));
   let review;
-  const service = createMultiplayerRuleSubmissionService({ repository: { review: async input => { review = input; return { state: 'approved_for_build' }; } },objectStore: {},ids: () => crypto.randomUUID() });
+  const service = createMultiplayerRuleSubmissionService({ repository: { review: async input => { review = input; return { state: 'approved_for_build' }; } },objectStore: {},ruleBuildEnabled: true,ruleBuilderImageDigest: `sha256:${'a'.repeat(64)}`,ids: () => crypto.randomUUID() });
   await assert.rejects(() => service.adminReview(actor,crypto.randomUUID(),{ action: 'approve_for_build',note: 'reviewed' }), error => error.code === 'ADMIN_REQUIRED');
   const admin = { ...actor,profile: { canPublish: true,role: 'admin' } };
   await assert.rejects(() => service.adminReview(admin,crypto.randomUUID(),{ action: 'approve_for_build',note: ' ' }), error => error.code === 'REVIEW_NOTE_REQUIRED');
   const result = await service.adminReview(admin,crypto.randomUUID(),{ action: 'approve_for_build',note: ' deterministic and private views checked ' });
   assert.equal(result.state,'approved_for_build');
   assert.equal(review.note,'deterministic and private views checked');
+  assert.match(review.builderImageDigest,/^sha256:[a-f0-9]{64}$/u);
+  assert.match(review.buildId,/^[0-9a-f-]{36}$/u);
+});
+
+test('rule approval fails closed while the isolated Builder is unavailable', async () => {
+  const { createMultiplayerRuleSubmissionService } = await import(moduleUrl('multiplayer-rule-submission-service.mjs'));
+  const admin = { ...actor,profile: { canPublish: true,role: 'admin' } };
+  const service = createMultiplayerRuleSubmissionService({ repository: { review: async () => assert.fail('review must not be persisted') },objectStore: {} });
+  await assert.rejects(() => service.adminReview(admin,crypto.randomUUID(),{ action: 'approve_for_build',note: 'approved' }), error => error.code === 'RULE_BUILDER_UNAVAILABLE');
+});
+
+test('built rule download verifies the stored bytes before returning them for offline signing', async t => {
+  const { createMultiplayerRuleSubmissionService } = await import(moduleUrl('multiplayer-rule-submission-service.mjs'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-rule-artifact-')); t.after(() => fs.rm(root,{ recursive: true,force: true }));
+  const artifact = path.join(root,'adapter.cjs'); const content = Buffer.from('module.exports={};\n'); await fs.writeFile(artifact,content);
+  const sha256 = crypto.createHash('sha256').update(content).digest('hex');
+  const repository = { builtPackageForAdmin: async () => ({ objectKey: 'quarantine/build/artifact.bin',fileName: 'duel.cjs',sha256,bytes: String(content.length) }) };
+  const objectStore = { pathFor: () => artifact };
+  const service = createMultiplayerRuleSubmissionService({ repository,objectStore });
+  const admin = { ...actor,profile: { canPublish: true,role: 'admin' } };
+  const result = await service.adminBuiltPackage(admin,crypto.randomUUID());
+  assert.deepEqual(result.content,content);
+  await fs.writeFile(artifact,Buffer.from('tampered'));
+  await assert.rejects(() => service.adminBuiltPackage(admin,crypto.randomUUID()),error => error.code === 'RULE_BUILD_ARTIFACT_INTEGRITY_INVALID');
 });

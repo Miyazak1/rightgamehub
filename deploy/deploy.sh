@@ -19,6 +19,13 @@ for name in APP_DOMAIN RUNTIME_DOMAIN ACME_EMAIL ALIYUN_ACCESS_KEY_ID ALIYUN_ACC
   fi
 done
 
+if [ "${RULE_BUILD_ENABLED:-false}" = "true" ]; then
+  if ! printf '%s' "${RULE_BUILDER_IMAGE_DIGEST:-}" | grep -Eq '^sha256:[a-f0-9]{64}$'; then
+    echo "RULE_BUILDER_IMAGE_DIGEST must be a pinned sha256 digest when RULE_BUILD_ENABLED=true." >&2
+    exit 1
+  fi
+fi
+
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml config >/dev/null
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml up -d --build --remove-orphans
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml ps

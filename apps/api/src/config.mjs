@@ -68,6 +68,12 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   if (nodeEnv === 'production' && sourceBuildEnabled && sourceBuilderExecutionMode !== 'isolated') throw new Error('SOURCE_BUILDER_EXECUTION_MODE must be isolated in production');
   const sourceBuilderImageDigest = env.SOURCE_BUILDER_IMAGE_DIGEST?.trim() || (nodeEnv === 'production' ? '' : 'development-unpinned');
   if (sourceBuildEnabled && nodeEnv === 'production' && !/^sha256:[a-f0-9]{64}$/.test(sourceBuilderImageDigest)) throw new Error('SOURCE_BUILDER_IMAGE_DIGEST must be a pinned sha256 digest in production');
+  const ruleBuildEnabled = boolean(env.RULE_BUILD_ENABLED, false, 'RULE_BUILD_ENABLED');
+  const ruleBuilderExecutionMode = env.RULE_BUILDER_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
+  if (!['local','isolated'].includes(ruleBuilderExecutionMode)) throw new Error('RULE_BUILDER_EXECUTION_MODE must be local or isolated');
+  if (nodeEnv === 'production' && ruleBuildEnabled && ruleBuilderExecutionMode !== 'isolated') throw new Error('RULE_BUILDER_EXECUTION_MODE must be isolated in production');
+  const ruleBuilderImageDigest = env.RULE_BUILDER_IMAGE_DIGEST?.trim() || (nodeEnv === 'production' ? '' : 'development-unpinned');
+  if (ruleBuildEnabled && nodeEnv === 'production' && !/^sha256:[a-f0-9]{64}$/.test(ruleBuilderImageDigest)) throw new Error('RULE_BUILDER_IMAGE_DIGEST must be a pinned sha256 digest in production');
   const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
   const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
   if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
@@ -107,6 +113,11 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     sourceBuildWorkingRoot: env.SOURCE_BUILD_WORKING_ROOT ?? '.runtime/platform/source-worker',
     sourceBuilderExecutionMode,
     sourceBuilderImageDigest,
+    ruleBuildEnabled,
+    ruleBuilderRoot: env.RULE_BUILDER_ROOT ?? '.runtime/platform/rule-builder',
+    ruleBuildWorkingRoot: env.RULE_BUILD_WORKING_ROOT ?? '.runtime/platform/rule-worker',
+    ruleBuilderExecutionMode,
+    ruleBuilderImageDigest,
     mailProvider,
     resendApiKey: env.RESEND_API_KEY?.trim() || null,
     mailFrom: env.MAIL_FROM?.trim() || null,

@@ -50,6 +50,9 @@ import { PostgresSourceBuildRepository } from './source-build-repository.mjs';
 import { createSourceBuildService } from './source-build-service.mjs';
 import { createSourceBuildRunner } from './source-build-runner.mjs';
 import { createSourceBuildWorker } from './source-build-worker.mjs';
+import { PostgresMultiplayerRuleBuildRepository } from './multiplayer-rule-build-repository.mjs';
+import { createMultiplayerRuleBuildWorker } from './multiplayer-rule-build-worker.mjs';
+import { createRuleBuildRunner } from './rule-build-runner.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -132,12 +135,14 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const multiplayerMatchPublisher = createRedisMatchPublisher({ url: config.redisUrl });
   const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
   const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry, publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
-  const multiplayerRuleSubmissionService = createMultiplayerRuleSubmissionService({ repository: new PostgresMultiplayerRuleSubmissionRepository(database.pool),objectStore: quarantineStore,storageCapacityService });
+  const multiplayerRuleSubmissionRepository = new PostgresMultiplayerRuleSubmissionRepository(database.pool);
+  const multiplayerRuleSubmissionService = createMultiplayerRuleSubmissionService({ repository: multiplayerRuleSubmissionRepository,objectStore: quarantineStore,storageCapacityService,ruleBuildEnabled:config.ruleBuildEnabled,ruleBuilderImageDigest:config.ruleBuilderImageDigest });
+  const multiplayerRuleBuildWorker = createMultiplayerRuleBuildWorker({ repository:new PostgresMultiplayerRuleBuildRepository(database.pool),buildRunner:createRuleBuildRunner({ mode:config.ruleBuilderExecutionMode,builderRoot:config.ruleBuilderRoot }),quarantineStore,workingRoot:config.ruleBuildWorkingRoot,enabled:config.ruleBuildEnabled,builderImageDigest:config.ruleBuilderImageDigest });
   const sourceBuildRepository = new PostgresSourceBuildRepository(database.pool);
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const app = createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, sourceBuildService, sourceBuildWorker, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, sourceBuildService, sourceBuildWorker, multiplayerRuleBuildWorker, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
 }

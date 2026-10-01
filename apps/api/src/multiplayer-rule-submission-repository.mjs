@@ -8,12 +8,18 @@ const listView = row => ({
   sourceSha256: row.actual_sha256 ?? row.declared_sha256,errorCode: row.error_code,reviewNote: row.review_note,
   submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString() : null,reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
   createdAt: new Date(row.created_at).toISOString(),updatedAt: new Date(row.updated_at).toISOString(),
-  doctorSummary: row.doctor_report?.summary ?? null,
+  doctorSummary: row.doctor_report?.summary ?? null,build: buildView(row.rule_build),
 });
 const detailView = (row, events = []) => ({
   ...listView(row),modeConfig: row.mode_config,creatorSubmission: row.creator_submission,doctorReport: row.doctor_report,
   events: events.map(event => ({ id: event.id,action: event.action,fromState: event.from_state,toState: event.to_state,details: event.details,actorUserId: event.actor_user_id,createdAt: new Date(event.created_at).toISOString() })),
 });
+const buildView = row => row ? ({
+  id: row.id,state: row.state,builderImageDigest: row.builder_image_digest,sourceSha256: row.source_sha256,
+  artifactSha256: row.artifact_sha256,artifactBytes: row.artifact_bytes == null ? null : String(row.artifact_bytes),
+  report: row.build_report,errorCode: row.error_code,createdAt: new Date(row.created_at).toISOString(),
+  startedAt: row.started_at ? new Date(row.started_at).toISOString() : null,completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : null,
+}) : null;
 const stateForAction = { start: 'in_review',request_changes: 'changes_requested',approve_for_build: 'approved_for_build',reject: 'rejected' };
 const eventForAction = { start: 'review_started',request_changes: 'changes_requested',approve_for_build: 'approved_for_build',reject: 'rejected' };
 
@@ -126,7 +132,7 @@ export class PostgresMultiplayerRuleSubmissionRepository {
   async listMine({ actor,workId }) {
     const values = [actor.userId];
     const filter = workId ? (values.push(workId),' AND s.work_id=$2') : '';
-    const rows = (await this.pool.query(`SELECT s.*,w.title AS work_title FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id WHERE s.owner_user_id=$1${filter} ORDER BY s.created_at DESC LIMIT 100`, values)).rows;
+    const rows = (await this.pool.query(`SELECT s.*,w.title AS work_title,to_jsonb(b) AS rule_build FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id LEFT JOIN multiplayer_rule_builds b ON b.submission_id=s.id WHERE s.owner_user_id=$1${filter} ORDER BY s.created_at DESC LIMIT 100`, values)).rows;
     return rows.map(listView);
   }
 
@@ -134,14 +140,15 @@ export class PostgresMultiplayerRuleSubmissionRepository {
     const row = (await this.pool.query('SELECT s.*,w.title AS work_title FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id WHERE s.id=$1 AND s.owner_user_id=$2', [submissionId,actor.userId])).rows[0];
     if (!row) throw new MultiplayerRuleSubmissionError('NOT_FOUND', 404, '规则提交不存在。');
     const events = (await this.pool.query('SELECT * FROM multiplayer_rule_submission_events WHERE submission_id=$1 ORDER BY created_at,id', [submissionId])).rows;
-    return detailView(row,events);
+    const build = (await this.pool.query('SELECT * FROM multiplayer_rule_builds WHERE submission_id=$1', [submissionId])).rows[0];
+    return { ...detailView(row,events),build: buildView(build) };
   }
 
   async adminList({ state = 'queue',limit = 50 } = {}) {
     const states = state === 'queue' ? ['submitted','in_review'] : [state];
     const rows = (await this.pool.query(
-      `SELECT s.*,w.title AS work_title,u.display_name AS owner_display_name
-         FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id JOIN users u ON u.id=s.owner_user_id
+      `SELECT s.*,w.title AS work_title,u.display_name AS owner_display_name,to_jsonb(b) AS rule_build
+         FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id JOIN users u ON u.id=s.owner_user_id LEFT JOIN multiplayer_rule_builds b ON b.submission_id=s.id
         WHERE s.state=ANY($1::text[]) ORDER BY COALESCE(s.submitted_at,s.created_at),s.id LIMIT $2`, [states,limit],
     )).rows;
     return rows.map(listView);
@@ -151,7 +158,8 @@ export class PostgresMultiplayerRuleSubmissionRepository {
     const row = (await this.pool.query('SELECT s.*,w.title AS work_title,u.display_name AS owner_display_name FROM multiplayer_rule_submissions s JOIN works w ON w.id=s.work_id JOIN users u ON u.id=s.owner_user_id WHERE s.id=$1', [submissionId])).rows[0];
     if (!row) throw new MultiplayerRuleSubmissionError('NOT_FOUND', 404, '规则提交不存在。');
     const events = (await this.pool.query('SELECT * FROM multiplayer_rule_submission_events WHERE submission_id=$1 ORDER BY created_at,id', [submissionId])).rows;
-    return detailView(row,events);
+    const build = (await this.pool.query('SELECT * FROM multiplayer_rule_builds WHERE submission_id=$1', [submissionId])).rows[0];
+    return { ...detailView(row,events),build: buildView(build) };
   }
 
   async review(input) {
@@ -169,7 +177,17 @@ export class PostgresMultiplayerRuleSubmissionRepository {
         [row.id,targetState,input.note,input.actor.userId,terminal],
       )).rows[0];
       await client.query('INSERT INTO multiplayer_rule_submission_events(id,submission_id,actor_user_id,action,from_state,to_state,details) VALUES ($1,$2,$3,$4,$5,$6,$7)', [input.eventId,row.id,input.actor.userId,eventForAction[input.action],row.state,targetState,input.note ? { note: input.note } : {}]);
-      return listView(updated);
+      let build = null;
+      if (input.action === 'approve_for_build') {
+        build = (await client.query(
+          `INSERT INTO multiplayer_rule_builds(id,submission_id,owner_user_id,work_id,mode_key,ruleset_version,source_sha256,source_object_key,builder_image_digest)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [input.buildId,row.id,row.owner_user_id,row.work_id,row.mode_key,row.ruleset_version,row.actual_sha256,row.object_key,input.builderImageDigest],
+        )).rows[0];
+        await client.query("INSERT INTO jobs(id,kind,target_id,state) VALUES($1,'multiplayer_rule_build',$2,'queued')", [input.queueJobId,build.id]);
+        await client.query("INSERT INTO multiplayer_rule_build_events(id,build_id,action,to_state,details) VALUES($1,$2,'queued','queued',$3)", [input.buildEventId,build.id,{ submissionId: row.id,builderImageDigest: input.builderImageDigest }]);
+      }
+      return { ...listView(updated),build: buildView(build) };
     });
   }
 
@@ -177,5 +195,11 @@ export class PostgresMultiplayerRuleSubmissionRepository {
     const row = (await this.pool.query("SELECT object_key,source_file_name,actual_sha256,actual_bytes FROM multiplayer_rule_submissions WHERE id=$1 AND state IN ('submitted','in_review','approved_for_build','changes_requested','rejected')", [submissionId])).rows[0];
     if (!row?.actual_sha256) throw new MultiplayerRuleSubmissionError('NOT_FOUND', 404, '可审核的规则源码包不存在。');
     return { objectKey: row.object_key,fileName: row.source_file_name,sha256: row.actual_sha256,bytes: String(row.actual_bytes) };
+  }
+
+  async builtPackageForAdmin(buildId) {
+    const row = (await this.pool.query("SELECT id,work_id,mode_key,ruleset_version,artifact_object_key,artifact_sha256,artifact_bytes FROM multiplayer_rule_builds WHERE id=$1 AND state='ready'", [buildId])).rows[0];
+    if (!row?.artifact_object_key) throw new MultiplayerRuleSubmissionError('NOT_FOUND', 404, '可供离线签名的规则构建产物不存在。');
+    return { objectKey: row.artifact_object_key,fileName: `${row.work_id}-${row.mode_key}-${row.ruleset_version}.cjs`,sha256: row.artifact_sha256,bytes: String(row.artifact_bytes) };
   }
 }

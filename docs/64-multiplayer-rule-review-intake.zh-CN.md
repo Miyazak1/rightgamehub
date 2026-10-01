@@ -1,6 +1,6 @@
 # 联网规则包提交与审核队列
 
-状态：代码完成，待生产环境迁移与真实账号验收
+状态：收件与审核已部署；受控构建代码完成，待迁移 `0038`、固定生产 Builder 镜像摘要与真实账号验收
 
 更新日期：2026-10-01
 
@@ -51,10 +51,10 @@ created   -> expired
 
 ## 管理员流程
 
-管理员治理页会显示 `submitted` 和 `in_review` 队列。审核员必须先“开始审核”，再选择：
+管理员治理页会显示 `submitted`、`in_review` 和已批准构建的记录。审核员必须先“开始审核”，再选择：
 
 - `request_changes`：要求作者修改并重新提交；
-- `approve_for_build`：允许把固定源码包交给独立受控 Builder；
+- `approve_for_build`：在同一事务中批准固定源码包、创建唯一构建记录并写入 Worker 任务；生产环境没有启用隔离 Builder 或没有固定镜像摘要时失败关闭；
 - `reject`：拒绝本次版本。
 
 除“开始审核”外，每个结论都必须填写说明。管理员可下载隔离源码包；下载响应带 `Digest`，审核工具必须再次计算 SHA-256 并与页面/接口记录对比。
@@ -76,6 +76,7 @@ created   -> expired
 - `GET /v1/admin/multiplayer/rule-submissions/{submissionId}`
 - `GET /v1/admin/multiplayer/rule-submissions/{submissionId}/package`
 - `POST /v1/admin/multiplayer/rule-submissions/{submissionId}/review`
+- `GET /v1/admin/multiplayer/rule-builds/{buildId}/package`（仅 `ready` 后下载平台构建的 bundle）
 
 创建和最终提交要求 `Idempotency-Key`。上传使用单次、短时 `Upload <token>`，上传 token 只以 SHA-256 摘要形式存储。
 
@@ -89,8 +90,8 @@ npm run verify:m1-foundation
 npm run web:build
 ```
 
-迁移为 `0035_multiplayer_rule_submissions.sql`。规则源码继续存放在现有 quarantine 根目录；上线前应确认该目录容量、备份/保留策略、管理员下载审计和受控 Builder 的只读输入挂载。
+收件与审核使用 `0035_multiplayer_rule_submissions.sql`，生产环境已经完成该阶段迁移。受控构建新增 `0038_multiplayer_rule_builds.sql`；启用前必须构建 Rule Builder 镜像、记录其 `sha256:` 摘要，并配置 `RULE_BUILD_ENABLED=true` 与 `RULE_BUILDER_IMAGE_DIGEST`。规则源码和构建产物继续存放在 quarantine 根目录；上线前应确认该目录容量、备份/保留策略和管理员下载审计。
 
 ## 完成边界
 
-本阶段完成“收件与审核”，没有完成后续受控构建、离线签名、双服务部署、模式注册、回滚编排和两个真实账号的最终发布验收。只有这些后续步骤全部完成，某个规则版本才可以标记为生产可用。
+收件与审核已经部署，本次增量完成“批准后原子排队、隔离构建、产物摘要和管理员下载”。尚未完成离线签名、双服务部署、模式注册、回滚编排和两个真实账号的最终发布验收。只有这些后续步骤全部完成，某个规则版本才可以标记为生产可用。

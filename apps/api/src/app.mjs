@@ -262,6 +262,11 @@ export function createApp({ config, database, migrations, authService, workServi
       reply.header('Cache-Control','no-store'); reply.header('X-Content-Type-Options','nosniff'); reply.header('Digest',`sha-256=${Buffer.from(item.sha256,'hex').toString('base64')}`);
       reply.header('Content-Disposition',`attachment; filename*=UTF-8''${encodeURIComponent(item.fileName)}`); return reply.type('application/zip').send(createReadStream(item.path));
     });
+    app.get('/v1/admin/multiplayer/rule-builds/:buildId/package', { preHandler: requireAuth,schema: { params: { type: 'object',additionalProperties: false,required: ['buildId'],properties: { buildId: { type: 'string',format: 'uuid' } } } } }, async (request,reply) => {
+      const item=await multiplayerRuleSubmissionService.adminBuiltPackage(request.actor,request.params.buildId);
+      reply.header('Cache-Control','no-store');reply.header('X-Content-Type-Options','nosniff');reply.header('Digest',`sha-256=${Buffer.from(item.sha256,'hex').toString('base64')}`);
+      reply.header('Content-Disposition',`attachment; filename*=UTF-8''${encodeURIComponent(item.fileName)}`);return reply.type('application/javascript').send(item.content);
+    });
     app.post('/v1/admin/multiplayer/rule-submissions/:submissionId/review', {
       preHandler: requireAuth,schema: { params: submissionParams,body: { type: 'object',additionalProperties: false,required: ['action'],properties: { action: { type: 'string',enum: ['start','request_changes','approve_for_build','reject'] },note: { type: 'string',minLength: 1,maxLength: 2000 } } } },
     }, async (request,reply) => { reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.adminReview(request.actor,request.params.submissionId,request.body)); });

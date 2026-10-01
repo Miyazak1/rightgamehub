@@ -10,6 +10,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@gamehub/creator-tools':
+        specifier: workspace:*
+        version: link:../../packages/creator-tools
       '@gamehub/multiplayer-protocol':
         specifier: workspace:*
         version: link:../../packages/multiplayer-protocol

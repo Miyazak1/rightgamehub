@@ -60,29 +60,30 @@ npm run rules:manifest -- keygen rules-release-2026-09 /secure/rules-private.pem
 
 ## 4. 发布一个规则版本
 
-1. 将 bundle 放到 `rules/<game>/<mode>-<version>.cjs`。
-2. 在 `rules/manifest.json` 增加身份与 bundle 路径；摘要可先留占位值。
-3. 执行签名，命令会从磁盘重新计算所有 bundle 的 SHA-256：
+1. 管理员从治理页下载状态为 `ready` 的平台构建 bundle，核对响应 `Digest`、构建报告和审核记录中的 SHA-256；不要使用作者自行编译或审核后手工修改的文件。
+2. 将核对后的 bundle 放到 `rules/<game>/<mode>-<version>.cjs`。
+3. 在 `rules/manifest.json` 增加身份与 bundle 路径；摘要可先留占位值。
+4. 执行签名，命令会从磁盘重新计算所有 bundle 的 SHA-256：
 
    ```bash
    npm run rules:manifest -- sign rules/manifest.json /secure/rules-private.pem
    ```
 
-4. 用公开密钥做独立验证：
+5. 用公开密钥做独立验证：
 
    ```bash
    npm run rules:manifest -- verify rules/manifest.json /secure/rules-public.json
    ```
 
-5. 设置生产环境：
+6. 设置生产环境：
 
    ```dotenv
    RULES_MANIFEST_PATH=/app/rules/manifest.json
    RULES_TRUSTED_KEYS_JSON={"rules-release-2026-09":"<SPKI DER base64>"}
    ```
 
-6. 同一次发布重新创建 `api` 和 `realtime`。只有这两个需要执行权威规则的服务挂载同一个只读 `rules/` 目录；API 与 Realtime 日志必须报告相同适配器数量。迁移、上传校验 worker 和静态运行边缘不加载规则代码。
-7. 最后再通过管理员 API 创建或启用对应 `modeKey/rulesetVersion`。API 会拒绝未安装的 `platform_authoritative` 规则。
+7. 同一次发布重新创建 `api` 和 `realtime`。只有这两个需要执行权威规则的服务挂载同一个只读 `rules/` 目录；API 与 Realtime 日志必须报告相同适配器数量。迁移、上传校验 worker、Rule Builder 和静态运行边缘不加载已签名规则，也不持有私钥。
+8. 最后再通过管理员 API 创建或启用对应 `modeKey/rulesetVersion`。API 会拒绝未安装的 `platform_authoritative` 规则。
 
 生产环境禁止 `RULES_ALLOW_UNSIGNED=true`。开发环境如确有需要可显式临时启用，但不得把未签名清单复制到生产部署。
 

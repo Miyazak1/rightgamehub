@@ -90,6 +90,21 @@ test('production compose constrains the source builder and exposes only a mailbo
   assert.match(compose,/SOURCE_BUILDER_EXECUTION_MODE: isolated/u);
 });
 
+test('production compose isolates the Rule Builder from secrets and networks', async () => {
+  const compose=await fs.readFile(path.join(projectRoot,'deploy/compose.prod.yml'),'utf8');
+  const dockerfile=await fs.readFile(path.join(projectRoot,'deploy/Dockerfile.rule-builder'),'utf8');
+  const builder=compose.slice(compose.indexOf('\n  rule-builder:'),compose.indexOf('\n  rule-worker:'));
+  const worker=compose.slice(compose.indexOf('\n  rule-worker:'),compose.indexOf('\n  worker:'));
+  assert.match(builder,/dockerfile: deploy\/Dockerfile\.rule-builder/u);
+  assert.match(builder,/network_mode: none/u);assert.match(builder,/read_only: true/u);assert.match(builder,/cap_drop: \[ALL\]/u);assert.match(builder,/no-new-privileges:true/u);assert.match(builder,/pids_limit: 64/u);
+  assert.doesNotMatch(builder,/(DATABASE_URL|REDIS_URL|RULES_TRUSTED_KEYS_JSON|quarantine:\/data\/quarantine)/u);
+  assert.match(worker,/multiplayer-rule-build-worker-cli\.mjs/u);assert.match(worker,/rule-builder:\/data\/rule-builder/u);assert.match(worker,/quarantine:\/data\/quarantine(?!:ro)/u);
+  assert.doesNotMatch(worker,/(avatars:\/data\/avatars|covers:\/data\/covers|runtime-assets:\/data\/runtime|source-builder:\/data\/builder)/u);
+  assert.match(dockerfile,/packages\/creator-tools\/node_modules/u);
+  assert.match(dockerfile,/USER node/u);
+  assert.match(compose,/RULE_BUILDER_EXECUTION_MODE: isolated/u);
+});
+
 test('production compose constrains the validator container and keeps it off every network', async () => {
   const compose = await fs.readFile(path.join(projectRoot,'deploy/compose.prod.yml'),'utf8');
   assert.match(compose,/\r?\n  validator:\r?\n/u);

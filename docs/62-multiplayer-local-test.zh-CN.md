@@ -13,4 +13,10 @@
 
 首版不伪造双真实账号自动通过。自动测试覆盖适配器和桥契约，真实账号、网络断开和生产部署必须按上述步骤记录结果。
 
-常见排障：`BRIDGE_TIMEOUT` 检查是否在 GameHub 已批准的多人发布中运行；`MODE_NOT_ALLOWED` 检查 mode 是否属于当前作品；`REVISION_CONFLICT` 重新订阅；`RULESET_NOT_AVAILABLE` 先完成平台审核、签名和双服务部署；Doctor 的 `PRIVATE_VIEW_LEAK` 需检查服务端裁剪与公开 event。
+## 平台构建与上线前核对
+
+管理员选择“批准构建”后，提交会原子进入独立 Rule Builder 队列。只有构建状态为 `ready` 时，治理页才允许下载平台构建的 `.cjs`；下载后要核对 `Digest` 与页面 SHA-256。这个文件仍需在离线发布机签入完整 manifest，并同时部署到 API 与 Realtime，不能直接复制进单个线上容器。
+
+如果构建失败，先按错误码检查来源 ZIP 摘要、`creator-submission.json` 身份、规则测试和当前 Builder 镜像摘要。不得手工修改失败构建的产物或数据库状态；源码或规则有变化时提交新的 `rulesetVersion`。
+
+常见排障：`BRIDGE_TIMEOUT` 检查是否在 GameHub 已批准的多人发布中运行；`MODE_NOT_ALLOWED` 检查 mode 是否属于当前作品；`REVISION_CONFLICT` 重新订阅；`RULE_BUILDER_UNAVAILABLE` 检查受控构建是否启用且镜像摘要已固定；`RULESET_NOT_AVAILABLE` 先完成平台审核、受控构建、离线签名和双服务部署；Doctor 的 `PRIVATE_VIEW_LEAK` 需检查服务端裁剪与公开 event。
