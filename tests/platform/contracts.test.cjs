@@ -29,7 +29,7 @@ test('author writes require bearer auth and idempotency where the contract decla
       const sourceOperation = operation.operationId;
       if (['uploadContent','uploadMultiplayerRulePackage'].includes(sourceOperation)) assert.deepEqual(operation.security, [{ uploadGrant: [] }], `${operation.operationId} auth`);
       else if (route.startsWith('/v1/creator/')) assert.deepEqual(operation.security, [{ bearerAuth: [] }], `${operation.operationId} auth`);
-      if (['createWork', 'createUpload', 'completeUpload', 'createGitHubImportedDraft','createMultiplayerRuleSubmission','submitMultiplayerRuleSubmission'].includes(sourceOperation)) {
+      if (['createWork', 'createUpload', 'completeUpload', 'createGitHubImportedDraft','createSourceBuild','createMultiplayerRuleSubmission','submitMultiplayerRuleSubmission'].includes(sourceOperation)) {
         assert.ok(operation.parameters.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required));
       }
       if (['updateWork', 'withdrawWork'].includes(sourceOperation)) {
@@ -48,6 +48,8 @@ test('GitHub source import contract keeps connections private and draft creation
   assert.ok(openapi.paths['/v1/creator/source-imports/drafts'].post.parameters.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required));
   assert.ok(openapi.components.schemas.WorkSource);
   assert.ok(openapi.components.schemas.GitHubLicenseEvidence);
+  assert.ok(openapi.components.schemas.SourceBuildJob);
+  assert.equal(openapi.paths['/v1/creator/works/{workId}/builds'].post.responses['202'].description,'Success');
 });
 
 test('work and upload state enums preserve the D0 state contract', async () => {

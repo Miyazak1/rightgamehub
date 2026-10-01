@@ -395,14 +395,31 @@ test('API client starts and polls GitHub web authorization without bearer creden
   assert.equal(requests[1].init.headers.Authorization, undefined);
 });
 
-test('GitHub source import UI stays read-only and hands drafts to the existing ZIP upload flow', async () => {
+test('GitHub source import UI stays read-only and hands drafts to the controlled build flow', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /function GitHubImportPage/);
   assert.match(source, /只读取你授权仓库的元数据、README、许可证和固定提交信息，不执行仓库代码/);
-  assert.match(source, /导入不会自动构建或发布/);
+  assert.match(source, /导入不会自动执行或发布仓库代码/);
   assert.match(source, /私有仓库地址不会出现在公开作品资料中/);
   assert.match(source, /createGitHubImportedDraft/);
-  assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/upload`\)/);
+  assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/builds`\)/);
+  assert.match(source, /function SourceBuildPage/);
+  assert.match(source, /不会运行 package\.json、脚本或自定义命令/);
+});
+
+test('API client exposes idempotent source builds, status polling and explicit publish', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests=[];
+  const client=createApiClient({ getAccessToken:()=> 'creator-token',fetchImpl:async(url,init)=>{ requests.push({ url,init }); return new Response(JSON.stringify({ data:[] }),{ status:200,headers:{ 'content-type':'application/json' } }); } });
+  const workId='00000000-0000-4000-8000-000000000001'; const buildId='00000000-0000-4000-8000-000000000002';
+  await client.createSourceBuild(workId,{ templateKey:'static-v1',releaseLabel:'1.0.0' });
+  await client.listSourceBuilds(workId);
+  await client.getSourceBuild(workId,buildId);
+  await client.publishSourceBuild(workId,buildId);
+  assert.deepEqual(requests.map(item=>item.init.method),['POST','GET','GET','POST']);
+  assert.ok(requests[0].init.headers['Idempotency-Key']);
+  assert.ok(requests.every(item=>item.init.headers.Authorization==='Bearer creator-token'));
+  assert.match(requests[3].url,/\/builds\/00000000-0000-4000-8000-000000000002\/publish$/u);
 });
 
 test('API client exposes authenticated GitHub source operations and idempotent draft creation', async () => {

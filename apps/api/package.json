@@ -10,6 +10,7 @@
     "validate:once": "node src/validate-once-cli.mjs",
     "runtime:start": "node src/runtime-edge-server.mjs",
     "worker:start": "node src/validation-worker-cli.mjs",
+    "source-worker:start": "node src/source-build-worker-cli.mjs",
     "validator:start": "node src/web-validator-service.mjs",
     "admin:promote": "node src/promote-admin-cli.mjs",
     "dev:e2e": "node src/dev-e2e-server.mjs"

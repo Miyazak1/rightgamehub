@@ -29,6 +29,11 @@ x-api-environment: &api-environment
   GITHUB_APP_CALLBACK_URL: ${GITHUB_APP_CALLBACK_URL:-}
   GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
   GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+  SOURCE_BUILD_ENABLED: ${SOURCE_BUILD_ENABLED:-false}
+  SOURCE_BUILDER_ROOT: /data/builder
+  SOURCE_BUILD_WORKING_ROOT: /data/source-worker
+  SOURCE_BUILDER_EXECUTION_MODE: isolated
+  SOURCE_BUILDER_IMAGE_DIGEST: ${SOURCE_BUILDER_IMAGE_DIGEST:-}
   QUARANTINE_ROOT: /data/quarantine
   AVATAR_ROOT: /data/avatars
   COVER_ROOT: /data/covers
@@ -180,6 +185,54 @@ services:
       timeout: 3s
       retries: 20
 
+  source-builder:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.builder
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      SOURCE_BUILDER_ROOT: /data/builder
+      NODE_OPTIONS: --max-old-space-size=1536
+    volumes:
+      - source-builder:/data/builder
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    pids_limit: 128
+    cpus: "2.0"
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:fs').statSync('/data/builder/service.ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  source-worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment: *api-environment
+    command: ["node", "apps/api/src/source-build-worker-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      source-builder: { condition: service_healthy }
+    volumes:
+      - quarantine:/data/quarantine
+      - runtime-assets:/data/runtime
+      - validator:/data/validator
+      - source-builder:/data/builder
+      - source-worker:/data/source-worker
+      - avatars:/data/avatars
+      - covers:/data/covers
+    networks: [backend]
+    mem_limit: 512m
+
   worker:
     build:
       context: ..
@@ -255,5 +308,7 @@ volumes:
   quarantine:
   runtime-assets:
   validator:
+  source-builder:
+  source-worker:
   caddy-data:
   caddy-config:

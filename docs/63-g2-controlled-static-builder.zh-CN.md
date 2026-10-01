@@ -1,6 +1,6 @@
 # G2 受控静态站 Builder
 
-状态：安全底座已实现；GitHub 构建队列、作者 UI 和生产启用尚未完成
+状态：代码闭环完成，默认关闭；待生产迁移、镜像摘要固定和真实仓库验收
 
 更新日期：2026-10-01
 
@@ -13,7 +13,7 @@ G2 的首个实现只处理“不需要依赖安装、不执行仓库脚本”�
 -> static-v1 固定方案
 -> 无网络隔离 Builder
 -> 不可变 Web ZIP + SHA-256
--> 现有 Validator（下一里程碑接线）
+-> 现有 Validator
 -> 作者确认发布
 ```
 
@@ -27,6 +27,10 @@ G2 的首个实现只处理“不需要依赖安装、不执行仓库脚本”�
 - ZIP CRC、大小和 SHA-256 来源证明；确定性文件排序。
 - 原子请求/响应信箱、请求过期、租约心跳、取消信号和输出摘要复核。
 - 独立非 root Builder 镜像；镜像不包含 API 服务、数据库客户端配置或部署凭据。
+- `source_revisions`、`build_jobs` 和 `release_provenance` 记录固定源码、规范化配置、构建镜像与最终产物摘要。
+- 后台 Source Worker 下载固定 commit 归档、续租、检查存储容量，并把产物作为内部上传交给现有 Validator。
+- 作者 API 和 UI 支持发起构建、查看状态、失败码与历史，并在校验完成后明确发布。
+- 生产 Compose 将 Builder 设为无网络、只读根文件系统、非 root、丢弃全部 capability，限制为 2 CPU、2 GiB 和 128 个进程。
 - Vite + 锁文件只识别为 `planned`，尚不执行依赖安装。
 
 ## 2. 安全边界
@@ -35,10 +39,33 @@ Builder 不应拥有数据库、Redis、对象存储、GitHub App 私钥、部�
 
 在依赖代理、网络出口策略和构建镜像摘要固定前，不开放 Vite/React/Vue 的脚本执行。作者不能提交自定义 shell、Dockerfile、GitHub Actions 或安装命令。
 
-## 3. 后续接线
+## 3. API 与状态
 
-1. 增加 `source_revisions`、`build_jobs` 与 `release_provenance` 迁移。
-2. 将已实现的独立信箱与 Builder 镜像接入生产 Compose 的无网络服务。
-3. Builder 产物作为内部上传进入现有 Validator，失败构建不得产生 Release。
-4. 增加作者构建列表、状态、日志摘要、预览和手动发布 UI。
-5. 完成 G1 真实 GitHub App 验收、备份恢复和资源告警后才允许生产启用。
+- `POST /v1/creator/works/{workId}/builds`：按 `Idempotency-Key` 创建 `static-v1` 构建。
+- `GET /v1/creator/works/{workId}/builds`：读取最近 50 次构建。
+- `GET /v1/creator/works/{workId}/builds/{buildId}`：读取单次状态。
+- `POST /v1/creator/works/{workId}/builds/{buildId}/publish`：仅发布已校验、未过时且许可证已识别的版本。
+
+状态依次为 `queued -> preparing -> building -> packaging -> validating -> ready`；失败进入 `failed`，来源出现新 commit 后旧的未完成构建进入 `superseded`。
+
+## 4. 生产启用
+
+功能默认关闭。启用时至少需要：
+
+```dotenv
+GITHUB_SOURCE_IMPORT_ENABLED=true
+SOURCE_BUILD_ENABLED=true
+SOURCE_BUILDER_EXECUTION_MODE=isolated
+SOURCE_BUILDER_IMAGE_DIGEST=sha256:<已部署镜像的 64 位摘要>
+```
+
+生产配置拒绝未固定的 Builder 镜像摘要，也拒绝 `local` 执行模式。
+
+## 5. 上线前验收
+
+1. 在测试数据库执行迁移 `0036_github_source_builds.sql` 并验证回滚/恢复方案。
+2. 构建并部署 Builder 镜像，把实际镜像摘要写入 `SOURCE_BUILDER_IMAGE_DIGEST`。
+3. 用公开和私有仓库各验证一次固定 commit 下载、静态子目录、失败重试与连接撤销。
+4. 验证恶意 ZIP、`package.json`、符号链接、超限文件和缺失入口均不会产生 Release。
+5. 验证许可证未识别、源码已更新和校验失败的构建均不能发布。
+6. 完成容量告警、备份恢复与失败任务运维演练后再设置 `SOURCE_BUILD_ENABLED=true`。

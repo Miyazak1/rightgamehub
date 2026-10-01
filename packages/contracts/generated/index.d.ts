@@ -9,6 +9,7 @@ export type UploadState = "created" | "receiving" | "uploaded" | "queued" | "val
 export type PublicationOutcome = "pending" | "published" | "draft" | "skipped_newer_intent" | "blocked";
 export type ReleaseValidationState = "processing" | "scanning" | "ready" | "failed" | "review_required";
 export type ReleaseServingState = "disabled" | "enabled" | "revoked";
+export type SourceBuildState = "queued" | "preparing" | "building" | "packaging" | "validating" | "ready" | "failed" | "superseded";
 
 export type UIntString = `${number}`;
 export type UUID = string;
@@ -31,6 +32,7 @@ export interface MultiplayerAdminEvent { id: UUID; actorUserId: UUID; actorDispl
 export interface WorkTarget { targetKey: TargetKey; state: WorkState; currentReleaseId: UUID | null; revision: UIntString }
 export interface Work { id: UUID; ownerUserId: UUID; title: string; description: string; instructions: string; kind: WorkKind; state: WorkState; visibility: Visibility; revision: UIntString; firstPublishedAt: string | null; coverUrl: string | null; estimatedMinutes: number; tags: string[]; agentLabel: string | null; repositoryUrl: string | null; licenseSpdx: string | null; creatorDisplayName: string | null; playCount: number; saveCount: number; targets: WorkTarget[] }
 export interface ReleaseSummary { id: UUID; targetKey: TargetKey; label: string; packageType: PackageType; validationState: ReleaseValidationState; servingState: ReleaseServingState; createdAt: string }
+export interface SourceBuildJob { id: UUID; workId: UUID; revisionId: UUID; commitSha: string; treeSha: string; templateKey: "static-v1"; templateVersion: "1"; config: Record<string, unknown>; configSha256: string; builderImageDigest: string; releaseLabel: string; state: SourceBuildState; errorCode: string | null; artifactSha256: string | null; artifactBytes: UIntString | null; uploadId: UUID | null; releaseId: UUID | null; createdAt: string; startedAt: string | null; completedAt: string | null; updatedAt: string }
 export interface UploadJob { id: UUID; workId: UUID; targetKey: TargetKey; packageType: PackageType; state: UploadState; publicationOutcome: PublicationOutcome; declaredBytes: UIntString; actualBytes: UIntString | null; createdAt: string; expiresAt: string; errorCode: string | null }
 export interface LaunchDescriptor { apiVersion: 1; workId: UUID; releaseId: UUID; releaseLabel: string; entryUrl: string; runtimeOrigin: string; playerProtocol: { min: number; max: number }; capabilities: { fullscreen: boolean; pointerLock: boolean } }
 export interface ContentReport { id: UUID; workId: UUID; workTitle: string; reporterUserId: UUID; category: "unsafe" | "malware" | "harassment" | "copyright" | "other"; details: string; status: "open" | "resolved" | "dismissed"; resolutionAction: "suspend" | "dismiss" | null; resolutionNote: string | null; createdAt: string; resolvedAt: string | null }

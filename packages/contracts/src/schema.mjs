@@ -13,6 +13,7 @@ export const enums = Object.freeze({
   PublicationOutcome: ['pending', 'published', 'draft', 'skipped_newer_intent', 'blocked'],
   ReleaseValidationState: ['processing', 'scanning', 'ready', 'failed', 'review_required'],
   ReleaseServingState: ['disabled', 'enabled', 'revoked'],
+  SourceBuildState: ['queued', 'preparing', 'building', 'packaging', 'validating', 'ready', 'failed', 'superseded'],
 });
 
 const id = { type: 'string', format: 'uuid' };
@@ -302,6 +303,17 @@ export const schemas = Object.freeze({
     id, actorUserId: { oneOf: [id,{ type: 'null' }] }, connectionId: { oneOf: [id,{ type: 'null' }] },
     importId: { oneOf: [id,{ type: 'null' }] }, workId: { oneOf: [id,{ type: 'null' }] }, action: { type: 'string' },
     details: { type: 'object', additionalProperties: true }, createdAt: dateTime,
+  }),
+  CreateSourceBuildRequest: object({
+    templateKey: { type: 'string', const: 'static-v1' }, templateVersion: { type: 'string', const: '1' },
+    subdirectory: { type: 'string', maxLength: 255 }, releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
+  }, ['templateKey','releaseLabel']),
+  SourceBuildJob: object({
+    id, workId: id, revisionId: id, commitSha: { type: 'string', pattern: '^[a-f0-9]{40}$' }, treeSha: { type: 'string', pattern: '^[a-f0-9]{40}$' },
+    templateKey: { type: 'string', const: 'static-v1' }, templateVersion: { type: 'string', const: '1' }, config: { type: 'object', additionalProperties: true },
+    configSha256: sha256, builderImageDigest: { type: 'string' }, releaseLabel: { type: 'string' }, state: stringEnum(enums.SourceBuildState),
+    errorCode: { oneOf: [{ type: 'string' },{ type: 'null' }] }, artifactSha256: { oneOf: [sha256,{ type: 'null' }] }, artifactBytes: { oneOf: [uintString,{ type: 'null' }] },
+    uploadId: { oneOf: [id,{ type: 'null' }] }, releaseId: { oneOf: [id,{ type: 'null' }] }, createdAt: dateTime, startedAt: nullableDateTime, completedAt: nullableDateTime, updatedAt: dateTime,
   }),
   ReleaseSummary: object({
     id,
@@ -598,6 +610,10 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/webhooks/github', operationId: 'acceptGitHubWebhook', auth: 'anonymous', response: 'GitHubWebhookAccepted', webhookBody: true },
   { method: 'get', path: '/v1/admin/source-imports/overview', operationId: 'getGitHubSourceAdminOverview', auth: 'bearer', response: 'GitHubSourceAdminOverview' },
   { method: 'get', path: '/v1/admin/source-imports/audit', operationId: 'listGitHubSourceAudit', auth: 'bearer', response: 'GitHubSourceAuditEvent', responseArray: true, queryLimit: true },
+  { method: 'post', path: '/v1/creator/works/{workId}/builds', operationId: 'createSourceBuild', auth: 'bearer', request: 'CreateSourceBuildRequest', response: 'SourceBuildJob', pathId: 'workId', idempotent: true, successStatus: '202' },
+  { method: 'get', path: '/v1/creator/works/{workId}/builds', operationId: 'listSourceBuilds', auth: 'bearer', response: 'SourceBuildJob', responseArray: true, pathId: 'workId' },
+  { method: 'get', path: '/v1/creator/works/{workId}/builds/{buildId}', operationId: 'getSourceBuild', auth: 'bearer', response: 'SourceBuildJob', pathId: 'workId', pathBuildId: true },
+  { method: 'post', path: '/v1/creator/works/{workId}/builds/{buildId}/publish', operationId: 'publishSourceBuild', auth: 'bearer', response: 'SourceBuildJob', pathId: 'workId', pathBuildId: true },
   { method: 'post', path: '/v1/creator/works', operationId: 'createWork', auth: 'bearer', request: 'CreateWorkRequest', response: 'Work', idempotent: true },
   { method: 'patch', path: '/v1/creator/works/{workId}', operationId: 'updateWork', auth: 'bearer', request: 'UpdateWorkRequest', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },
   { method: 'put', path: '/v1/creator/works/{workId}/cover', operationId: 'uploadWorkCover', auth: 'bearer', response: 'Work', pathId: 'workId', coverBody: true },
@@ -620,6 +636,7 @@ export function createOpenApiDocument() {
       if (operation.pathPuzzleId) parameters.push({ name: 'puzzleId', in: 'path', required: true, schema: { type: 'string', minLength: 1, maxLength: 120 } });
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });
     if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
+    if (operation.pathBuildId) parameters.push({ name: 'buildId', in: 'path', required: true, schema: id });
     if (operation.pathToken) parameters.push({ name: 'token', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } });
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });

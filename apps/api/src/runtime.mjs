@@ -46,6 +46,10 @@ import { createGitHubAppClient } from './github-app-client.mjs';
 import { PostgresGitHubSourceRepository, createGitHubSourceService } from './github-source-service.mjs';
 import { PostgresMultiplayerRuleSubmissionRepository } from './multiplayer-rule-submission-repository.mjs';
 import { createMultiplayerRuleSubmissionService } from './multiplayer-rule-submission-service.mjs';
+import { PostgresSourceBuildRepository } from './source-build-repository.mjs';
+import { createSourceBuildService } from './source-build-service.mjs';
+import { createSourceBuildRunner } from './source-build-runner.mjs';
+import { createSourceBuildWorker } from './source-build-worker.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -68,9 +72,10 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     githubClient: createGitHubOAuthClient({ clientId: config.githubClientId, clientSecret: config.githubClientSecret, callbackUrl: config.githubCallbackUrl }),
   });
   const workService = createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) });
+  const githubClient = createGitHubAppClient({ appId: config.githubAppId, privateKey: config.githubAppPrivateKey, slug: config.githubAppSlug });
   const githubSourceService = createGitHubSourceService({
     repository: new PostgresGitHubSourceRepository(database.pool),
-    githubClient: createGitHubAppClient({ appId: config.githubAppId, privateKey: config.githubAppPrivateKey, slug: config.githubAppSlug }),
+    githubClient,
     enabled: config.githubSourceImportEnabled,
     webhookSecret: config.githubAppWebhookSecret,
   });
@@ -92,8 +97,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     monitorIntervalMs: config.storageMonitorIntervalSeconds * 1000,
     logger: storageLogger,
   });
+  const uploadRepository = new PostgresUploadRepository(database.pool);
   const uploadService = createUploadService({
-    repository: new PostgresUploadRepository(database.pool),
+    repository: uploadRepository,
     objectStore: quarantineStore,
     storageCapacityService,
   });
@@ -127,8 +133,11 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
   const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry, publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });
   const multiplayerRuleSubmissionService = createMultiplayerRuleSubmissionService({ repository: new PostgresMultiplayerRuleSubmissionRepository(database.pool),objectStore: quarantineStore,storageCapacityService });
-  const app = createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger: config.nodeEnv !== 'test' });
+  const sourceBuildRepository = new PostgresSourceBuildRepository(database.pool);
+  const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
+  const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled });
+  const app = createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger: config.nodeEnv !== 'test' });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
-  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
+  return { config, database, migrations, avatarStore, coverStore, authService, workService, githubSourceService, sourceBuildService, sourceBuildWorker, uploadService, validationWorker, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, rulesRegistry, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, runtimeEdgeApp, app };
 }

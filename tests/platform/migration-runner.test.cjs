@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 35);
+  assert.equal(migrations.length, 36);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -37,6 +37,7 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[32].version, '0033');
   assert.equal(migrations[33].version, '0034');
   assert.equal(migrations[34].version, '0035');
+  assert.equal(migrations[35].version, '0036');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);
@@ -64,11 +65,13 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
   const { PostgresModerationRepository, createModerationService } = await import(pathToFileURL(path.join(root, 'apps/api/src/moderation-service.mjs')));
   const { PostgresRuntimeEdgeRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/runtime-edge-repository.mjs')));
   const { createRuntimeEdgeApp } = await import(pathToFileURL(path.join(root, 'apps/api/src/runtime-edge-app.mjs')));
+  const { PostgresSourceBuildRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/source-build-repository.mjs')));
+  const { createSourceBuildService } = await import(pathToFileURL(path.join(root, 'apps/api/src/source-build-service.mjs')));
   const database = createDatabase({ databaseUrl: process.env.GAMEHUB_TEST_DATABASE_URL, databaseSsl: false });
   const pool = database.pool;
   try {
     const first = await applyMigrations(pool, migrationDir);
-    assert.equal(first.total, 33);
+    assert.equal(first.total, 36);
     const second = await applyMigrations(pool, migrationDir);
     assert.deepEqual(second.applied, []);
     assert.equal((await migrationStatus(pool, migrationDir)).ready, true);
@@ -118,12 +121,14 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
     const publicConfig = { requestBodyLimit: 65536, runtimeDomain: 'gamehub.test', runtimeScheme: 'https', runtimePublicPort: null };
     const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(pool), config: publicConfig });
     const moderationService = createModerationService({ repository: new PostgresModerationRepository(pool) });
+    const sourceBuildRepository = new PostgresSourceBuildRepository(pool);
+    const sourceBuildService = createSourceBuildService({ repository: sourceBuildRepository,enabled: true,builderImageDigest: `sha256:${'a'.repeat(64)}` });
     const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(pool), objectStore: new LocalRuntimeStore(runtimeRoot), runtimeDomain: publicConfig.runtimeDomain });
 
     const app = createApp({
       config: publicConfig,
       database: { ping: async () => (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1 },
-      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, uploadService, catalogService, moderationService,
+      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, sourceBuildService, uploadService, catalogService, moderationService,
     });
     try {
       const ready = await app.inject({ url: '/ready' });
@@ -144,6 +149,20 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       assert.equal(conflict.statusCode, 409);
 
       const workId = created.json().data.id;
+      const connectionId = crypto.randomUUID(); const repositoryId = crypto.randomUUID(); const importId = crypto.randomUUID(); const sourceId = crypto.randomUUID();
+      await pool.query("INSERT INTO github_source_connections(id,user_id,installation_id,account_id,account_login,account_type,repository_selection) VALUES($1,$2,70001,70002,'integration-owner','User','selected')",[connectionId,authorAuth.profile.id]);
+      await pool.query("INSERT INTO github_source_repositories(id,connection_id,repository_id,node_id,owner_login,name,default_branch,visibility,html_url) VALUES($1,$2,70003,'R_integration','integration-owner','integration-repo','main','private','https://github.com/integration-owner/integration-repo')",[repositoryId,connectionId]);
+      await pool.query("INSERT INTO github_source_imports(id,user_id,connection_id,source_repository_id,commit_sha,tree_sha,status,repository_snapshot,license_status,license_spdx,static_signals,work_id) VALUES($1,$2,$3,$4,$5,$6,'succeeded','{}','recognized','MIT','{}',$7)",[importId,authorAuth.profile.id,connectionId,repositoryId,'b'.repeat(40),'c'.repeat(40),workId]);
+      await pool.query("INSERT INTO work_sources(id,work_id,source_import_id,repository_id,repository_node_id,repository_visibility,owner_login,repository_name,repository_url,default_branch,commit_sha,tree_sha,provenance) VALUES($1,$2,$3,70003,'R_integration','private','integration-owner','integration-repo','https://github.com/integration-owner/integration-repo','main',$4,$5,'{}')",[sourceId,workId,importId,'b'.repeat(40),'c'.repeat(40)]);
+      const sourceBuildResponse = await app.inject({ method:'POST',url:`/v1/creator/works/${workId}/builds`,headers:{ authorization:`Bearer ${authorAuth.accessToken}`,'idempotency-key':`source-build-${Date.now()}` },payload:{ templateKey:'static-v1',releaseLabel:'source-1' } });
+      assert.equal(sourceBuildResponse.statusCode,202,sourceBuildResponse.body);
+      const sourceBuild = sourceBuildResponse.json().data;
+      assert.equal(sourceBuild.commitSha,'b'.repeat(40));
+      const sourceClaim = await sourceBuildRepository.claimNext({ leaseToken:crypto.randomUUID(),targetBuildId:sourceBuild.id });
+      assert.equal(sourceClaim.owner,'integration-owner');
+      assert.equal(sourceClaim.name,'integration-repo');
+      assert.equal(await sourceBuildRepository.fail({ claim:sourceClaim,errorCode:'INTEGRATION_STOP' }),true);
+      assert.equal((await sourceBuildRepository.get({ userId:authorAuth.profile.id },workId,sourceBuild.id)).state,'failed');
       const etag = created.headers.etag;
       const updateRequest = { method: 'PATCH', url: `/v1/creator/works/${workId}`, headers: { authorization: `Bearer ${authorAuth.accessToken}`, 'idempotency-key': `update-work-${Date.now()}`, 'if-match': etag }, payload: { title: 'Updated Game' } };
       const updated = await app.inject(updateRequest);

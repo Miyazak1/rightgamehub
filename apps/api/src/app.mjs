@@ -16,6 +16,7 @@ import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
 import { MultiplayerMatchError } from './multiplayer-match-service.mjs';
 import { GitHubSourceError } from './github-source-service.mjs';
 import { MultiplayerRuleSubmissionError } from './multiplayer-rule-submission-service.mjs';
+import { SourceBuildRepositoryError } from './source-build-repository.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -29,7 +30,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -50,7 +51,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -745,6 +746,28 @@ export function createApp({ config, database, migrations, authService, workServi
         reply.header('Cache-Control', 'no-store');
         return envelope(await githubSourceService.handleWebhook(request.headers, request.body));
       });
+    });
+  }
+  if (sourceBuildService) {
+    const workBuildParams = { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } };
+    const buildParams = { type: 'object', additionalProperties: false, required: ['workId','buildId'], properties: { workId: { type: 'string', format: 'uuid' }, buildId: { type: 'string', format: 'uuid' } } };
+    app.post('/v1/creator/works/:workId/builds', {
+      preHandler: requireAuth,
+      schema: { params: workBuildParams, body: { type: 'object', additionalProperties: false, required: ['templateKey','releaseLabel'], properties: {
+        templateKey: { type: 'string', enum: ['static-v1'] }, templateVersion: { type: 'string', enum: ['1'] }, subdirectory: { type: 'string', maxLength: 255 }, releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
+      } } },
+    }, async (request, reply) => {
+      reply.status(202).header('Cache-Control', 'no-store');
+      return envelope(await sourceBuildService.create(request.actor, request.params.workId, request.body, request.headers['idempotency-key']));
+    });
+    app.get('/v1/creator/works/:workId/builds', { preHandler: requireAuth, schema: { params: workBuildParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await sourceBuildService.list(request.actor, request.params.workId));
+    });
+    app.get('/v1/creator/works/:workId/builds/:buildId', { preHandler: requireAuth, schema: { params: buildParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await sourceBuildService.get(request.actor, request.params.workId, request.params.buildId));
+    });
+    app.post('/v1/creator/works/:workId/builds/:buildId/publish', { preHandler: requireAuth, schema: { params: buildParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await sourceBuildService.publish(request.actor, request.params.workId, request.params.buildId));
     });
   }
   if (uploadService) {

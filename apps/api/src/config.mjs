@@ -61,6 +61,13 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_APP_CALLBACK_URL must be a valid HTTP URL');
     if (nodeEnv === 'production' && parsed.protocol !== 'https:') throw new Error('GITHUB_APP_CALLBACK_URL must use HTTPS in production');
   }
+  const sourceBuildEnabled = boolean(env.SOURCE_BUILD_ENABLED, false, 'SOURCE_BUILD_ENABLED');
+  if (sourceBuildEnabled && !githubSourceImportEnabled) throw new Error('GITHUB_SOURCE_IMPORT_ENABLED must be true when source builds are enabled');
+  const sourceBuilderExecutionMode = env.SOURCE_BUILDER_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
+  if (!['local', 'isolated'].includes(sourceBuilderExecutionMode)) throw new Error('SOURCE_BUILDER_EXECUTION_MODE must be local or isolated');
+  if (nodeEnv === 'production' && sourceBuildEnabled && sourceBuilderExecutionMode !== 'isolated') throw new Error('SOURCE_BUILDER_EXECUTION_MODE must be isolated in production');
+  const sourceBuilderImageDigest = env.SOURCE_BUILDER_IMAGE_DIGEST?.trim() || (nodeEnv === 'production' ? '' : 'development-unpinned');
+  if (sourceBuildEnabled && nodeEnv === 'production' && !/^sha256:[a-f0-9]{64}$/.test(sourceBuilderImageDigest)) throw new Error('SOURCE_BUILDER_IMAGE_DIGEST must be a pinned sha256 digest in production');
   const redisUrl = env.REDIS_URL?.trim() || 'redis://127.0.0.1:6379';
   const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
   if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
@@ -95,6 +102,11 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     githubAppSlug,
     githubAppCallbackUrl,
     githubAppClientId,
+    sourceBuildEnabled,
+    sourceBuilderRoot: env.SOURCE_BUILDER_ROOT ?? '.runtime/platform/builder',
+    sourceBuildWorkingRoot: env.SOURCE_BUILD_WORKING_ROOT ?? '.runtime/platform/source-worker',
+    sourceBuilderExecutionMode,
+    sourceBuilderImageDigest,
     mailProvider,
     resendApiKey: env.RESEND_API_KEY?.trim() || null,
     mailFrom: env.MAIL_FROM?.trim() || null,

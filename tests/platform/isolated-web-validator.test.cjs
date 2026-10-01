@@ -71,6 +71,25 @@ test('isolated validator mailbox processes only bounded quarantine and validator
   );
 });
 
+test('production compose constrains the source builder and exposes only a mailbox volume', async () => {
+  const compose = await fs.readFile(path.join(projectRoot,'deploy/compose.prod.yml'),'utf8');
+  const builder = compose.slice(compose.indexOf('\n  source-builder:'),compose.indexOf('\n  source-worker:'));
+  const worker = compose.slice(compose.indexOf('\n  source-worker:'),compose.indexOf('\n  worker:'));
+  assert.match(builder,/dockerfile: deploy\/Dockerfile\.builder/u);
+  assert.match(builder,/network_mode: none/u);
+  assert.match(builder,/read_only: true/u);
+  assert.match(builder,/cap_drop: \[ALL\]/u);
+  assert.match(builder,/no-new-privileges:true/u);
+  assert.match(builder,/pids_limit: 128/u);
+  assert.match(builder,/cpus: "2\.0"/u);
+  assert.match(builder,/mem_limit: 2g/u);
+  assert.doesNotMatch(builder,/quarantine:\/data\/quarantine/u);
+  assert.match(worker,/source-build-worker-cli\.mjs/u);
+  assert.match(worker,/source-builder:\/data\/builder/u);
+  assert.match(worker,/quarantine:\/data\/quarantine(?!:ro)/u);
+  assert.match(compose,/SOURCE_BUILDER_EXECUTION_MODE: isolated/u);
+});
+
 test('production compose constrains the validator container and keeps it off every network', async () => {
   const compose = await fs.readFile(path.join(projectRoot,'deploy/compose.prod.yml'),'utf8');
   assert.match(compose,/\r?\n  validator:\r?\n/u);

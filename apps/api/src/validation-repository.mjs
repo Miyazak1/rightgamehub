@@ -54,6 +54,7 @@ export class PostgresValidationRepository {
       if (!job) return false;
       const upload = (await client.query("UPDATE upload_jobs SET state='failed',error_code=$2,updated_at=now() WHERE id=$1 AND state='validating' RETURNING owner_user_id,reserved_bytes", [uploadId, errorCode])).rows[0];
       if (upload) await client.query('UPDATE creator_usage SET reserved_bytes=GREATEST(reserved_bytes-$2,0),updated_at=now() WHERE user_id=$1', [upload.owner_user_id, upload.reserved_bytes]);
+      await client.query("UPDATE build_jobs SET state='failed',error_code=$2,completed_at=now(),updated_at=now() WHERE upload_job_id=$1 AND state='validating'", [uploadId, errorCode]);
       await client.query("UPDATE jobs SET state='failed',lease_until=NULL,lease_token=NULL,last_error_code=$2,updated_at=now() WHERE id=$1", [jobId, errorCode]);
       return true;
     });
@@ -66,6 +67,7 @@ export class PostgresValidationRepository {
       if (job.attempt >= 3) {
         const upload = (await client.query("UPDATE upload_jobs SET state='failed',error_code=$2,updated_at=now() WHERE id=$1 AND state='validating' RETURNING owner_user_id,reserved_bytes", [uploadId, errorCode])).rows[0];
         if (upload) await client.query('UPDATE creator_usage SET reserved_bytes=GREATEST(reserved_bytes-$2,0),updated_at=now() WHERE user_id=$1', [upload.owner_user_id, upload.reserved_bytes]);
+        await client.query("UPDATE build_jobs SET state='failed',error_code=$2,completed_at=now(),updated_at=now() WHERE upload_job_id=$1 AND state='validating'", [uploadId, errorCode]);
         await client.query("UPDATE jobs SET state='failed',lease_until=NULL,lease_token=NULL,last_error_code=$2,updated_at=now() WHERE id=$1", [jobId, errorCode]);
         return true;
       }
@@ -102,6 +104,14 @@ export class PostgresValidationRepository {
       );
       const release = (await client.query('SELECT * FROM releases WHERE upload_job_id=$1', [upload.id])).rows[0];
       if (!release || release.id !== upload.release_id) throw new ValidationError('RELEASE_ID_CONFLICT', 'Upload already produced a different release.');
+      const sourceBuild = (await client.query("UPDATE build_jobs SET state=CASE WHEN state='validating' THEN 'ready' ELSE state END,release_id=$2,error_code=CASE WHEN state='validating' THEN NULL ELSE error_code END,completed_at=now(),updated_at=now() WHERE upload_job_id=$1 AND state IN('validating','superseded') RETURNING *", [upload.id, release.id])).rows[0];
+      if (sourceBuild) {
+        await client.query(
+          `INSERT INTO release_provenance(release_id,source_revision_id,build_job_id,config_sha256,artifact_sha256,builder_image_digest)
+           VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(release_id) DO NOTHING`,
+          [release.id, sourceBuild.source_revision_id, sourceBuild.id, sourceBuild.config_sha256, sourceBuild.artifact_sha256, sourceBuild.builder_image_digest],
+        );
+      }
       if (outcome === 'published') {
         await client.query("UPDATE work_targets SET current_release_id=$3,state='published',revision=revision+1,updated_at=now() WHERE work_id=$1 AND target_key=$2", [upload.work_id, upload.target_key, release.id]);
         await client.query("UPDATE works SET state='published',visibility='public',first_published_at=COALESCE(first_published_at,now()),revision=revision+1,updated_at=now() WHERE id=$1", [upload.work_id]);

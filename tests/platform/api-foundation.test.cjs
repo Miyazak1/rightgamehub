@@ -21,6 +21,8 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.deepEqual(config.rulesTrustedKeys, {});
   assert.deepEqual(config.corsOrigins, []);
   assert.equal(config.githubSourceImportEnabled, false);
+  assert.equal(config.sourceBuildEnabled, false);
+  assert.equal(config.sourceBuilderExecutionMode, 'local');
   const production = loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime' });
   assert.equal(production.validatorExecutionMode, 'isolated');
   assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), VALIDATOR_EXECUTION_MODE: 'local' }), /must be isolated/);
@@ -39,6 +41,14 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   });
   assert.equal(githubImport.githubSourceImportEnabled, true);
   assert.equal(githubImport.githubAppId, '12345');
+  const sourceBuild = loadConfig({
+    NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_SOURCE_IMPORT_ENABLED: 'true', SOURCE_BUILD_ENABLED: 'true',
+    GITHUB_APP_ID: '12345', GITHUB_APP_PRIVATE_KEY: privateKey, GITHUB_APP_WEBHOOK_SECRET: 'w'.repeat(32),
+    GITHUB_APP_SLUG: 'gamehub-source-import', GITHUB_APP_CALLBACK_URL: 'http://127.0.0.1:5173/#/creator/import',
+  });
+  assert.equal(sourceBuild.sourceBuildEnabled, true);
+  assert.equal(sourceBuild.sourceBuilderImageDigest, 'development-unpinned');
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), SOURCE_BUILD_ENABLED: 'true' }), /GITHUB_SOURCE_IMPORT_ENABLED/);
   assert.throws(() => loadConfig({
     NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', GITHUB_SOURCE_IMPORT_ENABLED: 'true',
     GITHUB_APP_ID: '12345', GITHUB_APP_PRIVATE_KEY: privateKey, GITHUB_APP_WEBHOOK_SECRET: 'w'.repeat(32),
