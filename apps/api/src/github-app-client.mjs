@@ -23,7 +23,7 @@ export function createGitHubAppClient({ appId, privateKey, slug, fetchImpl = glo
     const signature = crypto.sign('RSA-SHA256', Buffer.from(`${header}.${payload}`), key).toString('base64url');
     return `${header}.${payload}.${signature}`;
   };
-  const request = async (path, { token = null, method = 'GET', accept = 'application/vnd.github+json', body = undefined, maxBytes = 512 * 1024 } = {}) => {
+  const request = async (path, { token = null, method = 'GET', accept = 'application/vnd.github+json', body = undefined, maxBytes = 512 * 1024, binary = false } = {}) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -46,6 +46,7 @@ export function createGitHubAppClient({ appId, privateKey, slug, fetchImpl = glo
         if (response.status === 404) throw new GitHubAppClientError('GITHUB_RESOURCE_NOT_FOUND', 404, 'The authorized GitHub resource is unavailable.');
         throw new GitHubAppClientError('GITHUB_UPSTREAM_ERROR', 502, `GitHub API request failed (${response.status}).`, response.status >= 500);
       }
+      if (binary) return bytes;
       if (accept.includes('raw')) return bytes.toString('utf8');
       try { return JSON.parse(bytes.toString('utf8') || '{}'); }
       catch { throw new GitHubAppClientError('GITHUB_RESPONSE_INVALID', 502, 'GitHub returned an invalid response.', true); }
@@ -117,6 +118,11 @@ export function createGitHubAppClient({ appId, privateKey, slug, fetchImpl = glo
         const names = Array.isArray(root) ? root.slice(0, 200).map(item => String(item.name ?? '').toLowerCase()) : [];
         return { repo, commitSha, treeSha, readme, license, rootNames: names };
       });
+    },
+    async downloadRepositoryArchive(installationId, owner, name, commitSha, maxBytes = 100 * 1024 * 1024) {
+      if (!/^[A-Za-z0-9_.-]{1,100}$/.test(owner ?? '') || !/^[A-Za-z0-9_.-]{1,100}$/.test(name ?? '') || !/^[a-f0-9]{40}$/.test(commitSha ?? '')) throw new GitHubAppClientError('GITHUB_ARCHIVE_REQUEST_INVALID', 400, 'Repository archive identity is invalid.');
+      if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 100 * 1024 * 1024) throw new GitHubAppClientError('GITHUB_ARCHIVE_REQUEST_INVALID', 400, 'Repository archive limit is invalid.');
+      return withInstallation(installationId, token => request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/zipball/${commitSha}`, { token,binary:true,maxBytes }));
     },
     clearInstallationToken(installationId) { tokenCache.delete(String(installationId)); },
   });

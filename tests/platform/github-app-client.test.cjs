@@ -19,6 +19,7 @@ test('GitHub App client signs app JWTs and keeps installation tokens out of retu
     calls.push({ url, options });
     if (url.endsWith('/app/installations/42/access_tokens')) return response(201, { token: 'installation-secret-token', expires_at: '2099-01-01T00:00:00Z' });
     if (url.includes('/installation/repositories')) return response(200, { repositories: [{ id: 7, node_id: 'R_7', owner: { login: 'cat' }, name: 'desk-cat', full_name: 'cat/desk-cat', default_branch: 'main', private: true, visibility: 'private', html_url: 'https://github.com/cat/desk-cat' }] });
+    if (url.includes('/zipball/')) return response(200, 'zip-bytes', { 'content-length': '9' });
     throw new Error(`unexpected ${url}`);
   };
   const { createGitHubAppClient } = await import(moduleUrl);
@@ -31,6 +32,10 @@ test('GitHub App client signs app JWTs and keeps installation tokens out of retu
   assert.equal(jwt.split('.').length, 3);
   assert.equal(calls[1].options.headers.Authorization, 'Bearer installation-secret-token');
   assert.equal(client.installUrl('safe-state'), 'https://github.com/apps/gamehub-source/installations/new?state=safe-state');
+  const archive = await client.downloadRepositoryArchive('42', 'cat', 'desk-cat', 'a'.repeat(40));
+  assert.equal(archive.toString(), 'zip-bytes');
+  assert.equal(calls.at(-1).options.headers.Authorization, 'Bearer installation-secret-token');
+  await assert.rejects(client.downloadRepositoryArchive('42', 'cat', 'desk-cat', 'main'), error => error.code === 'GITHUB_ARCHIVE_REQUEST_INVALID');
 });
 
 test('GitHub App client maps upstream rate limits to a retryable platform error', async () => {
