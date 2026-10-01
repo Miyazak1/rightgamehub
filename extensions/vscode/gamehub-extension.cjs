@@ -185,9 +185,20 @@ const extensionInstallPresent = async (context, item) => {
   const entries = await readdir(path.dirname(context.extensionPath), { withFileTypes: true });
   return entries.some(entry => entry.isDirectory() && (entry.name.toLowerCase() === expected || entry.name.toLowerCase().startsWith(`${expected}-`)));
 };
+const editorCliInvocation = async () => {
+  const cliScript = path.join(path.dirname(process.execPath), 'resources', 'app', 'out', 'cli.js');
+  const details = await stat(cliScript).catch(() => null);
+  if (!details?.isFile()) throw new Error(`未找到编辑器命令行安装器：${cliScript}`);
+  return {
+    command: process.execPath,
+    args: [cliScript],
+    env: { ...process.env,ELECTRON_RUN_AS_NODE: '1',VSCODE_DEV: '' },
+  };
+};
 const installEditorVsix = async (context, item, target, output) => {
   output.appendLine(`GameHub ${item.version} 已校验，正在通过隐藏的编辑器安装进程安装。`);
-  await runHidden(process.execPath, ['--install-extension',target.fsPath,'--force'], { timeoutMs: 5 * 60 * 1000 });
+  const cli = await editorCliInvocation();
+  await runHidden(cli.command, [...cli.args,'--install-extension',target.fsPath,'--force'], { env: cli.env,timeoutMs: 5 * 60 * 1000 });
   if (!await extensionInstallPresent(context, item)) throw new Error(`Cursor 未确认 GameHub ${item.version} 已安装；更新将在稍后重试。`);
 };
 async function checkForEditorUpdate(context, output, { force = false, userInitiated = false } = {}) {
