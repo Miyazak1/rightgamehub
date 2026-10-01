@@ -23948,6 +23948,8 @@ const PLATFORM_CSS=":root {\r\n  --gh-canvas: #0c0b11; --gh-panel: #15131d; --gh
       getMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}`, { ...options, auth: true }),
       joinMultiplayerRoom: (roomId, joinCode, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/join`, { ...options, method: "POST", body: joinCode ? { joinCode } : {}, auth: true }),
       joinMultiplayerRoomScoped: (roomId, modeId, joinCode, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/join`, { ...options, method: "POST", body: { modeId, ...joinCode ? { joinCode } : {} }, auth: true }),
+      createMultiplayerInvite: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/invite`, { ...options, method: "POST", auth: true }),
+      claimMultiplayerInvite: (token, options) => request(`/v1/multiplayer/invites/${encodeURIComponent(token)}/claim`, { ...options, method: "POST", auth: true }),
       leaveMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/leave`, { ...options, method: "POST", auth: true }),
       setMultiplayerReady: (roomId, ready, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/ready`, { ...options, method: "POST", body: { ready }, auth: true }),
       startMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/start`, { ...options, method: "POST", auth: true, idempotent: true }),
@@ -24792,6 +24794,8 @@ ${GUESS_BAIKE_SHARE_URL}`;
     "multiplayer.rooms.create",
     "multiplayer.rooms.get",
     "multiplayer.rooms.join",
+    "multiplayer.rooms.invite",
+    "multiplayer.rooms.current",
     "multiplayer.rooms.leave",
     "multiplayer.rooms.ready",
     "multiplayer.rooms.start",
@@ -24833,6 +24837,7 @@ ${GUESS_BAIKE_SHARE_URL}`;
     frame,
     launchId,
     workId,
+    initialRoomId = null,
     apiClient,
     sessionFactory = (options) => createMultiplayerSession(options),
     MessageChannelImpl = globalThis.MessageChannel,
@@ -24845,6 +24850,7 @@ ${GUESS_BAIKE_SHARE_URL}`;
     let modesPromise = null;
     const rooms = /* @__PURE__ */ new Map();
     const matches = /* @__PURE__ */ new Map();
+    const inviteUrl = (token) => `${windowImpl.location?.origin ?? "https://mooyu.fun"}${windowImpl.location?.pathname ?? "/"}#/invite/${token}`;
     const loadModes = async () => {
       modesPromise ??= apiClient.listMultiplayerModes(workId).then((response) => response.data ?? response).catch((error) => {
         modesPromise = null;
@@ -24928,6 +24934,12 @@ ${GUESS_BAIKE_SHARE_URL}`;
         await requireMode(modeId);
         return trackRoom((await apiClient.joinMultiplayerRoomScoped(requireUuid(roomId, "roomId"), modeId, joinCode)).data);
       },
+      "multiplayer.rooms.invite": async ({ roomId }) => {
+        const id = requireRoom(roomId);
+        const invite = (await apiClient.createMultiplayerInvite(id)).data;
+        return { url: inviteUrl(invite.token), expiresAt: invite.expiresAt };
+      },
+      "multiplayer.rooms.current": async () => initialRoomId ? trackRoom((await apiClient.getMultiplayerRoom(requireUuid(initialRoomId, "initialRoomId"))).data) : null,
       "multiplayer.rooms.leave": async ({ roomId }) => trackRoom((await apiClient.leaveMultiplayerRoom(requireRoom(roomId))).data),
       "multiplayer.rooms.ready": async ({ roomId, ready }) => {
         if (typeof ready !== "boolean") throw Object.assign(new Error("ready must be boolean."), { code: "BRIDGE_PARAMETER_INVALID" });
@@ -25387,7 +25399,37 @@ await gamehub.multiplayer.matches.command(matchId, { type: 'move', to: 'b3' });`
       if (event.target === event.currentTarget) onClose();
     } }, /* @__PURE__ */ import_react3.default.createElement("form", { className: "report-dialog", role: "dialog", "aria-modal": "true", "aria-label": "\u4E3E\u62A5\u4F5C\u54C1", onSubmit: submit }, /* @__PURE__ */ import_react3.default.createElement("button", { type: "button", className: "modal-close", onClick: onClose, "aria-label": "\u5173\u95ED" }, "\xD7"), /* @__PURE__ */ import_react3.default.createElement("span", { className: "kicker" }, "CONTENT REPORT"), state === "sent" ? /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("h2", null, "\u5DF2\u6536\u5230\u4E3E\u62A5"), /* @__PURE__ */ import_react3.default.createElement("p", null, "\u7BA1\u7406\u5458\u4F1A\u6839\u636E\u4F5C\u54C1\u5F53\u524D\u7248\u672C\u548C\u4F60\u63D0\u4F9B\u7684\u4FE1\u606F\u8FDB\u884C\u5224\u65AD\u3002"), /* @__PURE__ */ import_react3.default.createElement(Button, { type: "button", onClick: onClose }, "\u5B8C\u6210")) : /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("h2", null, "\u4E3E\u62A5\u300A", work.title, "\u300B"), /* @__PURE__ */ import_react3.default.createElement("p", null, "\u8BF7\u9009\u62E9\u6700\u63A5\u8FD1\u7684\u95EE\u9898\u3002\u4E3E\u62A5\u4E0D\u4F1A\u81EA\u52A8\u4E0B\u67B6\u4F5C\u54C1\u3002"), /* @__PURE__ */ import_react3.default.createElement("label", null, "\u95EE\u9898\u7C7B\u578B", /* @__PURE__ */ import_react3.default.createElement("select", { value: category, onChange: (event) => setCategory(event.target.value) }, /* @__PURE__ */ import_react3.default.createElement("option", { value: "unsafe" }, "\u4E0D\u5B89\u5168\u6216\u8D8A\u6743\u884C\u4E3A"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "malware" }, "\u6076\u610F\u4EE3\u7801\u6216\u6B3A\u9A97"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "harassment" }, "\u9A9A\u6270\u6216\u4EC7\u6068\u5185\u5BB9"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "copyright" }, "\u7248\u6743\u95EE\u9898"), /* @__PURE__ */ import_react3.default.createElement("option", { value: "other" }, "\u5176\u4ED6\u95EE\u9898"))), /* @__PURE__ */ import_react3.default.createElement("label", null, "\u8865\u5145\u8BF4\u660E", /* @__PURE__ */ import_react3.default.createElement("textarea", { value: details, maxLength: "1000", onChange: (event) => setDetails(event.target.value), placeholder: "\u53EF\u9009\uFF1A\u8BF4\u660E\u53D1\u751F\u4E86\u4EC0\u4E48\uFF0C\u4EE5\u53CA\u5982\u4F55\u590D\u73B0\u3002" })), error && /* @__PURE__ */ import_react3.default.createElement("p", { className: "form-error", role: "alert" }, error), /* @__PURE__ */ import_react3.default.createElement("div", { className: "dialog-actions" }, /* @__PURE__ */ import_react3.default.createElement(Button, { type: "button", kind: "secondary", onClick: onClose }, "\u53D6\u6D88"), /* @__PURE__ */ import_react3.default.createElement(Button, { type: "submit", disabled: state === "sending" }, state === "sending" ? "\u63D0\u4EA4\u4E2D\u2026" : "\u63D0\u4EA4\u4E3E\u62A5")))));
   }
-  function PlayerPage({ workId, releaseId, challengeCode, api: api2, host: host2, hostKind, demo, go }) {
+  function InvitePage({ token, api: api2, go }) {
+    const [state, setState] = (0, import_react3.useState)({ phase: "claiming", message: "" });
+    (0, import_react3.useEffect)(() => {
+      let active = true;
+      api2.claimMultiplayerInvite(token).then(async ({ data }) => {
+        const work = (await api2.getWork(data.workId)).data;
+        const releaseId = work.targets?.find((target) => target.targetKey === "web")?.currentReleaseId;
+        if (!releaseId) throw new Error("\u8FD9\u4E2A\u6E38\u620F\u6682\u65F6\u6CA1\u6709\u53EF\u542F\u52A8\u7684 Web \u7248\u672C\u3002");
+        if (active) go(`/play/${data.workId}/${releaseId}/room/${data.room.id}`);
+      }).catch((error) => {
+        if (!active) return;
+        if (error?.status === 401) {
+          sessionStorage.setItem("gamehub.pendingRoute", `/invite/${token}`);
+          setState({ phase: "auth", message: "\u767B\u5F55\u540E\u4F1A\u81EA\u52A8\u8FD4\u56DE\u5E76\u52A0\u5165\u623F\u95F4\u3002" });
+        } else setState({ phase: "error", message: error?.message || "\u9080\u8BF7\u94FE\u63A5\u65E0\u6548\u6216\u5DF2\u88AB\u9886\u53D6\u3002" });
+      });
+      return () => {
+        active = false;
+      };
+    }, [api2, token]);
+    return /* @__PURE__ */ import_react3.default.createElement("main", { className: "page" }, /* @__PURE__ */ import_react3.default.createElement(
+      StatePanel,
+      {
+        title: state.phase === "claiming" ? "\u6B63\u5728\u52A0\u5165\u5BF9\u5C40" : state.phase === "auth" ? "\u767B\u5F55\u540E\u9886\u53D6\u9080\u8BF7" : "\u65E0\u6CD5\u52A0\u5165\u8FD9\u4E2A\u623F\u95F4",
+        body: state.phase === "claiming" ? "\u6B63\u5728\u786E\u8BA4\u8FD9\u4EFD\u4E00\u6B21\u6027\u9080\u8BF7\u2026\u2026" : state.message,
+        action: state.phase === "auth" ? "\u524D\u5F80\u767B\u5F55" : state.phase === "error" ? "\u8FD4\u56DE\u53D1\u73B0" : null,
+        onAction: () => go(state.phase === "auth" ? "/account" : "/discover")
+      }
+    ));
+  }
+  function PlayerPage({ workId, releaseId, challengeCode, initialRoomId, api: api2, host: host2, hostKind, demo, go }) {
     const mount = (0, import_react3.useRef)(null);
     const core = (0, import_react3.useRef)(null);
     const [state, setState] = (0, import_react3.useState)("loading");
@@ -25409,7 +25451,7 @@ await gamehub.multiplayer.matches.command(matchId, { type: 'move', to: 'b3' });`
         return void 0;
       }
       const loopback = ["127.0.0.1", "localhost"].includes(location.hostname);
-      core.current = new PlayerCore({ runtimeDomain: loopback ? "localhost" : host2?.runtimeDomain || "runtime.mooyu.fun", allowLocalhost: loopback || false, createBridge: (context) => createWebGameMultiplayerHost({ ...context, apiClient: api2, workId }) });
+      core.current = new PlayerCore({ runtimeDomain: loopback ? "localhost" : host2?.runtimeDomain || "runtime.mooyu.fun", allowLocalhost: loopback || false, createBridge: (context) => createWebGameMultiplayerHost({ ...context, apiClient: api2, workId, initialRoomId }) });
       const off = core.current.onStateChanged((e) => {
         setState(e.state);
         if (e.message) setLaunchError(e.message);
@@ -25439,7 +25481,7 @@ await gamehub.multiplayer.matches.command(matchId, { type: 'move', to: 'b3' });`
         off();
         core.current?.dispose();
       };
-    }, [workId, releaseId, demo, builtIn, host2, api2]);
+    }, [workId, releaseId, initialRoomId, demo, builtIn, host2, api2]);
     return /* @__PURE__ */ import_react3.default.createElement("main", { className: `player-page ${builtIn ? "player-page--guess" : ""}` }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "player-bar" }, /* @__PURE__ */ import_react3.default.createElement("button", { className: "back-link", onClick: () => go(challengeCode ? "/social" : `/works/${workId}`) }, icons.back, " \u9000\u51FA\u6E38\u620F"), /* @__PURE__ */ import_react3.default.createElement("span", { className: `live-state live-state--${state}` }, /* @__PURE__ */ import_react3.default.createElement("i", null), challengeCode ? "\u73A9\u5BB6\u6311\u6218\u8FDB\u884C\u4E2D" : builtIn ? "GameHub \u5B98\u65B9\u51FA\u54C1" : state === "running" ? "\u6B63\u5728\u8FD0\u884C" : state === "loading" ? "\u6B63\u5728\u8F7D\u5165" : state === "error" ? "\u542F\u52A8\u5931\u8D25" : "\u5DF2\u6682\u505C"), /* @__PURE__ */ import_react3.default.createElement("div", null, !builtIn && /* @__PURE__ */ import_react3.default.createElement(import_react3.default.Fragment, null, /* @__PURE__ */ import_react3.default.createElement("button", { className: "icon-button", onClick: () => state === "hidden" ? core.current?.resume() : core.current?.hide(), "aria-label": "\u6682\u505C\u6216\u6062\u590D" }, icons.pause), /* @__PURE__ */ import_react3.default.createElement("button", { className: "icon-button", onClick: () => core.current?.stop(), "aria-label": "\u505C\u6B62" }, icons.stop)))), /* @__PURE__ */ import_react3.default.createElement("div", { className: "player-stage", ref: mount }, builtIn ? /* @__PURE__ */ import_react3.default.createElement(GuessBaikeGame, { api: api2, demo, challengeCode }) : demo ? /* @__PURE__ */ import_react3.default.createElement("div", { className: "demo-game" }, /* @__PURE__ */ import_react3.default.createElement("div", { className: "demo-planet" }), /* @__PURE__ */ import_react3.default.createElement("span", { className: "kicker" }, "DEMO SESSION"), /* @__PURE__ */ import_react3.default.createElement("h1", null, "\u661F\u6E2F\u6F02\u79FB"), /* @__PURE__ */ import_react3.default.createElement("p", null, "\u2191 \u2193 \u2190 \u2192 \u9A7E\u9A76 \xB7 \u7A7A\u683C\u63A8\u8FDB"), /* @__PURE__ */ import_react3.default.createElement("div", { className: "demo-track" }, /* @__PURE__ */ import_react3.default.createElement("i", null), /* @__PURE__ */ import_react3.default.createElement("i", null), /* @__PURE__ */ import_react3.default.createElement("i", null))) : null, state === "error" && /* @__PURE__ */ import_react3.default.createElement(StatePanel, { title: "\u6E38\u620F\u6CA1\u6709\u6210\u529F\u542F\u52A8", body: launchError || "\u8FD0\u884C\u5730\u5740\u53EF\u80FD\u5DF2\u7ECF\u5931\u6548\u3002\u8FD4\u56DE\u8BE6\u60C5\u9875\u540E\u518D\u8BD5\u4E00\u6B21\u3002", action: "\u8FD4\u56DE\u8BE6\u60C5", onAction: () => go(`/works/${workId}`) })));
   }
   function AccountPage({ api: api2, host: host2, demo, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, onProfileChange }) {
@@ -25513,6 +25555,11 @@ await gamehub.multiplayer.matches.command(matchId, { type: 'move', to: 'b3' });`
       commitProfile(next);
       setDisplayName(next.displayName);
       setPhase("settings");
+      const pendingRoute = sessionStorage.getItem("gamehub.pendingRoute");
+      if (pendingRoute) {
+        sessionStorage.removeItem("gamehub.pendingRoute");
+        go(pendingRoute);
+      }
     };
     (0, import_react3.useEffect)(() => {
       if (phase !== "github-web" || !githubChallenge?.challengeId) return void 0;
@@ -26628,7 +26675,8 @@ GameHub \u4F11\u606F\u5BA4`);
     let content;
     const parts = route.split("/").filter(Boolean);
     if (parts[0] === "works" && parts[1]) content = /* @__PURE__ */ import_react3.default.createElement(DetailPage, { workId: parts[1], api: api2, host: host2, hostKind: hostReady ? hostIdentity.id : null, demo, go });
-    else if (parts[0] === "play" && parts[1]) content = /* @__PURE__ */ import_react3.default.createElement(PlayerPage, { workId: parts[1], releaseId: parts[2] === "challenge" ? null : parts[2], challengeCode: parts[2] === "challenge" ? parts[3] : null, api: api2, host: host2, hostKind: hostReady ? hostIdentity.id : null, demo, go });
+    else if (parts[0] === "play" && parts[1]) content = /* @__PURE__ */ import_react3.default.createElement(PlayerPage, { workId: parts[1], releaseId: parts[2] === "challenge" ? null : parts[2], challengeCode: parts[2] === "challenge" ? parts[3] : null, initialRoomId: parts[3] === "room" ? parts[4] : null, api: api2, host: host2, hostKind: hostReady ? hostIdentity.id : null, demo, go });
+    else if (parts[0] === "invite" && parts[1]) content = /* @__PURE__ */ import_react3.default.createElement(InvitePage, { token: parts[1], api: api2, go });
     else if (route === "/account") content = /* @__PURE__ */ import_react3.default.createElement(AccountPage, { api: api2, host: host2, demo, go, themeMode, setThemeMode, canChangeTheme: typeof host2.theme.setPreference === "function", hostIdentity, onProfileChange: setAccountProfile });
     else if (route.startsWith("/creator/import")) content = /* @__PURE__ */ import_react3.default.createElement(GitHubImportPage, { api: api2, demo, go });
     else if (route === "/creator/works/new") content = /* @__PURE__ */ import_react3.default.createElement(NewWorkPage, { api: api2, demo, go });
