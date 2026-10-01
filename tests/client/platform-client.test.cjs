@@ -488,3 +488,36 @@ test('API client refreshes an expired access token once and updates host memory'
   assert.equal(requests.length, 3);
   assert.equal(requests[2].authorization, 'Bearer fresh-access');
 });
+
+test('API client shares one refresh across concurrent expired requests', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  let access = 'expired-access'; let refresh = 'single-use-refresh'; let refreshCalls = 0;
+  const client = createApiClient({
+    getAccessToken: () => access,
+    getRefreshToken: () => refresh,
+    setTokens: tokens => { access = tokens.accessToken; refresh = tokens.refreshToken; },
+    fetchImpl: async (url, init) => {
+      if (url.endsWith('/v1/auth/refresh')) {
+        refreshCalls += 1;
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return new Response(JSON.stringify({ data: { accessToken: 'fresh-access', refreshToken: 'rotated-refresh' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (init.headers.Authorization === 'Bearer expired-access') {
+        return new Response(JSON.stringify({ error: { code: 'AUTH_REQUIRED' } }), { status: 401, headers: { 'content-type': 'application/json' } });
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    },
+  });
+
+  const [works, connections, profile] = await Promise.all([
+    client.listCreatorWorks(),
+    client.listGitHubSourceConnections(),
+    client.getProfile(),
+  ]);
+  assert.deepEqual(works.data, []);
+  assert.deepEqual(connections.data, []);
+  assert.deepEqual(profile.data, []);
+  assert.equal(refreshCalls, 1);
+  assert.equal(access, 'fresh-access');
+  assert.equal(refresh, 'rotated-refresh');
+});

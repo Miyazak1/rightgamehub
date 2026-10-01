@@ -28,7 +28,7 @@ M1 的 Web 主链路已经在本机真实 PostgreSQL、平台 API、校验 Worke
 
 - 账号成功页可直接进入创作中心；创作中心、新建作品和上传页改为调用真实 API。
 - 上传页可恢复 `created`、`receiving`、`uploaded`、`queued`、`validating` 与终态任务，并在需要时明确要求重新选择本机文件。
-- API 客户端在受保护请求返回 401 时使用 refresh token 刷新一次并重放原请求。网页入口仅在当前标签页的 `sessionStorage` 中保留会话，以支持 GitHub 安装往返和页面刷新；显式退出或关闭标签页后清除，不写入 URL、`localStorage` 或日志。
+- API 客户端在受保护请求返回 401 时使用 refresh token 刷新一次并重放原请求；并发 401 共享同一次刷新，避免重复使用已轮换的 refresh token 而撤销整个授权族。网页入口仅在当前标签页的 `sessionStorage` 中保留会话，以支持 GitHub 安装往返和页面刷新；显式退出或关闭标签页后清除，不写入 URL、`localStorage` 或日志。
 - Harness 在自身运行于回环地址时使用本地 API；生产来源不自动降级到回环服务。
 - PlayerCore 接受明确开启的 `*.localhost` 开发 Release 主机，生产仍要求 HTTPS 和受信任 Release 子域。
 

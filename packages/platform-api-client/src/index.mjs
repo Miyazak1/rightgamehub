@@ -7,6 +7,19 @@ export class ApiError extends Error {
 const randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {}, timeoutMs = 15000, xhrFactory = () => new XMLHttpRequest() } = {}) {
+  let refreshPromise = null;
+  const refreshSession = signal => {
+    if (!refreshPromise) {
+      refreshPromise = (async () => {
+        const refreshToken = await getRefreshToken();
+        if (!refreshToken) return false;
+        const refreshed = await request('/v1/auth/refresh', { method: 'POST', body: { refreshToken }, signal, allowRefresh: false });
+        await setTokens(refreshed.data);
+        return true;
+      })().finally(() => { refreshPromise = null; });
+    }
+    return refreshPromise;
+  };
   async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false } = {}) {
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(new Error('timeout')), timeoutMs);
@@ -25,12 +38,11 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         ...(body != null ? { body: JSON.stringify(body) } : rawBody != null ? { body: rawBody } : {}),
       });
       if (response.status === 401 && auth && allowRefresh) {
-        const refreshToken = await getRefreshToken();
-        if (refreshToken) {
-          const refreshed = await request('/v1/auth/refresh', { method: 'POST', body: { refreshToken }, signal, allowRefresh: false });
-          await setTokens(refreshed.data);
+        const currentToken = await getAccessToken();
+        if (token && currentToken && token !== currentToken) {
           return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive });
         }
+        if (await refreshSession(signal)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive });
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new ApiError({ status: response.status, ...(payload.error ?? {}), message: payload.error?.message ?? `请求失败 (${response.status})` });

@@ -589,7 +589,10 @@ function GitHubImportPage({ api, demo, go }) {
       globalThis.sessionStorage?.removeItem('gamehub.github-app-state');
       globalThis.history?.replaceState(null, '', `${globalThis.location.pathname}#/creator/import`);
       return loadConnections();
-    }).catch(caught => { setState(current => ({ ...current, status: 'error' })); setError(caught.message || 'GitHub 安装回调未完成。'); }).finally(() => setBusy(''));
+    }).catch(caught => {
+      setState(current => ({ ...current, status: caught.status === 401 ? 'auth' : 'error' }));
+      setError(caught.status === 401 ? '登录会话已失效，请重新登录后继续完成 GitHub 连接。' : caught.message || 'GitHub 安装回调未完成。');
+    }).finally(() => setBusy(''));
   }, [api, demo]);
   useEffect(() => {
     if (!selectedConnection || demo) return;
