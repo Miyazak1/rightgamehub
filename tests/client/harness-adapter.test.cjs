@@ -278,7 +278,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.14');
+  assert.equal(manifest.version, '0.3.15');
   assert.match(extension, /runHidden\(process\.execPath, \['--install-extension',target\.fsPath,'--force'\]/);
   assert.match(extension, /windowsHide: true/);
   assert.match(extension, /extensionInstallPresent\(context, item\)/);
@@ -286,6 +286,13 @@ test('Cursor self-update installs the verified VSIX before reporting restart rea
   assert.match(extension, /跳过重复下载/);
   assert.match(extension, /downloadUpdateBytesWithPowerShell/);
   assert.doesNotMatch(extension, /workbench\.extensions\.installExtension/);
+});
+
+test('Cursor webview CSP permits only the configured API and its realtime socket', async () => {
+  const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
+  assert.match(extension, /const realtimeSources = localApi \? 'ws:\/\/127\.0\.0\.1:3093 ws:\/\/localhost:3093' : `wss:\/\/\$\{apiUrl\.host\}`/);
+  assert.match(extension, /connect-src \$\{apiUrl\.origin\} \$\{realtimeSources\}/);
+  assert.doesNotMatch(extension, /connect-src \*/);
 });
 
 test('the packaged Cursor client contains the multiplayer host bridge', async () => {

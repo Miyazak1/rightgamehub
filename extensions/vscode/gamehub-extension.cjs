@@ -303,11 +303,12 @@ async function activate(context) {
       const apiUrl = allowedUrl(config().get('apiUrl', 'http://127.0.0.1:3090'), 'API 地址');
       const localApi = ['127.0.0.1', 'localhost'].includes(apiUrl.hostname);
       const gameRuntimeDomain = localApi ? 'localhost' : runtimeDomain(config().get('runtimeDomain', 'runtime.mooyu.fun'));
+      const realtimeSources = localApi ? 'ws://127.0.0.1:3093 ws://localhost:3093' : `wss://${apiUrl.host}`;
       view.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] };
       const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'gamehub.js'));
       const nonce = randomBytes(18).toString('base64');
       const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
-      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>GameHub</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
+      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>GameHub</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
       const subscription = view.webview.onDidReceiveMessage(async message => {
         if (!message || message.type !== 'gamehub:request' || !Number.isSafeInteger(message.id)) return;
         try {
