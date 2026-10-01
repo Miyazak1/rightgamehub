@@ -13178,6 +13178,17 @@
             "type": "string",
             "format": "uuid"
           },
+          "workId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "repository": {
             "type": "object",
             "additionalProperties": true
@@ -13221,6 +13232,7 @@
         },
         "required": [
           "importId",
+          "workId",
           "repository",
           "commitSha",
           "treeSha",

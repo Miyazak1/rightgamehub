@@ -45,6 +45,38 @@ test('source draft creation requires creator permission and an idempotency key',
   assert.match(input.requestHash, /^[a-f0-9]{64}$/u);
 });
 
+test('an already imported commit restores its existing draft without consuming quota', async () => {
+  const workId = crypto.randomUUID();
+  const importId = crypto.randomUUID();
+  const now = new Date();
+  let usageChecked = false;
+  const work = {
+    id: workId, owner_user_id: actor.userId, title: 'Desk Cat', description: '', instructions: '', kind: 'game', state: 'draft', visibility: 'private',
+    revision: 1, first_published_at: null, estimated_minutes: 3, tags: ['github-import'], agent_label: null, repository_url: null, license_spdx: null,
+  };
+  const source = {
+    work_id: workId, provider: 'github', repository_id: '7', repository_node_id: 'node-7', repository_visibility: 'private', owner_login: 'cat',
+    repository_name: 'desk-cat', repository_url: 'https://github.com/cat/desk-cat', default_branch: 'main', commit_sha: 'a'.repeat(40), tree_sha: 'b'.repeat(40),
+    source_status: 'active', provenance: {}, created_at: now, updated_at: now,
+  };
+  const client = { release() {}, async query(sql) {
+    if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK' || sql.includes('pg_advisory_xact_lock') || sql.includes('INSERT INTO idempotency_keys')) return { rows: [] };
+    if (sql.includes("operation='github_source.draft'")) return { rows: [] };
+    if (sql.includes('SELECT status,can_publish FROM users')) return { rows: [{ status: 'active', can_publish: true }] };
+    if (sql.includes('FROM github_source_imports i JOIN')) return { rows: [{ id: importId, work_id: workId, connection_status: 'active', access_state: 'active' }] };
+    if (sql.includes('SELECT * FROM works')) return { rows: [work] };
+    if (sql.includes('SELECT * FROM work_sources')) return { rows: [source] };
+    if (sql.includes('SELECT work_count FROM creator_usage')) { usageChecked = true; return { rows: [{ work_count: 5 }] }; }
+    throw new Error(`Unexpected query: ${sql}`);
+  } };
+  const { PostgresGitHubSourceRepository } = await import(moduleUrl);
+  const repository = new PostgresGitHubSourceRepository({ connect: async () => client });
+  const result = await repository.createDraft({ actor, importId, title: 'Ignored', description: '', kind: 'game', workId: crypto.randomUUID(), idempotencyKey: 'restore-existing-draft', requestHash: 'hash' });
+  assert.equal(result.work.id, workId);
+  assert.equal(result.source.workId, workId);
+  assert.equal(usageChecked, false);
+});
+
 test('installation completion accepts only a recent read-only GitHub App installation', async () => {
   let consumed = false;
   const repository = { consumeInstallState: async () => { consumed = true; return connection; } };

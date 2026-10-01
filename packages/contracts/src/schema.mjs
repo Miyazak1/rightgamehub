@@ -279,7 +279,7 @@ export const schemas = Object.freeze({
     sha256: { oneOf: [sha256, { type: 'null' }] },
   }),
   GitHubImportPreview: object({
-    importId: id, repository: { type: 'object', additionalProperties: true },
+    importId: id, workId: { oneOf: [id, { type: 'null' }] }, repository: { type: 'object', additionalProperties: true },
     commitSha: { type: 'string', pattern: '^[a-f0-9]{40}$' }, treeSha: { type: 'string', pattern: '^[a-f0-9]{40}$' },
     readmeExcerpt: { type: 'string', maxLength: 12000 }, readmeSha256: { oneOf: [sha256, { type: 'null' }] },
     license: { $ref: '#/components/schemas/GitHubLicenseEvidence' }, staticSignals: { type: 'object', additionalProperties: { type: 'boolean' } }, createdAt: dateTime,

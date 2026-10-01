@@ -27,7 +27,7 @@ const repositoryView = row => ({
   htmlUrl: row.html_url, accessState: row.access_state, lastSeenAt: iso(row.last_seen_at),
 });
 const importView = row => ({
-  importId: row.id, repository: row.repository_snapshot, commitSha: row.commit_sha, treeSha: row.tree_sha,
+  importId: row.id, workId: row.work_id ?? null, repository: row.repository_snapshot, commitSha: row.commit_sha, treeSha: row.tree_sha,
   readmeExcerpt: row.readme_excerpt, readmeSha256: row.readme_sha256,
   license: { status: row.license_status, spdx: row.license_spdx, path: row.license_path, sha256: row.license_sha256 },
   staticSignals: row.static_signals ?? {}, createdAt: iso(row.created_at),
@@ -169,8 +169,6 @@ export class PostgresGitHubSourceRepository {
       }
       const user = (await client.query('SELECT status,can_publish FROM users WHERE id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
       if (!user || user.status !== 'active' || !user.can_publish) throw new GitHubSourceError('PUBLISH_NOT_ENABLED', 403, 'Publishing is not enabled for this account.');
-      const usage = (await client.query('SELECT work_count FROM creator_usage WHERE user_id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
-      if (!usage || usage.work_count >= 5) throw new GitHubSourceError('QUOTA_EXCEEDED', 429, 'The work quota has been reached.');
       const sourceImport = (await client.query(
         `SELECT i.*,r.repository_id,r.node_id,r.owner_login,r.name,r.default_branch,r.visibility,r.html_url,r.access_state,c.status AS connection_status
            FROM github_source_imports i JOIN github_source_repositories r ON r.id=i.source_repository_id
@@ -179,7 +177,20 @@ export class PostgresGitHubSourceRepository {
       )).rows[0];
       if (!sourceImport) throw new GitHubSourceError('NOT_FOUND', 404, 'GitHub import preview not found.');
       if (sourceImport.connection_status !== 'active' || sourceImport.access_state !== 'active') throw new GitHubSourceError('GITHUB_SOURCE_ACCESS_LOST', 409, 'GitHub repository access is no longer active.');
-      if (sourceImport.work_id) throw new GitHubSourceError('GITHUB_IMPORT_ALREADY_USED', 409, 'This import preview already created a draft.');
+      if (sourceImport.work_id) {
+        const work = (await client.query('SELECT * FROM works WHERE id=$1 AND owner_user_id=$2', [sourceImport.work_id, input.actor.userId])).rows[0];
+        const source = (await client.query('SELECT * FROM work_sources WHERE work_id=$1 AND source_import_id=$2', [sourceImport.work_id, input.importId])).rows[0];
+        if (!work || !source) throw new GitHubSourceError('GITHUB_IMPORT_STATE_INVALID', 409, 'The existing imported draft could not be restored.');
+        const result = { work: workView(work), source: sourceView(source) };
+        await client.query(
+          `INSERT INTO idempotency_keys(actor_id,operation,key,request_hash,result_status,result_json,expires_at)
+           VALUES ($1,'github_source.draft',$2,$3,200,$4,now()+interval '24 hours')`,
+          [input.actor.userId, input.idempotencyKey, input.requestHash, result],
+        );
+        return result;
+      }
+      const usage = (await client.query('SELECT work_count FROM creator_usage WHERE user_id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
+      if (!usage || usage.work_count >= 5) throw new GitHubSourceError('QUOTA_EXCEEDED', 429, 'The work quota has been reached.');
       const publicEvidence = sourceImport.visibility === 'public' && sourceImport.license_status === 'recognized';
       const work = (await client.query(
         `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,repository_url,license_spdx)

@@ -407,6 +407,10 @@ test('GitHub source import UI stays read-only and hands drafts to the controlled
   assert.match(source, /不是仓库权利人？请联系原作者补充许可证/);
   assert.match(source, /重新检测/);
   assert.match(source, /创建私有草稿并继续/);
+  assert.match(source, /继续已有草稿/);
+  assert.match(source, /state\.preview\.workId/);
+  assert.match(source, /继续构建/);
+  assert.match(source, /sourceProvider === 'github'/);
   assert.match(source, /createGitHubImportedDraft/);
   assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/builds`\)/);
   assert.match(source, /function SourceBuildPage/);
