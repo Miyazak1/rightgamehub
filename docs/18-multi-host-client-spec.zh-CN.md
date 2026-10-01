@@ -122,7 +122,7 @@ interface HostCapabilities {
 
 VS Code/Cursor 的长期 token 放 SecretStorage；Harness 通过 `credentials` 记录接口或已验证的安全存储提供方保存本插件记录。Harness 默认文件型凭据存储不隔离同 OS 用户的 Agent 工具进程，不能将其宣传为系统钥匙串同等保护。没有合适持久存储时使用内存会话，重启后重新登录。[Harness 凭据接口](https://github.com/deepseek-ai/deepseek-harness/blob/c36a83ff6bb95e3f82cf79f9be7c724270a8aa61/packages/credentials/credentials/README.zh.md)、[默认存储边界](https://github.com/deepseek-ai/deepseek-harness/blob/c36a83ff6bb95e3f82cf79f9be7c724270a8aa61/packages/credentials/credentials-local/README.zh.md)
 
-令牌优先由可信宿主服务持有，UI 只调用受限业务方法；不放 webview 全局变量、localStorage、项目文件或游戏启动 URL。多窗口刷新使用宿主级互斥；丢失 refresh 响应时可重新登录，不能无限重放旧 refresh。重用已轮换 token 撤销对应授权族。退出清空本设备授权并停止未提交写操作；下载完成文件不因退出自动删除。
+令牌优先由可信宿主服务持有，UI 只调用受限业务方法；不放 webview 全局变量、localStorage、项目文件或游戏启动 URL。独立网页入口没有宿主秘密存储，仅可用当前标签页的 `sessionStorage` 支持 OAuth/GitHub App 往返与刷新，不得升级为长期浏览器凭据。多窗口刷新使用宿主级互斥；丢失 refresh 响应时可重新登录，不能无限重放旧 refresh。重用已轮换 token 撤销对应授权族。退出清空本设备授权并停止未提交写操作；下载完成文件不因退出自动删除。
 
 可选网站 Cookie 会话仍按 14 防 CSRF；插件 Bearer 请求不使用 Cookie。浏览器只直接上传单任务短期 upload grant 时，该 grant 只能写指定 uploadId、大小、哈希和期限，不能发布、修改其他作品或读取私有资料。
 

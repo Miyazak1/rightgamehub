@@ -14,6 +14,36 @@ function fakeHarnessWindow() {
   };
 }
 
+function fakeBrowserWindow() {
+  const values = new Map();
+  const media = { matches: false, addEventListener() {}, removeEventListener() {} };
+  return {
+    matchMedia: () => media,
+    sessionStorage: {
+      getItem: key => values.has(key) ? values.get(key) : null,
+      setItem: (key, value) => values.set(key, String(value)),
+      removeItem: key => values.delete(key),
+    },
+  };
+}
+
+test('Browser adapter restores tab-session credentials after a GitHub redirect', async () => {
+  const { createBrowserHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
+  const browserWindow = fakeBrowserWindow();
+  const first = createBrowserHostAdapter({ window: browserWindow });
+  await first.account.setTokens({ accessToken: 'access-token', refreshToken: 'refresh-token' });
+
+  const afterRedirect = createBrowserHostAdapter({ window: browserWindow });
+  assert.equal(await afterRedirect.account.getAccessToken(), 'access-token');
+  assert.equal(await afterRedirect.account.getRefreshToken(), 'refresh-token');
+  assert.equal((await afterRedirect.getCapabilities()).canPersistCredential, false);
+
+  await afterRedirect.account.clearTokens();
+  const afterLogout = createBrowserHostAdapter({ window: browserWindow });
+  assert.equal(await afterLogout.account.getAccessToken(), null);
+  assert.equal(await afterLogout.account.getRefreshToken(), null);
+});
+
 test('Harness adapter reports honest capabilities and keeps credentials in memory only', async () => {
   const { createHarnessHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
   const controller = new AbortController();

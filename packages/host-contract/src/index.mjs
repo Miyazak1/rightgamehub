@@ -12,7 +12,26 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
   const media = browserWindow?.matchMedia?.('(prefers-color-scheme: dark)');
   let override = 'system';
   let accent = '#8b5cf6';
-  let credentials = null;
+  const credentialKey = 'gamehub.browser.credentials.v1';
+  const readCredentials = () => {
+    try {
+      const raw = browserWindow?.sessionStorage?.getItem(credentialKey);
+      if (!raw) return null;
+      const value = JSON.parse(raw);
+      if (!value || typeof value !== 'object' || typeof value.accessToken !== 'string' || typeof value.refreshToken !== 'string') {
+        browserWindow.sessionStorage.removeItem(credentialKey);
+        return null;
+      }
+      return { ...value };
+    } catch { return null; }
+  };
+  const writeCredentials = value => {
+    try {
+      if (value) browserWindow?.sessionStorage?.setItem(credentialKey, JSON.stringify(value));
+      else browserWindow?.sessionStorage?.removeItem(credentialKey);
+    } catch {}
+  };
+  let credentials = readCredentials();
   const current = () => normalizeTheme({
     mode: override === 'system' ? (media?.matches ? 'dark' : 'light') : override,
     colors: { accent },
@@ -28,7 +47,10 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
         canSelectFile: true, canManageDownloads: false, canRevealDownload: false,
         canPersistCredential: false, canPlayWeb: true, canLaunchDesktop: false,
         canPlayNativeInPanel: false,
-        unavailableReasons: { canLaunchDesktop: '桌面游戏需在受信任的宿主中启动。' },
+        unavailableReasons: {
+          canPersistCredential: '浏览器仅在当前标签页会话中保留登录，关闭标签页后需重新登录。',
+          canLaunchDesktop: '桌面游戏需在受信任的宿主中启动。',
+        },
       };
     },
     theme: {
@@ -42,8 +64,8 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
       async getAccessToken() { return credentials?.accessToken ?? null; },
       async getRefreshToken() { return credentials?.refreshToken ?? null; },
       async getTokens() { return credentials ? { ...credentials } : null; },
-      async setTokens(tokens) { credentials = tokens ? { ...tokens } : null; },
-      async clearTokens() { credentials = null; },
+      async setTokens(tokens) { credentials = tokens ? { ...tokens } : null; writeCredentials(credentials); },
+      async clearTokens() { credentials = null; writeCredentials(null); },
     },
   };
 }
