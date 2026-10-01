@@ -15,6 +15,7 @@ import { RealtimeTicketError } from './realtime-ticket-service.mjs';
 import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
 import { MultiplayerMatchError } from './multiplayer-match-service.mjs';
 import { GitHubSourceError } from './github-source-service.mjs';
+import { MultiplayerRuleSubmissionError } from './multiplayer-rule-submission-service.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -28,7 +29,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, githubSourceService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -49,7 +50,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -216,6 +217,53 @@ export function createApp({ config, database, migrations, authService, workServi
     app.get('/v1/admin/multiplayer/audit', {
       preHandler: requireAuth,schema: { querystring: { type: 'object',additionalProperties: false,properties: { limit: { type: 'integer',minimum: 1,maximum: 100 } } } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await multiplayerMatchService.adminAudit(request.actor,request.query)); });
+  }
+  if (multiplayerRuleSubmissionService) {
+    const submissionParams = { type: 'object',additionalProperties: false,required: ['submissionId'],properties: { submissionId: { type: 'string',format: 'uuid' } } };
+    const submissionIdentity = { type: 'object',additionalProperties: true,required: ['version','workId','modeKey','rulesetVersion','authority','players'],properties: {
+      version: { const: 1 },workId: workKeySchema,modeKey: { type: 'string',pattern: '^[a-z][a-z0-9_]{1,63}$' },rulesetVersion: { type: 'string',pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },authority: { const: 'platform_authoritative' },
+      players: { type: 'object',additionalProperties: true,required: ['min','max'],properties: { min: { type: 'integer',minimum: 2,maximum: 8 },max: { type: 'integer',minimum: 2,maximum: 8 } } },
+    } };
+    const doctorReport = { type: 'object',additionalProperties: true,required: ['version','ok','summary','findings'],properties: {
+      version: { const: 1 },ok: { type: 'boolean' },summary: { type: 'object',additionalProperties: true,required: ['errors','warnings','info'],properties: { errors: { type: 'integer',minimum: 0 },warnings: { type: 'integer',minimum: 0 },info: { type: 'integer',minimum: 0 } } },findings: { type: 'array',maxItems: 500 },
+    } };
+    const createSubmissionBody = { type: 'object',additionalProperties: false,required: ['modeKey','modeName','rulesetVersion','minPlayers','maxPlayers','fileName','declaredBytes','sha256','creatorSubmission','doctorReport'],properties: {
+      modeKey: { type: 'string',pattern: '^[a-z][a-z0-9_]{1,63}$' },modeName: { type: 'string',minLength: 1,maxLength: 80 },rulesetVersion: { type: 'string',pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
+      minPlayers: { type: 'integer',minimum: 2,maximum: 8 },maxPlayers: { type: 'integer',minimum: 2,maximum: 8 },modeConfig: { type: 'object',additionalProperties: false,properties: { turnSeconds: { type: 'integer',minimum: 10,maximum: 3600 },spectators: { type: 'boolean' },reconnectGraceSeconds: { type: 'integer',minimum: 15,maximum: 600 } } },
+      fileName: { type: 'string',minLength: 1,maxLength: 255,pattern: '^[^\\\\/\\u0000]+\\.zip$' },declaredBytes: { anyOf: [{ type: 'integer',minimum: 1,maximum: 20971520 },{ type: 'string',pattern: '^[1-9][0-9]{0,7}$' }] },sha256: { type: 'string',pattern: '^[a-f0-9]{64}$' },creatorSubmission: submissionIdentity,doctorReport,
+    } };
+    app.post('/v1/creator/works/:workId/multiplayer-rule-submissions', {
+      preHandler: requireAuth,schema: { params: { type: 'object',additionalProperties: false,required: ['workId'],properties: { workId: workKeySchema } },body: createSubmissionBody },
+    }, async (request, reply) => { reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.create(request.actor,request.params.workId,request.body,request.headers['idempotency-key'])); });
+    app.get('/v1/creator/works/:workId/multiplayer-rule-submissions', {
+      preHandler: requireAuth,schema: { params: { type: 'object',additionalProperties: false,required: ['workId'],properties: { workId: workKeySchema } } },
+    }, async (request, reply) => { reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.listMine(request.actor,request.params.workId)); });
+    app.get('/v1/creator/multiplayer-rule-submissions/:submissionId', { preHandler: requireAuth,schema: { params: submissionParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.getMine(request.actor,request.params.submissionId));
+    });
+    app.post('/v1/creator/multiplayer-rule-submissions/:submissionId/grant', { preHandler: requireAuth,schema: { params: submissionParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.grant(request.actor,request.params.submissionId));
+    });
+    app.put('/v1/creator/multiplayer-rule-submissions/:submissionId/package', { schema: { params: submissionParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.receive(request.params.submissionId,request.headers.authorization,request.body));
+    });
+    app.post('/v1/creator/multiplayer-rule-submissions/:submissionId/submit', { preHandler: requireAuth,schema: { params: submissionParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.submit(request.actor,request.params.submissionId,request.headers['idempotency-key']));
+    });
+    app.get('/v1/admin/multiplayer/rule-submissions', {
+      preHandler: requireAuth,schema: { querystring: { type: 'object',additionalProperties: false,properties: { state: { type: 'string',enum: ['queue','submitted','in_review','changes_requested','approved_for_build','rejected','failed'] },limit: { type: 'integer',minimum: 1,maximum: 100 } } } },
+    }, async (request,reply) => { reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.adminList(request.actor,request.query)); });
+    app.get('/v1/admin/multiplayer/rule-submissions/:submissionId', { preHandler: requireAuth,schema: { params: submissionParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.adminGet(request.actor,request.params.submissionId));
+    });
+    app.get('/v1/admin/multiplayer/rule-submissions/:submissionId/package', { preHandler: requireAuth,schema: { params: submissionParams } }, async (request,reply) => {
+      const item = await multiplayerRuleSubmissionService.adminPackage(request.actor,request.params.submissionId);
+      reply.header('Cache-Control','no-store'); reply.header('X-Content-Type-Options','nosniff'); reply.header('Digest',`sha-256=${Buffer.from(item.sha256,'hex').toString('base64')}`);
+      reply.header('Content-Disposition',`attachment; filename*=UTF-8''${encodeURIComponent(item.fileName)}`); return reply.type('application/zip').send(createReadStream(item.path));
+    });
+    app.post('/v1/admin/multiplayer/rule-submissions/:submissionId/review', {
+      preHandler: requireAuth,schema: { params: submissionParams,body: { type: 'object',additionalProperties: false,required: ['action'],properties: { action: { type: 'string',enum: ['start','request_changes','approve_for_build','reject'] },note: { type: 'string',minLength: 1,maxLength: 2000 } } } },
+    }, async (request,reply) => { reply.header('Cache-Control','no-store'); return envelope(await multiplayerRuleSubmissionService.adminReview(request.actor,request.params.submissionId,request.body)); });
   }
   if (analyticsService) {
     const analyticsEvent = {

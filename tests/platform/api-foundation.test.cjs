@@ -305,6 +305,41 @@ test('multiplayer match routes authenticate starts and expose participant recove
     assert.deepEqual(abortCall[3], { reason: 'stuck' });
 });
 
+test('multiplayer rule intake routes preserve the quarantine and human review boundary', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const actor = { userId: crypto.randomUUID(),scopes: ['upload'],profile: { role: 'admin',canPublish: true } };
+  const workId = crypto.randomUUID(); const submissionId = crypto.randomUUID(); const calls = [];
+  const app = createApp({
+    config: { requestBodyLimit: 65536 },database: { ping: async () => true },migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async () => actor },
+    multiplayerRuleSubmissionService: {
+      create: async (...args) => { calls.push(['create',...args]); return { id: submissionId,state: 'created' }; },
+      grant: async (...args) => { calls.push(['grant',...args]); return { submissionId,token: 'x'.repeat(43) }; },
+      receive: async (...args) => { let bytes=0; for await (const chunk of args[2]) bytes += chunk.length; calls.push(['receive',args[0],args[1],bytes]); return { id: submissionId,state: 'uploaded' }; },
+      submit: async (...args) => { calls.push(['submit',...args]); return { id: submissionId,state: 'submitted' }; },
+      listMine: async () => [],getMine: async () => ({ id: submissionId,state: 'submitted' }),adminList: async () => [{ id: submissionId,state: 'submitted' }],adminGet: async () => ({ id: submissionId,state: 'submitted' }),
+      adminReview: async (...args) => { calls.push(['review',...args]); return { id: submissionId,state: 'in_review' }; },
+    },
+  });
+  t.after(() => app.close());
+  const payload = {
+    modeKey: 'duel',modeName: '双人对战',rulesetVersion: '1.0.0',minPlayers: 2,maxPlayers: 2,modeConfig: { turnSeconds: 60 },fileName: 'source.zip',declaredBytes: '16',sha256: 'a'.repeat(64),
+    creatorSubmission: { version: 1,workId,modeKey: 'duel',rulesetVersion: '1.0.0',authority: 'platform_authoritative',players: { min: 2,max: 2 } },
+    doctorReport: { version: 1,ok: true,summary: { errors: 0,warnings: 1,info: 10 },findings: [] },
+  };
+  const created = await app.inject({ method: 'POST',url: `/v1/creator/works/${workId}/multiplayer-rule-submissions`,headers: { authorization: 'Bearer valid','idempotency-key': 'rules-create-route-0001' },payload });
+  const granted = await app.inject({ method: 'POST',url: `/v1/creator/multiplayer-rule-submissions/${submissionId}/grant`,headers: { authorization: 'Bearer valid' } });
+  const uploaded = await app.inject({ method: 'PUT',url: `/v1/creator/multiplayer-rule-submissions/${submissionId}/package`,headers: { authorization: `Upload ${'x'.repeat(43)}`,'content-type': 'application/zip' },payload: Buffer.from('PK\x03\x04route-test') });
+  const submitted = await app.inject({ method: 'POST',url: `/v1/creator/multiplayer-rule-submissions/${submissionId}/submit`,headers: { authorization: 'Bearer valid','idempotency-key': 'rules-submit-route-0001' } });
+  const queue = await app.inject({ url: '/v1/admin/multiplayer/rule-submissions?state=queue&limit=20',headers: { authorization: 'Bearer valid' } });
+  const reviewed = await app.inject({ method: 'POST',url: `/v1/admin/multiplayer/rule-submissions/${submissionId}/review`,headers: { authorization: 'Bearer valid' },payload: { action: 'start' } });
+  assert.deepEqual([created,granted,uploaded,submitted,queue,reviewed].map(response => response.statusCode),[200,200,200,200,200,200]);
+  assert.ok([created,granted,uploaded,submitted,queue,reviewed].every(response => response.headers['cache-control'] === 'no-store'));
+  assert.equal(calls.find(call => call[0] === 'create')[4],'rules-create-route-0001');
+  assert.equal(calls.find(call => call[0] === 'receive')[3],Buffer.byteLength('PK\x03\x04route-test'));
+  assert.equal(calls.find(call => call[0] === 'review')[3].action,'start');
+});
+
 test('auth routes reject unknown fields and keep sensitive responses out of caches', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const app = createApp({

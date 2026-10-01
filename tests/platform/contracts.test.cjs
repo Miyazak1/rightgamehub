@@ -27,9 +27,9 @@ test('author writes require bearer auth and idempotency where the contract decla
   for (const [route, pathItem] of Object.entries(openapi.paths)) {
     for (const operation of Object.values(pathItem)) {
       const sourceOperation = operation.operationId;
-      if (sourceOperation === 'uploadContent') assert.deepEqual(operation.security, [{ uploadGrant: [] }], `${operation.operationId} auth`);
+      if (['uploadContent','uploadMultiplayerRulePackage'].includes(sourceOperation)) assert.deepEqual(operation.security, [{ uploadGrant: [] }], `${operation.operationId} auth`);
       else if (route.startsWith('/v1/creator/')) assert.deepEqual(operation.security, [{ bearerAuth: [] }], `${operation.operationId} auth`);
-      if (['createWork', 'createUpload', 'completeUpload', 'createGitHubImportedDraft'].includes(sourceOperation)) {
+      if (['createWork', 'createUpload', 'completeUpload', 'createGitHubImportedDraft','createMultiplayerRuleSubmission','submitMultiplayerRuleSubmission'].includes(sourceOperation)) {
         assert.ok(operation.parameters.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required));
       }
       if (['updateWork', 'withdrawWork'].includes(sourceOperation)) {

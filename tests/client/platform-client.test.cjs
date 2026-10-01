@@ -423,6 +423,36 @@ test('API client exposes authenticated GitHub source operations and idempotent d
   assert.match(requests.at(-1).url, /\/v1\/creator\/source-imports\/drafts$/);
 });
 
+test('API client exposes staged multiplayer rule submission and administrative review', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({ getAccessToken: () => 'rules-token',fetchImpl: async (url,init) => {
+    requests.push({ url,init });
+    return new Response(JSON.stringify({ data: [] }),{ status: 200,headers: { 'content-type': 'application/json' } });
+  } });
+  const workId = '00000000-0000-4000-8000-000000000001'; const submissionId = '00000000-0000-4000-8000-000000000002';
+  await client.createMultiplayerRuleSubmission(workId,{ modeKey: 'duel' });
+  await client.listMultiplayerRuleSubmissions(workId);
+  await client.createMultiplayerRuleUploadGrant(submissionId);
+  await client.submitMultiplayerRuleSubmission(submissionId);
+  await client.listAdminMultiplayerRuleSubmissions('queue',20);
+  await client.reviewAdminMultiplayerRuleSubmission(submissionId,{ action: 'start' });
+  assert.deepEqual(requests.map(item => item.init.method),['POST','GET','POST','POST','GET','POST']);
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer rules-token'));
+  assert.ok(requests[0].init.headers['Idempotency-Key']);
+  assert.ok(requests[3].init.headers['Idempotency-Key']);
+  assert.match(requests[4].url,/state=queue&limit=20$/u);
+});
+
+test('multiplayer rule UI states that approval is not execution, signing or deployment', async () => {
+  const submission = await fs.readFile('packages/platform-client/src/MultiplayerRuleSubmissionPage.jsx','utf8');
+  const review = await fs.readFile('packages/platform-client/src/MultiplayerRuleReviewQueue.jsx','utf8');
+  assert.match(submission,/平台审核、受控构建、摘要确认和离线签名完成前，不会在 API 或 Realtime 中执行/);
+  assert.match(submission,/提交不等于上线/);
+  assert.match(review,/“批准构建”不会自动签名、部署或注册模式/);
+  assert.match(review,/approve_for_build/);
+});
+
 test('API client refreshes an expired access token once and updates host memory', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let access = 'expired-access'; let saved; const requests = [];

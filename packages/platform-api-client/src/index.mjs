@@ -41,6 +41,15 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
       throw new ApiError({ message: '暂时无法连接 GameHub，请稍后重试。' });
     } finally { clearTimeout(timer); }
   }
+  async function authenticatedDownload(path, options = {}) {
+    const token = await getAccessToken();
+    const response = await fetchImpl(`${baseUrl}${path}`, { signal: options.signal,headers: { Accept: 'application/zip',...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new ApiError({ status: response.status,...(payload.error ?? {}),message: payload.error?.message ?? `下载失败 (${response.status})` });
+    }
+    return { data: await response.blob(),digest: response.headers.get('digest') };
+  }
   return {
     listWorks: ({ limit = 20, kind } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
@@ -68,6 +77,35 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     listAdminMultiplayerMatches: (status = 'all', limit = 50, options) => request(`/v1/admin/multiplayer/matches?status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
     abortAdminMultiplayerMatch: (matchId, reason, options) => request(`/v1/admin/multiplayer/matches/${encodeURIComponent(matchId)}/abort`, { ...options, method: 'POST',body: { reason },auth: true }),
     listAdminMultiplayerAudit: (limit = 50, options) => request(`/v1/admin/multiplayer/audit?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    createMultiplayerRuleSubmission: (workId, body, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/multiplayer-rule-submissions`, { ...options,method: 'POST',body,auth: true,idempotent: true }),
+    listMultiplayerRuleSubmissions: (workId, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/multiplayer-rule-submissions`, { ...options,auth: true }),
+    getMultiplayerRuleSubmission: (submissionId, options) => request(`/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}`, { ...options,auth: true }),
+    createMultiplayerRuleUploadGrant: (submissionId, options) => request(`/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/grant`, { ...options,method: 'POST',auth: true }),
+    uploadMultiplayerRulePackage(submissionId, file, grantToken, { signal,onProgress = () => {} } = {}) {
+      return new Promise((resolve,reject) => {
+        const xhr = xhrFactory();
+        const fail = () => reject(new ApiError({ code: 'UPLOAD_INTERRUPTED',message: '规则源码包上传中断；请刷新提交状态后再决定是否重试。' }));
+        xhr.open('PUT',`${baseUrl}/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/package`);
+        xhr.timeout = 10 * 60 * 1000;
+        xhr.setRequestHeader('Authorization',`Upload ${grantToken}`);
+        xhr.setRequestHeader('Content-Type','application/zip');
+        xhr.upload.onprogress = event => event.lengthComputable && onProgress({ loaded: event.loaded,total: event.total,percent: Math.round(event.loaded / event.total * 100) });
+        xhr.onerror = fail;
+        xhr.ontimeout = () => reject(new ApiError({ code: 'REQUEST_TIMEOUT',message: '规则源码包上传超时。' }));
+        xhr.onabort = () => reject(new ApiError({ code: 'UPLOAD_CANCELLED',message: '本机已取消上传。',retryable: true }));
+        xhr.onload = () => {
+          let payload = {}; try { payload = JSON.parse(xhr.responseText || '{}'); } catch {}
+          if (xhr.status < 200 || xhr.status >= 300) reject(new ApiError({ status: xhr.status,...(payload.error ?? {}),message: payload.error?.message ?? `上传失败 (${xhr.status})` }));
+          else resolve({ data: payload.data });
+        };
+        const abort = () => xhr.abort(); signal?.addEventListener('abort',abort,{ once: true }); xhr.onloadend = () => signal?.removeEventListener('abort',abort); xhr.send(file);
+      });
+    },
+    submitMultiplayerRuleSubmission: (submissionId, options) => request(`/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/submit`, { ...options,method: 'POST',auth: true,idempotent: true }),
+    listAdminMultiplayerRuleSubmissions: (state = 'queue',limit = 50,options) => request(`/v1/admin/multiplayer/rule-submissions?state=${encodeURIComponent(state)}&limit=${encodeURIComponent(limit)}`, { ...options,auth: true }),
+    getAdminMultiplayerRuleSubmission: (submissionId,options) => request(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}`, { ...options,auth: true }),
+    reviewAdminMultiplayerRuleSubmission: (submissionId,body,options) => request(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}/review`, { ...options,method: 'POST',body,auth: true }),
+    downloadAdminMultiplayerRulePackage: (submissionId,options) => authenticatedDownload(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}/package`,options),
     createChallenge: (body, options) => request('/v1/auth/email/challenges', { ...options, method: 'POST', body }),
     verifyChallenge: (body, options) => request('/v1/auth/email/verify', { ...options, method: 'POST', body }),
     startGitHubDevice: (body, options) => request('/v1/auth/github/device', { ...options, method: 'POST', body }),

@@ -166,6 +166,21 @@ export const schemas = Object.freeze({
     id,actorUserId: id,actorDisplayName: { type: 'string' },matchId: id,action: stringEnum(['abort']),reason: { type: 'string' },
     beforeState: { type: 'object',additionalProperties: true },afterState: { type: 'object',additionalProperties: true },createdAt: dateTime,
   }),
+  CreateMultiplayerRuleSubmissionRequest: object({
+    modeKey: { type: 'string',pattern: '^[a-z][a-z0-9_]{1,63}$' },modeName: { type: 'string',minLength: 1,maxLength: 80 },rulesetVersion: { type: 'string',pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
+    minPlayers: { type: 'integer',minimum: 2,maximum: 8 },maxPlayers: { type: 'integer',minimum: 2,maximum: 8 },modeConfig: { $ref: '#/components/schemas/MultiplayerRoomSettings' },
+    fileName: { type: 'string',minLength: 1,maxLength: 255,pattern: '^[^\\\\/\\u0000]+\\.zip$' },declaredBytes: uintString,sha256,
+    creatorSubmission: { type: 'object',additionalProperties: true },doctorReport: { type: 'object',additionalProperties: true },
+  }, ['modeKey','modeName','rulesetVersion','minPlayers','maxPlayers','fileName','declaredBytes','sha256','creatorSubmission','doctorReport']),
+  MultiplayerRuleSubmission: object({
+    id,workId: id,workTitle: { oneOf: [{ type: 'string' },{ type: 'null' }] },ownerUserId: id,ownerDisplayName: { oneOf: [{ type: 'string' },{ type: 'null' }] },
+    modeKey: { type: 'string' },modeName: { type: 'string' },rulesetVersion: { type: 'string' },minPlayers: { type: 'integer' },maxPlayers: { type: 'integer' },
+    state: stringEnum(['created','receiving','uploaded','submitted','in_review','changes_requested','approved_for_build','rejected','expired','failed']),sourceFileName: { type: 'string' },declaredBytes: uintString,
+    actualBytes: { oneOf: [uintString,{ type: 'null' }] },sourceSha256: sha256,errorCode: { oneOf: [{ type: 'string' },{ type: 'null' }] },reviewNote: { oneOf: [{ type: 'string' },{ type: 'null' }] },
+    submittedAt: nullableDateTime,reviewedAt: nullableDateTime,createdAt: dateTime,updatedAt: dateTime,doctorSummary: { oneOf: [{ type: 'object',additionalProperties: true },{ type: 'null' }] },
+  }),
+  MultiplayerRuleUploadGrant: object({ submissionId: id,token: { type: 'string',minLength: 32 },expiresAt: dateTime }),
+  MultiplayerRuleReviewRequest: object({ action: stringEnum(['start','request_changes','approve_for_build','reject']),note: { type: 'string',minLength: 1,maxLength: 2000 } }, ['action']),
   GitHubDevicePoll: object({
     status: stringEnum(['pending', 'complete']),
     retryAfter: { type: 'integer', minimum: 0, maximum: 120 },
@@ -511,6 +526,16 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/multiplayer/matches', operationId: 'listAdminMultiplayerMatches', auth: 'bearer', response: 'MultiplayerMatch', responseArray: true, queryAdminMatches: true },
   { method: 'post', path: '/v1/admin/multiplayer/matches/{matchId}/abort', operationId: 'abortAdminMultiplayerMatch', auth: 'bearer', request: 'AbortMultiplayerMatchRequest', response: 'MultiplayerAbortResult', pathMatchId: true },
   { method: 'get', path: '/v1/admin/multiplayer/audit', operationId: 'listAdminMultiplayerAudit', auth: 'bearer', response: 'MultiplayerAdminEvent', responseArray: true, queryLimit: true },
+  { method: 'post', path: '/v1/creator/works/{workId}/multiplayer-rule-submissions', operationId: 'createMultiplayerRuleSubmission', auth: 'bearer', request: 'CreateMultiplayerRuleSubmissionRequest', response: 'MultiplayerRuleSubmission', pathId: 'workId', idempotent: true },
+  { method: 'get', path: '/v1/creator/works/{workId}/multiplayer-rule-submissions', operationId: 'listMultiplayerRuleSubmissions', auth: 'bearer', response: 'MultiplayerRuleSubmission', responseArray: true, pathId: 'workId' },
+  { method: 'get', path: '/v1/creator/multiplayer-rule-submissions/{submissionId}', operationId: 'getMultiplayerRuleSubmission', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId' },
+  { method: 'post', path: '/v1/creator/multiplayer-rule-submissions/{submissionId}/grant', operationId: 'createMultiplayerRuleUploadGrant', auth: 'bearer', response: 'MultiplayerRuleUploadGrant', pathId: 'submissionId' },
+  { method: 'put', path: '/v1/creator/multiplayer-rule-submissions/{submissionId}/package', operationId: 'uploadMultiplayerRulePackage', auth: 'upload', response: 'MultiplayerRuleSubmission', pathId: 'submissionId', rawBody: true },
+  { method: 'post', path: '/v1/creator/multiplayer-rule-submissions/{submissionId}/submit', operationId: 'submitMultiplayerRuleSubmission', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId', idempotent: true },
+  { method: 'get', path: '/v1/admin/multiplayer/rule-submissions', operationId: 'listAdminMultiplayerRuleSubmissions', auth: 'bearer', response: 'MultiplayerRuleSubmission', responseArray: true, queryRuleSubmissions: true },
+  { method: 'get', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}', operationId: 'getAdminMultiplayerRuleSubmission', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId' },
+  { method: 'get', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}/package', operationId: 'downloadAdminMultiplayerRulePackage', auth: 'bearer', response: 'MultiplayerRuleSubmission', pathId: 'submissionId', zipResponse: true },
+  { method: 'post', path: '/v1/admin/multiplayer/rule-submissions/{submissionId}/review', operationId: 'reviewAdminMultiplayerRuleSubmission', auth: 'bearer', request: 'MultiplayerRuleReviewRequest', response: 'MultiplayerRuleSubmission', pathId: 'submissionId' },
   { method: 'post', path: '/v1/auth/device/logout', operationId: 'logoutDeviceGrant', auth: 'bearer', response: 'Profile' },
   { method: 'post', path: '/v1/auth/devices/logout-others', operationId: 'logoutOtherDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
   { method: 'post', path: '/v1/auth/devices/logout-all', operationId: 'logoutAllDeviceGrants', auth: 'bearer', response: 'RevokeSessionsResponse' },
@@ -613,6 +638,10 @@ export function createOpenApiDocument() {
       { name: 'status', in: 'query', required: false, schema: stringEnum(['all','pending','active','finishing','completed','aborted']) },
       { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
     );
+    if (operation.queryRuleSubmissions) parameters.push(
+      { name: 'state',in: 'query',required: false,schema: stringEnum(['queue','submitted','in_review','changes_requested','approved_for_build','rejected','failed']) },
+      { name: 'limit',in: 'query',required: false,schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } },
+    );
     if (operation.queryLimit) parameters.push({ name: 'limit', in: 'query', required: false, schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } });
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
@@ -626,7 +655,7 @@ export function createOpenApiDocument() {
       ...(parameters.length ? { parameters } : {}),
       ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
       responses: {
-        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : response(operation.responseArray
+        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })
           : object({ data: { $ref: `#/components/schemas/${operation.response}` } })),
         ...errorResponses,

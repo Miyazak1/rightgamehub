@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [64 联网规则包提交与审核队列](./64-multiplayer-rule-review-intake.zh-CN.md) | **源码 ZIP 隔离收件、Doctor 证据、一次性上传授权、仅追加审核记录与受控构建边界** |
 | [56 作者 GitHub 导入指南](./56-github-import-author-guide.zh-CN.md) | **作者连接只读 GitHub App、预览来源、创建草稿、上传 ZIP、权限与许可证说明** |
 | [55 G1 GitHub 只读来源导入](./55-g1-github-source-import.zh-CN.md) | **独立 GitHub App、固定 Commit、README 清洗、许可证证据、Webhook 去重、部署与验收** |
 | [62 联网游戏本地测试与排障](./62-multiplayer-local-test.zh-CN.md) | **Creator Doctor、双账号命令/重连/终局验收与常见错误处置** |

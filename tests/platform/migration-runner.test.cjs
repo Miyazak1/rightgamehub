@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 34);
+  assert.equal(migrations.length, 35);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -36,6 +36,7 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[31].version, '0032');
   assert.equal(migrations[32].version, '0033');
   assert.equal(migrations[33].version, '0034');
+  assert.equal(migrations[34].version, '0035');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);

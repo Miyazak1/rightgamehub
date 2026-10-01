@@ -749,3 +749,43 @@ button { cursor: pointer; }
 .reference-grid span { padding: 10px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font-size: 10px; }
 @container (max-width: 720px) { .multiplayer-dev-hero,.multiplayer-progress { grid-template-columns: 1fr; } .multiplayer-boundary { grid-template-columns: 1fr; } .multiplayer-dev-nav { grid-template-columns: repeat(2,1fr); } }
  @container (max-width: 520px) { .multiplayer-wizard,.wizard-output,.reference-grid,.multiplayer-progress ol { grid-template-columns: 1fr; } .multiplayer-dev-hero,.multiplayer-dev-section { padding: 18px; } }
+
+.multiplayer-rule-submit-page { display: grid; gap: 18px; padding-bottom: 96px; }
+.rule-submit-layout { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(270px,.65fr); gap: 16px; align-items: start; }
+.rule-submit-form { display: grid; gap: 14px; }
+.rule-submit-form > label,.rule-submit-form .form-grid label { display: grid; gap: 6px; color: var(--gh-secondary); font-size: 10px; }
+.rule-submit-form input { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); font: inherit; }
+.file-drop.compact { min-height: 118px; }
+.rule-evidence-files { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.rule-evidence-files label { display: grid; gap: 7px; padding: 12px; border: 1px dashed var(--gh-border); color: var(--gh-secondary); font-size: 10px; cursor: pointer; }
+.rule-evidence-files input { padding: 0; border: 0; }
+.rule-evidence-files span { overflow-wrap: anywhere; color: var(--gh-primary); }
+.rule-submit-boundary { border-color: color-mix(in srgb,var(--gh-action) 65%,var(--gh-border)); }
+.rule-submit-boundary h2 { margin: 8px 0 14px; }
+.rule-submit-boundary ol { display: grid; gap: 10px; padding-left: 22px; color: var(--gh-secondary); line-height: 1.55; }
+.rule-submit-boundary p { padding-top: 12px; border-top: 1px dashed var(--gh-border); color: var(--gh-secondary); line-height: 1.6; }
+.rule-submit-success { display: flex; gap: 12px; padding: 15px; border: 1px solid var(--gh-success); background: color-mix(in srgb,var(--gh-success) 8%,var(--gh-panel)); }
+.rule-submit-success > span { color: var(--gh-success); font-size: 25px; }
+.rule-submit-success p { margin: 5px 0; color: var(--gh-secondary); }
+.rule-submit-success code { display: block; max-width: 100%; overflow-wrap: anywhere; font-size: 9px; }
+.rule-submission-history { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+.rule-submission-history h2 { margin: 7px 0 0; }
+.rule-submission-history > p,.rule-submission-history > ol { grid-column: 1 / -1; }
+.rule-submission-history > p { color: var(--gh-secondary); }
+.rule-submission-history ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rule-submission-history li { display: grid; grid-template-columns: 1fr auto; gap: 8px 15px; align-items: center; padding: 12px; border: 1px solid var(--gh-border); }
+.rule-submission-history li div { display: grid; gap: 4px; }
+.rule-submission-history li small,.rule-submission-history li p { color: var(--gh-secondary); }
+.rule-submission-history li p { grid-column: 1 / -1; margin: 0; }
+.rule-state { display: inline-flex; width: fit-content; padding: 4px 7px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font: 800 9px ui-monospace,monospace; }
+.rule-state--approved_for_build { border-color: var(--gh-success); color: var(--gh-success); }
+.rule-state--changes_requested { border-color: #e7ad48; color: #e7ad48; }
+.rule-state--rejected,.rule-state--failed { border-color: var(--gh-danger); color: var(--gh-danger); }
+.rule-review-queue { border: 2px solid color-mix(in srgb,var(--gh-action) 55%,var(--gh-border)); }
+.rule-review-card dl { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0; }
+.rule-review-card dl div { min-width: 0; padding: 9px; border: 1px solid var(--gh-border); }
+.rule-review-card dt { color: var(--gh-secondary); font-size: 8px; }
+.rule-review-card dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.rule-review-card textarea { width: 100%; min-height: 84px; padding: 10px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); resize: vertical; }
+@container (max-width: 760px) { .rule-submit-layout { grid-template-columns: 1fr; }.rule-review-card dl { grid-template-columns: 1fr; } }
+@container (max-width: 520px) { .rule-evidence-files,.rule-submission-history { grid-template-columns: 1fr; }.rule-submission-history > .button { width: 100%; }.rule-review-card .dialog-actions { align-items: stretch; flex-direction: column; } }
