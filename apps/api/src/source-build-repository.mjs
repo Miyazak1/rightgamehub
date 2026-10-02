@@ -24,10 +24,14 @@ export class PostgresSourceBuildRepository {
     await client.query("UPDATE source_revisions SET status='superseded' WHERE work_source_id=$1 AND id<>$2 AND status='active'",[source.id,revision.id]);
     const superseded=(await client.query("UPDATE build_jobs SET state='superseded',completed_at=now(),updated_at=now() WHERE work_id=$1 AND source_revision_id<>$2 AND state IN ('queued','preparing','building','packaging','validating') RETURNING id",[input.workId,revision.id])).rows.map(item=>item.id);
     if(superseded.length) await client.query("UPDATE jobs SET state='cancelled',lease_until=NULL,lease_token=NULL,last_error_code='BUILD_SUPERSEDED',updated_at=now() WHERE kind='source_build' AND target_id=ANY($1::uuid[]) AND state IN('queued','leased')",[superseded]);
-    const row=(await client.query(`INSERT INTO build_jobs(id,owner_user_id,work_id,source_revision_id,template_key,template_version,build_config,config_sha256,builder_image_digest,release_label)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(source_revision_id,config_sha256,builder_image_digest) DO UPDATE SET updated_at=build_jobs.updated_at
-      RETURNING *`,[input.buildId,input.actor.userId,input.workId,revision.id,input.plan.templateKey,input.plan.templateVersion,input.plan,input.plan.configSha256,input.builderImageDigest,input.releaseLabel])).rows[0];
-    await client.query("INSERT INTO jobs(id,kind,target_id,state) VALUES($1,'source_build',$2,'queued') ON CONFLICT(kind,target_id) DO NOTHING",[input.queueJobId,row.id]);
+    let row=(await client.query('SELECT * FROM build_jobs WHERE source_revision_id=$1 AND config_sha256=$2 AND builder_image_digest=$3 FOR UPDATE',[revision.id,input.plan.configSha256,input.builderImageDigest])).rows[0];
+    if(!row) row=(await client.query(`INSERT INTO build_jobs(id,owner_user_id,work_id,source_revision_id,template_key,template_version,build_config,config_sha256,builder_image_digest,release_label)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,[input.buildId,input.actor.userId,input.workId,revision.id,input.plan.templateKey,input.plan.templateVersion,input.plan,input.plan.configSha256,input.builderImageDigest,input.releaseLabel])).rows[0];
+    else if(row.state==='failed'&&row.upload_job_id==null) row=(await client.query(`UPDATE build_jobs SET release_label=$2,state='queued',error_code=NULL,log_excerpt='',started_at=NULL,completed_at=NULL,updated_at=now()
+      WHERE id=$1 AND state='failed' AND upload_job_id IS NULL RETURNING *`,[row.id,input.releaseLabel])).rows[0];
+    await client.query(`INSERT INTO jobs(id,kind,target_id,state) VALUES($1,'source_build',$2,'queued') ON CONFLICT(kind,target_id) DO UPDATE SET
+      state='queued',attempt=0,available_at=now(),lease_until=NULL,lease_token=NULL,last_error_code=NULL,updated_at=now()
+      WHERE jobs.state IN('failed','cancelled') AND EXISTS(SELECT 1 FROM build_jobs WHERE id=$2 AND state='queued')`,[input.queueJobId,row.id]);
     const result=view({ ...row,commit_sha:revision.commit_sha,tree_sha:revision.tree_sha });
     await client.query("INSERT INTO idempotency_keys(actor_id,operation,key,request_hash,result_status,result_json,expires_at) VALUES($1,'source_build.create',$2,$3,202,$4,now()+interval '24 hours')",[input.actor.userId,input.idempotencyKey,input.requestHash,result]);
     return result;

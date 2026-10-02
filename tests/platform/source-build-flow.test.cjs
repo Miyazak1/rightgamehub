@@ -24,6 +24,19 @@ test('source build service normalizes and idempotently queues a pinned static bu
   assert.equal(received.releaseLabel,'1.0.0');
 });
 
+test('source build repository requeues a failed attempt that produced no artifact',async()=>{
+  const { PostgresSourceBuildRepository }=await import(moduleUrl('source-build-repository.mjs'));
+  const actor={ userId:crypto.randomUUID() }; const workId=crypto.randomUUID(); const revisionId=crypto.randomUUID(); const buildId=crypto.randomUUID();
+  const base={ id:buildId,owner_user_id:actor.userId,work_id:workId,source_revision_id:revisionId,template_key:'static-v1',template_version:'1',build_config:{ templateKey:'static-v1' },config_sha256:'a'.repeat(64),builder_image_digest:'sha256:'+'b'.repeat(64),release_label:'1.0.0',state:'failed',error_code:'BUILD_OUTPUT_TYPE_UNSUPPORTED',log_excerpt:'failed',artifact_sha256:null,artifact_bytes:null,upload_job_id:null,release_id:null,created_at:new Date(),started_at:new Date(),completed_at:new Date(),updated_at:new Date() };
+  const queries=[];
+  const client={ release(){},async query(sql,params=[]){ queries.push({ sql,params }); if(sql==='BEGIN'||sql==='COMMIT'||sql==='ROLLBACK'||sql.startsWith('SELECT pg_advisory'))return{rows:[]}; if(sql.includes("FROM idempotency_keys"))return{rows:[]}; if(sql.includes('FROM work_sources s'))return{rows:[{ id:crypto.randomUUID(),work_state:'draft',source_status:'active',access_state:'active',connection_status:'active',commit_sha:'c'.repeat(40),tree_sha:'d'.repeat(40) }]}; if(sql.startsWith('INSERT INTO source_revisions'))return{rows:[{ id:revisionId,commit_sha:'c'.repeat(40),tree_sha:'d'.repeat(40) }]}; if(sql.startsWith("UPDATE source_revisions"))return{rows:[]}; if(sql.startsWith("UPDATE build_jobs SET state='superseded'"))return{rows:[]}; if(sql.startsWith('SELECT * FROM build_jobs'))return{rows:[base]}; if(sql.startsWith('UPDATE build_jobs SET release_label='))return{rows:[{ ...base,release_label:'1.0.1',state:'queued',error_code:null,log_excerpt:'',started_at:null,completed_at:null,updated_at:new Date() }]}; if(sql.startsWith('INSERT INTO jobs'))return{rows:[]}; if(sql.startsWith('INSERT INTO idempotency_keys'))return{rows:[]}; throw new Error(`Unexpected query: ${sql}`); }};
+  const repository=new PostgresSourceBuildRepository({ connect:async()=>client });
+  const result=await repository.create({ actor,workId,plan:{ templateKey:'static-v1',templateVersion:'1',configSha256:'a'.repeat(64) },releaseLabel:'1.0.1',buildId:crypto.randomUUID(),revisionId:crypto.randomUUID(),queueJobId:crypto.randomUUID(),builderImageDigest:'sha256:'+'b'.repeat(64),idempotencyKey:'i'.repeat(16),requestHash:'e'.repeat(64) });
+  assert.equal(result.id,buildId); assert.equal(result.state,'queued'); assert.equal(result.errorCode,null); assert.equal(result.releaseLabel,'1.0.1');
+  assert.ok(queries.some(item=>item.sql.includes("state='queued',error_code=NULL")));
+  assert.ok(queries.some(item=>item.sql.includes("ON CONFLICT(kind,target_id) DO UPDATE SET")&&item.sql.includes("jobs.state IN('failed','cancelled')")));
+});
+
 test('source build worker moves an immutable GitHub archive into validation quarantine',async t=>{
   const { createSourceBuildWorker }=await import(moduleUrl('source-build-worker.mjs'));
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-source-flow-'));
