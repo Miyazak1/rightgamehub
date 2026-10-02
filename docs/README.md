@@ -120,3 +120,9 @@
 5. 三宿主均须完成真实“作者上传 → 平台托管 → 另一位用户游玩或下载”的闭环；其他 Agent 按实际扩展能力另行适配。
 
 各文档内的外部链接为本次核查的资料或官方接口说明。正式上线前应按目标版本、主体、内容类别及接入合同复核。
+
+## 游戏存档与竞赛基础设施
+
+- [通用竞赛设计](71-platform-competition-leaderboards-design.zh-CN.md)
+- [通用存档设计](72-game-save-platform-infrastructure-design.zh-CN.md)
+- [实施状态与第一阶段验证](game-services-implementation-status.zh-CN.md)

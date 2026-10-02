@@ -151,14 +151,14 @@ Content-Security-Policy:
   object-src 'none';
   base-uri 'none';
   form-action 'none';
-  sandbox allow-scripts allow-same-origin;
+  sandbox allow-scripts;
 ```
 
 `unsafe-inline` 为接受单 HTML 小游戏的兼容选择，只用于隔离运行域；不允许普通 JS unsafe-eval。WASM 编译是否被目标 Chromium 正确允许要实测。`worker-src 'none'` 阻止本策略下创建 Worker/Service Worker，不提供离线安装；运行域不可复用任何旧的不受限部署。
 
 TD-1.1 的公开免费游戏响应不设置 frame-ancestors 或 X-Frame-Options，以接纳实际桌面 Webview 的完整祖先链；不靠父站来源授予权限。业务账户页面仍限制嵌入，游戏的 sandbox、独立域、子资源 CSP 与游戏通道限制保留。frame-ancestors 会检查全部祖先，不能只核对最内层 iframe 的 URL；三宿主都要实测。[MDN frame-ancestors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors)
 
-iframe 固定 `sandbox="allow-scripts allow-same-origin"`、`referrerpolicy="no-referrer"`。默认无 forms、popups、downloads、top-navigation 和原生桥。批准 pointerLock 时 iframe 与 HTTP sandbox 同时添加 `allow-pointer-lock`；不靠 manifest 直接授权。fullscreen 经 Permissions-Policy 和 iframe allow 按批准能力委派，用户操作触发。
+iframe 固定 `sandbox="allow-scripts"`、`referrerpolicy="no-referrer"`。默认无 forms、popups、downloads、top-navigation 和原生桥。批准 pointerLock 时 iframe 与 HTTP sandbox 同时添加 `allow-pointer-lock`；不靠 manifest 直接授权。fullscreen 经 Permissions-Policy 和 iframe allow 按批准能力委派，用户操作触发。
 
 Permissions-Policy 默认拒绝 camera、microphone、geolocation、usb、serial、hid、payment、display-capture 和 clipboard 权限；fullscreen 只为相应游戏开放。必须测试宿主上层策略，子 frame 无法扩大父层禁止的权限。
 

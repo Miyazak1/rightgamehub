@@ -1,4 +1,4 @@
-import { WEB_GAME_BRIDGE_PROTOCOL, WEB_GAME_BRIDGE_VERSION, bridgeEnvelope } from './protocol.mjs';
+import { WEB_GAME_BRIDGE_PROTOCOL, WEB_GAME_BRIDGE_VERSION, bridgeEnvelope, parseBridgeRequest } from './protocol.mjs';
 
 const randomId = () => globalThis.crypto?.randomUUID?.() ?? `00000000-0000-4000-8000-${Math.random().toString(16).slice(2).padEnd(12, '0').slice(0, 12)}`;
 const randomNonce = () => {
@@ -14,12 +14,21 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   let port = null;
   let connectPromise = null;
   let closed = false;
+  let capabilities = [];
+  let cancelConnect = null;
 
   const emit = (event, payload) => { for (const listener of listeners.get(event) ?? []) listener(payload); };
   const handlePortMessage = event => {
     const message = event.data;
     if (!message || message.protocol !== WEB_GAME_BRIDGE_PROTOCOL || message.version !== WEB_GAME_BRIDGE_VERSION) return;
-    if (message.type === 'event') return emit(message.event, message.payload);
+    if (message.type === 'event') {
+      if (message.event === 'bridge.closed') {
+        closed = true; port?.close?.(); port = null;
+        for (const operation of pending.values()) { clearTimeout(operation.timer); operation.reject(Object.assign(new Error('Game launch ended.'), { code: 'BRIDGE_CLOSED' })); }
+        pending.clear();
+      }
+      return emit(message.event, message.payload);
+    }
     if (message.type !== 'response' || !pending.has(message.id)) return;
     const operation = pending.get(message.id);
     pending.delete(message.id); clearTimeout(operation.timer);
@@ -28,7 +37,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   };
   const connect = () => {
     if (closed) return Promise.reject(new Error('GameHub client is closed.'));
-    if (port) return Promise.resolve();
+    if (port) return Promise.resolve([...capabilities]);
     if (connectPromise) return connectPromise;
     connectPromise = new Promise((resolve, reject) => {
       const clientNonce = randomNonce();
@@ -36,12 +45,15 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
       const onReady = event => {
         const message = event.data;
         if (event.source !== parentWindow || message?.protocol !== WEB_GAME_BRIDGE_PROTOCOL || message?.version !== WEB_GAME_BRIDGE_VERSION || message?.type !== 'gamehub.bridge.ready' || message.clientNonce !== clientNonce || !event.ports?.[0]) return;
-        clearTimeout(timer); windowImpl.removeEventListener('message', onReady);
+        if (closed) { event.ports[0].close?.(); return; }
+        clearTimeout(timer); windowImpl.removeEventListener('message', onReady); cancelConnect = null;
         port = event.ports[0];
         if (port.addEventListener) port.addEventListener('message', handlePortMessage); else port.onmessage = handlePortMessage;
         port.start?.();
-        resolve(message.capabilities ?? []);
+        capabilities = message.capabilities ?? [];
+        resolve([...capabilities]);
       };
+      cancelConnect = () => { clearTimeout(timer); windowImpl.removeEventListener('message', onReady); connectPromise = null; reject(new Error('GameHub client closed.')); };
       windowImpl.addEventListener('message', onReady);
       parentWindow.postMessage(bridgeEnvelope({ type: 'gamehub.bridge.connect', clientNonce }), '*');
     });
@@ -49,11 +61,13 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   };
   const request = async (method, params = {}) => {
     await connect();
+    if (closed || !port) throw new Error('GameHub client closed.');
     const id = randomId();
+    const envelope = parseBridgeRequest(bridgeEnvelope({ type: 'request',id,method,params }));
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { pending.delete(id); reject(Object.assign(new Error('GameHub bridge request timed out.'), { code: 'BRIDGE_TIMEOUT' })); }, requestTimeoutMs);
       pending.set(id, { resolve,reject,timer });
-      port.postMessage(bridgeEnvelope({ type: 'request',id,method,params }));
+      try { port.postMessage(envelope); } catch (error) { clearTimeout(timer); pending.delete(id); reject(error); }
     });
   };
   const rooms = {
@@ -88,7 +102,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
       return () => { set.delete(listener); if (!set.size) listeners.delete(event); };
     },
     close() {
-      closed = true; port?.close?.(); port = null;
+      closed = true; cancelConnect?.(); cancelConnect = null; port?.close?.(); port = null;
       for (const operation of pending.values()) { clearTimeout(operation.timer); operation.reject(new Error('GameHub client closed.')); }
       pending.clear(); listeners.clear();
     },

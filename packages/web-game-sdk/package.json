@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.mjs",
-    "./protocol": "./src/protocol.mjs"
+    "./protocol": "./src/protocol.mjs",
+    "./transfer": "./src/transfer.mjs"
   }
 }

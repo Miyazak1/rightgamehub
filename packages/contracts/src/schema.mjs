@@ -90,6 +90,16 @@ export const schemas = Object.freeze({
     refreshToken: { type: 'string', minLength: 32 }, refreshExpiresAt: dateTime,
     grantId: id, profile: { $ref: '#/components/schemas/Profile' },
   }),
+  CreateGameSessionRequest: object({ workId: id, releaseId: id, channel: stringEnum(['production','preview']), launchNonce: id }),
+  GameSession: object({
+    gameSessionId: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' }, expiresAt: dateTime,
+    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition']), uniqueItems: true },
+  }),
+  GameSessionStatus: object({
+    active: { type: 'boolean', const: true }, expiresAt: dateTime,
+    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition']), uniqueItems: true },
+  }),
+  GameSessionRevocation: object({ revoked: { type: 'boolean', const: true } }),
   RealtimeTicket: object({
     ticket: { type: 'string', minLength: 32, maxLength: 128 },
     websocketUrl: { type: 'string', pattern: '^wss?://' },
@@ -355,7 +365,7 @@ export const schemas = Object.freeze({
     releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
     entryUrl: { type: 'string', format: 'uri' }, runtimeOrigin: { type: 'string', format: 'uri' },
     playerProtocol: object({ min: { type: 'integer', minimum: 1 }, max: { type: 'integer', minimum: 1 } }),
-    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' } }),
+    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' }, cloudSave: { type: 'boolean' }, competition: { type: 'boolean' } }, ['fullscreen', 'pointerLock', 'multiplayer']),
   }),
   LibraryState: object({
     workId: workKey,
@@ -622,6 +632,9 @@ const errorResponses = {
 };
 
 export const operations = Object.freeze([
+  { method: 'post', path: '/v1/game-sessions', operationId: 'createGameSession', auth: 'bearer', request: 'CreateGameSessionRequest', response: 'GameSession', successStatus: '201' },
+  { method: 'get', path: '/v1/game-sessions/current', operationId: 'getGameSession', auth: 'bearer', response: 'GameSessionStatus', gameSession: true },
+  { method: 'delete', path: '/v1/game-sessions/current', operationId: 'revokeGameSession', auth: 'bearer', response: 'GameSessionRevocation', gameSession: true },
   { method: 'post', path: '/v1/auth/email/challenges', operationId: 'createEmailChallenge', auth: 'anonymous', request: 'EmailChallengeRequest', response: 'EmailChallenge' },
   { method: 'post', path: '/v1/auth/email/verify', operationId: 'verifyEmailChallenge', auth: 'anonymous', request: 'VerifyEmailRequest', response: 'AuthTokens' },
   { method: 'post', path: '/v1/auth/github/device', operationId: 'startGitHubDevice', auth: 'anonymous', request: 'GitHubDeviceStartRequest', response: 'GitHubDeviceChallenge' },
@@ -764,6 +777,7 @@ export function createOpenApiDocument() {
     if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
     if (operation.pathBuildId) parameters.push({ name: 'buildId', in: 'path', required: true, schema: id });
     if (operation.pathToken) parameters.push({ name: 'token', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } });
+    if (operation.gameSession) parameters.push({ name: 'X-GameHub-Session', in: 'header', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' } });
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });

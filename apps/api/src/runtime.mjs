@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { PostgresGameSessionRepository } from './game-session-repository.mjs';
+import { createGameSessionService } from './game-session-service.mjs';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.mjs';
 import { createDatabase } from './database.mjs';
@@ -149,7 +151,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildRepository = new PostgresSourceBuildRepository(database.pool);
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
+  const gameSessionService = createGameSessionService({ repository: new PostgresGameSessionRepository(database.pool) });
   const app = createApp({
+    gameSessionService,
     config,
     database,
     migrations,
@@ -208,6 +212,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     multiplayerRoomService,
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
+    gameSessionService,
     runtimeEdgeApp,
     app,
   };

@@ -33,7 +33,7 @@ export class PlayerCore {
     frame.addEventListener('error', () => this.#frame === frame && this.#setState('error', { message: '游戏加载失败。' }), { once: true });
     container.replaceChildren(frame); this.#frame = frame;
     try {
-      if (descriptor.capabilities?.multiplayer && this.options.createBridge) this.#bridge = this.options.createBridge({ frame,launchId: this.#launchId,descriptor });
+      if (['multiplayer', 'cloudSave', 'competition'].some(key => descriptor.capabilities?.[key] === true) && this.options.createBridge) this.#bridge = this.options.createBridge({ frame,launchId: this.#launchId,descriptor });
     } catch (error) {
       frame.src = 'about:blank'; frame.remove(); this.#frame = null; this.#launchId = null;
       throw error;

@@ -4,6 +4,32 @@ export const WEB_GAME_BRIDGE_MAX_BYTES = 32 * 1024;
 
 export const WEB_GAME_BRIDGE_METHODS = Object.freeze([
   'player.get',
+  'cloudSave.policy.get',
+  'cloudSave.slots.list',
+  'cloudSave.slots.metadata',
+  'cloudSave.slots.read',
+  'cloudSave.slots.write',
+  'cloudSave.slots.delete',
+  'cloudSave.slots.history',
+  'cloudSave.slots.restore',
+  'cloudSave.conflicts.resolve',
+  'cloudSave.sync.status',
+  'cloudSave.export.request',
+  'cloudSave.transfer.begin',
+  'cloudSave.transfer.append',
+  'cloudSave.transfer.commit',
+  'cloudSave.transfer.abort',
+  'cloudSave.transfer.read',
+  'competition.modes.list',
+  'competition.runs.start',
+  'competition.runs.get',
+  'competition.runs.finish',
+  'competition.runs.abandon',
+  'competition.evidence.begin',
+  'competition.evidence.append',
+  'competition.evidence.commit',
+  'competition.evidence.abort',
+  'competition.leaderboards.get',
   'multiplayer.modes.list',
   'multiplayer.rooms.list',
   'multiplayer.rooms.create',
@@ -48,3 +74,8 @@ export function parseBridgeRequest(value) {
 }
 
 export const bridgeEnvelope = fields => ({ protocol: WEB_GAME_BRIDGE_PROTOCOL, version: WEB_GAME_BRIDGE_VERSION, ...fields });
+
+export function bridgeMethodCapability(method) {
+  if (!methods.has(method)) return null;
+  return method === 'player.get' ? 'identity' : method.split('.')[0];
+}
