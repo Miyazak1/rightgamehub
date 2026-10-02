@@ -15037,6 +15037,36 @@
           "url"
         ]
       },
+      "PublicGitHubRepository": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://github\\.com/"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "name",
+          "url"
+        ]
+      },
       "PublicUserProfile": {
         "type": "object",
         "additionalProperties": false,
@@ -15069,6 +15099,17 @@
               "followers",
               "private"
             ]
+          },
+          "libraryVisibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "followers",
+              "private"
+            ]
+          },
+          "libraryVisible": {
+            "type": "boolean"
           },
           "creator": {
             "type": "boolean"
@@ -15108,6 +15149,13 @@
               "$ref": "#/components/schemas/PublicProfileLink"
             }
           },
+          "githubRepositories": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "$ref": "#/components/schemas/PublicGitHubRepository"
+            }
+          },
           "featuredWorks": {
             "type": "array",
             "maxItems": 6,
@@ -15116,6 +15164,13 @@
             }
           },
           "works": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Work"
+            }
+          },
+          "library": {
             "type": "array",
             "maxItems": 100,
             "items": {
@@ -15130,6 +15185,8 @@
           "headline",
           "about",
           "visibility",
+          "libraryVisibility",
+          "libraryVisible",
           "creator",
           "role",
           "joinedAt",
@@ -15139,8 +15196,10 @@
           "isFollowing",
           "isMe",
           "links",
+          "githubRepositories",
           "featuredWorks",
-          "works"
+          "works",
+          "library"
         ]
       },
       "UpdatePublicProfileRequest": {
@@ -15167,6 +15226,14 @@
               "private"
             ]
           },
+          "libraryVisibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "followers",
+              "private"
+            ]
+          },
           "links": {
             "type": "array",
             "maxItems": 5,
@@ -15175,6 +15242,15 @@
             }
           },
           "featuredWorkIds": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "githubRepositoryIds": {
             "type": "array",
             "maxItems": 6,
             "uniqueItems": true,

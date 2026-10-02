@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 
-const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.can_publish,u.role,u.created_at,
+const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.profile_library_visibility,u.can_publish,u.role,u.created_at,
   a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,
   (SELECT count(*) FROM user_follows f WHERE f.followed_user_id=u.id)::int AS follower_count,
   (SELECT count(*) FROM user_follows f WHERE f.follower_user_id=u.id)::int AS following_count,
@@ -25,6 +25,24 @@ const publicWorksSql = `SELECT w.*,u.display_name AS creator_display_name,u.prof
    AND r.validation_state='ready' AND r.serving_state='enabled'
  ORDER BY fw.position NULLS LAST,w.first_published_at DESC,w.id,t.target_key`;
 
+const publicLibrarySql = `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,
+  COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
+  t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
+  r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
+  r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes,
+  NULL::smallint AS featured_position
+ FROM user_library library
+ JOIN works w ON w.id::text=library.work_key
+ JOIN users u ON u.id=w.owner_user_id
+ JOIN work_targets t ON t.work_id=w.id
+ JOIN releases r ON r.id=t.current_release_id AND r.work_id=t.work_id AND r.target_key=t.target_key
+ JOIN upload_jobs ru ON ru.id=r.upload_job_id
+ LEFT JOIN LATERAL (SELECT COALESCE(SUM(play_count),0)::integer AS play_count,COUNT(*) FILTER (WHERE saved_at IS NOT NULL)::integer AS save_count FROM user_library WHERE work_key=w.id::text) e ON true
+ WHERE library.user_id=$1 AND library.saved_at IS NOT NULL
+   AND w.state='published' AND w.visibility='public' AND t.state='published'
+   AND r.validation_state='ready' AND r.serving_state='enabled'
+ ORDER BY library.saved_at DESC,w.id,t.target_key`;
+
 export class PostgresPublicProfileRepository {
   constructor(pool) { this.pool = pool; }
 
@@ -37,11 +55,20 @@ export class PostgresPublicProfileRepository {
       [viewerId, handle],
     )).rows[0];
     if (!profile) return null;
-    const [links, works] = await Promise.all([
+    const libraryVisible = profile.is_me || profile.profile_library_visibility === 'public' || (profile.profile_library_visibility === 'followers' && profile.is_following);
+    const [links, works, library, savedKeys, githubRepositories] = await Promise.all([
       client.query('SELECT kind,label,url,position FROM user_profile_links WHERE user_id=$1 ORDER BY position', [profile.id]),
       client.query(publicWorksSql, [profile.id]),
+      libraryVisible ? client.query(publicLibrarySql, [profile.id]) : Promise.resolve({ rows: [] }),
+      libraryVisible ? client.query('SELECT work_key FROM user_library WHERE user_id=$1 AND saved_at IS NOT NULL ORDER BY saved_at DESC', [profile.id]) : Promise.resolve({ rows: [] }),
+      client.query(`SELECT r.id,r.owner_login,r.name,r.html_url,p.position
+        FROM user_profile_github_repositories p
+        JOIN github_source_repositories r ON r.id=p.source_repository_id
+        JOIN github_source_connections c ON c.id=r.connection_id
+        WHERE p.user_id=$1 AND c.user_id=$1 AND c.status='active' AND r.access_state='active' AND r.visibility='public'
+        ORDER BY p.position`, [profile.id]),
     ]);
-    return { profile, links: links.rows, workRows: works.rows };
+    return { profile, links: links.rows, workRows: works.rows, libraryWorkRows: library.rows, libraryWorkKeys: savedKeys.rows.map(row => row.work_key), libraryVisible, githubRepositories: githubRepositories.rows };
   }
 
   async update(input) {
@@ -56,10 +83,18 @@ export class PostgresPublicProfileRepository {
           )).rows.map(row => row.id);
           if (eligible.length !== input.featuredWorkIds.length) return { error: 'featured_work_invalid' };
         }
+        if (input.githubRepositoryIds.length) {
+          const eligible = (await client.query(
+            `SELECT r.id FROM github_source_repositories r JOIN github_source_connections c ON c.id=r.connection_id
+              WHERE c.user_id=$1 AND c.status='active' AND r.id=ANY($2::uuid[]) AND r.access_state='active' AND r.visibility='public'`,
+            [input.userId, input.githubRepositoryIds],
+          )).rows.map(row => row.id);
+          if (eligible.length !== input.githubRepositoryIds.length) return { error: 'github_repository_invalid' };
+        }
         await client.query(
-          `UPDATE users SET profile_handle=$2,bio=$3,profile_about=$4,social_visibility=$5,updated_at=$6
+          `UPDATE users SET profile_handle=$2,bio=$3,profile_about=$4,social_visibility=$5,profile_library_visibility=$6,updated_at=$7
             WHERE id=$1 AND status='active'`,
-          [input.userId, input.handle, input.headline, input.about, input.visibility, input.now],
+          [input.userId, input.handle, input.headline, input.about, input.visibility, input.libraryVisibility, input.now],
         );
         await client.query('DELETE FROM user_profile_links WHERE user_id=$1', [input.userId]);
         for (const [position, link] of input.links.entries()) await client.query(
@@ -70,6 +105,11 @@ export class PostgresPublicProfileRepository {
         for (const [position, workId] of input.featuredWorkIds.entries()) await client.query(
           'INSERT INTO user_featured_works(user_id,work_id,position,created_at) VALUES ($1,$2,$3,$4)',
           [input.userId, workId, position, input.now],
+        );
+        await client.query('DELETE FROM user_profile_github_repositories WHERE user_id=$1', [input.userId]);
+        for (const [position, repositoryId] of input.githubRepositoryIds.entries()) await client.query(
+          'INSERT INTO user_profile_github_repositories(user_id,source_repository_id,position,created_at) VALUES ($1,$2,$3,$4)',
+          [input.userId, repositoryId, position, input.now],
         );
         const handle = (await client.query('SELECT profile_handle FROM users WHERE id=$1', [input.userId])).rows[0]?.profile_handle;
         return this.getByHandle(input.userId, handle, client);

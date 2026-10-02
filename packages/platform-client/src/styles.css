@@ -144,6 +144,14 @@ button { cursor: pointer; }
 .community-project__copy > div:last-child button { margin-left: auto; padding: 5px 7px; border: 1px solid var(--gh-action); background: color-mix(in srgb, var(--gh-action) 10%, transparent); color: var(--gh-primary); font: 700 9px ui-monospace, monospace; }
 .community-project__copy > div:last-child button:hover { background: var(--gh-action); color: var(--gh-onAction); }
 .detail-byline { margin: -4px 0 12px; color: var(--gh-secondary); font: 700 10px ui-monospace, monospace; }
+.creator-profile-link { width: fit-content; padding: 0; border: 0; background: transparent; color: var(--gh-accent); font: 700 10px ui-monospace, "Cascadia Mono", monospace; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.creator-profile-link:hover { color: var(--gh-primary); }
+.profile-repository-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 12px; }
+.profile-repository-grid > a { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 14px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); text-decoration: none; }
+.profile-repository-grid svg { width: 24px; height: 24px; flex: 0 0 auto; }
+.profile-repository-grid span { display: grid; gap: 5px; min-width: 0; }
+.profile-repository-grid strong { overflow: hidden; text-overflow: ellipsis; font: 800 12px ui-monospace, "Cascadia Mono", monospace; }
+.profile-repository-grid small { color: var(--gh-secondary); font-size: 9px; }
 .detail-tags { margin: 0 0 17px; display: flex; flex-wrap: wrap; gap: 5px; }
 .detail-tags span { padding: 4px 6px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font: 700 9px ui-monospace, monospace; }
 .source-link { margin-top: 20px !important; display: flex; align-items: center; justify-content: space-between; gap: 12px; }

@@ -592,7 +592,9 @@ export function createApp({ config, database, migrations, authService, workServi
       preHandler: requireAuth,
       schema: { body: { type: 'object', additionalProperties: false, required: ['handle','headline','about','visibility','links','featuredWorkIds'], properties: {
         handle: { type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9-]{2,31}$' }, headline: { type: 'string', maxLength: 160 }, about: { type: 'string', maxLength: 2000 }, visibility: { type: 'string', enum: ['public','followers','private'] },
+        libraryVisibility: { type: 'string', enum: ['public','followers','private'] },
         links: { type: 'array', maxItems: 5, items: profileLink }, featuredWorkIds: { type: 'array', maxItems: 6, uniqueItems: true, items: { type: 'string', format: 'uuid' } },
+        githubRepositoryIds: { type: 'array', maxItems: 6, uniqueItems: true, items: { type: 'string', format: 'uuid' } },
       } } },
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');

@@ -31,6 +31,7 @@ import { PostgresSocialRepository } from './social-repository.mjs';
 import { createSocialService } from './social-service.mjs';
 import { PostgresPublicProfileRepository } from './public-profile-repository.mjs';
 import { createPublicProfileService } from './public-profile-service.mjs';
+import { guessBaikeWork } from './built-in-works.mjs';
 import { createConfiguredMailer } from './mailer.mjs';
 import { PostgresAnalyticsRepository } from './analytics-repository.mjs';
 import { createAnalyticsService } from './analytics-service.mjs';
@@ -129,7 +130,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
-  const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool) });
+  const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool), builtInWorks: [guessBaikeWork] });
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });

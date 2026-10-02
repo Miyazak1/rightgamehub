@@ -7,20 +7,23 @@ const moduleUrl = pathToFileURL(path.resolve(__dirname, '../../apps/api/src/publ
 const profileResult = overrides => ({
   profile: {
     id: '00000000-0000-4000-8000-000000000001', profile_handle: 'pixel-maker', display_name: 'Pixel Maker', bio: '做小而完整的游戏',
-    profile_about: '喜欢像素与轻量玩法。', social_visibility: 'public', can_publish: true, role: 'user', created_at: new Date('2026-09-01T00:00:00Z'),
+    profile_about: '喜欢像素与轻量玩法。', social_visibility: 'public', profile_library_visibility: 'followers', can_publish: true, role: 'user', created_at: new Date('2026-09-01T00:00:00Z'),
     avatar_kind: 'preset', preset_key: 'fox', follower_count: 3, following_count: 2, is_following: false, is_me: true,
     ...overrides,
   },
-  links: [{ kind: 'github', label: 'GitHub', url: 'https://github.com/example', position: 0 }], workRows: [],
+  links: [{ kind: 'github', label: 'GitHub', url: 'https://github.com/example', position: 0 }], workRows: [], libraryWorkRows: [], libraryVisible: true,
 });
 
 test('public profile supports anonymous reads and keeps the compact social identity separate', async () => {
   const { createPublicProfileService } = await import(moduleUrl);
   const calls = [];
-  const service = createPublicProfileService({ repository: { getByHandle: async (viewerId, handle) => { calls.push([viewerId, handle]); return profileResult({ is_me: false }); } } });
+  const service = createPublicProfileService({ repository: { getByHandle: async (viewerId, handle) => { calls.push([viewerId, handle]); return { ...profileResult({ is_me: false }),libraryWorkKeys: ['gamehub-built-in'] }; } },builtInWorks: [{ id: 'gamehub-built-in',title: '内置游戏' }] });
   const profile = await service.get(null, 'PIXEL-MAKER');
   assert.equal(profile.handle, 'pixel-maker');
   assert.equal(profile.creator, true);
+  assert.equal(profile.libraryVisibility, 'followers');
+  assert.equal(profile.libraryVisible, true);
+  assert.equal(profile.library[0].title, '内置游戏');
   assert.equal(profile.links[0].url, 'https://github.com/example');
   assert.deepEqual(calls[0], [null, 'pixel-maker']);
 });
@@ -33,12 +36,15 @@ test('public profile updates normalize handles and reject unsafe links or invali
     clock: () => new Date('2026-10-01T00:00:00Z'),
   });
   const actor = { userId: '00000000-0000-4000-8000-000000000001' };
-  const result = await service.update(actor, { handle: 'Pixel-Maker', headline: '  hello  ', about: '  about  ', visibility: 'followers', links: [{ kind: 'github', label: 'Code', url: 'https://github.com/example' }], featuredWorkIds: [] });
+  const repositoryId = '00000000-0000-4000-8000-000000000099';
+  const result = await service.update(actor, { handle: 'Pixel-Maker', headline: '  hello  ', about: '  about  ', visibility: 'followers', libraryVisibility: 'public', links: [{ kind: 'github', label: 'Code', url: 'https://github.com/example' }], featuredWorkIds: [], githubRepositoryIds: [repositoryId] });
   assert.equal(result.handle, 'pixel-maker');
   assert.equal(saved.headline, 'hello');
+  assert.equal(saved.libraryVisibility, 'public');
+  assert.deepEqual(saved.githubRepositoryIds, [repositoryId]);
   assert.equal(saved.links[0].url, 'https://github.com/example');
-  await assert.rejects(service.update(actor, { handle: 'admin', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
-  await assert.rejects(service.update(actor, { handle: 'valid-name', headline: '', about: '', visibility: 'public', links: [{ kind: 'website', label: 'Local', url: 'https://127.0.0.1/path' }], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
+  await assert.rejects(service.update(actor, { handle: 'admin', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
+  await assert.rejects(service.update(actor, { handle: 'valid-name', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [{ kind: 'website', label: 'Local', url: 'https://127.0.0.1/path' }], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
 });
 
 test('hidden and conflicting profiles fail closed with stable error codes', async () => {
@@ -46,5 +52,7 @@ test('hidden and conflicting profiles fail closed with stable error codes', asyn
   const hidden = createPublicProfileService({ repository: { getByHandle: async () => null } });
   await assert.rejects(hidden.get(null, 'hidden-user'), error => error.code === 'PROFILE_NOT_FOUND' && error.statusCode === 404);
   const conflict = createPublicProfileService({ repository: { update: async () => ({ error: 'handle_taken' }) } });
-  await assert.rejects(conflict.update({ userId: 'u' }, { handle: 'valid-name', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] }), error => error.code === 'HANDLE_TAKEN' && error.statusCode === 409);
+  await assert.rejects(conflict.update({ userId: 'u' }, { handle: 'valid-name', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] }), error => error.code === 'HANDLE_TAKEN' && error.statusCode === 409);
+  const invalidRepository = createPublicProfileService({ repository: { update: async () => ({ error: 'github_repository_invalid' }) } });
+  await assert.rejects(invalidRepository.update({ userId: 'u' }, { handle: 'valid-name', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [], githubRepositoryIds: ['00000000-0000-4000-8000-000000000099'] }), error => error.code === 'GITHUB_REPOSITORY_INVALID');
 });

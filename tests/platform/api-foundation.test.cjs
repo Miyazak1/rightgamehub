@@ -111,9 +111,9 @@ test('public profile reads are anonymous while profile edits require the current
   t.after(() => app.close());
   const read = await app.inject({ method: 'GET', url: '/v1/profiles/pixel-maker' });
   assert.equal(read.statusCode, 200); assert.equal(read.headers['cache-control'], 'public, max-age=60'); assert.equal(calls[0][1], null);
-  const denied = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] } });
+  const denied = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] } });
   assert.equal(denied.statusCode, 401);
-  const updated = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', headers: { authorization: 'Bearer token' }, payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', links: [], featuredWorkIds: [] } });
+  const updated = await app.inject({ method: 'PATCH', url: '/v1/me/public-profile', headers: { authorization: 'Bearer token' }, payload: { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] } });
   assert.equal(updated.statusCode, 200); assert.equal(updated.headers['cache-control'], 'no-store'); assert.equal(calls[1][1], actor);
 });
 
