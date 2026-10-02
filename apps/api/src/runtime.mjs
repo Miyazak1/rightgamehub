@@ -36,6 +36,7 @@ import { createConfiguredMailer } from './mailer.mjs';
 import { PostgresAnalyticsRepository } from './analytics-repository.mjs';
 import { createAnalyticsService } from './analytics-service.mjs';
 import { PostgresCreatorFeedbackRepository, createCreatorFeedbackService } from './creator-feedback-service.mjs';
+import { PostgresContributionTaskRepository, createContributionTaskService } from './contribution-task-service.mjs';
 import { createRealtimeTicketService } from './realtime-ticket-service.mjs';
 import { createRedisRealtimeTicketStore } from './redis-realtime-ticket-store.mjs';
 import { PostgresMultiplayerRoomRepository } from './multiplayer-room-repository.mjs';
@@ -134,6 +135,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool), builtInWorks: [guessBaikeWork] });
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(database.pool) });
+  const contributionTaskService = createContributionTaskService({ repository: new PostgresContributionTaskRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -165,6 +167,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     publicProfileService,
     analyticsService,
     creatorFeedbackService,
+    contributionTaskService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
@@ -198,6 +201,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     publicProfileService,
     analyticsService,
     creatorFeedbackService,
+    contributionTaskService,
     storageCapacityService,
     realtimeTicketService,
     rulesRegistry,

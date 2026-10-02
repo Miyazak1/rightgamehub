@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 43);
+  assert.equal(files.length, 44);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -54,6 +54,12 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(creatorFeedback, /CREATE TABLE creator_feedback_events/);
   assert.match(creatorFeedback, /BEFORE UPDATE ON creator_feedback_events/);
   assert.match(creatorFeedback, /BEFORE DELETE ON creator_feedback_events/);
+  const contributionTasks = fs.readFileSync(path.join(migrationDir, '0044_contribution_tasks.sql'), 'utf8');
+  assert.match(contributionTasks, /CREATE TABLE contribution_tasks/);
+  assert.match(contributionTasks, /CREATE TABLE contribution_task_events/);
+  assert.match(contributionTasks, /最多|status IN \('claimed','submitted','completed'\)/);
+  assert.match(contributionTasks, /BEFORE UPDATE ON contribution_task_events/);
+  assert.match(contributionTasks, /BEFORE DELETE ON contribution_task_events/);
   const analytics = fs.readFileSync(path.join(migrationDir, '0029_analytics_foundation.sql'), 'utf8');
   assert.match(analytics, /CREATE TABLE analytics_events/);
   assert.match(analytics, /download_complete/);

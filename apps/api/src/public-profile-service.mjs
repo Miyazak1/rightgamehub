@@ -73,6 +73,7 @@ const view = result => {
     isFollowing: Boolean(row.is_following), isMe: Boolean(row.is_me),
     links: result.links.map(link => ({ kind: link.kind, label: link.label, url: link.url })),
     githubRepositories: (result.githubRepositories ?? []).map(repository => ({ id: repository.id, owner: repository.owner_login, name: repository.name, url: repository.html_url })),
+    contributions: (result.contributions ?? []).map(item => ({ taskId: item.task_id, title: item.title, workId: item.work_id, workTitle: item.work_title, repositoryUrl: item.repository_url, issueUrl: item.issue_url, submissionUrl: item.submission_url, completedAt: new Date(item.completed_at).toISOString() })),
     activity: (result.activity ?? []).map(item => ({ type: item.type, occurredAt: new Date(item.occurred_at).toISOString(), title: item.title, workId: item.work_id ?? null })),
     achievements: achievementView(result.achievementMetrics),
     featuredWorks: featuredIds.map(id => workById.get(id)).filter(Boolean), works, library,

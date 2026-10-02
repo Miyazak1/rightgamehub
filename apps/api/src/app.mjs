@@ -12,6 +12,7 @@ import { PublicProfileError } from './public-profile-service.mjs';
 import { GuessBaikeError } from './guess-baike-service.mjs';
 import { AnalyticsError } from './analytics-service.mjs';
 import { CreatorFeedbackError } from './creator-feedback-service.mjs';
+import { ContributionTaskError } from './contribution-task-service.mjs';
 import { StorageCapacityError } from './storage-capacity-service.mjs';
 import { RealtimeTicketError } from './realtime-ticket-service.mjs';
 import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
@@ -51,6 +52,7 @@ export function createApp(dependencies) {
     publicProfileService,
     analyticsService,
     creatorFeedbackService,
+    contributionTaskService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus = null,
@@ -79,7 +81,7 @@ export function createApp(dependencies) {
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -734,6 +736,53 @@ export function createApp(dependencies) {
       reply.header('Cache-Control', 'no-store');
       return envelope(await creatorFeedbackService.update(request.actor, request.params.feedbackId, request.body));
     });
+  }
+
+  if (contributionTaskService) {
+    const taskParams = { type: 'object', additionalProperties: false, required: ['taskId'], properties: { taskId: { type: 'string', format: 'uuid' } } };
+    const contributionTaskBody = { type: 'object', additionalProperties: false, required: ['title','description','difficulty','skills'], properties: {
+      title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
+      difficulty: { type: 'string', enum: ['starter','intermediate','advanced'] },
+      skills: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 30 } },
+    } };
+    app.post('/v1/creator/feedback/:feedbackId/contribution-task', {
+      preHandler: requireAuth,
+      schema: { params: { type: 'object', additionalProperties: false, required: ['feedbackId'], properties: { feedbackId: { type: 'string', format: 'uuid' } } }, body: contributionTaskBody },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); reply.status(201);
+      return envelope(await contributionTaskService.createFromFeedback(request.actor, request.params.feedbackId, request.body));
+    });
+    app.get('/v1/creator/contribution-tasks', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 } } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.listForCreator(request.actor, request.query)); });
+    app.patch('/v1/creator/contribution-tasks/:taskId', {
+      preHandler: requireAuth,
+      schema: { params: taskParams, body: { type: 'object', additionalProperties: false, required: ['action'], properties: {
+        action: { type: 'string', enum: ['publish','close','reopen','complete','request_changes','link_issue'] }, issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.creatorAction(request.actor, request.params.taskId, request.body)); });
+    app.post('/v1/creator/contribution-tasks/:taskId/issue-draft', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.issueDraft(request.actor, request.params.taskId));
+    });
+    app.get('/v1/contribution-tasks', {
+      preHandler: identifyOptional,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: {
+        status: { type: 'string', enum: ['all','open','claimed','submitted','completed'] }, limit: { type: 'integer', minimum: 1, maximum: 100 },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', request.actor ? 'private, no-store' : 'public, max-age=30'); return envelope(await contributionTaskService.listPublic(request.actor, request.query)); });
+    app.post('/v1/contribution-tasks/:taskId/claim', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.claim(request.actor, request.params.taskId));
+    });
+    app.post('/v1/contribution-tasks/:taskId/release', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.release(request.actor, request.params.taskId));
+    });
+    app.post('/v1/contribution-tasks/:taskId/submission', {
+      preHandler: requireAuth,
+      schema: { params: taskParams, body: { type: 'object', additionalProperties: false, required: ['url','note'], properties: {
+        url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 },
+      } } },
+    }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.submit(request.actor, request.params.taskId, request.body)); });
   }
 
   if (workService) {

@@ -432,6 +432,7 @@ export const schemas = Object.freeze({
     followerCount: { type: 'integer', minimum: 0 }, followingCount: { type: 'integer', minimum: 0 }, isFollowing: { type: 'boolean' }, isMe: { type: 'boolean' },
     links: { type: 'array', maxItems: 5, items: { $ref: '#/components/schemas/PublicProfileLink' } },
     githubRepositories: { type: 'array', maxItems: 6, items: { $ref: '#/components/schemas/PublicGitHubRepository' } },
+    contributions: { type: 'array', maxItems: 20, items: { $ref: '#/components/schemas/PublicProfileContribution' } },
     featuredWorks: { type: 'array', maxItems: 6, items: { $ref: '#/components/schemas/Work' } },
     works: { type: 'array', maxItems: 100, items: { $ref: '#/components/schemas/Work' } },
     library: { type: 'array', maxItems: 100, items: { $ref: '#/components/schemas/Work' } },
@@ -528,6 +529,36 @@ export const schemas = Object.freeze({
   UpdateCreatorFeedbackRequest: object({
     action: stringEnum(['review','archive','reopen','link_issue']), issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
   }, ['action']),
+  ContributionIdentity: object({ id, handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, displayName: { type: 'string', minLength: 1, maxLength: 120 } }),
+  CreateContributionTaskRequest: object({
+    title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
+    difficulty: stringEnum(['starter','intermediate','advanced']),
+    skills: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 30 } },
+  }),
+  ContributionTask: object({
+    id, workId: id, workTitle: { type: 'string', minLength: 1, maxLength: 120 }, feedbackId: { oneOf: [id,{ type: 'null' }] },
+    title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
+    difficulty: stringEnum(['starter','intermediate','advanced']), skills: { type: 'array', maxItems: 8, items: { type: 'string', minLength: 1, maxLength: 30 } },
+    status: stringEnum(['draft','open','claimed','submitted','completed','closed']),
+    repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, issueUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] },
+    submissionUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, submissionNote: { type: 'string', maxLength: 2000 },
+    author: { $ref: '#/components/schemas/ContributionIdentity' }, claimant: { oneOf: [{ $ref: '#/components/schemas/ContributionIdentity' },{ type: 'null' }] },
+    publishedAt: { oneOf: [dateTime,{ type: 'null' }] }, claimedAt: { oneOf: [dateTime,{ type: 'null' }] }, submittedAt: { oneOf: [dateTime,{ type: 'null' }] }, completedAt: { oneOf: [dateTime,{ type: 'null' }] },
+    createdAt: dateTime, updatedAt: dateTime,
+  }),
+  UpdateContributionTaskRequest: object({
+    action: stringEnum(['publish','close','reopen','complete','request_changes','link_issue']), issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
+  }, ['action']),
+  ContributionSubmissionRequest: object({ url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 } }),
+  ContributionIssueDraft: object({
+    taskId: id, title: { type: 'string', minLength: 1, maxLength: 200 }, body: { type: 'string', minLength: 1, maxLength: 10000 },
+    repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, createUrl: { oneOf: [{ type: 'string', maxLength: 16000 },{ type: 'null' }] },
+  }),
+  PublicProfileContribution: object({
+    taskId: id, title: { type: 'string', minLength: 5, maxLength: 160 }, workId: id, workTitle: { type: 'string', minLength: 1, maxLength: 120 },
+    repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, issueUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] },
+    submissionUrl: { type: 'string', minLength: 1, maxLength: 2048 }, completedAt: dateTime,
+  }),
   ModerationDecisionRequest: object({ action: stringEnum(['suspend','dismiss']), note: { type: 'string', minLength: 1, maxLength: 1000 } }),
   ModerationAuditEvent: object({
     id, reportId: id, workId: id, workTitle: { type: 'string', minLength: 1, maxLength: 120 }, actorUserId: id,
@@ -677,6 +708,14 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/creator/feedback', operationId: 'listCreatorFeedback', auth: 'bearer', response: 'CreatorFeedback', responseArray: true },
   { method: 'post', path: '/v1/creator/feedback/{feedbackId}/issue-draft', operationId: 'createCreatorFeedbackIssueDraft', auth: 'bearer', response: 'CreatorFeedbackIssueDraft', pathId: 'feedbackId' },
   { method: 'patch', path: '/v1/creator/feedback/{feedbackId}', operationId: 'updateCreatorFeedback', auth: 'bearer', request: 'UpdateCreatorFeedbackRequest', response: 'CreatorFeedback', pathId: 'feedbackId' },
+  { method: 'post', path: '/v1/creator/feedback/{feedbackId}/contribution-task', operationId: 'createContributionTaskFromFeedback', auth: 'bearer', request: 'CreateContributionTaskRequest', response: 'ContributionTask', pathId: 'feedbackId', successStatus: '201' },
+  { method: 'get', path: '/v1/creator/contribution-tasks', operationId: 'listCreatorContributionTasks', auth: 'bearer', response: 'ContributionTask', responseArray: true, queryLimit: true },
+  { method: 'patch', path: '/v1/creator/contribution-tasks/{taskId}', operationId: 'updateCreatorContributionTask', auth: 'bearer', request: 'UpdateContributionTaskRequest', response: 'ContributionTask', pathId: 'taskId' },
+  { method: 'post', path: '/v1/creator/contribution-tasks/{taskId}/issue-draft', operationId: 'createContributionIssueDraft', auth: 'bearer', response: 'ContributionIssueDraft', pathId: 'taskId' },
+  { method: 'get', path: '/v1/contribution-tasks', operationId: 'listContributionTasks', auth: 'anonymous', response: 'ContributionTask', responseArray: true, queryContributionTasks: true },
+  { method: 'post', path: '/v1/contribution-tasks/{taskId}/claim', operationId: 'claimContributionTask', auth: 'bearer', response: 'ContributionTask', pathId: 'taskId' },
+  { method: 'post', path: '/v1/contribution-tasks/{taskId}/release', operationId: 'releaseContributionTask', auth: 'bearer', response: 'ContributionTask', pathId: 'taskId' },
+  { method: 'post', path: '/v1/contribution-tasks/{taskId}/submission', operationId: 'submitContributionTask', auth: 'bearer', request: 'ContributionSubmissionRequest', response: 'ContributionTask', pathId: 'taskId' },
   { method: 'get', path: '/v1/admin/reports', operationId: 'listContentReports', auth: 'bearer', response: 'ContentReport', responseArray: true },
   { method: 'post', path: '/v1/admin/reports/{reportId}/decision', operationId: 'decideContentReport', auth: 'bearer', request: 'ModerationDecisionRequest', response: 'ContentReport', pathId: 'reportId' },
   { method: 'get', path: '/v1/admin/audit', operationId: 'listModerationAudit', auth: 'bearer', response: 'ModerationAuditEvent', responseArray: true },
@@ -747,6 +786,10 @@ export function createOpenApiDocument() {
       { name: 'limit',in: 'query',required: false,schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } },
     );
     if (operation.queryLimit) parameters.push({ name: 'limit', in: 'query', required: false, schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } });
+    if (operation.queryContributionTasks) parameters.push(
+      { name: 'status', in: 'query', required: false, schema: stringEnum(['all','open','claimed','submitted','completed']) },
+      { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
+    );
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
       { name: 'scope', in: 'query', required: true, schema: stringEnum(['global','following']) },

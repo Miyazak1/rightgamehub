@@ -59,7 +59,7 @@ export class PostgresPublicProfileRepository {
     const libraryVisible = profile.is_me || profile.profile_library_visibility === 'public' || (profile.profile_library_visibility === 'followers' && profile.is_following);
     const activityVisible = profile.is_me || profile.profile_activity_visibility === 'public' || (profile.profile_activity_visibility === 'followers' && profile.is_following);
     const achievementsVisible = profile.is_me || profile.profile_achievements_visibility === 'public' || (profile.profile_achievements_visibility === 'followers' && profile.is_following);
-    const [links, works, library, savedKeys, githubRepositories, activity, achievementMetrics] = await Promise.all([
+    const [links, works, library, savedKeys, githubRepositories, contributions, activity, achievementMetrics] = await Promise.all([
       client.query('SELECT kind,label,url,position FROM user_profile_links WHERE user_id=$1 ORDER BY position', [profile.id]),
       client.query(publicWorksSql, [profile.id]),
       libraryVisible ? client.query(publicLibrarySql, [profile.id]) : Promise.resolve({ rows: [] }),
@@ -70,6 +70,11 @@ export class PostgresPublicProfileRepository {
         JOIN github_source_connections c ON c.id=r.connection_id
         WHERE p.user_id=$1 AND c.user_id=$1 AND c.status='active' AND r.access_state='active' AND r.visibility='public'
         ORDER BY p.position`, [profile.id]),
+      client.query(`SELECT t.id AS task_id,t.title,t.work_id,w.title AS work_title,t.repository_url,t.issue_url,t.submission_url,t.completed_at
+        FROM contribution_tasks t JOIN works w ON w.id=t.work_id
+        WHERE t.claimant_user_id=$1 AND t.status='completed' AND t.submission_url IS NOT NULL
+          AND w.state='published' AND w.visibility='public'
+        ORDER BY t.completed_at DESC,t.id DESC LIMIT 20`, [profile.id]),
       activityVisible ? client.query(
         `SELECT * FROM (
            SELECT 'work_published'::text AS type,w.first_published_at AS occurred_at,w.title,w.id AS work_id
@@ -80,7 +85,7 @@ export class PostgresPublicProfileRepository {
          ) events ORDER BY occurred_at DESC LIMIT 12`, [profile.id]) : Promise.resolve({ rows: [] }),
       achievementsVisible ? this.getAchievementMetrics(profile.id, client) : Promise.resolve(null),
     ]);
-    return { profile, links: links.rows, workRows: works.rows, libraryWorkRows: library.rows, libraryWorkKeys: savedKeys.rows.map(row => row.work_key), libraryVisible, githubRepositories: githubRepositories.rows, activityVisible, activity: activity.rows, achievementsVisible, achievementMetrics };
+    return { profile, links: links.rows, workRows: works.rows, libraryWorkRows: library.rows, libraryWorkKeys: savedKeys.rows.map(row => row.work_key), libraryVisible, githubRepositories: githubRepositories.rows, contributions: contributions.rows, activityVisible, activity: activity.rows, achievementsVisible, achievementMetrics };
   }
 
   async getAchievementMetrics(userId, client = this.pool) {

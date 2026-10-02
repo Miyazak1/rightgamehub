@@ -286,6 +286,22 @@ test('player feedback form explains minimum lengths instead of silently disablin
   assert.doesNotMatch(source, /disabled=\{state === 'sending' \|\| form\.summary\.trim\(\)\.length/);
 });
 
+test('API client exposes the contribution draft, claim, submission and acceptance loop', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = []; const feedbackId = crypto.randomUUID(); const taskId = crypto.randomUUID();
+  const client = createApiClient({ getAccessToken: () => 'contributor-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init }); return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  await client.createContributionTaskFromFeedback(feedbackId, { title: 'Improve controls', description: 'Document keyboard controls and verification.', difficulty: 'starter', skills: ['docs'] });
+  await client.listCreatorContributionTasks(); await client.updateCreatorContributionTask(taskId, { action: 'publish' }); await client.createContributionIssueDraft(taskId);
+  await client.listContributionTasks('open'); await client.claimContributionTask(taskId); await client.submitContributionTask(taskId, { url: 'https://github.com/example/game/pull/7', note: 'Ready for review.' }); await client.releaseContributionTask(taskId);
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','PATCH','POST','GET','POST','POST','POST']);
+  assert.match(requests[0].url, new RegExp(`/v1/creator/feedback/${feedbackId}/contribution-task$`));
+  assert.match(requests[4].url, /\/v1\/contribution-tasks\?status=open&limit=50$/);
+  assert.match(requests[6].url, new RegExp(`/v1/contribution-tasks/${taskId}/submission$`));
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer contributor-token'));
+});
+
 test('API client reads, updates and logs out the current account with bearer auth', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];
