@@ -282,6 +282,24 @@ services:
     networks: [backend]
     mem_limit: 384m
 
+  rules-operator:
+    profiles: [rules-operations]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.rules-operator
+    volumes:
+      - ../rules:/data/rules
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    pids_limit: 32
+    cpus: "0.5"
+    mem_limit: 128m
+
   worker:
     build:
       context: ..

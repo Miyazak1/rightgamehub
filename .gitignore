@@ -18,3 +18,9 @@ node_modules/
 !.env.example
 !.env.*.example
 deploy/backups/
+rules/releases/
+rules/current
+rules/previous
+rules/.release.lock/
+rules/.trusted-keys.*
+rules/.incoming-*/

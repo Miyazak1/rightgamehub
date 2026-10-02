@@ -1,6 +1,6 @@
 # 受信规则适配器发布与回滚
 
-更新日期：2026-09-30。
+更新日期：2026-10-02。
 
 ## 1. 目标与边界
 
@@ -61,29 +61,28 @@ npm run rules:manifest -- keygen rules-release-2026-09 /secure/rules-private.pem
 ## 4. 发布一个规则版本
 
 1. 管理员从治理页下载状态为 `ready` 的平台构建 bundle，核对响应 `Digest`、构建报告和审核记录中的 SHA-256；不要使用作者自行编译或审核后手工修改的文件。
-2. 将核对后的 bundle 放到 `rules/<game>/<mode>-<version>.cjs`。
-3. 在 `rules/manifest.json` 增加身份与 bundle 路径；摘要可先留占位值。
-4. 执行签名，命令会从磁盘重新计算所有 bundle 的 SHA-256：
+2. 在离线发布机用 `stage` 核对 bundle 自报身份、验证当前签名清单并制作包含新旧版本的完整发布目录：
 
    ```bash
-   npm run rules:manifest -- sign rules/manifest.json /secure/rules-private.pem
+   npm run rules:release -- stage ./next-release <key-id> ./downloaded.cjs <work-id> <mode-key> <ruleset-version> ./current/manifest.json ./trusted-public-keys.json
    ```
 
-5. 用公开密钥做独立验证：
+3. 离线签名并用公开密钥做独立验证：
 
    ```bash
-   npm run rules:manifest -- verify rules/manifest.json /secure/rules-public.json
+   npm run rules:release -- sign ./next-release/manifest.unsigned.json /secure/rules-private.pem ./next-release/manifest.json
+   npm run rules:release -- verify-release ./next-release /secure/rules-public.json
    ```
 
-6. 设置生产环境：
+4. 生产环境只配置公钥和稳定的 current 指针：
 
    ```dotenv
-   RULES_MANIFEST_PATH=/app/rules/manifest.json
-   RULES_TRUSTED_KEYS_JSON={"rules-release-2026-09":"<SPKI DER base64>"}
+   RULES_MANIFEST_PATH=/app/rules/current/manifest.json
+   RULES_TRUSTED_KEYS_JSON='{"rules-release-2026-09":"<SPKI DER base64>"}'
    ```
 
-7. 同一次发布重新创建 `api` 和 `realtime`。只有这两个需要执行权威规则的服务挂载同一个只读 `rules/` 目录；API 与 Realtime 日志必须报告相同适配器数量。迁移、上传校验 worker、Rule Builder 和静态运行边缘不加载已签名规则，也不持有私钥。
-8. 最后再通过管理员 API 创建或启用对应 `modeKey/rulesetVersion`。API 会拒绝未安装的 `platform_authoritative` 规则。
+5. 用 `deploy/rules-release.sh install ./next-release` 安装。脚本将签名内容物化到不可变摘要目录、原子切换 current、同时重建 `api` 和 `realtime`，并要求两个 `/ready` 报告精确相同的 manifest SHA-256。迁移、上传校验 worker、Rule Builder 和静态运行边缘不加载已签名规则，也不持有私钥。
+6. 最后再通过管理员 API 创建或启用对应 `modeKey/rulesetVersion`。API 会拒绝未安装的 `platform_authoritative` 规则。
 
 生产环境禁止 `RULES_ALLOW_UNSIGNED=true`。开发环境如确有需要可显式临时启用，但不得把未签名清单复制到生产部署。
 
@@ -106,12 +105,12 @@ npm run rules:manifest -- keygen rules-release-2026-09 /secure/rules-private.pem
 - bundle 的 `workId/modeKey/rulesetVersion` 与清单不一致；
 - 身份或 bundle 重复。
 
-回滚时恢复上一套完整的 `rules/` 目录、上一份已签名清单和仍受信的公钥，然后同时重建 API 与 Realtime。不要只回滚其中一个服务，也不要通过删除数据库中的进行中对局来绕过旧版本缺失。
+回滚执行 `deploy/rules-release.sh rollback`。脚本先验证 previous，再原子交换 current/previous、同时重建 API 与 Realtime，并要求两个服务报告目标 manifest 摘要；失败会恢复原 current。不要只回滚其中一个服务，也不要通过删除数据库中的进行中对局来绕过旧版本缺失。完整命令、备份与证据要求见 [66](./66-multiplayer-rules-release-operations.zh-CN.md)。
 
 ## 7. 接入完成门槛
 
 - 离线签名、线上公钥验证和摘要验证均通过。
-- API、Realtime 从同一只读目录加载相同数量和身份的适配器。
+- API、Realtime 从同一只读目录加载，并在 `/ready` 报告相同 manifest SHA-256。
 - 未安装版本无法创建权威模式，也无法开始或继续对局。
 - 篡改 bundle、替换身份、未知 keyId 和未签名生产配置都有自动化拒绝测试。
 - 新旧版本并存时，旧对局仍可命令、超时、恢复和回放。

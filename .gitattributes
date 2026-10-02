@@ -1,0 +1,5 @@
+# Signed rule bundles are byte-exact artifacts. Never rewrite their line endings.
+rules/**/*.cjs -text
+
+# Deployment scripts run in POSIX containers and servers.
+*.sh text eol=lf

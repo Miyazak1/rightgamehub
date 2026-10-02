@@ -76,6 +76,29 @@ const publicKeyFrom = value => {
 
 export const digestRulesBundle = source => crypto.createHash('sha256').update(source).digest('hex');
 
+const emptyReleaseDescription = Object.freeze({
+  installed: false,
+  protocol: RULES_MANIFEST_PROTOCOL,
+  manifestSha256: null,
+  keyId: null,
+  createdAt: null,
+  adapterCount: 0,
+});
+
+export function inspectRulesBundle(source, { filename = 'rules-adapter.cjs' } = {}) {
+  const bytes = Buffer.isBuffer(source) ? source : Buffer.from(source ?? '');
+  if (bytes.length < 1 || bytes.length > RULES_BUNDLE_MAX_BYTES) manifestError('RULES_BUNDLE_INVALID', 'Rules bundle has an invalid size.');
+  const adapter = loadVerifiedBundle(bytes, filename);
+  validateRulesAdapter(adapter);
+  return Object.freeze({
+    workId: adapter.workId,
+    modeKey: adapter.modeKey,
+    rulesetVersion: adapter.rulesetVersion,
+    sha256: digestRulesBundle(bytes),
+    bytes: bytes.length,
+  });
+}
+
 export function parseTrustedRulesKeys(value) {
   if (value == null || value === '') return Object.freeze({});
   let parsed = value;
@@ -110,7 +133,7 @@ export function validateRulesAdapter(adapter) {
   return adapter;
 }
 
-export function createRulesRegistry(adapters = []) {
+export function createRulesRegistry(adapters = [], releaseDescription = emptyReleaseDescription) {
   const entries = new Map();
   for (const adapter of adapters) {
     validateRulesAdapter(adapter);
@@ -121,6 +144,7 @@ export function createRulesRegistry(adapters = []) {
   return Object.freeze({
     get(identity) { return entries.get(adapterKey(identity)) ?? null; },
     list() { return [...entries.values()]; },
+    describe() { return releaseDescription; },
   });
 }
 
@@ -175,5 +199,12 @@ export function loadRulesRegistry({ manifestPath = null, trustedKeys = {}, allow
     for (const field of ['workId','modeKey','rulesetVersion']) if (adapter[field] !== entry[field]) manifestError('RULES_BUNDLE_IDENTITY_MISMATCH', `Rules bundle identity does not match its manifest: ${entry.bundle}`);
     return adapter;
   });
-  return createRulesRegistry(adapters);
+  return createRulesRegistry(adapters,Object.freeze({
+    installed: true,
+    protocol: manifest.protocol,
+    manifestSha256: digestRulesBundle(manifestBytes),
+    keyId: manifest.keyId ?? null,
+    createdAt: manifest.createdAt,
+    adapterCount: adapters.length,
+  }));
 }

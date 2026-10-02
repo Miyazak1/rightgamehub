@@ -39,11 +39,15 @@ const setup = async t => {
 };
 
 test('signed rules manifest loads the exact verified CommonJS adapter', async t => {
-  const { sdk,identity,manifestPath,trustedKeys } = await setup(t);
+  const { sdk,identity,manifest,manifestPath,trustedKeys } = await setup(t);
   const registry = sdk.loadRulesRegistry({ manifestPath,trustedKeys });
   assert.equal(registry.list().length,1);
   assert.equal(registry.get(identity).modeKey,'duel');
   assert.equal(registry.get(identity).createInitialState().turn,0);
+  assert.deepEqual(registry.describe(),{
+    installed: true,protocol: sdk.RULES_MANIFEST_PROTOCOL,manifestSha256: sdk.digestRulesBundle(fs.readFileSync(manifestPath)),
+    keyId: manifest.keyId,createdAt: manifest.createdAt,adapterCount: 1,
+  });
 });
 
 test('rules loading fails closed for untrusted signatures, changed bundles and identity drift', async t => {
@@ -83,4 +87,40 @@ test('rules manifest CLI recomputes bundle digests, signs and verifies a release
   const verified = spawnSync(process.execPath, [cli,'verify',manifestPath,publicPath], { encoding: 'utf8' });
   assert.equal(verified.status,0,verified.stderr);
   assert.match(verified.stdout,/Verified 1 trusted rules adapter/u);
+});
+
+test('rules release CLI carries forward trusted adapters and materializes only signed bytes', async t => {
+  const sdk = await import(modulePath);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(),'gamehub-rules-release-')); t.after(() => fs.rmSync(root,{ recursive: true,force: true }));
+  const current = path.join(root,'current'); fs.mkdirSync(current);
+  const workId = '00000000-0000-4000-8000-000000000041';
+  const firstIdentity = { workId,modeKey: 'duel',rulesetVersion: '1.0.0' };
+  const secondIdentity = { workId,modeKey: 'duel',rulesetVersion: '1.1.0' };
+  const firstBundle = adapterSource(firstIdentity); const secondBundle = adapterSource(secondIdentity);
+  fs.writeFileSync(path.join(current,'duel-1.0.0.cjs'),firstBundle);
+  const { privateKey,publicKey } = crypto.generateKeyPairSync('ed25519');
+  const keyId = 'release-2026-10';
+  const privatePath = path.join(root,'private.pem'); const trustedPath = path.join(root,'trusted.json');
+  fs.writeFileSync(privatePath,privateKey.export({ format: 'pem',type: 'pkcs8' }));
+  fs.writeFileSync(trustedPath,JSON.stringify({ [keyId]: publicKey.export({ format: 'der',type: 'spki' }).toString('base64') }));
+  const currentManifest = path.join(current,'manifest.json');
+  fs.writeFileSync(currentManifest,JSON.stringify(sdk.signRulesManifest({ protocol: sdk.RULES_MANIFEST_PROTOCOL,createdAt: '2026-10-01T00:00:00.000Z',keyId,entries: [{ ...firstIdentity,bundle: 'duel-1.0.0.cjs',sha256: sdk.digestRulesBundle(firstBundle) }] },privateKey)));
+  const nextBundle = path.join(root,'next.cjs'); fs.writeFileSync(nextBundle,secondBundle);
+  const staged = path.join(root,'staged'); const cli = path.resolve(__dirname,'../../scripts/rules-manifest-cli.mjs');
+  const stage = spawnSync(process.execPath,[cli,'stage',staged,keyId,nextBundle,workId,'duel','1.1.0',currentManifest,trustedPath],{ encoding: 'utf8' });
+  assert.equal(stage.status,0,stage.stderr); assert.equal(JSON.parse(stage.stdout).adapterCount,2);
+  assert.equal(fs.existsSync(path.join(staged,'manifest.json')),false);
+  const sign = spawnSync(process.execPath,[cli,'sign',path.join(staged,'manifest.unsigned.json'),privatePath,path.join(staged,'manifest.json')],{ encoding: 'utf8' });
+  assert.equal(sign.status,0,sign.stderr);
+  const verify = spawnSync(process.execPath,[cli,'verify-release',staged,trustedPath],{ encoding: 'utf8' });
+  assert.equal(verify.status,0,verify.stderr); assert.equal(JSON.parse(verify.stdout).adapterCount,2);
+  const deployed = path.join(root,'deployed');
+  const materialize = spawnSync(process.execPath,[cli,'materialize',path.join(staged,'manifest.json'),trustedPath,deployed],{ encoding: 'utf8' });
+  assert.equal(materialize.status,0,materialize.stderr); assert.equal(JSON.parse(materialize.stdout).adapterCount,2);
+  assert.equal(fs.existsSync(path.join(deployed,'manifest.unsigned.json')),false);
+  assert.equal(fs.existsSync(path.join(deployed,'release-plan.json')),false);
+  assert.equal(sdk.loadRulesRegistry({ manifestPath: path.join(deployed,'manifest.json'),trustedKeys: JSON.parse(fs.readFileSync(trustedPath,'utf8')) }).list().length,2);
+  const duplicateBundle = path.join(root,'duplicate.cjs'); fs.writeFileSync(duplicateBundle,firstBundle);
+  const duplicate = spawnSync(process.execPath,[cli,'stage',path.join(root,'duplicate'),keyId,duplicateBundle,workId,'duel','1.0.0',currentManifest,trustedPath],{ encoding: 'utf8' });
+  assert.notEqual(duplicate.status,0); assert.match(duplicate.stderr,/identity already exists/u);
 });

@@ -26,7 +26,7 @@ const matchTimeoutWorker = createMatchTimeoutWorker({
   repository: matchRepository,coordinator: matchCoordinator,rulesRegistry,
   intervalMs: config.matchTimeoutSweepMs,batchSize: config.matchTimeoutBatchSize,
 });
-const realtime = createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, ...config });
+const realtime = createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker,rulesStatus: rulesRegistry.describe(), ...config });
 await realtime.listen({ host: config.host, port: config.port });
 process.stdout.write(`GameHub realtime listening on ${config.host}:${config.port}\n`);
 process.stdout.write(`GameHub realtime loaded ${rulesRegistry.list().length} trusted rules adapter(s).\n`);

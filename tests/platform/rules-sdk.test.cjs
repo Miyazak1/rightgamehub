@@ -19,11 +19,21 @@ test('rules SDK canonical hashing is stable across object key order', async () =
 });
 
 test('rules registry validates adapters and rejects duplicate identities', async () => {
-  const { createRulesRegistry, validateRulesAdapter } = await import('../../packages/rules-sdk/src/index.mjs');
+  const { createRulesRegistry, inspectRulesBundle, validateRulesAdapter } = await import('../../packages/rules-sdk/src/index.mjs');
   const registered = adapter();
   const registry = createRulesRegistry([registered]);
   assert.equal(registry.get(registered), registered);
   assert.equal(registry.get({ workId: 'work-1', modeKey: 'other', rulesetVersion: '1.0.0' }), null);
   assert.throws(() => createRulesRegistry([registered, adapter()]), /Duplicate rules adapter/u);
   assert.throws(() => validateRulesAdapter({}), /workId is required/u);
+  assert.deepEqual(registry.describe(),{
+    installed: false,protocol: 'gamehub.rules-manifest.v1',manifestSha256: null,keyId: null,createdAt: null,adapterCount: 0,
+  });
+  const inspected = inspectRulesBundle(Buffer.from(`module.exports={
+    workId:'work-2',modeKey:'duel',rulesetVersion:'2.0.0',
+    createInitialState(){},getTurn(){},getPlayerView(){},getSpectatorView(){},serializeState(){},deserializeState(){},
+    hashState(){},validateCommand(){},applyCommand(){},handleResign(){},handleTimeout(){}
+  };`));
+  assert.equal(inspected.workId,'work-2');
+  assert.match(inspected.sha256,/^[a-f0-9]{64}$/u);
 });

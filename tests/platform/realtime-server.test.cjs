@@ -45,7 +45,8 @@ test('realtime server consumes a one-time ticket and answers heartbeats', async 
 
 test('realtime server exposes liveness and Redis-backed readiness', async t => {
   const { createRealtimeServer } = await import(serverUrl);
-  const realtime = createRealtimeServer({ ticketStore: { consume: async () => null, ping: async () => true }, logger: { error() {}, warn() {} } });
+  const rulesStatus = { installed: true,manifestSha256: 'b'.repeat(64),adapterCount: 2 };
+  const realtime = createRealtimeServer({ ticketStore: { consume: async () => null, ping: async () => true },rulesStatus, logger: { error() {}, warn() {} } });
   t.after(() => realtime.close());
   const address = await realtime.listen({ host: '127.0.0.1', port: 0 });
   const health = await fetch(`http://127.0.0.1:${address.port}/health`);
@@ -53,7 +54,9 @@ test('realtime server exposes liveness and Redis-backed readiness', async t => {
   const metrics = await fetch(`http://127.0.0.1:${address.port}/metrics`);
   assert.equal(health.status, 200);
   assert.equal(ready.status, 200);
-  assert.equal((await ready.json()).data.redis, true);
+  const readyPayload = (await ready.json()).data;
+  assert.equal(readyPayload.redis, true);
+  assert.deepEqual(readyPayload.rules,rulesStatus);
   assert.equal(metrics.status, 200);
   assert.match(await metrics.text(), /gamehub_realtime_connections 0/u);
 });

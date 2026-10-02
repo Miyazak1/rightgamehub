@@ -15,7 +15,7 @@
 `deploy/.env.prod` 需要包含：
 
 ```dotenv
-RULES_MANIFEST_PATH=/app/rules/manifest.json
+RULES_MANIFEST_PATH=/app/rules/current/manifest.json
 RULES_TRUSTED_KEYS_JSON='{"mizhen-release-2026-09":"MCowBQYDK2VwAyEANV5dtIf2p6FvIQbylX7IbNQvdv2LEgRPbFWEJm/s9Mc="}'
 ```
 

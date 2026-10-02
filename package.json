@@ -16,6 +16,7 @@
     "contracts:generate": "node scripts/generate-contracts.mjs",
     "contracts:check": "node scripts/generate-contracts.mjs --check",
     "rules:manifest": "node scripts/rules-manifest-cli.mjs",
+    "rules:release": "node scripts/rules-manifest-cli.mjs",
     "multiplayer:doctor": "node scripts/creator-doctor.mjs",
     "multiplayer:templates": "node scripts/build-multiplayer-templates.mjs",
     "test:legacy": "node --test tests/*.test.cjs",

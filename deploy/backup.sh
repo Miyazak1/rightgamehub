@@ -17,6 +17,10 @@ for volume in avatars covers runtime-assets; do
     tar -C /source -czf "/backup/${volume}.tar.gz" .
 done
 
+if [ -d ../rules/current ]; then
+  tar -C ../rules/current -czf "$TARGET/rules-current.tar.gz" .
+fi
+
 sha256sum "$TARGET"/* > "$TARGET/SHA256SUMS"
 chmod 600 "$TARGET"/*
 echo "Backup written to $TARGET"

@@ -31,7 +31,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, storageCapacityService, realtimeTicketService, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, storageCapacityService, realtimeTicketService, rulesStatus = null, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -64,7 +64,7 @@ export function createApp({ config, database, migrations, authService, workServi
     try {
       const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
       if (!databaseOk || !migration.ready || !realtimeOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk }));
-      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk });
+      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk,rules: rulesStatus });
     } catch {
       return reply.status(503).send(envelope({ status: 'not-ready', database: false }));
     }

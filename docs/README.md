@@ -29,6 +29,7 @@
 | [67 G3.1 作者增长基础](./67-g3-creator-growth-phase-1.zh-CN.md) | **作者私有聚合数据、浏览/有效试玩/复访/收藏/构建指标，以及公开作品 README 在线体验徽章** |
 | [64 联网规则包提交与审核队列](./64-multiplayer-rule-review-intake.zh-CN.md) | **源码 ZIP 隔离收件、Doctor 证据、一次性上传授权、仅追加审核记录与受控构建边界** |
 | [65 联网规则受控构建与发布实施契约](./65-multiplayer-rule-build-release.zh-CN.md) | **审核后原子排队、无网络 Rule Builder、确定性 bundle、离线签名与双服务发布边界** |
+| [66 联网规则签名发布与回滚运行手册](./66-multiplayer-rules-release-operations.zh-CN.md) | **增量制作完整签名制品、不可变安装、API/Realtime 摘要门禁、失败恢复与一键回滚** |
 | [63 G2 受控静态站 Builder](./63-g2-controlled-static-builder.zh-CN.md) | **固定方案、无脚本静态构建、构建队列、来源证明、隔离部署与上线验收** |
 | [56 作者 GitHub 导入指南](./56-github-import-author-guide.zh-CN.md) | **作者连接只读 GitHub App、预览来源、受控静态构建/手动上传、权限与许可证说明** |
 | [55 G1 GitHub 只读来源导入](./55-g1-github-source-import.zh-CN.md) | **独立 GitHub App、固定 Commit、README 清洗、许可证证据、Webhook 去重、部署与验收** |

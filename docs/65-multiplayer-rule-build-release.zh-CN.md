@@ -1,8 +1,8 @@
 # 联网规则受控构建与发布实施契约
 
-状态：受控构建代码完成；待生产迁移、镜像摘要固定与真实账号验收；离线签名、双服务部署、模式注册和回滚待后续阶段
+状态：受控构建已完成生产迁移与 G2 验证；签名发布/摘要门禁/自动回退代码完成，待首个真实规则制品上线、模式注册与双账号验收
 
-更新日期：2026-10-01
+更新日期：2026-10-02
 
 ## 1. 本阶段完成定义
 
@@ -57,16 +57,16 @@ Builder 使用平台固定测试器加载 `rules/adapter.cjs`，并验证：
 
 Node `vm` 只限制意外依赖，不视为恶意代码安全沙箱；真正的执行隔离由独立容器提供，人工代码审核仍然是批准构建的前提。
 
-## 5. 后续发布阶段
+## 5. 签名发布阶段
 
 构建为 `ready` 后：
 
 1. 管理员下载 bundle 和构建证明并再次核对 SHA-256。
-2. 离线发布机把新旧 bundle 合入完整规则目录。
+2. 离线发布机用 `rules:release stage` 验证当前签名发布并把新旧 bundle 合入完整规则目录。
 3. 使用不进入服务器的 Ed25519 私钥签署完整 manifest。
-4. API 与 Realtime 同时挂载并验证同一只读目录、签名清单和公钥。
-5. 两个服务报告相同规则身份后，管理员才能注册或启用模式。
-6. 回滚恢复上一套完整目录、清单和公钥，并同时重建 API 与 Realtime。
+4. 生产机用 `deploy/rules-release.sh install` 物化不可变目录，并让 API 与 Realtime 同时挂载和验证同一签名清单、公钥。
+5. 两个服务的 `/ready` 报告相同 manifest SHA-256 后，管理员才能注册或启用模式。
+6. `deploy/rules-release.sh rollback` 验证 previous、原子切换并同时重建两个服务；完整运行手册见 [66](./66-multiplayer-rules-release-operations.zh-CN.md)。
 
 ## 6. 验收门槛
 
@@ -79,7 +79,7 @@ Node `vm` 只限制意外依赖，不视为恶意代码安全沙箱；真正的�
 
 ## 7. 生产启用
 
-本阶段新增迁移 `0038_multiplayer_rule_builds.sql`。部署前先构建 `deploy/Dockerfile.rule-builder`，获取实际镜像的 `sha256:` 摘要，然后配置：
+本阶段新增迁移 `0038_multiplayer_rule_builds.sql`。截至 2026-10-02，生产迁移与 G2 Rule Builder 验证已完成。新环境部署前仍需构建 `deploy/Dockerfile.rule-builder`，获取实际镜像的 `sha256:` 摘要，然后配置：
 
 ```dotenv
 RULE_BUILD_ENABLED=true

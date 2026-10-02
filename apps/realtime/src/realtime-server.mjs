@@ -9,7 +9,7 @@ const rejectUpgrade = (socket, statusCode, message) => {
   if (!socket.destroyed) socket.end(`HTTP/1.1 ${statusCode} ${message}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
 };
 
-export function createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
+export function createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, rulesStatus = null, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
   if (!ticketStore?.consume || !ticketStore?.ping) throw new TypeError('A realtime ticket store is required.');
   const trustedOrigins = new Set(allowedOrigins);
   const metrics = { connectionsTotal: 0,messagesTotal: 0,commandFailuresTotal: 0 };
@@ -36,7 +36,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, matchSes
         const redis = await ticketStore.ping();
         const rooms = !roomSessionManager || await roomSessionManager.ping();
         const matches = !matchSessionManager || await matchSessionManager.ping();
-        if (redis && rooms && matches) return response.end(json({ data: { status: 'ready', redis: true, rooms, matches } }));
+        if (redis && rooms && matches) return response.end(json({ data: { status: 'ready', redis: true, rooms, matches,rules: rulesStatus } }));
       } catch (error) { logger?.error?.({ error }, 'Realtime readiness failed'); }
       response.statusCode = 503;
       return response.end(json({ data: { status: 'not-ready', redis: false, rooms: false } }));

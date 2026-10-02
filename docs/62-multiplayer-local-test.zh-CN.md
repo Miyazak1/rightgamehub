@@ -15,7 +15,7 @@
 
 ## 平台构建与上线前核对
 
-管理员选择“批准构建”后，提交会原子进入独立 Rule Builder 队列。只有构建状态为 `ready` 时，治理页才允许下载平台构建的 `.cjs`；下载后要核对 `Digest` 与页面 SHA-256。这个文件仍需在离线发布机签入完整 manifest，并同时部署到 API 与 Realtime，不能直接复制进单个线上容器。
+管理员选择“批准构建”后，提交会原子进入独立 Rule Builder 队列。只有构建状态为 `ready` 时，治理页才允许下载平台构建的 `.cjs`；下载后要核对 `Digest` 与页面 SHA-256。这个文件仍需在离线发布机签入完整 manifest，再按 [66](./66-multiplayer-rules-release-operations.zh-CN.md) 安装；只有 API 与 Realtime `/ready` 返回同一个 manifest SHA-256 才能注册模式，不能直接复制进单个线上容器。
 
 如果构建失败，先按错误码检查来源 ZIP 摘要、`creator-submission.json` 身份、规则测试和当前 Builder 镜像摘要。不得手工修改失败构建的产物或数据库状态；源码或规则有变化时提交新的 `rulesetVersion`。
 
