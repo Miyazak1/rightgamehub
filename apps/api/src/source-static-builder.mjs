@@ -8,8 +8,9 @@ import { SOURCE_BUILD_LIMITS, normalizeStaticBuildPlan } from './source-build-po
 import { createZipBuffer } from './zip-buffer-writer.mjs';
 
 const invalid = (code, message) => Object.assign(new Error(message), { code });
-const ignoredRootFile = /^(?:readme(?:\.[^/]*)?|licen[cs]e(?:\.[^/]*)?|copying(?:\.[^/]*)?|notice(?:\.[^/]*)?|\.gitignore|\.gitattributes)$/iu;
+const ignoredRootFile = /^(?:readme(?:\.[^/]*)?|licen[cs]e(?:\.[^/]*)?|copying(?:\.[^/]*)?|notice(?:\.[^/]*)?|contributing(?:\.[^/]*)?|changelog(?:\.[^/]*)?|code_of_conduct(?:\.[^/]*)?|rakefile|gemfile(?:\.lock)?|\.gitignore|\.gitattributes|\.jshintrc|\.eslintrc(?:\.[^/]*)?|\.prettierrc(?:\.[^/]*)?)$/iu;
 const buildDescriptor = /^(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|vite\.config\.[^/]+)$/iu;
+const ignoredSourceExtension = /\.(?:less|sass|scss)$/iu;
 
 const safeArchiveParts = value => {
   if (typeof value !== 'string' || !value || value.includes('\\') || value.includes('\0') || Buffer.byteLength(value) > 1024) {
@@ -87,6 +88,7 @@ export async function buildStaticSourceArchive({ inputPath, outputPath, plan: ra
       const relative = repositoryParts.slice(selectedPrefix.length).join('/');
       if (relative.startsWith('.github/') || relative.startsWith('.git/')) continue;
       if (!relative.includes('/') && ignoredRootFile.test(relative)) continue;
+      if (ignoredSourceExtension.test(relative)) continue;
       if (!relative.includes('/') && buildDescriptor.test(relative)) {
         throw invalid('BUILD_PLAN_MISMATCH', 'The static template cannot execute a repository build descriptor.');
       }
