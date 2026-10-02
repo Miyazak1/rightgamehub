@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 41);
+  assert.equal(files.length, 42);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -44,6 +44,11 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(profileLibrary, /ADD COLUMN profile_library_visibility/);
   const profileGitHub = fs.readFileSync(path.join(migrationDir, '0041_public_profile_github_repositories.sql'), 'utf8');
   assert.match(profileGitHub, /CREATE TABLE user_profile_github_repositories/);
+  const profilePhaseTwo = fs.readFileSync(path.join(migrationDir, '0042_public_profile_phase_two.sql'), 'utf8');
+  assert.match(profilePhaseTwo, /ADD COLUMN profile_collaboration_status/);
+  assert.match(profilePhaseTwo, /ADD COLUMN profile_skills/);
+  assert.match(profilePhaseTwo, /ADD COLUMN profile_activity_visibility/);
+  assert.match(profilePhaseTwo, /ADD COLUMN profile_achievements_visibility/);
   const analytics = fs.readFileSync(path.join(migrationDir, '0029_analytics_foundation.sql'), 'utf8');
   assert.match(analytics, /CREATE TABLE analytics_events/);
   assert.match(analytics, /download_complete/);

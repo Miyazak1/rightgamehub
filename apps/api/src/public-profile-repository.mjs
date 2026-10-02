@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 
-const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.profile_library_visibility,u.can_publish,u.role,u.created_at,
+const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.profile_library_visibility,
+  u.profile_collaboration_status,u.profile_skills,u.profile_activity_visibility,u.profile_achievements_visibility,u.can_publish,u.role,u.created_at,
   a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,
   (SELECT count(*) FROM user_follows f WHERE f.followed_user_id=u.id)::int AS follower_count,
   (SELECT count(*) FROM user_follows f WHERE f.follower_user_id=u.id)::int AS following_count,
@@ -56,7 +57,9 @@ export class PostgresPublicProfileRepository {
     )).rows[0];
     if (!profile) return null;
     const libraryVisible = profile.is_me || profile.profile_library_visibility === 'public' || (profile.profile_library_visibility === 'followers' && profile.is_following);
-    const [links, works, library, savedKeys, githubRepositories] = await Promise.all([
+    const activityVisible = profile.is_me || profile.profile_activity_visibility === 'public' || (profile.profile_activity_visibility === 'followers' && profile.is_following);
+    const achievementsVisible = profile.is_me || profile.profile_achievements_visibility === 'public' || (profile.profile_achievements_visibility === 'followers' && profile.is_following);
+    const [links, works, library, savedKeys, githubRepositories, activity, achievementMetrics] = await Promise.all([
       client.query('SELECT kind,label,url,position FROM user_profile_links WHERE user_id=$1 ORDER BY position', [profile.id]),
       client.query(publicWorksSql, [profile.id]),
       libraryVisible ? client.query(publicLibrarySql, [profile.id]) : Promise.resolve({ rows: [] }),
@@ -67,8 +70,42 @@ export class PostgresPublicProfileRepository {
         JOIN github_source_connections c ON c.id=r.connection_id
         WHERE p.user_id=$1 AND c.user_id=$1 AND c.status='active' AND r.access_state='active' AND r.visibility='public'
         ORDER BY p.position`, [profile.id]),
+      activityVisible ? client.query(
+        `SELECT * FROM (
+           SELECT 'work_published'::text AS type,w.first_published_at AS occurred_at,w.title,w.id AS work_id
+             FROM works w WHERE w.owner_user_id=$1 AND w.state='published' AND w.visibility='public' AND w.first_published_at IS NOT NULL
+           UNION ALL
+           SELECT 'guess_baike_completed'::text AS type,r.completed_at AS occurred_at,'完成猜百科 · ' || r.puzzle_date::text AS title,NULL::uuid AS work_id
+             FROM guess_baike_results r WHERE r.user_id=$1
+         ) events ORDER BY occurred_at DESC LIMIT 12`, [profile.id]) : Promise.resolve({ rows: [] }),
+      achievementsVisible ? this.getAchievementMetrics(profile.id, client) : Promise.resolve(null),
     ]);
-    return { profile, links: links.rows, workRows: works.rows, libraryWorkRows: library.rows, libraryWorkKeys: savedKeys.rows.map(row => row.work_key), libraryVisible, githubRepositories: githubRepositories.rows };
+    return { profile, links: links.rows, workRows: works.rows, libraryWorkRows: library.rows, libraryWorkKeys: savedKeys.rows.map(row => row.work_key), libraryVisible, githubRepositories: githubRepositories.rows, activityVisible, activity: activity.rows, achievementsVisible, achievementMetrics };
+  }
+
+  async getAchievementMetrics(userId, client = this.pool) {
+    const [dates, challenges, ranking] = await Promise.all([
+      client.query('SELECT puzzle_date FROM guess_baike_results WHERE user_id=$1 ORDER BY puzzle_date', [userId]),
+      client.query(
+        `SELECT count(*) FILTER (WHERE p.completed_at IS NOT NULL)::int AS completed,
+          count(*) FILTER (WHERE p.completed_at IS NOT NULL AND ((c.creator_user_id=$1 AND p.participant_outcome='loss') OR (p.participant_user_id=$1 AND p.participant_outcome='win')))::int AS wins
+         FROM game_challenges c LEFT JOIN challenge_participations p ON p.challenge_id=c.id
+         WHERE c.creator_user_id=$1 OR p.participant_user_id=$1`, [userId]),
+      client.query(
+        `WITH ranked AS (
+           SELECT user_id,puzzle_date,dense_rank() OVER (PARTITION BY puzzle_date ORDER BY hints,guessed_count,elapsed_seconds,completed_at,user_id)::int AS rank
+             FROM guess_baike_results
+         )
+         SELECT min(rank)::int AS best_rank,(array_agg(rank ORDER BY puzzle_date DESC))[1]::int AS latest_rank,
+                (array_agg(puzzle_date ORDER BY puzzle_date DESC))[1] AS latest_date
+           FROM ranked WHERE user_id=$1`, [userId]),
+    ]);
+    return {
+      dates: dates.rows.map(row => String(row.puzzle_date).slice(0, 10)),
+      completedChallenges: Number(challenges.rows[0]?.completed ?? 0), challengeWins: Number(challenges.rows[0]?.wins ?? 0),
+      bestDailyRank: ranking.rows[0]?.best_rank ?? null, latestDailyRank: ranking.rows[0]?.latest_rank ?? null,
+      latestRankDate: ranking.rows[0]?.latest_date ? String(ranking.rows[0].latest_date).slice(0, 10) : null,
+    };
   }
 
   async update(input) {
@@ -92,9 +129,11 @@ export class PostgresPublicProfileRepository {
           if (eligible.length !== input.githubRepositoryIds.length) return { error: 'github_repository_invalid' };
         }
         await client.query(
-          `UPDATE users SET profile_handle=$2,bio=$3,profile_about=$4,social_visibility=$5,profile_library_visibility=$6,updated_at=$7
+          `UPDATE users SET profile_handle=$2,bio=$3,profile_about=$4,social_visibility=$5,profile_library_visibility=$6,
+            profile_collaboration_status=COALESCE($7,profile_collaboration_status),profile_skills=COALESCE($8,profile_skills),
+            profile_activity_visibility=COALESCE($9,profile_activity_visibility),profile_achievements_visibility=COALESCE($10,profile_achievements_visibility),updated_at=$11
             WHERE id=$1 AND status='active'`,
-          [input.userId, input.handle, input.headline, input.about, input.visibility, input.libraryVisibility, input.now],
+          [input.userId, input.handle, input.headline, input.about, input.visibility, input.libraryVisibility, input.collaborationStatus, input.skills, input.activityVisibility, input.achievementsVisibility, input.now],
         );
         await client.query('DELETE FROM user_profile_links WHERE user_id=$1', [input.userId]);
         for (const [position, link] of input.links.entries()) await client.query(

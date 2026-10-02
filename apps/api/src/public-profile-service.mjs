@@ -1,6 +1,8 @@
 const HANDLE = /^[a-z][a-z0-9-]{2,31}$/;
 const KINDS = new Set(['github','website','portfolio','bilibili','other']);
 const RESERVED = new Set(['admin','api','account','creator','discover','install','library','login','me','play','profile','settings','social','support','works']);
+const COLLABORATION_STATUSES = new Set(['not_looking','open_to_collaboration','available_for_hire']);
+const VISIBILITIES = new Set(['public','followers','private']);
 
 export class PublicProfileError extends Error {
   constructor(code, statusCode, message) { super(message); this.name = 'PublicProfileError'; this.code = code; this.statusCode = statusCode; this.retryable = false; }
@@ -32,6 +34,28 @@ const groupedWorks = rows => {
   return [...groups.values()].map(workView);
 };
 
+const dayNumber = value => Math.floor(Date.parse(`${value}T00:00:00Z`) / 86_400_000);
+const achievementView = metrics => {
+  if (!metrics) return null;
+  const dates = [...new Set(metrics.dates ?? [])].map(dayNumber).sort((a,b) => a-b);
+  let longestStreak = 0; let run = 0; let previous = null;
+  for (const day of dates) { run = previous !== null && day === previous + 1 ? run + 1 : 1; longestStreak = Math.max(longestStreak, run); previous = day; }
+  const completedChallenges = Number(metrics.completedChallenges ?? 0); const challengeWins = Number(metrics.challengeWins ?? 0);
+  const badges = [
+    ['first_break','初次休息','完成第一局猜百科',dates.length >= 1],
+    ['streak_3','三日火花','连续参与 3 天',longestStreak >= 3],
+    ['streak_7','七日像素','连续参与 7 天',longestStreak >= 7],
+    ['challenger','挑战者','完成第一场玩家挑战',completedChallenges >= 1],
+    ['duel_winner','胜负手','赢得第一场玩家挑战',challengeWins >= 1],
+  ].filter(([, , , unlocked]) => unlocked).map(([key,name,description]) => ({ key,name,description }));
+  return {
+    totalDays: dates.length, longestStreak, completedChallenges, challengeWins,
+    bestDailyRank: metrics.bestDailyRank == null ? null : Number(metrics.bestDailyRank),
+    latestDailyRank: metrics.latestDailyRank == null ? null : Number(metrics.latestDailyRank),
+    latestRankDate: metrics.latestRankDate ?? null, badges,
+  };
+};
+
 const view = result => {
   const works = groupedWorks(result.workRows);
   const library = groupedWorks(result.libraryWorkRows ?? []);
@@ -40,11 +64,17 @@ const view = result => {
   const row = result.profile;
   return {
     id: row.id, handle: row.profile_handle, displayName: row.display_name, headline: row.bio, about: row.profile_about,
-    visibility: row.social_visibility, libraryVisibility: row.profile_library_visibility ?? 'private', libraryVisible: Boolean(result.libraryVisible), creator: Boolean(row.can_publish), role: row.role, joinedAt: new Date(row.created_at).toISOString(),
+    visibility: row.social_visibility, libraryVisibility: row.profile_library_visibility ?? 'private', libraryVisible: Boolean(result.libraryVisible),
+    collaborationStatus: row.profile_collaboration_status ?? 'not_looking', skills: row.profile_skills ?? [],
+    activityVisibility: row.profile_activity_visibility ?? 'private', activityVisible: Boolean(result.activityVisible),
+    achievementsVisibility: row.profile_achievements_visibility ?? 'followers', achievementsVisible: Boolean(result.achievementsVisible),
+    creator: Boolean(row.can_publish), role: row.role, joinedAt: new Date(row.created_at).toISOString(),
     avatar: avatarView(row), followerCount: Number(row.follower_count || 0), followingCount: Number(row.following_count || 0),
     isFollowing: Boolean(row.is_following), isMe: Boolean(row.is_me),
     links: result.links.map(link => ({ kind: link.kind, label: link.label, url: link.url })),
     githubRepositories: (result.githubRepositories ?? []).map(repository => ({ id: repository.id, owner: repository.owner_login, name: repository.name, url: repository.html_url })),
+    activity: (result.activity ?? []).map(item => ({ type: item.type, occurredAt: new Date(item.occurred_at).toISOString(), title: item.title, workId: item.work_id ?? null })),
+    achievements: achievementView(result.achievementMetrics),
     featuredWorks: featuredIds.map(id => workById.get(id)).filter(Boolean), works, library,
   };
 };
@@ -77,12 +107,15 @@ export function createPublicProfileService({ repository, builtInWorks = [], cloc
       const handle = String(input.handle || '').trim().toLowerCase();
       const headline = String(input.headline || '').trim(); const about = String(input.about || '').trim();
       const libraryVisibility = input.libraryVisibility ?? 'private';
-      if (!HANDLE.test(handle) || RESERVED.has(handle) || Array.from(headline).length > 160 || Array.from(about).length > 2000 || !['public','followers','private'].includes(input.visibility) || !['public','followers','private'].includes(libraryVisibility)) throw new PublicProfileError('SCHEMA_INVALID', 400, '个人主页资料无效。');
+      const collaborationStatus = input.collaborationStatus === undefined ? null : input.collaborationStatus;
+      const activityVisibility = input.activityVisibility === undefined ? null : input.activityVisibility; const achievementsVisibility = input.achievementsVisibility === undefined ? null : input.achievementsVisibility;
+      const skills = input.skills === undefined ? null : Array.isArray(input.skills) ? [...new Set(input.skills.map(value => String(value).trim()).filter(Boolean))] : false;
+      if (!HANDLE.test(handle) || RESERVED.has(handle) || Array.from(headline).length > 160 || Array.from(about).length > 2000 || !VISIBILITIES.has(input.visibility) || !VISIBILITIES.has(libraryVisibility) || (activityVisibility !== null && !VISIBILITIES.has(activityVisibility)) || (achievementsVisibility !== null && !VISIBILITIES.has(achievementsVisibility)) || (collaborationStatus !== null && !COLLABORATION_STATUSES.has(collaborationStatus)) || skills === false || (skills !== null && (skills.length > 12 || skills.some(skill => Array.from(skill).length > 30)))) throw new PublicProfileError('SCHEMA_INVALID', 400, '个人主页资料无效。');
       const githubRepositoryIds = input.githubRepositoryIds ?? [];
       if (!Array.isArray(input.links) || input.links.length > 5 || !Array.isArray(input.featuredWorkIds) || input.featuredWorkIds.length > 6 || new Set(input.featuredWorkIds).size !== input.featuredWorkIds.length || !Array.isArray(githubRepositoryIds) || githubRepositoryIds.length > 6 || new Set(githubRepositoryIds).size !== githubRepositoryIds.length) throw new PublicProfileError('SCHEMA_INVALID', 400, '主页链接、精选作品或 GitHub 仓库数量无效。');
       const links = input.links.map(validateLink);
       if (new Set(links.map(link => link.url)).size !== links.length) throw new PublicProfileError('SCHEMA_INVALID', 400, '主页链接不能重复。');
-      const result = await repository.update({ userId: actor.userId, handle, headline, about, visibility: input.visibility, libraryVisibility, links, featuredWorkIds: input.featuredWorkIds, githubRepositoryIds, now: clock() });
+      const result = await repository.update({ userId: actor.userId, handle, headline, about, visibility: input.visibility, libraryVisibility, collaborationStatus, skills, activityVisibility, achievementsVisibility, links, featuredWorkIds: input.featuredWorkIds, githubRepositoryIds, now: clock() });
       if (result?.error === 'handle_taken') throw new PublicProfileError('HANDLE_TAKEN', 409, '这个主页地址已经被使用。');
       if (result?.error === 'featured_work_invalid') throw new PublicProfileError('FEATURED_WORK_INVALID', 400, '精选作品必须是你已公开发布且当前可用的作品。');
       if (result?.error === 'github_repository_invalid') throw new PublicProfileError('GITHUB_REPOSITORY_INVALID', 400, '只能展示当前 GitHub 授权中仍然公开的仓库。');

@@ -7,11 +7,13 @@ const moduleUrl = pathToFileURL(path.resolve(__dirname, '../../apps/api/src/publ
 const profileResult = overrides => ({
   profile: {
     id: '00000000-0000-4000-8000-000000000001', profile_handle: 'pixel-maker', display_name: 'Pixel Maker', bio: '做小而完整的游戏',
-    profile_about: '喜欢像素与轻量玩法。', social_visibility: 'public', profile_library_visibility: 'followers', can_publish: true, role: 'user', created_at: new Date('2026-09-01T00:00:00Z'),
+    profile_about: '喜欢像素与轻量玩法。', social_visibility: 'public', profile_library_visibility: 'followers', profile_collaboration_status: 'open_to_collaboration', profile_skills: ['像素美术','JavaScript'], profile_activity_visibility: 'public', profile_achievements_visibility: 'followers', can_publish: true, role: 'user', created_at: new Date('2026-09-01T00:00:00Z'),
     avatar_kind: 'preset', preset_key: 'fox', follower_count: 3, following_count: 2, is_following: false, is_me: true,
     ...overrides,
   },
-  links: [{ kind: 'github', label: 'GitHub', url: 'https://github.com/example', position: 0 }], workRows: [], libraryWorkRows: [], libraryVisible: true,
+  links: [{ kind: 'github', label: 'GitHub', url: 'https://github.com/example', position: 0 }], workRows: [], libraryWorkRows: [], libraryVisible: true, activityVisible: true, achievementsVisible: true,
+  activity: [{ type: 'guess_baike_completed', occurred_at: new Date('2026-09-30T08:00:00Z'), title: '完成猜百科 · 2026-09-30', work_id: null }],
+  achievementMetrics: { dates: ['2026-09-29','2026-09-30'], completedChallenges: 1, challengeWins: 1, bestDailyRank: 2, latestDailyRank: 3, latestRankDate: '2026-09-30' },
 });
 
 test('public profile supports anonymous reads and keeps the compact social identity separate', async () => {
@@ -23,6 +25,11 @@ test('public profile supports anonymous reads and keeps the compact social ident
   assert.equal(profile.creator, true);
   assert.equal(profile.libraryVisibility, 'followers');
   assert.equal(profile.libraryVisible, true);
+  assert.equal(profile.collaborationStatus, 'open_to_collaboration');
+  assert.deepEqual(profile.skills, ['像素美术','JavaScript']);
+  assert.equal(profile.activity[0].type, 'guess_baike_completed');
+  assert.equal(profile.achievements.longestStreak, 2);
+  assert.equal(profile.achievements.bestDailyRank, 2);
   assert.equal(profile.library[0].title, '内置游戏');
   assert.equal(profile.links[0].url, 'https://github.com/example');
   assert.deepEqual(calls[0], [null, 'pixel-maker']);
@@ -37,12 +44,18 @@ test('public profile updates normalize handles and reject unsafe links or invali
   });
   const actor = { userId: '00000000-0000-4000-8000-000000000001' };
   const repositoryId = '00000000-0000-4000-8000-000000000099';
-  const result = await service.update(actor, { handle: 'Pixel-Maker', headline: '  hello  ', about: '  about  ', visibility: 'followers', libraryVisibility: 'public', links: [{ kind: 'github', label: 'Code', url: 'https://github.com/example' }], featuredWorkIds: [], githubRepositoryIds: [repositoryId] });
+  const result = await service.update(actor, { handle: 'Pixel-Maker', headline: '  hello  ', about: '  about  ', visibility: 'followers', libraryVisibility: 'public', collaborationStatus: 'available_for_hire', skills: [' TypeScript ','像素美术','TypeScript'], activityVisibility: 'followers', achievementsVisibility: 'public', links: [{ kind: 'github', label: 'Code', url: 'https://github.com/example' }], featuredWorkIds: [], githubRepositoryIds: [repositoryId] });
   assert.equal(result.handle, 'pixel-maker');
   assert.equal(saved.headline, 'hello');
   assert.equal(saved.libraryVisibility, 'public');
   assert.deepEqual(saved.githubRepositoryIds, [repositoryId]);
+  assert.equal(saved.collaborationStatus, 'available_for_hire');
+  assert.deepEqual(saved.skills, ['TypeScript','像素美术']);
+  assert.equal(saved.activityVisibility, 'followers');
   assert.equal(saved.links[0].url, 'https://github.com/example');
+  await service.update(actor, { handle: 'pixel-maker', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] });
+  assert.equal(saved.collaborationStatus, null);
+  assert.equal(saved.skills, null);
   await assert.rejects(service.update(actor, { handle: 'admin', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
   await assert.rejects(service.update(actor, { handle: 'valid-name', headline: '', about: '', visibility: 'public', libraryVisibility: 'private', links: [{ kind: 'website', label: 'Local', url: 'https://127.0.0.1/path' }], featuredWorkIds: [] }), error => error.code === 'SCHEMA_INVALID');
 });
