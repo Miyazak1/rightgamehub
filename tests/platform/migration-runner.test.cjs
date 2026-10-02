@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 42);
+  assert.equal(migrations.length, 43);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -42,6 +42,7 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[37].version, '0038');
   assert.equal(migrations[38].version, '0039');
   assert.equal(migrations[41].version, '0042');
+  assert.equal(migrations[42].version, '0043');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);
@@ -67,6 +68,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
   const { PostgresCatalogRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/catalog-repository.mjs')));
   const { createCatalogService } = await import(pathToFileURL(path.join(root, 'apps/api/src/catalog-service.mjs')));
   const { PostgresModerationRepository, createModerationService } = await import(pathToFileURL(path.join(root, 'apps/api/src/moderation-service.mjs')));
+  const { PostgresCreatorFeedbackRepository, createCreatorFeedbackService } = await import(pathToFileURL(path.join(root, 'apps/api/src/creator-feedback-service.mjs')));
   const { PostgresRuntimeEdgeRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/runtime-edge-repository.mjs')));
   const { createRuntimeEdgeApp } = await import(pathToFileURL(path.join(root, 'apps/api/src/runtime-edge-app.mjs')));
   const { PostgresSourceBuildRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/source-build-repository.mjs')));
@@ -125,6 +127,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
     const publicConfig = { requestBodyLimit: 65536, runtimeDomain: 'gamehub.test', runtimeScheme: 'https', runtimePublicPort: null };
     const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(pool), config: publicConfig });
     const moderationService = createModerationService({ repository: new PostgresModerationRepository(pool) });
+    const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(pool) });
     const sourceBuildRepository = new PostgresSourceBuildRepository(pool);
     const sourceBuildService = createSourceBuildService({ repository: sourceBuildRepository,enabled: true,builderImageDigest: `sha256:${'a'.repeat(64)}` });
     const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(pool), objectStore: new LocalRuntimeStore(runtimeRoot), runtimeDomain: publicConfig.runtimeDomain });
@@ -132,7 +135,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
     const app = createApp({
       config: publicConfig,
       database: { ping: async () => (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1 },
-      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, sourceBuildService, uploadService, catalogService, moderationService,
+      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, sourceBuildService, uploadService, catalogService, moderationService, creatorFeedbackService,
     });
     try {
       const ready = await app.inject({ url: '/ready' });
@@ -143,7 +146,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       assert.equal(me.json().data.canPublish, true);
 
       const idempotencyKey = `create-work-${Date.now()}`;
-      const createRequest = { method: 'POST', url: '/v1/creator/works', headers: { authorization: `Bearer ${authorAuth.accessToken}`, 'idempotency-key': idempotencyKey }, payload: { title: 'Integration Game', description: 'Database-backed work', kind: 'game' } };
+      const createRequest = { method: 'POST', url: '/v1/creator/works', headers: { authorization: `Bearer ${authorAuth.accessToken}`, 'idempotency-key': idempotencyKey }, payload: { title: 'Integration Game', description: 'Database-backed work', kind: 'game', repositoryUrl: 'https://github.com/integration-owner/integration-repo' } };
       const [created, replay] = await Promise.all([app.inject(createRequest), app.inject(createRequest)]);
       assert.equal(created.statusCode, 200);
       assert.equal(replay.statusCode, 200);
@@ -322,6 +325,22 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       const reporterEmail = `reporter-${Date.now()}@example.test`;
       const reporterChallenge = await authService.requestChallenge({ email: reporterEmail, clientKind: 'browser' });
       const reporterAuth = await authService.verifyChallenge({ challengeId: reporterChallenge.challengeId, code, deviceLabel: 'Reporter device' });
+      const feedback = await app.inject({
+        method: 'POST', url: `/v1/works/${workId}/feedback`, headers: { authorization: `Bearer ${reporterAuth.accessToken}` },
+        payload: { category: 'bug', summary: 'Restart leaves the player frozen', details: 'After restarting level two, movement controls stop responding.', reproductionSteps: 'Start level two, pause, then choose restart.', environment: 'Chrome on Windows' },
+      });
+      assert.equal(feedback.statusCode, 201, feedback.body);
+      const feedbackId = feedback.json().data.id;
+      const inbox = await app.inject({ url: '/v1/creator/feedback?status=new', headers: { authorization: `Bearer ${authorAuth.accessToken}` } });
+      assert.equal(inbox.statusCode, 200, inbox.body);
+      assert.ok(inbox.json().data.some(item => item.id === feedbackId && !('reporterUserId' in item)));
+      const issueDraft = await app.inject({ method: 'POST', url: `/v1/creator/feedback/${feedbackId}/issue-draft`, headers: { authorization: `Bearer ${authorAuth.accessToken}` } });
+      assert.equal(issueDraft.statusCode, 200, issueDraft.body);
+      assert.match(issueDraft.json().data.createUrl, /^https:\/\/github\.com\/integration-owner\/integration-repo\/issues\/new\?/);
+      const linkedFeedback = await app.inject({ method: 'PATCH', url: `/v1/creator/feedback/${feedbackId}`, headers: { authorization: `Bearer ${authorAuth.accessToken}` }, payload: { action: 'link_issue', issueUrl: 'https://github.com/integration-owner/integration-repo/issues/7' } });
+      assert.equal(linkedFeedback.statusCode, 200, linkedFeedback.body);
+      assert.equal(linkedFeedback.json().data.status, 'issue_linked');
+      await assert.rejects(pool.query('UPDATE creator_feedback_events SET details=$1 WHERE feedback_id=$2', [{ tampered: true }, feedbackId]), /append-only/);
       const report = await app.inject({
         method: 'POST', url: `/v1/works/${workId}/reports`,
         headers: { authorization: `Bearer ${reporterAuth.accessToken}` }, payload: { category: 'unsafe', details: 'Unexpected external navigation.' },

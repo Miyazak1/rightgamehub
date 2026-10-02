@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 42);
+  assert.equal(files.length, 43);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -49,6 +49,11 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(profilePhaseTwo, /ADD COLUMN profile_skills/);
   assert.match(profilePhaseTwo, /ADD COLUMN profile_activity_visibility/);
   assert.match(profilePhaseTwo, /ADD COLUMN profile_achievements_visibility/);
+  const creatorFeedback = fs.readFileSync(path.join(migrationDir, '0043_creator_feedback.sql'), 'utf8');
+  assert.match(creatorFeedback, /CREATE TABLE creator_feedback/);
+  assert.match(creatorFeedback, /CREATE TABLE creator_feedback_events/);
+  assert.match(creatorFeedback, /BEFORE UPDATE ON creator_feedback_events/);
+  assert.match(creatorFeedback, /BEFORE DELETE ON creator_feedback_events/);
   const analytics = fs.readFileSync(path.join(migrationDir, '0029_analytics_foundation.sql'), 'utf8');
   assert.match(analytics, /CREATE TABLE analytics_events/);
   assert.match(analytics, /download_complete/);
@@ -116,6 +121,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'work_sources', 'github_webhook_deliveries', 'github_source_audit_events', 'multiplayer_room_invites',
     'multiplayer_rule_submissions', 'multiplayer_rule_submission_grants', 'multiplayer_rule_submission_events',
     'source_revisions', 'build_jobs', 'release_provenance', 'multiplayer_rule_builds', 'multiplayer_rule_build_events',
+    'creator_feedback', 'creator_feedback_events',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

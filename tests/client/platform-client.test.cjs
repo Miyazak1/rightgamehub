@@ -255,6 +255,27 @@ test('API client submits reports and exposes admin decisions and audit reads', a
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer moderator-token'));
 });
 
+test('API client keeps player feedback and author-controlled GitHub issue drafting separate', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const workId = '00000000-0000-4000-8000-000000000115';
+  const feedbackId = '00000000-0000-4000-8000-000000000116';
+  const client = createApiClient({ getAccessToken: () => 'player-or-creator-token', fetchImpl: async (url, init) => {
+    requests.push({ url, init });
+    return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  } });
+  await client.createCreatorFeedback(workId, { category: 'bug', summary: 'Cannot restart level', details: 'Restart leaves the player frozen.' });
+  await client.listCreatorFeedback('new');
+  await client.createCreatorFeedbackIssueDraft(feedbackId);
+  await client.updateCreatorFeedback(feedbackId, { action: 'archive' });
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','POST','PATCH']);
+  assert.match(requests[0].url, new RegExp(`/v1/works/${workId}/feedback$`));
+  assert.match(requests[1].url, /\/v1\/creator\/feedback\?status=new$/);
+  assert.match(requests[2].url, new RegExp(`/v1/creator/feedback/${feedbackId}/issue-draft$`));
+  assert.match(requests[3].url, new RegExp(`/v1/creator/feedback/${feedbackId}$`));
+  assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer player-or-creator-token'));
+});
+
 test('API client reads, updates and logs out the current account with bearer auth', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];

@@ -11,6 +11,7 @@ import { SocialError } from './social-service.mjs';
 import { PublicProfileError } from './public-profile-service.mjs';
 import { GuessBaikeError } from './guess-baike-service.mjs';
 import { AnalyticsError } from './analytics-service.mjs';
+import { CreatorFeedbackError } from './creator-feedback-service.mjs';
 import { StorageCapacityError } from './storage-capacity-service.mjs';
 import { RealtimeTicketError } from './realtime-ticket-service.mjs';
 import { MultiplayerRoomError } from './multiplayer-room-service.mjs';
@@ -31,7 +32,7 @@ const readLimitedBody = async (stream, limit) => {
 };
 const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接 GameHub' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回 GameHub 后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
 
-export function createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, storageCapacityService, realtimeTicketService, rulesStatus = null, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
+export function createApp({ config, database, migrations, authService, workService, githubSourceService, sourceBuildService, uploadService, catalogService, engagementService, guessBaikeService, guessBaikeAutomation, moderationService, socialService, publicProfileService, analyticsService, creatorFeedbackService, storageCapacityService, realtimeTicketService, rulesStatus = null, multiplayerRoomService, multiplayerMatchService, multiplayerRuleSubmissionService, logger = false }) {
   const app = Fastify({
     logger,
     bodyLimit: config.requestBodyLimit,
@@ -52,7 +53,7 @@ export function createApp({ config, database, migrations, authService, workServi
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -658,6 +659,54 @@ export function createApp({ config, database, migrations, authService, workServi
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
       return envelope(await moderationService.audit(request.actor, request.query));
+    });
+  }
+
+  if (creatorFeedbackService) {
+    const feedbackParams = { type: 'object', additionalProperties: false, required: ['feedbackId'], properties: { feedbackId: { type: 'string', format: 'uuid' } } };
+    app.post('/v1/works/:workId/feedback', {
+      preHandler: requireAuth,
+      schema: {
+        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },
+        body: { type: 'object', additionalProperties: false, required: ['category','summary','details'], properties: {
+          category: { type: 'string', enum: ['bug','idea','compatibility','other'] },
+          summary: { type: 'string', minLength: 5, maxLength: 160 },
+          details: { type: 'string', minLength: 10, maxLength: 2000 },
+          reproductionSteps: { type: 'string', maxLength: 2000 },
+          environment: { type: 'string', maxLength: 500 },
+        } },
+      },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      reply.status(201);
+      return envelope(await creatorFeedbackService.submit(request.actor, request.params.workId, request.body));
+    });
+    app.get('/v1/creator/feedback', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: {
+        status: { type: 'string', enum: ['new','reviewed','archived','issue_drafted','issue_linked','all'] },
+        limit: { type: 'integer', minimum: 1, maximum: 100 },
+      } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await creatorFeedbackService.list(request.actor, request.query));
+    });
+    app.post('/v1/creator/feedback/:feedbackId/issue-draft', {
+      preHandler: requireAuth,
+      schema: { params: feedbackParams },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await creatorFeedbackService.issueDraft(request.actor, request.params.feedbackId));
+    });
+    app.patch('/v1/creator/feedback/:feedbackId', {
+      preHandler: requireAuth,
+      schema: { params: feedbackParams, body: { type: 'object', additionalProperties: false, required: ['action'], properties: {
+        action: { type: 'string', enum: ['review','archive','reopen','link_issue'] },
+        issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
+      } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await creatorFeedbackService.update(request.actor, request.params.feedbackId, request.body));
     });
   }
 
