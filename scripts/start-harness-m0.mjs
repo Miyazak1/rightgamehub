@@ -45,7 +45,7 @@ try {
   await requireFile(localPnpm, 'Harness local pnpm is missing. Run its start-harness.bat --prepare --rebuild to restore dependencies.');
   stage = 'checking the GameHub package';
   const manifest = JSON.parse(await readFile(path.join(projectRoot, 'extensions/harness/package.json'), 'utf8'));
-  const artifact = path.join(projectRoot, `artifacts/gamehub-harness-plugin-${manifest.version}.tgz`);
+  const artifact = path.join(projectRoot, `artifacts/${manifest.name}-${manifest.version}.tgz`);
   await requireFile(artifact, 'Build the GameHub package first: npm run pack:harness');
   await mkdir(taskHome, { recursive: true });
   console.log(`Using Harness local pnpm: ${localPnpm}`);

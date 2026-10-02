@@ -262,6 +262,14 @@ test('Harness navigation remains inside the plugin surface', async () => {
   assert.match(app, /\['127\.0\.0\.1', 'localhost'\]\.includes\(location\.hostname\)/);
 });
 
+test('local Harness startup resolves the package from the current plugin manifest', async () => {
+  const launcher = await readFile('scripts/start-harness-m0.mjs', 'utf8');
+  const manifest = JSON.parse(await readFile('extensions/harness/package.json', 'utf8'));
+  assert.equal(manifest.name, 'gamehub-dsh-plugin');
+  assert.match(launcher, /`artifacts\/\$\{manifest\.name\}-\$\{manifest\.version\}\.tgz`/);
+  assert.doesNotMatch(launcher, /gamehub-harness-plugin-\$\{manifest\.version\}/);
+});
+
 
 test('portable Agent plugin manifests keep Codex and Claude Code installable', async () => {
   const portable = JSON.parse(await readFile('plugins/gamehub/plugin.json', 'utf8'));
