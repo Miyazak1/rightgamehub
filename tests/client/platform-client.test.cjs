@@ -92,7 +92,7 @@ test('API client exposes catalog data without inventing local works', async () =
   assert.deepEqual((await client.listWorks()).data, []);
 });
 
-test('API client submits analytics and reads the administrator overview', async () => {
+test('API client submits analytics and reads administrator and creator overviews', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];
   const client = createApiClient({ getAccessToken: () => 'analytics-token', fetchImpl: async (url, init) => {
@@ -101,12 +101,24 @@ test('API client submits analytics and reads the administrator overview', async 
   } });
   await client.trackAnalytics([{ type: 'page_view' }]);
   await client.getAdminAnalytics(30);
+  await client.getCreatorAnalytics(90);
   await client.getAdminStorage();
-  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET']);
+  assert.deepEqual(requests.map(item => item.init.method), ['POST','GET','GET','GET']);
   assert.match(requests[0].url, /\/v1\/analytics\/events$/);
   assert.match(requests[1].url, /\/v1\/admin\/analytics\?days=30$/);
-  assert.match(requests[2].url, /\/v1\/admin\/storage$/);
+  assert.match(requests[2].url, /\/v1\/creator\/analytics\?days=90$/);
+  assert.match(requests[3].url, /\/v1\/admin\/storage$/);
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
+});
+
+test('creator studio exposes private aggregate insights and README play badges', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /CREATOR INSIGHTS/);
+  assert.match(source, /api\.getCreatorAnalytics\(insights\.days\)/);
+  assert.match(source, /复制 README 徽章/);
+  assert.match(source, /\/v1\/works\/\$\{work\.id\}\/badge\.svg/);
+  assert.match(source, /const PUBLIC_GAMEHUB_URL = 'https:\/\/mooyu\.fun'/);
+  assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
 });
 
 test('API client creates an authenticated realtime connection ticket', async () => {

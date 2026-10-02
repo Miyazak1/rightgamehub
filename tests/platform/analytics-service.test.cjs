@@ -25,3 +25,25 @@ test('analytics overview is admin-only and range-bound', async () => {
   assert.equal(result.days, 30);
   assert.equal(result.since.toISOString(), '2026-08-31T16:00:00.000Z');
 });
+
+test('creator analytics requires publishing access and is scoped to the actor', async () => {
+  const { createAnalyticsService } = await import('../../apps/api/src/analytics-service.mjs');
+  const service = createAnalyticsService({ repository: { creatorOverview: async input => input }, clock: () => new Date('2026-09-30T12:00:00Z') });
+  await assert.rejects(() => service.creatorOverview({ userId: 'creator', scopes: ['works:read'], profile: { canPublish: false } }), error => error.code === 'CREATOR_REQUIRED');
+  await assert.rejects(() => service.creatorOverview({ userId: 'creator', scopes: [], profile: { canPublish: true } }), error => error.code === 'CREATOR_REQUIRED');
+  const result = await service.creatorOverview({ userId: 'creator', scopes: ['works:read'], profile: { canPublish: true } }, { days: 30 });
+  assert.equal(result.userId, 'creator');
+  assert.equal(result.days, 30);
+  assert.equal(result.since.toISOString(), '2026-08-31T16:00:00.000Z');
+});
+
+test('creator analytics repository returns aggregate rates and a complete daily series', async () => {
+  const { PostgresAnalyticsRepository } = await import('../../apps/api/src/analytics-repository.mjs');
+  const pool = { query: async sql => sql.includes('WITH owned AS') ? { rows: [{ work_id: '00000000-0000-4000-8000-000000000111', title: '测试游戏', state: 'published', views: 12, starts: 5, engaged_sessions: 3, repeat_players: 2, saves: 4, builds: 2, successful_builds: 1 }] } : { rows: [{ day: '2026-09-30', views: 12, starts: 5, engaged_sessions: 3 }] } };
+  const result = await new PostgresAnalyticsRepository(pool).creatorOverview({ userId: 'creator', days: 7, since: new Date('2026-09-24T16:00:00Z'), now: new Date('2026-10-01T12:00:00Z') });
+  assert.equal(result.daily.length, 7);
+  assert.equal(result.works[0].title, '测试游戏');
+  assert.equal(result.totals.engagementRate, 60);
+  assert.equal(result.totals.repeatPlayers, 2);
+  assert.equal(result.totals.buildSuccessRate, 50);
+});

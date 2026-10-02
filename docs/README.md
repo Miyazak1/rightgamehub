@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [67 G3.1 作者增长基础](./67-g3-creator-growth-phase-1.zh-CN.md) | **作者私有聚合数据、浏览/有效试玩/复访/收藏/构建指标，以及公开作品 README 在线体验徽章** |
 | [64 联网规则包提交与审核队列](./64-multiplayer-rule-review-intake.zh-CN.md) | **源码 ZIP 隔离收件、Doctor 证据、一次性上传授权、仅追加审核记录与受控构建边界** |
 | [65 联网规则受控构建与发布实施契约](./65-multiplayer-rule-build-release.zh-CN.md) | **审核后原子排队、无网络 Rule Builder、确定性 bundle、离线签名与双服务发布边界** |
 | [63 G2 受控静态站 Builder](./63-g2-controlled-static-builder.zh-CN.md) | **固定方案、无脚本静态构建、构建队列、来源证明、隔离部署与上线验收** |

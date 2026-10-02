@@ -526,6 +526,13 @@ export const schemas = Object.freeze({
     works: { type: 'array', items: object({ workId: workKey, title: { type: 'string' }, views: { type: 'integer', minimum: 0 }, starts: { type: 'integer', minimum: 0 }, downloads: { type: 'integer', minimum: 0 } }) },
     measurement: object({ timeZone: { type: 'string' }, siteDuration: { type: 'string' }, browserDownloads: { type: 'string' }, managedDownloads: { type: 'string' } }),
   }),
+  CreatorAnalyticsOverview: object({
+    range: object({ days: { type: 'integer', enum: [7,30,90] }, since: dateTime, until: dateTime }),
+    totals: object(Object.fromEntries(['views','starts','engagedSessions','repeatPlayers','saves','builds','successfulBuilds','engagementRate','buildSuccessRate'].map(key => [key, { type: 'integer', minimum: 0 }]))),
+    daily: { type: 'array', items: object({ day: { type: 'string', format: 'date' }, views: { type: 'integer', minimum: 0 }, starts: { type: 'integer', minimum: 0 }, engagedSessions: { type: 'integer', minimum: 0 } }) },
+    works: { type: 'array', items: object({ workId: workKey, title: { type: 'string' }, state: stringEnum(enums.WorkState), views: { type: 'integer', minimum: 0 }, starts: { type: 'integer', minimum: 0 }, engagedSessions: { type: 'integer', minimum: 0 }, repeatPlayers: { type: 'integer', minimum: 0 }, saves: { type: 'integer', minimum: 0 }, builds: { type: 'integer', minimum: 0 }, successfulBuilds: { type: 'integer', minimum: 0 } }) },
+    measurement: object({ timeZone: { type: 'string' }, repeatPlayer: { type: 'string' }, saves: { type: 'string' }, engagementRate: { type: 'string' } }),
+  }),
   StorageCapacityOverview: object({
     checkedAt: dateTime,
     level: stringEnum(['healthy','warning','blocked','unavailable']),
@@ -645,6 +652,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/admin/audit', operationId: 'listModerationAudit', auth: 'bearer', response: 'ModerationAuditEvent', responseArray: true },
   { method: 'post', path: '/v1/analytics/events', operationId: 'recordAnalyticsEvents', auth: 'anonymous', request: 'AnalyticsEventsRequest', response: 'AnalyticsAccepted', successStatus: '202' },
   { method: 'get', path: '/v1/admin/analytics', operationId: 'getAdminAnalytics', auth: 'bearer', response: 'AdminAnalyticsOverview', queryAnalyticsDays: true },
+  { method: 'get', path: '/v1/creator/analytics', operationId: 'getCreatorAnalytics', auth: 'bearer', response: 'CreatorAnalyticsOverview', queryAnalyticsDays: true, analyticsDefaultDays: 30 },
   { method: 'get', path: '/v1/admin/storage', operationId: 'getAdminStorage', auth: 'bearer', response: 'StorageCapacityOverview' },
   { method: 'get', path: '/v1/creator/works', operationId: 'listCreatorWorks', auth: 'bearer', response: 'Work', responseArray: true },
   { method: 'post', path: '/v1/creator/source-connections/github/install', operationId: 'startGitHubSourceInstall', auth: 'bearer', response: 'GitHubSourceInstallStart' },
@@ -690,7 +698,7 @@ export function createOpenApiDocument() {
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
-    if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: 7 } });
+    if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: operation.analyticsDefaultDays ?? 7 } });
     if (operation.queryMultiplayerRooms) parameters.push(
       { name: 'modeId', in: 'query', required: true, schema: id },
       { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 50, default: 30 } },

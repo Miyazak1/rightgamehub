@@ -13,6 +13,15 @@ const WORK_KEY = /^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F-]{36})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const invalid = message => { throw new AnalyticsError('ANALYTICS_INVALID', 400, message); };
+const rangeFor = (clock, input, fallback = 7) => {
+  const days = Number(input.days ?? fallback);
+  if (![7, 30, 90].includes(days)) invalid('统计周期无效。');
+  const now = clock();
+  const chinaNow = new Date(now.getTime() + 8 * 3_600_000);
+  chinaNow.setUTCHours(0, 0, 0, 0);
+  const since = new Date(chinaNow.getTime() - 8 * 3_600_000 - (days - 1) * 86_400_000);
+  return { days, now, since };
+};
 
 export function createAnalyticsService({ repository, clock = () => new Date(), ids = () => crypto.randomUUID() }) {
   return {
@@ -40,13 +49,12 @@ export function createAnalyticsService({ repository, clock = () => new Date(), i
 
     async overview(actor, input = {}) {
       if (actor?.profile?.role !== 'admin') throw new AnalyticsError('ADMIN_REQUIRED', 403, '需要管理员权限。');
-      const days = Number(input.days ?? 7);
-      if (![7, 30, 90].includes(days)) invalid('统计周期无效。');
-      const now = clock();
-      const chinaNow = new Date(now.getTime() + 8 * 3_600_000);
-      chinaNow.setUTCHours(0, 0, 0, 0);
-      const since = new Date(chinaNow.getTime() - 8 * 3_600_000 - (days - 1) * 86_400_000);
-      return repository.overview({ days, now, since });
+      return repository.overview(rangeFor(clock, input));
+    },
+
+    async creatorOverview(actor, input = {}) {
+      if (!actor?.profile?.canPublish || !actor?.scopes?.includes('works:read')) throw new AnalyticsError('CREATOR_REQUIRED', 403, '需要创作者权限。');
+      return repository.creatorOverview({ userId: actor.userId, ...rangeFor(clock, input, 30) });
     },
   };
 }

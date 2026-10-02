@@ -297,6 +297,13 @@ export function createApp({ config, database, migrations, authService, workServi
       reply.header('Cache-Control', 'no-store');
       return envelope(await analyticsService.overview(request.actor, request.query));
     });
+    app.get('/v1/creator/analytics', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { days: { type: 'integer', enum: [7,30,90] } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await analyticsService.creatorOverview(request.actor, request.query));
+    });
   }
   if (storageCapacityService) {
     app.get('/v1/admin/storage', { preHandler: requireAuth }, async (request, reply) => {
@@ -322,6 +329,16 @@ export function createApp({ config, database, migrations, authService, workServi
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.get(request.params.workId));
+    });
+    app.get('/v1/works/:workId/badge.svg', {
+      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } } },
+    }, async (request, reply) => {
+      await catalogService.get(request.params.workId);
+      const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="212" height="32" viewBox="0 0 212 32" role="img" aria-label="Play on GameHub"><rect width="212" height="32" fill="#14111f"/><rect x="1" y="1" width="210" height="30" fill="none" stroke="#8b5cf6" stroke-width="2"/><path fill="#8b5cf6" d="M13 8h4v4h4v4h4v4h-4v4h-4v-4h-4z"/><text x="34" y="21" fill="#f5f3ff" font-family="monospace" font-size="12" font-weight="700">PLAY ON GAMEHUB</text></svg>`;
+      reply.header('Cache-Control', 'public, max-age=300');
+      reply.header('X-Content-Type-Options', 'nosniff');
+      reply.header('Content-Security-Policy', "default-src 'none'");
+      return reply.type('image/svg+xml; charset=utf-8').send(svg);
     });
     app.get('/v1/works/:workId/releases/:releaseId/download', {
       schema: { params: { type: 'object', additionalProperties: false, required: ['workId','releaseId'], properties: {

@@ -8242,6 +8242,106 @@
         }
       }
     },
+    "/v1/creator/analytics": {
+      "get": {
+        "operationId": "getCreatorAnalytics",
+        "tags": [
+          "creator"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30,
+                90
+              ],
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CreatorAnalyticsOverview"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/storage": {
       "get": {
         "operationId": "getAdminStorage",
@@ -16745,6 +16845,219 @@
           "totals",
           "daily",
           "hosts",
+          "works",
+          "measurement"
+        ]
+      },
+      "CreatorAnalyticsOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "days": {
+                "type": "integer",
+                "enum": [
+                  7,
+                  30,
+                  90
+                ]
+              },
+              "since": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "until": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "days",
+              "since",
+              "until"
+            ]
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "views": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "starts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "engagedSessions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "repeatPlayers": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "saves": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "builds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "successfulBuilds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "engagementRate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "buildSuccessRate": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "views",
+              "starts",
+              "engagedSessions",
+              "repeatPlayers",
+              "saves",
+              "builds",
+              "successfulBuilds",
+              "engagementRate",
+              "buildSuccessRate"
+            ]
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "views": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "starts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "engagedSessions": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "day",
+                "views",
+                "starts",
+                "engagedSessions"
+              ]
+            }
+          },
+          "works": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "workId": {
+                  "type": "string",
+                  "pattern": "^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "published",
+                    "withdrawn",
+                    "suspended"
+                  ]
+                },
+                "views": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "starts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "engagedSessions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "repeatPlayers": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "saves": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "builds": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "successfulBuilds": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "workId",
+                "title",
+                "state",
+                "views",
+                "starts",
+                "engagedSessions",
+                "repeatPlayers",
+                "saves",
+                "builds",
+                "successfulBuilds"
+              ]
+            }
+          },
+          "measurement": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "timeZone": {
+                "type": "string"
+              },
+              "repeatPlayer": {
+                "type": "string"
+              },
+              "saves": {
+                "type": "string"
+              },
+              "engagementRate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timeZone",
+              "repeatPlayer",
+              "saves",
+              "engagementRate"
+            ]
+          }
+        },
+        "required": [
+          "range",
+          "totals",
+          "daily",
           "works",
           "measurement"
         ]

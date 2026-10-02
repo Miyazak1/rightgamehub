@@ -149,6 +149,33 @@ test('creator work routes accept discovery metadata from the creation form', asy
   assert.deepEqual(received, payload);
 });
 
+test('creator analytics is authenticated and public work badges stay catalog-gated', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const { AuthError } = await import(moduleUrl('auth-service.mjs'));
+  const workId = '00000000-0000-4000-8000-000000000777';
+  const actor = { userId: 'creator-user', scopes: ['works:read'], profile: { canPublish: true } };
+  const calls = [];
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
+    analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async () => ({ accepted: 1 }) },
+    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏' }; } },
+  });
+  t.after(() => app.close());
+  const denied = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30' });
+  assert.equal(denied.statusCode, 401);
+  const analytics = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30', headers: { authorization: 'Bearer token' } });
+  assert.equal(analytics.statusCode, 200);
+  assert.equal(calls[0][1], actor);
+  assert.equal(calls[0][2].days, 30);
+  const badge = await app.inject({ method: 'GET', url: `/v1/works/${workId}/badge.svg` });
+  assert.equal(badge.statusCode, 200);
+  assert.match(badge.headers['content-type'], /^image\/svg\+xml/u);
+  assert.equal(badge.headers['x-content-type-options'], 'nosniff');
+  assert.match(badge.body, /PLAY ON GAMEHUB/u);
+  assert.deepEqual(calls[1], ['catalog', workId]);
+});
+
 test('GitHub source routes authenticate creators and preserve raw webhook bytes', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   let rawBody;
