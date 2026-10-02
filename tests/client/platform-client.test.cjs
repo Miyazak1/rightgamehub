@@ -276,6 +276,16 @@ test('API client keeps player feedback and author-controlled GitHub issue drafti
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer player-or-creator-token'));
 });
 
+test('player feedback form explains minimum lengths instead of silently disabling submit', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /一句话标题至少需要 5 个字，还差/);
+  assert.match(source, /详细说明至少需要 10 个字，还差/);
+  assert.match(source, /\{summaryLength\}\/160 · 至少 5 个字/);
+  assert.match(source, /\{detailsLength\}\/2000 · 至少 10 个字/);
+  assert.match(source, /type="submit" disabled=\{state === 'sending'\}/);
+  assert.doesNotMatch(source, /disabled=\{state === 'sending' \|\| form\.summary\.trim\(\)\.length/);
+});
+
 test('API client reads, updates and logs out the current account with bearer auth', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];

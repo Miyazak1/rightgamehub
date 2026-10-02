@@ -473,6 +473,12 @@ button { cursor: pointer; }
 .feedback-dialog__grid { display: grid; grid-template-columns: 180px minmax(0,1fr); gap: 12px; }
 .feedback-dialog input { width: 100%; height: 42px; padding: 0 11px; border: 1px solid var(--gh-border); border-radius: 0; background: var(--gh-raised); color: var(--gh-primary); font: inherit; }
 .feedback-dialog textarea { min-height: 76px; }
+.feedback-field-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.feedback-field-heading small { color: var(--gh-secondary); font-size: 8px; font-weight: 500; }
+.feedback-field-heading small.is-short { color: var(--gh-warning); }
+.feedback-field-heading small.is-ready { color: var(--gh-success); }
+.feedback-dialog [aria-invalid="true"] { border-color: var(--gh-warning); box-shadow: inset 3px 0 0 var(--gh-warning); }
+.feedback-validation { margin: 12px 0 0; padding: 9px 11px; border-left: 3px solid var(--gh-warning); background: color-mix(in srgb,var(--gh-warning) 9%,var(--gh-raised)); }
 .feedback-privacy { display: block; margin-top: 12px; color: var(--gh-secondary); font-size: 9px; line-height: 1.6; }
 .modal-close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--gh-secondary); font-size: 22px; cursor: pointer; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
