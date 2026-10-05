@@ -1,6 +1,6 @@
 # 游戏存档与竞赛基础设施：实施状态
 
-更新：2026-10-02。实施分支：`codex/game-services-foundation`。
+更新：2026-10-05。实施分支：`codex/game-services-foundation`。
 
 权威设计：
 
@@ -21,6 +21,39 @@
 6. 共享分片组件：16 KiB 解码正文、32 KiB JSON 信封上限、顺序与相同内容重传、SHA-256、总量、5 分钟空闲 TTL、中止、受限下载游标。
 7. SDK 在关闭时取消未完成握手，发送前检查完整信封大小。保留已有协议主版本；存档/竞赛响应执行 32 KiB 上限，多人响应维持其既有领域边界，避免房间列表回归。
 8. 修正旧发布规范的 sandbox 描述，与真实运行代码一致：不包含 `allow-same-origin`。
+
+## 第二阶段：Cloud Save S0（2026-10-05）
+
+S0 的数据库与运行 API 已实现；生产能力仍关闭。新增 `0046_game_saves.sql`，包括 policy/审批审计、slot、不可变 revision、可回收 payload、usage、跨 channel 的写频率预算，以及不可变幂等操作回执。
+
+已落地：
+
+- 运行 API 提供策略、列表、元数据、正文、写入、删除、历史分页与恢复。所有请求通过账号 bearer 和短期游戏会话绑定 user/work/channel/namespace；接口不接受用户或 release 覆盖字段。
+- 原样保留正文，以 SHA-256 校验；JSON 必须是 UTF-8 顶层对象，并限制深度和节点数。默认单文档 256 KiB、硬上限 1 MiB，只接受 identity 编码。
+- 新槽使用 `If-None-Match: *`，已有槽使用单一强 ETag。先查完整请求摘要的幂等回执，再做 CAS；相同重试返回原成功结果，摘要或前置条件改变返回 409，过期 ETag 返回 412。
+- 每用户/作品/channel 的当前正文总额固定不超过 1 MiB、有效槽不超过 10 个，所有 namespace 共享。namespace policy 可进一步收紧额度。写频率跨 production/preview 共用 20 次/分钟、2,000 次/UTC 日；重试不重复计数，日额度耗尽后仍可删除有效槽。
+- 历史正文按 namespace 策略与 5 MiB 作品级总预算回收；优先保留有效槽的上一份正文。回收不改变修订事实和幂等回执，不阻塞当前保存；不足时返回 `historyDegraded`。
+- 删除写入墓碑；恢复复制历史正文为新修订，保留来源 ID。已清理历史明确返回 410。读取列表隐藏墓碑，元数据仍返回其 ETag，重新写入必须以墓碑 ETag 为基线。
+- 授权行在领域事务中持有共享锁，撤销与保存有确定顺序。SQL 约束防止跨槽指针、修订重写、孤立新修订、正文摘要不符及清理当前正文。正文、指针、计数和回执一起提交或回滚。
+- 正文响应设置 private/no-store、nosniff 和 attachment；错误不返回正文。接口契约与 TypeScript 声明已更新。revision 以十进制字符串返回，避免 bigint 精度损失。
+
+本次验证：
+
+- 完整测试：315 通过、8 跳过、0 失败（Legacy 74、Platform 163、Client 78）。
+- 存档 PostgreSQL 专项：11 通过、0 跳过、0 失败；真实应用 0001–0046 迁移。
+- 共享会话 PostgreSQL 专项：8 通过，包含新事务授权路径的原有撤销/隔离回归。
+- 合同生成与检查通过。故障注入覆盖写入正文、更新指针和清理历史之后出错，确认事务完整回滚。
+
+实施细化：修订事实保存在 `game_save_revisions`，正文放入 `game_save_payloads`。清理只移除历史 payload，不破坏 append-only 修订。首期只落地 PostgreSQL bytea；对象存储迁移、recovery 保护和账号删除保留策略在后续阶段实现。
+
+尚未完成：可信宿主领域 handler/SDK 接入、持久 outbox、冲突 UI 与独立 recovery 预算、用户管理/导入导出、定时对账清理、容量门禁、备份恢复演练和 Competition。策略审批目前保留数据库审计入口，没有对创作者开放写 API。这里的运行 API 会在发布撤下后拒绝旧会话；作品撤下后仍可管理自己的存档，需要后续独立账号管理入口。
+
+复验存档专项：
+
+```powershell
+$env:GAMEHUB_GAME_SAVE_DATABASE_URL = '<dedicated-test-database-url>'
+node --test tests/platform/game-saves.test.cjs tests/platform/game-saves-postgres.test.cjs
+```
 
 ## 权限与兼容合同
 
@@ -66,11 +99,11 @@ G3.3 使用 `0044_contribution_tasks.sql`，本分支基于它的完成提交 `5
 
 设计稿在源共享工作区原路径保留，实施分支使用编号 71/72，以避开 G3.2 的 68、G3.3 的 69 和 G4 的 70。
 
-后续预留 0046/0047 给存档/竞赛，真正提交前再次检查远端迁移序列。与 G4 的生产演练、Skill/MCP 控制面保持分工；共用授权边界。
+存档 S0 已使用 0046；0047 继续预留给竞赛。提交前再次核对远端 main 仍为 e6ec421，未出现编号冲突。与 G4 的生产演练、Skill/MCP 控制面保持分工；共用授权边界。
 
 ## 后续实施清单
 
-- Cloud Save：policy、slot、revision、usage、operations；CAS、幂等优先于 CAS、配额与滚动历史；运行 API 与 namespace/schema 兼容。
+- Cloud Save S1：接入真实宿主 handler 与 SDK，复用受控上传/下载分片及作用域会话。S0 数据库和运行 API 已完成。
 - 持久缓存：Browser IndexedDB、Agent/Windows adapter；confirmed/inFlight/pending 原子 outbox；匿名导入、多设备冲突与 recovery。
 - 用户/运营：导出、导入、恢复、删除、容量/写频率门禁、对账清理、break-glass 审计与真实备份恢复演练。
 - Competition：模式/规则、赛季 closing、run/submission/decision/result-set/participants、租约验证器、代际榜单与水位追赶。

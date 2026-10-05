@@ -245,6 +245,14 @@ userId
 
 唯一约束：`(slot_id, revision)`；`idempotency_key_hash` 在同一槽位范围内唯一。
 
+### 7.3.1 S0 实施细化（0046）
+
+不可变修订事实与可回收正文分表：`game_save_revisions` 不允许 UPDATE/DELETE；`game_save_payloads` 以 revision_id 为主键保存 bytea。当前指针指向的正文不可清理，历史正文可按预算删除，修订摘要及操作回执继续保留。首期未启用 object_key；后续对象存储也遵守相同保留边界。
+
+幂等键摘要、完整请求摘要和原成功响应保存在追加式 `game_save_operations`，以 slot_id + idempotency_key_hash 唯一约束。请求摘要覆盖操作类型、前置 ETag、schema、内容类型、编码、正文摘要或恢复来源；重试命中发生在 CAS 与当前策略写入检查之前，但仍必须通过当前账号与游戏作用域授权。
+
+HTTP revision/baseRevision 使用十进制字符串表示 bigint，不让 JavaScript 数字精度影响审计。普通已删除槽的 metadata 保留墓碑 ETag，恢复写入必须基于该 ETag；不能用 create-only 跳过墓碑。
+
 ### 7.4 `game_save_usage`
 
 按 `user_id + work_id + channel` 保存：

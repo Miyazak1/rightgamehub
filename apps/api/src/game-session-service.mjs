@@ -46,10 +46,10 @@ export function createGameSessionService({ repository, clock = () => new Date(),
       });
       return { gameSessionId: token, expiresAt: new Date(result.expiresAt).toISOString(), capabilities: result.capabilities };
     },
-    async resolve(actor, token, expected = {}) {
+    async resolve(actor, token, expected = {}, transaction) {
       requireActor(actor);
       if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/u.test(token)) denied();
-      const row = await repository.resolve({ userId: actor.userId, grantId: actor.grantId, tokenHash: hashGameSession(token), now: clock() });
+      const row = await repository.resolve({ userId: actor.userId, grantId: actor.grantId, tokenHash: hashGameSession(token), now: clock() }, transaction);
       if (!row || Object.entries(expected).some(([key, value]) =>
         key === 'capability' ? !row.capabilities.includes(value)
           : key === 'namespace' ? !Object.hasOwn(row.namespaces, value)

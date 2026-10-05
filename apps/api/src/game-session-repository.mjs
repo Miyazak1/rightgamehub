@@ -47,8 +47,19 @@ export class PostgresGameSessionRepository {
       return { expiresAt: input.expiresAt, capabilities: scope.capabilities };
     });
   }
-  async resolve(input) {
-    const row = (await this.pool.query(`SELECT s.* FROM game_sessions s
+  async resolve(input, transaction) {
+    const db = transaction ?? this.pool;
+    if (transaction) {
+      // Keep the issuance lock order and hold authority stable through commit.
+      await db.query('SELECT id FROM device_grants WHERE id=$1 AND user_id=$2 FOR SHARE', [input.grantId,input.userId]);
+      await db.query(`SELECT r.id FROM game_sessions s JOIN releases r ON r.id=s.release_id
+        JOIN works w ON w.id=s.work_id JOIN work_targets t ON t.work_id=r.work_id AND t.target_key=r.target_key
+        JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.user_id=$2 AND s.grant_id=$3 FOR SHARE OF r,w,t,u`,
+        [input.tokenHash,input.userId,input.grantId]);
+      await db.query(`SELECT a.release_id FROM game_sessions s JOIN game_release_service_scopes a
+        ON a.release_id=s.release_id AND a.channel=s.channel WHERE s.token_hash=$1 FOR SHARE OF a`, [input.tokenHash]);
+    }
+    const row = (await db.query(`SELECT s.* FROM game_sessions s
       JOIN device_grants g ON g.id=s.grant_id AND g.user_id=s.user_id
       JOIN users u ON u.id=s.user_id
       JOIN releases r ON r.id=s.release_id AND r.work_id=s.work_id
@@ -56,14 +67,14 @@ export class PostgresGameSessionRepository {
       JOIN work_targets t ON t.work_id=r.work_id AND t.target_key=r.target_key
       LEFT JOIN game_release_service_scopes a ON a.release_id=s.release_id AND a.channel=s.channel
       WHERE s.token_hash=$1 AND s.user_id=$2 AND s.grant_id=$3
-        AND s.revoked_at IS NULL AND s.expires_at>$4 AND g.revoked_at IS NULL AND g.expires_at>$4 AND u.status='active'
-        AND r.validation_state='ready' AND r.serving_state='enabled' AND (r.retire_after IS NULL OR r.retire_after>$4)
+        AND s.revoked_at IS NULL AND s.expires_at>GREATEST($4::timestamptz,clock_timestamp()) AND g.revoked_at IS NULL AND g.expires_at>GREATEST($4::timestamptz,clock_timestamp()) AND u.status='active'
+        AND r.validation_state='ready' AND r.serving_state='enabled' AND (r.retire_after IS NULL OR r.retire_after>GREATEST($4::timestamptz,clock_timestamp()))
         AND w.state NOT IN ('withdrawn','suspended')
         AND (s.channel='production' AND w.state='published' AND w.visibility='public' AND t.state='published'
           OR s.channel='preview' AND w.owner_user_id=s.user_id)
         AND s.work_generation=w.game_session_generation AND s.target_generation=t.game_session_generation
         AND s.release_generation=r.game_session_generation AND s.scope_generation=COALESCE(a.generation,0)
-        AND (NOT (s.capabilities && ARRAY['cloudSave','competition']::text[]) OR a.status='active')`,
+        AND (NOT (s.capabilities && ARRAY['cloudSave','competition']::text[]) OR a.status='active')${transaction ? ' FOR SHARE OF s' : ''}`,
       [input.tokenHash,input.userId,input.grantId,input.now])).rows[0];
     if (!row) return null;
     return { userId: row.user_id, grantId: row.grant_id, workId: row.work_id, releaseId: row.release_id, channel: row.channel,

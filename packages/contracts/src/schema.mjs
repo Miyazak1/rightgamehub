@@ -23,7 +23,31 @@ const nullableDateTime = { oneOf: [dateTime, { type: 'null' }] };
 const uintString = { type: 'string', pattern: '^(0|[1-9][0-9]*)$' };
 const sha256 = { type: 'string', pattern: '^[a-f0-9]{64}$' };
 
+const saveName = { type: 'string', pattern: '^(?!_gamehub[.])[a-z0-9._-]{1,64}$' };
+const nullable = schema => ({ oneOf: [schema, { type: 'null' }] });
+const saveMetadata = {
+  slot: saveName, namespace: saveName, revisionId: id, revision: uintString,
+  etag: { type: 'string' }, schemaVersion: nullable({type:'integer',minimum:1}),
+  contentType: nullable(stringEnum(['application/json','application/octet-stream'])),
+  contentEncoding: {type:'string',const:'identity'}, sha256: nullable(sha256), bytes: {type:'integer',minimum:0,maximum:1048576},
+  updatedAt: dateTime, deleted: {type:'boolean'}, restoredFromRevisionId: nullable(id),
+};
+
 export const schemas = Object.freeze({
+  GameSaveParams: object({workId:id}),
+  GameSaveSlotParams: object({workId:id,slotKey:saveName}),
+  GameSaveQuery: object({namespace:saveName}),
+  GameSaveHistoryQuery: object({namespace:saveName,beforeRevision:{type:'string',pattern:'^[1-9][0-9]{0,18}$'}},['namespace']),
+  RestoreGameSaveRequest: object({revisionId:id}),
+  GameSaveMetadata: object(saveMetadata),
+  GameSaveWriteResult: object({...saveMetadata,historyDegraded:{type:'boolean'},durability:{type:'string',const:'cloud'}}),
+  GameSaveHistory: object({items:{type:'array',maxItems:50,items:object({...saveMetadata,payloadAvailable:{type:'boolean'}})},nextBeforeRevision:nullable(uintString)}),
+  GameSavePolicy: object({
+    namespace:saveName,status:stringEnum(['active','retired']),maxSlots:{type:'integer'},maxDocumentBytes:{type:'integer'},
+    maxLiveBytes:{type:'integer'},maxHistoryBytes:{type:'integer'},historyVersions:{type:'integer'},historyDays:{type:'integer'},
+    schemaMin:{type:'integer'},schemaMax:{type:'integer'},contentTypes:{type:'array',items:stringEnum(['application/json','application/octet-stream'])},
+  }),
+
   ErrorResponse: object({
     error: object({
       code: { type: 'string', minLength: 1, maxLength: 80 },
@@ -632,6 +656,15 @@ const errorResponses = {
 };
 
 export const operations = Object.freeze([
+  {"method":"get","path":"/v1/works/{workId}/save-policy","operationId":"getGameSavePolicy","response":"GameSavePolicy","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true},
+  {"method":"get","path":"/v1/me/game-saves/{workId}/slots","operationId":"listGameSaves","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"responseArray":true},
+  {"method":"get","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/metadata","operationId":"getGameSaveMetadata","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true},
+  {"method":"get","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/content","operationId":"readGameSave","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveContent":true},
+  {"method":"put","path":"/v1/me/game-saves/{workId}/slots/{slotKey}","operationId":"writeGameSave","response":"GameSaveWriteResult","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveMutation":true,"saveBody":true},
+  {"method":"delete","path":"/v1/me/game-saves/{workId}/slots/{slotKey}","operationId":"deleteGameSave","response":"GameSaveWriteResult","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveMutation":true},
+  {"method":"get","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/history","operationId":"listGameSaveHistory","response":"GameSaveHistory","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveHistory":true},
+  {"method":"post","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/restore","operationId":"restoreGameSave","response":"GameSaveWriteResult","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveMutation":true,"request":"RestoreGameSaveRequest"},
+
   { method: 'post', path: '/v1/game-sessions', operationId: 'createGameSession', auth: 'bearer', request: 'CreateGameSessionRequest', response: 'GameSession', successStatus: '201' },
   { method: 'get', path: '/v1/game-sessions/current', operationId: 'getGameSession', auth: 'bearer', response: 'GameSessionStatus', gameSession: true },
   { method: 'delete', path: '/v1/game-sessions/current', operationId: 'revokeGameSession', auth: 'bearer', response: 'GameSessionRevocation', gameSession: true },
@@ -769,6 +802,19 @@ export function createOpenApiDocument() {
   const paths = {};
   for (const operation of operations) {
     const parameters = [];
+    if (operation.saveScope) parameters.push({ name:'namespace',in:'query',required:true,schema:saveName });
+    if (operation.saveSlot) parameters.push({ name:'slotKey',in:'path',required:true,schema:saveName });
+    if (operation.saveHistory) parameters.push({ name:'beforeRevision',in:'query',required:false,schema:{type:'string',pattern:'^[1-9][0-9]{0,18}$'} });
+    if (operation.saveMutation) parameters.push(
+      { name:'Idempotency-Key',in:'header',required:true,schema:id },
+      { name:'If-Match',in:'header',required:!operation.saveBody,schema:{type:'string'},description:'One exact strong ETag. For creation use If-None-Match instead.' },
+      ...(operation.saveBody?[{name:'If-None-Match',in:'header',required:false,schema:{type:'string',const:'*'},description:'Creation only; mutually exclusive with If-Match.'}]:[]),
+    );
+    if (operation.saveBody) parameters.push(
+      {name:'X-GameHub-Save-Schema',in:'header',required:true,schema:{type:'integer',minimum:1,maximum:2147483647}},
+      {name:'X-Content-SHA256',in:'header',required:true,schema:sha256},
+      {name:'Content-Encoding',in:'header',required:false,schema:{type:'string',const:'identity'}},
+    );
     if (operation.pathId) parameters.push({ name: operation.pathId, in: 'path', required: true, schema: id });
     if (operation.pathHandle) parameters.push({ name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' } });
     if (operation.pathCode) parameters.push({ name: 'code', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{10,24}$' } });
@@ -814,12 +860,13 @@ export function createOpenApiDocument() {
       tags: [operation.path.split('/')[2]],
       ...(operation.auth === 'bearer' ? { security: [{ bearerAuth: [] }] } : operation.auth === 'upload' ? { security: [{ uploadGrant: [] }] } : { security: [] }),
       ...(parameters.length ? { parameters } : {}),
-      ...(operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
+      ...(operation.saveBody ? {requestBody:{required:true,content:{'application/json':{schema:{type:'object',additionalProperties:true}},'application/octet-stream':{schema:{type:'string',contentEncoding:'binary',maxLength:1048576}}}}} : operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
       responses: {
-        [operation.successStatus ?? '200']: operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : operation.ruleBundleResponse ? { description: 'Controlled rule bundle for offline signing.',content: { 'application/javascript': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
+        [operation.successStatus ?? '200']: operation.saveContent ? {description:'Private save bytes; ETag and schema/digest headers describe the returned revision.',content:{'application/json':{schema:{type:'object',additionalProperties:true}},'application/octet-stream':{schema:{type:'string',contentEncoding:'binary'}}}} : operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : operation.ruleBundleResponse ? { description: 'Controlled rule bundle for offline signing.',content: { 'application/javascript': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })
           : object({ data: { $ref: `#/components/schemas/${operation.response}` } })),
         ...errorResponses,
+        ...(operation.saveScope ? Object.fromEntries([404,410,412,413,422,428,429,503].map(status=>[status,response({$ref:'#/components/schemas/ErrorResponse'})])) : {}),
       },
     };
   }

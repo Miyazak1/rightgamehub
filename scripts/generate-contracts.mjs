@@ -32,6 +32,15 @@ function generateTypes() {
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
   lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
+  lines.push("export interface GameSaveParams { workId: UUID }");
+  lines.push("export interface GameSaveSlotParams extends GameSaveParams { slotKey: string }");
+  lines.push("export interface GameSaveQuery { namespace: string }");
+  lines.push("export interface GameSaveHistoryQuery extends GameSaveQuery { beforeRevision?: UIntString }");
+  lines.push("export interface RestoreGameSaveRequest { revisionId: UUID }");
+  lines.push("export interface GameSaveMetadata { slot: string; namespace: string; revisionId: UUID; revision: UIntString; etag: string; schemaVersion: number | null; contentType: \"application/json\" | \"application/octet-stream\" | null; contentEncoding: \"identity\"; sha256: string | null; bytes: number; updatedAt: string; deleted: boolean; restoredFromRevisionId: UUID | null }");
+  lines.push("export interface GameSaveWriteResult extends GameSaveMetadata { historyDegraded: boolean; durability: \"cloud\" }");
+  lines.push("export interface GameSaveHistory { items: Array<GameSaveMetadata & { payloadAvailable: boolean }>; nextBeforeRevision: UIntString | null }");
+  lines.push("export interface GameSavePolicy { namespace: string; status: \"active\" | \"retired\"; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number; schemaMin: number; schemaMax: number; contentTypes: Array<\"application/json\" | \"application/octet-stream\"> }");
   lines.push('export interface CreateGameSessionRequest { workId: UUID; releaseId: UUID; channel: "production" | "preview"; launchNonce: UUID }');
   lines.push('export interface GameSession { gameSessionId: string; expiresAt: string; capabilities: Array<"identity" | "multiplayer" | "cloudSave" | "competition"> }');
   lines.push('export interface GameSessionStatus { active: true; expiresAt: string; capabilities: GameSession["capabilities"] }');
