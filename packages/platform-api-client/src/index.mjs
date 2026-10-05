@@ -1,8 +1,49 @@
 export class ApiError extends Error {
-  constructor({ code = 'NETWORK_ERROR', message = '请求失败，请稍后重试。', status = 0, retryable = true, requestId = null } = {}) {
-    super(message); this.name = 'ApiError'; this.code = code; this.status = status; this.retryable = retryable; this.requestId = requestId;
+  constructor({ code = 'NETWORK_ERROR', message = '请求失败，请稍后重试。', status = 0, retryable = true, requestId = null, details = {} } = {}) {
+    super(message); this.name = 'ApiError'; this.code = code; this.status = status; this.retryable = retryable; this.requestId = requestId; this.details = details && typeof details === 'object' && !Array.isArray(details) ? details : {};
   }
 }
+
+async function readBoundedResponse(response,limit,signal) {
+  if(!Number.isSafeInteger(limit)||limit<0||limit>1048576)throw new TypeError('Invalid save response limit.');
+  const declared=response.headers.get('content-length');
+  if(declared!==null&&(!/^[0-9]+$/u.test(declared)||Number(declared)>limit)) {
+    response.body?.cancel?.().catch(()=>{});
+    throw new ApiError({code:'SAVE_DOCUMENT_TOO_LARGE',message:'云存档正文超过下载限制。',retryable:false});
+  }
+  if(!response.body)return new Uint8Array(0);
+  if(!response.body.getReader)throw new ApiError({code:'SAVE_RESPONSE_INVALID',message:'当前宿主不支持受限存档下载。',retryable:false});
+  const reader=response.body.getReader(),chunks=[];let length=0,abort;
+  const interrupted=new Promise((_,reject)=>{
+    abort=()=>{reader.cancel().catch(()=>{});reject(new DOMException('Aborted','AbortError'));};
+    signal?.addEventListener('abort',abort,{once:true});
+  });
+  try {
+    while(true) {
+      if(signal?.aborted)throw new DOMException('Aborted','AbortError');
+      const {done,value}=await Promise.race([reader.read(),interrupted]);
+      if(signal?.aborted)throw new DOMException('Aborted','AbortError');
+      if(done)break;
+      length+=value.byteLength;
+      if(length>limit)throw new ApiError({code:'SAVE_DOCUMENT_TOO_LARGE',message:'云存档正文超过下载限制。',retryable:false});
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(length);let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    return bytes;
+  } finally {
+    signal?.removeEventListener('abort',abort);
+    reader.cancel().catch(()=>{});
+    reader.releaseLock();
+  }
+}
+const savePath=(scope,suffix='')=>'/v1/me/game-saves/'+encodeURIComponent(scope.workId)+'/slots'
+  +(scope.slotKey!==undefined?'/'+encodeURIComponent(scope.slotKey):'')+suffix+'?namespace='+encodeURIComponent(scope.namespace);
+const saveOptions=(scope,options)=>({...options,auth:true,headers:{'X-GameHub-Session':scope.gameSessionId}});
+const saveConditions=input=>({
+  'Idempotency-Key':input.idempotencyKey,
+  ...(input.createOnly?{'If-None-Match':'*'}:{'If-Match':input.expectedEtag}),
+});
 
 const randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -20,12 +61,17 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     }
     return refreshPromise;
   };
-  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false } = {}) {
+  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false, beforeRequest, responseBytesLimit } = {}) {
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(new Error('timeout')), timeoutMs);
-    const combined = globalThis.AbortSignal?.any ? AbortSignal.any([timeout.signal, ...(signal ? [signal] : [])]) : timeout.signal;
-    const token = auth ? await getAccessToken() : null;
+    const hasCombinedSignal = Boolean(globalThis.AbortSignal?.any);
+    const combined = hasCombinedSignal ? AbortSignal.any([timeout.signal, ...(signal ? [signal] : [])]) : timeout.signal;
+    const cancel = () => timeout.abort(signal?.reason);
+    if (!hasCombinedSignal) signal?.addEventListener('abort', cancel, { once: true });
     try {
+      const token = auth ? await getAccessToken() : null;
+      await beforeRequest?.();
+      if (combined.aborted || signal?.aborted) throw new ApiError({ code: 'REQUEST_CANCELLED', message: '请求已取消。', retryable: false });
       const response = await fetchImpl(`${baseUrl}${path}`, {
         method, signal: combined, keepalive,
         headers: {
@@ -40,18 +86,23 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
       if (response.status === 401 && auth && allowRefresh) {
         const currentToken = await getAccessToken();
         if (token && currentToken && token !== currentToken) {
-          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive });
+          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
         }
-        if (await refreshSession(signal)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive });
+        if (await refreshSession(signal)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
+      }
+      if (response.ok && responseBytesLimit !== undefined) {
+        const bytes = await readBoundedResponse(response, responseBytesLimit, combined);
+        return { data: bytes, etag: response.headers.get('etag'), sha256: response.headers.get('x-content-sha256'), schemaVersion: Number(response.headers.get('x-gamehub-save-schema')), contentType: response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() };
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new ApiError({ status: response.status, ...(payload.error ?? {}), message: payload.error?.message ?? `请求失败 (${response.status})` });
       return { data: payload.data, etag: response.headers.get('etag') };
     } catch (error) {
-      if (error instanceof ApiError) throw error;
+      if (error instanceof ApiError || error?.code === 'BRIDGE_ACCOUNT_CHANGED' || error?.code === 'BRIDGE_CLOSED') throw error;
+      if (signal?.aborted) throw new ApiError({ code: 'REQUEST_CANCELLED', message: '请求已取消。', retryable: false });
       if (error?.name === 'AbortError' || timeout.signal.aborted) throw new ApiError({ code: 'REQUEST_TIMEOUT', message: '连接超时，请检查网络后重试。' });
       throw new ApiError({ message: '暂时无法连接 GameHub，请稍后重试。' });
-    } finally { clearTimeout(timer); }
+    } finally { clearTimeout(timer); if (!hasCombinedSignal) signal?.removeEventListener('abort', cancel); }
   }
   async function authenticatedDownload(path, options = {}) {
     const token = await getAccessToken();
@@ -74,6 +125,28 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     createGameSession: (body, options) => request('/v1/game-sessions', { ...options, method: 'POST', body, auth: true }),
     getGameSession: (gameSessionId, options) => request('/v1/game-sessions/current', { ...options, auth: true, headers: { 'X-GameHub-Session': gameSessionId } }),
     revokeGameSession: (gameSessionId, options) => request('/v1/game-sessions/current', { ...options, method: 'DELETE', auth: true, headers: { 'X-GameHub-Session': gameSessionId } }),
+    getGameSavePolicy: (scope,options) => request('/v1/works/'+encodeURIComponent(scope.workId)+'/save-policy?namespace='+encodeURIComponent(scope.namespace),saveOptions(scope,options)),
+    listGameSaves: (scope,options) => request(savePath(scope),saveOptions(scope,options)),
+    getGameSaveMetadata: (scope,options) => request(savePath(scope,'/metadata'),saveOptions(scope,options)),
+    readGameSave: (scope,expectedEtag,options) => request(savePath(scope,'/content'),{
+      ...saveOptions(scope,options),responseBytesLimit:1048576,
+      headers:{'X-GameHub-Session':scope.gameSessionId,'If-Match':expectedEtag,Accept:'application/octet-stream, application/json'},
+    }),
+    getGameSaveWriteReceipt: (scope,input,options) => request(savePath(scope,'/write-receipt'),{
+      ...saveOptions(scope,options),method:'POST',body:{schemaVersion:input.schemaVersion,contentType:input.contentType,sha256:input.sha256},
+      headers:{'X-GameHub-Session':scope.gameSessionId,...saveConditions(input)},
+    }),
+    writeGameSave: (scope,input,options) => request(savePath(scope),{
+      ...saveOptions(scope,options),method:'PUT',rawBody:input.bytes,
+      headers:{'X-GameHub-Session':scope.gameSessionId,...saveConditions(input),'Content-Type':input.contentType,'X-GameHub-Save-Schema':String(input.schemaVersion),'X-Content-SHA256':input.sha256},
+    }),
+    deleteGameSave: (scope,input,options) => request(savePath(scope),{
+      ...saveOptions(scope,options),method:'DELETE',headers:{'X-GameHub-Session':scope.gameSessionId,...saveConditions(input)},
+    }),
+    listGameSaveHistory: (scope,beforeRevision,options) => request(savePath(scope,'/history')+(beforeRevision?'&beforeRevision='+encodeURIComponent(beforeRevision):''),saveOptions(scope,options)),
+    restoreGameSave: (scope,input,options) => request(savePath(scope,'/restore'),{
+      ...saveOptions(scope,options),method:'POST',body:{revisionId:input.revisionId},headers:{'X-GameHub-Session':scope.gameSessionId,...saveConditions(input)},
+    }),
     createRealtimeTicket: options => request('/v1/realtime/tickets', { ...options, method: 'POST', auth: true }),
     listMultiplayerModes: (workId, options) => request(`/v1/works/${encodeURIComponent(workId)}/multiplayer-modes`, options),
     createMultiplayerMode: (body, options) => request('/v1/admin/multiplayer/modes', { ...options, method: 'POST', body, auth: true }),

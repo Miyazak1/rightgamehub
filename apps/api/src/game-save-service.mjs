@@ -44,7 +44,7 @@ export function createGameSaveService({repository,gameSessionService,clock=()=>n
       return action(tx,scope);
     });
   };
-  const mutate=async(actor,token,input,kind)=>{
+  const prepareMutation=(input,kind,receiptOnly=false)=>{
     resource(input);
     if(!saveName(input.slotKey)||!uuid.test(input.idempotencyKey??''))saveError('SCHEMA_INVALID',400,'A slot and UUID idempotency key are required.');
     const createOnly=input.ifNoneMatch==='*';
@@ -54,17 +54,28 @@ export function createGameSaveService({repository,gameSessionService,clock=()=>n
     if(kind==='write') {
       if(!Number.isInteger(input.schemaVersion)||input.schemaVersion<1||input.schemaVersion>2147483647)saveError('SAVE_SCHEMA_UNSUPPORTED',422,'Invalid save schema version.');
       if((input.contentEncoding??'identity')!=='identity')saveError('SAVE_CONTENT_INVALID',422,'Only identity content encoding is supported.');
-      payloadHash=validateSavePayload(input.bytes,input.contentType,input.sha256);
+      if(receiptOnly) {
+        if(!['application/json','application/octet-stream'].includes(input.contentType)||!/^[a-f0-9]{64}$/u.test(input.sha256??''))
+          saveError('SAVE_CONTENT_INVALID',422,'Invalid save receipt metadata.');
+        payloadHash=input.sha256;
+      } else payloadHash=validateSavePayload(input.bytes,input.contentType,input.sha256);
     }
     if(kind==='restore'&&!uuid.test(input.revisionId??''))saveError('SCHEMA_INVALID',400,'A history revision ID is required.');
     // Bind every semantic field, including the CAS condition and operation type.
     const digest=saveHash(JSON.stringify([kind,createOnly?'*':input.ifMatch,
       kind==='write'?input.schemaVersion:null,kind==='write'?input.contentType:null,
       kind==='write'?'identity':null,payloadHash,kind==='restore'?input.revisionId:null]));
-    const command={...input,kind,createOnly,payloadHash,requestDigest:digest,keyHash:saveHash(input.idempotencyKey.toLowerCase())};
+    return {...input,kind,createOnly,payloadHash,requestDigest:digest,keyHash:saveHash(input.idempotencyKey.toLowerCase())};
+  };
+  const mutate=async(actor,token,input,kind)=>{
+    const command=prepareMutation(input,kind);
     return perform(actor,token,input,(tx,scope)=>repository.mutate(tx,scope,command,clock()));
   };
   return Object.freeze({
+    writeReceipt:async(actor,token,input)=>{
+      const command=prepareMutation(input,'write',true);
+      return perform(actor,token,input,(tx,scope)=>repository.writeReceipt(tx,scope,command));
+    },
     policy:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.policy(tx,scope,input.namespace)),
     list:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.list(tx,scope,input.namespace)),
     metadata:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.read(tx,scope,input,false)),

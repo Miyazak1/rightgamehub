@@ -4,8 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.mjs",
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    },
     "./protocol": "./src/protocol.mjs",
-    "./transfer": "./src/transfer.mjs"
+    "./transfer": "./src/transfer.mjs",
+    "./cloud-save-protocol": "./src/cloud-save-protocol.mjs"
   }
 }

@@ -1,3 +1,4 @@
+import { createCloudSaveClient } from './cloud-save.mjs';
 import { WEB_GAME_BRIDGE_PROTOCOL, WEB_GAME_BRIDGE_VERSION, bridgeEnvelope, parseBridgeRequest } from './protocol.mjs';
 
 const randomId = () => globalThis.crypto?.randomUUID?.() ?? `00000000-0000-4000-8000-${Math.random().toString(16).slice(2).padEnd(12, '0').slice(0, 12)}`;
@@ -7,7 +8,7 @@ const randomNonce = () => {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('') || `${Date.now()}${Math.random()}`.replace(/\D/gu, '').padEnd(24, '0');
 };
 
-export function createGameHubClient({ windowImpl = globalThis.window, parentWindow = windowImpl?.parent, requestTimeoutMs = 15_000 } = {}) {
+export function createGameHubClient({ windowImpl = globalThis.window, parentWindow = windowImpl?.parent, requestTimeoutMs = 15_000, cloudSaveTimeoutMs = 45_000 } = {}) {
   if (!windowImpl?.addEventListener || !parentWindow?.postMessage) throw new TypeError('GameHub SDK requires a browser iframe environment.');
   const listeners = new Map();
   const pending = new Map();
@@ -59,13 +60,13 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     });
     return connectPromise;
   };
-  const request = async (method, params = {}) => {
+  const request = async (method, params = {}, timeoutMs = requestTimeoutMs) => {
     await connect();
     if (closed || !port) throw new Error('GameHub client closed.');
     const id = randomId();
     const envelope = parseBridgeRequest(bridgeEnvelope({ type: 'request',id,method,params }));
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { pending.delete(id); reject(Object.assign(new Error('GameHub bridge request timed out.'), { code: 'BRIDGE_TIMEOUT' })); }, requestTimeoutMs);
+      const timer = setTimeout(() => { pending.delete(id); reject(Object.assign(new Error('GameHub bridge request timed out.'), { code: 'BRIDGE_TIMEOUT', retryable: true })); }, timeoutMs);
       pending.set(id, { resolve,reject,timer });
       try { port.postMessage(envelope); } catch (error) { clearTimeout(timer); pending.delete(id); reject(error); }
     });
@@ -92,6 +93,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   return Object.freeze({
     connect,
     getPlayer: () => request('player.get'),
+    cloudSave: createCloudSaveClient({request:(method,params)=>request(method,params,cloudSaveTimeoutMs)}),
     multiplayer: Object.freeze({
       listModes: () => request('multiplayer.modes.list'), rooms: Object.freeze(rooms), matches: Object.freeze(matches),
       connect: () => request('multiplayer.realtime.connect'),

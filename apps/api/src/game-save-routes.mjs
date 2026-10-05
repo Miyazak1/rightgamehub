@@ -32,7 +32,7 @@ export function registerGameSaveRoutes(app,{service,requireAuth}) {
     saves.get(base+'/:slotKey/metadata',{schema:{headers,params:slotParams,querystring:query}},
       async(request,reply)=>respond(reply,await call('metadata',request)));
     saves.get(base+'/:slotKey/content',{schema:{headers,params:slotParams,querystring:query}},async(request,reply)=>{
-      const result=await call('content',request);
+      const result=await call('content',request,{expectedEtag:request.headers['if-match']});
       reply.header('ETag',result.metadata.etag);
       reply.header('X-Content-SHA256',result.metadata.sha256);
       reply.header('X-GameHub-Save-Schema',String(result.metadata.schemaVersion));
@@ -43,6 +43,8 @@ export function registerGameSaveRoutes(app,{service,requireAuth}) {
       async(request,reply)=>respond(reply,await call('history',request)));
     saves.delete(base+'/:slotKey',{schema:{headers,params:slotParams,querystring:query}},
       async(request,reply)=>respond(reply,await call('delete',request,cas(request))));
+    saves.post(base+'/:slotKey/write-receipt',{bodyLimit:1024,schema:{headers,params:slotParams,querystring:query,body:schemas.GameSaveWriteReceiptRequest}},
+      async(request,reply)=>respond(reply,await call('writeReceipt',request,{...request.body,...cas(request)})));
     saves.post(base+'/:slotKey/restore',{bodyLimit:1024,schema:{headers,params:slotParams,querystring:query,body:schemas.RestoreGameSaveRequest}},
       async(request,reply)=>respond(reply,await call('restore',request,{...cas(request),revisionId:request.body.revisionId})));
     saves.register(async raw=>{

@@ -41,6 +41,16 @@ export class PostgresGameSaveRepository {
     if(!p||!['active','retired'].includes(p.status))saveError('SAVE_POLICY_NOT_ACTIVE',409,'Save policy has not been activated.');
     return p;
   }
+  async writeReceipt(tx,scope,input) {
+    await this.getPolicy(tx,scope,input.namespace);
+    const row=(await tx.query(`SELECT o.request_digest,o.result FROM game_save_slots s
+      JOIN game_save_operations o ON o.slot_id=s.id
+      WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3 AND s.namespace=$4 AND s.slot_key=$5 AND o.idempotency_key_hash=$6`,
+      [...scopeKey(scope),input.namespace,input.slotKey,input.keyHash])).rows[0];
+    if(!row)return {result:null};
+    if(!row.request_digest.equals(input.requestDigest))saveError('SAVE_IDEMPOTENCY_MISMATCH',409,'Idempotency key belongs to a different save request.');
+    return {result:row.result};
+  }
   async policy(tx,scope,namespace) {return policyView(await this.getPolicy(tx,scope,namespace));}
   async list(tx,scope,namespace) {
     await this.getPolicy(tx,scope,namespace);
@@ -55,6 +65,7 @@ export class PostgresGameSaveRepository {
     const row=(await tx.query(query,[...scopeKey(scope),input.namespace,input.slotKey])).rows[0];
     if(!row||content&&row.tombstone)saveError('SAVE_SLOT_NOT_FOUND',404,'Save slot was not found.');
     if(!content)return metadata(row);
+    if(input.expectedEtag!==undefined&&input.expectedEtag!==row.etag)saveError('SAVE_CONFLICT',412,'Save changed before download.',{expectedEtag:row.etag,currentRevision:String(row.revision),currentUpdatedAt:new Date(row.created_at).toISOString()});
     assertReadable(scope,input.namespace,row);
     // One MVCC statement reads the pointer and bytes together, even if another
     // transaction replaces the save and purges history immediately afterwards.

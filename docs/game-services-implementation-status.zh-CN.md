@@ -46,13 +46,45 @@ S0 的数据库与运行 API 已实现；生产能力仍关闭。新增 `0046_ga
 
 实施细化：修订事实保存在 `game_save_revisions`，正文放入 `game_save_payloads`。清理只移除历史 payload，不破坏 append-only 修订。首期只落地 PostgreSQL bytea；对象存储迁移、recovery 保护和账号删除保留策略在后续阶段实现。
 
-尚未完成：可信宿主领域 handler/SDK 接入、持久 outbox、冲突 UI 与独立 recovery 预算、用户管理/导入导出、定时对账清理、容量门禁、备份恢复演练和 Competition。策略审批目前保留数据库审计入口，没有对创作者开放写 API。这里的运行 API 会在发布撤下后拒绝旧会话；作品撤下后仍可管理自己的存档，需要后续独立账号管理入口。
+S0 完成时尚未实现的 handler/SDK 已在下述 S1 切片接入。当前仍未完成：持久 outbox、冲突 UI 与独立 recovery 预算、用户管理/导入导出、定时对账清理、容量门禁、备份恢复演练和 Competition。策略审批目前保留数据库审计入口，没有对创作者开放写 API。这里的运行 API 会在发布撤下后拒绝旧会话；作品撤下后仍可管理自己的存档，需要后续独立账号管理入口。
 
 复验存档专项：
 
 ```powershell
 $env:GAMEHUB_GAME_SAVE_DATABASE_URL = '<dedicated-test-database-url>'
 node --test tests/platform/game-saves.test.cjs tests/platform/game-saves-postgres.test.cjs
+```
+
+## 第三阶段：Cloud Save S1 在线链路（2026-10-05）
+
+已完成可信宿主与 SDK 的在线链路实现及内部自动化验证，**尚未完成 S1 的实际游戏适配与双宿主人工验收**。没有新增迁移，继续使用 0046；生产能力保持关闭。
+
+已落地：
+
+- 默认通用宿主注册 cloudSave handler，SDK 提供策略、列表、元数据、JSON/二进制读写、删除、历史分页、恢复与状态事件；接入说明见 [SDK 文档](../packages/web-game-sdk/README.md)。
+- 16 KiB 分片上传及下载共用连接级传输边界；上传前查批准策略，commit 绑定 begin 的槽、正文摘要、schema、CAS 和幂等键。提交等待期间保留传输占用；旧游标不能跨重连或账号继续使用。
+- 元数据和正文下载使用 If-Match 绑定同一修订，流式限制实际下载字节数，并校验摘要、长度与类型。空二进制正文与墓碑读取均可往返。
+- 服务端成功 ACK 才显示云端确认；冲突、未确认与不可用分别提示。不同槽的成功不会隐藏另一槽的未解决问题；尚无冲突选择/副本 UI。
+- 新增只查询已提交结果的 write-receipt API。策略缩小或退休后，同一完整请求仍能取得原成功回执；修改正文、CAS 或幂等键不能绕过策略创建写入。
+- 账号身份在请求及凭据重试前复核；新账号不会携带旧会话提交。桥只转发受限冲突元数据，不暴露 bearer、gameSessionId 或服务端私有字段。
+- 多人模板改为完整模块打包并携带 SDK 依赖，避免新增存档模块导致已有模板失效；Cursor 的受版本管理客户端产物已重新构建。
+
+验证证据：
+
+- 全套测试分组复验：Legacy 74 通过/1 跳过、Platform 164 通过/7 跳过、Client 87 通过，共 325 通过、8 跳过、0 失败。旧 Cursor 产物测试的函数名断言已更新为通用宿主及两个领域处理器检查。
+- SDK、存档单元与 PostgreSQL 专项组合 23 通过；其中 PostgreSQL 专项 12 通过，真实应用 0001–0046 迁移。
+- MessageChannel → SDK → 默认宿主 → 真实 HTTP handler → PostgreSQL 链路覆盖 JSON、256 KiB 二进制、并发 CAS、提交后 ACK 丢失重试、原回执与较新修订共存、删除/恢复、策略缩小/退休，以及两个账号隔离。
+- 合同检查、Harness/VS Code 扩展/Web 正式构建、多人模板构建通过。新增 SDK TypeScript 声明已提供，未运行独立 TypeScript 编译检查。
+
+测试使用真实 MessageChannel、应用 HTTP 注入和 PostgreSQL；web/agent 为两个模拟宿主，不等于真实浏览器/Cursor 游玩。当前工作树未找到 A Dark Room 源码及三类黄金存档，因此尚无真实游戏 adapter、网页刷新续玩和跨宿主进度验收证据。
+
+后续范围：S1 的实际游戏适配与验收；S2 本机缓存/outbox；S3 用户管理、recovery、容量门禁、对账及备份恢复。当前不能据此公开长流程游戏。
+
+专项复验：
+
+```powershell
+$env:GAMEHUB_GAME_SAVE_DATABASE_URL = '<dedicated-test-database-url>'
+node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.cjs tests/platform/game-saves-postgres.test.cjs
 ```
 
 ## 权限与兼容合同
@@ -63,7 +95,7 @@ node --test tests/platform/game-saves.test.cjs tests/platform/game-saves-postgre
 
 首次会话由可信宿主在首次服务 RPC 前创建；业务 handler 执行前必须成功完成授权。匿名本机存档将在持久缓存阶段单独接入，不能通过创建匿名云会话模拟。
 
-新能力在共享合同中为可选字段。当前生产 catalog 和 ZIP 校验仍不开放新能力；领域 handler、持久缓存与控制面完成后再启用。测试中的单能力组合通过受控模块夹具验证宿主合同，不能当作实际游戏已经接入的证据。
+新能力在共享合同中为可选字段。当前生产 catalog 和 ZIP 校验仍不开放新能力；持久缓存、控制面与实际验收完成后再启用。S1 的默认存档 handler 已接真实 API/数据库；模拟宿主验证不能当作实际游戏已经接入的证据。
 
 分片首期仅接受 `identity` 编码。gzip 在受限解压与计量实现前明确拒绝。一个连接内两个领域共享一个活动 transfer；具体 handler 还必须实施自己的 policy 上限（存档默认 256 KiB，竞赛默认 256 KiB、硬上限 2 MiB）。
 
@@ -103,7 +135,7 @@ G3.3 使用 `0044_contribution_tasks.sql`，本分支基于它的完成提交 `5
 
 ## 后续实施清单
 
-- Cloud Save S1：接入真实宿主 handler 与 SDK，复用受控上传/下载分片及作用域会话。S0 数据库和运行 API 已完成。
+- Cloud Save S1：在线宿主 handler/SDK 与数据库闭环已完成自动化验证；待 A Dark Room adapter、黄金存档和真实网页/Cursor 双宿主验收。
 - 持久缓存：Browser IndexedDB、Agent/Windows adapter；confirmed/inFlight/pending 原子 outbox；匿名导入、多设备冲突与 recovery。
 - 用户/运营：导出、导入、恢复、删除、容量/写频率门禁、对账清理、break-glass 审计与真实备份恢复演练。
 - Competition：模式/规则、赛季 closing、run/submission/decision/result-set/participants、租约验证器、代际榜单与水位追赶。
@@ -111,4 +143,4 @@ G3.3 使用 `0044_contribution_tasks.sql`，本分支基于它的完成提交 `5
 - 2048 确定性规则与回放验证、第二款不同结构存档游戏、迷阵权威终局适配；Web/Agent/Windows 跨端验收。
 - 短期会话票据交换与 Agent/Windows 的受控本机凭据存储；目前复用已存在的宿主账号 bearer，不宣称原生票据流程完成。
 
-第一阶段的成功不能替代上述完成条件。
+已完成切片的自动化验证不能替代上述实际游戏与运营验收。

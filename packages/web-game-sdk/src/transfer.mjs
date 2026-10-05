@@ -35,7 +35,7 @@ export function createGameTransfer({ maxBytes = 256 * 1024, clock = Date.now, id
       sweep();
       if (closed) fail('TRANSFER_CLOSED', 'Transfer channel is closed.');
       if (current) fail('TRANSFER_BUSY', 'Only one active transfer is allowed.');
-      if (!scope || !Number.isSafeInteger(totalBytes) || totalBytes < 1 || totalBytes > maxBytes || !/^[a-f0-9]{64}$/u.test(sha256 ?? '')
+      if (!scope || !Number.isSafeInteger(totalBytes) || totalBytes < 0 || totalBytes > maxBytes || !/^[a-f0-9]{64}$/u.test(sha256 ?? '')
         || typeof contentType !== 'string' || contentType.length > 128 || encoding !== 'identity') fail('TRANSFER_INVALID', 'Invalid transfer metadata.');
       current = { id: ids(), scope, direction: 'upload', totalBytes, sha256, contentType, encoding, bytes: new Uint8Array(totalBytes), nextIndex: 0, touchedAt: clock(), committing: false };
       return status(current);
@@ -53,7 +53,7 @@ export function createGameTransfer({ maxBytes = 256 * 1024, clock = Date.now, id
       } else { entry.bytes.set(bytes, offset); entry.nextIndex += 1; }
       entry.touchedAt = clock(); return status(entry);
     },
-    async commit(scope, { transferId }) {
+    async commit(scope, { transferId, retain = false }) {
       const entry = requireCurrent(scope, transferId);
       if (entry.committing) fail('TRANSFER_BUSY', 'Transfer is committing.');
       if (entry.nextIndex !== Math.ceil(entry.totalBytes / GAME_TRANSFER_CHUNK_BYTES)) fail('TRANSFER_INCOMPLETE', 'Transfer is incomplete.');
@@ -62,18 +62,26 @@ export function createGameTransfer({ maxBytes = 256 * 1024, clock = Date.now, id
         const actual = await digest(entry.bytes);
         if (requireCurrent(scope, transferId) !== entry) fail('TRANSFER_EXPIRED', 'Transfer was replaced.');
         if (actual !== entry.sha256) fail('TRANSFER_DIGEST_MISMATCH', 'Transfer digest does not match.');
-        current = null;
+        if (!retain) current = null;
         return { bytes: entry.bytes, sha256: actual, contentType: entry.contentType, encoding: entry.encoding };
       } catch (error) {
         if (current === entry) current = null;
         throw error;
       }
     },
-    async openRead(scope, bytes, contentType = 'application/octet-stream') {
+    reserve(scope) {
       sweep();
       if (closed || current) fail('TRANSFER_BUSY', 'Transfer channel is unavailable.');
-      if (!scope || !(bytes instanceof Uint8Array) || bytes.length < 1 || bytes.length > maxBytes || typeof contentType !== 'string' || contentType.length > 128) fail('TRANSFER_INVALID', 'Invalid read payload.');
-      const entry = { id: ids(), scope, direction: 'download', bytes: bytes.slice(), totalBytes: bytes.length, nextIndex: 0, contentType, touchedAt: clock() };
+      if (!scope) fail('TRANSFER_INVALID', 'A trusted scope is required.');
+      current = { id: ids(), scope, direction: 'reserved', touchedAt: clock() };
+      return { transferId: current.id };
+    },
+    async openRead(scope, bytes, contentType = 'application/octet-stream', { reservationId } = {}) {
+      sweep();
+      if (reservationId) requireCurrent(scope, reservationId, 'reserved');
+      if (closed || current && !reservationId) fail('TRANSFER_BUSY', 'Transfer channel is unavailable.');
+      if (!scope || !(bytes instanceof Uint8Array) || bytes.length > maxBytes || typeof contentType !== 'string' || contentType.length > 128) fail('TRANSFER_INVALID', 'Invalid read payload.');
+      const entry = { id: reservationId ?? ids(), scope, direction: 'download', bytes: bytes.slice(), totalBytes: bytes.length, nextIndex: 0, contentType, touchedAt: clock() };
       current = entry;
       try {
         const sha256 = await digest(entry.bytes);

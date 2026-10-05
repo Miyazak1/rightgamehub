@@ -1,6 +1,6 @@
 # GameHub 通用游戏存档基础设施设计
 
-> 状态：架构设计 v0.2，已完成第一次交叉评审；共享前置切片已完成，领域业务仍待实施（见 [实施状态](game-services-implementation-status.zh-CN.md)）<br>
+> 状态：架构设计 v0.2，已完成第一次交叉评审；共享前置切片、存档 S0 与 S1 在线链路已实现，实际游戏验收及后续阶段仍待完成（见 [实施状态](game-services-implementation-status.zh-CN.md)）<br>
 > 日期：2026-10-02<br>
 > 首个接入作品：A Dark Room 兼容改造版<br>
 > 适用宿主：网站、Cursor/Agent 内嵌游戏、Windows 游戏客户端<br>
@@ -253,6 +253,12 @@ userId
 
 HTTP revision/baseRevision 使用十进制字符串表示 bigint，不让 JavaScript 数字精度影响审计。普通已删除槽的 metadata 保留墓碑 ETag，恢复写入必须基于该 ETag；不能用 create-only 跳过墓碑。
 
+### 7.3.2 S1 在线传输与回执查询
+
+宿主下载正文时携带元数据 ETag（If-Match），服务端从同一 MVCC 快照取得正文与修订；不同版本不能拼为一次读取。SDK 还会校验长度、类型及 SHA-256。
+
+上传 begin 先检查当前策略；若策略已缩小或退休，可信宿主可调用 `POST /v1/me/game-saves/:workId/slots/:slotKey/write-receipt?namespace=...`，携带原幂等键、CAS、schema、内容类型及正文摘要，查询已提交的操作。此 API 没有写入副作用：同完整摘要返回原成功回执，不存在返回 null，同键不同摘要返回 409；始终要求当前账号及游戏 scope 授权。它既不分配正文，也不允许新保存绕过策略。
+
 ### 7.4 `game_save_usage`
 
 按 `user_id + work_id + channel` 保存：
@@ -482,7 +488,7 @@ nextLocalSequence（单调递增）
 
 ### 13.2 宿主重构
 
-当前宿主实现以 multiplayer 命名并固定公布 `identity`、`multiplayer`。实施存档前应重构为通用 `createWebGameHost`：
+设计起点的宿主以 multiplayer 命名并固定公布 `identity`、`multiplayer`。共享前置切片现已实现通用 `createWebGameHost`，遵循以下边界：
 
 ```text
 Bridge Core

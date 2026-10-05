@@ -185,6 +185,86 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     await pending;await revocation;
     await rejected(f.service.content(f.actor,f.token,f.resource()),'GAME_SESSION_INVALID');
   });
+  await t.test('SDK -> MessageChannel -> API -> PostgreSQL supports two accounts, host restart, CAS and lost acknowledgements',async st=>{
+    const {createSaveBridge}=require('../helpers/game-save-bridge.cjs');
+    const {createApiClient}=await import('../../packages/platform-api-client/src/index.mjs');
+    const {createApp}=await import('../../apps/api/src/app.mjs');
+    const {loadConfig}=await import('../../apps/api/src/config.mjs');
+    const f=await fixture(),other=await fixture();
+    const actors={'Bearer account-a':f.actor,'Bearer account-b':other.actor};
+    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+      authService:{authenticateBearer:async header=>{assert.ok(actors[header]);return actors[header];}},
+      gameSessionService:f.sessions,gameSaveService:f.service});
+    st.after(()=>app.close());
+    const requests=[];let dropAcknowledgement=false,readRace=null;
+    const fetchImpl=async(address,init)=>{
+      const parsed=new URL(address,'https://test.invalid');
+      requests.push({path:parsed.pathname,headers:init.headers,body:init.body});
+      if(parsed.pathname.endsWith('/content')&&readRace){const race=readRace;readRace=null;await race();}
+      const response=await app.inject({method:init.method,url:parsed.pathname+parsed.search,headers:init.headers,
+        ...(init.body!==undefined?{payload:init.body instanceof Uint8Array?Buffer.from(init.body):init.body}:{})});
+      if(dropAcknowledgement&&init.method==='PUT'&&response.statusCode===200){dropAcknowledgement=false;throw new Error('Simulated dropped response after commit');}
+      return new Response(response.rawPayload,{status:response.statusCode,headers:response.headers});
+    };
+    const makeHost=async account=>{
+      const api=createApiClient({getAccessToken:()=>account,fetchImpl});
+      const bridge=await createSaveBridge({api,descriptor:{workId:f.workId,releaseId:f.releaseId,channel:'production',capabilities:{cloudSave:true}},
+        identity:async()=>account,cloudSaveTimeoutMs:10000});
+      st.after(()=>bridge.close());return bridge;
+    };
+    const web=await makeHost('account-a'),agent=await makeHost('account-a'),secondPlayer=await makeHost('account-b');
+    assert.equal(await web.client.cloudSave.read({slot:'autosave'}),null);
+    const initial=await web.client.cloudSave.write({slot:'autosave',data:{chapter:'二'},schemaVersion:1,createOnly:true,idempotencyKey:uuid()});
+    assert.deepEqual((await agent.client.cloudSave.read({slot:'autosave'})).data,{chapter:'二'});
+    assert.equal(await secondPlayer.client.cloudSave.read({slot:'autosave'}),null);
+    await secondPlayer.client.cloudSave.write({slot:'autosave',data:{chapter:'玩家乙'},schemaVersion:1,createOnly:true,idempotencyKey:uuid()});
+    const large=crypto.randomBytes(262144);
+    const updated=await agent.client.cloudSave.write({slot:'autosave',data:large,schemaVersion:1,expectedEtag:initial.etag,idempotencyKey:uuid()});
+    await assert.rejects(web.client.cloudSave.write({slot:'autosave',data:{chapter:'过期'},schemaVersion:1,expectedEtag:initial.etag,idempotencyKey:uuid()}),
+      error=>error.code==='SAVE_CONFLICT'&&error.details.expectedEtag===updated.etag&&error.details.currentRevision==='2');
+    const read=await web.client.cloudSave.read({slot:'autosave'});
+    assert.deepEqual(Buffer.from(read.data),large);
+    const restarted=web.newClient();await restarted.connect();
+    assert.deepEqual(Buffer.from((await restarted.cloudSave.read({slot:'autosave'})).data),large);
+    dropAcknowledgement=true;
+    const replay={slot:'autosave',data:crypto.randomBytes(80000),schemaVersion:1,expectedEtag:updated.etag,idempotencyKey:uuid()};
+    await assert.rejects(restarted.cloudSave.write(replay),{code:'NETWORK_ERROR'});
+    const afterLostAck=await agent.client.cloudSave.getMetadata({slot:'autosave'});
+    assert.equal(afterLostAck.revision,'3');
+    const later=await agent.client.cloudSave.write({slot:'autosave',data:{chapter:'更新'},schemaVersion:1,expectedEtag:afterLostAck.etag,idempotencyKey:uuid()});
+    const receipt=await restarted.cloudSave.write(replay);
+    assert.equal(receipt.revision,'3');assert.equal(receipt.etag,afterLostAck.etag);
+    assert.equal((await restarted.cloudSave.getMetadata({slot:'autosave'})).revision,'4');
+    const history=await restarted.cloudSave.history({slot:'autosave'});
+    assert.ok(history.items.some(row=>row.revisionId===initial.revisionId&&row.payloadAvailable));
+    const restored=await restarted.cloudSave.restore({slot:'autosave',revisionId:initial.revisionId,expectedEtag:later.etag,idempotencyKey:uuid()});
+    assert.equal(restored.revision,'5');assert.deepEqual((await restarted.cloudSave.read({slot:'autosave'})).data,{chapter:'二'});
+    readRace=async()=>agent.client.cloudSave.write({slot:'autosave',data:{chapter:'下载竞态'},schemaVersion:1,expectedEtag:restored.etag,idempotencyKey:uuid()});
+    await assert.rejects(restarted.cloudSave.read({slot:'autosave'}),{code:'SAVE_CONFLICT'});
+    const latest=await restarted.cloudSave.getMetadata({slot:'autosave'});
+    const deleted=await restarted.cloudSave.delete({slot:'autosave',expectedEtag:latest.etag,idempotencyKey:uuid()});
+    const tombstone=await restarted.cloudSave.read({slot:'autosave'});
+    assert.equal(tombstone.deleted,true);assert.equal(tombstone.data,null);assert.equal(tombstone.etag,deleted.etag);
+    const fresh=await restarted.cloudSave.write({slot:'autosave',data:{chapter:'重新开始'},schemaVersion:1,expectedEtag:tombstone.etag,idempotencyKey:uuid()});
+    assert.equal(fresh.revision,'8');
+    // A policy downgrade/retirement must not prevent replay of a committed write.
+    await pool.query('UPDATE game_save_policies SET max_document_bytes=1 WHERE work_id=$1',[f.workId]);
+    const afterDowngrade=await restarted.cloudSave.write(replay);
+    assert.equal(afterDowngrade.etag,receipt.etag);
+    await pool.query("UPDATE game_save_policies SET status='retired' WHERE work_id=$1",[f.workId]);
+    assert.equal((await restarted.cloudSave.write(replay)).etag,receipt.etag);
+    await assert.rejects(restarted.cloudSave.write({...replay,data:crypto.randomBytes(80000)}),{code:'SAVE_IDEMPOTENCY_MISMATCH'});
+    await assert.rejects(restarted.cloudSave.write({...replay,expectedEtag:fresh.etag}),{code:'SAVE_IDEMPOTENCY_MISMATCH'});
+    // The same key/body in another account cannot retrieve account A's receipt.
+    await assert.rejects(secondPlayer.client.cloudSave.write(replay),{code:'SAVE_POLICY_NOT_ACTIVE'});
+    await assert.rejects(restarted.cloudSave.write({...replay,idempotencyKey:uuid()}),{code:'SAVE_POLICY_NOT_ACTIVE'});
+    assert.deepEqual((await secondPlayer.client.cloudSave.read({slot:'autosave'})).data,{chapter:'玩家乙'});
+    for(const bridge of [web,agent,secondPlayer]){
+      assert.ok(bridge.wire.every(frame=>Buffer.byteLength(JSON.stringify(frame))<=32768));
+      assert.doesNotMatch(JSON.stringify(bridge.wire),/gameSessionId|Bearer account-|grantId/);
+    }
+    assert.ok(requests.filter(r=>r.path.includes('/game-saves/')).every(r=>r.headers['X-GameHub-Session']));
+  });
   await t.test('HTTP calls run through real auth scope, CAS transaction and raw content download',async st=>{
     const f=await fixture();
     const {createApp}=await import('../../apps/api/src/app.mjs');

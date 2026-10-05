@@ -125,4 +125,5 @@
 
 - [通用竞赛设计](71-platform-competition-leaderboards-design.zh-CN.md)
 - [通用存档设计](72-game-save-platform-infrastructure-design.zh-CN.md)
-- [实施状态与第一阶段验证](game-services-implementation-status.zh-CN.md)
+- [实施状态与 S0/S1 验证](game-services-implementation-status.zh-CN.md)
+- [网页游戏 SDK 在线存档接入](../packages/web-game-sdk/README.md)

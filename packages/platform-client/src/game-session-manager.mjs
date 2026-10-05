@@ -1,5 +1,5 @@
 /** Holds authorization only in the trusted parent. Never send this object over the bridge. */
-export function createGameSessionManager({ apiClient, descriptor, signal, clock = Date.now } = {}) {
+export function createGameSessionManager({ apiClient, descriptor, signal, checkIdentity, clock = Date.now } = {}) {
   let session = null;
   let pending = null;
   let closed = false;
@@ -18,7 +18,7 @@ export function createGameSessionManager({ apiClient, descriptor, signal, clock 
         pending ??= apiClient.createGameSession({
           workId: descriptor.workId, releaseId: descriptor.releaseId, channel: descriptor.channel ?? 'production',
           launchNonce: crypto.randomUUID(),
-        }, { signal }).then(({ data }) => {
+        }, { signal, beforeRequest: checkIdentity }).then(({ data }) => {
           if (closed || signal?.aborted) { revoke(data); throw Object.assign(new Error('Game launch closed.'), { code: 'BRIDGE_CLOSED' }); }
           session = data; return data;
         }).finally(() => { pending = null; });

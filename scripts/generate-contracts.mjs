@@ -32,6 +32,8 @@ function generateTypes() {
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
   lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
+  lines.push('export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }');
+  lines.push('export interface GameSaveWriteReceipt { result: GameSaveWriteResult | null }');
   lines.push("export interface GameSaveParams { workId: UUID }");
   lines.push("export interface GameSaveSlotParams extends GameSaveParams { slotKey: string }");
   lines.push("export interface GameSaveQuery { namespace: string }");

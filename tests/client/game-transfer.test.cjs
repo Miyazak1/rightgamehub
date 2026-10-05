@@ -52,3 +52,18 @@ test('malformed Base64, padding bits, oversized chunks and unsupported compressi
   assert.throws(()=>store.begin('save',{totalBytes:262145,sha256:'a'.repeat(64)}),{code:'TRANSFER_INVALID'});
   assert.throws(()=>store.begin('save',{totalBytes:1,sha256:'a'.repeat(64),encoding:'gzip'}),{code:'TRANSFER_INVALID'});
 });
+
+test('reservations and retained commits keep a single transfer across service domains',async()=>{
+  const {createGameTransfer,sha256Hex}=await transfer();
+  const store=createGameTransfer(),empty=new Uint8Array(0),digest=await sha256Hex(empty);
+  const reserved=store.reserve('save');
+  assert.throws(()=>store.begin('competition',{totalBytes:0,sha256:digest}),{code:'TRANSFER_BUSY'});
+  await assert.rejects(store.openRead('competition',empty,'application/octet-stream',{reservationId:reserved.transferId}),{code:'TRANSFER_EXPIRED'});
+  const read=await store.openRead('save',empty,'application/octet-stream',{reservationId:reserved.transferId});
+  assert.equal(read.totalBytes,0);assert.equal(read.sha256,digest);store.abort('save',read);
+  const upload=store.begin('save',{totalBytes:0,sha256:digest});
+  assert.deepEqual((await store.commit('save',{transferId:upload.transferId,retain:true})).bytes,empty);
+  assert.throws(()=>store.begin('competition',{totalBytes:0,sha256:digest}),{code:'TRANSFER_BUSY'});
+  store.abort('save',upload);
+  store.begin('competition',{totalBytes:0,sha256:digest});store.close();
+});

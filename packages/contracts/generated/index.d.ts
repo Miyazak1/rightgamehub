@@ -16,6 +16,8 @@ export type UUID = string;
 
 export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }
 export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }
+export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }
+export interface GameSaveWriteReceipt { result: GameSaveWriteResult | null }
 export interface GameSaveParams { workId: UUID }
 export interface GameSaveSlotParams extends GameSaveParams { slotKey: string }
 export interface GameSaveQuery { namespace: string }

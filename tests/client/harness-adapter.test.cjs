@@ -336,11 +336,11 @@ test('Cursor webview CSP permits only the configured API and its realtime socket
   assert.doesNotMatch(extension, /connect-src \*/);
 });
 
-test('the packaged Cursor client contains the multiplayer host bridge', async () => {
+test('the packaged Cursor client contains the shared host and both approved service handlers', async () => {
   const bundle = await readFile('extensions/vscode/media/gamehub.js', 'utf8');
-  assert.match(bundle, /createWebGameMultiplayerHost/);
-  assert.match(bundle, /createBridge:/);
-  assert.match(bundle, /gamehub\.bridge\.ready/);
-  assert.match(bundle, /multiplayer\.rooms\.invite/);
-  assert.match(bundle, /createMultiplayerInvite/);
+  for (const marker of ['createWebGameHost', 'createBridge:', 'gamehub.bridge.ready',
+    'multiplayer.rooms.invite', 'createMultiplayerInvite', 'createCloudSaveHandlers',
+    'cloudSave.transfer.commit', 'getGameSaveWriteReceipt']) {
+    assert.ok(bundle.includes(marker), 'Cursor bundle is missing ' + marker);
+  }
 });

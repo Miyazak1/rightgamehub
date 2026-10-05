@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 import { makeZip } from './zip-fixture.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -15,19 +16,27 @@ async function walk(directory,prefix='') {
   }
   return output;
 }
-const protocol=(await fs.readFile(path.join(root,'packages/web-game-sdk/src/protocol.mjs'),'utf8')).replaceAll('export ','');
-const sdkSource=await fs.readFile(path.join(root,'packages/web-game-sdk/src/index.mjs'),'utf8');
-const protocolSource=await fs.readFile(path.join(root,'packages/web-game-sdk/src/protocol.mjs'));
-const sdkPackage=JSON.parse(await fs.readFile(path.join(root,'packages/web-game-sdk/package.json'),'utf8'));
-const sdk=sdkSource.replace(/^import .*?;\r?\n/u,'').replaceAll('export function ','function ').replace(/\r?\nexport \* from .*?;\r?\n?/u,'\n');
+const sdkRoot=path.join(root,'packages/web-game-sdk/src');
 const gameSource=(await read('game.js')).toString('utf8');
-const game=gameSource.replace(/^import .*?;\r?\n/u,'');
+const requireFromHarness=createRequire(path.join(root,'extensions/harness/package.json'));
+const {build}=await import(pathToFileURL(requireFromHarness.resolve('esbuild')).href);
+// Bundle the real module graph; regex concatenation loses transitive imports.
+const bundled=await build({
+  absWorkingDir:root,stdin:{contents:gameSource,sourcefile:'game.js',resolveDir:templateRoot},
+  alias:{'@gamehub/web-game-sdk':path.join(sdkRoot,'index.mjs')},
+  bundle:true,format:'esm',platform:'browser',target:['chrome110'],write:false,logLevel:'silent',
+});
+const game=bundled.outputFiles[0].text;
 const webEntries=[
   {name:'index.html',data:await read('index.html')},{name:'style.css',data:await read('style.css')},
-  {name:'game.js',data:`${protocol}\n${sdk}\n${game}`},{name:'platform.json',data:await read('platform.json')},
+  {name:'game.js',data:game},{name:'platform.json',data:await read('platform.json')},
 ];
 const sourceEntries=(await walk(templateRoot)).map(entry=>entry.name==='game.js' ? { ...entry,data:gameSource.replace("from '@gamehub/web-game-sdk'","from './vendor/gamehub-sdk.mjs'") } : entry);
-sourceEntries.push({name:'vendor/gamehub-sdk.mjs',data:`// Generated from ${sdkPackage.name} ${sdkPackage.version}; do not edit this vendored artifact.\n${sdkSource}`},{name:'vendor/protocol.mjs',data:protocolSource});
+for(const name of (await fs.readdir(sdkRoot)).filter(name=>name.endsWith('.mjs')).sort()) {
+  const source=await fs.readFile(path.join(sdkRoot,name));
+  sourceEntries.push({name:'vendor/'+(name==='index.mjs'?'gamehub-sdk.mjs':name),data:source});
+}
+
 sourceEntries.sort((left,right)=>left.name.localeCompare(right.name,'en'));
 for (const outputRoot of outputRoots) {
   await fs.mkdir(outputRoot,{recursive:true});

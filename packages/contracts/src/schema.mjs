@@ -39,6 +39,8 @@ export const schemas = Object.freeze({
   GameSaveQuery: object({namespace:saveName}),
   GameSaveHistoryQuery: object({namespace:saveName,beforeRevision:{type:'string',pattern:'^[1-9][0-9]{0,18}$'}},['namespace']),
   RestoreGameSaveRequest: object({revisionId:id}),
+  GameSaveWriteReceiptRequest: object({schemaVersion:{type:'integer',minimum:1,maximum:2147483647},contentType:stringEnum(['application/json','application/octet-stream']),sha256}),
+  GameSaveWriteReceipt: object({result:nullable(object({...saveMetadata,historyDegraded:{type:'boolean'},durability:{type:'string',const:'cloud'}}))}),
   GameSaveMetadata: object(saveMetadata),
   GameSaveWriteResult: object({...saveMetadata,historyDegraded:{type:'boolean'},durability:{type:'string',const:'cloud'}}),
   GameSaveHistory: object({items:{type:'array',maxItems:50,items:object({...saveMetadata,payloadAvailable:{type:'boolean'}})},nextBeforeRevision:nullable(uintString)}),
@@ -656,6 +658,7 @@ const errorResponses = {
 };
 
 export const operations = Object.freeze([
+  {method:'post',path:'/v1/me/game-saves/{workId}/slots/{slotKey}/write-receipt',operationId:'getGameSaveWriteReceipt',auth:'bearer',gameSession:true,pathId:'workId',saveScope:true,saveSlot:true,saveMutation:true,saveCreateCondition:true,request:'GameSaveWriteReceiptRequest',response:'GameSaveWriteReceipt'},
   {"method":"get","path":"/v1/works/{workId}/save-policy","operationId":"getGameSavePolicy","response":"GameSavePolicy","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true},
   {"method":"get","path":"/v1/me/game-saves/{workId}/slots","operationId":"listGameSaves","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"responseArray":true},
   {"method":"get","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/metadata","operationId":"getGameSaveMetadata","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true},
@@ -807,9 +810,10 @@ export function createOpenApiDocument() {
     if (operation.saveHistory) parameters.push({ name:'beforeRevision',in:'query',required:false,schema:{type:'string',pattern:'^[1-9][0-9]{0,18}$'} });
     if (operation.saveMutation) parameters.push(
       { name:'Idempotency-Key',in:'header',required:true,schema:id },
-      { name:'If-Match',in:'header',required:!operation.saveBody,schema:{type:'string'},description:'One exact strong ETag. For creation use If-None-Match instead.' },
-      ...(operation.saveBody?[{name:'If-None-Match',in:'header',required:false,schema:{type:'string',const:'*'},description:'Creation only; mutually exclusive with If-Match.'}]:[]),
+      { name:'If-Match',in:'header',required:!operation.saveBody&&!operation.saveCreateCondition,schema:{type:'string'},description:'One exact strong ETag. For creation use If-None-Match instead.' },
+      ...(operation.saveBody||operation.saveCreateCondition?[{name:'If-None-Match',in:'header',required:false,schema:{type:'string',const:'*'},description:'Creation only; mutually exclusive with If-Match.'}]:[]),
     );
+    if (operation.saveContent) parameters.push({name:'If-Match',in:'header',required:false,schema:{type:'string'},description:'Download only the metadata revision already read; returns 412 if it changed.'});
     if (operation.saveBody) parameters.push(
       {name:'X-GameHub-Save-Schema',in:'header',required:true,schema:{type:'integer',minimum:1,maximum:2147483647}},
       {name:'X-Content-SHA256',in:'header',required:true,schema:sha256},
