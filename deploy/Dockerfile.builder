@@ -5,6 +5,9 @@ RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
+COPY packages/creator-tools/package.json packages/creator-tools/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json
 COPY packages/rules-sdk/package.json packages/rules-sdk/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/api...
 

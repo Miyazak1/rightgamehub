@@ -87,6 +87,14 @@ $env:GAMEHUB_GAME_SAVE_DATABASE_URL = '<dedicated-test-database-url>'
 node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.cjs tests/platform/game-saves-postgres.test.cjs
 ```
 
+### 推送前部署镜像验证
+
+推送核对发现 Docker 构建阶段未包含 API 新增的 contracts 工作区依赖。已补齐 API、源码构建器、规则构建器、校验器的依赖清单，并将 contracts 正文加入 API 运行镜像。四个镜像均在本机实际构建成功；随后在断网临时容器中验证 API 和三个工具入口模块图可加载。
+
+生产更新使用 `/www/gamehub/deploy/compose.prod.yml` 与 `.env.prod`。本次 API/Web 更新可仅构建 migrate、api、runtime、worker、source-worker、rule-worker、web，沿用现有隔离构建器及其固定摘要。更新前执行 `BACKUP_ROOT=/www/backup/gamehub sh backup.sh`，显式运行 migrate，再重启应用服务；完成后 `/ready` 应显示 46/46。
+
+0044–0046 上线后，只有 43 份迁移文件的旧代码会因 unexpected_version 无法通过 readiness。应用回退必须使用保留已应用迁移文件的兼容版本；不能仅切回旧提交并宣称已完成回滚。本轮只推送功能分支，没有执行生产部署。
+
 ## 权限与兼容合同
 
 当前平台身份接口使用父宿主持有的 bearer。游戏会话在此之上缩小作用域，不改变既有登录协议，也不把 bearer 或 gameSessionId 交给 iframe。

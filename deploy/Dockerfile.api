@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json
 COPY packages/rules-sdk/package.json packages/rules-sdk/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/api...
@@ -18,6 +19,7 @@ COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=dependencies /app/packages/creator-tools/node_modules ./packages/creator-tools/node_modules
 COPY --chown=node:node apps/api ./apps/api
 COPY --chown=node:node packages/creator-tools ./packages/creator-tools
+COPY --chown=node:node packages/contracts ./packages/contracts
 COPY --chown=node:node packages/multiplayer-protocol ./packages/multiplayer-protocol
 COPY --chown=node:node packages/rules-sdk ./packages/rules-sdk
 COPY --chown=node:node packages/platform-client/src/guess-baike-policy.mjs packages/platform-client/src/guess-baike-policy.mjs
