@@ -265,6 +265,45 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     }
     assert.ok(requests.filter(r=>r.path.includes('/game-saves/')).every(r=>r.headers['X-GameHub-Session']));
   });
+
+  await t.test('A Dark Room stage snapshots and lost ACK replay through SDK, HTTP and PostgreSQL',async st=>{
+    const {createAdrSaveAdapter}=await import('../../samples/adarkroom/save-adapter.mjs');
+    const {createSaveBridge}=require('../helpers/game-save-bridge.cjs');
+    const {createApiClient}=await import('../../packages/platform-api-client/src/index.mjs');
+    const {createApp}=await import('../../apps/api/src/app.mjs');
+    const {loadConfig}=await import('../../apps/api/src/config.mjs');
+    const f=await fixture();let dropAck=false;
+    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+      authService:{authenticateBearer:async()=>f.actor},gameSessionService:f.sessions,gameSaveService:f.service});
+    st.after(()=>app.close());
+    const api=createApiClient({getAccessToken:()=> 'fixture',fetchImpl:async(address,init)=>{
+      const parsed=new URL(address,'https://test.invalid');
+      const r=await app.inject({method:init.method,url:parsed.pathname+parsed.search,headers:init.headers,
+        ...(init.body!==undefined?{payload:init.body instanceof Uint8Array?Buffer.from(init.body):init.body}:{})});
+      if(dropAck&&init.method==='PUT'&&r.statusCode===200){dropAck=false;throw new Error('ACK dropped after commit');}
+      return new Response(r.rawPayload,{status:r.statusCode,headers:r.headers});
+    }});
+    async function launch(){
+      const b=await createSaveBridge({api,descriptor:{workId:f.workId,releaseId:f.releaseId,channel:'production',capabilities:{cloudSave:true}},identity:async()=>f.actor.userId});
+      const a=createAdrSaveAdapter({cloudSave:b.client.cloudSave,schedule:()=>null,cancel:()=>{}});
+      const close=()=>{a.close();b.close();};st.after(close);return {...a,close};
+    }
+    let a=await launch();await a.load();
+    for(const name of ['new','mid','pre-ending','observed/new','observed/mid','observed/pre-ending']){
+      const value=JSON.parse(await require('node:fs/promises').readFile(path.resolve(__dirname,'../../samples/adarkroom/fixtures/'+name+'.json'),'utf8'));
+      value.config={...value.config,soundOn:false};
+      a.queue(value);await a.saveNow();a.close();a=await launch();
+      assert.deepEqual(await a.load(),value);
+    }
+    const before=await f.service.metadata(f.actor,f.token,f.resource());
+    const value=a.exportState();value.stores.wood+=7;a.queue(value);dropAck=true;
+    await assert.rejects(a.saveNow(),{code:'NETWORK_ERROR'});
+    assert.equal(a.getStatus().inFlight,true);
+    await a.retry();assert.equal(a.getStatus().pending,false);
+    const after=await f.service.metadata(f.actor,f.token,f.resource());
+    assert.equal(BigInt(after.revision),BigInt(before.revision)+1n);
+    const next=await launch();assert.deepEqual(await next.load(),value);
+  });
   await t.test('HTTP calls run through real auth scope, CAS transaction and raw content download',async st=>{
     const f=await fixture();
     const {createApp}=await import('../../apps/api/src/app.mjs');

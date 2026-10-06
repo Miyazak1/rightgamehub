@@ -1,0 +1,63 @@
+{
+  "version": 1.3,
+  "features": {
+    "location": {
+      "room": true,
+      "outside": true,
+      "spaceShip": true
+    }
+  },
+  "stores": {
+    "wood": 654,
+    "fur": 90,
+    "meat": 40,
+    "cured meat": 25,
+    "compass": 1,
+    "steel": 250,
+    "alien alloy": 20,
+    "laser rifle": 1,
+    "energy cell": 40
+  },
+  "game": {
+    "builder": {
+      "level": 4
+    },
+    "population": 16,
+    "workers": {},
+    "buildings": {
+      "cart": 1,
+      "hut": 4,
+      "trap": 3
+    },
+    "fire": {
+      "value": 3,
+      "text": "burning"
+    },
+    "temperature": {
+      "value": 3,
+      "text": "warm"
+    },
+    "spaceShip": {
+      "hull": 20,
+      "thrusters": 4
+    }
+  },
+  "income": {},
+  "timers": {},
+  "character": {
+    "perks": {
+      "scout": true
+    }
+  },
+  "playStats": {
+    "audioAlertShown": true,
+    "score": 98765
+  },
+  "previous": {},
+  "outfit": {},
+  "config": {
+    "soundOn": false
+  },
+  "wait": {},
+  "cooldown": {}
+}

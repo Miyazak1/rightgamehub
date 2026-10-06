@@ -95,6 +95,21 @@ node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.
 
 0044–0046 上线后，只有 43 份迁移文件的旧代码会因 unexpected_version 无法通过 readiness。应用回退必须使用保留已应用迁移文件的兼容版本；不能仅切回旧提交并宣称已完成回滚。本轮只推送功能分支，没有执行生产部署。
 
+## 第四阶段：A Dark Room S1 参考适配（2026-10-06）
+
+真实参考游戏适配及本机浏览器/Cursor 开发宿主验收已落地，见 [示例、复验命令与验收边界](../samples/adarkroom/README.md)。没有新增迁移，线上能力仍关闭。
+
+- 固定上游提交 1fada4620b6c66bd07bf15a3f1eb8223df8bc1d7，保留 MPL-2.0、中文与音频；校验源码摘要并构建内部 ZIP。
+- 替换 localStorage 与 eval 状态路径，在原 runtime CSP/sandbox 下等云端读取成功后启动；保留原状态格式和手动导出码。
+- 合并周期保存、明确 ACK、冻结原请求重试；发生冲突时展示物资/建筑摘要与双方导出码，明确选择后仍以 CAS 更新。
+- 真实 Chromium 浏览器和 Cursor 3.22.12 开发 Webview 完成中期双向接续；Cursor 增加陷阱后，旧浏览器被阻止覆盖，选择云端恢复新进度。
+- 独立 PostgreSQL 的 A/B 账号隔离、网页刷新、61×61 世界地图不重生成、飞船参数及分数保留通过。
+- 三个阶段起点及三份原游戏引擎实际导出的回归快照已保留；起点是人工构造，不能称为从零完整通关的黄金样本。
+- 全套 338 通过/8 跳过/0 失败；真实 PostgreSQL 专项 12 子测试及总套件通过；适配器专项 13 通过。内含真实 SDK/HTTP/PG 的阶段保存与提交后丢 ACK 重试。
+- 补齐 FLAC MIME，窄窗口保存栏及底部菜单不再互相覆盖。原有能力审批、账号边界、CSP 未放宽。
+
+这里的 Cursor 是实际原生 Webview，使用正式 PlayerCore/host/SDK，但登录和目录由本机验收壳替代；正式安装版 VSIX、真实身份、线上审批和全程游玩仍需独立验证。测试库使用 production 协议频道以覆盖非作者账号，未改线上审批。S2 持久 outbox、S3 recovery/管理/容量与备份恢复尚未实现，不可据此公开长期进度游戏。
+
 ## 权限与兼容合同
 
 当前平台身份接口使用父宿主持有的 bearer。游戏会话在此之上缩小作用域，不改变既有登录协议，也不把 bearer 或 gameSessionId 交给 iframe。
@@ -143,7 +158,7 @@ G3.3 使用 `0044_contribution_tasks.sql`，本分支基于它的完成提交 `5
 
 ## 后续实施清单
 
-- Cloud Save S1：在线宿主 handler/SDK 与数据库闭环已完成自动化验证；待 A Dark Room adapter、黄金存档和真实网页/Cursor 双宿主验收。
+- Cloud Save S1：在线 handler/SDK、A Dark Room 参考适配、本机浏览器/Cursor 开发宿主接续已完成；正式安装版真实身份及全程游玩样本仍待验收。
 - 持久缓存：Browser IndexedDB、Agent/Windows adapter；confirmed/inFlight/pending 原子 outbox；匿名导入、多设备冲突与 recovery。
 - 用户/运营：导出、导入、恢复、删除、容量/写频率门禁、对账清理、break-glass 审计与真实备份恢复演练。
 - Competition：模式/规则、赛季 closing、run/submission/decision/result-set/participants、租约验证器、代际榜单与水位追赶。

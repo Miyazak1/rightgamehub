@@ -17,12 +17,14 @@ test('web validator extracts a strict immutable asset report and rejects unsafe 
     await fs.writeFile(archive, makeZip([
       { name: 'index.html', data: '<!doctype html><script src="assets/game.js"></script>' },
       { name: 'assets/game.js', data: 'globalThis.gameReady=true' },
+      { name: 'audio/music.flac', data: Buffer.from('fLaCfixture') },
       { name: 'platform.json', data: JSON.stringify({ version: 1, entry: 'index.html', capabilities: ['fullscreen','multiplayer'] }) },
     ]));
     const report = await validateWebZip(archive, output);
     assert.equal(report.entry, 'index.html');
     assert.deepEqual(report.approvedCapabilities, ['fullscreen','multiplayer']);
-    assert.equal(report.fileCount, 3);
+    assert.equal(report.fileCount, 4);
+    assert.equal(report.assets['audio/music.flac'].mime, 'audio/flac');
     assert.equal(await fs.readFile(path.join(output, 'assets/game.js'), 'utf8'), 'globalThis.gameReady=true');
 
     const unsafeArchive = path.join(directory, 'unsafe.zip');

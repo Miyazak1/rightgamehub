@@ -1,0 +1,49 @@
+{
+  "version": 1.3,
+  "features": {
+    "location": {
+      "room": true,
+      "outside": true
+    }
+  },
+  "stores": {
+    "wood": 321,
+    "fur": 90,
+    "meat": 40,
+    "cured meat": 25
+  },
+  "game": {
+    "builder": {
+      "level": 4
+    },
+    "population": 16,
+    "workers": {},
+    "buildings": {
+      "cart": 1,
+      "hut": 4,
+      "trap": 3
+    },
+    "fire": {
+      "value": 3,
+      "text": "burning"
+    },
+    "temperature": {
+      "value": 3,
+      "text": "warm"
+    }
+  },
+  "income": {},
+  "timers": {},
+  "character": {},
+  "playStats": {
+    "audioAlertShown": true,
+    "score": 1234
+  },
+  "previous": {},
+  "outfit": {},
+  "config": {
+    "soundOn": false
+  },
+  "wait": {},
+  "cooldown": {}
+}
