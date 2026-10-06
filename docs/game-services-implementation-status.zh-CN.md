@@ -117,7 +117,7 @@ node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.
 - 真实 OTP、设备授权、目录、资源清单、SDK/HTTP/PG 链路五组复验通过；覆盖令牌自动刷新、跨设备续玩、CAS 冲突、账号隔离及设备撤销。
 - 正式网页客户端经邮箱登录与目录入口完成点火、保存和刷新续玩。客户端 102 项测试及 Web/Harness/VSIX 构建通过；本机 readiness 为 46/46。
 - 完整客户端实测发现并修复游戏透明背景造成的深色平台黑字不可读；浅色、夜间模式和菜单通过检查。测试作品连续发布新 release 后仍继承原存档，未改写已发布资源清单。
-- VSIX 0.3.23 已实际安装到专用目录。Cursor 安装版界面、SecretStorage 重启恢复与双向游玩仍待人工身份环节完成，不宣称安装版全流程已经通过。
+- VSIX 0.3.23 在 Cursor 3.23.23 专用 IDE 窗口完成真实邮箱登录、正式侧栏目录启动和双向续玩。Cursor 建造陷阱后旧网页保存被 CAS 阻止，比较确认 0/1 后读取云端；网页再建造第二个陷阱，重开 Cursor 编辑器后自动恢复同一设备授权并读到 2 个陷阱，继续保存成功。验证覆盖编辑器/扩展宿主重建，未关闭仍在运行的 Cursor Agents 进程。
 - 本地脚本只为随机测试作品返回 cloudSave；正式 catalog/ZIP 能力开关、生产审批和数据库均未修改。没有新增迁移或线上部署。
 
 [环境、命令、边界与清理](../samples/adarkroom/README.md#安装包与真实身份验收环境)。
@@ -170,11 +170,12 @@ G3.3 使用 `0044_contribution_tasks.sql`，本分支基于它的完成提交 `5
 
 ## 后续实施清单
 
-- Cloud Save S1：在线 handler/SDK、A Dark Room 参考适配、本机浏览器/Cursor 开发宿主接续已完成；正式安装版真实身份及全程游玩样本仍待验收。
+- Cloud Save S1：在线 handler/SDK、A Dark Room 参考适配、本机浏览器/Cursor 开发宿主接续已完成；正式安装版的本机真实身份、双向续玩和编辑器重开恢复已验收；线上身份/审批及全程游玩样本仍待验证。
 - 持久缓存：Browser IndexedDB、Agent/Windows adapter；confirmed/inFlight/pending 原子 outbox；匿名导入、多设备冲突与 recovery。
 - 用户/运营：导出、导入、恢复、删除、容量/写频率门禁、对账清理、break-glass 审计与真实备份恢复演练。
 - Competition：模式/规则、赛季 closing、run/submission/decision/result-set/participants、租约验证器、代际榜单与水位追赶。
 - 跨域后台资源门禁及实时对局、存档、验证、构建、备份的混合负载验收。
+- 宿主现有“暂停或恢复”按钮调用 PlayerCore.hide/resume，仅隐藏 iframe，游戏计时仍继续；需要单独明确隐藏/暂停语义。本次不宣称已验证真正暂停计时。
 - 2048 确定性规则与回放验证、第二款不同结构存档游戏、迷阵权威终局适配；Web/Agent/Windows 跨端验收。
 - 短期会话票据交换与 Agent/Windows 的受控本机凭据存储；目前复用已存在的宿主账号 bearer，不宣称原生票据流程完成。
 

@@ -80,7 +80,7 @@ node --test tests/platform/game-saves-postgres.test.cjs
 - 真实 PostgreSQL 存档专项：12 个子测试及总套件通过（Node TAP 计数 13）；新增真实 adapter → SDK → MessageChannel → HTTP → PostgreSQL 的阶段快照和丢 ACK 重试。
 - 后续界面布局/样本变更重新执行适配器专项；FLAC 通过 ZIP 校验测试。
 
-尚待：正式安装版目录和真实身份流程验收、全程游玩样本、S2 持久本机缓存/outbox、S3 用户存档管理与 recovery、备份恢复/容量演练。线上 cloudSave 仍关闭。
+正式安装版目录和真实身份的后续验收见下一节。尚待：全程游玩样本、S2 持久本机缓存/outbox、S3 用户存档管理与 recovery、备份恢复/容量演练。线上 cloudSave 仍关闭。
 
 ## 安装包与真实身份验收环境
 
@@ -104,7 +104,7 @@ cursor --user-data-dir $adrSession.profilePath --extensions-dir $adrSession.exte
 cursor --user-data-dir $adrSession.profilePath --extensions-dir $adrSession.extensionsPath --new-window
 ```
 
-使用真实 VSIX 安装，不带 `--extensionDevelopmentPath`。仅专用配置关闭扩展自动更新，避免测试时被线上旧包替换；日常 Cursor 配置与扩展目录不变。首次启动 Cursor 自身如需登录，由操作者完成；进入编辑器后运行命令 `GameHub: 打开游戏平台`。
+使用真实 VSIX 安装，不带 `--extensionDevelopmentPath`。仅专用配置关闭扩展自动更新，避免测试时被线上旧包替换；日常 Cursor 配置与扩展目录不变。首次启动 Cursor 自身如需登录，由操作者完成。Cursor 3.23.23 可能先显示独立 Agents 窗口；点击右上角 `IDE` 进入标题为“GameHub ADR 安装版验收”的编辑器窗口，再运行命令 `GameHub: 打开游戏平台`。Agents 窗口不显示编辑器扩展侧栏。Cursor 自身登录与 GameHub 测试账号登录是两个独立步骤。
 
 GameHub 测试账号是 `adr-a@gamehub.test`、`adr-b@gamehub.test`。在网页或扩展中选择邮箱登录，点击发送验证码，再从本机文件读取当次验证码：
 
@@ -128,7 +128,15 @@ npm run verify:adarkroom-installed
 - 同账号不同设备接续、旧 ETag 冲突；
 - 撤销设备后旧桥失败，另一设备正常。
 
-2026-10-06 已通过上述五组验证，客户端 102 项通过；Web、Harness 与 VSIX 构建通过。本机 readiness 为 46/46、database/realtime 均正常。实际网页经邮箱登录、目录进入游戏、点火保存、刷新续玩通过。随后发布两个新 release，原作品 autosave 持续继承、修订递增；浅色/夜间模式及菜单均已截图复验。VSIX 0.3.23 已安装到独立目录；正式安装版 UI、SecretStorage 重启续用与双向游玩仍待完成，不能用 API 模拟宿主结果代替。
+2026-10-06 已通过上述五组验证，客户端 102 项通过；Web、Harness 与 VSIX 构建通过。本机 readiness 为 46/46、database/realtime 均正常。实际网页经邮箱登录、目录进入游戏、点火保存、刷新续玩通过。随后发布两个新 release，原作品 autosave 持续继承、修订递增；浅色/夜间模式及菜单均已截图复验。VSIX 0.3.23 已安装到独立目录；随后在 Cursor 3.23.23 的实际 IDE 窗口完成以下验证，使用真实安装包，未使用开发宿主：
+
+- 操作者通过本机测试邮箱完成 GameHub 登录；账号页显示 Cursor SecretStorage，网页与 Cursor 是两个设备。
+- 从正式侧栏目录进入 A Dark Room，读取网页已有进度；Cursor 建造第一个陷阱并保存后，云端修订为 19。
+- 保留旧网页再保存，正确触发冲突；比较页显示本页陷阱 0、云端陷阱 1。选择云端后恢复为 1。
+- 网页建造第二个陷阱，保存确认修订 21。关闭专用 Cursor 编辑器窗口，再以同一 profile/extensions 目录重开，无需再次登录即可读到 2 个陷阱。
+- 重开前后仍为同一 Cursor 设备授权，没有新增登录；恢复后继续保存成功，实际观察到修订 24 的云端确认。
+
+此处的重启验证覆盖编辑器窗口和扩展宿主重建；Cursor Agents 窗口保持开启，不等同于整台机器或所有 Cursor 进程重启。邮件仍只投递本地 mailbox；没有验证线上邮件、OAuth、跨机器网络、线上能力审批或完整通关。实际 UI 结果与前述自动化五组结果分别记录，不互相替代。
 
 本轮另修复安装版连接本机 API 时误拒 HTTP runtime 的问题：仅当可信宿主的 API 为 loopback 且运行域配置为 localhost 时允许本机游戏。生产 HTTPS/release 主机校验和 iframe sandbox 保持原边界。完整客户端还暴露出原游戏透明背景导致深色平台上黑字不可读；适配层显式设置浅色底，原生夜间模式仍可覆盖。
 
