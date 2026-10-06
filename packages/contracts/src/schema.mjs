@@ -34,6 +34,13 @@ const saveMetadata = {
 };
 
 export const schemas = Object.freeze({
+  SaveLibraryQuery: object({afterSlotId:id},[]),
+  SaveLibrarySlotParams: object({slotId:id}),
+  SaveLibraryRevisionParams: object({slotId:id,revisionId:id}),
+  SaveLibraryHistoryQuery: object({beforeRevision:{type:'string',pattern:'^[1-9][0-9]{0,18}$'}},[]),
+  SaveLibrarySlot: object({...saveMetadata,slotId:id,workId:id,workTitle:{type:'string'},channel:stringEnum(['production','preview'])}),
+  SaveLibraryPage: object({items:{type:'array',maxItems:50,items:{$ref:'#/components/schemas/SaveLibrarySlot'}},nextAfterSlotId:nullable(id)}),
+  SaveLibraryHistory: object({slot:{$ref:'#/components/schemas/SaveLibrarySlot'},items:{type:'array',maxItems:50,items:object({...saveMetadata,payloadAvailable:{type:'boolean'}})},nextBeforeRevision:nullable(uintString)}),
   GameSaveParams: object({workId:id}),
   GameSaveSlotParams: object({workId:id,slotKey:saveName}),
   GameSaveQuery: object({namespace:saveName}),
@@ -658,6 +665,10 @@ const errorResponses = {
 };
 
 export const operations = Object.freeze([
+  {method:'get',path:'/v1/me/save-library',operationId:'listSaveLibrary',auth:'bearer',saveLibrary:true,saveLibraryPage:true,response:'SaveLibraryPage'},
+  {method:'get',path:'/v1/me/save-library/{slotId}/history',operationId:'getSaveLibraryHistory',auth:'bearer',saveLibrary:true,pathId:'slotId',saveHistory:true,response:'SaveLibraryHistory'},
+  {method:'get',path:'/v1/me/save-library/{slotId}/revisions/{revisionId}/content',operationId:'readSaveLibraryRevision',auth:'bearer',saveLibrary:true,pathId:'slotId',saveRevision:true,saveContent:true,response:'GameSaveMetadata'},
+  {method:'post',path:'/v1/me/save-library/{slotId}/restore',operationId:'restoreSaveLibraryRevision',auth:'bearer',saveLibrary:true,pathId:'slotId',saveMutation:true,request:'RestoreGameSaveRequest',response:'GameSaveWriteResult'},
   {method:'post',path:'/v1/me/game-saves/{workId}/slots/{slotKey}/write-receipt',operationId:'getGameSaveWriteReceipt',auth:'bearer',gameSession:true,pathId:'workId',saveScope:true,saveSlot:true,saveMutation:true,saveCreateCondition:true,request:'GameSaveWriteReceiptRequest',response:'GameSaveWriteReceipt'},
   {"method":"get","path":"/v1/works/{workId}/save-policy","operationId":"getGameSavePolicy","response":"GameSavePolicy","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true},
   {"method":"get","path":"/v1/me/game-saves/{workId}/slots","operationId":"listGameSaves","response":"GameSaveMetadata","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"responseArray":true},
@@ -805,6 +816,8 @@ export function createOpenApiDocument() {
   const paths = {};
   for (const operation of operations) {
     const parameters = [];
+    if (operation.saveLibraryPage) parameters.push({name:'afterSlotId',in:'query',required:false,schema:id});
+    if (operation.saveRevision) parameters.push({name:'revisionId',in:'path',required:true,schema:id});
     if (operation.saveScope) parameters.push({ name:'namespace',in:'query',required:true,schema:saveName });
     if (operation.saveSlot) parameters.push({ name:'slotKey',in:'path',required:true,schema:saveName });
     if (operation.saveHistory) parameters.push({ name:'beforeRevision',in:'query',required:false,schema:{type:'string',pattern:'^[1-9][0-9]{0,18}$'} });
@@ -870,7 +883,7 @@ export function createOpenApiDocument() {
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })
           : object({ data: { $ref: `#/components/schemas/${operation.response}` } })),
         ...errorResponses,
-        ...(operation.saveScope ? Object.fromEntries([404,410,412,413,422,428,429,503].map(status=>[status,response({$ref:'#/components/schemas/ErrorResponse'})])) : {}),
+        ...(operation.saveScope || operation.saveLibrary ? Object.fromEntries([404,410,412,413,422,428,429,503].map(status=>[status,response({$ref:'#/components/schemas/ErrorResponse'})])) : {}),
       },
     };
   }

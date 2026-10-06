@@ -31,21 +31,8 @@ export function validateSavePayload(bytes,contentType,expectedHash) {
   }
   return hash;
 }
-export function createGameSaveService({repository,gameSessionService,clock=()=>new Date()}) {
-  const resource=input=>{
-    if(!input||!uuid.test(input.workId??'')||!saveName(input.namespace)||input.slotKey!==undefined&&!saveName(input.slotKey))
-      saveError('SCHEMA_INVALID',400,'Invalid save resource.');
-  };
-  const perform=(actor,token,input,action)=> {
-    resource(input);
-    return repository.transaction(async tx=>{
-      // Authorization rows stay locked through commit, so revocation cannot race a save.
-      const scope=await gameSessionService.resolve(actor,token,{workId:input.workId,namespace:input.namespace,capability:'cloudSave'},tx);
-      return action(tx,scope);
-    });
-  };
-  const prepareMutation=(input,kind,receiptOnly=false)=>{
-    resource(input);
+export function prepareSaveMutation(input,kind,receiptOnly=false) {
+    if(!input||!uuid.test(input.workId??'')||!saveName(input.namespace))saveError('SCHEMA_INVALID',400,'Invalid save resource.');
     if(!saveName(input.slotKey)||!uuid.test(input.idempotencyKey??''))saveError('SCHEMA_INVALID',400,'A slot and UUID idempotency key are required.');
     const createOnly=input.ifNoneMatch==='*';
     if(createOnly ? input.ifMatch!==undefined||kind!=='write' : input.ifNoneMatch!==undefined||typeof input.ifMatch!=='string'||!/^"[\x21\x23-\x7e]{1,180}"$/u.test(input.ifMatch))
@@ -66,14 +53,28 @@ export function createGameSaveService({repository,gameSessionService,clock=()=>n
       kind==='write'?input.schemaVersion:null,kind==='write'?input.contentType:null,
       kind==='write'?'identity':null,payloadHash,kind==='restore'?input.revisionId:null]));
     return {...input,kind,createOnly,payloadHash,requestDigest:digest,keyHash:saveHash(input.idempotencyKey.toLowerCase())};
+}
+
+export function createGameSaveService({repository,gameSessionService,clock=()=>new Date()}) {
+  const resource=input=>{
+    if(!input||!uuid.test(input.workId??'')||!saveName(input.namespace)||input.slotKey!==undefined&&!saveName(input.slotKey))
+      saveError('SCHEMA_INVALID',400,'Invalid save resource.');
+  };
+  const perform=(actor,token,input,action)=> {
+    resource(input);
+    return repository.transaction(async tx=>{
+      // Authorization rows stay locked through commit, so revocation cannot race a save.
+      const scope=await gameSessionService.resolve(actor,token,{workId:input.workId,namespace:input.namespace,capability:'cloudSave'},tx);
+      return action(tx,scope);
+    });
   };
   const mutate=async(actor,token,input,kind)=>{
-    const command=prepareMutation(input,kind);
+    const command=prepareSaveMutation(input,kind);
     return perform(actor,token,input,(tx,scope)=>repository.mutate(tx,scope,command,clock()));
   };
   return Object.freeze({
     writeReceipt:async(actor,token,input)=>{
-      const command=prepareMutation(input,'write',true);
+      const command=prepareSaveMutation(input,'write',true);
       return perform(actor,token,input,(tx,scope)=>repository.writeReceipt(tx,scope,command));
     },
     policy:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.policy(tx,scope,input.namespace)),

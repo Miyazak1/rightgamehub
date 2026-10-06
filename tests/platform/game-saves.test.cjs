@@ -66,3 +66,20 @@ test('save HTTP boundary requires authentication, validates scope, preserves raw
   const conflict=await app.inject({method:'DELETE',url,headers:{authorization:headers.authorization,'x-gamehub-session':headers['x-gamehub-session']}});
   assert.equal(conflict.statusCode,412);assert.equal(conflict.json().error.details.expectedEtag,etag);
 });
+
+test('account save library HTTP boundary authenticates without game sessions and keeps downloads private',async t=>{
+  const {createApp}=await import('../../apps/api/src/app.mjs');const {loadConfig}=await import('../../apps/api/src/config.mjs');const {AuthError}=await import('../../apps/api/src/auth-service.mjs');const {GameSaveError}=await import('../../apps/api/src/game-save-service.mjs');
+  const actor={userId:crypto.randomUUID(),grantId:crypto.randomUUID()},slotId=crypto.randomUUID(),revisionId=crypto.randomUUID(),etag='"revision"',bytes=Buffer.from('{}');let restores=0;
+  const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32)}),authService:{authenticateBearer:async h=>{if(h!=='Bearer account')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return actor;}},saveLibraryService:{
+    list:async who=>{assert.deepEqual(who,actor);return {items:[],nextAfterSlotId:null};},
+    content:async(who,input)=>{assert.deepEqual(who,actor);assert.equal(input.slotId,slotId);assert.equal(input.revisionId,revisionId);return {metadata:{etag,sha256:hash(bytes),schemaVersion:1,contentType:'application/json'},bytes};},
+    restore:async(_who,input)=>{restores++;assert.equal(input.idempotencyKey,'fixed-key');throw new GameSaveError('SAVE_CONFLICT',412,'Changed');},
+  }});t.after(()=>app.close());
+  assert.equal((await app.inject({url:'/v1/me/save-library'})).statusCode,401);
+  const headers={authorization:'Bearer account'};assert.equal((await app.inject({url:'/v1/me/save-library',headers})).statusCode,200);
+  assert.equal((await app.inject({url:'/v1/me/save-library?userId='+actor.userId,headers})).statusCode,400);
+  const result=await app.inject({url:'/v1/me/save-library/'+slotId+'/revisions/'+revisionId+'/content',headers});assert.equal(result.statusCode,200);assert.equal(result.body,'{}');assert.equal(result.headers['cache-control'],'private, no-store');assert.equal(result.headers['x-content-sha256'],hash(bytes));
+  const restore={method:'POST',url:'/v1/me/save-library/'+slotId+'/restore',headers:{...headers,'idempotency-key':'fixed-key','if-match':etag},payload:{revisionId}};
+  assert.equal((await app.inject({...restore,payload:{revisionId,userId:actor.userId}})).statusCode,400);assert.equal(restores,0);
+  assert.equal((await app.inject(restore)).statusCode,412);assert.equal(restores,1);
+});

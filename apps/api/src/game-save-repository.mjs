@@ -3,7 +3,7 @@ import { withTransaction } from './database.mjs';
 import { GameSaveError,SAVE_LIMITS,saveError } from './game-save-service.mjs';
 
 const scopeKey=s=>[s.userId,s.workId,s.channel];
-const metadata=row=>({
+export const saveMetadata=row=>({
   slot:row.slot_key,namespace:row.namespace,revisionId:row.id,revision:String(row.revision),
   etag:row.etag,schemaVersion:row.schema_version,contentType:row.content_type,contentEncoding:row.content_encoding,
   sha256:row.payload_sha256,bytes:row.stored_bytes,updatedAt:new Date(row.created_at).toISOString(),
@@ -56,7 +56,7 @@ export class PostgresGameSaveRepository {
     await this.getPolicy(tx,scope,namespace);
     return (await tx.query(`SELECT r.*,s.namespace,s.slot_key FROM game_save_slots s JOIN game_save_revisions r ON r.id=s.current_revision_id
       WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3 AND s.namespace=$4 AND s.deleted_at IS NULL ORDER BY s.slot_key`,
-      [...scopeKey(scope),namespace])).rows.map(metadata);
+      [...scopeKey(scope),namespace])).rows.map(saveMetadata);
   }
   async read(tx,scope,input,content) {
     await this.getPolicy(tx,scope,input.namespace);
@@ -64,13 +64,13 @@ export class PostgresGameSaveRepository {
       .replace('WHERE s.user_id','LEFT JOIN game_save_payloads b ON b.revision_id=r.id WHERE s.user_id'):currentQuery;
     const row=(await tx.query(query,[...scopeKey(scope),input.namespace,input.slotKey])).rows[0];
     if(!row||content&&row.tombstone)saveError('SAVE_SLOT_NOT_FOUND',404,'Save slot was not found.');
-    if(!content)return metadata(row);
+    if(!content)return saveMetadata(row);
     if(input.expectedEtag!==undefined&&input.expectedEtag!==row.etag)saveError('SAVE_CONFLICT',412,'Save changed before download.',{expectedEtag:row.etag,currentRevision:String(row.revision),currentUpdatedAt:new Date(row.created_at).toISOString()});
     assertReadable(scope,input.namespace,row);
     // One MVCC statement reads the pointer and bytes together, even if another
     // transaction replaces the save and purges history immediately afterwards.
     if(!row.payload_inline)saveError('SAVE_STORAGE_UNAVAILABLE',503,'Save payload is unavailable.');
-    return {metadata:metadata(row),bytes:row.payload_inline};
+    return {metadata:saveMetadata(row),bytes:row.payload_inline};
   }
   async history(tx,scope,input) {
     await this.getPolicy(tx,scope,input.namespace);
@@ -79,7 +79,7 @@ export class PostgresGameSaveRepository {
       WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3 AND s.namespace=$4 AND s.slot_key=$5 AND r.revision<$6::bigint
       ORDER BY r.revision DESC LIMIT 51`,[...scopeKey(scope),input.namespace,input.slotKey,input.beforeRevision??'9223372036854775807'])).rows;
     const more=rows.length>50,items=rows.slice(0,50);
-    return {items:items.map(r=>({...metadata(r),payloadAvailable:r.payload_available})),nextBeforeRevision:more?String(items.at(-1).revision):null};
+    return {items:items.map(r=>({...saveMetadata(r),payloadAvailable:r.payload_available})),nextBeforeRevision:more?String(items.at(-1).revision):null};
   }
   async mutate(tx,scope,input,now) {
     const key=scopeKey(scope),p=await this.getPolicy(tx,scope,input.namespace);
@@ -147,7 +147,7 @@ export class PostgresGameSaveRepository {
       WHERE user_id=$1 AND work_id=$2 AND channel=$3`,[...key,liveSlots,liveBytes,history.bytes]);
     await tx.query(`UPDATE game_save_rate_usage SET recent_writes=$3,day=$4,day_writes=$5,day_bytes=$6 WHERE user_id=$1 AND work_id=$2`,
       [scope.userId,scope.workId,[...recent,now],day,dayWrites+1,dayBytes+length]);
-    const result={...metadata({...row,namespace:input.namespace,slot_key:input.slotKey}),historyDegraded:history.degraded,durability:'cloud'};
+    const result={...saveMetadata({...row,namespace:input.namespace,slot_key:input.slotKey}),historyDegraded:history.degraded,durability:'cloud'};
     await tx.query(`INSERT INTO game_save_operations(id,slot_id,revision_id,idempotency_key_hash,request_digest,result,created_at)
       VALUES($1,$2,$3,$4,$5,$6,$7)`,[crypto.randomUUID(),slot.id,id,input.keyHash,input.requestDigest,JSON.stringify(result),now]);
     return result;

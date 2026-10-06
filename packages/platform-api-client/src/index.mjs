@@ -125,6 +125,14 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     createGameSession: (body, options) => request('/v1/game-sessions', { ...options, method: 'POST', body, auth: true }),
     getGameSession: (gameSessionId, options) => request('/v1/game-sessions/current', { ...options, auth: true, headers: { 'X-GameHub-Session': gameSessionId } }),
     revokeGameSession: (gameSessionId, options) => request('/v1/game-sessions/current', { ...options, method: 'DELETE', auth: true, headers: { 'X-GameHub-Session': gameSessionId } }),
+    listSaveLibrary: (afterSlotId,options) => request('/v1/me/save-library'+(afterSlotId?'?afterSlotId='+encodeURIComponent(afterSlotId):''),{...options,auth:true}),
+    getSaveLibraryHistory: (slotId,beforeRevision,options) => request('/v1/me/save-library/'+encodeURIComponent(slotId)+'/history'+(beforeRevision?'?beforeRevision='+encodeURIComponent(beforeRevision):''),{...options,auth:true}),
+    readSaveLibraryRevision: (slotId,revisionId,expectedEtag,options) => request('/v1/me/save-library/'+encodeURIComponent(slotId)+'/revisions/'+encodeURIComponent(revisionId)+'/content',{
+      ...options,auth:true,responseBytesLimit:1048576,headers:{'If-Match':expectedEtag,Accept:'application/octet-stream, application/json'},
+    }),
+    restoreSaveLibraryRevision: (slotId,input,options) => request('/v1/me/save-library/'+encodeURIComponent(slotId)+'/restore',{
+      ...options,auth:true,method:'POST',body:{revisionId:input.revisionId},headers:saveConditions(input),
+    }),
     getGameSavePolicy: (scope,options) => request('/v1/works/'+encodeURIComponent(scope.workId)+'/save-policy?namespace='+encodeURIComponent(scope.namespace),saveOptions(scope,options)),
     listGameSaves: (scope,options) => request(savePath(scope),saveOptions(scope,options)),
     getGameSaveMetadata: (scope,options) => request(savePath(scope,'/metadata'),saveOptions(scope,options)),

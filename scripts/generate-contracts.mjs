@@ -34,6 +34,13 @@ function generateTypes() {
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
   lines.push('export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }');
   lines.push('export interface GameSaveWriteReceipt { result: GameSaveWriteResult | null }');
+  lines.push('export interface SaveLibraryQuery { afterSlotId?: UUID }');
+  lines.push('export interface SaveLibrarySlotParams { slotId: UUID }');
+  lines.push('export interface SaveLibraryRevisionParams extends SaveLibrarySlotParams { revisionId: UUID }');
+  lines.push('export interface SaveLibraryHistoryQuery { beforeRevision?: UIntString }');
+  lines.push('export interface SaveLibrarySlot extends GameSaveMetadata { slotId: UUID; workId: UUID; workTitle: string; channel: "production" | "preview" }');
+  lines.push('export interface SaveLibraryPage { items: SaveLibrarySlot[]; nextAfterSlotId: UUID | null }');
+  lines.push('export interface SaveLibraryHistory extends GameSaveHistory { slot: SaveLibrarySlot }');
   lines.push("export interface GameSaveParams { workId: UUID }");
   lines.push("export interface GameSaveSlotParams extends GameSaveParams { slotKey: string }");
   lines.push("export interface GameSaveQuery { namespace: string }");

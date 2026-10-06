@@ -181,3 +181,19 @@ docker stop gamehub-adr-installed-test gamehub-adr-installed-redis
 本机故障开关仅存在于专用安装版验收脚本，启动时默认恢复网络，不进入生产 runtime。截图证据：adr-installed-s2-offline.png、adr-installed-s2-reopened.png、adr-installed-s3-import.png（本次聊天的本地可视化目录）。生产 cloudSave 仍关闭；本轮提供 S3 本机用户管理入口，不能代替全账号云历史管理、运营治理、容量门禁及真实备份恢复演练。
 
 补充验证：真实 PostgreSQL 存档事务专项在另一独立测试库执行，14 项全部通过、0 跳过；覆盖 SQLite → SDK → MessageChannel → HTTP → PostgreSQL 的断线、丢 ACK 与重开。
+
+### S3 云端历史与恢复演练验收（2026-10-06）
+
+VSIX 0.3.26 / Harness 0.1.8 增加个人设置中的“管理云端存档”。本轮实际 Cursor 安装版沿用 ADR Test A 登录，列出 autosave 和匿名导入恢复槽；导出 autosave #32 校验成功，预览 #31 后确认恢复得到 #33。数据库验证 source_kind=restore、restored_from_revision 指向 #31，正文 SHA-256 相同，回执与用户事件均存在。另一槽仍是 #1。截图为本机可视化目录中的 adr-cloud-history-restored.jpg；现场数据库核验记录保留在 .runtime/adarkroom-installed/cloud-library-acceptance.json。
+
+恢复演练命令（在本仓库根目录执行，连接已有的专用本地测试容器）：
+
+```powershell
+$env:GAMEHUB_GAME_SAVE_DATABASE_URL = 'postgres://gamehub_test:gamehub_local_test@127.0.0.1:55439/gamehub_installed_test'
+$env:GAMEHUB_REHEARSAL_CONTAINER = 'gamehub-adr-s2-installed-test'
+node scripts/rehearse-save-database-restore.mjs
+```
+
+脚本只接受 loopback 的 gamehub_*_test 数据库和 gamehub-*-test 容器，并核对端口映射。每次创建独立随机测试库，绝不清理或覆盖已有库；备份、SHA256SUMS 和只含统计/摘要的 report.json 保留在 .runtime/restore-rehearsals/<时间戳>/。这些备份含测试账号资料，不能提交仓库。测试容器与恢复库保留供复核，后续由操作者按具体名字清理。
+
+最终验收源库 gamehub_installed_test → gamehub_restore_20261006151544635_7c3b44_test，77 张表摘要一致，六类存档不变量异常均为零；从已落盘备份文件恢复约 44.7 秒。备份 SHA-256：6a069bb48ff07510ae622a9fa28459007bb12ecec7402003db497c1885400669。这是本机数据库恢复演练，不包含 avatars/covers/runtime-assets 卷、不覆盖生产恢复、异地备份或生产容量目标。

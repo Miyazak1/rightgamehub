@@ -18,6 +18,13 @@ export interface ErrorResponse { error: { code: string; message: string; request
 export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }
 export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }
 export interface GameSaveWriteReceipt { result: GameSaveWriteResult | null }
+export interface SaveLibraryQuery { afterSlotId?: UUID }
+export interface SaveLibrarySlotParams { slotId: UUID }
+export interface SaveLibraryRevisionParams extends SaveLibrarySlotParams { revisionId: UUID }
+export interface SaveLibraryHistoryQuery { beforeRevision?: UIntString }
+export interface SaveLibrarySlot extends GameSaveMetadata { slotId: UUID; workId: UUID; workTitle: string; channel: "production" | "preview" }
+export interface SaveLibraryPage { items: SaveLibrarySlot[]; nextAfterSlotId: UUID | null }
+export interface SaveLibraryHistory extends GameSaveHistory { slot: SaveLibrarySlot }
 export interface GameSaveParams { workId: UUID }
 export interface GameSaveSlotParams extends GameSaveParams { slotKey: string }
 export interface GameSaveQuery { namespace: string }

@@ -1,3 +1,4 @@
+import {createSaveLibraryService} from './save-library-service.mjs';
 import path from 'node:path';
 import { PostgresGameSaveRepository } from './game-save-repository.mjs';
 import { createGameSaveService } from './game-save-service.mjs';
@@ -154,9 +155,12 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const gameSessionService = createGameSessionService({ repository: new PostgresGameSessionRepository(database.pool) });
-  const gameSaveService = createGameSaveService({ repository: new PostgresGameSaveRepository(database.pool), gameSessionService });
+  const gameSaveRepository = new PostgresGameSaveRepository(database.pool);
+  const gameSaveService = createGameSaveService({ repository: gameSaveRepository, gameSessionService });
+  const saveLibraryService = createSaveLibraryService({ repository: gameSaveRepository });
   const app = createApp({
     gameSaveService,
+    saveLibraryService,
     gameSessionService,
     config,
     database,
@@ -219,6 +223,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     gameSessionService,
     runtimeEdgeApp,
     gameSaveService,
+    saveLibraryService,
     app,
   };
 }

@@ -13,6 +13,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
   const {createGameSessionService}=await import('../../apps/api/src/game-session-service.mjs');
   const {PostgresGameSaveRepository}=await import('../../apps/api/src/game-save-repository.mjs');
   const {createGameSaveService}=await import('../../apps/api/src/game-save-service.mjs');
+  const {createSaveLibraryService}=await import('../../apps/api/src/save-library-service.mjs');
   const db=createDatabase({databaseUrl:url,databaseSsl:false}),pool=db.pool;t.after(()=>db.close());
   await applyMigrations(pool,path.resolve(__dirname,'../../apps/api/migrations'));
   async function fixture(policy={}) {
@@ -27,6 +28,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
       for(const channel of ['production','preview'])await pool.query("INSERT INTO game_release_service_scopes(work_id,release_id,channel,status,namespaces,approved_by,reason) VALUES($1,$2,$3,'active',$4,$5,'save test approval')",[workId,id,channel,JSON.stringify(scopes),userId]);
     }
     await release(releaseId);
+    await pool.query("UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1",[workId,releaseId]);
     for(const namespace of Object.keys(namespaces))await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,schema_max,max_document_bytes,max_live_bytes,max_history_bytes,max_slots,approved_by,reason) VALUES($1,$2,$3,'active',2,$4,$5,$6,$7,$8,'save test policy')",
       [uuid(),workId,namespace,policy.document??262144,policy.live??1048576,policy.history??5242880,policy.slots??10,userId]);
     const actor={userId,grantId},sessions=createGameSessionService({repository:new PostgresGameSessionRepository(pool),clock:()=>now});
@@ -38,9 +40,80 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const command=(bytes=Buffer.from('{"level":1}'),extra={})=>({...resource(),ifNoneMatch:'*',idempotencyKey:uuid(),schemaVersion:1,contentType:'application/json',bytes,sha256:hash(bytes),...extra});
     const write=(input,session=token)=>service.write(actor,session,input);
     const advance=ms=>{now=new Date(now.getTime()+ms);};
-    return {actor,workId,releaseId,token,sessions,repository,service,resource,command,write,issue,release,advance};
+    const library=createSaveLibraryService({repository,clock:()=>now});
+    return {library,actor,workId,releaseId,token,sessions,repository,service,resource,command,write,issue,release,advance};
   }
   const rejected=(promise,code)=>assert.rejects(promise,{code});
+  await t.test('account library isolates owners, channels and revisions; exports survive withdrawal',async()=>{
+    const f=await fixture(),other=await fixture();const first=await f.write(f.command());
+    await f.write(f.command(Buffer.from('{"preview":true}')),await f.issue('preview'));
+    const page=await f.library.list(f.actor);assert.equal(page.items.length,2);assert.deepEqual(new Set(page.items.map(x=>x.channel)),new Set(['production','preview']));
+    const slot=page.items.find(x=>x.channel==='production');const history=await f.library.history(f.actor,{slotId:slot.slotId});assert.equal(history.items[0].revisionId,first.revisionId);
+    assert.deepEqual((await f.library.list(other.actor)).items,[]);
+    const input={slotId:slot.slotId,revisionId:first.revisionId,ifMatch:first.etag,idempotencyKey:uuid()};
+    await rejected(f.library.history(other.actor,input),'SAVE_SLOT_NOT_FOUND');await rejected(f.library.content(other.actor,input),'SAVE_SLOT_NOT_FOUND');await rejected(f.library.restore(other.actor,input),'SAVE_SLOT_NOT_FOUND');
+    await rejected(f.library.content(f.actor,{...input,revisionId:page.items.find(x=>x.channel==='preview').revisionId}),'SAVE_SLOT_NOT_FOUND');
+    await pool.query("UPDATE works SET state='withdrawn' WHERE id=$1",[f.workId]);
+    assert.deepEqual((await f.library.content(f.actor,{...input,expectedEtag:first.etag})).bytes,Buffer.from('{"level":1}'));
+    await rejected(f.library.restore(f.actor,input),'SAVE_RESTORE_NOT_ALLOWED');
+    await pool.query("UPDATE game_save_policies SET status='retired' WHERE work_id=$1",[f.workId]);
+    assert.equal((await f.library.history(f.actor,input)).items.length,1);
+    assert.equal((await pool.query("SELECT count(*)::int n FROM game_save_user_events WHERE user_id=$1 AND action='export'",[f.actor.userId])).rows[0].n,1);
+    await assert.rejects(pool.query('DELETE FROM game_save_user_events WHERE user_id=$1',[f.actor.userId]),/append only/);
+  });
+  await t.test('account restore CAS, retry receipts and audit are atomic, and restore can undo deletion',async()=>{
+    const f=await fixture(),a=await f.write(f.command()),b=await f.write(f.command(Buffer.from('{"level":2}'),{ifNoneMatch:undefined,ifMatch:a.etag}));
+    const slot=(await f.library.list(f.actor)).items[0],input={slotId:slot.slotId,revisionId:a.revisionId,ifMatch:b.etag,idempotencyKey:uuid()};
+    const [one,two]=await Promise.all([f.library.restore(f.actor,input),f.library.restore(f.actor,input)]);assert.deepEqual(one,two);assert.equal(one.revision,'3');assert.equal(one.restoredFromRevisionId,a.revisionId);
+    assert.equal((await pool.query("SELECT count(*)::int n FROM game_save_user_events WHERE slot_id=$1 AND action='restore'",[slot.slotId])).rows[0].n,1);
+    await rejected(f.library.restore(f.actor,{...input,idempotencyKey:uuid()}),'SAVE_CONFLICT');
+    await rejected(f.library.restore(f.actor,{...input,revisionId:b.revisionId}),'SAVE_IDEMPOTENCY_MISMATCH');
+    const deleted=await f.service.delete(f.actor,f.token,{...f.resource(),ifMatch:one.etag,idempotencyKey:uuid()});assert.equal((await f.library.list(f.actor)).items[0].deleted,true);
+    const restored=await f.library.restore(f.actor,{...input,ifMatch:deleted.etag,idempotencyKey:uuid()});assert.equal(restored.deleted,false);assert.equal(restored.revision,'5');
+    assert.deepEqual((await f.service.content(f.actor,f.token,f.resource())).bytes,Buffer.from('{"level":1}'));
+    await rejected(f.write(f.command(undefined,{ifNoneMatch:undefined,ifMatch:b.etag})),'SAVE_CONFLICT');
+  });
+  await t.test('account restore requires current approved release, namespace, compatible schema and active policy',async()=>{
+    const f=await fixture(),a=await f.write(f.command()),slot=(await f.library.list(f.actor)).items[0];
+    const input={slotId:slot.slotId,revisionId:a.revisionId,ifMatch:a.etag,idempotencyKey:uuid()};
+    const next=uuid();await f.release(next,{default:{readSchema:{min:2,max:2},writeSchema:2}});
+    await pool.query('UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1',[f.workId,next]);
+    await rejected(f.library.restore(f.actor,input),'SAVE_RELEASE_INCOMPATIBLE');
+    await pool.query('UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1',[f.workId,f.releaseId]);
+    await pool.query("UPDATE game_release_service_scopes SET status='retired',reason='revoke for test' WHERE release_id=$1",[f.releaseId]);
+    await rejected(f.library.restore(f.actor,input),'SAVE_RESTORE_NOT_ALLOWED');
+    await pool.query("UPDATE game_release_service_scopes SET status='active',reason='approve for test' WHERE release_id=$1",[f.releaseId]);
+    await pool.query("UPDATE game_save_policies SET status='retired' WHERE work_id=$1",[f.workId]);
+    await rejected(f.library.restore(f.actor,input),'SAVE_POLICY_NOT_ACTIVE');
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_user_events WHERE slot_id=$1',[slot.slotId])).rows[0].n,0);
+  });
+  await t.test('account library rejects revoked grants and waits for concurrent revocation',async()=>{
+    const f=await fixture();await f.write(f.command());const slot=(await f.library.list(f.actor)).items[0];
+    const blocker=await pool.connect();try{
+      await blocker.query('BEGIN');await blocker.query('UPDATE device_grants SET revoked_at=now() WHERE id=$1',[f.actor.grantId]);
+      const pending=f.library.content(f.actor,{slotId:slot.slotId,revisionId:slot.revisionId});const check=rejected(pending,'AUTH_REQUIRED');
+      await new Promise(resolve=>setTimeout(resolve,75));await blocker.query('COMMIT');await check;
+    }finally{await blocker.query('ROLLBACK');blocker.release();}
+    await rejected(f.library.list(f.actor),'AUTH_REQUIRED');
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_user_events WHERE user_id=$1',[f.actor.userId])).rows[0].n,0);
+  });
+  await t.test('account grant expiry at commit rolls back restored bytes, pointer, receipt and audit',async()=>{
+    const f=await fixture(),first=await f.write(f.command()),slot=(await f.library.list(f.actor)).items[0];const mutate=f.repository.mutate.bind(f.repository);
+    f.repository.mutate=async(...args)=>{const result=await mutate(...args);f.advance(7200000);return result;};
+    await rejected(f.library.restore(f.actor,{slotId:slot.slotId,revisionId:first.revisionId,ifMatch:first.etag,idempotencyKey:uuid()}),'AUTH_REQUIRED');
+    assert.equal((await pool.query('SELECT revision::text FROM game_save_slots WHERE id=$1',[slot.slotId])).rows[0].revision,'1');
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_operations WHERE slot_id=$1',[slot.slotId])).rows[0].n,1);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_user_events WHERE slot_id=$1',[slot.slotId])).rows[0].n,0);
+  });
+  await t.test('account history paginates exactly and unavailable bytes never restore',async()=>{
+    const f=await fixture({history:0});let last=await f.write(f.command());const first=last;
+    for(let i=0;i<51;i++){f.advance(61000);last=await f.write(f.command(undefined,{ifNoneMatch:undefined,ifMatch:last.etag}),await f.issue());}
+    const slot=(await f.library.list(f.actor)).items[0],page=await f.library.history(f.actor,{slotId:slot.slotId});assert.equal(page.items.length,50);assert.equal(page.nextBeforeRevision,'3');
+    const older=await f.library.history(f.actor,{slotId:slot.slotId,beforeRevision:page.nextBeforeRevision});assert.deepEqual(older.items.map(x=>x.revision),['2','1']);assert.equal(older.nextBeforeRevision,null);
+    await rejected(f.library.content(f.actor,{slotId:slot.slotId,revisionId:first.revisionId}),'SAVE_HISTORY_UNAVAILABLE');
+    await rejected(f.library.restore(f.actor,{slotId:slot.slotId,revisionId:first.revisionId,ifMatch:last.etag,idempotencyKey:uuid()}),'SAVE_HISTORY_UNAVAILABLE');
+    await rejected(f.library.history(f.actor,{slotId:slot.slotId,beforeRevision:'9999999999999999999'}),'SCHEMA_INVALID');
+  });
   await t.test('concurrent retries make one revision; receipt precedes stale CAS and binds all fields',async()=>{
     const f=await fixture(),input=f.command();
     const [a,b]=await Promise.all([f.write(input),f.write(input)]);
