@@ -1,6 +1,6 @@
 # 游戏存档与竞赛基础设施：实施状态
 
-更新：2026-10-05。实施分支：`codex/game-services-foundation`。
+更新：2026-10-06。实施分支：`codex/game-services-foundation`。
 
 权威设计：
 
@@ -109,6 +109,17 @@ node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.
 - 补齐 FLAC MIME，窄窗口保存栏及底部菜单不再互相覆盖。原有能力审批、账号边界、CSP 未放宽。
 
 这里的 Cursor 是实际原生 Webview，使用正式 PlayerCore/host/SDK，但登录和目录由本机验收壳替代；正式安装版 VSIX、真实身份、线上审批和全程游玩仍需独立验证。测试库使用 production 协议频道以覆盖非作者账号，未改线上审批。S2 持久 outbox、S3 recovery/管理/容量与备份恢复尚未实现，不可据此公开长期进度游戏。
+
+## 第五阶段：安装版入口与真实身份验收（2026-10-06）
+
+已建立独立 Cursor 配置/扩展目录、正式 VSIX 和本机 PostgreSQL/Redis 验收环境。修复安装版连接 loopback API 时误拒合法 HTTP runtime 的问题；生产来源限制不变。
+
+- 真实 OTP、设备授权、目录、资源清单、SDK/HTTP/PG 链路五组复验通过；覆盖令牌自动刷新、跨设备续玩、CAS 冲突、账号隔离及设备撤销。
+- 正式网页客户端经邮箱登录与目录入口完成点火、保存和刷新续玩。客户端 102 项测试及 Web/Harness/VSIX 构建通过；本机 readiness 为 46/46。
+- VSIX 0.3.23 已实际安装到专用目录。Cursor 安装版界面、SecretStorage 重启恢复与双向游玩仍待人工身份环节完成，不宣称安装版全流程已经通过。
+- 本地脚本只为随机测试作品返回 cloudSave；正式 catalog/ZIP 能力开关、生产审批和数据库均未修改。没有新增迁移或线上部署。
+
+[环境、命令、边界与清理](../samples/adarkroom/README.md#安装包与真实身份验收环境)。
 
 ## 权限与兼容合同
 

@@ -81,3 +81,59 @@ node --test tests/platform/game-saves-postgres.test.cjs
 - 后续界面布局/样本变更重新执行适配器专项；FLAC 通过 ZIP 校验测试。
 
 尚待：正式安装版目录和真实身份流程验收、全程游玩样本、S2 持久本机缓存/outbox、S3 用户存档管理与 recovery、备份恢复/容量演练。线上 cloudSave 仍关闭。
+
+## 安装包与真实身份验收环境
+
+新增 `npm run start:adarkroom-installed-acceptance`，使用完整平台客户端、真实邮箱 OTP/令牌/设备授权、PostgreSQL 目录与 runtime 资源清单。邮件仅写入本机 mailbox，不调用外部邮箱/OAuth；只允许下面两个测试邮箱。数据库仍必须是 loopback、以 `_test` 结尾的专用库。
+
+```powershell
+docker run --detach --rm --name gamehub-adr-installed-test --publish 127.0.0.1:55439:5432 --env POSTGRES_USER=gamehub_test --env POSTGRES_PASSWORD=gamehub_local_test --env POSTGRES_DB=gamehub_installed_test postgres:16.10-alpine
+docker run --detach --rm --name gamehub-adr-installed-redis --publish 127.0.0.1:55440:6379 redis:7.4-alpine
+$env:GAMEHUB_ADR_DATABASE_URL = 'postgres://gamehub_test:gamehub_local_test@127.0.0.1:55439/gamehub_installed_test'
+npm run start:adarkroom-installed-acceptance
+```
+
+API/网页为 http://127.0.0.1:3086 ，runtime 为 3092。不能与前一节的服务同时运行。生产目录仍不返回 cloudSave；只有此启动脚本为本次随机作品的启动描述注入能力，测试库中的 scope/policy 审批仍由真实游戏会话服务检查。不是线上发布审批验收。每次启动新建测试作品，重启脚本不会沿用上次作品的存档；不要在同一次续玩验收中重启服务。
+
+脚本写入 `.runtime/adarkroom-installed/session.json`，含当前作品 ID、VSIX 路径及独立 Cursor 目录。保持服务运行，在另一终端执行：
+
+```powershell
+$adrSession = Get-Content .runtime/adarkroom-installed/session.json -Raw | ConvertFrom-Json
+cursor --user-data-dir $adrSession.profilePath --extensions-dir $adrSession.extensionsPath --install-extension $adrSession.vsixPath --force
+cursor --user-data-dir $adrSession.profilePath --extensions-dir $adrSession.extensionsPath --list-extensions --show-versions
+cursor --user-data-dir $adrSession.profilePath --extensions-dir $adrSession.extensionsPath --new-window
+```
+
+使用真实 VSIX 安装，不带 `--extensionDevelopmentPath`。仅专用配置关闭扩展自动更新，避免测试时被线上旧包替换；日常 Cursor 配置与扩展目录不变。首次启动 Cursor 自身如需登录，由操作者完成；进入编辑器后运行命令 `GameHub: 打开游戏平台`。
+
+GameHub 测试账号是 `adr-a@gamehub.test`、`adr-b@gamehub.test`。在网页或扩展中选择邮箱登录，点击发送验证码，再从本机文件读取当次验证码：
+
+```powershell
+Get-Content .runtime/adarkroom-installed/mailbox.json
+```
+
+验证码十分钟有效，相同邮箱一分钟只能请求一次。这里只替代邮件投递，验证码校验、令牌刷新和设备撤销都走真实服务。不要把测试邮箱用于线上，也不要把 mailbox、Cursor profile 或 token 内容提交仓库。
+
+真实身份的自动化复验（服务运行期间）：
+
+```powershell
+npm run verify:adarkroom-installed
+```
+
+该脚本使用独立槽位，不覆盖游戏 autosave；完成后删除测试槽并退出它创建的设备。可能等待一次真实 OTP 频控窗口。结果写入 `.runtime/adarkroom-installed/verification.json`，包括：
+
+- 真实 OTP、目录与发布启动描述；
+- 真实 SDK/MessageChannel/HTTP/PG 分片读写及 A/B 隔离；
+- 访问令牌失效后的自动刷新不改变原 grant；
+- 同账号不同设备接续、旧 ETag 冲突；
+- 撤销设备后旧桥失败，另一设备正常。
+
+2026-10-06 已通过上述五组验证，客户端 102 项通过；Web、Harness 与 VSIX 构建通过。本机 readiness 为 46/46、database/realtime 均正常。实际网页经邮箱登录、目录进入游戏、点火保存、刷新续玩通过。VSIX 0.3.23 已安装到独立目录；正式安装版 UI、SecretStorage 重启续用与双向游玩仍待完成，不能用 API 模拟宿主结果代替。
+
+本轮另修复安装版连接本机 API 时误拒 HTTP runtime 的问题：仅当可信宿主的 API 为 loopback 且运行域配置为 localhost 时允许本机游戏。生产 HTTPS/release 主机校验和 iframe sandbox 保持原边界。
+
+验收完成后先关闭游戏，再停止 Node 服务，最后停止这两个专用可丢弃容器：
+
+```powershell
+docker stop gamehub-adr-installed-test gamehub-adr-installed-redis
+```

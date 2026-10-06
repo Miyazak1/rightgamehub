@@ -9,6 +9,7 @@ import GuessBaikeGame from './GuessBaikeGame.jsx';
 import { formatBytes, uploadErrorMessage } from './upload-display.mjs';
 import { createWebGameHost } from './web-game-host.mjs';
 import CloudSaveStatus from './CloudSaveStatus.jsx';
+import { playerRuntimeOptions } from './player-runtime-options.mjs';
 import MultiplayerDeveloperCenter from './MultiplayerDeveloperCenter.jsx';
 import MultiplayerRuleSubmissionPage from './MultiplayerRuleSubmissionPage.jsx';
 import MultiplayerRuleReviewQueue from './MultiplayerRuleReviewQueue.jsx';
@@ -317,7 +318,7 @@ function PlayerPage({ workId, releaseId, challengeCode, initialRoomId, api, host
     const started = Date.now(); emitAnalytics(api, hostKind, { type: 'game_start', route: 'play', workId, ...(releaseId ? { releaseId } : {}) }, demo);
     return () => emitAnalytics(api, hostKind, { type: 'game_end', route: 'play', workId, ...(releaseId ? { releaseId } : {}), durationMs: Math.min(600000, Date.now() - started) }, demo);
   }, [api, hostKind, workId, releaseId, demo]);
-  useEffect(() => { setSaveStatus(null); if (builtIn) { setState('running'); return undefined; } const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname); core.current = new PlayerCore({ runtimeDomain: loopback ? 'localhost' : host?.runtimeDomain || import.meta.env?.VITE_RUNTIME_DOMAIN || 'runtime.mooyu.fun', allowLocalhost: loopback || import.meta.env?.DEV === true, createBridge: context => createWebGameHost({ ...context,apiClient: api,workId,initialRoomId,onCloudSaveStatus: setSaveStatus, getAccountIdentity: async () => {
+  useEffect(() => { setSaveStatus(null); if (builtIn) { setState('running'); return undefined; } core.current = new PlayerCore({ ...playerRuntimeOptions({ host, pageHostname: location.hostname, development: import.meta.env?.DEV === true, defaultRuntimeDomain: import.meta.env?.VITE_RUNTIME_DOMAIN }), createBridge: context => createWebGameHost({ ...context,apiClient: api,workId,initialRoomId,onCloudSaveStatus: setSaveStatus, getAccountIdentity: async () => {
     const tokens = await host.account?.getTokens?.();
     return tokens ? JSON.stringify([tokens.profile?.id ?? null, tokens.grantId ?? null]) : null;
   } }) }); const off = core.current.onStateChanged(e => { setState(e.state); if (e.state === 'idle' || e.state === 'disposed') setSaveStatus(null); if (e.message) setLaunchError(e.message); }); let active = true; if (demo) { setState('running'); } else { api.getWork(workId).then(({ data: work }) => { if (!active) return; if (!workHasWebRelease(work)) { go(`/works/${workId}`); return; } return api.getLaunch(workId, releaseId).then(({ data }) => { if (active) core.current?.mount(mount.current, data); }); }).catch(caught => { if (active) { setLaunchError(caught.message || '游戏启动失败。'); setState('error'); } }); } return () => { active = false; off(); core.current?.dispose(); }; }, [workId, releaseId, initialRoomId, demo, builtIn, host, api]);

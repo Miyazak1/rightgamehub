@@ -25887,6 +25887,21 @@ ${GUESS_BAIKE_SHARE_URL}`;
     return /* @__PURE__ */ import_react2.default.createElement("span", { className: `cloud-save-status cloud-save-status--${status.state}`, role: "status", "aria-live": "polite", title: notes[status.state] }, /* @__PURE__ */ import_react2.default.createElement("i", { "aria-hidden": "true" }), /* @__PURE__ */ import_react2.default.createElement("span", null, label), status.state === "cloud" && status.historyDegraded && /* @__PURE__ */ import_react2.default.createElement("small", null, "\u5386\u53F2\u5907\u4EFD\u53D7\u9650"));
   }
 
+  // packages/platform-client/src/player-runtime-options.mjs
+  function playerRuntimeOptions({ host: host2, pageHostname, development = false, defaultRuntimeDomain = "runtime.mooyu.fun" } = {}) {
+    const pageIsLocal = ["127.0.0.1", "localhost"].includes(pageHostname);
+    let editorIsLocal = false;
+    try {
+      const api2 = new URL(host2?.apiBaseUrl);
+      editorIsLocal = host2?.runtimeDomain === "localhost" && ["http:", "https:"].includes(api2.protocol) && !api2.username && !api2.password && ["127.0.0.1", "localhost"].includes(api2.hostname);
+    } catch {
+    }
+    return {
+      runtimeDomain: pageIsLocal || editorIsLocal ? "localhost" : host2?.runtimeDomain || defaultRuntimeDomain,
+      allowLocalhost: pageIsLocal || editorIsLocal || development
+    };
+  }
+
   // packages/platform-client/src/MultiplayerDeveloperCenter.jsx
   var import_react3 = __toESM(require_react(), 1);
 
@@ -26687,8 +26702,7 @@ ${item.reproductionSteps}` : ""}`);
         setState("running");
         return void 0;
       }
-      const loopback = ["127.0.0.1", "localhost"].includes(location.hostname);
-      core.current = new PlayerCore({ runtimeDomain: loopback ? "localhost" : host2?.runtimeDomain || "runtime.mooyu.fun", allowLocalhost: loopback || false, createBridge: (context) => createWebGameHost({ ...context, apiClient: api2, workId, initialRoomId, onCloudSaveStatus: setSaveStatus, getAccountIdentity: async () => {
+      core.current = new PlayerCore({ ...playerRuntimeOptions({ host: host2, pageHostname: location.hostname, development: false, defaultRuntimeDomain: "runtime.mooyu.fun" }), createBridge: (context) => createWebGameHost({ ...context, apiClient: api2, workId, initialRoomId, onCloudSaveStatus: setSaveStatus, getAccountIdentity: async () => {
         const tokens = await host2.account?.getTokens?.();
         return tokens ? JSON.stringify([tokens.profile?.id ?? null, tokens.grantId ?? null]) : null;
       } }) });

@@ -259,7 +259,6 @@ test('Harness navigation remains inside the plugin surface', async () => {
   assert.match(entry, /GAMEHUB_API_BASE_URL/);
   assert.match(app, /\['created', 'receiving'\]\.includes\(data\.state\)/);
   assert.match(app, /data\.state === 'uploaded'/);
-  assert.match(app, /\['127\.0\.0\.1', 'localhost'\]\.includes\(location\.hostname\)/);
 });
 
 test('local Harness startup resolves the package from the current plugin manifest', async () => {
