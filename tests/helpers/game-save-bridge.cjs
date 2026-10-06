@@ -5,7 +5,7 @@ const target=()=>{const listeners=new Map();return {
   removeEventListener(type,fn){listeners.get(type)?.delete(fn);},
   dispatch(event){for(const fn of listeners.get('message')??[])fn(event);},
 };};
-exports.createSaveBridge=async function({api,descriptor,identity=async()=> 'account/grant',onStatus=()=>{},cloudSaveTimeoutMs=2000}={}) {
+exports.createSaveBridge=async function({api,descriptor,identity=async()=> 'account/grant',onStatus=()=>{},cloudSaveTimeoutMs=2000,...localOptions}={}) {
   const {createWebGameHost}=await import('../../packages/platform-client/src/web-game-host.mjs');
   const {createGameHubClient}=await import('../../packages/web-game-sdk/src/index.mjs');
   const {bridgeEnvelope}=await import('../../packages/web-game-sdk/src/protocol.mjs');
@@ -22,7 +22,7 @@ exports.createSaveBridge=async function({api,descriptor,identity=async()=> 'acco
     }
   }
   const bridge=createWebGameHost({windowImpl:hostWindow,frame:{contentWindow:frame},launchId:crypto.randomUUID(),
-    descriptor,apiClient:api,MessageChannelImpl:Channel,getAccountIdentity:identity,onCloudSaveStatus:onStatus,logger:{warn(){}}});
+    ...localOptions,descriptor,apiClient:api,MessageChannelImpl:Channel,getAccountIdentity:identity,onCloudSaveStatus:onStatus,logger:{warn(){}}});
   const clients=[];
   const newClient=()=>{
     const client=createGameHubClient({windowImpl:gameWindow,parentWindow:parent,requestTimeoutMs:2000,cloudSaveTimeoutMs});

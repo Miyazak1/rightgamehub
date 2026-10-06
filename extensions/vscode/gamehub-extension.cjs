@@ -298,6 +298,12 @@ async function activate(context) {
     const { createDesktopLauncher } = await import(pathToFileURL(moduleUri.fsPath).href);
     desktopLauncher = createDesktopLauncher({ root: vscode.Uri.joinPath(context.globalStorageUri, 'desktop-games').fsPath, enabled: process.platform === 'win32' });
   } catch (error) { updateOutput.appendLine(`GameHub 本机启动组件不可用：${String(error.message || error)}`); }
+  let saveStore=null,runSaveStoreRequest;
+  try {
+    const {createSqliteSaveStore}=await import(pathToFileURL(path.join(context.extensionPath,'save-cache','sqlite-store.mjs')).href);
+    ({runSaveStoreRequest}=await import(pathToFileURL(path.join(context.extensionPath,'save-cache','store-rpc.mjs')).href));
+    saveStore=await createSqliteSaveStore({root:path.join(context.globalStorageUri.fsPath,'game-saves')});
+  } catch(error) { updateOutput.appendLine('GameHub 本机存档不可用：'+String(error.message||error)); }
   const config = () => vscode.workspace.getConfiguration('gamehub');
   const openBrowser = async () => {
     const url = allowedUrl(config().get('browserUrl', 'http://127.0.0.1:3081/'), '浏览器地址');
@@ -329,6 +335,10 @@ async function activate(context) {
             if (!validTokens(message.payload?.tokens)) throw new Error('拒绝保存无效的 GameHub 凭据。');
             await context.secrets.store(TOKEN_KEY, JSON.stringify(message.payload.tokens));
           } else if (message.operation === 'credentials.clear') await context.secrets.delete(TOKEN_KEY);
+          else if (message.operation.startsWith('saveCache.')) {
+            if(!runSaveStoreRequest)throw Object.assign(new Error('本机存档组件不可用。'),{code:'SAVE_LOCAL_STORAGE_UNAVAILABLE'});
+            result=await runSaveStoreRequest({store:saveStore,operation:message.operation.slice(10),payload:message.payload,origin:apiUrl.origin,getTokens:async()=>{const value=await context.secrets.get(TOKEN_KEY);return value?JSON.parse(value):null;}});
+          }
           else if (message.operation === 'external.open') result = await vscode.env.openExternal(vscode.Uri.parse(trustedExternalUrl(message.payload?.url).href));
           else if (message.operation === 'desktop.status') {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
@@ -345,7 +355,7 @@ async function activate(context) {
             result = await desktopLauncher.launch(release.record, randomUUID());
           } else throw new Error('不支持的宿主操作。');
           await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: true, result });
-        } catch (error) { await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: false, error: String(error.message || error) }); }
+        } catch (error) { await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: false, error: String(error.message || error), errorCode: error.code, retryable: error.retryable===true }); }
       });
       const themeSubscription = vscode.window.onDidChangeActiveColorTheme(() => view.webview.postMessage({ type: 'gamehub:theme', theme: { mode: themeMode() } }));
       view.onDidDispose(() => { subscription.dispose(); themeSubscription.dispose(); if (currentView === view) currentView = undefined; });
@@ -360,7 +370,7 @@ async function activate(context) {
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.checkForUpdates', () => runEditorUpdateCheck(context, updateOutput, { force: true, userInitiated: true })));
   const updateTimer = setTimeout(() => void runEditorUpdateCheck(context, updateOutput, { force: true }), 15000);
   const updateInterval = setInterval(() => void runEditorUpdateCheck(context, updateOutput), UPDATE_INTERVAL_MS);
-  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void desktopLauncher?.close(); } });
+  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void desktopLauncher?.close(); void saveStore?.close(); } });
 }
 
 module.exports = { activate };

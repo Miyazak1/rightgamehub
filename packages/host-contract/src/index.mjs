@@ -1,3 +1,5 @@
+import {createIndexedDbSaveStore} from '../../save-cache/src/indexeddb-store.mjs';
+import {createSaveStoreProxy} from '../../save-cache/src/store-rpc.mjs';
 const MODES = new Set(['light', 'dark', 'high-contrast']);
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -9,6 +11,7 @@ export function normalizeTheme(input = {}) {
 
 export function createBrowserHostAdapter({ window: browserWindow = globalThis.window } = {}) {
   const listeners = new Set();
+  const saveCache=createIndexedDbSaveStore({indexedDB:browserWindow?.indexedDB});
   const media = browserWindow?.matchMedia?.('(prefers-color-scheme: dark)');
   let override = 'system';
   let accent = '#8b5cf6';
@@ -40,6 +43,8 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
   const mediaChanged = () => override === 'system' && emit();
   media?.addEventListener?.('change', mediaChanged);
   return {
+    saveCache,
+    saveOrigin:browserWindow?.location?.origin,
     async getCapabilities() {
       return {
         protocolVersion: 1, host: 'browser', hostVersion: '1', surface: 'embedded-browser',
@@ -170,6 +175,11 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
+    saveOrigin:apiBaseUrl?new URL(apiBaseUrl).origin:hostWindow.location?.origin,
+    saveCache:createSaveStoreProxy(async(operation,payload)=>{
+      const response=await hostWindow.fetch(new URL('api/gamehub/save-cache',hostWindow.document.baseURI),{method:'POST',credentials:'same-origin',cache:'no-store',signal,headers:{'Content-Type':'application/json','X-GameHub-Save-Cache':'1'},body:JSON.stringify({operation,payload})});
+      const result=await response.json();if(!response.ok||!result.ok)throw Object.assign(new Error(result.error||'Local save storage failed.'),{code:result.code||'SAVE_LOCAL_STORAGE_UNAVAILABLE',retryable:result.retryable===true});return result.data;
+    }),
     async getCapabilities() {
       await ensureCredentials();
       return {
@@ -255,6 +265,8 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
+    saveOrigin:new URL(apiBaseUrl).origin,
+    saveCache:createSaveStoreProxy((operation,payload)=>bridge.call('saveCache.'+operation,payload)),
     runtimeDomain: String(bootstrap.runtimeDomain || '').trim() || undefined,
     async getCapabilities() {
       return {

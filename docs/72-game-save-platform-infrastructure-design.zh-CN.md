@@ -1120,3 +1120,12 @@ GameHub 应把以下四层严格分开：
 ```
 
 保持 Cloud Save、Competition 和 Multiplayer 的领域数据分离；当前阶段不需要新增独立部署微服务。
+
+
+### S2 实现状态（2026-10-06）
+
+可信宿主缓存与 outbox 已在 packages/save-cache 实现，浏览器使用 IndexedDB 严格事务，Cursor/VS Code 与 Harness 使用宿主 SQLite WAL/FULL。新增 cloudSave.local 接口明确区分本机 ACK 与云端 ACK，旧在线接口语义不变。浏览器断网建造、关闭页签重开、恢复联网已实测；SQLite 进程中断、幂等重放、双窗口冲突、账号隔离、已知撤销授权后的重开、匿名安全导入及真实 PostgreSQL 链路有测试覆盖。
+
+同槽位保持一个不可变的逻辑 inFlight 操作；崩溃接管可能重复投递该操作，由原幂等键消除重复修订。同步只在已打开的批准游戏宿主中运行。本轮不覆盖完整离线资源安装或关闭应用后的后台同步。S2 新 VSIX 的真实界面及匿名导入 UI 尚待验收，不能把之前 S1 安装版结果算作 S2 结果。
+
+生产 cloudSave 仍关闭；S3 用户存档管理、恢复副本导出与移除、备份恢复/容量演练及 Windows EXE 启动票据接入仍是后续门槛。实现预算和 API 见 ../packages/save-cache/README.md，复验入口和证据见 ../samples/adarkroom/README.md。

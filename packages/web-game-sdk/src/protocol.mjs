@@ -4,6 +4,18 @@ export const WEB_GAME_BRIDGE_MAX_BYTES = 32 * 1024;
 
 export const WEB_GAME_BRIDGE_METHODS = Object.freeze([
   'player.get',
+  'cloudSave.local.read',
+  'cloudSave.local.write',
+  'cloudSave.local.sync',
+  'cloudSave.local.status',
+  'cloudSave.local.compare',
+  'cloudSave.local.resolve',
+  'cloudSave.local.recoveries',
+  'cloudSave.local.transfer.begin',
+  'cloudSave.local.transfer.append',
+  'cloudSave.local.transfer.commit',
+  'cloudSave.local.transfer.read',
+  'cloudSave.local.transfer.abort',
   'cloudSave.policy.get',
   'cloudSave.slots.list',
   'cloudSave.slots.metadata',

@@ -31,6 +31,8 @@ await writeFile(new URL('lib/client.js', pluginRoot), bundle);
 await copyFile(new URL('src/index.js', pluginRoot), new URL('lib/index.js', pluginRoot));
 await copyFile(new URL('src/transfer-service.mjs', pluginRoot), new URL('lib/transfer-service.mjs', pluginRoot));
 for (const name of ['web-policy.mjs', 'zip-worker.mjs', 'prepare-web-game.mjs', 'game-runtime.mjs', 'native-probe-adapter.mjs', 'offscreen-adapter.mjs', 'offscreen-player.html', 'offscreen-package.mjs', 'offscreen-install.mjs', 'offscreen-approved.json', 'desktop-launcher.mjs', 'credential-store.mjs']) await copyFile(new URL(`src/${name}`, pluginRoot), new URL(`lib/${name}`, pluginRoot));
+await mkdir(new URL('lib/save-cache/',pluginRoot),{recursive:true});
+for(const name of ['store-contract.mjs','store-rpc.mjs','sqlite-store.mjs'])await copyFile(new URL('packages/save-cache/src/'+name,root),new URL('lib/save-cache/'+name,pluginRoot));
 const offscreenPlayer = await readFile(new URL('src/offscreen-player.html', pluginRoot), 'utf8');
 new vm.Script(offscreenPlayer.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1].replace('__ROUTES__', '{}'), { filename: 'offscreen-player.js' });
 console.log(`Built ${manifest.name}@${manifest.version}: shared platform + local lab closure bundle. React is supplied by the host.`);

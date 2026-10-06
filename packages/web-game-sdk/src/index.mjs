@@ -37,7 +37,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     else operation.reject(Object.assign(new Error(message.error?.message ?? 'GameHub bridge request failed.'), message.error ?? {}));
   };
   const connect = () => {
-    if (closed) return Promise.reject(new Error('GameHub client is closed.'));
+    if (closed) return Promise.reject(Object.assign(new Error('GameHub client is closed.'),{code:'BRIDGE_CLOSED'}));
     if (port) return Promise.resolve([...capabilities]);
     if (connectPromise) return connectPromise;
     connectPromise = new Promise((resolve, reject) => {
@@ -54,7 +54,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
         capabilities = message.capabilities ?? [];
         resolve([...capabilities]);
       };
-      cancelConnect = () => { clearTimeout(timer); windowImpl.removeEventListener('message', onReady); connectPromise = null; reject(new Error('GameHub client closed.')); };
+      cancelConnect = () => { clearTimeout(timer); windowImpl.removeEventListener('message', onReady); connectPromise = null; reject(Object.assign(new Error('GameHub client closed.'),{code:'BRIDGE_CLOSED'})); };
       windowImpl.addEventListener('message', onReady);
       parentWindow.postMessage(bridgeEnvelope({ type: 'gamehub.bridge.connect', clientNonce }), '*');
     });
@@ -62,7 +62,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   };
   const request = async (method, params = {}, timeoutMs = requestTimeoutMs) => {
     await connect();
-    if (closed || !port) throw new Error('GameHub client closed.');
+    if (closed || !port) throw Object.assign(new Error('GameHub client closed.'),{code:'BRIDGE_CLOSED'});
     const id = randomId();
     const envelope = parseBridgeRequest(bridgeEnvelope({ type: 'request',id,method,params }));
     return new Promise((resolve, reject) => {
@@ -105,7 +105,7 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     },
     close() {
       closed = true; cancelConnect?.(); cancelConnect = null; port?.close?.(); port = null;
-      for (const operation of pending.values()) { clearTimeout(operation.timer); operation.reject(new Error('GameHub client closed.')); }
+      for (const operation of pending.values()) { clearTimeout(operation.timer); operation.reject(Object.assign(new Error('GameHub client closed.'),{code:'BRIDGE_CLOSED'})); }
       pending.clear(); listeners.clear();
     },
   });

@@ -50,6 +50,7 @@ const inputs = [
   ['extension/package.json', await readFile(new URL('package.json', extensionRoot))],
   ['extension/gamehub-extension.cjs', await readFile(new URL('gamehub-extension.cjs', extensionRoot))],
   ['extension/desktop-launcher.mjs', await readFile(new URL('extensions/harness/src/desktop-launcher.mjs', root))],
+  ...await Promise.all(['store-contract.mjs','store-rpc.mjs','sqlite-store.mjs'].map(async name=>['extension/save-cache/'+name,await readFile(new URL('packages/save-cache/src/'+name,root))])),
   ['extension/media/gamehub.js', await readFile(new URL('media/gamehub.js', extensionRoot))],
   ['extension/media/gamehub.js.map', await readFile(new URL('media/gamehub.js.map', extensionRoot))],
   ['extension/media/arcade.svg', await readFile(new URL('media/arcade.svg', extensionRoot))],

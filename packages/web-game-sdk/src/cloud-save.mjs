@@ -2,7 +2,7 @@ import { encodeChunk,decodeChunk,sha256Hex,GAME_TRANSFER_CHUNK_BYTES } from './t
 import { saveResource,saveMutation,saveFailure,SAVE_INLINE_BYTES,SAVE_MAX_DOCUMENT_BYTES } from './cloud-save-protocol.mjs';
 
 /** Online transport only. The caller retains an immutable operation for retry. */
-export function createCloudSaveClient({request}) {
+export function createCloudSaveClient({request,local=false}) {
   let transferring=false;
   const payloadOperation=async action=>{
     if(transferring)saveFailure('SAVE_TRANSFER_BUSY','Another save read or write is active.',true);
@@ -15,7 +15,7 @@ export function createCloudSaveClient({request}) {
   const missingAsNull=async action=>{
     try{return await action();}catch(error){if(error.code==='SAVE_SLOT_NOT_FOUND')return null;throw error;}
   };
-  return Object.freeze({
+  const client={
     getPolicy:(input={})=>request('cloudSave.policy.get',saveResource(input,{slot:false})),
     listSlots:(input={})=>request('cloudSave.slots.list',saveResource(input,{slot:false})),
     getMetadata:input=>missingAsNull(()=>request('cloudSave.slots.metadata',saveResource(input))),
@@ -57,10 +57,11 @@ export function createCloudSaveClient({request}) {
       });
     },
     read:input=>payloadOperation(()=>missingAsNull(async()=>{
-      const resource=saveResource(input);let cursor;
+      const resource=saveResource(input,{extra:local?['view','token','recoveryId']:[]});let cursor;
+      if(local)for(const key of ['view','token','recoveryId'])if(input[key]!==undefined)resource[key]=input[key];
       try {
         const result=await request('cloudSave.slots.read',resource);
-        if(result.deleted){const {transfer,...meta}=result;return {...meta,data:null};}
+        if(result.deleted||local&&result.empty){const {transfer,...meta}=result;return {...meta,data:null};}
         cursor=result.transfer;
         if(!cursor||!Number.isSafeInteger(cursor.totalBytes)||cursor.totalBytes<0||cursor.totalBytes>SAVE_MAX_DOCUMENT_BYTES
           ||cursor.totalBytes!==result.bytes||cursor.chunkBytes!==GAME_TRANSFER_CHUNK_BYTES||cursor.sha256!==result.sha256)
@@ -85,5 +86,18 @@ export function createCloudSaveClient({request}) {
         return {...meta,data};
       } finally {await abort(cursor);}
     })),
-  });
+  };
+  if(!local){
+    const transport=createCloudSaveClient({local:true,request:(method,input)=>request(method.replace('cloudSave.slots.','cloudSave.local.').replace('cloudSave.transfer.','cloudSave.local.transfer.'),input)});
+    client.local=Object.freeze({
+      read:transport.read,write:transport.write,
+      status:input=>request('cloudSave.local.status',saveResource(input)),
+      sync:input=>request('cloudSave.local.sync',saveResource(input)),
+      async compare(input){const resource=saveResource(input),pair=await request('cloudSave.local.compare',resource);return {...pair,cloud:await transport.read({...resource,view:'comparison',token:pair.token})};},
+      resolve:input=>{const resource=saveResource(input,{extra:['choice','token','expectedEtag']});return request('cloudSave.local.resolve',{...resource,choice:input.choice,token:input.token,expectedEtag:input.expectedEtag});},
+      recoveries:input=>request('cloudSave.local.recoveries',saveResource(input)),
+      readRecovery:input=>{const resource=saveResource(input,{extra:['recoveryId']});return transport.read({...resource,view:'recovery',recoveryId:input.recoveryId});},
+    });
+  }
+  return Object.freeze(client);
 }

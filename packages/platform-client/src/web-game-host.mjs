@@ -1,3 +1,4 @@
+import {createLocalSaveHandlers} from './web-game-local-save-handlers.mjs';
 import { bridgeEnvelope, isBridgeConnectMessage, parseBridgeRequest, bridgeMethodCapability, WEB_GAME_BRIDGE_MAX_BYTES } from '@gamehub/web-game-sdk/protocol';
 import { createGameSessionManager } from './game-session-manager.mjs';
 import { createGameTransfer } from '@gamehub/web-game-sdk/transfer';
@@ -12,7 +13,7 @@ const byteLength = value => new TextEncoder().encode(JSON.stringify(value)).byte
 export function createWebGameHost({
   windowImpl = globalThis.window, frame, launchId, descriptor, apiClient,
   initialRoomId = null, sessionFactory, MessageChannelImpl = globalThis.MessageChannel,
-  logger = console, modules = {}, signal, getAccountIdentity, onCloudSaveStatus,
+  logger = console, modules = {}, signal, getAccountIdentity, onCloudSaveStatus, saveCache, getSaveOwner, saveOrigin, onLocalSaveController,
 } = {}) {
   if (!windowImpl?.addEventListener || !frame?.contentWindow || !descriptor?.workId || !apiClient || !MessageChannelImpl) {
     throw new TypeError('A window, mounted frame, launch descriptor, API client and MessageChannel are required.');
@@ -71,6 +72,10 @@ export function createWebGameHost({
           apiClient, workId: descriptor.workId, descriptor, initialRoomId, sessionFactory,
           sendEvent, logger, signal: controller.signal, transfer, checkIdentity, onCloudSaveStatus, getGameSession: capability => gameSession.get(capability),
         });
+        if(capability==='cloudSave'&&saveCache&&getSaveOwner){
+          const local=createLocalSaveHandlers({apiClient,descriptor,getGameSession:capability=>gameSession.get(capability),transfer,signal:controller.signal,checkIdentity,saveCache,getSaveOwner,saveOrigin,sendEvent,onCloudSaveStatus,onLocalSaveController,onAuthorizationRevoked:()=>{sendEvent('bridge.closed',{reason:'authorization_revoked'});close();}});
+          Object.assign(module.handlers,local.handlers);cleanups.push(()=>local.close());
+        }
         if (module.close) cleanups.push(() => module.close());
         for (const [method, handler] of Object.entries(module.handlers)) {
           if (bridgeMethodCapability(method) !== capability || typeof handler !== 'function' || handlers.has(method)) {
@@ -107,7 +112,7 @@ export function createWebGameHost({
         outstanding += 1;
         try {
           const capability = bridgeMethodCapability(request.method);
-          if (capability === 'cloudSave' || capability === 'competition') await gameSession.get(capability);
+          if (capability === 'cloudSave' && !request.method.startsWith('cloudSave.local.') || capability === 'competition') await gameSession.get(capability);
           if (!alive) return;
           const result = await handlers.get(request.method)(request.params ?? {});
           await checkIdentity();

@@ -40,6 +40,14 @@ function validName(name) {
 // Host, Origin and Fetch Metadata before dispatching its connection.fetch handlers.
 export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024, quotaBytes = 2 * 1024 ** 3, maxFiles = 50, timeoutMs = 30 * 60 * 1000, offscreenOptions, desktopOptions, credentialStore = null, platformOrigin = process.env.GAMEHUB_API_BASE_URL || 'https://mooyu.fun', updateStateFile = process.env.GAMEHUB_UPDATE_STATE_FILE || path.join(process.platform === 'win32' ? (process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')) : (process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share')), process.platform === 'win32' ? 'GameHub' : 'gamehub', 'updates', 'harness.json') }) {
   await mkdir(root, { recursive: true });
+  let saveStore=null,runSaveStoreRequest,saveStorePromise;
+  const ensureSaveStore=()=>saveStorePromise??=(async()=>{try {
+    const packaged=new URL('.',import.meta.url).pathname.endsWith('/lib/');
+    const base=packaged?new URL('./save-cache/',import.meta.url):new URL('../../../packages/save-cache/src/',import.meta.url);
+    const {createSqliteSaveStore}=await import(new URL('sqlite-store.mjs',base));
+    ({runSaveStoreRequest}=await import(new URL('store-rpc.mjs',base)));
+    saveStore=await createSqliteSaveStore({root:path.join(root,'game-saves')});
+  } catch {} })();
   const records = new Map();
   for (const filename of await readdir(root)) {
     if (!filename.endsWith('.json') || !UUID.test(filename.slice(0, -5))) continue;
@@ -254,6 +262,15 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
 
   const handlers = {
     '/api/gamehub/files': { methods: ['GET'], requestBody: 'buffered', run: () => json({ ok: true, files: [...records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(catalogRecord), maxBytes, quotaBytes, usedBytes: usedBytes() }) },
+    '/api/gamehub/save-cache': {methods:['POST'],requestBody:'buffered',run:async request=>{
+      if(request.headers.get('x-gamehub-save-cache')!=='1'||request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')fail(403,'请从 GameHub 操作本机存档。');
+      const text=await request.text();if(Buffer.byteLength(text)>8*1024*1024)fail(413,'本机存档请求过大。');
+      try {
+        await ensureSaveStore();if(!runSaveStoreRequest)throw Object.assign(new Error('Durable local storage is unavailable in this host runtime.'),{code:'SAVE_LOCAL_STORAGE_UNAVAILABLE'});
+        const {operation,payload}=JSON.parse(text);const data=await runSaveStoreRequest({store:saveStore,operation,payload,origin:platformBase.origin,getTokens:async()=>credentialStore?.available?credentialStore.get():null});
+        return json({ok:true,data});
+      }catch(error){return json({ok:false,error:error.message,code:error.code??'SAVE_LOCAL_STORAGE_UNAVAILABLE',retryable:error.retryable===true},400);}
+    }},
     '/api/gamehub/credentials': { methods: ['GET', 'PUT', 'DELETE'], requestBody: 'buffered', run: async request => {
       if (request.headers.get('x-gamehub-credentials') !== '1') fail(403, '请从 GameHub 账号面板管理登录凭据。');
       if (!credentialStore?.available) return json({ ok: true, tokens: null, persistence: credentialStore?.persistence ?? { kind: 'memory', description: '系统凭据库不可用，凭据仅保留到 Harness 本次运行结束。' } });
@@ -345,5 +362,5 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
       }
     },
   }));
-  return { routes, close: () => { lifetime.abort(); return Promise.all([runtime.close(), native.close(), offscreen.close(), desktop.close()]); } };
+  return { routes, close: async () => { lifetime.abort(); await saveStorePromise; await saveStore?.close(); return Promise.all([runtime.close(), native.close(), offscreen.close(), desktop.close()]); } };
 }

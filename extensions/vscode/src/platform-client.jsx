@@ -27,7 +27,7 @@ window.addEventListener('message', event => {
   if (message?.type !== 'gamehub:response' || !Number.isSafeInteger(message.id)) return;
   const task = pending.get(message.id); if (!task) return;
   pending.delete(message.id); clearTimeout(task.timer);
-  if (message.ok) task.resolve(message.result); else task.reject(new Error(message.error || '宿主操作失败。'));
+  if (message.ok) task.resolve(message.result); else task.reject(Object.assign(new Error(message.error || '宿主操作失败。'),{code:message.errorCode,retryable:message.retryable===true}));
 });
 
 const host = createEditorHostAdapter({ bridge, bootstrap, apiBaseUrl: bootstrap.apiBaseUrl });

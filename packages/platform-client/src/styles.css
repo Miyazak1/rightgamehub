@@ -1016,3 +1016,10 @@ button { cursor: pointer; }
   .player-bar:has(.cloud-save-status) { flex-wrap: wrap; padding-bottom: 8px; }
   .player-bar .cloud-save-status { order: 4; flex-basis: 100%; justify-content: center; }
 }
+
+.anonymous-save-import { position:relative; font-size:11px; }
+.anonymous-save-import>button { font:inherit; color:inherit; background:transparent; border:1px solid currentColor; border-radius:5px; padding:4px 8px; }
+.anonymous-save-import>[role="dialog"],.anonymous-save-import>p { position:absolute; z-index:20; top:100%; right:0; width:min(340px,85vw); padding:16px; background:#252332; color:#f2eff8; border:1px solid #716783; border-radius:8px; box-shadow:0 8px 24px #0006; }
+.anonymous-save-import>[role="dialog"] { max-height:60vh; overflow:auto; }
+.anonymous-save-import>[role="dialog"]~p { top:calc(100% + 10px); position:relative; }
+.cloud-save-status--local_only,.cloud-save-status--local_pending { color:#a8c9ff; }

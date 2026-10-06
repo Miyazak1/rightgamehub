@@ -11,7 +11,7 @@ async function fixture(t, options = {}) {
   const { createTransferService } = await import('../extensions/harness/src/transfer-service.mjs');
   const service = await createTransferService({ root, ...options });
   t.after(async () => {
-    service.close();
+    await service.close();
     assert.equal(path.dirname(path.resolve(root)), base);
     assert.ok(path.basename(root).startsWith('case-'));
     await fs.rm(root, { recursive: true, force: true });
@@ -152,4 +152,22 @@ test('cancel and timeout clean temporary bytes, release slot and allow retry', a
     assert.deepEqual(await fs.readdir(f.root), []);
   }
   assert.equal((await f.upload(Buffer.from('MZ1234'))).status, 201);
+});
+
+test('trusted save-cache RPC persists across service restart and rejects other account/origin',async t=>{
+  const id=require('node:crypto').randomUUID,user=id();
+  const credentialStore={available:true,get:async()=>({profile:{id:user}})};
+  const f=await fixture(t,{credentialStore}),headers={'Content-Type':'application/json','X-GameHub-Save-Cache':'1'};
+  const scope={origin:'https://mooyu.fun',owner:'user:'+user,workId:id(),channel:'production',namespace:'default',slot:'autosave'};
+  const call=(operation,payload)=>f.call('save-cache',{method:'POST',headers,body:JSON.stringify({operation,payload})});
+  assert.equal((await f.call('save-cache',{method:'POST',body:'{}'})).status,403);
+  const written=await call('compareAndSwap',{scope,version:0,value:{format:1,proof:'durable'}});assert.equal(written.status,200,await written.text());
+  await f.service.close();
+  const restarted=await f.createTransferService({root:f.root,credentialStore});t.after(()=>restarted.close());
+  const route=restarted.routes.find(r=>r.path==='/api/gamehub/save-cache');
+  const request=payload=>route.fetch(new Request('http://dsh.internal/api/gamehub/save-cache',{method:'POST',headers,body:JSON.stringify({operation:'read',payload})}));
+  assert.equal((await (await request({scope})).json()).data.value.proof,'durable');
+  assert.equal((await (await request({scope:{...scope,owner:'user:'+id()}})).json()).code,'BRIDGE_ACCOUNT_CHANGED');
+  assert.equal((await (await request({scope:{...scope,origin:'https://other.invalid'}})).json()).code,'BRIDGE_ACCOUNT_CHANGED');
+  await restarted.close();
 });

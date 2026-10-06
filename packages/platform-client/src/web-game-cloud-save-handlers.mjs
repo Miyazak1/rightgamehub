@@ -2,7 +2,7 @@ import { encodeChunk,GAME_TRANSFER_TTL_MS } from '@gamehub/web-game-sdk/transfer
 import { saveResource,saveMutation,saveUpload,saveTransferInput,saveFailure,saveName,saveEtag,SAVE_MAX_DOCUMENT_BYTES } from '@gamehub/web-game-sdk/cloud-save-protocol';
 
 const metadataKeys=['slot','namespace','revisionId','revision','etag','schemaVersion','contentType','contentEncoding','sha256','bytes','updatedAt','deleted','restoredFromRevisionId'];
-const metadata=value=>{
+export const metadata=value=>{
   if(!value||!saveName(value.slot)||!saveName(value.namespace)||!saveEtag(value.etag)
     ||typeof value.revision!=='string'||!/^[1-9][0-9]{0,18}$/u.test(value.revision)
     ||!Number.isSafeInteger(value.bytes)||value.bytes<0||value.bytes>SAVE_MAX_DOCUMENT_BYTES)

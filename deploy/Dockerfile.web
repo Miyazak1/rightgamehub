@@ -22,6 +22,7 @@ COPY packages/web-game-sdk packages/web-game-sdk
 COPY packages/multiplayer-protocol packages/multiplayer-protocol
 COPY packages/platform-api-client packages/platform-api-client
 COPY packages/host-contract packages/host-contract
+COPY packages/save-cache packages/save-cache
 COPY packages/player-core packages/player-core
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode

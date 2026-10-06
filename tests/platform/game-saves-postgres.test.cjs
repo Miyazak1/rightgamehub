@@ -185,6 +185,47 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     await pending;await revocation;
     await rejected(f.service.content(f.actor,f.token,f.resource()),'GAME_SESSION_INVALID');
   });
+
+  await t.test('S2 SQLite outbox -> SDK -> HTTP -> PostgreSQL replays lost ACK after offline host restart',async st=>{
+    const fs=await import('node:fs/promises'),os=await import('node:os');
+    const {createSqliteSaveStore}=await import('../../packages/save-cache/src/sqlite-store.mjs');
+    const {createSaveBridge}=require('../helpers/game-save-bridge.cjs');
+    const {createApiClient}=await import('../../packages/platform-api-client/src/index.mjs');
+    const {createApp}=await import('../../apps/api/src/app.mjs');
+    const {loadConfig}=await import('../../apps/api/src/config.mjs');
+    const f=await fixture(),root=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-s2-pg-'));
+    let offline=false,dropAck=false;
+    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+      authService:{authenticateBearer:async()=>f.actor},gameSessionService:f.sessions,gameSaveService:f.service});
+    const stores=[],bridges=[],puts=[];
+    st.after(async()=>{for(const b of bridges)b.close();for(const s of stores)await s.close();await app.close();await fs.rm(root,{recursive:true,force:true});});
+    const api=createApiClient({getAccessToken:()=> 'test',fetchImpl:async(address,init)=>{
+      if(offline)throw new TypeError('offline');
+      const p=new URL(address,'https://test.invalid');
+      if(init.method==='PUT')puts.push({headers:init.headers,body:Buffer.from(init.body)});
+      const r=await app.inject({method:init.method,url:p.pathname+p.search,headers:init.headers,...(init.body!==undefined?{payload:init.body instanceof Uint8Array?Buffer.from(init.body):init.body}:{})});
+      if(dropAck&&init.method==='PUT'&&r.statusCode===200){dropAck=false;throw new TypeError('ACK lost after database commit');}
+      return new Response(r.rawPayload,{status:r.statusCode,headers:r.headers});
+    }});
+    const open=async()=>{
+      const store=await createSqliteSaveStore({root});stores.push(store);
+      const b=await createSaveBridge({api,descriptor:{workId:f.workId,releaseId:f.releaseId,channel:'production',capabilities:{cloudSave:true}},
+        saveCache:store,getSaveOwner:()=> 'user:'+f.actor.userId,saveOrigin:'https://test.invalid',cloudSaveTimeoutMs:10000});
+      bridges.push(b);return b;
+    };
+    const a=await open(),slot={slot:'autosave'};let view=await a.client.cloudSave.local.read(slot);
+    offline=true;view=await a.client.cloudSave.local.write({...slot,data:{step:1},schemaVersion:1,expectedEtag:view.etag,idempotencyKey:uuid()});
+    assert.equal(view.durability,'local');assert.equal((await a.client.cloudSave.local.sync(slot)).state,'error_retryable');
+    offline=false;dropAck=true;assert.equal((await a.client.cloudSave.local.sync(slot)).state,'error_retryable');
+    await a.client.cloudSave.local.write({...slot,data:{step:2},schemaVersion:1,expectedEtag:view.etag,idempotencyKey:uuid()});
+    a.close();await stores[0].close();
+    const b=await open();assert.deepEqual((await b.client.cloudSave.local.read(slot)).data,{step:2});
+    assert.equal((await b.client.cloudSave.local.sync(slot)).state,'cloud');
+    assert.equal(puts.length,3);assert.equal(puts[0].headers['Idempotency-Key'],puts[1].headers['Idempotency-Key']);assert.deepEqual(puts[0].body,puts[1].body);
+    assert.equal(puts[0].headers['If-None-Match'],puts[1].headers['If-None-Match']);
+    const result=await f.service.content(f.actor,f.token,f.resource());assert.deepEqual(JSON.parse(result.bytes),{step:2});
+    const meta=await f.service.metadata(f.actor,f.token,f.resource());assert.equal(meta.revision,'2');
+  });
   await t.test('SDK -> MessageChannel -> API -> PostgreSQL supports two accounts, host restart, CAS and lost acknowledgements',async st=>{
     const {createSaveBridge}=require('../helpers/game-save-bridge.cjs');
     const {createApiClient}=await import('../../packages/platform-api-client/src/index.mjs');
@@ -284,7 +325,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
       return new Response(r.rawPayload,{status:r.statusCode,headers:r.headers});
     }});
     async function launch(){
-      const b=await createSaveBridge({api,descriptor:{workId:f.workId,releaseId:f.releaseId,channel:'production',capabilities:{cloudSave:true}},identity:async()=>f.actor.userId});
+      const b=await createSaveBridge({api,descriptor:{workId:f.workId,releaseId:f.releaseId,channel:'production',capabilities:{cloudSave:true}},identity:async()=>f.actor.userId,cloudSaveTimeoutMs:15000});
       const a=createAdrSaveAdapter({cloudSave:b.client.cloudSave,schedule:()=>null,cancel:()=>{}});
       const close=()=>{a.close();b.close();};st.after(close);return {...a,close};
     }
