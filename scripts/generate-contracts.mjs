@@ -1,3 +1,4 @@
+import {saveOperationsSchemas} from '../packages/contracts/src/save-operations-schema.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -21,6 +22,15 @@ function validateSource() {
   }
 }
 
+function operationSchemaType(s) {
+  if(s.$ref)return s.$ref.split('/').at(-1);
+  if(s.oneOf)return s.oneOf.map(operationSchemaType).join(' | ');
+  if(s.const!==undefined)return JSON.stringify(s.const);
+  if(s.enum)return s.enum.map(v=>JSON.stringify(v)).join(' | ');
+  if(s.type==='object')return s.additionalProperties===true?'Record<string, unknown>':'{ '+Object.entries(s.properties).map(([k,v])=>k+(s.required?.includes(k)?'':'?')+': '+operationSchemaType(v)).join('; ')+' }';
+  if(s.type==='array')return 'Array<'+operationSchemaType(s.items)+'>';
+  return s.type==='integer'?'number':s.type;
+}
 function generateTypes() {
   const lines = [
     '// Generated from src/schema.mjs. Do not edit by hand.',
@@ -30,6 +40,7 @@ function generateTypes() {
     lines.push(`export type ${name} = ${values.map(value => JSON.stringify(value)).join(' | ')};`);
   }
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
+  for(const [name,schema] of Object.entries(saveOperationsSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
   lines.push('export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }');
@@ -49,7 +60,7 @@ function generateTypes() {
   lines.push("export interface GameSaveMetadata { slot: string; namespace: string; revisionId: UUID; revision: UIntString; etag: string; schemaVersion: number | null; contentType: \"application/json\" | \"application/octet-stream\" | null; contentEncoding: \"identity\"; sha256: string | null; bytes: number; updatedAt: string; deleted: boolean; restoredFromRevisionId: UUID | null }");
   lines.push("export interface GameSaveWriteResult extends GameSaveMetadata { historyDegraded: boolean; durability: \"cloud\" }");
   lines.push("export interface GameSaveHistory { items: Array<GameSaveMetadata & { payloadAvailable: boolean }>; nextBeforeRevision: UIntString | null }");
-  lines.push("export interface GameSavePolicy { namespace: string; status: \"active\" | \"retired\"; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number; schemaMin: number; schemaMax: number; contentTypes: Array<\"application/json\" | \"application/octet-stream\"> }");
+  lines.push("export interface GameSavePolicy { writesPaused: boolean; namespace: string; status: \"active\" | \"retired\"; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number; schemaMin: number; schemaMax: number; contentTypes: Array<\"application/json\" | \"application/octet-stream\"> }");
   lines.push('export interface CreateGameSessionRequest { workId: UUID; releaseId: UUID; channel: "production" | "preview"; launchNonce: UUID }');
   lines.push('export interface GameSession { gameSessionId: string; expiresAt: string; capabilities: Array<"identity" | "multiplayer" | "cloudSave" | "competition"> }');
   lines.push('export interface GameSessionStatus { active: true; expiresAt: string; capabilities: GameSession["capabilities"] }');

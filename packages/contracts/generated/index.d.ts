@@ -14,6 +14,20 @@ export type SourceBuildState = "queued" | "preparing" | "building" | "packaging"
 export type UIntString = `${number}`;
 export type UUID = string;
 
+export type SaveHealthQuery = { afterWorkId?: string };
+export type SavePolicyParams = { policyId: string };
+export type SavePolicyControl = { id: string; workId: string; namespace: string; status: "draft" | "review" | "active" | "retired"; writesPaused: boolean; version: string; schemaMin: number; schemaMax: number; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number };
+export type SaveTraffic = { channel: "production" | "preview"; operation: "read" | "write" | "delete" | "restore" | "receipt"; requests: number; successes: number; errors: Array<{ code: string; count: number }>; p50MsUpperBound: number | null; p95MsUpperBound: number | null; p99MsUpperBound: number | null };
+export type SaveHealthWork = { workId: string; title: string; policies: Array<SavePolicyControl>; usage: Array<{ channel: "production" | "preview"; liveSlots: number; liveBytes: string; historyBytes: string; lastReconciledAt: string | null }>; traffic: Array<SaveTraffic> };
+export type SaveHealthPage = { items: Array<SaveHealthWork>; nextAfterWorkId: string | null; windowHours: 24 };
+export type SaveCapacityControl = { retainedBytes: string; maxPayloadBytes: string; writesPaused: boolean; version: string };
+export type SaveCapacityOverview = { retainedBytes: string; maxPayloadBytes: string; writesPaused: boolean; version: string; databaseBytes: string; saveTableBytes: string; diskFreeBytes: null; telemetryDropped: number };
+export type SavePolicyPauseRequest = { operationId: string; reason: string; expectedVersion: string; writesPaused: boolean };
+export type SaveCapacityRequest = { operationId: string; reason: string; expectedVersion: string; writesPaused: boolean; maxPayloadBytes: number };
+export type SaveMaintenanceCursor = { userId: string; channel: "production" | "preview" };
+export type SaveMaintenanceRequest = { operationId: string; reason: string; mode: "inspect" | "repair" | "cleanup"; after?: { userId: string; channel: "production" | "preview" } };
+export type SaveMaintenanceResult = { scopes: number; mismatchScopes: number; repairedScopes: number; purgedPayloads: number; sampledPayloads: number; invalidPayloads: number; missingCurrentPayloads: number; next: SaveMaintenanceCursor | null };
+export type SaveAdminAuditPage = { items: Array<{ id: string; actorUserId: string; action: "policy_pause" | "capacity" | "inspect" | "repair" | "cleanup"; workId: string | null; reason: string; requestId: string; beforeState: Record<string, unknown>; result: Record<string, unknown>; createdAt: string }> };
 export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }
 export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }
 export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }
@@ -33,7 +47,7 @@ export interface RestoreGameSaveRequest { revisionId: UUID }
 export interface GameSaveMetadata { slot: string; namespace: string; revisionId: UUID; revision: UIntString; etag: string; schemaVersion: number | null; contentType: "application/json" | "application/octet-stream" | null; contentEncoding: "identity"; sha256: string | null; bytes: number; updatedAt: string; deleted: boolean; restoredFromRevisionId: UUID | null }
 export interface GameSaveWriteResult extends GameSaveMetadata { historyDegraded: boolean; durability: "cloud" }
 export interface GameSaveHistory { items: Array<GameSaveMetadata & { payloadAvailable: boolean }>; nextBeforeRevision: UIntString | null }
-export interface GameSavePolicy { namespace: string; status: "active" | "retired"; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number; schemaMin: number; schemaMax: number; contentTypes: Array<"application/json" | "application/octet-stream"> }
+export interface GameSavePolicy { writesPaused: boolean; namespace: string; status: "active" | "retired"; maxSlots: number; maxDocumentBytes: number; maxLiveBytes: number; maxHistoryBytes: number; historyVersions: number; historyDays: number; schemaMin: number; schemaMax: number; contentTypes: Array<"application/json" | "application/octet-stream"> }
 export interface CreateGameSessionRequest { workId: UUID; releaseId: UUID; channel: "production" | "preview"; launchNonce: UUID }
 export interface GameSession { gameSessionId: string; expiresAt: string; capabilities: Array<"identity" | "multiplayer" | "cloudSave" | "competition"> }
 export interface GameSessionStatus { active: true; expiresAt: string; capabilities: GameSession["capabilities"] }

@@ -66,7 +66,7 @@ try{
   docker(['exec',container,'pg_restore','-U',user,'--dbname='+target,'--exit-on-error',restoreDump]);
   const restoreMs=Date.now()-restoreStarted;
   const client=await targetDb.pool.connect();let restoredTables,invariants;
-  try{restoredTables=await fingerprint(client);invariants=(await client.query(invariantQuery)).rows[0];}finally{client.release();}
+  try{restoredTables=await fingerprint(client);const capacityCheck=restoredTables.some(t=>t.name==='game_save_capacity')?', (SELECT CASE WHEN count(*)=1 AND min(retained_bytes)=(SELECT COALESCE(sum(octet_length(payload_inline)),0) FROM game_save_payloads) THEN 0 ELSE 1 END FROM game_save_capacity) AS bad_payload_capacity':'';invariants=(await client.query(invariantQuery+capacityCheck)).rows[0];}finally{client.release();}
   if(JSON.stringify(sourceTables)!==JSON.stringify(restoredTables))throw Error('Restored table fingerprints differ from source snapshot.');
   if(Object.values(invariants).some(value=>value!==0))throw Error('Restored save invariants failed: '+JSON.stringify(invariants));
   const report={verified:true,at:new Date().toISOString(),sourceDatabase:source,restoredDatabase:target,backupSha256,backupBytes:(await fs.stat(artifact)).size,backupMs,restoreMs,totalMs:Date.now()-started,invariants,tables:restoredTables};

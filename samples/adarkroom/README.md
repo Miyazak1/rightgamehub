@@ -197,3 +197,20 @@ node scripts/rehearse-save-database-restore.mjs
 脚本只接受 loopback 的 gamehub_*_test 数据库和 gamehub-*-test 容器，并核对端口映射。每次创建独立随机测试库，绝不清理或覆盖已有库；备份、SHA256SUMS 和只含统计/摘要的 report.json 保留在 .runtime/restore-rehearsals/<时间戳>/。这些备份含测试账号资料，不能提交仓库。测试容器与恢复库保留供复核，后续由操作者按具体名字清理。
 
 最终验收源库 gamehub_installed_test → gamehub_restore_20261006151544635_7c3b44_test，77 张表摘要一致，六类存档不变量异常均为零；从已落盘备份文件恢复约 44.7 秒。备份 SHA-256：6a069bb48ff07510ae622a9fa28459007bb12ecec7402003db497c1885400669。这是本机数据库恢复演练，不包含 avatars/covers/runtime-assets 卷、不覆盖生产恢复、异地备份或生产容量目标。
+
+
+### S3 运营与容量回归（2026-10-06）
+
+候选 VSIX 0.3.27 / Harness 0.1.9 增加创作者存档健康页与管理员存档运营页。本轮浏览器验收使用回归库中的临时测试管理员，实际点击 namespace 暂停、恢复和用量检查；生产不受影响，测试完成后撤销临时 grant。截图：save-operations-verified.png（本次聊天的本地可视化目录）。未重新安装这两个候选包；原 ADR 安装版会话、登录及存档保持原状。
+
+专项回归：
+
+```powershell
+$env:GAMEHUB_GAME_SAVE_DATABASE_URL = 'postgres://gamehub_test:gamehub_local_test@127.0.0.1:55439/gamehub_s3_regression_test'
+node --test tests/platform/game-saves-postgres.test.cjs
+node --test tests/platform/save-operations.test.cjs
+```
+
+真实 PG 专项 26 通过，HTTP/采样/API 客户端边界 3 通过；完整回归 371 通过、8 跳过。容量关停时读取、导出、删除与成功回执仍可用；并发写入总量计数、对账修复、清理不删当前正文及版本事实、异常摘要只报警都有验收。生产 cloudSave 继续关闭，逻辑正文门限不等于实际 PG 数据盘剩余空间保护。
+
+同一恢复脚本在 0048 后再次验收回归库：80 张表指纹一致，七项异常为零（包含容量计数与实际正文总字节相等）。恢复库 gamehub_restore_20261006155337628_172278_test，备份 3576792 字节，恢复 34.056 秒，SHA-256 为 aca8583f621a608e013169a146ed4ee78a2f525e5b1ce43ef2f4463e8adaad22。备份和完整报告仍在忽略目录 .runtime/restore-rehearsals/20261006155337628_172278/，不提交仓库。

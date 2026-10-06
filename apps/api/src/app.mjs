@@ -1,3 +1,4 @@
+import {registerSaveOperationsRoutes} from './save-operations-routes.mjs';
 import {registerSaveLibraryRoutes} from './save-library-routes.mjs';
 import Fastify from 'fastify';
 import { GameSaveError } from './game-save-service.mjs';
@@ -63,6 +64,7 @@ export function createApp(dependencies) {
     gameSessionService,
     gameSaveService,
     saveLibraryService,
+    saveOperationsService,
     rulesStatus = null,
     multiplayerRoomService,
     multiplayerMatchService,
@@ -167,6 +169,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  if (saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
   if (saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
   if (gameSaveService) registerGameSaveRoutes(app, { service: gameSaveService, requireAuth });
   if (gameSessionService) registerGameSessionRoutes(app, { service: gameSessionService, requireAuth });

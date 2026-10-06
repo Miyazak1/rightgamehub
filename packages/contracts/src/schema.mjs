@@ -1,3 +1,4 @@
+import {saveOperationsSchemas,saveOperationsRoutes} from './save-operations-schema.mjs';
 const stringEnum = values => ({ type: 'string', enum: values });
 const object = (properties, required = Object.keys(properties)) => ({
   type: 'object', additionalProperties: false, properties, required,
@@ -34,6 +35,7 @@ const saveMetadata = {
 };
 
 export const schemas = Object.freeze({
+  ...saveOperationsSchemas,
   SaveLibraryQuery: object({afterSlotId:id},[]),
   SaveLibrarySlotParams: object({slotId:id}),
   SaveLibraryRevisionParams: object({slotId:id,revisionId:id}),
@@ -52,7 +54,7 @@ export const schemas = Object.freeze({
   GameSaveWriteResult: object({...saveMetadata,historyDegraded:{type:'boolean'},durability:{type:'string',const:'cloud'}}),
   GameSaveHistory: object({items:{type:'array',maxItems:50,items:object({...saveMetadata,payloadAvailable:{type:'boolean'}})},nextBeforeRevision:nullable(uintString)}),
   GameSavePolicy: object({
-    namespace:saveName,status:stringEnum(['active','retired']),maxSlots:{type:'integer'},maxDocumentBytes:{type:'integer'},
+    namespace:saveName,status:stringEnum(['active','retired']),writesPaused:{type:'boolean'},maxSlots:{type:'integer'},maxDocumentBytes:{type:'integer'},
     maxLiveBytes:{type:'integer'},maxHistoryBytes:{type:'integer'},historyVersions:{type:'integer'},historyDays:{type:'integer'},
     schemaMin:{type:'integer'},schemaMax:{type:'integer'},contentTypes:{type:'array',items:stringEnum(['application/json','application/octet-stream'])},
   }),
@@ -665,6 +667,7 @@ const errorResponses = {
 };
 
 export const operations = Object.freeze([
+  ...saveOperationsRoutes,
   {method:'get',path:'/v1/me/save-library',operationId:'listSaveLibrary',auth:'bearer',saveLibrary:true,saveLibraryPage:true,response:'SaveLibraryPage'},
   {method:'get',path:'/v1/me/save-library/{slotId}/history',operationId:'getSaveLibraryHistory',auth:'bearer',saveLibrary:true,pathId:'slotId',saveHistory:true,response:'SaveLibraryHistory'},
   {method:'get',path:'/v1/me/save-library/{slotId}/revisions/{revisionId}/content',operationId:'readSaveLibraryRevision',auth:'bearer',saveLibrary:true,pathId:'slotId',saveRevision:true,saveContent:true,response:'GameSaveMetadata'},
@@ -816,6 +819,7 @@ export function createOpenApiDocument() {
   const paths = {};
   for (const operation of operations) {
     const parameters = [];
+    if (operation.saveHealthPage) parameters.push({name:'afterWorkId',in:'query',required:false,schema:id});
     if (operation.saveLibraryPage) parameters.push({name:'afterSlotId',in:'query',required:false,schema:id});
     if (operation.saveRevision) parameters.push({name:'revisionId',in:'path',required:true,schema:id});
     if (operation.saveScope) parameters.push({ name:'namespace',in:'query',required:true,schema:saveName });

@@ -55,27 +55,29 @@ export function prepareSaveMutation(input,kind,receiptOnly=false) {
     return {...input,kind,createOnly,payloadHash,requestDigest:digest,keyHash:saveHash(input.idempotencyKey.toLowerCase())};
 }
 
-export function createGameSaveService({repository,gameSessionService,clock=()=>new Date()}) {
+export function createGameSaveService({repository,gameSessionService,metrics,clock=()=>new Date()}) {
   const resource=input=>{
     if(!input||!uuid.test(input.workId??'')||!saveName(input.namespace)||input.slotKey!==undefined&&!saveName(input.slotKey))
       saveError('SCHEMA_INVALID',400,'Invalid save resource.');
   };
-  const perform=(actor,token,input,action)=> {
+  const perform=async(actor,token,input,action,operation='read')=> {
     resource(input);
-    return repository.transaction(async tx=>{
+    let scope,code='OK';const started=performance.now();
+    try {return await repository.transaction(async tx=>{
       // Authorization rows stay locked through commit, so revocation cannot race a save.
-      const scope=await gameSessionService.resolve(actor,token,{workId:input.workId,namespace:input.namespace,capability:'cloudSave'},tx);
+      scope=await gameSessionService.resolve(actor,token,{workId:input.workId,namespace:input.namespace,capability:'cloudSave'},tx);
       return action(tx,scope);
-    });
+    });}catch(error){code=error instanceof GameSaveError?error.code:'SAVE_STORAGE_UNAVAILABLE';throw error;}
+    finally {metrics?.observe({workId:scope?.workId,channel:scope?.channel,operation,code,durationMs:performance.now()-started});}
   };
   const mutate=async(actor,token,input,kind)=>{
     const command=prepareSaveMutation(input,kind);
-    return perform(actor,token,input,(tx,scope)=>repository.mutate(tx,scope,command,clock()));
+    return perform(actor,token,input,(tx,scope)=>repository.mutate(tx,scope,command,clock()),kind);
   };
   return Object.freeze({
     writeReceipt:async(actor,token,input)=>{
       const command=prepareSaveMutation(input,'write',true);
-      return perform(actor,token,input,(tx,scope)=>repository.writeReceipt(tx,scope,command));
+      return perform(actor,token,input,(tx,scope)=>repository.writeReceipt(tx,scope,command),'receipt');
     },
     policy:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.policy(tx,scope,input.namespace)),
     list:(actor,token,input)=>perform(actor,token,input,(tx,scope)=>repository.list(tx,scope,input.namespace)),

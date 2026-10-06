@@ -13,8 +13,10 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
   const {createGameSessionService}=await import('../../apps/api/src/game-session-service.mjs');
   const {PostgresGameSaveRepository}=await import('../../apps/api/src/game-save-repository.mjs');
   const {createGameSaveService}=await import('../../apps/api/src/game-save-service.mjs');
+  const {createSaveOperationsService}=await import('../../apps/api/src/save-operations-service.mjs');
+  const {createSaveHealthMetrics}=await import('../../apps/api/src/save-health-metrics.mjs');
   const {createSaveLibraryService}=await import('../../apps/api/src/save-library-service.mjs');
-  const db=createDatabase({databaseUrl:url,databaseSsl:false}),pool=db.pool;t.after(()=>db.close());
+  const db=createDatabase({databaseUrl:url,databaseSsl:false}),pool=db.pool;const collectors=[];t.after(async()=>{for(const c of collectors)await c.close();await db.close();});
   await applyMigrations(pool,path.resolve(__dirname,'../../apps/api/migrations'));
   async function fixture(policy={}) {
     const userId=uuid(),grantId=uuid(),workId=uuid(),releaseId=uuid();let now=new Date();
@@ -33,7 +35,9 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
       [uuid(),workId,namespace,policy.document??262144,policy.live??1048576,policy.history??5242880,policy.slots??10,userId]);
     const actor={userId,grantId},sessions=createGameSessionService({repository:new PostgresGameSessionRepository(pool),clock:()=>now});
     const repository=new PostgresGameSaveRepository(pool);
-    const service=createGameSaveService({repository,gameSessionService:sessions,clock:()=>now});
+    const metrics=createSaveHealthMetrics({pool,clock:()=>now});collectors.push(metrics);
+    const service=createGameSaveService({repository,gameSessionService:sessions,metrics,clock:()=>now});
+    const ops=createSaveOperationsService({repository,metrics,clock:()=>now});
     const issue=async(channel='production',id=releaseId)=>(await sessions.create(actor,{workId,releaseId:id,channel,launchNonce:uuid()})).gameSessionId;
     const token=await issue();
     const resource=(slotKey='autosave',extra={})=>({workId,namespace:'default',slotKey,...extra});
@@ -41,9 +45,100 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const write=(input,session=token)=>service.write(actor,session,input);
     const advance=ms=>{now=new Date(now.getTime()+ms);};
     const library=createSaveLibraryService({repository,clock:()=>now});
-    return {library,actor,workId,releaseId,token,sessions,repository,service,resource,command,write,issue,release,advance};
+    return {ops,metrics,library,actor,workId,releaseId,token,sessions,repository,service,resource,command,write,issue,release,advance};
   }
   const rejected=(promise,code)=>assert.rejects(promise,{code});
+
+  async function adminFixture(){const f=await fixture();await pool.query("UPDATE users SET role='admin',can_publish=true WHERE id=$1",[f.actor.userId]);await pool.query("UPDATE device_grants SET scopes=ARRAY['profile:read','works:read'] WHERE id=$1",[f.actor.grantId]);return f;}
+  const operation=extra=>({operationId:uuid(),reason:'Local save operations acceptance',requestId:uuid(),...extra});
+  const policy=async f=>(await pool.query("SELECT * FROM game_save_policies WHERE work_id=$1 AND namespace='default'",[f.workId])).rows[0];
+  const restoreCapacity=async admin=>{const current=await admin.ops.capacity(admin.actor);await admin.ops.setCapacity(admin.actor,operation({expectedVersion:current.version,writesPaused:false,maxPayloadBytes:5368709120}));};
+
+  await t.test('creator health is owner-only aggregate; live database authority overrides forged roles and records histogram errors',async()=>{
+    const f=await fixture(),other=await fixture();const cmd=f.command();await f.write(cmd);await rejected(f.write({...cmd,idempotencyKey:uuid()}),'SAVE_CONFLICT');
+    await f.service.content(f.actor,f.token,f.resource());await f.metrics.flush();
+    await rejected(f.ops.health({...f.actor,profile:{role:'admin',canPublish:true},scopes:['works:read']}),'FORBIDDEN');
+    await rejected(f.ops.capacity({...f.actor,profile:{role:'admin'}}),'FORBIDDEN');
+    await pool.query('UPDATE users SET can_publish=true WHERE id=$1',[f.actor.userId]);
+    await rejected(f.ops.health(f.actor),'FORBIDDEN');
+    await pool.query("UPDATE device_grants SET scopes=ARRAY['works:read'] WHERE id=$1",[f.actor.grantId]);
+    const page=await f.ops.health(f.actor);assert.equal(page.items.length,1);assert.equal(page.items[0].workId,f.workId);assert.notEqual(page.items[0].workId,other.workId);
+    assert.doesNotMatch(JSON.stringify(page),/userId|slotId|slotKey|payload_inline|grantId/);
+    const write=page.items[0].traffic.find(r=>r.operation==='write');assert.equal(write.requests,2);assert.equal(write.successes,1);assert.deepEqual(write.errors,[{code:'SAVE_CONFLICT',count:1}]);assert.ok(write.p95MsUpperBound>=0);
+    await pool.query('UPDATE device_grants SET revoked_at=now() WHERE id=$1',[f.actor.grantId]);await rejected(f.ops.health(f.actor),'AUTH_REQUIRED');
+  });
+  await t.test('audited policy pause preserves reads, export, receipts and deletion; mutations use CAS and idempotency',async()=>{
+    const admin=await adminFixture(),f=await fixture(),command=f.command(),saved=await f.write(command),p=await policy(f);
+    const input=operation({policyId:p.id,expectedVersion:String(p.control_version),writesPaused:true});
+    const [one,two]=await Promise.all([admin.ops.pausePolicy(admin.actor,input),admin.ops.pausePolicy(admin.actor,input)]);assert.deepEqual(one,two);assert.equal(one.writesPaused,true);
+    assert.deepEqual(await f.write(command),saved);
+    await rejected(f.write(f.command(undefined,{ifNoneMatch:undefined,ifMatch:saved.etag})),'SAVE_WRITES_PAUSED');
+    assert.deepEqual((await f.service.content(f.actor,f.token,f.resource())).bytes,command.bytes);
+    const slot=(await f.library.list(f.actor)).items[0];assert.deepEqual((await f.library.content(f.actor,{slotId:slot.slotId,revisionId:saved.revisionId})).bytes,command.bytes);
+    await rejected(f.library.restore(f.actor,{slotId:slot.slotId,revisionId:saved.revisionId,ifMatch:saved.etag,idempotencyKey:uuid()}),'SAVE_WRITES_PAUSED');
+    const deleted=await f.service.delete(f.actor,f.token,{...f.resource(),ifMatch:saved.etag,idempotencyKey:uuid()});assert.equal(deleted.deleted,true);
+    await rejected(admin.ops.pausePolicy(admin.actor,{...input,writesPaused:false}),'SAVE_IDEMPOTENCY_MISMATCH');
+    await rejected(admin.ops.pausePolicy(admin.actor,{...input,operationId:uuid()}),'SAVE_CONTROL_CONFLICT');
+    const events=(await pool.query('SELECT * FROM game_save_admin_events WHERE actor_user_id=$1 AND operation_id=$2',[admin.actor.userId,input.operationId])).rows;
+    assert.equal(events.length,1);assert.equal(events[0].before_state.writesPaused,false);assert.equal(events[0].result.writesPaused,true);assert.equal(events[0].request_id,input.requestId);
+    await assert.rejects(pool.query('DELETE FROM game_save_admin_events WHERE id=$1',[events[0].id]),/append only/);
+    await assert.rejects(pool.query("UPDATE game_save_admin_events SET reason='changed' WHERE id=$1",[events[0].id]),/append only/);
+  });
+  await t.test('global retained capacity is exact under competing writes and reopening; closed gate preserves receipts and deletes',async()=>{
+    const admin=await adminFixture(),f=await fixture(),g=await fixture(),bytes=Buffer.from('{"level":1}'),a=f.command(bytes),b=g.command(bytes);
+    const initial=await admin.ops.capacity(admin.actor);
+    try {
+      await admin.ops.setCapacity(admin.actor,operation({expectedVersion:initial.version,writesPaused:false,maxPayloadBytes:Number(initial.retainedBytes)+bytes.length}));
+      const results=await Promise.allSettled([f.write(a),g.write(b)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.code,'SAVE_CAPACITY_EXCEEDED');
+      const winner=results[0].status==='fulfilled'?f:g,cmd=winner===f?a:b,saved=results.find(r=>r.status==='fulfilled').value;
+      const cap=await admin.ops.capacity(admin.actor);assert.equal(BigInt(cap.retainedBytes),BigInt(initial.retainedBytes)+BigInt(bytes.length));assert.equal(cap.diskFreeBytes,null);assert.ok(BigInt(cap.saveTableBytes)>0);
+      await admin.ops.setCapacity(admin.actor,operation({expectedVersion:cap.version,writesPaused:true,maxPayloadBytes:Number(cap.maxPayloadBytes)}));
+      assert.deepEqual(await winner.write(cmd),saved);assert.deepEqual((await winner.service.content(winner.actor,winner.token,winner.resource())).bytes,bytes);
+      const slot=(await winner.library.list(winner.actor)).items[0];assert.deepEqual((await winner.library.content(winner.actor,{slotId:slot.slotId,revisionId:saved.revisionId})).bytes,bytes);
+      assert.equal((await winner.service.delete(winner.actor,winner.token,{...winner.resource(),ifMatch:saved.etag,idempotencyKey:uuid()})).deleted,true);
+      await restoreCapacity(admin);
+      const loser=winner===f?g:f;await loser.write(loser===f?a:b);
+      const counter=(await pool.query('SELECT retained_bytes,(SELECT COALESCE(sum(octet_length(payload_inline)),0) FROM game_save_payloads) actual FROM game_save_capacity')).rows[0];assert.equal(counter.retained_bytes,counter.actual);
+    } finally {await restoreCapacity(admin);}
+  });
+  await t.test('bounded maintenance detects and repairs injected usage, hashes retained bytes, cleans only history and remains safe with concurrent saves',async()=>{
+    const admin=await adminFixture(),f=await fixture(),first=await f.write(f.command()),second=await f.write(f.command(Buffer.from('{"level":2}'),{ifNoneMatch:undefined,ifMatch:first.etag}));
+    await pool.query('UPDATE game_save_usage SET live_slots=0,live_bytes=0,history_bytes=0 WHERE user_id=$1 AND work_id=$2',[f.actor.userId,f.workId]);
+    const inspected=await admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'inspect'}));assert.equal(inspected.mismatchScopes,1);assert.equal(inspected.repairedScopes,0);assert.equal(inspected.sampledPayloads,2);assert.equal(inspected.invalidPayloads,0);
+    const repair=operation({workId:f.workId,mode:'repair'});const result=await admin.ops.maintain(admin.actor,repair);assert.equal(result.repairedScopes,1);assert.deepEqual(await admin.ops.maintain(admin.actor,repair),result);
+    const updated=await f.write(f.command(Buffer.from('{"level":3}'),{ifNoneMatch:undefined,ifMatch:second.etag}));
+    await pool.query('UPDATE game_save_policies SET history_days=0 WHERE work_id=$1',[f.workId]);
+    const [clean,next]=await Promise.all([admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'cleanup'})),f.write(f.command(Buffer.from('{"level":4}'),{ifNoneMatch:undefined,ifMatch:updated.etag}))]);
+    assert.ok(clean.purgedPayloads<=2);assert.equal(next.revision,'4');assert.deepEqual((await f.service.content(f.actor,f.token,f.resource())).bytes,Buffer.from('{"level":4}'));
+    const final=await admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'inspect'}));assert.equal(final.mismatchScopes,0);assert.equal(final.missingCurrentPayloads,0);
+    const row=(await pool.query('SELECT count(*)::int n FROM game_save_revisions r JOIN game_save_slots s ON s.id=r.slot_id WHERE s.work_id=$1',[f.workId])).rows[0];assert.equal(row.n,4);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_operations o JOIN game_save_slots s ON s.id=o.slot_id WHERE s.work_id=$1',[f.workId])).rows[0].n,4);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_payloads p JOIN game_save_revisions r ON r.id=p.revision_id JOIN game_save_slots s ON s.id=r.slot_id WHERE s.work_id=$1',[f.workId])).rows[0].n,1);
+    const counter=(await pool.query('SELECT retained_bytes,(SELECT COALESCE(sum(octet_length(payload_inline)),0) FROM game_save_payloads) actual FROM game_save_capacity')).rows[0];assert.equal(counter.retained_bytes,counter.actual);
+  });
+  await t.test('administrator grant expiry during mutation rolls back controls and audit together',async()=>{
+    const admin=await adminFixture(),f=await fixture(),p=await policy(f);
+    const ops=createSaveOperationsService({repository:admin.repository,clock:(()=>{let calls=0;return()=>new Date(Date.now()+(calls++>0?7200000:0));})()});
+    const input=operation({policyId:p.id,expectedVersion:String(p.control_version),writesPaused:true});
+    await rejected(ops.pausePolicy(admin.actor,input),'AUTH_REQUIRED');assert.equal((await policy(f)).writes_paused,false);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM game_save_admin_events WHERE operation_id=$1',[input.operationId])).rows[0].n,0);
+  });
+
+
+  await t.test('maintenance pagination covers every scope once, and corruption sampling never rewrites a payload',async()=>{
+    const admin=await adminFixture(),f=await fixture(),saved=await f.write(f.command());
+    for(let i=0;i<6;i++){const id=uuid();await pool.query("INSERT INTO users(id,display_name) VALUES($1,'Maintenance cursor fixture')",[id]);await pool.query("INSERT INTO game_save_usage(user_id,work_id,channel) VALUES($1,$2,'production')",[id,f.workId]);}
+    const one=await admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'inspect'}));assert.equal(one.scopes,5);assert.ok(one.next);
+    const two=await admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'inspect',after:one.next}));assert.equal(two.scopes,2);assert.equal(two.next,null);
+    // Privileged fault injection is limited to this test revision; restore it before leaving the test.
+    const inject=async bytes=>{const client=await pool.connect();try{await client.query('BEGIN');await client.query('ALTER TABLE game_save_payloads DISABLE TRIGGER game_save_payload_guard');await client.query('UPDATE game_save_payloads SET payload_inline=$2 WHERE revision_id=$1',[saved.revisionId,bytes]);await client.query('ALTER TABLE game_save_payloads ENABLE TRIGGER game_save_payload_guard');await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}};
+    try{
+      await inject(Buffer.from('{"level":9}'));
+      let invalid=0,after;do{const r=await admin.ops.maintain(admin.actor,operation({workId:f.workId,mode:'repair',...(after?{after}:{})}));invalid+=r.invalidPayloads;after=r.next;}while(after);
+      assert.equal(invalid,1);assert.deepEqual((await pool.query('SELECT payload_inline FROM game_save_payloads WHERE revision_id=$1',[saved.revisionId])).rows[0].payload_inline,Buffer.from('{"level":9}'));
+    }finally{await inject(Buffer.from('{"level":1}'));}
+  });
+
   await t.test('account library isolates owners, channels and revisions; exports survive withdrawal',async()=>{
     const f=await fixture(),other=await fixture();const first=await f.write(f.command());
     await f.write(f.command(Buffer.from('{"preview":true}')),await f.issue('preview'));

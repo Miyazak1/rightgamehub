@@ -11,7 +11,7 @@ export const saveMetadata=row=>({
 });
 const policyView=p=>({namespace:p.namespace,status:p.status,maxSlots:p.max_slots,maxDocumentBytes:p.max_document_bytes,
   maxLiveBytes:p.max_live_bytes,maxHistoryBytes:p.max_history_bytes,historyVersions:p.history_versions,historyDays:p.history_days,
-  schemaMin:p.schema_min,schemaMax:p.schema_max,contentTypes:p.content_types});
+  writesPaused:p.writes_paused,schemaMin:p.schema_min,schemaMax:p.schema_max,contentTypes:p.content_types});
 const assertReadable=(scope,namespace,row)=>{
   const read=scope.namespaces[namespace].readSchema;
   if(!row.tombstone&&(row.schema_version<read.min||row.schema_version>read.max))
@@ -31,6 +31,7 @@ export class PostgresGameSaveRepository {
         return action(tx);
       });
     } catch(error) {
+      if(error.code==='P7501')throw new GameSaveError('SAVE_CAPACITY_EXCEEDED',507,'Cloud save capacity is closed; keep the local copy.',{},true);
       if(['55P03','57014','40P01','40001'].includes(error.code))
         throw new GameSaveError('SAVE_STORAGE_UNAVAILABLE',503,'Save storage is busy; retry the same operation.',{},true);
       throw error;
@@ -82,6 +83,10 @@ export class PostgresGameSaveRepository {
     return {items:items.map(r=>({...saveMetadata(r),payloadAvailable:r.payload_available})),nextBeforeRevision:more?String(items.at(-1).revision):null};
   }
   async mutate(tx,scope,input,now) {
+    // All save mutations and maintenance take this short global admission lock before policy/usage locks.
+    // Receipts are still returned when admission is closed. The trigger accounts exact retained bytes.
+    const capacity=(await tx.query('SELECT * FROM game_save_capacity WHERE singleton FOR UPDATE')).rows[0];
+    if(!capacity)saveError('SAVE_STORAGE_UNAVAILABLE',503,'Save capacity state is unavailable.');
     const key=scopeKey(scope),p=await this.getPolicy(tx,scope,input.namespace);
     const day=now.toISOString().slice(0,10);
     await tx.query('INSERT INTO game_save_rate_usage(user_id,work_id,day) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[scope.userId,scope.workId,day]);
@@ -110,6 +115,9 @@ export class PostgresGameSaveRepository {
       bytes=source.payload_inline;schema=source.schema_version;contentType=source.content_type;sha=source.payload_sha256;
     }
     const tombstone=input.kind==='delete';
+    if(!tombstone&&p.writes_paused)throw new GameSaveError('SAVE_WRITES_PAUSED',503,'New cloud saves are paused for this game; keep the local copy.',{},true);
+    if(!tombstone&&(capacity.writes_paused||BigInt(capacity.retained_bytes)+BigInt(bytes.length)>BigInt(capacity.max_payload_bytes)))
+      throw new GameSaveError('SAVE_CAPACITY_EXCEEDED',507,'Cloud save capacity is closed; keep the local copy.',{},true);
     if(!tombstone) {
       if(current)assertReadable(scope,input.namespace,current);
       const approved=scope.namespaces[input.namespace];
@@ -172,6 +180,6 @@ export class PostgresGameSaveRepository {
       else{purge.push(row.id);if(row.rank===1||eligible&&!fits)degraded=true;}
     }
     if(purge.length)await tx.query('DELETE FROM game_save_payloads WHERE revision_id=ANY($1::uuid[])',[purge]);
-    return {bytes:total,degraded};
+    return {bytes:total,degraded,purgedPayloads:purge.length};
   }
 }

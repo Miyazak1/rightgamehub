@@ -1,3 +1,5 @@
+import {createSaveOperationsService} from './save-operations-service.mjs';
+import {createSaveHealthMetrics} from './save-health-metrics.mjs';
 import {createSaveLibraryService} from './save-library-service.mjs';
 import path from 'node:path';
 import { PostgresGameSaveRepository } from './game-save-repository.mjs';
@@ -156,11 +158,14 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const gameSessionService = createGameSessionService({ repository: new PostgresGameSessionRepository(database.pool) });
   const gameSaveRepository = new PostgresGameSaveRepository(database.pool);
-  const gameSaveService = createGameSaveService({ repository: gameSaveRepository, gameSessionService });
+  const saveMetrics=createSaveHealthMetrics({pool:database.pool});
+  const saveOperationsService=createSaveOperationsService({repository:gameSaveRepository,metrics:saveMetrics});
+  const gameSaveService = createGameSaveService({ repository: gameSaveRepository, gameSessionService, metrics:saveMetrics });
   const saveLibraryService = createSaveLibraryService({ repository: gameSaveRepository });
   const app = createApp({
     gameSaveService,
     saveLibraryService,
+    saveOperationsService,
     gameSessionService,
     config,
     database,
@@ -189,7 +194,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { await saveMetrics.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return {
     config,
     database,
@@ -224,6 +229,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     runtimeEdgeApp,
     gameSaveService,
     saveLibraryService,
+    saveOperationsService,
     app,
   };
 }
