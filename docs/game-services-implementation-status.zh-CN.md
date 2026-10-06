@@ -116,6 +116,7 @@ node --test tests/client/cloud-save-sdk.test.cjs tests/platform/game-saves.test.
 
 - 真实 OTP、设备授权、目录、资源清单、SDK/HTTP/PG 链路五组复验通过；覆盖令牌自动刷新、跨设备续玩、CAS 冲突、账号隔离及设备撤销。
 - 正式网页客户端经邮箱登录与目录入口完成点火、保存和刷新续玩。客户端 102 项测试及 Web/Harness/VSIX 构建通过；本机 readiness 为 46/46。
+- 完整客户端实测发现并修复游戏透明背景造成的深色平台黑字不可读；浅色、夜间模式和菜单通过检查。测试作品连续发布新 release 后仍继承原存档，未改写已发布资源清单。
 - VSIX 0.3.23 已实际安装到专用目录。Cursor 安装版界面、SecretStorage 重启恢复与双向游玩仍待人工身份环节完成，不宣称安装版全流程已经通过。
 - 本地脚本只为随机测试作品返回 cloudSave；正式 catalog/ZIP 能力开关、生产审批和数据库均未修改。没有新增迁移或线上部署。
 

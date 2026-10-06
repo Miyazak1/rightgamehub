@@ -93,7 +93,7 @@ $env:GAMEHUB_ADR_DATABASE_URL = 'postgres://gamehub_test:gamehub_local_test@127.
 npm run start:adarkroom-installed-acceptance
 ```
 
-API/网页为 http://127.0.0.1:3086 ，runtime 为 3092。不能与前一节的服务同时运行。生产目录仍不返回 cloudSave；只有此启动脚本为本次随机作品的启动描述注入能力，测试库中的 scope/policy 审批仍由真实游戏会话服务检查。不是线上发布审批验收。每次启动新建测试作品，重启脚本不会沿用上次作品的存档；不要在同一次续玩验收中重启服务。
+API/网页为 http://127.0.0.1:3086 ，runtime 为 3092。不能与前一节的服务同时运行。生产目录仍不返回 cloudSave；只有此启动脚本为本次随机作品的启动描述注入能力，测试库中的 scope/policy 审批仍由真实游戏会话服务检查。不是线上发布审批验收。同一测试库和 session.json 下重启会为当前测试作品发布一个新 release，保留作品级云存档；换新数据库时创建新作品。构建产物通过新的资源清单发布，不在运行中修改已发布资源。
 
 脚本写入 `.runtime/adarkroom-installed/session.json`，含当前作品 ID、VSIX 路径及独立 Cursor 目录。保持服务运行，在另一终端执行：
 
@@ -128,9 +128,9 @@ npm run verify:adarkroom-installed
 - 同账号不同设备接续、旧 ETag 冲突；
 - 撤销设备后旧桥失败，另一设备正常。
 
-2026-10-06 已通过上述五组验证，客户端 102 项通过；Web、Harness 与 VSIX 构建通过。本机 readiness 为 46/46、database/realtime 均正常。实际网页经邮箱登录、目录进入游戏、点火保存、刷新续玩通过。VSIX 0.3.23 已安装到独立目录；正式安装版 UI、SecretStorage 重启续用与双向游玩仍待完成，不能用 API 模拟宿主结果代替。
+2026-10-06 已通过上述五组验证，客户端 102 项通过；Web、Harness 与 VSIX 构建通过。本机 readiness 为 46/46、database/realtime 均正常。实际网页经邮箱登录、目录进入游戏、点火保存、刷新续玩通过。随后发布两个新 release，原作品 autosave 持续继承、修订递增；浅色/夜间模式及菜单均已截图复验。VSIX 0.3.23 已安装到独立目录；正式安装版 UI、SecretStorage 重启续用与双向游玩仍待完成，不能用 API 模拟宿主结果代替。
 
-本轮另修复安装版连接本机 API 时误拒 HTTP runtime 的问题：仅当可信宿主的 API 为 loopback 且运行域配置为 localhost 时允许本机游戏。生产 HTTPS/release 主机校验和 iframe sandbox 保持原边界。
+本轮另修复安装版连接本机 API 时误拒 HTTP runtime 的问题：仅当可信宿主的 API 为 loopback 且运行域配置为 localhost 时允许本机游戏。生产 HTTPS/release 主机校验和 iframe sandbox 保持原边界。完整客户端还暴露出原游戏透明背景导致深色平台上黑字不可读；适配层显式设置浅色底，原生夜间模式仍可覆盖。
 
 验收完成后先关闭游戏，再停止 Node 服务，最后停止这两个专用可丢弃容器：
 

@@ -54,7 +54,11 @@ try {
     }
     userIds.push(id);
   }
-  const workId = crypto.randomUUID(), releaseId = crypto.randomUUID(), uploadId = crypto.randomUUID();
+  const previous = JSON.parse(await fs.readFile(path.join(stateRoot, 'session.json'), 'utf8').catch(() => '{}'));
+  const previousWork = /^[a-f0-9-]{36}$/.test(previous.workId ?? '') ? (await pool.query(
+    "SELECT id FROM works WHERE id=$1 AND owner_user_id=$2 AND title='A Dark Room 安装版验收' AND state='published'",
+    [previous.workId, userIds[0]])).rows[0] : null;
+  const workId = previousWork?.id ?? crypto.randomUUID(), releaseId = crypto.randomUUID(), uploadId = crypto.randomUUID();
   const directory = path.join(root, '.runtime/adarkroom-web'), assets = {};
   async function walk(dir, prefix = '') {
     for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
@@ -78,8 +82,8 @@ try {
   const connection = await pool.connect();
   try {
     await connection.query('BEGIN');
-    await connection.query("INSERT INTO works(id,owner_user_id,title,description,instructions,kind,state,visibility,first_published_at) VALUES($1,$2,'A Dark Room 安装版验收','仅供本机验收，邮箱登录后继续冒险。','点火开始；保存栏显示云端确认后再退出。','game','published','public',now())", [workId, userIds[0]]);
-    await connection.query("INSERT INTO work_targets(work_id,target_key,state) VALUES($1,'web','published')", [workId]);
+    await connection.query("INSERT INTO works(id,owner_user_id,title,description,instructions,kind,state,visibility,first_published_at) VALUES($1,$2,'A Dark Room 安装版验收','仅供本机验收，邮箱登录后继续冒险。','点火开始；保存栏显示云端确认后再退出。','game','published','public',now()) ON CONFLICT (id) DO NOTHING", [workId, userIds[0]]);
+    await connection.query("INSERT INTO work_targets(work_id,target_key,state) VALUES($1,'web','published') ON CONFLICT (work_id,target_key) DO NOTHING", [workId]);
     await connection.query("INSERT INTO upload_jobs(id,owner_user_id,work_id,target_key,package_type,file_name,state,declared_bytes,actual_bytes,declared_sha256,object_key,reserved_bytes,expires_at,release_label) VALUES($1,$2,$3,'web','web_zip','adr-internal.zip','succeeded',$4,$4,$5,$6,0,now()+interval '1 day','Installed acceptance')",
       [uploadId, userIds[0], workId, zip.length, digest, 'adr-installed/' + uploadId]);
     await connection.query("INSERT INTO releases(id,work_id,target_key,label,package_type,validation_state,serving_state,approved_capabilities,upload_job_id,entry_path,asset_prefix,asset_manifest_sha256,asset_count,expanded_bytes) VALUES($1,$2,'web','Installed acceptance','web_zip','ready','enabled',$3,$4,'index.html',$5,$6,$7,$8)",
@@ -87,7 +91,7 @@ try {
     await connection.query("UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1 AND target_key='web'", [workId, releaseId]);
     await connection.query("INSERT INTO game_release_service_scopes(work_id,release_id,channel,status,namespaces,approved_by,reason) VALUES($1,$2,'production','active',$3,$4,'loopback installed acceptance only')",
       [workId, releaseId, JSON.stringify({ default: { readSchema: { min: 1, max: 1 }, writeSchema: 1 } }), userIds[0]]);
-    await connection.query("INSERT INTO game_save_policies(id,work_id,namespace,status,approved_by,reason) VALUES($1,$2,'default','active',$3,'loopback installed acceptance only')", [crypto.randomUUID(), workId, userIds[0]]);
+    await connection.query("INSERT INTO game_save_policies(id,work_id,namespace,status,approved_by,reason) VALUES($1,$2,'default','active',$3,'loopback installed acceptance only') ON CONFLICT (work_id,namespace) DO NOTHING", [crypto.randomUUID(), workId, userIds[0]]);
     await connection.query('COMMIT');
   } catch (error) { await connection.query('ROLLBACK'); throw error; }
   finally { connection.release(); }

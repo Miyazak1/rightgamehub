@@ -1,3 +1,5 @@
+/* Keep the opaque sandbox readable when its parent uses a dark canvas. */
+body{background:#fff;color:#000;color-scheme:light}
 #adr-save-bar{position:fixed;z-index:1000;inset:0 0 auto;background:#f5f3ee;color:#25231f;border-bottom:1px solid #bbb;padding:10px 16px;font:13px/1.5 system-ui;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 #adr-save-status{font-weight:700;margin-right:6px}#adr-save-message{font-size:12px;color:#625b52;flex-basis:100%}
 #adr-save-bar[data-state=conflict],#adr-save-bar[data-state=blocked],#adr-save-bar[data-state=unconfirmed]{border-color:#af5730}
@@ -10,5 +12,5 @@
 @media(max-width:650px){#adr-save-message{font-size:11px}}
 
 .adr-credit{position:fixed;bottom:6px;right:10px;font:12px system-ui;color:#666;z-index:10;background:#fff}
-div.menu{display:flex;flex-direction:row-reverse;flex-wrap:wrap;max-width:calc(100% - 20px);gap:10px;bottom:30px;background:#fff}
+div.menu{display:flex;flex-direction:row-reverse;flex-wrap:wrap;max-width:calc(100% - 20px);gap:10px;bottom:30px;background:inherit;color:inherit}
 div.menu>.menuBtn{float:none;margin-left:0}div.menu>.customSelect{position:relative;flex:0 0 120px}
