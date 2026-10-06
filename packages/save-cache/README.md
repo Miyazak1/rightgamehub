@@ -49,3 +49,14 @@ The SDK transfers large documents in bounded chunks. Additional methods: status,
 Anonymous saves never upload automatically. The trusted player UI lists only this work's anonymous slots and offers an explicit import action after login. Import uses the original slot only when empty; otherwise it creates a recovery-anon-* slot. Its operation is persisted before enqueueing; the anonymous original is retained indefinitely until later retention/management work. Games cannot invoke the cross-owner import function.
 
 This is a closed-test S2 implementation. The production cloudSave capability gate remains closed. Native executable launch-ticket integration, full S3 save management and backup/restore exercises are separate release gates.
+
+
+## Trusted local save management (S3 user controls)
+
+The player shell's SaveManager lists this account/work/origin/channel on this device, with sync status and recovery copies. It can export a portable gamehub-save version 1 JSON document, inspect/import that document into an explicit namespace/slot, export recovery copies, and remove an individually confirmed recovery after the user saves its export elsewhere. A copyable text export is always present because editor webviews may not support browser-style file downloads.
+
+Exports contain game identity, channel, resource and checked payload bytes/hash/schema; they exclude host account IDs and credentials. Imports require matching work/channel/namespace, bounded canonical base64 and a SHA-256 check. A short-lived preview captures the destination local ETag and an immutable operation UUID. Restore uses local CAS, preserves the old progress atomically, and queues the replacement behind any immutable in-flight operation. Concurrent progress or a full recovery budget blocks replacement. A cloud conflict must still be compared/resolved through the existing conflict flow. After local acknowledgement, the player remounts the game so its stale in-memory state cannot resume writing.
+
+These management mutations are exposed only to the trusted player shell, not new iframe bridge methods. Existing SDK write fingerprints and persisted records remain compatible. An imported recovery-anon-* slot can be exported and explicitly restored into autosave (or another user-selected slot); the anonymous source remains intact.
+
+This completes the local user-control slice of S3, not the complete release gate. Account-wide cloud history management, creator health, administrator governance/audit, reconciliation/cleanup, capacity gates and database backup/restore exercises remain separate work. No production capability approval is enabled here.

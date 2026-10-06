@@ -2,6 +2,7 @@ import {saveResource,saveUpload,saveTransferInput,saveFailure,saveUuid} from '@g
 import {encodeChunk,GAME_TRANSFER_TTL_MS} from '@gamehub/web-game-sdk/transfer';
 import {createSaveOutbox,snapshotPayload,decodeBody,importAnonymousSave} from '../../save-cache/src/outbox.mjs';
 import {metadata} from './web-game-cloud-save-handlers.mjs';
+import {createSaveManagement} from './save-management.mjs';
 
 /** The iframe supplies only namespace/slot; owner, origin and work come from the trusted host. */
 export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,transfer,signal,checkIdentity,
@@ -116,7 +117,18 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
       return {...resource,...result,schemaVersion:payload.schemaVersion,contentType:payload.contentType,sha256:payload.sha256,bytes:payload.bytes,transfer:cursor};
     }catch(error){release();throw error;}
   };
+  let managementPromise;
+  const management=()=>managementPromise??=(async()=>{
+    await assertOpen();const owner=await ownerPromise;await assertOpen();
+    return createSaveManagement({store:saveCache,groupScope:{origin:saveOrigin,owner,workId:descriptor.workId,channel:descriptor.channel??'production'},createBox,assertOpen,wake,clock});
+  })();
   onLocalSaveController?.({
+    list:async()=>(await management()).list(),
+    exportSave:async(...args)=>(await management()).exportSave(...args),
+    prepareRestore:async(...args)=>(await management()).prepareRestore(...args),
+    restore:async(...args)=>(await management()).restore(...args),
+    removeRecovery:async(...args)=>(await management()).removeRecovery(...args),
+    sync:async(...args)=>(await management()).sync(...args),
     async listAnonymous(){
       await assertOpen();const scope={origin:saveOrigin,owner:'anonymous:'+await saveCache.anonymousId(),workId:descriptor.workId,channel:descriptor.channel??'production'};
       return (await saveCache.list(scope)).filter(row=>row.value.current).map(row=>({namespace:row.scope.namespace,slot:row.scope.slot,bytes:row.value.current.payload.bytes,updatedAt:row.value.updatedAt}));

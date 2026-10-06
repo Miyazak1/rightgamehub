@@ -158,3 +158,65 @@ test('a persisted authorization failure requires online revalidation before a re
   f.offline(false);assert.equal((await restarted.read()).payload.sha256,(await f.payload({secret:1})).sha256);
   assert.equal((await restarted.sync()).state,'cloud');
 });
+
+test('management restore preserves old progress and the immutable lost-ACK operation across restart',async t=>{
+  const f=await fixture(t),box=f.open();let v=await box.read();
+  v=await box.write({payload:await f.payload({step:1}),expectedEtag:v.etag,idempotencyKey:id()});f.loseAck();await box.sync();
+  const first=structuredClone((await f.store.read(f.scope)).value.inFlight);
+  const input={payload:await f.payload({step:9}),expectedEtag:v.etag,idempotencyKey:id()};
+  const restored=await box.restore(input);assert.equal(restored.durability,'local');
+  assert.deepEqual((await f.store.read(f.scope)).value.inFlight,first);
+  assert.equal(JSON.parse(Buffer.from((await box.recovery((await box.recoveries())[0].id)).payload.body,'base64')).step,1);
+  assert.deepEqual(await box.restore(input),restored);
+  box.close();const reopened=f.open({store:await f.reopen()});await reopened.sync();
+  assert.deepEqual(f.calls[0],f.calls[1]);assert.equal(f.cloud().meta.revision,'2');
+  assert.equal(JSON.parse(Buffer.from(f.cloud().payload.body,'base64')).step,9);
+});
+test('management export/preview rejects tampering, cross-game imports, stale snapshots and changed identity',async t=>{
+  const f=await fixture(t),box=f.open(),{createSaveManagement}=await import('../../packages/platform-client/src/save-management.mjs');
+  let active=true;const manager=createSaveManagement({store:f.store,groupScope:f.scope,createBox:()=>box,assertOpen:async()=>{if(!active)throw Object.assign(Error('changed'),{code:'BRIDGE_ACCOUNT_CHANGED'});}});
+  const resource={namespace:f.scope.namespace,slot:f.scope.slot};let v=await box.read();
+  v=await box.write({payload:await f.payload({wood:4}),expectedEtag:v.etag,idempotencyKey:id()});
+  const text=await manager.exportSave(resource),doc=JSON.parse(text);
+  assert.equal(doc.workId,f.scope.workId);assert.equal(text.includes(f.scope.owner),false);assert.equal(text.includes(f.scope.origin),false);
+  assert.equal((await manager.list())[0].bytes,doc.payload.bytes);
+  for(const change of [{workId:id()},{channel:'preview'},{namespace:'other'},{payload:{...doc.payload,sha256:'0'.repeat(64)}},{payload:{...doc.payload,sha256:undefined}}])
+    await assert.rejects(manager.prepareRestore(JSON.stringify({...doc,...change}),resource),{code:'SAVE_CONTENT_INVALID'});
+  await assert.rejects(manager.prepareRestore(text,{...resource,owner:'user:'+id()}));
+  const plan=await manager.prepareRestore(text,resource);
+  await box.write({payload:await f.payload({wood:5}),expectedEtag:v.etag,idempotencyKey:id()});
+  await assert.rejects(manager.restore(plan.token),{code:'SAVE_LOCAL_CONFLICT'});assert.equal((await box.recoveries()).length,0);
+  active=false;await assert.rejects(manager.exportSave(resource),{code:'BRIDGE_ACCOUNT_CHANGED'});
+});
+test('full recovery budget blocks restore atomically until one exact exported copy is removed',async t=>{
+  const f=await fixture(t),box=f.open();let v=await box.read();
+  v=await box.write({payload:await f.payload({step:0}),expectedEtag:v.etag,idempotencyKey:id()});
+  for(let step=1;step<=3;step++)v=await box.restore({payload:await f.payload({step}),expectedEtag:v.etag,idempotencyKey:id()});
+  const before=structuredClone((await f.store.read(f.scope)).value);
+  const input={payload:await f.payload({step:4}),expectedEtag:v.etag,idempotencyKey:id()};
+  await assert.rejects(box.restore(input),{code:'SAVE_RECOVERY_QUOTA_EXCEEDED'});
+  assert.deepEqual((await f.store.read(f.scope)).value,before);
+  const copy=(await box.recoveries())[0];await assert.rejects(box.removeRecovery({recoveryId:copy.id,sha256:'wrong'}),{code:'SAVE_LOCAL_CONFLICT'});
+  await box.removeRecovery({recoveryId:copy.id,sha256:copy.sha256});await box.restore(input);
+  assert.equal((await box.recoveries()).length,3);assert.equal(JSON.parse(Buffer.from((await box.read()).payload.body,'base64')).step,4);
+});
+test('a recovery-slot export can be explicitly restored into autosave while retaining the source',async t=>{
+  const f=await fixture(t),{createSaveManagement}=await import('../../packages/platform-client/src/save-management.mjs');
+  const owner='anonymous:'+await f.store.anonymousId(),group={...f.scope,owner};
+  const boxes=new Map();const createBox=scope=>{if(!boxes.has(scope.slot))boxes.set(scope.slot,f.open({scope}));return boxes.get(scope.slot);};
+  const source=createBox({...group,slot:'recovery-anon-example'}),sv=await source.read();
+  await source.write({payload:await f.payload({guest:8}),expectedEtag:sv.etag,idempotencyKey:id()});
+  const manager=createSaveManagement({store:f.store,groupScope:group,createBox,assertOpen:async()=>{}});
+  const text=await manager.exportSave({namespace:'default',slot:'recovery-anon-example'});
+  const plan=await manager.prepareRestore(text,{namespace:'default',slot:'autosave'});await manager.restore(plan.token);
+  const current=await createBox(group).read();assert.equal(JSON.parse(Buffer.from(current.payload.body,'base64')).guest,8);
+  assert.equal((await source.read()).payload.sha256,current.payload.sha256);assert.equal(f.calls.length,0);
+});
+test('management restore cannot silently clear an existing cloud conflict',async t=>{
+  const f=await fixture(t),box=f.open(),v=await box.read();
+  const saved=await box.write({payload:await f.payload({step:1}),expectedEtag:v.etag,idempotencyKey:id()});
+  f.setCloud({meta:{etag:'"newer-cloud"',revision:'3'},payload:await f.payload({step:2})});await box.sync();
+  const before=structuredClone((await f.store.read(f.scope)).value);
+  await assert.rejects(box.restore({payload:await f.payload({step:9}),expectedEtag:saved.etag,idempotencyKey:id()}),{code:'SAVE_COMPARE_REQUIRED'});
+  assert.deepEqual((await f.store.read(f.scope)).value,before);
+});

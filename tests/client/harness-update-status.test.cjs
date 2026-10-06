@@ -24,7 +24,7 @@ test('Harness exposes a bounded update status and keeps the restart notice non-b
   assert.equal(response.status, 200);
   const result = await response.json();
   assert.deepEqual(result, {
-    ok: true, enabled: true, phase: 'ready', currentVersion: '0.1.5', version: '9.9.9',
+    ok: true, enabled: true, phase: 'ready', currentVersion: require('../../extensions/harness/package.json').version, version: '9.9.9',
     percent: 100, message: 'ready', updatedAt: '2026-09-30T00:00:00.000Z', restartRequired: true,
   });
 

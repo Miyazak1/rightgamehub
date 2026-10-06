@@ -41,6 +41,14 @@ const runtime = createRuntime({
     await fs.rename(temp, mailboxPath);
   } },
 });
+// Local acceptance fault switch; production runtime never installs this hook.
+const networkFaultPath = path.join(stateRoot, 'network-fault.json');
+await fs.writeFile(networkFaultPath, JSON.stringify({ offline: false }));
+runtime.app.addHook('onRequest', async (request, reply) => {
+  if (!/^\/v1\/(?:game-sessions(?:[/?]|$)|me\/game-saves\/)/.test(request.url)) return;
+  const fault = JSON.parse(await fs.readFile(networkFaultPath, 'utf8').catch(() => '{}'));
+  if (fault.offline) return reply.code(503).send({ error: { code: 'API_UNAVAILABLE', message: 'Installed acceptance: simulated save-service outage.', retryable: true } });
+});
 try {
   await runtime.migrations.apply();
   const pool = runtime.database.pool;

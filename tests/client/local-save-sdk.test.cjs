@@ -37,8 +37,8 @@ async function fixture(t,{anonymous=false}={}){
     },
   };
   const owner=(anonymous?'anonymous:':'user:')+(anonymous?await store.anonymousId():user);
-  const open=async()=>{
-    const b=await createSaveBridge({api,descriptor,saveCache:store,getSaveOwner:async()=>owner,saveOrigin:'http://127.0.0.1:3086'});
+  const open=async(options={})=>{
+    const b=await createSaveBridge({api,descriptor,saveCache:store,getSaveOwner:async()=>owner,saveOrigin:'http://127.0.0.1:3086',...options});
     bridges.push(b);return b;
   };
   return {open,store,owner,user,descriptor,api,offline:v=>offline=v,lose:()=>loseAck=true,revoke:()=>revoked=true,cloud:()=>cloud,calls:()=>calls,sessions:()=>sessions};
@@ -91,4 +91,20 @@ test('revocation blocks local fallback after the server reports it',async t=>{
   const v=await api.read(slot);await api.write({...slot,schemaVersion:1,data:{x:1},expectedEtag:v.etag,idempotencyKey:id()});
   f.revoke();await assert.rejects(api.sync(slot),{code:'BRIDGE_CLOSED'});
   await assert.rejects(api.read(slot),e=>['AUTH_REQUIRED','BRIDGE_CLOSED'].includes(e.code));
+});
+
+test('trusted management restores through the real host while destructive methods stay outside the iframe bridge',async t=>{
+  const f=await fixture(t,{anonymous:true});let controller;
+  const h=await f.open({onLocalSaveController:value=>controller=value}),local=h.client.cloudSave.local;
+  const resource={namespace:'default',slot:'autosave'},empty=await local.read(resource);
+  const first=await local.write({...resource,schemaVersion:1,data:{step:1},expectedEtag:empty.etag,idempotencyKey:id()});
+  const exported=await controller.exportSave(resource);
+  await local.write({...resource,schemaVersion:1,data:{step:2},expectedEtag:first.etag,idempotencyKey:id()});
+  const plan=await controller.prepareRestore(exported,resource);await controller.restore(plan.token);
+  assert.deepEqual((await local.read(resource)).data,{step:1});
+  const copies=(await controller.list())[0].recoveries;assert.equal(copies.length,1);
+  const copy=JSON.parse(await controller.exportSave(resource,copies[0].id));assert.deepEqual(JSON.parse(Buffer.from(copy.payload.body,'base64')),{step:2});
+  for(const method of ['cloudSave.local.restore','cloudSave.local.removeRecovery','cloudSave.local.importAnonymous'])assert.equal((await h.raw(method,{})).error.code,'BRIDGE_METHOD_NOT_ALLOWED');
+  await controller.removeRecovery(resource,copies[0]);assert.equal((await local.recoveries(resource)).length,0);
+  const old=controller;h.close();assert.equal(controller,null);await assert.rejects(old.list(),{code:'BRIDGE_CLOSED'});
 });

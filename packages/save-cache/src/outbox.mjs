@@ -108,10 +108,10 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     return {etag:record.localEtag,payload:copy(record.current?.payload??null),empty:!record.current,
       deleted:record.confirmed.meta?.deleted===true&&!record.current,...status(record)};
   };
-  const write=async({payload,expectedEtag,createOnly=false,idempotencyKey})=>{
+  const commitLocal=async({payload,expectedEtag,createOnly=false,idempotencyKey},restoring=false)=>{
     await verifyPayload(payload);
     if(typeof idempotencyKey!=='string'||!/^[0-9a-f-]{36}$/i.test(idempotencyKey))throw cacheError('SAVE_REQUEST_INVALID','A local operation UUID is required.');
-    const fingerprint=JSON.stringify([expectedEtag??null,createOnly,payload.sha256,payload.schemaVersion,payload.contentType,payload.bytes]);
+    const fingerprint=JSON.stringify([expectedEtag??null,createOnly,payload.sha256,payload.schemaVersion,payload.contentType,payload.bytes,...(restoring?['restore']:[])]);
     const {record,result}=await update(record=>{
       if(!record.confirmed.known)throw cacheError('SAVE_CACHE_NOT_READY','Read the save before writing.');
       const prior=record.receipts.find(item=>item.id===idempotencyKey);
@@ -120,8 +120,12 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
         return {unchanged:true,value:prior.result};
       }
       if(createOnly?record.current!==null:record.localEtag!==expectedEtag){
-        preserve(record,{payload,sequence:0,etag:expectedEtag??null},'local-conflict',id,clock);
+        if(!restoring)preserve(record,{payload,sequence:0,etag:expectedEtag??null},'local-conflict',id,clock);
         return {rejected:'SAVE_LOCAL_CONFLICT'};
+      }
+      if(restoring){
+        if(record.conflict)throw cacheError('SAVE_COMPARE_REQUIRED','Resolve the cloud conflict before restoring a copy.');
+        preserve(record,record.current,'before-restore',id,clock);
       }
       record.localEtag=localEtag(id);
       record.current={payload:copy(payload),sequence:record.nextSequence++,etag:record.localEtag};
@@ -131,7 +135,7 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
       record.receipts.push({id:idempotencyKey,fingerprint,result:receipt});record.receipts=record.receipts.slice(-32);
       return receipt;
     });
-    report(record);if(result?.rejected)throw cacheError(result.rejected,'Another local window has newer progress. This snapshot was retained as a recovery copy.');return {...result,namespace:scope.namespace,slot:scope.slot};
+    report(record);if(result?.rejected)throw cacheError(result.rejected,restoring?'Current progress changed; inspect it again before restoring.':'Another local window has newer progress. This snapshot was retained as a recovery copy.');return {...result,namespace:scope.namespace,slot:scope.slot};
   };
   const sync=({force=true}={})=>{
     if(running)return running;
@@ -207,7 +211,17 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     report(record);return read({refresh:false});
   };
   return {
-    read,write,sync,compare,resolve,
+    read,write:input=>commitLocal(input),sync,compare,resolve,
+    // Trusted management UI only; the game bridge does not expose these mutations.
+    restore:input=>commitLocal(input,true),
+    async removeRecovery({recoveryId,sha256}){
+      const {record}=await update(record=>{
+        const index=record.recoveries.findIndex(item=>item.id===recoveryId);
+        if(index<0)throw cacheError('SAVE_RECOVERY_NOT_FOUND','Recovery copy not found.');
+        if(record.recoveries[index].payload.sha256!==sha256)throw cacheError('SAVE_LOCAL_CONFLICT','Recovery copy changed; export it again.');
+        record.recoveries.splice(index,1);
+      });report(record);return {removed:true};
+    },
     async status(){const row=await inspect();return row.value?status(row.value):{state:'idle'};},
     async recoveries(){const row=await inspect();return (row.value?.recoveries??[]).map(({payload,...item})=>({...item,bytes:payload.bytes,sha256:payload.sha256}));},
     async recovery(id){const row=await inspect();const item=row.value?.recoveries.find(item=>item.id===id);if(!item)throw cacheError('SAVE_RECOVERY_NOT_FOUND','Recovery copy not found.');await verifyPayload(item.payload);return copy(item);},
