@@ -18,7 +18,7 @@ test('game sessions reject body scopes and resolve only authenticated actor and 
       {...actor,workId:stored.workId,releaseId:stored.releaseId,channel:stored.channel,capabilities:['identity','cloudSave'],namespaces:{default:{}},modeIds:[],expiresAt:stored.expiresAt.toISOString()}:null,
     revoke:async()=>{},
   };
-  let now=new Date();const service=createGameSessionService({repository,clock:()=>now});
+  let now=new Date();const service=createGameSessionService({cloudSaveEnabled:true,repository,clock:()=>now});
   const input={workId:crypto.randomUUID(),releaseId:crypto.randomUUID(),channel:'production',launchNonce:crypto.randomUUID()};
   await assert.rejects(service.create(actor,{...input,userId:actor.userId}),{code:'SCHEMA_INVALID'});
   const issued=await service.create(actor,input);

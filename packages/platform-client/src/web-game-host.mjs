@@ -28,7 +28,7 @@ export function createWebGameHost({
     if (!getAccountIdentity || closed) return;
     const [before, current] = await Promise.all([initialIdentity, getAccountIdentity()]);
     if (before !== current) {
-      if (descriptor.capabilities?.cloudSave) onCloudSaveStatus?.({state:'blocked',code:'BRIDGE_ACCOUNT_CHANGED'});
+      if (descriptor.capabilities?.cloudSave || descriptor.capabilities?.localSave) onCloudSaveStatus?.({state:'blocked',code:'BRIDGE_ACCOUNT_CHANGED'});
       connection?.notifyClosed('account_changed');
       close();
       throw Object.assign(new Error('Game account changed.'), { code: 'BRIDGE_ACCOUNT_CHANGED' });
@@ -66,6 +66,15 @@ export function createWebGameHost({
       for (const cleanup of cleanups) cleanup();
     };
     try {
+      if (descriptor.capabilities?.localSave === true && descriptor.capabilities?.cloudSave !== true && saveCache && getSaveOwner) {
+        const local = createLocalSaveHandlers({apiClient,descriptor,localOnly:true,transfer,signal:controller.signal,checkIdentity,saveCache,getSaveOwner,saveOrigin,sendEvent,onCloudSaveStatus,onLocalSaveController});
+        cleanups.push(() => local.close());
+        for (const [method, handler] of Object.entries(local.handlers)) {
+          if (bridgeMethodCapability(method) !== 'cloudSave' || !method.startsWith('cloudSave.local.') || typeof handler !== 'function') throw new TypeError('Invalid local save method.');
+          handlers.set(method, handler);
+        }
+        capabilities.push('localSave');
+      }
       for (const capability of ['cloudSave', 'competition', 'multiplayer']) {
         if (descriptor.capabilities?.[capability] !== true || !factories[capability]) continue;
         const module = factories[capability]({

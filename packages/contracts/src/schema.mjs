@@ -400,7 +400,7 @@ export const schemas = Object.freeze({
     releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
     entryUrl: { type: 'string', format: 'uri' }, runtimeOrigin: { type: 'string', format: 'uri' },
     playerProtocol: object({ min: { type: 'integer', minimum: 1 }, max: { type: 'integer', minimum: 1 } }),
-    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' }, cloudSave: { type: 'boolean' }, competition: { type: 'boolean' } }, ['fullscreen', 'pointerLock', 'multiplayer']),
+    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' }, localSave: { type: 'boolean' }, cloudSave: { type: 'boolean' }, competition: { type: 'boolean' } }, ['fullscreen', 'pointerLock', 'multiplayer']),
   }),
   LibraryState: object({
     workId: workKey,

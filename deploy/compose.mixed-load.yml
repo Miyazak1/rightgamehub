@@ -40,6 +40,7 @@ services:
       API_PORT: "3090"
       REALTIME_PUBLIC_URL: wss://localhost:${MIXED_RT_PORT:-55793}/v1/realtime
       GUESS_BAIKE_AUTOMATION_ENABLED: "false"
+      CLOUD_SAVE_ENABLED: "true" # Isolated cloud laboratory only.
       SAVE_STORAGE_REQUIRED: "true"
       RULES_MANIFEST_PATH: /app/rules/manifest.json
       RULES_TRUSTED_KEYS_JSON: ${MIXED_RULE_KEYS:?trusted public keys required}

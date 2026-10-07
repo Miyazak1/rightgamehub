@@ -10,7 +10,7 @@ const client = createGameHubClient();
 let ready = false, adapter, localMode=false;
 const text = {
   idle:'尚无存档',
-  local_pending:'已存本机，等待同步', local_only:'已存本机（未登录）', offline:'已存本机，联网后重试', loading:'正在读取存档', ready:'云存档已读取', pending:'有进度等待保存', syncing:'正在保存',
+  local_pending:'已存本机，等待同步', local_only:'已存本机（仅此设备）', offline:'已存本机，联网后重试', loading:'正在读取存档', ready:'云存档已读取', pending:'有进度等待保存', syncing:'正在保存',
   cloud:'云端保存已确认', conflict:'云端进度已变化', unconfirmed:'保存尚未确认', blocked:'云存档暂不可用',
 };
 function showStatus(value) {
@@ -18,7 +18,7 @@ function showStatus(value) {
   bar.dataset.state = value.state;
   document.getElementById('adr-retry').hidden = !['unconfirmed','blocked','offline'].includes(value.state) || value.code === 'BRIDGE_CLOSED';
   document.getElementById('adr-compare').hidden = value.state !== 'conflict';
-  message.textContent = value.message ?? (localMode && ['local_pending','local_only','offline','syncing'].includes(value.state) ? '本机进度已保留；云端确认会单独显示。' : localMode && value.state === 'pending' ? '正在保存到本机，请稍候。' : value.state === 'pending' ? '每分钟自动保存；离开前请点“立即保存”。' :
+  message.textContent = value.message ?? (value.state === 'local_only' ? '进度仅保存在此设备，可导出备份。' : localMode && ['local_pending','local_only','offline','syncing'].includes(value.state) ? '本机进度已保留；云端确认会单独显示。' : localMode && value.state === 'pending' ? '正在保存到本机，请稍候。' : value.state === 'pending' ? '每分钟自动保存；离开前请点“立即保存”。' :
     value.state === 'cloud' ? '修订 ' + value.revision + (value.historyDegraded ? ' · 历史备份受限' : '') :
     value.state === 'conflict' ? '请比较双方进度后选择，当前进度仍保留在本页。' :
     value.state === 'unconfirmed' ? '请保持页面打开，重试会继续确认原保存。' : localMode ? '本机存档内部验证版。浏览器清理站点数据会删除本机副本。' : '当前为在线存档内部验证版。');
@@ -65,6 +65,7 @@ document.getElementById('adr-compare').onclick = action(async () => {
   document.getElementById('adr-conflict-revision').textContent = (pair.localConflict ? '本机另一窗口的进度 · 修订：' : '云端修订：') + (pair.revision ?? '空存档');
   showCodes(pair.local, pair.cloud);
   document.querySelector('label[for="adr-cloud-code"]').textContent=pair.localConflict?'本机另一窗口进度':'云端进度';
+  document.getElementById('adr-keep-local').textContent=pair.localConflict?'确认保留本页进度':'确认保留本页并更新云端';
   document.getElementById('adr-use-cloud').textContent=pair.localConflict?'确认使用另一窗口进度':'确认放弃本页，使用云端';
 });
 document.getElementById('adr-keep-local').onclick = action(async () => { adapter.queue(window.State); await adapter.keepLocal(); dialog.close(); });
@@ -78,7 +79,7 @@ window.addEventListener('beforeunload', event => {
 });
 async function start() {
   const capabilities = await client.connect();
-  if (!capabilities.includes('cloudSave')) throw new Error('当前宿主尚未批准本游戏的云存档能力。');
+  if (!capabilities.includes('localSave') && !capabilities.includes('cloudSave')) throw new Error('当前宿主不支持本机存档，请更新 GameHub 客户端。');
   try{await client.cloudSave.local.status({slot:'autosave'});localMode=true;}catch(error){if(error.code!=='BRIDGE_CAPABILITY_NOT_GRANTED')throw error;}
   adapter=(localMode?createAdrLocalSaveAdapter:createAdrSaveAdapter)(adapterOptions);
   window.GameHubADR.loadedState = await adapter.load();
@@ -96,7 +97,7 @@ async function start() {
 }
 start().catch(error => {
   ready = false; document.getElementById('wrapper').inert = true;
-  showStatus({state:'blocked', code:error.code, message:error.message + ' 原云端进度未被覆盖。'});
+  showStatus({state:'blocked', code:error.code, message:error.message + ' 已有进度未被覆盖。'});
   document.getElementById('adr-retry').hidden = true;
   document.getElementById('adr-reload').hidden = false;
 });

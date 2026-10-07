@@ -5,7 +5,7 @@ import {metadata} from './web-game-cloud-save-handlers.mjs';
 import {createSaveManagement} from './save-management.mjs';
 
 /** The iframe supplies only namespace/slot; owner, origin and work come from the trusted host. */
-export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,transfer,signal,checkIdentity,
+export function createLocalSaveHandlers({apiClient,descriptor,localOnly=false,getGameSession,transfer,signal,checkIdentity,
   saveCache,getSaveOwner,saveOrigin,sendEvent=()=>{},onCloudSaveStatus,onLocalSaveController,onAuthorizationRevoked=()=>{},clock=Date.now}){
   const transferScope=Object.freeze({}),boxes=new Map(),statuses=new Map();
   let active=null,closed=false,authError=null,timer=null;
@@ -13,6 +13,7 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
   const ownerPromise=Promise.resolve().then(getSaveOwner);ownerPromise.catch(()=>{});
   const cloudOptions={signal,beforeRequest:assertOpen};
   const call=async(resource,method,...args)=>{
+    if(localOnly)saveFailure('CLOUD_SAVE_DISABLED','Cloud saves are disabled.');
     await assertOpen();const gameSessionId=await getGameSession('cloudSave');
     const result=await apiClient[method]({workId:descriptor.workId,namespace:resource.namespace,slotKey:resource.slot,gameSessionId},...args,cloudOptions);
     await assertOpen();return result;
@@ -39,7 +40,7 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
     if(!boxes.has(key)){
       if(boxes.size>=32)saveFailure('SAVE_LOCAL_QUOTA_EXCEEDED','Too many local save slots in one launch.');
       const resource={namespace:scope.namespace,slot:scope.slot};
-      boxes.set(key,createSaveOutbox({store:saveCache,scope,checkIdentity:assertOpen,signal,onStatus:report,clock,remote:{
+      boxes.set(key,createSaveOutbox({store:saveCache,scope,localOnly,checkIdentity:assertOpen,signal,onStatus:report,clock,remote:{
         read:async()=>{
           let meta;try{meta=metadata((await call(resource,'getGameSaveMetadata')).data);}catch(error){if(error.code==='SAVE_SLOT_NOT_FOUND')return null;throw error;}
           if(meta.deleted)return {meta,payload:null};
@@ -61,7 +62,7 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
     return boxes.get(key);
   };
   const wake=()=>{
-    if(closed||timer!==null)return;
+    if(localOnly||closed||timer!==null)return;
     timer=setTimeout(async()=>{
       timer=null;
       for(const item of boxes.values()){if(closed)break;try{await item.sync({force:false});}catch{}}
@@ -102,6 +103,7 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
     try{
       let result,payload;
       if(view==='comparison'){
+        if(localOnly)saveFailure('CLOUD_SAVE_DISABLED','Cloud saves are disabled.');
         const row=await saveCache.read({origin:saveOrigin,owner:await ownerPromise,workId:descriptor.workId,channel:descriptor.channel??'production',...resource});
         if(row.value?.comparison?.token!==input.token)saveFailure('SAVE_COMPARE_REQUIRED','Comparison changed; read it again.');
         const cloud=row.value.comparison.cloud;payload=cloud?.payload??null;
@@ -123,6 +125,7 @@ export function createLocalSaveHandlers({apiClient,descriptor,getGameSession,tra
     return createSaveManagement({store:saveCache,groupScope:{origin:saveOrigin,owner,workId:descriptor.workId,channel:descriptor.channel??'production'},createBox,assertOpen,wake,clock});
   })();
   onLocalSaveController?.({
+    localOnly,
     list:async()=>(await management()).list(),
     exportSave:async(...args)=>(await management()).exportSave(...args),
     prepareRestore:async(...args)=>(await management()).prepareRestore(...args),

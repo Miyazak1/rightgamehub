@@ -129,6 +129,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     runtimeRoot: env.RUNTIME_ROOT ?? '.runtime/platform/published',
     validatorRoot: env.VALIDATOR_ROOT ?? '.runtime/platform/validator',
     validatorExecutionMode,
+    cloudSaveEnabled: boolean(env.CLOUD_SAVE_ENABLED, false, 'CLOUD_SAVE_ENABLED'),
     saveStorageProtection:loadSaveStorageProtection(env,nodeEnv==='production'),
     storageWarnPercent,
     storageBlockPercent,

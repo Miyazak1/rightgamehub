@@ -23,7 +23,7 @@ test('PostgreSQL game session isolation, atomic quota, expiry and revocation gen
   await pool.query("INSERT INTO releases(id,work_id,target_key,label,package_type,validation_state,serving_state,approved_capabilities) VALUES($1,$2,'web','v1','web_zip','ready','enabled',$3)",[releaseId,workId,JSON.stringify(['multiplayer','cloudSave','competition'])]);
   const actor={userId,grantId};
   const repository=new PostgresGameSessionRepository(pool);
-  const service=createGameSessionService({repository,clock:()=>now});
+  const service=createGameSessionService({cloudSaveEnabled:true,repository,clock:()=>now});
   const input=(overrides={})=>({workId,releaseId,channel:'production',launchNonce:crypto.randomUUID(),...overrides});
   const create=()=>service.create(actor,input());
   const rejected=session=>assert.rejects(service.resolve(actor,session.gameSessionId),{code:'GAME_SESSION_INVALID'});

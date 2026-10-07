@@ -3,7 +3,7 @@ const test=require('node:test');const assert=require('node:assert/strict');const
 test('save operations HTTP authenticates, rejects forged scopes/unknown fields, requires a reason and preserves request tracing',async t=>{
   const {createApp}=await import('../../apps/api/src/app.mjs');const {loadConfig}=await import('../../apps/api/src/config.mjs');const {AuthError}=await import('../../apps/api/src/auth-service.mjs');
   const actor={userId:crypto.randomUUID(),grantId:crypto.randomUUID()},workId=crypto.randomUUID();let calls=0;
-  const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32)}),authService:{authenticateBearer:async h=>{if(h!=='Bearer test')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return actor;}},saveOperationsService:{
+  const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32)}),authService:{authenticateBearer:async h=>{if(h!=='Bearer test')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return actor;}},saveOperationsService:{
     health:async(who,input)=>{assert.deepEqual(who,actor);assert.equal(input.admin,true);return {items:[],nextAfterWorkId:null,windowHours:24};},
     maintain:async(who,input)=>{calls++;assert.deepEqual(who,actor);assert.equal(input.workId,workId);assert.equal(input.requestId,'ops-trace');return {scopes:0,next:null};},
   }});t.after(()=>app.close());

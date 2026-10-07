@@ -1,3 +1,5 @@
+> 当前生产仅开放 localSave。本机存档使用 client.localSave（兼容 client.cloudSave.local），需要新版宿主；cloudSave 仅用于显式启用的内部测试。游戏的 platform.json 可声明 capabilities: ["localSave"]。本机进度不会自动上传。
+
 # GameHub 网页游戏 SDK：在线云存档
 
 状态：S1 在线链路已实现并完成内部自动化验证，生产能力仍关闭。本 SDK 尚不提供持久本机缓存、离线 outbox 或冲突副本；关闭页面可能丢失未确认的进度。完整准入条件见 [存档设计](../../docs/72-game-save-platform-infrastructure-design.zh-CN.md)。

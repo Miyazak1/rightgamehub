@@ -90,6 +90,16 @@ export function createApp(dependencies) {
     reply.header('Access-Control-Expose-Headers', 'ETag, X-Request-Id, X-GameHub-Save-Schema, X-Content-SHA256');
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
+  // Reject before authentication/body parsing; disabled services are never registered.
+  if (config.cloudSaveEnabled !== true) app.addHook('onRequest', async (request, reply) => {
+    const path = request.url.split('?')[0];
+    if (/^\/v1\/(?:me\/(?:game-saves|save-library)(?:\/|$)|creator\/save-health(?:\/|$)|admin\/save-operations(?:\/|$)|works\/[^/]+\/save-policy(?:\/|$))/.test(path)) {
+      return reply.header('Cache-Control', 'no-store').status(503).send({error:{
+        code:'CLOUD_SAVE_DISABLED', message:'Cloud saves are disabled. Use local saves on this device.',
+        requestId:request.id, retryable:false, details:{},
+      }});
+    }
+  });
   app.setErrorHandler((error, request, reply) => {
     const known = error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
@@ -103,7 +113,7 @@ export function createApp(dependencies) {
     try {
       const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
       if (!databaseOk || !migration.ready || !realtimeOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk }));
-      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus });
+      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
     } catch {
       return reply.status(503).send(envelope({ status: 'not-ready', database: false }));
     }
@@ -169,9 +179,9 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
-  if (saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
-  if (saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
-  if (gameSaveService) registerGameSaveRoutes(app, { service: gameSaveService, requireAuth });
+  if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
+  if (config.cloudSaveEnabled === true && saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
+  if (config.cloudSaveEnabled === true && gameSaveService) registerGameSaveRoutes(app, { service: gameSaveService, requireAuth });
   if (gameSessionService) registerGameSessionRoutes(app, { service: gameSessionService, requireAuth });
   const identifyOptional = async request => {
     request.actor = request.headers.authorization ? await authService.authenticateBearer(request.headers.authorization) : null;

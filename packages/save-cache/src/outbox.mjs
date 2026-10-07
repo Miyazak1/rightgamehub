@@ -5,7 +5,7 @@ export function decodeBody(text){if(typeof text!=='string'||text.length>1398104)
 
 const uuid=()=>crypto.randomUUID();
 const localEtag=id=>'"ghlocal-'+id()+'"';
-const isRetryable=error=>error?.retryable===true || error instanceof TypeError || ['NETWORK_ERROR','API_UNAVAILABLE'].includes(error?.code) || error?.status>=500;
+const isRetryable=error=>error?.retryable===false?false:error?.retryable===true || error instanceof TypeError || ['NETWORK_ERROR','API_UNAVAILABLE'].includes(error?.code) || error?.status>=500;
 const authFailure=error=>['AUTH_REQUIRED','GAME_SESSION_INVALID','GAME_SESSION_RELEASE_NOT_ALLOWED','BRIDGE_ACCOUNT_CHANGED'].includes(error?.code);
 export async function snapshotPayload({bytes,schemaVersion,contentType,sha256}) {
   if(!(bytes instanceof Uint8Array)||bytes.length>1048576||!Number.isInteger(schemaVersion)||schemaVersion<1
@@ -37,7 +37,7 @@ const preserve=(record,snapshot,reason,id,now)=>{
 };
 
 /** A durable, account-scoped slot. CAS is required both locally and remotely. */
-export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},signal,onStatus=()=>{},clock=Date.now,id=uuid,leaseMs=60000}={}) {
+export function createSaveOutbox({store,scope,remote,localOnly=false,checkIdentity=async()=>{},signal,onStatus=()=>{},clock=Date.now,id=uuid,leaseMs=60000}={}) {
   scope=cacheScope(scope);
   const anonymous=scope.owner.startsWith('anonymous:'),owner=id();
   let closed=false,running=null,authorizationError=null;
@@ -51,7 +51,9 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     await assertOpen();const row=await store.read(scope);await assertOpen();
     if(row.value&&(row.value.format!==1||!Number.isSafeInteger(row.value.nextSequence)||!Array.isArray(row.value.recoveries)))
       throw cacheError('SAVE_CACHE_CORRUPT','Local save metadata is damaged. Preserve the original data.');
+    if(row.value?.localOnly && !localOnly)throw cacheError('CLOUD_SAVE_DISABLED','This save is local only. Automatic cloud upload is disabled.');
     if(authFailure(row.value?.lastError)){
+      if(localOnly)throw cacheError(row.value.lastError.code,'This save has a revoked authorization.');
       // A restart must not turn a known revocation into an offline-cache bypass.
       // A new valid grant may reclaim this same user's cache only after a server check.
       try{await cloudRead();}catch(error){if(authFailure(error))authorizationError=error;throw error;}
@@ -71,19 +73,24 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     }
     throw cacheError('SAVE_LOCAL_BUSY','Another window is updating this save. Retry with the same operation.',true);
   };
-  const status=record=>({namespace:scope.namespace,slot:scope.slot,state:stateOf(record,anonymous),
-    durability:!anonymous&&!dirty(record)&&!record.conflict&&record.confirmed.known&&record.confirmed.meta?'cloud':'local',
+  const status=record=>({namespace:scope.namespace,slot:scope.slot,state:localOnly?'local_only':stateOf(record,anonymous),
+    durability:!localOnly&&!anonymous&&!dirty(record)&&!record.conflict&&record.confirmed.known&&record.confirmed.meta?'cloud':'local',
     localSequence:record.current?.sequence??0,confirmedLocalSequence:record.confirmed.localSequence,
-    revision:record.confirmed.meta?.revision??null,code:record.lastError?.code??null,recoveryCount:record.recoveries.length});
+    revision:record.confirmed.meta?.revision??null,code:localOnly?null:record.lastError?.code??null,recoveryCount:record.recoveries.length});
   const report=record=>{if(!closed&&!signal?.aborted)onStatus(status(record));};
   const cloudRead=async()=>{
+    if(localOnly)throw cacheError('CLOUD_SAVE_DISABLED','Cloud saves are disabled.');
     await assertOpen();const result=await remote.read();await assertOpen();
     if(result?.payload)await verifyPayload(result.payload);
     return result;
   };
   const read=async({refresh=true}={})=>{
     let row=await inspect();
-    if(!row.value || refresh&&!dirty(row.value)&&!row.value.conflict) {
+    if(localOnly && !row.value){
+      const {record}=await update(record=>{if(record.confirmed.known)return {unchanged:true};record.confirmed.known=true;record.localOnly=true;});
+      row={value:record};
+    }
+    if(!localOnly && (!row.value || refresh&&!dirty(row.value)&&!row.value.conflict)) {
       let cloud;
       try{cloud=anonymous?null:await cloudRead();}
       catch(error){
@@ -113,7 +120,7 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     if(typeof idempotencyKey!=='string'||!/^[0-9a-f-]{36}$/i.test(idempotencyKey))throw cacheError('SAVE_REQUEST_INVALID','A local operation UUID is required.');
     const fingerprint=JSON.stringify([expectedEtag??null,createOnly,payload.sha256,payload.schemaVersion,payload.contentType,payload.bytes,...(restoring?['restore']:[])]);
     const {record,result}=await update(record=>{
-      if(!record.confirmed.known)throw cacheError('SAVE_CACHE_NOT_READY','Read the save before writing.');
+      if(!localOnly&&!record.confirmed.known)throw cacheError('SAVE_CACHE_NOT_READY','Read the save before writing.');
       const prior=record.receipts.find(item=>item.id===idempotencyKey);
       if(prior){
         if(prior.fingerprint!==fingerprint)throw cacheError('SAVE_IDEMPOTENCY_CONFLICT','Local operation key was reused with different content.');
@@ -124,20 +131,22 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
         return {rejected:'SAVE_LOCAL_CONFLICT'};
       }
       if(restoring){
-        if(record.conflict)throw cacheError('SAVE_COMPARE_REQUIRED','Resolve the cloud conflict before restoring a copy.');
+        if(!localOnly&&record.conflict)throw cacheError('SAVE_COMPARE_REQUIRED','Resolve the cloud conflict before restoring a copy.');
         preserve(record,record.current,'before-restore',id,clock);
       }
       record.localEtag=localEtag(id);
       record.current={payload:copy(payload),sequence:record.nextSequence++,etag:record.localEtag};
-      record.pending=copy(record.current);
+      if(localOnly)record.localOnly=true;
+      else record.pending=copy(record.current);
       if(!record.conflict)record.lastError=null;
-      const receipt={etag:record.localEtag,localSequence:record.current.sequence,durability:'local',state:anonymous?'local_only':record.conflict?'conflict':'local_pending'};
+      const receipt={etag:record.localEtag,localSequence:record.current.sequence,durability:'local',state:localOnly||anonymous?'local_only':record.conflict?'conflict':'local_pending'};
       record.receipts.push({id:idempotencyKey,fingerprint,result:receipt});record.receipts=record.receipts.slice(-32);
       return receipt;
     });
     report(record);if(result?.rejected)throw cacheError(result.rejected,restoring?'Current progress changed; inspect it again before restoring.':'Another local window has newer progress. This snapshot was retained as a recovery copy.');return {...result,namespace:scope.namespace,slot:scope.slot};
   };
   const sync=({force=true}={})=>{
+    if(localOnly)return inspect().then(row=>row.value?status(row.value):{state:'local_only',durability:'local'});
     if(running)return running;
     running=(async()=>{
       for(let step=0;step<8;step++){
@@ -191,6 +200,7 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
     return {token,local:await read({refresh:false}),cloud:copy(cloud),etag:record.localEtag};
   };
   const resolve=async({choice,token,expectedEtag})=>{
+    if(localOnly)throw cacheError('CLOUD_SAVE_DISABLED','Cloud saves are disabled.');
     if(!['local','cloud'].includes(choice))throw cacheError('SAVE_REQUEST_INVALID','Choose local or cloud progress.');
     const {record}=await update(record=>{
       if(!record.conflict||record.comparison?.token!==token||record.localEtag!==expectedEtag)
@@ -222,10 +232,10 @@ export function createSaveOutbox({store,scope,remote,checkIdentity=async()=>{},s
         record.recoveries.splice(index,1);
       });report(record);return {removed:true};
     },
-    async status(){const row=await inspect();return row.value?status(row.value):{state:'idle'};},
+    async status(){const row=await inspect();return row.value?status(row.value):{state:localOnly?'local_only':'idle',durability:'local'};},
     async recoveries(){const row=await inspect();return (row.value?.recoveries??[]).map(({payload,...item})=>({...item,bytes:payload.bytes,sha256:payload.sha256}));},
     async recovery(id){const row=await inspect();const item=row.value?.recoveries.find(item=>item.id===id);if(!item)throw cacheError('SAVE_RECOVERY_NOT_FOUND','Recovery copy not found.');await verifyPayload(item.payload);return copy(item);},
-    async releaseLease(){if(closed||signal?.aborted)return;await update(record=>{if(record.lease?.owner===owner)record.lease=null;else return {unchanged:true};});},
+    async releaseLease(){if(localOnly||closed||signal?.aborted)return;await update(record=>{if(record.lease?.owner===owner)record.lease=null;else return {unchanged:true};});},
     close(){closed=true;},
   };
 }

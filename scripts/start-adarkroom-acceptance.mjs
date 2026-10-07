@@ -34,9 +34,9 @@ await pool.query("INSERT INTO work_targets(work_id,target_key,state) VALUES($1,'
 await pool.query("INSERT INTO releases(id,work_id,target_key,label,package_type,validation_state,serving_state,approved_capabilities) VALUES($1,$2,'web','ADR internal','web_zip','ready','enabled',$3)",[releaseId,workId,JSON.stringify(['cloudSave'])]);
 await pool.query("INSERT INTO game_release_service_scopes(work_id,release_id,channel,status,namespaces,approved_by,reason) VALUES($1,$2,'production','active',$3,$4,'local isolated S1 public-play acceptance fixture')",[workId,releaseId,JSON.stringify({default:{readSchema:{min:1,max:1},writeSchema:1}}),userIds.a]);
 await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,approved_by,reason) VALUES($1,$2,'default','active',$3,'local isolated S1 acceptance fixture')",[uuid(),workId,userIds.a]);
-const sessionService=createGameSessionService({repository:new PostgresGameSessionRepository(pool)});
+const sessionService=createGameSessionService({cloudSaveEnabled:true,repository:new PostgresGameSessionRepository(pool)});
 const saveService=createGameSaveService({repository:new PostgresGameSaveRepository(pool),gameSessionService:sessionService});
-const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:databaseUrl,OTP_HMAC_KEY:'adr-local-acceptance-only-'.repeat(2),CORS_ORIGINS:'http://127.0.0.1:3086,http://localhost:3086',TRUST_EDITOR_WEBVIEWS:'true'}),
+const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:databaseUrl,OTP_HMAC_KEY:'adr-local-acceptance-only-'.repeat(2),CORS_ORIGINS:'http://127.0.0.1:3086,http://localhost:3086',TRUST_EDITOR_WEBVIEWS:'true'}),
   authService:{authenticateBearer:async header=>{const actor=actors.get(header);if(!actor)throw Object.assign(new Error('Local fixture authentication required'),{statusCode:401});return actor;}},
   gameSessionService:sessionService,gameSaveService:saveService});
 const directory=path.join(root,'.runtime/adarkroom-web'),assets={};

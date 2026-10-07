@@ -90,10 +90,12 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     command: (matchId, command) => request('multiplayer.matches.command', { matchId,command }),
     resign: matchId => request('multiplayer.matches.resign', { matchId }),
   };
+  const cloudSave = createCloudSaveClient({request:(method,params)=>request(method,params,cloudSaveTimeoutMs)});
   return Object.freeze({
     connect,
     getPlayer: () => request('player.get'),
-    cloudSave: createCloudSaveClient({request:(method,params)=>request(method,params,cloudSaveTimeoutMs)}),
+    cloudSave,
+    localSave: cloudSave.local,
     multiplayer: Object.freeze({
       listModes: () => request('multiplayer.modes.list'), rooms: Object.freeze(rooms), matches: Object.freeze(matches),
       connect: () => request('multiplayer.realtime.connect'),

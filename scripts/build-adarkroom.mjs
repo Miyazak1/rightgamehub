@@ -7,6 +7,7 @@ import {makeZip} from './zip-fixture.cjs';
 const root = fileURLToPath(new URL('../',import.meta.url));
 const source = path.join(root,'samples/adarkroom');
 const lock = JSON.parse(await fs.readFile(path.join(source,'upstream.lock.json'),'utf8'));
+const cloudTest = process.argv.includes('--cloud-test');
 const files = new Map();
 for(const file of lock.files) {
   const bytes = await fs.readFile(path.join(source,'upstream',file.path));
@@ -59,18 +60,18 @@ const header = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><m
  + '<script>var oldIE=false;var lang=new URLSearchParams(location.search).get("lang")==="en"?"en":"zh_cn";var langs={en:"English",zh_cn:"简体中文"};</script>';
 const ordered = scripts.filter(p=>p!=='lib/jquery.min.js').map(p=>'<script src="'+p+'"></script>'+(p==='lib/translate.js'?'<script>if(lang==="zh_cn")document.write(\'<script src="lang/zh_cn/strings.js"><\\/script>\');</script>':'')).join('\n');
 const localeCss = '<script>if(lang==="zh_cn")document.write(\'<link rel="stylesheet" href="lang/zh_cn/main.css">\');</script>';
-const controls = '<section id="adr-save-bar" aria-label="云存档"><span id="adr-save-status" role="status">正在连接存档</span><button id="adr-save" disabled>立即保存</button><button id="adr-export" disabled>导出当前进度</button><button id="adr-retry" hidden>重试原保存</button><button id="adr-compare" hidden>比较冲突进度</button><button id="adr-reload" hidden>重新读取</button><span id="adr-save-message"></span></section>'
+const controls = '<section id="adr-save-bar" aria-label="游戏存档"><span id="adr-save-status" role="status">正在连接存档</span><button id="adr-save" disabled>立即保存</button><button id="adr-export" disabled>导出当前进度</button><button id="adr-retry" hidden>重试原保存</button><button id="adr-compare" hidden>比较冲突进度</button><button id="adr-reload" hidden>重新读取</button><span id="adr-save-message"></span></section>'
  + '<dialog id="adr-save-dialog"><h2>保留与恢复进度</h2><p>复制导出码可保留这份进度。请确认顶部已显示本机或云端保存。尚未得到任何保存确认的修改仍只存在于本页。</p><label for="adr-local-code">本页进度</label><p id="adr-local-summary"></p><textarea id="adr-local-code" readonly></textarea><section id="adr-cloud-section" hidden><p id="adr-conflict-revision"></p><label for="adr-cloud-code">云端进度</label><p id="adr-cloud-summary"></p><textarea id="adr-cloud-code" readonly></textarea></section><footer id="adr-choices" hidden><button id="adr-keep-local">确认保留本页并更新云端</button><button id="adr-use-cloud">确认放弃本页，使用云端</button></footer><footer><button id="adr-close-dialog">返回游戏</button></footer></dialog>';
 const body = '<div id="wrapper"><div id="saveNotify"></div><div id="content"><div id="outerSlider"><div id="main"><div id="header"></div></div></div></div></div>';
 files.set('index.html',header+ordered+css.map(p=>'<link rel="stylesheet" href="'+p+'">').join('')+localeCss+'<link rel="stylesheet" href="gamehub/platform.css"></head><body>'+controls+body
  + '<footer class="adr-credit"><a href="https://github.com/doublespeakgames/adarkroom">A Dark Room — doublespeak games</a> · <a href="LICENSE.txt">MPL-2.0</a></footer><script src="gamehub/boot.js"></script></body></html>');
 files.set('LICENSE.txt',await fs.readFile(path.join(source,'upstream/LICENSE.md')));
-files.set('NOTICE.txt','A Dark Room by doublespeak games and contributors. MPL-2.0.\nUpstream: '+lock.repository+'\nPinned commit: '+lock.commit+'\nGameHub adaptation: state access without eval; scoped cloud saves and durable host storage; startup waits for cloud read; analytics removed; bundled local dependencies.\nModified engine/state-manager sources are included in script/. Adapter source is included in source/.\nInternal S1/S2 reference package; production capability is not enabled by this manifest.\n');
+files.set('NOTICE.txt','A Dark Room by doublespeak games and contributors. MPL-2.0.\nUpstream: '+lock.repository+'\nPinned commit: '+lock.commit+'\nGameHub adaptation: state access without eval; durable host saves; startup waits for saved progress; analytics removed; bundled local dependencies.\nModified engine/state-manager sources are included in script/. Adapter source is included in source/.\nLocal-save reference package. Cloud synchronization requires an explicitly enabled internal cloud test host.\n');
 for(const name of ['state.mjs','save-adapter.mjs','local-save-adapter.mjs','bootstrap.mjs']) files.set('source/'+name,await fs.readFile(path.join(source,name)));
-files.set('platform.json',JSON.stringify({version:1,entry:'index.html',capabilities:['cloudSave']}));
+files.set('platform.json',JSON.stringify({version:1,entry:'index.html',capabilities:[cloudTest?'cloudSave':'localSave']}));
 const output = path.join(root,'.runtime/adarkroom-web');
 await fs.mkdir(output,{recursive:true});
 for(const [name,data] of files) { await fs.mkdir(path.dirname(path.join(output,name)),{recursive:true}); await fs.writeFile(path.join(output,name),data); }
 await fs.mkdir(path.join(root,'artifacts'),{recursive:true});
-await fs.writeFile(path.join(root,'artifacts/adarkroom-cloud-save-internal.zip'),makeZip([...files].map(([name,data])=>({name,data}))));
-console.log('Built A Dark Room '+lock.commit.slice(0,12)+': '+files.size+' files. Internal cloudSave approval required.');
+await fs.writeFile(path.join(root,cloudTest?'artifacts/adarkroom-cloud-save-internal.zip':'artifacts/adarkroom-local-save.zip'),makeZip([...files].map(([name,data])=>({name,data}))));
+console.log('Built A Dark Room '+lock.commit.slice(0,12)+': '+files.size+' files. '+(cloudTest?'Internal cloudSave approval required.':'Local saves only; no cloud synchronization.'));

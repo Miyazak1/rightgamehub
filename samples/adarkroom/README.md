@@ -1,3 +1,5 @@
+> 当前默认构建为仅本机存档包 artifacts/adarkroom-local-save.zip，声明 localSave，不自动上传。下面云存档验收仅用于隔离测试，需 node scripts/build-adarkroom.mjs --cloud-test；生产更新说明见 docs/game-save-local-only-release.zh-CN.md。
+
 # A Dark Room：云端与本机存档参考适配
 
 本目录是 Cloud Save S1/S2 的内部参考游戏。使用固定上游源码、正式 SDK/PlayerCore/通用宿主和 API/数据库实现；没有开启线上发布权限。支持本机存储的宿主使用 S2 持久队列，旧宿主继续使用 S1 在线接口。

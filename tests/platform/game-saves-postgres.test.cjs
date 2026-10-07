@@ -33,7 +33,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     await pool.query("UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1",[workId,releaseId]);
     for(const namespace of Object.keys(namespaces))await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,schema_max,max_document_bytes,max_live_bytes,max_history_bytes,max_slots,approved_by,reason) VALUES($1,$2,$3,'active',2,$4,$5,$6,$7,$8,'save test policy')",
       [uuid(),workId,namespace,policy.document??262144,policy.live??1048576,policy.history??5242880,policy.slots??10,userId]);
-    const actor={userId,grantId},sessions=createGameSessionService({repository:new PostgresGameSessionRepository(pool),clock:()=>now});
+    const actor={userId,grantId},sessions=createGameSessionService({cloudSaveEnabled:true,repository:new PostgresGameSessionRepository(pool),clock:()=>now});
     const repository=new PostgresGameSaveRepository(pool,{storageProtection:policy.storageProtection});
     const metrics=createSaveHealthMetrics({pool,clock:()=>now});collectors.push(metrics);
     const service=createGameSaveService({repository,gameSessionService:sessions,metrics,clock:()=>now});

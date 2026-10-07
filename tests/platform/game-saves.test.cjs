@@ -38,7 +38,7 @@ test('save HTTP boundary requires authentication, validates scope, preserves raw
   const {AuthError}=await import('../../apps/api/src/auth-service.mjs');
   const {GameSaveError}=await import('../../apps/api/src/game-save-service.mjs');
   const {loadConfig}=await import('../../apps/api/src/config.mjs');
-  const config=loadConfig({NODE_ENV:'test',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32),CORS_ORIGINS:'https://gamehub.test'});
+  const config=loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32),CORS_ORIGINS:'https://gamehub.test'});
   const bytes=Buffer.from(' { "chapter" : 3 }\n'),etag='"example-etag"';let writes=0;
   const app=createApp({config,authService:{authenticateBearer:async h=>{if(h!=='Bearer host-only')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return {userId:crypto.randomUUID()};}},
     gameSaveService:{
@@ -70,7 +70,7 @@ test('save HTTP boundary requires authentication, validates scope, preserves raw
 test('account save library HTTP boundary authenticates without game sessions and keeps downloads private',async t=>{
   const {createApp}=await import('../../apps/api/src/app.mjs');const {loadConfig}=await import('../../apps/api/src/config.mjs');const {AuthError}=await import('../../apps/api/src/auth-service.mjs');const {GameSaveError}=await import('../../apps/api/src/game-save-service.mjs');
   const actor={userId:crypto.randomUUID(),grantId:crypto.randomUUID()},slotId=crypto.randomUUID(),revisionId=crypto.randomUUID(),etag='"revision"',bytes=Buffer.from('{}');let restores=0;
-  const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32)}),authService:{authenticateBearer:async h=>{if(h!=='Bearer account')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return actor;}},saveLibraryService:{
+  const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:'postgres://unused/test',OTP_HMAC_KEY:'x'.repeat(32)}),authService:{authenticateBearer:async h=>{if(h!=='Bearer account')throw new AuthError('AUTH_REQUIRED',401,'Sign in');return actor;}},saveLibraryService:{
     list:async who=>{assert.deepEqual(who,actor);return {items:[],nextAfterSlotId:null};},
     content:async(who,input)=>{assert.deepEqual(who,actor);assert.equal(input.slotId,slotId);assert.equal(input.revisionId,revisionId);return {metadata:{etag,sha256:hash(bytes),schemaVersion:1,contentType:'application/json'},bytes};},
     restore:async(_who,input)=>{restores++;assert.equal(input.idempotencyKey,'fixed-key');throw new GameSaveError('SAVE_CONFLICT',412,'Changed');},

@@ -1,3 +1,9 @@
+## 当前生产策略：仅本机存档
+
+生产默认关闭云存档。新游戏在 platform.json 声明 localSave，使用 SDK 的 client.localSave（client.cloudSave.local 为兼容别名）。宿主以 localOnly:true 打开同一账号/作品的耐久缓存，不访问云 API，不生成自动同步队列或计时器；导出和导入仍可用。历史待同步/确认信息保留，本机写入记录禁止自动转回云同步。已知授权撤销仍拒绝访问。
+
+部署及客户端版本见 docs/game-save-local-only-release.zh-CN.md。下面的 S2/S3 云同步章节仅适用于显式启用的内部云测试。
+
 # Durable host save cache (S2)
 
 The trusted platform host owns this store. A game iframe can pass only a namespace and slot through the approved cloudSave capability; it cannot choose an account, API origin, work, channel or filesystem path.

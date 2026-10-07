@@ -1,0 +1,81 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const os=require('node:os');
+const path=require('node:path');
+const {randomUUID:id}=require('node:crypto');
+const {createSaveBridge}=require('../helpers/game-save-bridge.cjs');
+
+async function fixture(t){
+  const {createSqliteSaveStore}=await import('../../packages/save-cache/src/sqlite-store.mjs');
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-local-only-')),stores=[],bridges=[];
+  const reopen=async()=>{const store=await createSqliteSaveStore({root});stores.push(store);return store;};
+  const store=await reopen(),descriptor={workId:id(),releaseId:id(),capabilities:{localSave:true}};
+  let calls=0;
+  const api=new Proxy({},{get:()=>async()=>{calls++;throw Error('Cloud must not be called');}});
+  const open=async(extra={})=>{const h=await createSaveBridge({api,descriptor,saveCache:store,saveOrigin:'https://gamehub.test',getSaveOwner:async()=>'user:'+user,...extra});bridges.push(h);return h;};
+  const user=id();
+  t.after(async()=>{for(const h of bridges)h.close();for(const s of stores)await s.close();await fs.rm(root,{recursive:true,force:true});});
+  return {store,reopen,open,descriptor,user,calls:()=>calls};
+}
+for(const guest of [false,true])test('local-only '+(guest?'anonymous':'signed-in')+' SDK persists chunks across store restart; export/restore never calls cloud',async t=>{
+  const f=await fixture(t),owner=guest?'anonymous:'+await f.store.anonymousId():'user:'+f.user;
+  let controller;
+  const options={getSaveOwner:async()=>owner,onLocalSaveController:c=>{controller=c;}};
+  const h=await f.open(options),api=h.client.localSave,slot={slot:'autosave'},data={text:'本地进度'.repeat(10000)};
+  assert.deepEqual(await h.client.connect(),['identity','localSave']);
+  assert.equal(api,h.client.cloudSave.local);assert.equal(controller.localOnly,true);
+  const empty=await api.read(slot);
+  const saved=await api.write({...slot,schemaVersion:1,data,expectedEtag:empty.etag,idempotencyKey:id()});
+  assert.equal(saved.state,'local_only');assert.equal(saved.durability,'local');
+  const exported=await controller.exportSave(slot);
+  await api.write({...slot,schemaVersion:1,data:{step:2},expectedEtag:saved.etag,idempotencyKey:id()});
+  const plan=await controller.prepareRestore(exported,slot);await controller.restore(plan.token);
+  assert.deepEqual((await api.read(slot)).data,data);
+  assert.equal((await controller.list())[0].recoveries.length,1);
+  assert.equal((await api.sync(slot)).state,'local_only');
+  await assert.rejects(api.compare(slot),{code:'CLOUD_SAVE_DISABLED'});
+  assert.equal((await h.raw('cloudSave.slots.read',slot)).error.code,'BRIDGE_CAPABILITY_NOT_GRANTED');
+  assert.equal((await h.raw('cloudSave.local.read',{...slot,owner:'user:'+id()})).error.code,'SAVE_REQUEST_INVALID');
+  // An old 3-second sync timer must not reappear.
+  await new Promise(resolve=>setTimeout(resolve,3200));
+  h.close();await f.store.close();
+  const next=await f.open({...options,saveCache:await f.reopen()});
+  assert.deepEqual((await next.client.localSave.read(slot)).data,data);
+  assert.equal(f.calls(),0);
+});
+test('switching old pending/conflicted records to local only preserves cloud metadata and recovery copies',async t=>{
+  const f=await fixture(t),{createSaveOutbox,snapshotPayload}=await import('../../packages/save-cache/src/outbox.mjs');
+  const scope={origin:'https://gamehub.test',owner:'user:'+f.user,workId:f.descriptor.workId,channel:'production',namespace:'default',slot:'autosave'};
+  const payload=async step=>snapshotPayload({bytes:Buffer.from(JSON.stringify({step})),schemaVersion:1,contentType:'application/json'});
+  const old=createSaveOutbox({store:f.store,scope,remote:{read:async()=>null,write:async()=>{throw Object.assign(Error('conflict'),{code:'SAVE_CONFLICT'});}}});
+  let v=await old.read();v=await old.write({payload:await payload(1),expectedEtag:v.etag,idempotencyKey:id()});await old.sync();
+  await old.write({payload:await payload(2),expectedEtag:v.etag,idempotencyKey:id()});old.close();
+  const before=await f.store.read(scope);
+  let calls=0;const remote={read:async()=>{calls++;throw Error('network');},write:async()=>{calls++;throw Error('network');}};
+  const local=createSaveOutbox({store:f.store,scope,remote,localOnly:true});
+  v=await local.read();assert.equal(v.state,'local_only');await local.sync();
+  assert.deepEqual(await f.store.read(scope),before);
+  await local.write({payload:await payload(3),expectedEtag:v.etag,idempotencyKey:id()});
+  const after=await f.store.read(scope);
+  for(const key of ['inFlight','pending','confirmed','recoveries','comparison','conflict'])assert.deepEqual(after.value[key],before.value[key],key);
+  assert.equal(after.value.localOnly,true);
+  const syncMode=createSaveOutbox({store:f.store,scope,remote});
+  await assert.rejects(syncMode.sync(),{code:'CLOUD_SAVE_DISABLED'});
+  await assert.rejects(local.resolve({choice:'cloud',token:id(),expectedEtag:v.etag}),{code:'CLOUD_SAVE_DISABLED'});
+  assert.equal(calls,0);local.close();syncMode.close();
+  const revoked=structuredClone(after.value);revoked.lastError={code:'AUTH_REQUIRED',retryable:false};
+  await f.store.compareAndSwap(scope,after.version,revoked);
+  const reopened=createSaveOutbox({store:f.store,scope,remote,localOnly:true});
+  await assert.rejects(reopened.read(),{code:'AUTH_REQUIRED'});assert.equal(calls,0);reopened.close();
+});
+test('local-only bridge closes on account change and another account cannot read the first account save',async t=>{
+  const f=await fixture(t);let identity='first';
+  const a=await f.open({identity:async()=>identity}),slot={slot:'autosave'};
+  const empty=await a.client.localSave.read(slot);
+  await a.client.localSave.write({...slot,schemaVersion:1,data:{private:true},expectedEtag:empty.etag,idempotencyKey:id()});
+  identity='second';
+  await assert.rejects(a.client.localSave.read(slot),e=>['BRIDGE_ACCOUNT_CHANGED','BRIDGE_CLOSED'].includes(e.code));
+  const b=await f.open({getSaveOwner:async()=>'user:'+id()});
+  assert.equal((await b.client.localSave.read(slot)).empty,true);assert.equal(f.calls(),0);
+});

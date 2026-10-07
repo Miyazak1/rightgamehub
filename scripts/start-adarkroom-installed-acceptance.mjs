@@ -24,7 +24,7 @@ await fs.writeFile(mailboxPath, '{}\n', { mode: 0o600 });
 const runtime = createRuntime({
   // Deliberately do not inherit production environment or OAuth/mail credentials.
   env: {
-    NODE_ENV: 'test', DATABASE_URL: databaseUrl, OTP_HMAC_KEY: crypto.randomBytes(32).toString('hex'),
+    NODE_ENV: 'test', CLOUD_SAVE_ENABLED: 'true', DATABASE_URL: databaseUrl, OTP_HMAC_KEY: crypto.randomBytes(32).toString('hex'),
     API_HOST: '127.0.0.1', API_PORT: '3086', RUNTIME_DOMAIN: 'localhost',
     RUNTIME_SCHEME: 'http', RUNTIME_PORT: '3092', RUNTIME_PUBLIC_PORT: '3092',
     TRUST_EDITOR_WEBVIEWS: 'true', CORS_ORIGINS: 'http://127.0.0.1:3086,http://localhost:3086',
