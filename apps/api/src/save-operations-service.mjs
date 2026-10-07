@@ -1,3 +1,5 @@
+import {maintainSaveScope} from './save-maintenance-scope.mjs';
+import {storageAdmission} from './save-storage-protection.mjs';
 import crypto from 'node:crypto';
 import {saveError,saveHash,GameSaveError} from './game-save-service.mjs';
 
@@ -69,7 +71,14 @@ export function createSaveOperationsService({repository,metrics,clock=()=>new Da
       const row=(await tx.query('SELECT * FROM game_save_capacity WHERE singleton')).rows[0];
       if(!row)saveError('SAVE_STORAGE_UNAVAILABLE',503,'Save capacity state is unavailable.');
       const size=(await tx.query("SELECT pg_database_size(current_database())::text database_bytes,(SELECT COALESCE(sum(pg_total_relation_size(c.oid)),0)::text FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relname LIKE 'game_save_%') save_table_bytes")).rows[0];
-      return {...capacityView(row),databaseBytes:size.database_bytes,saveTableBytes:size.save_table_bytes,diskFreeBytes:null,telemetryDropped:metrics?.status().dropped??0};
+      const sample=(await tx.query('SELECT *,clock_timestamp() checked_at,(SELECT system_identifier::text FROM pg_control_system()) actual_cluster_id,(SELECT storage_write_bytes FROM game_save_capacity WHERE singleton) current_write_bytes FROM game_save_storage_status WHERE singleton')).rows[0];
+      const maintenance=(await tx.query('SELECT * FROM game_save_maintenance_status WHERE singleton')).rows[0];
+      const errorScopes=(await tx.query('SELECT count(*)::int count FROM game_save_usage WHERE maintenance_last_code IS NOT NULL')).rows[0].count;
+      const storage=storageAdmission(repository.storageProtection,sample,sample?.current_write_bytes??row.storage_write_bytes,{now:sample?.checked_at??clock()});
+      return {...capacityView(row),databaseBytes:size.database_bytes,saveTableBytes:size.save_table_bytes,diskFreeBytes:sample?String(sample.available_bytes):null,
+        storage:{...storage,totalBytes:sample?String(sample.total_bytes):null,walBytes:sample?String(sample.wal_bytes):null},
+        maintenance:maintenance?{lastTickAt:new Date(maintenance.last_tick_at).toISOString(),lastRunAt:maintenance.last_run_at?new Date(maintenance.last_run_at).toISOString():null,status:maintenance.status,code:maintenance.code,errorScopes}:null,
+        telemetryDropped:metrics?.status().dropped??0};
     }),
     pausePolicy:(actor,input)=>{
       checkId(input.policyId);checkVersion(input.expectedVersion);
@@ -102,21 +111,9 @@ export function createSaveOperationsService({repository,metrics,clock=()=>new Da
         const rows=(await tx.query('SELECT * FROM game_save_usage WHERE work_id=$1 AND ($2::uuid IS NULL OR (user_id,channel)>($2::uuid,$3::text)) ORDER BY user_id,channel LIMIT 6 FOR UPDATE',[input.workId,input.after?.userId??null,input.after?.channel??null])).rows;
         const scopes=rows.slice(0,5);let mismatchScopes=0,repairedScopes=0,purgedPayloads=0,sampledPayloads=0,invalidPayloads=0,missingCurrentPayloads=0;
         for(const usage of scopes){
-          const scope={userId:usage.user_id,workId:input.workId,channel:usage.channel},key=[scope.userId,scope.workId,scope.channel];
-          const count=async()=> (await tx.query(
-            'SELECT count(*) FILTER(WHERE r.id=s.current_revision_id AND NOT r.tombstone)::int live_slots,COALESCE(sum(r.stored_bytes) FILTER(WHERE r.id=s.current_revision_id AND NOT r.tombstone),0)::text live_bytes,COALESCE(sum(octet_length(p.payload_inline)) FILTER(WHERE r.id<>s.current_revision_id),0)::text history_bytes,count(*) FILTER(WHERE r.id=s.current_revision_id AND NOT r.tombstone AND p.revision_id IS NULL)::int missing_current FROM game_save_slots s JOIN game_save_revisions r ON r.slot_id=s.id LEFT JOIN game_save_payloads p ON p.revision_id=r.id WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3',key)).rows[0];
-          const before=await count(),mismatch=before.live_slots!==usage.live_slots||before.live_bytes!==String(usage.live_bytes)||before.history_bytes!==String(usage.history_bytes);
-          if(mismatch)mismatchScopes++;missingCurrentPayloads+=before.missing_current;
-          // Sample at most 10 retained bodies per scope; hashes run in PG and no content leaves PG.
-          const sample=(await tx.query('SELECT count(*)::int sampled,count(*) FILTER(WHERE octet_length(payload_inline)<>stored_bytes OR encode(sha256(payload_inline),\'hex\')<>payload_sha256)::int invalid FROM (SELECT p.payload_inline,r.stored_bytes,r.payload_sha256 FROM game_save_slots s JOIN game_save_revisions r ON r.slot_id=s.id JOIN game_save_payloads p ON p.revision_id=r.id WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3 ORDER BY r.created_at DESC,r.id LIMIT 10) sampled',key)).rows[0];
-          sampledPayloads+=sample.sampled;invalidPayloads+=sample.invalid;
-          if(input.mode==='cleanup')purgedPayloads+=(await repository.trimHistory(tx,scope,clock())).purgedPayloads;
-          const actual=input.mode==='cleanup'?await count():before;
-          if(input.mode!=='inspect'){
-            if(actual.live_slots>10||BigInt(actual.live_bytes)>1048576n||BigInt(actual.history_bytes)>5242880n)throw new GameSaveError('SAVE_RECONCILE_UNSAFE',409,'Usage exceeds hard limits; investigate before repair.');
-            await tx.query('UPDATE game_save_usage SET live_slots=$4,live_bytes=$5,history_bytes=$6,version=version+1,reconciled_at=$7 WHERE user_id=$1 AND work_id=$2 AND channel=$3',[...key,actual.live_slots,actual.live_bytes,actual.history_bytes,clock()]);
-            if(mismatch)repairedScopes++;
-          }
+          const r=await maintainSaveScope(tx,repository,usage,{mode:input.mode,now:clock()});
+          mismatchScopes+=r.mismatchScopes;repairedScopes+=r.repairedScopes;purgedPayloads+=r.purgedPayloads;
+          sampledPayloads+=r.sampledPayloads;invalidPayloads+=r.invalidPayloads;missingCurrentPayloads+=r.missingCurrentPayloads;
         }
         // Capacity is independently maintained by payload triggers; don't scan every payload in a bounded work batch.
         return {scopes:scopes.length,mismatchScopes,repairedScopes,purgedPayloads,sampledPayloads,invalidPayloads,missingCurrentPayloads,next:rows.length>5?{userId:scopes.at(-1).user_id,channel:scopes.at(-1).channel}:null};

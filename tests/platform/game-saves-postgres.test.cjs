@@ -34,7 +34,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     for(const namespace of Object.keys(namespaces))await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,schema_max,max_document_bytes,max_live_bytes,max_history_bytes,max_slots,approved_by,reason) VALUES($1,$2,$3,'active',2,$4,$5,$6,$7,$8,'save test policy')",
       [uuid(),workId,namespace,policy.document??262144,policy.live??1048576,policy.history??5242880,policy.slots??10,userId]);
     const actor={userId,grantId},sessions=createGameSessionService({repository:new PostgresGameSessionRepository(pool),clock:()=>now});
-    const repository=new PostgresGameSaveRepository(pool);
+    const repository=new PostgresGameSaveRepository(pool,{storageProtection:policy.storageProtection});
     const metrics=createSaveHealthMetrics({pool,clock:()=>now});collectors.push(metrics);
     const service=createGameSaveService({repository,gameSessionService:sessions,metrics,clock:()=>now});
     const ops=createSaveOperationsService({repository,metrics,clock:()=>now});
@@ -53,6 +53,96 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
   const operation=extra=>({operationId:uuid(),reason:'Local save operations acceptance',requestId:uuid(),...extra});
   const policy=async f=>(await pool.query("SELECT * FROM game_save_policies WHERE work_id=$1 AND namespace='default'",[f.workId])).rows[0];
   const restoreCapacity=async admin=>{const current=await admin.ops.capacity(admin.actor);await admin.ops.setCapacity(admin.actor,operation({expectedVersion:current.version,writesPaused:false,maxPayloadBytes:5368709120}));};
+
+
+  await t.test('real storage admission fails closed, reserves concurrent writes and preserves receipts, exports and deletion',async()=>{
+    const {loadSaveStorageProtection,storageWriteCharge}=await import('../../apps/api/src/save-storage-protection.mjs');
+    const protection=loadSaveStorageProtection({},true),f=await fixture({storageProtection:protection}),g=await fixture({storageProtection:protection});
+    const sample=async patch=>{
+      await pool.query('DELETE FROM game_save_storage_status');
+      await pool.query("SELECT record_game_save_storage(clock_timestamp(),(SELECT system_identifier::text FROM pg_control_system()),10737418240,$1,100,80,$2,(SELECT storage_write_bytes FROM game_save_capacity))",[String(patch?.available??5368709120),String(patch?.wal??16777216)]);
+    };
+    try{
+      await pool.query('DELETE FROM game_save_storage_status');
+      const command=f.command(),start=(await pool.query('SELECT storage_write_bytes FROM game_save_capacity')).rows[0].storage_write_bytes;
+      await rejected(f.write(command),'SAVE_STORAGE_UNAVAILABLE');
+      assert.equal((await pool.query('SELECT storage_write_bytes FROM game_save_capacity')).rows[0].storage_write_bytes,start);
+      await sample();const saved=await f.write(command),after=(await pool.query('SELECT storage_write_bytes FROM game_save_capacity')).rows[0].storage_write_bytes;
+      assert.equal(BigInt(after)-BigInt(start),storageWriteCharge(command.bytes.length));
+      await pool.query("UPDATE game_save_storage_status SET observed_at=clock_timestamp()-interval '91 seconds'");
+      assert.deepEqual(await f.write(command),saved);
+      assert.deepEqual((await f.service.content(f.actor,f.token,f.resource())).bytes,command.bytes);
+      const slot=(await f.library.list(f.actor)).items[0];
+      assert.deepEqual((await f.library.content(f.actor,{slotId:slot.slotId,revisionId:saved.revisionId})).bytes,command.bytes);
+      await rejected(f.write(f.command(undefined,{ifNoneMatch:undefined,ifMatch:saved.etag})),'SAVE_STORAGE_UNAVAILABLE');
+      await rejected(f.library.restore(f.actor,{slotId:slot.slotId,revisionId:saved.revisionId,ifMatch:saved.etag,idempotencyKey:uuid()}),'SAVE_STORAGE_UNAVAILABLE');
+      await f.service.delete(f.actor,f.token,{...f.resource(),ifMatch:saved.etag,idempotencyKey:uuid()});
+      assert.equal((await pool.query('SELECT storage_write_bytes FROM game_save_capacity')).rows[0].storage_write_bytes,after);
+      const a=f.command(undefined,{slotKey:'another'}),b=g.command();
+      const floor=10737418240n*15n/100n;
+      await sample({available:floor+storageWriteCharge(a.bytes.length)});
+      const attempts=await Promise.allSettled([f.write(a),g.write(b)]);
+      assert.equal(attempts.filter(x=>x.status==='fulfilled').length,1);
+      assert.equal(attempts.find(x=>x.status==='rejected').reason.code,'SAVE_STORAGE_UNAVAILABLE');
+      await sample();
+      const loser=attempts[0].status==='rejected'?f:g;await loser.write(loser===f?a:b);
+      await assert.rejects(pool.query("SELECT record_game_save_storage(clock_timestamp(),'1',100,99,100,99,0,0)"),/invalid save storage sample/);
+      await assert.rejects(pool.query("SELECT record_game_save_storage(clock_timestamp()-interval '16 seconds',(SELECT system_identifier::text FROM pg_control_system()),100,99,100,99,0,0)"),/invalid save storage sample/);
+      await pool.query("UPDATE users SET role='admin' WHERE id=$1",[f.actor.userId]);
+      // A probe can publish a newer watermark between the overview's size and
+      // sample queries. The overview must read the counter with that sample.
+      const racingPool={connect:async()=>{const c=await pool.connect();return {query:async(q,v)=>{const r=await c.query(q,v);if(typeof q==='string'&&q.includes('pg_database_size')){await f.write(f.command(undefined,{slotKey:'during-overview'}));await sample();}return r;},release:()=>c.release()};}};
+      const racingOps=createSaveOperationsService({repository:new PostgresGameSaveRepository(racingPool,{storageProtection:protection})});
+      assert.equal((await racingOps.capacity(f.actor)).storage.allowed,true);
+      await sample({wal:2147483648});await rejected(g.write(g.command(undefined,{slotKey:'wal-blocked'})),'SAVE_STORAGE_UNAVAILABLE');
+    }finally{await pool.query('DELETE FROM game_save_storage_status');}
+  });
+
+  await t.test('periodic maintenance yields to writes, repairs one due scope, persists alerts and rolls back timed-out cleanup',async()=>{
+    const {createSaveMaintenanceWorker}=await import('../../apps/api/src/save-maintenance-worker.mjs');
+    await pool.query("UPDATE game_save_usage SET maintenance_next_at=clock_timestamp()+interval '1 day'");
+    const f=await fixture(),first=await f.write(f.command()),second=await f.write(f.command(Buffer.from('{"level":2}'),{ifNoneMatch:undefined,ifMatch:first.etag}));
+    const worker=createSaveMaintenanceWorker({repository:f.repository});
+    const key=[f.actor.userId,f.workId];
+    const due=()=>pool.query("UPDATE game_save_usage SET maintenance_next_at='2000-01-01' WHERE user_id=$1 AND work_id=$2",key);
+    await due();
+    const blocker=await pool.connect();
+    try{
+      await blocker.query('BEGIN');await blocker.query('SELECT * FROM game_save_capacity FOR UPDATE');
+      const start=performance.now();assert.equal((await worker.runOnce()).status,'busy');assert.ok(performance.now()-start<1000);
+    }finally{await blocker.query('ROLLBACK');blocker.release();}
+    await pool.query('UPDATE game_save_usage SET live_slots=0,live_bytes=0,history_bytes=0 WHERE user_id=$1 AND work_id=$2',key);
+    const result=await worker.runOnce();assert.equal(result.status,'ok');assert.equal(result.result.repairedScopes,1);
+    assert.equal((await worker.runOnce()).status,'idle');
+    await assert.rejects(pool.query('DELETE FROM game_save_maintenance_runs WHERE work_id=$1',[f.workId]),/append only/);
+    await pool.query('UPDATE game_save_policies SET history_days=0 WHERE work_id=$1',[f.workId]);
+    const count=async()=>Number((await pool.query('SELECT count(*) n FROM game_save_payloads p JOIN game_save_revisions r ON r.id=p.revision_id JOIN game_save_slots s ON s.id=r.slot_id WHERE s.work_id=$1',[f.workId])).rows[0].n);
+    assert.equal(await count(),2);await due();
+    const faultRepository=new PostgresGameSaveRepository(pool);
+    faultRepository.trimHistory=async(...args)=>{const r=await f.repository.trimHistory(...args);await args[0].query('SELECT pg_sleep(0.35)');return r;};
+    const fault=await createSaveMaintenanceWorker({repository:faultRepository}).runOnce();assert.equal(fault.status,'error');assert.equal(fault.code,'SAVE_MAINTENANCE_BUSY');
+    assert.equal(await count(),2);
+    assert.equal((await pool.query('SELECT maintenance_last_code FROM game_save_usage WHERE user_id=$1 AND work_id=$2',key)).rows[0].maintenance_last_code,'SAVE_MAINTENANCE_BUSY');
+    const inject=async bytes=>{const c=await pool.connect();try{await c.query('BEGIN');await c.query('ALTER TABLE game_save_payloads DISABLE TRIGGER game_save_payload_guard');await c.query('UPDATE game_save_payloads SET payload_inline=$2 WHERE revision_id=$1',[second.revisionId,bytes]);await c.query('ALTER TABLE game_save_payloads ENABLE TRIGGER game_save_payload_guard');await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}};
+    try{
+      await inject(Buffer.from('{"level":9}'));await due();const alert=await worker.runOnce();assert.equal(alert.code,'SAVE_INTEGRITY_ALERT');assert.equal(await count(),2);
+      assert.equal((await worker.runOnce()).status,'idle');
+      const g=await fixture();await g.write(g.command());assert.equal((await worker.runOnce()).status,'ok');
+      assert.equal((await pool.query('SELECT maintenance_last_code FROM game_save_usage WHERE user_id=$1 AND work_id=$2',key)).rows[0].maintenance_last_code,'SAVE_INTEGRITY_ALERT');
+    }finally{await inject(Buffer.from('{"level":2}'));}
+    await due();const clean=await worker.runOnce();assert.equal(clean.status,'ok');assert.equal(clean.result.purgedPayloads,1);assert.equal(await count(),1);
+    assert.equal((await pool.query('SELECT maintenance_last_code FROM game_save_usage WHERE user_id=$1 AND work_id=$2',key)).rows[0].maintenance_last_code,null);
+    assert.deepEqual((await f.service.content(f.actor,f.token,f.resource())).bytes,Buffer.from('{"level":2}'));
+    await due();const competing=await Promise.all([worker.runOnce(),createSaveMaintenanceWorker({repository:f.repository}).runOnce()]);
+    assert.equal(competing.filter(r=>r.status==='ok').length,1);
+    await due();let lostCommit=false;
+    const uncertainPool={connect:async()=>{const c=await pool.connect();return {query:async(q,v)=>{const r=await c.query(q,v);if(q==='COMMIT'&&!lostCommit){lostCommit=true;throw new Error('lost commit response');}return r;},release:()=>c.release()};}};
+    const runsBefore=Number((await pool.query('SELECT count(*) n FROM game_save_maintenance_runs WHERE work_id=$1',[f.workId])).rows[0].n);
+    const recovered=await createSaveMaintenanceWorker({repository:new PostgresGameSaveRepository(uncertainPool)}).runOnce();
+    assert.equal(recovered.status,'ok');assert.equal(lostCommit,true);
+    assert.equal(Number((await pool.query('SELECT count(*) n FROM game_save_maintenance_runs WHERE work_id=$1',[f.workId])).rows[0].n),runsBefore+1);
+    const counter=(await pool.query('SELECT retained_bytes,(SELECT COALESCE(sum(octet_length(payload_inline)),0) FROM game_save_payloads) actual FROM game_save_capacity')).rows[0];assert.equal(counter.retained_bytes,counter.actual);
+  });
 
   await t.test('creator health is owner-only aggregate; live database authority overrides forged roles and records histogram errors',async()=>{
     const f=await fixture(),other=await fixture();const cmd=f.command();await f.write(cmd);await rejected(f.write({...cmd,idempotencyKey:uuid()}),'SAVE_CONFLICT');
@@ -91,7 +181,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
       await admin.ops.setCapacity(admin.actor,operation({expectedVersion:initial.version,writesPaused:false,maxPayloadBytes:Number(initial.retainedBytes)+bytes.length}));
       const results=await Promise.allSettled([f.write(a),g.write(b)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.code,'SAVE_CAPACITY_EXCEEDED');
       const winner=results[0].status==='fulfilled'?f:g,cmd=winner===f?a:b,saved=results.find(r=>r.status==='fulfilled').value;
-      const cap=await admin.ops.capacity(admin.actor);assert.equal(BigInt(cap.retainedBytes),BigInt(initial.retainedBytes)+BigInt(bytes.length));assert.equal(cap.diskFreeBytes,null);assert.ok(BigInt(cap.saveTableBytes)>0);
+      const cap=await admin.ops.capacity(admin.actor);assert.equal(BigInt(cap.retainedBytes),BigInt(initial.retainedBytes)+BigInt(bytes.length));assert.ok(cap.diskFreeBytes===null||/^\d+$/.test(cap.diskFreeBytes));assert.ok(BigInt(cap.saveTableBytes)>0);
       await admin.ops.setCapacity(admin.actor,operation({expectedVersion:cap.version,writesPaused:true,maxPayloadBytes:Number(cap.maxPayloadBytes)}));
       assert.deepEqual(await winner.write(cmd),saved);assert.deepEqual((await winner.service.content(winner.actor,winner.token,winner.resource())).bytes,bytes);
       const slot=(await winner.library.list(winner.actor)).items[0];assert.deepEqual((await winner.library.content(winner.actor,{slotId:slot.slotId,revisionId:saved.revisionId})).bytes,bytes);

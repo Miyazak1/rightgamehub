@@ -1170,3 +1170,46 @@ Cursor 0.3.26 实际安装版保留登录完成历史读取、当前版本 32 �
 0048 后再次从落盘备份恢复到全新测试库：80 张表 SHA-256 指纹一致，新增 bad_payload_capacity 在内的 7 项异常计数全部为 0。源库 gamehub_s3_regression_test，目标 gamehub_restore_20261006155337628_172278_test；备份 3576792 字节，restore 34056 ms。此结果只代表本地测试环境。
 
 生产 cloudSave 门禁继续关闭。后续仍需周期维护调度与报警、配额/退役治理和 break-glass 正文访问流程、PG 数据盘/WAL 保护、跨服务混合负载，以及生产异地自动备份和 RPO/RTO 恢复验收。管理员本阶段没有读取或修改玩家正文的接口。VSIX 0.3.27 / Harness 0.1.9 与 Web 为本阶段候选构建，不能据此宣布 S3 全部完成。
+
+
+### S3 周期维护与 PG 数据盘保护（2026-10-07）
+
+0049_game_save_storage_maintenance 增加真实磁盘采样、单调写入预留计数、分区维护到期时间、系统维护审计和心跳状态。管理员 /admin/saves 展示采样时间、可用空间、WAL、新写入准入结果、维护心跳和待排查分区数。页面是刷新时的快照；异常代码和时间必须一起判断。没有新增管理员读取玩家正文的接口。
+
+**磁盘探针与写入准入**
+
+deploy/save-storage-probe.sh 在 postgres:16.10-alpine 中以 postgres 用户执行，数据卷只读挂载，容器根文件系统只读，移除全部 capabilities，禁止提权，不挂 Docker socket、不开放端口。每 15 秒采样，单次外层 timeout 10 秒，数据库连接/语句分别限制 3 秒；默认预算 64 MiB / 0.10 CPU。探针将本地 pg_controldata 标识与数据库 pg_control_system() 标识核对，拒绝不同集群、standby、自定义 tablespace、数据卷以外的 WAL 路径/设备；仅支持部署文件声明的同一 PGDATA 卷。克隆集群可能保留同一 system identifier，标识核对不是卷的密码学证明，部署仍必须保证挂载源正确。统计使用运行 PostgreSQL 用户可用的文件系统块/inode，以及 pg_ls_waldir() 的 WAL 文件总量。
+
+参考 PostgreSQL 16 官方说明：[pg_controldata](https://www.postgresql.org/docs/16/app-pgcontroldata.html)、[控制信息函数](https://www.postgresql.org/docs/16/functions-info.html#FUNCTIONS-CONTROLDATA)、[服务器文件函数](https://www.postgresql.org/docs/16/functions-admin.html#FUNCTIONS-ADMIN-GENFILE)。探针复用 Compose 内现有数据库所有者凭据，record_game_save_storage 为 invoker 函数并撤销 PUBLIC 执行权；没有给普通应用账号增加通用文件读取授权。
+
+NODE_ENV=production 强制 SAVE_STORAGE_REQUIRED=true。缺失、过期、来自其他集群或计数回退的采样会拒绝新 write/restore。默认阈值：
+
+| 配置 | 默认 | 含义 |
+| --- | --- | --- |
+| SAVE_STORAGE_MAX_AGE_SECONDS | 90 | 超过此采样年龄关闭新写入 |
+| SAVE_STORAGE_MIN_FREE_BYTES | 1073741824 | 至少保留 1 GiB |
+| SAVE_STORAGE_MAX_USED_PERCENT | 85 | 投影可用空间不少于总量 15% |
+| SAVE_STORAGE_MIN_FREE_INODE_PERCENT | 5 | 可用 inode 至少 5% |
+| SAVE_STORAGE_MAX_WAL_BYTES | 2147483648 | WAL 和待覆盖预留合计最多 2 GiB |
+
+每份新正文按 4 × payload bytes + 16 KiB 预留空间，由 payload INSERT 触发器与正文、指针、回执一同提交。探针在测磁盘**之前**读取单调计数水位，准入在容量行锁内扣除采样后尚未覆盖的预留及本次写入，因此多个并发请求不能重复使用同一采样余量。回滚不消耗预留，回执重放和删除不产生新正文预留；新采样只覆盖其测量前看到的水位。采样期间已实际反映在磁盘上的并发写入可能重复预留，保守拒绝可等下一次采样恢复。
+
+这些阈值和放大系数是保守准入策略，不是 PostgreSQL 物理分配或未来 WAL 大小的精确预测；其他服务、VACUUM、索引/备份等写盘仍可消耗空间。读取、导出、删除和已提交回执仍通过此门禁，但真实磁盘耗尽或数据库失联时并不保证它们必定成功。跨服务混合负载与生产容量验收仍必需。升级时保持 cloudSave 关闭，直到所有 API 实例均为新版并且新探针健康，避免旧实例绕过新增门禁。
+
+**周期维护**
+
+save-maintenance-worker-cli 使用独立最大 1 连接的池，每 30 秒最多选择一个到期的账号/作品/环境分区。所有存档变更先锁容量行，再锁 policy/usage；后台维护对容量行使用 NOWAIT，忙时立即让出。每条 SQL 250 ms、锁等待 100 ms；维护逻辑在语句之间检查 1 秒预算，数据库另设 2 秒空闲事务超时。总耗时检查不是硬实时超时，网络往返及最后一条在途 SQL 可超出该预算；必须继续观察生产 P95/P99。
+
+维护复用手动清理的同一 helper：核对 live/history 用量、抽检最多 10 份保留正文的大小及 SHA-256，按既有保留规则清理历史正文，修复计数。抽检不等于所有历史正文完整扫描。发现缺失当前正文或摘要异常时保留内容，不执行清理/修复，记录 SAVE_INTEGRITY_ALERT。成功后 6 小时再次到期；异常退避 15 分钟，其他分区继续前进。预算/语句超时撤销本批全部修改，再尝试记失败审计。每批固定 UUID，提交回执丢失时先查询不可变审计，避免把已成功批次标为失败。状态行竞争也会让出；暂时无法写入心跳/审计会在下轮重试，进程失联由心跳过期识别。
+
+game_save_maintenance_runs 为不可修改/删除的系统执行记录，与人工 game_save_admin_events 分开；只记录分区标识、计数和错误代码，不记录正文。maintenance_last_code 在成功复检后清除，健康分区成功不会掩盖其他分区的异常。运营页可见异常计数与过期心跳；外部告警通知、历史系统审计容量治理尚未完成。
+
+**部署与验收边界**
+
+两个新服务位于 opt-in 的 save-operations Compose profile；普通 deploy.sh 不自动启用。完整上线验收通过后，在服务器现有 deploy 目录由 COMPOSE_PROFILES=save-operations 启用原部署命令；当前不执行这一步，也不开放生产 cloudSave。先在与线上等价的资源限制下完成跨服务混合负载和异地备份恢复验收。数据卷、WAL、tablespace 分盘时必须扩展并重新验证探针，不能照用单卷结果。
+
+本轮：完整回归 372 通过、8 跳过；专用 PostgreSQL 套件 28 通过、0 跳过。覆盖缺失/过期/错集群采样、磁盘/inode/WAL门限、单份余量的并发争用、失败请求预留回滚、读/导出/删/重放保持准入、维护繁忙让出、超时清理回滚、损坏保留及退避、健康分区不掩盖旧异常、维护并发和丢失 COMMIT 响应。真实 postgres UID 70、只读数据卷探针采样成功；独立 tmpfs 初始化另一个集群后挂错路径的探针被拒绝。浏览器真实服务验证 PROBE_STALE → OK，维护 CLI 运行并产生心跳。Web、VSIX 0.3.28、Harness 0.1.10 构建通过；本轮未安装这两个客户端候选包。
+
+生产 cloudSave 继续关闭。剩余 S3 工作包括跨服务混合负载与全局资源治理、配额/退役流程、break-glass 正文访问审批、外部报警及生产异地自动备份/RPO/RTO；本次改动不代表整体 S3 上线就绪。
+
+0049 后落盘备份恢复至 gamehub_restore_20261007125006698_a15d76_test：83 张表指纹一致，7 项异常计数均为 0；备份 1314803 字节，restore 35078 ms。SHA-256：1432b6d81319c2f528a257960555365fbdbacf98cdac8ae68e075b7c031953c0。仅代表本机小型回归库，不能推导生产 RTO。

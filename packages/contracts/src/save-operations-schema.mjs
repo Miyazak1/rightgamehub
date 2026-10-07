@@ -12,7 +12,7 @@ export const saveOperationsSchemas={
   SaveHealthWork:obj({workId:id,title:text,policies:{type:'array',items:ref('SavePolicyControl')},usage:{type:'array',items:obj({channel,liveSlots:count,liveBytes:uint,historyBytes:uint,lastReconciledAt:nullable(time)})},traffic:{type:'array',items:ref('SaveTraffic')}}),
   SaveHealthPage:obj({items:{type:'array',maxItems:50,items:ref('SaveHealthWork')},nextAfterWorkId:nullable(id),windowHours:{type:'integer',const:24}}),
   SaveCapacityControl:obj(capacity),
-  SaveCapacityOverview:obj({...capacity,databaseBytes:uint,saveTableBytes:uint,diskFreeBytes:{type:'null'},telemetryDropped:count}),
+  SaveCapacityOverview:obj({...capacity,databaseBytes:uint,saveTableBytes:uint,diskFreeBytes:nullable(uint),storage:obj({required:bool,allowed:bool,code:text,observedAt:nullable(time),totalBytes:nullable(uint),walBytes:nullable(uint)}),maintenance:nullable(obj({lastTickAt:time,lastRunAt:nullable(time),status:en(['ok','idle','busy','error']),code:text,errorScopes:count})),telemetryDropped:count}),
   SavePolicyPauseRequest:obj({...auditInput,expectedVersion:uint,writesPaused:bool}),
   SaveCapacityRequest:obj({...auditInput,expectedVersion:uint,writesPaused:bool,maxPayloadBytes:{type:'integer',minimum:1,maximum:5368709120}}),
   SaveMaintenanceCursor:obj({userId:id,channel}),

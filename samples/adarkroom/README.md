@@ -214,3 +214,23 @@ node --test tests/platform/save-operations.test.cjs
 真实 PG 专项 26 通过，HTTP/采样/API 客户端边界 3 通过；完整回归 371 通过、8 跳过。容量关停时读取、导出、删除与成功回执仍可用；并发写入总量计数、对账修复、清理不删当前正文及版本事实、异常摘要只报警都有验收。生产 cloudSave 继续关闭，逻辑正文门限不等于实际 PG 数据盘剩余空间保护。
 
 同一恢复脚本在 0048 后再次验收回归库：80 张表指纹一致，七项异常为零（包含容量计数与实际正文总字节相等）。恢复库 gamehub_restore_20261006155337628_172278_test，备份 3576792 字节，恢复 34.056 秒，SHA-256 为 aca8583f621a608e013169a146ed4ee78a2f525e5b1ce43ef2f4463e8adaad22。备份和完整报告仍在忽略目录 .runtime/restore-rehearsals/20261006155337628_172278/，不提交仓库。
+
+
+### 2026-10-07：周期维护、PG 磁盘保护验收
+
+隔离工作树 game-services 新增迁移 0049；完整回归 372 通过、8 跳过，专用 PG 28 通过。测试容器 gamehub-save-storage-test 仅绑定 127.0.0.1:55439，最终源库 gamehub_storage_v2_test。原 ADR 临时容器在本轮开始时已不存在；本轮没有重建用户安装版登录或把新候选包装进 Cursor。
+
+磁盘保护使用真实只读 PGDATA 探针，验证正确卷采样、错误集群拒绝；过期采样和磁盘/WAL/inode 门限由受控测试注入。并发写入不能重复消费同一磁盘余量；已有回执、本人导出和删除仍通过准入。周期维护验证忙时让出、异常退避、清理超时回滚、摘要损坏保留，以及提交成功但响应丢失时不重复记审计。
+
+本地运营页显示 PROBE_STALE 后恢复 OK，维护 CLI 心跳及成功批次可见。候选 Web / VSIX 0.3.28 / Harness 0.1.10 构建通过；Cursor/Harness 安装交互验收未重复。真实探针、服务进程和临时 UI 管理员在验收后关闭/撤销；保留独立测试数据库及备份供复查。
+
+复验命令使用独立数据库：
+- GAMEHUB_GAME_SAVE_DATABASE_URL 指向上述 loopback 测试库，执行 node --test tests/platform/game-saves-postgres.test.cjs。
+- 普通测试：npm test；契约：npm run contracts:check。
+- 磁盘探针：以 postgres:16.10-alpine / postgres 用户、只读根文件系统和数据卷运行 deploy/save-storage-probe.sh --once；数据库必须与被挂载 PGDATA 属于同一集群，不可对生产随意复用测试注入。
+- 维护进程：DATABASE_URL 指向测试库，node apps/api/src/save-maintenance-worker-cli.mjs；--health 仅检查心跳。
+- 备份恢复：GAMEHUB_REHEARSAL_CONTAINER=gamehub-save-storage-test，执行 node scripts/rehearse-save-database-restore.mjs；始终恢复至随机命名新库。
+
+日志保留于隔离工作树 .runtime/save-storage-{all,pg-final,unit,web,vsix,harness,probe-wrong,restore}.log，截图为 save-storage-maintenance-verified.png。生产 cloudSave 未开放，仍需设计文档所列混合负载、治理和生产备份验收。
+
+0049 后落盘备份恢复至 gamehub_restore_20261007125006698_a15d76_test：83 张表指纹一致，7 项异常计数均为 0；备份 1314803 字节，restore 35078 ms。SHA-256：1432b6d81319c2f528a257960555365fbdbacf98cdac8ae68e075b7c031953c0。仅代表本机小型回归库，不能推导生产 RTO。

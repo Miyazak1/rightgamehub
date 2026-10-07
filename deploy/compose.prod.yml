@@ -45,6 +45,12 @@ x-api-environment: &api-environment
   RUNTIME_ROOT: /data/runtime
   VALIDATOR_ROOT: /data/validator
   VALIDATOR_EXECUTION_MODE: isolated
+  SAVE_STORAGE_REQUIRED: "true"
+  SAVE_STORAGE_MAX_AGE_SECONDS: ${SAVE_STORAGE_MAX_AGE_SECONDS:-90}
+  SAVE_STORAGE_MIN_FREE_BYTES: ${SAVE_STORAGE_MIN_FREE_BYTES:-1073741824}
+  SAVE_STORAGE_MAX_USED_PERCENT: ${SAVE_STORAGE_MAX_USED_PERCENT:-85}
+  SAVE_STORAGE_MIN_FREE_INODE_PERCENT: ${SAVE_STORAGE_MIN_FREE_INODE_PERCENT:-5}
+  SAVE_STORAGE_MAX_WAL_BYTES: ${SAVE_STORAGE_MAX_WAL_BYTES:-2147483648}
   STORAGE_WARN_PERCENT: "70"
   STORAGE_BLOCK_PERCENT: "85"
   STORAGE_MONITOR_INTERVAL_SECONDS: "60"
@@ -336,6 +342,66 @@ services:
       - validator:/data/validator
     networks: [backend]
     mem_limit: 256m
+
+  # Enable after save rollout acceptance: COMPOSE_PROFILES=save-operations.
+  save-storage-probe:
+    image: postgres:16.10-alpine
+    profiles: [save-operations]
+    user: postgres
+    entrypoint: ["sh", "/opt/save-storage-probe.sh"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: gamehub
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: gamehub
+      PGDATA: /var/lib/postgresql/data
+      PGCONNECT_TIMEOUT: "3"
+      PGOPTIONS: "-c statement_timeout=3000"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:ro
+      - ./save-storage-probe.sh:/opt/save-storage-probe.sh:ro
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [backend]
+    mem_limit: 64m
+    cpus: 0.10
+    healthcheck:
+      test: ["CMD-SHELL", "psql -XAtqc \"SELECT observed_at>clock_timestamp()-interval '90 seconds' FROM game_save_storage_status WHERE singleton\" | grep -qx t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  save-maintenance:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    profiles: [save-operations]
+    command: ["node", "apps/api/src/save-maintenance-worker-cli.mjs"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    environment:
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      NODE_OPTIONS: --max-old-space-size=64
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [backend]
+    mem_limit: 128m
+    cpus: 0.15
+    healthcheck:
+      test: ["CMD", "node", "apps/api/src/save-maintenance-worker-cli.mjs", "--health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   web:
     build:

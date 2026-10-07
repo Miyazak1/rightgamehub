@@ -35,3 +35,22 @@ test('operations API client uses account auth, exact operation identifiers, and 
   await api.getSaveHealth({admin:true,afterWorkId:'after/id'});assert.match(calls[2].url,/afterWorkId=after%2Fid$/);
   await api.maintainGameSaves('work-id',{operationId:input.operationId,reason:input.reason,mode:'inspect'});assert.equal(calls[3].options.method,'POST');
 });
+
+test('storage protection validates production configuration and conservative disk, WAL, inode and sample admission',async()=>{
+  const {loadSaveStorageProtection,storageAdmission,storageWriteCharge}=await import('../../apps/api/src/save-storage-protection.mjs');
+  assert.throws(()=>loadSaveStorageProtection({SAVE_STORAGE_REQUIRED:'false'},true),/must be true/);
+  for(const [key,value] of [['SAVE_STORAGE_MAX_AGE_SECONDS','121'],['SAVE_STORAGE_MIN_FREE_BYTES','1'],['SAVE_STORAGE_MAX_USED_PERCENT','96'],['SAVE_STORAGE_REQUIRED','yes']])assert.throws(()=>loadSaveStorageProtection({[key]:value}));
+  const config=loadSaveStorageProtection({},true),now=new Date(),row={observed_at:now,cluster_id:'123',actual_cluster_id:'123',total_bytes:'10737418240',available_bytes:'5368709120',total_inodes:'100',available_inodes:'80',wal_bytes:'16777216',write_baseline:'100'};
+  const check=(patch={},counter='100')=>storageAdmission(config,{...row,...patch},counter,{now,charge:storageWriteCharge(10)}).code;
+  assert.equal(storageAdmission(config,null,'0').code,'PROBE_MISSING');
+  assert.equal(check(),'OK');
+  assert.equal(check({observed_at:new Date(now-91000)}),'PROBE_STALE');
+  assert.equal(check({observed_at:new Date(+now+1000)}),'PROBE_STALE');
+  assert.equal(check({actual_cluster_id:'456'}),'PROBE_CLUSTER_MISMATCH');
+  assert.equal(check({write_baseline:'101'}),'PROBE_COUNTER_MISMATCH');
+  assert.equal(check({available_bytes:'1073741824'}),'DISK_HEADROOM');
+  assert.equal(check({},'5368709220'),'DISK_HEADROOM');
+  assert.equal(check({available_inodes:'4'}),'INODE_HEADROOM');
+  assert.equal(check({wal_bytes:'2147483648'}),'WAL_HEADROOM');
+  assert.equal(storageAdmission(loadSaveStorageProtection(),null,'0').code,'DISABLED');
+});

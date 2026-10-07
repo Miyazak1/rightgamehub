@@ -157,7 +157,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const gameSessionService = createGameSessionService({ repository: new PostgresGameSessionRepository(database.pool) });
-  const gameSaveRepository = new PostgresGameSaveRepository(database.pool);
+  const gameSaveRepository = new PostgresGameSaveRepository(database.pool,{storageProtection:config.saveStorageProtection});
   const saveMetrics=createSaveHealthMetrics({pool:database.pool});
   const saveOperationsService=createSaveOperationsService({repository:gameSaveRepository,metrics:saveMetrics});
   const gameSaveService = createGameSaveService({ repository: gameSaveRepository, gameSessionService, metrics:saveMetrics });

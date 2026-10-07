@@ -1,3 +1,4 @@
+import {loadSaveStorageProtection} from './save-storage-protection.mjs';
 import crypto from 'node:crypto';
 import { parseTrustedRulesKeys } from '@gamehub/rules-sdk';
 
@@ -128,6 +129,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     runtimeRoot: env.RUNTIME_ROOT ?? '.runtime/platform/published',
     validatorRoot: env.VALIDATOR_ROOT ?? '.runtime/platform/validator',
     validatorExecutionMode,
+    saveStorageProtection:loadSaveStorageProtection(env,nodeEnv==='production'),
     storageWarnPercent,
     storageBlockPercent,
     storageMonitorIntervalSeconds: integer(env.STORAGE_MONITOR_INTERVAL_SECONDS, 60, 'STORAGE_MONITOR_INTERVAL_SECONDS', 30, 3600),

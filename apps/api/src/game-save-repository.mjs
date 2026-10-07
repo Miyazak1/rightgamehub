@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {loadSaveStorageProtection,reserveSaveStorage} from './save-storage-protection.mjs';
 import { withTransaction } from './database.mjs';
 import { GameSaveError,SAVE_LIMITS,saveError } from './game-save-service.mjs';
 
@@ -22,7 +23,7 @@ const currentQuery=`SELECT r.*,s.namespace,s.slot_key FROM game_save_slots s
   WHERE s.user_id=$1 AND s.work_id=$2 AND s.channel=$3 AND s.namespace=$4 AND s.slot_key=$5`;
 
 export class PostgresGameSaveRepository {
-  constructor(pool) {this.pool=pool;}
+  constructor(pool,{storageProtection=loadSaveStorageProtection()}={}) {this.pool=pool;this.storageProtection=storageProtection;}
   async transaction(action) {
     try {
       return await withTransaction(this.pool,async tx=>{
@@ -119,6 +120,7 @@ export class PostgresGameSaveRepository {
     if(!tombstone&&(capacity.writes_paused||BigInt(capacity.retained_bytes)+BigInt(bytes.length)>BigInt(capacity.max_payload_bytes)))
       throw new GameSaveError('SAVE_CAPACITY_EXCEEDED',507,'Cloud save capacity is closed; keep the local copy.',{},true);
     if(!tombstone) {
+      await reserveSaveStorage(tx,this.storageProtection,capacity,bytes.length);
       if(current)assertReadable(scope,input.namespace,current);
       const approved=scope.namespaces[input.namespace];
       if(schema<p.schema_min||schema>p.schema_max||(input.kind==='write'?schema!==approved.writeSchema:schema<approved.readSchema.min||schema>approved.readSchema.max))
