@@ -234,3 +234,12 @@ node --test tests/platform/save-operations.test.cjs
 日志保留于隔离工作树 .runtime/save-storage-{all,pg-final,unit,web,vsix,harness,probe-wrong,restore}.log，截图为 save-storage-maintenance-verified.png。生产 cloudSave 未开放，仍需设计文档所列混合负载、治理和生产备份验收。
 
 0049 后落盘备份恢复至 gamehub_restore_20261007125006698_a15d76_test：83 张表指纹一致，7 项异常计数均为 0；备份 1314803 字节，restore 35078 ms。SHA-256：1432b6d81319c2f528a257960555365fbdbacf98cdac8ae68e075b7c031953c0。仅代表本机小型回归库，不能推导生产 RTO。
+
+
+### S3 混合负载门禁（2026-10-07）
+
+新增独立 Compose、固定节拍压测、Realtime 事件循环指标及恢复核对，使用真实签名迷阵、16 个存档账号、4 场权威对局与并发 pg_dump。CPU 配额合计 2 核，内存上限合计 1568 MiB；宿主本身是 20 核，不能视为等价生产机器。
+
+完整复测未通过延迟门槛：默认备份期间读取/对局 ACK P99 为 723.1/768.1 ms，超过预声明的 500 ms；停止后台任务后回落。关闭压缩对照也失败，并有 11 次调度漏发。497 份存档成功回执、709 个对局动作与源库精确匹配，第一份备份开始前已确认的操作全部在恢复库，源库/恢复库 7 项异常均为 0。完整回归 375 通过、8 跳过，合同校验通过。
+
+实现与实测证据见 [混合负载验收记录](../../docs/game-save-mixed-load-acceptance.zh-CN.md)。生产 cloudSave 继续关闭，无新迁移、无生产部署。备份资源隔离和共享后台任务准入仍是明确阻塞；真实竞赛 verifier、构建任务及生产异地恢复尚未覆盖。

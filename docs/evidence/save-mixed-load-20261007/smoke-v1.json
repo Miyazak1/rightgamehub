@@ -1,0 +1,1623 @@
+{
+  "schemaVersion": 1,
+  "project": "gamehub-save-mixed-1791379888018-4644a8",
+  "smoke": true,
+  "at": "2026-10-07T13:31:28.021Z",
+  "productionReady": false,
+  "coverage": [
+    "signed Mizhen authoritative matches",
+    "real bearer authentication",
+    "real game sessions and cloud saves",
+    "PostgreSQL",
+    "Redis",
+    "storage probe",
+    "periodic maintenance",
+    "concurrent pg_dump",
+    "restore of mixed-phase backup"
+  ],
+  "excluded": [
+    "competition verifier (not implemented in this branch)",
+    "source/rule builders",
+    "global shared resource governor",
+    "TLS/reverse proxy",
+    "production disk/host",
+    "offsite backup/RPO/RTO"
+  ],
+  "thresholds": {
+    "saveP95Ms": 300,
+    "saveP99Ms": 1000,
+    "readP95Ms": 150,
+    "readP99Ms": 500,
+    "commandP95Ms": 150,
+    "commandP99Ms": 500,
+    "heartbeatP95Ms": 100,
+    "heartbeatP99Ms": 250,
+    "maxWindowLoopP99Ms": 100,
+    "maxSchedulerMisses": 0,
+    "maxErrors": 0
+  },
+  "offered": {
+    "actors": 4,
+    "pairs": 1,
+    "saveIntervalMs": 6000,
+    "readIntervalMs": 4000,
+    "commandIntervalMs": 1000,
+    "heartbeatIntervalMs": 2000,
+    "fillerMiB": 8
+  },
+  "phases": [
+    {
+      "name": "baseline",
+      "seconds": 12,
+      "metrics": {
+        "save": {
+          "count": 8,
+          "p50": 76.72149999999965,
+          "p95": 173.94380000000092,
+          "p99": 173.94380000000092,
+          "max": 173.94380000000092
+        },
+        "read": {
+          "count": 12,
+          "p50": 46.269799999994575,
+          "p95": 75.61349999999948,
+          "p99": 75.61349999999948,
+          "max": 75.61349999999948
+        },
+        "command": {
+          "count": 12,
+          "p50": 30.032200000001467,
+          "p95": 89.69339999999647,
+          "p99": 89.69339999999647,
+          "max": 89.69339999999647
+        },
+        "fanout": {
+          "count": 12,
+          "p50": 32.609700000000885,
+          "p95": 92.71669999999722,
+          "p99": 92.71669999999722,
+          "max": 92.71669999999722
+        },
+        "heartbeat": {
+          "count": 12,
+          "p50": 1.4887000000016997,
+          "p95": 14.224499999996624,
+          "p99": 14.224499999996624,
+          "max": 14.224499999996624
+        },
+        "database": {
+          "count": 3,
+          "p50": 9.22559999999794,
+          "p95": 13.691299999998591,
+          "p99": 13.691299999998591,
+          "max": 13.691299999998591
+        }
+      },
+      "offered": 47,
+      "missed": 0,
+      "errors": [],
+      "observations": [
+        {
+          "at": "2026-10-07T13:32:21.901Z",
+          "pg": {
+            "database_bytes": "22696419",
+            "wal_bytes": "33554432",
+            "connections": 4,
+            "lock_waiters": 0,
+            "maintenance_runs": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020774911,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.063537151,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379938.983,
+            "gamehub_realtime_process_rss_bytes": 86876160,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 4,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "9.34%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "16.67%",
+              "MemUsage": "64.03MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "965kB / 841kB",
+              "PIDs": "18"
+            },
+            {
+              "BlockIO": "123kB / 89.1MB",
+              "CPUPerc": "3.95%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "10.42%",
+              "MemUsage": "66.7MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "9.25MB / 595kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "9.76%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "19.99%",
+              "MemUsage": "38.38MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "127kB / 113kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "1.78%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.74%",
+              "MemUsage": "5.977MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "16.4kB / 10.3kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.84%",
+              "MemUsage": "548KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "4.28kB / 3.04kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:26.948Z",
+          "pg": {
+            "database_bytes": "23204323",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020692991,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.025116671,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379943.983,
+            "gamehub_realtime_process_rss_bytes": 88023040,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 14,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "10.69%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "13.43%",
+              "MemUsage": "51.58MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "2.23MB / 1.69MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 89.6MB",
+              "CPUPerc": "1.19%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "10.33%",
+              "MemUsage": "66.09MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "9.75MB / 2.17MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.03%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "19.99%",
+              "MemUsage": "38.38MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "284kB / 253kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "2.20%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "4.12%",
+              "MemUsage": "6.59MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "20.3kB / 13.8kB",
+              "PIDs": "7"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "1.40%",
+              "MemUsage": "916KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "6.93kB / 5.78kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:31.891Z",
+          "pg": {
+            "database_bytes": "23368163",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020676607,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.063012863,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379948.982,
+            "gamehub_realtime_process_rss_bytes": 88186880,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 24,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.69%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "14.44%",
+              "MemUsage": "55.45MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "4.03MB / 2.8MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 90.1MB",
+              "CPUPerc": "2.66%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.02%",
+              "MemUsage": "70.54MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "10.2MB / 3.19MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.36%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "19.75%",
+              "MemUsage": "37.93MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "412kB / 369kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.32%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.32%",
+              "MemUsage": "5.305MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "25.6kB / 18.3kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.85%",
+              "MemUsage": "560KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "6.93kB / 5.78kB",
+              "PIDs": "2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed",
+      "seconds": 30,
+      "metrics": {
+        "save": {
+          "count": 20,
+          "p50": 60.76329999999143,
+          "p95": 117.95820000000822,
+          "p99": 210.9274000000005,
+          "max": 210.9274000000005
+        },
+        "read": {
+          "count": 30,
+          "p50": 52.37229999998817,
+          "p95": 83.06949999999779,
+          "p99": 103.66000000000349,
+          "max": 103.66000000000349
+        },
+        "command": {
+          "count": 30,
+          "p50": 31.65909999998985,
+          "p95": 60.37589999999909,
+          "p99": 60.89989999998943,
+          "max": 60.89989999998943
+        },
+        "fanout": {
+          "count": 30,
+          "p50": 34.32119999999122,
+          "p95": 86.99730000000272,
+          "p99": 95.3686999999918,
+          "max": 95.3686999999918
+        },
+        "heartbeat": {
+          "count": 30,
+          "p50": 1.9271000000007916,
+          "p95": 34.68379999999888,
+          "p99": 42.21809999999823,
+          "max": 42.21809999999823
+        },
+        "database": {
+          "count": 6,
+          "p50": 3.8619000000035157,
+          "p95": 12.130400000009104,
+          "p99": 12.130400000009104,
+          "max": 12.130400000009104
+        }
+      },
+      "offered": 118,
+      "missed": 0,
+      "errors": [],
+      "observations": [
+        {
+          "at": "2026-10-07T13:32:38.018Z",
+          "pg": {
+            "database_bytes": "23720419",
+            "wal_bytes": "33554432",
+            "connections": 6,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020840447,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.067764223,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379953.982,
+            "gamehub_realtime_process_rss_bytes": 88186880,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 28,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "12.32%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "14.94%",
+              "MemUsage": "57.38MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "4.49MB / 3.1MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 114MB",
+              "CPUPerc": "29.04%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.61%",
+              "MemUsage": "74.3MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "10.4MB / 3.64MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "10.05%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.11%",
+              "MemUsage": "38.61MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "510kB / 461kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "1.81%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.12%",
+              "MemUsage": "4.992MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "28.1kB / 20.4kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "11.14%",
+              "MemUsage": "14.26MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.55kB / 7.77kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.85%",
+              "MemUsage": "560KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "7.09kB / 5.78kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:43.003Z",
+          "pg": {
+            "database_bytes": "24195555",
+            "wal_bytes": "33554432",
+            "connections": 6,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020987903,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.063275007,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379958.981,
+            "gamehub_realtime_process_rss_bytes": 88186880,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 38,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.89%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "14.99%",
+              "MemUsage": "57.56MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "5.76MB / 3.95MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 114MB",
+              "CPUPerc": "1.43%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.62%",
+              "MemUsage": "74.34MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "10.9MB / 5.22MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.02%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.18%",
+              "MemUsage": "38.75MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "674kB / 611kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "1.70%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.60%",
+              "MemUsage": "5.754MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "34.2kB / 25.7kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "10.81%",
+              "MemUsage": "13.84MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.55kB / 7.77kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "1.46%",
+              "MemUsage": "960KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "9.74kB / 8.65kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:47.050Z",
+          "pg": {
+            "database_bytes": "24441315",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020561919,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.020807679,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379963.982,
+            "gamehub_realtime_process_rss_bytes": 88678400,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 48,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "13.95%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.85%",
+              "MemUsage": "60.86MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "7.56MB / 5.07MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 115MB",
+              "CPUPerc": "2.42%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.23%",
+              "MemUsage": "71.84MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "11.4MB / 6.25MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "9.69%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.47%",
+              "MemUsage": "39.3MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "806kB / 735kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "2.01%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.49%",
+              "MemUsage": "5.586MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "38.7kB / 29.5kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "10.81%",
+              "MemUsage": "13.84MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.61kB / 7.97kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.85%",
+              "MemUsage": "556KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "9.74kB / 8.65kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:53.008Z",
+          "pg": {
+            "database_bytes": "24826339",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020594687,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.020742143,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379968.982,
+            "gamehub_realtime_process_rss_bytes": 88944640,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 58,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.15%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.64%",
+              "MemUsage": "60.06MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "9.11MB / 6.1MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 115MB",
+              "CPUPerc": "2.37%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.60%",
+              "MemUsage": "74.21MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "12MB / 7.56MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.42%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.05%",
+              "MemUsage": "38.5MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "973kB / 890kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.33%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.09%",
+              "MemUsage": "4.949MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "44kB / 34.3kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "10.63%",
+              "MemUsage": "13.61MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.61kB / 7.97kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.85%",
+              "MemUsage": "556KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "9.74kB / 8.65kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:32:57.052Z",
+          "pg": {
+            "database_bytes": "25293283",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020840447,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.041844735,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379973.982,
+            "gamehub_realtime_process_rss_bytes": 89305088,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 68,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "10.93%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.88%",
+              "MemUsage": "60.98MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "10.2MB / 6.73MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 116MB",
+              "CPUPerc": "2.23%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.51%",
+              "MemUsage": "73.66MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "12.2MB / 8.58MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "9.73%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.72%",
+              "MemUsage": "39.77MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "1.14MB / 1.05MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.35%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.15%",
+              "MemUsage": "5.035MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "48.4kB / 38kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "10.63%",
+              "MemUsage": "13.61MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.61kB / 7.97kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.02%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "3.26%",
+              "MemUsage": "2.086MiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "12.4kB / 11.5kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:33:03.033Z",
+          "pg": {
+            "database_bytes": "25678307",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020856831,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.052494335,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379978.98,
+            "gamehub_realtime_process_rss_bytes": 89632768,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 78,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.96%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.60%",
+              "MemUsage": "59.91MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "11.5MB / 7.64MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 129MB",
+              "CPUPerc": "41.91%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "11.79%",
+              "MemUsage": "75.43MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "12.8MB / 10.3MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "10.15%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.55%",
+              "MemUsage": "39.46MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "1.34MB / 1.24MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.41%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.48%",
+              "MemUsage": "5.574MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "54.3kB / 43.2kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+              "ID": "a25439e763c3",
+              "MemPerc": "8.92%",
+              "MemUsage": "11.42MiB / 128MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-maintenance-1",
+              "NetIO": "5.61kB / 7.97kB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.84%",
+              "MemUsage": "552KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "12.4kB / 11.5kB",
+              "PIDs": "2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "recovery",
+      "seconds": 12,
+      "metrics": {
+        "save": {
+          "count": 8,
+          "p50": 54.428899999998976,
+          "p95": 74.08690000000934,
+          "p99": 74.08690000000934,
+          "max": 74.08690000000934
+        },
+        "read": {
+          "count": 12,
+          "p50": 50.294999999998254,
+          "p95": 79.43919999999343,
+          "p99": 79.43919999999343,
+          "max": 79.43919999999343
+        },
+        "command": {
+          "count": 11,
+          "p50": 28.880099999994854,
+          "p95": 56.14999999999418,
+          "p99": 56.14999999999418,
+          "max": 56.14999999999418
+        },
+        "fanout": {
+          "count": 11,
+          "p50": 32.22699999999895,
+          "p95": 58.85450000000128,
+          "p99": 58.85450000000128,
+          "max": 58.85450000000128
+        },
+        "heartbeat": {
+          "count": 12,
+          "p50": 1.7932999999902677,
+          "p95": 7.962200000009034,
+          "p99": 7.962200000009034,
+          "max": 7.962200000009034
+        },
+        "database": {
+          "count": 3,
+          "p50": 4.15329999999085,
+          "p95": 12.345000000001164,
+          "p99": 12.345000000001164,
+          "max": 12.345000000001164
+        }
+      },
+      "offered": 47,
+      "missed": 0,
+      "errors": [],
+      "observations": [
+        {
+          "at": "2026-10-07T13:33:09.121Z",
+          "pg": {
+            "database_bytes": "26120675",
+            "wal_bytes": "33554432",
+            "connections": 5,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020692991,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.020856831,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379983.98,
+            "gamehub_realtime_process_rss_bytes": 89796608,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 87,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "1.64%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "16.12%",
+              "MemUsage": "61.89MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "12.9MB / 8.58MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 132MB",
+              "CPUPerc": "4.43%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "12.07%",
+              "MemUsage": "77.23MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "13.3MB / 11.1MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "9.90%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.88%",
+              "MemUsage": "40.1MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "1.5MB / 1.38MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.34%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "2.93%",
+              "MemUsage": "4.691MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "62.3kB / 50.5kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.84%",
+              "MemUsage": "552KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "12.4kB / 11.5kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:33:14.149Z",
+          "pg": {
+            "database_bytes": "26452495",
+            "wal_bytes": "33554432",
+            "connections": 6,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020611071,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.021217279,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379988.98,
+            "gamehub_realtime_process_rss_bytes": 89972736,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 99,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.50%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.27%",
+              "MemUsage": "58.65MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "14.9MB / 9.82MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 133MB",
+              "CPUPerc": "1.30%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "12.35%",
+              "MemUsage": "79.05MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "13.8MB / 12.7MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.88%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.83%",
+              "MemUsage": "39.99MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "1.66MB / 1.52MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.31%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "2.76%",
+              "MemUsage": "4.422MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "67kB / 54.8kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "2.70%",
+              "MemUsage": "1.73MiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "15kB / 14.4kB",
+              "PIDs": "2"
+            }
+          ]
+        },
+        {
+          "at": "2026-10-07T13:33:19.130Z",
+          "pg": {
+            "database_bytes": "26620387",
+            "wal_bytes": "33554432",
+            "connections": 6,
+            "lock_waiters": 0,
+            "maintenance_runs": 1
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020398079,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.020676607,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791379993.981,
+            "gamehub_realtime_process_rss_bytes": 90255360,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 109,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "containers": [
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "10.09%",
+              "Container": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+              "ID": "148f4f6ba050",
+              "MemPerc": "15.29%",
+              "MemUsage": "58.71MiB / 384MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-api-1",
+              "NetIO": "16.2MB / 10.7MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "123kB / 133MB",
+              "CPUPerc": "2.29%",
+              "Container": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+              "ID": "cb6da86695f0",
+              "MemPerc": "12.29%",
+              "MemUsage": "78.63MiB / 640MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-postgres-1",
+              "NetIO": "14.3MB / 13.7MB",
+              "PIDs": "12"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.77%",
+              "Container": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+              "ID": "349ed9c7aedf",
+              "MemPerc": "20.99%",
+              "MemUsage": "40.29MiB / 192MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-realtime-1",
+              "NetIO": "1.78MB / 1.63MB",
+              "PIDs": "11"
+            },
+            {
+              "BlockIO": "4.1kB / 16.4kB",
+              "CPUPerc": "0.32%",
+              "Container": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+              "ID": "aca73278ec46",
+              "MemPerc": "3.36%",
+              "MemUsage": "5.371MiB / 160MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-redis-1",
+              "NetIO": "70.9kB / 58.2kB",
+              "PIDs": "6"
+            },
+            {
+              "BlockIO": "0B / 0B",
+              "CPUPerc": "0.00%",
+              "Container": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+              "ID": "f52e8d703631",
+              "MemPerc": "0.85%",
+              "MemUsage": "556KiB / 64MiB",
+              "Name": "gamehub-save-mixed-1791379888018-4644a8-save-storage-probe-1",
+              "NetIO": "15kB / 14.4kB",
+              "PIDs": "2"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "backups": [
+    {
+      "file": "/tmp/mixed-backup-0.dump",
+      "sha256": "58adf1f7757d78c473615c166d30763add135f3c3d8dfa5b72d3c284a00a6745",
+      "bytes": 11397500,
+      "durationMs": 2317.914499999999
+    },
+    {
+      "file": "/tmp/mixed-backup-1.dump",
+      "sha256": "40c9f644a199870dc3bae15300f2aef179e257fd76080dd53d6a39234f5d9d69",
+      "bytes": 12773909,
+      "durationMs": 2356.232799999998
+    }
+  ],
+  "checks": [
+    {
+      "name": "baseline: no errors",
+      "ok": true
+    },
+    {
+      "name": "baseline: offered load sustained",
+      "ok": true
+    },
+    {
+      "name": "baseline: save samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: save p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: save p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: read samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: read p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: read p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: command samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: command p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: command p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: fan-out p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: loop windows present",
+      "ok": true
+    },
+    {
+      "name": "baseline: event loop delay",
+      "ok": true
+    },
+    {
+      "name": "mixed: no errors",
+      "ok": true
+    },
+    {
+      "name": "mixed: offered load sustained",
+      "ok": true
+    },
+    {
+      "name": "mixed: save samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: save p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: save p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: read samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: read p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: read p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: command samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: command p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: command p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: fan-out p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: loop windows present",
+      "ok": true
+    },
+    {
+      "name": "mixed: event loop delay",
+      "ok": true
+    },
+    {
+      "name": "recovery: no errors",
+      "ok": true
+    },
+    {
+      "name": "recovery: offered load sustained",
+      "ok": true
+    },
+    {
+      "name": "recovery: save samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: save p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: save p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: read samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: read p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: read p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: command samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: command p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: command p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: fan-out p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: loop windows present",
+      "ok": true
+    },
+    {
+      "name": "recovery: event loop delay",
+      "ok": true
+    },
+    {
+      "name": "at least two concurrent backups",
+      "ok": true
+    },
+    {
+      "name": "no OOM or restarts",
+      "ok": true
+    },
+    {
+      "name": "source invariants",
+      "ok": true
+    },
+    {
+      "name": "restored invariants",
+      "ok": true
+    },
+    {
+      "name": "all save receipts present",
+      "ok": true
+    },
+    {
+      "name": "all acknowledged match commands present",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "gitHead": "e586b586649b9d4118a756b48c28718b77e6b91b",
+  "gitDirty": true,
+  "budget": {
+    "cpu": 2,
+    "memoryBytes": 1644167168,
+    "kind": "sum of service quotas; not a production-equivalent host",
+    "containers": [
+      {
+        "id": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+        "service": "api",
+        "image": "sha256:54a8ba50cfeaab79fa16411eff2d56b63717738ce7637619dc8b1d5a75275b39",
+        "cpus": 0.65,
+        "memoryBytes": 402653184,
+        "status": "running",
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "c2fdb002c88b940ecdbc8c5a9e6d2d3e3070de9c53beed9634dafd12821f7056",
+        "service": "migrate",
+        "image": "sha256:54a8ba50cfeaab79fa16411eff2d56b63717738ce7637619dc8b1d5a75275b39",
+        "cpus": 0.6,
+        "memoryBytes": 402653184,
+        "status": "exited",
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+        "service": "postgres",
+        "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "cpus": 0.6,
+        "memoryBytes": 671088640,
+        "status": "running",
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+        "service": "realtime",
+        "image": "sha256:730abb1940fac7260f7467cb6a941e92eeb78baf36bdd836649caca9120db697",
+        "cpus": 0.5,
+        "memoryBytes": 201326592,
+        "status": "running",
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+        "service": "redis",
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+        "cpus": 0.1,
+        "memoryBytes": 167772160,
+        "status": "running",
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+        "service": "save-storage-probe",
+        "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "cpus": 0.05,
+        "memoryBytes": 67108864,
+        "status": "running",
+        "oomKilled": false,
+        "restartCount": 0
+      }
+    ]
+  },
+  "docker": "20 CPUs; 12407349248 bytes; linux",
+  "rules": {
+    "installed": true,
+    "protocol": "gamehub.rules-manifest.v1",
+    "manifestSha256": "3294b07765d1e48a50c8ee7d9292f361e24656d5b037f1e3fc44d9447989df1c",
+    "keyId": "mizhen-release-2026-09",
+    "createdAt": "2026-09-30T00:00:00.000Z",
+    "adapterCount": 1
+  },
+  "invariants": {
+    "bad_pointers": 0,
+    "missing_current": 0,
+    "bad_payloads": 0,
+    "bad_receipts": 0,
+    "bad_capacity": 0,
+    "bad_usage": 0,
+    "bad_match_sequence": 0
+  },
+  "receipts": 40,
+  "matchCommands": 53,
+  "maintenance": [
+    {
+      "status": "ok",
+      "code": "OK",
+      "count": 1
+    }
+  ],
+  "unexpectedSocketErrors": 0,
+  "restoredInvariants": {
+    "bad_pointers": 0,
+    "missing_current": 0,
+    "bad_payloads": 0,
+    "bad_receipts": 0,
+    "bad_capacity": 0,
+    "bad_usage": 0,
+    "bad_match_sequence": 0
+  },
+  "finalContainers": [
+    {
+      "id": "148f4f6ba050d16cdf6be562b01fa1604c251553354c1de15b1b80b6a20dc53d",
+      "service": "api",
+      "image": "sha256:54a8ba50cfeaab79fa16411eff2d56b63717738ce7637619dc8b1d5a75275b39",
+      "cpus": 0.65,
+      "memoryBytes": 402653184,
+      "status": "running",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "c2fdb002c88b940ecdbc8c5a9e6d2d3e3070de9c53beed9634dafd12821f7056",
+      "service": "migrate",
+      "image": "sha256:54a8ba50cfeaab79fa16411eff2d56b63717738ce7637619dc8b1d5a75275b39",
+      "cpus": 0.6,
+      "memoryBytes": 402653184,
+      "status": "exited",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "cb6da86695f026bbfde98f78525116ec407340b1acb6821bd90c40c059a5b628",
+      "service": "postgres",
+      "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "cpus": 0.6,
+      "memoryBytes": 671088640,
+      "status": "running",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "349ed9c7aedfe225974c323fd0db9b7db7535c48afcd9b61d61bef12c67c34ba",
+      "service": "realtime",
+      "image": "sha256:730abb1940fac7260f7467cb6a941e92eeb78baf36bdd836649caca9120db697",
+      "cpus": 0.5,
+      "memoryBytes": 201326592,
+      "status": "running",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "aca73278ec46a93c047bd94a730b39cf69173a30452297f961ad09df467cdd53",
+      "service": "redis",
+      "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "cpus": 0.1,
+      "memoryBytes": 167772160,
+      "status": "running",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "a25439e763c3dca584564364cd51beed10fcc68e73cb3e52e68179068256265d",
+      "service": "save-maintenance",
+      "image": "sha256:54a8ba50cfeaab79fa16411eff2d56b63717738ce7637619dc8b1d5a75275b39",
+      "cpus": 0.1,
+      "memoryBytes": 134217728,
+      "status": "exited",
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "f52e8d7036312205259b34da9692340f67a276d1f6114c2b32408a7d171927cc",
+      "service": "save-storage-probe",
+      "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "cpus": 0.05,
+      "memoryBytes": 67108864,
+      "status": "running",
+      "oomKilled": false,
+      "restartCount": 0
+    }
+  ],
+  "localGatePassed": true
+}

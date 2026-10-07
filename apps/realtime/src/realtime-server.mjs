@@ -1,3 +1,4 @@
+import {createRealtimePerformanceMetrics} from './performance-metrics.mjs';
 import crypto from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -12,12 +13,14 @@ const rejectUpgrade = (socket, statusCode, message) => {
 export function createRealtimeServer({ ticketStore, roomSessionManager, matchSessionManager, matchTimeoutWorker, rulesStatus = null, allowedOrigins = [], trustEditorWebviews = false, nodeEnv = 'development', heartbeatIntervalMs = 20_000, reconnectGraceMs = 120_000, logger = console } = {}) {
   if (!ticketStore?.consume || !ticketStore?.ping) throw new TypeError('A realtime ticket store is required.');
   const trustedOrigins = new Set(allowedOrigins);
+  const performanceMetrics=createRealtimePerformanceMetrics();
   const metrics = { connectionsTotal: 0,messagesTotal: 0,commandFailuresTotal: 0 };
   const server = createServer(async (request, response) => {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname;
     if (path === '/metrics') {
       response.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
       return response.end([
+        performanceMetrics.text(),
         '# TYPE gamehub_realtime_connections gauge',
         `gamehub_realtime_connections ${sockets.size}`,
         '# TYPE gamehub_realtime_connections_total counter',
@@ -144,6 +147,7 @@ export function createRealtimeServer({ ticketStore, roomSessionManager, matchSes
     },
     async close() {
       clearInterval(heartbeat);
+      performanceMetrics.close();
       roomSessionManager?.close();
       matchSessionManager?.close();
       matchTimeoutWorker?.stop();

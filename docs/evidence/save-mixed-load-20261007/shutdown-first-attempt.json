@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-07T14:03:47.471Z",
+  "reason": "Default Compose stop timeout killed PostgreSQL during shutdown; verify recovery and a 60-second graceful stop.",
+  "runnerSha256": "9ce51fe687a5ce2ff0afa91921f4349c366e88a8f8517bbdb09740cfde2fa3f1",
+  "projects": [
+    {
+      "project": "gamehub-save-mixed-1791379888018-4644a8",
+      "before": {
+        "status": "exited",
+        "exitCode": 137,
+        "oomKilled": false
+      },
+      "invariants": {
+        "gamehub_mixed_load_test": {
+          "bad_pointers": 0,
+          "missing_current": 0,
+          "bad_payloads": 0,
+          "bad_receipts": 0,
+          "bad_capacity": 0,
+          "bad_usage": 0,
+          "bad_match_sequence": 0
+        },
+        "gamehub_mixed_restore_test": {
+          "bad_pointers": 0,
+          "missing_current": 0,
+          "bad_payloads": 0,
+          "bad_receipts": 0,
+          "bad_capacity": 0,
+          "bad_usage": 0,
+          "bad_match_sequence": 0
+        }
+      },
+      "stopMs": 1996.3472999999994,
+      "after": {
+        "status": "exited",
+        "exitCode": 0,
+        "oomKilled": false
+      },
+      "passed": true
+    },
+    {
+      "project": "gamehub-save-mixed-1791380145207-47583e",
+      "before": {
+        "status": "exited",
+        "exitCode": 137,
+        "oomKilled": false
+      },
+      "stopMs": 2993.6281000000017,
+      "after": {
+        "status": "exited",
+        "exitCode": 0,
+        "oomKilled": false
+      },
+      "passed": false
+    }
+  ]
+}

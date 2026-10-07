@@ -1,0 +1,135 @@
+# Dedicated local laboratory. Never combine with compose.prod.yml.
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_DB: gamehub_mixed_load_test
+      POSTGRES_USER: gamehub_test
+      POSTGRES_PASSWORD: ${MIXED_PASSWORD:?generated test password required}
+    ports: ["127.0.0.1:${MIXED_PG_PORT:-55739}:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    mem_limit: 640m
+    cpus: 0.60
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gamehub_test", "-d", "gamehub_mixed_load_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes: ["redis-data:/data"]
+    mem_limit: 160m
+    cpus: 0.10
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: ${MIXED_API_IMAGE:?generated image tag required}
+    environment: &api-env
+      NODE_ENV: production
+      DATABASE_URL: postgresql://gamehub_test:${MIXED_PASSWORD}@postgres:5432/gamehub_mixed_load_test
+      REDIS_URL: redis://redis:6379
+      OTP_HMAC_KEY: ${MIXED_OTP:?generated test key required}
+      API_HOST: 0.0.0.0
+      API_PORT: "3090"
+      REALTIME_PUBLIC_URL: wss://localhost:${MIXED_RT_PORT:-55793}/v1/realtime
+      GUESS_BAIKE_AUTOMATION_ENABLED: "false"
+      SAVE_STORAGE_REQUIRED: "true"
+      RULES_MANIFEST_PATH: /app/rules/manifest.json
+      RULES_TRUSTED_KEYS_JSON: ${MIXED_RULE_KEYS:?trusted public keys required}
+      RULES_ALLOW_UNSIGNED: "false"
+      QUARANTINE_ROOT: /data/quarantine
+      AVATAR_ROOT: /data/avatars
+      COVER_ROOT: /data/covers
+      RUNTIME_ROOT: /data/runtime
+      VALIDATOR_ROOT: /data/validator
+      NODE_OPTIONS: --max-old-space-size=256
+    command: ["node", "apps/api/src/migrate-cli.mjs"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    mem_limit: 384m
+    cpus: 0.60
+  api:
+    image: ${MIXED_API_IMAGE}
+    environment: *api-env
+    ports: ["127.0.0.1:${MIXED_API_PORT:-55790}:3090"]
+    volumes: ["../rules:/app/rules:ro"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    mem_limit: 384m
+    cpus: 0.65
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  realtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.realtime
+    image: ${MIXED_RT_IMAGE:?generated image tag required}
+    environment:
+      NODE_ENV: production
+      REALTIME_HOST: 0.0.0.0
+      REALTIME_PORT: "3093"
+      DATABASE_URL: postgresql://gamehub_test:${MIXED_PASSWORD}@postgres:5432/gamehub_mixed_load_test
+      REDIS_URL: redis://redis:6379
+      RULES_MANIFEST_PATH: /app/rules/manifest.json
+      RULES_TRUSTED_KEYS_JSON: ${MIXED_RULE_KEYS}
+      RULES_ALLOW_UNSIGNED: "false"
+      NODE_OPTIONS: --max-old-space-size=128
+    ports: ["127.0.0.1:${MIXED_RT_PORT:-55793}:3093"]
+    volumes: ["../rules:/app/rules:ro"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    mem_limit: 192m
+    cpus: 0.50
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  save-storage-probe:
+    image: postgres:16.10-alpine
+    user: postgres
+    entrypoint: ["sh", "/opt/save-storage-probe.sh"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    environment:
+      PGHOST: postgres
+      PGUSER: gamehub_test
+      PGPASSWORD: ${MIXED_PASSWORD}
+      PGDATABASE: gamehub_mixed_load_test
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:ro
+      - ./save-storage-probe.sh:/opt/save-storage-probe.sh:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    mem_limit: 64m
+    cpus: 0.05
+  save-maintenance:
+    profiles: [background]
+    image: ${MIXED_API_IMAGE}
+    command: ["node", "apps/api/src/save-maintenance-worker-cli.mjs"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    environment:
+      DATABASE_URL: postgresql://gamehub_test:${MIXED_PASSWORD}@postgres:5432/gamehub_mixed_load_test
+      NODE_OPTIONS: --max-old-space-size=64
+    mem_limit: 128m
+    cpus: 0.10
+volumes:
+  postgres-data:
+  redis-data:
