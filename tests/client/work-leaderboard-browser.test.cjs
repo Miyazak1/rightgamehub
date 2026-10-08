@@ -55,6 +55,16 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   await board.getByRole('button',{name:'回到今天',exact:true}).click();await board.getByText('像素玩家 1',{exact:true}).waitFor();await page.waitForTimeout(750);assert.equal(await board.getByText('历史玩家 1',{exact:true}).count(),0);slow=false;
   failBoard=true;await board.getByRole('button',{name:'刷新榜单',exact:true}).click();await board.getByRole('button',{name:'重试排行榜'}).waitFor();assert.equal(await page.getByRole('button',{name:'立即游玩',exact:false}).isEnabled(),true);
   await board.getByRole('button',{name:'重试排行榜'}).click();await board.getByText('第 61 名',{exact:true}).waitFor();
+  for(const width of [1365,800,640]){
+    await page.setViewportSize({width,height:1000});
+    const alignment=await board.evaluate(element=>{
+      const centers=selector=>[...element.querySelectorAll(selector)].map(node=>{const rect=node.getBoundingClientRect();return rect.left+rect.width/2;});
+      return {head:centers('.work-leaderboard__column-labels>span'),values:centers('.work-leaderboard__list>li:first-child .work-leaderboard__scores b')};
+    });
+    assert.equal(alignment.head.length,3);assert.equal(alignment.values.length,3);
+    alignment.head.forEach((center,index)=>assert.ok(Math.abs(center-alignment.values[index])<1,'metric header and score must share a column at width '+width));
+  }
+  await page.setViewportSize({width:1365,height:1000});
   const shots=path.join(root,'.runtime/work-leaderboard-preview');await fs.mkdir(shots,{recursive:true});await page.evaluate(()=>{document.documentElement.style.scrollBehavior='auto';scrollTo({top:0,behavior:'instant'});});await page.waitForTimeout(300);await page.screenshot({path:path.join(shots,'desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'当前light主题，点击切换',exact:true}).click();await page.getByRole('button',{name:'当前high-contrast主题，点击切换',exact:true}).click();await page.waitForTimeout(300);await page.screenshot({path:path.join(shots,'desktop-dark.png'),fullPage:true});await page.getByRole('button',{name:'当前dark主题，点击切换',exact:true}).click();
   for(const width of [390,360]){await page.setViewportSize({width,height:844});await page.evaluate(()=>scrollTo(0,0));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.join(shots,'narrow-'+width+'.png'),fullPage:true});}

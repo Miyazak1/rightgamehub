@@ -16,7 +16,7 @@ function Leaderboard({workId,api,demo,go,accountProfile,Avatar,date:requestedDat
   const date=requestedDate||leaderboardToday(),today=leaderboardToday(),definition=workLeaderboards[workId];
   const [expanded,setExpanded]=useState(false),[retry,setRetry]=useState(0),[state,setState]=useState({status:'loading',board:null});
   const [moreBusy,setMoreBusy]=useState(false),[moreError,setMoreError]=useState('');
-  const section=useRef(null),request=useRef(null),loadingMore=useRef(false);
+  const section=useRef(null),request=useRef(null),loadingMore=useRef(false),didFocus=useRef(false);
   useEffect(()=>{
     const controller=new AbortController();request.current=controller;loadingMore.current=false;
     setState({status:'loading',board:null});setMoreBusy(false);setMoreError('');
@@ -29,10 +29,12 @@ function Leaderboard({workId,api,demo,go,accountProfile,Avatar,date:requestedDat
     return()=>controller.abort();
   },[api,demo,workId,date,puzzleId,expanded,retry]);
   useEffect(()=>{
-    if(!focusBoard)return;
-    const frame=requestAnimationFrame(()=>{section.current?.scrollIntoView({block:'start',behavior:'instant'});section.current?.focus({preventScroll:true});});
+    if(!focusBoard){didFocus.current=false;return;}
+    if(state.status==='loading'||didFocus.current)return;
+    // Wait for the initial content height so scrolling is not clamped by the loading placeholder.
+    const frame=requestAnimationFrame(()=>{section.current?.scrollIntoView({block:'start',behavior:'instant'});section.current?.focus({preventScroll:true});didFocus.current=true;});
     return()=>cancelAnimationFrame(frame);
-  },[focusBoard]);
+  },[focusBoard,state.status]);
   async function loadMore(){
     if(loadingMore.current||!state.board?.hasMore)return;
     const controller=request.current;loadingMore.current=true;setMoreBusy(true);setMoreError('');
@@ -53,7 +55,7 @@ function Leaderboard({workId,api,demo,go,accountProfile,Avatar,date:requestedDat
         <div><span>我的成绩</span>{!accountProfile?<><strong>登录后记录你的成绩</strong><small>公开榜单无需登录即可查看。</small></>:board.myEntry?<><strong>{board.myEntry.rank?'第 '+board.myEntry.rank+' 名':'成绩已保存 · 未公开'}</strong><small>{scoreText(board.myEntry,board.metrics)}</small></>:<><strong>这道题还没有已保存的成绩</strong><small>{date===today?'完成并成功保存本局成绩后，可在这里查看。':'可以选择其他日期，或参加今天的挑战。'}</small></>}</div>
         {!accountProfile?<button onClick={()=>go('/account')}>登录</button>:!board.myEntry&&date===today?<button onClick={()=>go('/play/'+workId)}>开始游玩</button>:null}
       </div>
-      {board.entries.length?<><div className="work-leaderboard__columns" aria-hidden="true"><span>名次 / 玩家</span><span>提示 · 猜字 · 用时</span></div><ol className="work-leaderboard__list">{board.entries.map(entry=><li key={entry.player.id} className={entry.player.isMe?'is-me':''}><b className="work-leaderboard__rank">{entry.rank}</b><Avatar avatar={entry.player.avatar} api={api} alt=""/><div className="work-leaderboard__player"><strong>{entry.player.displayName}</strong>{entry.player.isMe&&<small>我</small>}</div><div className="work-leaderboard__scores" aria-label={scoreText(entry,board.metrics)}>{board.metrics.map(metric=><span key={metric.key}><b>{entry.scores[metric.key]}</b><small>{metric.label}</small></span>)}</div></li>)}</ol></>:<div className="work-leaderboard__state"><strong>这道题还没有公开成绩</strong><p>{date===today?'来完成今天的挑战，留下你的成绩吧。':'试试其他日期的排行榜。'}</p></div>}
+      {board.entries.length?<><div className="work-leaderboard__columns" aria-hidden="true"><span>名次 / 玩家</span><div className="work-leaderboard__scores work-leaderboard__column-labels">{board.metrics.map(metric=><span key={metric.key}>{metric.label}</span>)}</div></div><ol className="work-leaderboard__list">{board.entries.map(entry=><li key={entry.player.id} className={entry.player.isMe?'is-me':''}><b className="work-leaderboard__rank">{entry.rank}</b><Avatar avatar={entry.player.avatar} api={api} alt=""/><div className="work-leaderboard__player"><strong>{entry.player.displayName}</strong>{entry.player.isMe&&<small>我</small>}</div><div className="work-leaderboard__scores" aria-label={scoreText(entry,board.metrics)}>{board.metrics.map(metric=><span key={metric.key}><b>{entry.scores[metric.key]}</b><small>{metric.label}</small></span>)}</div></li>)}</ol></>:<div className="work-leaderboard__state"><strong>这道题还没有公开成绩</strong><p>{date===today?'来完成今天的挑战，留下你的成绩吧。':'试试其他日期的排行榜。'}</p></div>}
       {moreError&&<p role="alert">{moreError}</p>}
       {board.hasMore&&<button className="work-leaderboard__expand" disabled={moreBusy} onClick={()=>expanded?loadMore():setExpanded(true)}>{moreBusy?'正在加载…':moreError?'重试加载':expanded?'加载更多名次':'展开完整榜单'}</button>}
       {expanded&&<button className="work-leaderboard__collapse" onClick={()=>setExpanded(false)}>收起为前 10 名</button>}

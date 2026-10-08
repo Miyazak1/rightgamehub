@@ -2,7 +2,7 @@
   "name": "gamehub-agent",
   "displayName": "GameHub for AI Coding",
   "description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
-  "version": "0.3.32",
+  "version": "0.3.33",
   "publisher": "gamehub-local",
   "private": true,
   "engines": {

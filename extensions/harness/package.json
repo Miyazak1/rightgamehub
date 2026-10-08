@@ -1,6 +1,6 @@
 {
   "name": "gamehub-dsh-plugin",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "GameHub game discovery, publishing and play experience for DeepSeek Harness",
   "license": "UNLICENSED",
   "type": "module",
