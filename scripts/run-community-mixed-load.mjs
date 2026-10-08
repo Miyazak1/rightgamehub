@@ -157,7 +157,6 @@ try{
   fixture=await seedMixedFixture(db.pool,report.offered);
   for(const actor of fixture.people){
     await db.pool.query("UPDATE users SET social_visibility='public',profile_handle=$2 WHERE id=$1",[actor.userId,'load'+actor.userId.replaceAll('-','').slice(0,12)]);
-    await db.pool.query("INSERT INTO community_members(user_id,posting_allowed,reason,updated_by) VALUES($1,true,'Local load fixture',$1)",[actor.userId]);
   }
   const capability=await jsonRequest(api,fixture.people[0],'/v1/community/capabilities');
   if(!capability.canShare||!capability.imagesEnabled||capability.commentsEnabled)throw failure('CAPABILITIES_MISMATCH');

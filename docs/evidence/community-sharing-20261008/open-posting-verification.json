@@ -1,0 +1,74 @@
+{
+  "recordedAt": "2026-10-08T06:25:17.818Z",
+  "baseCommit": "077b13058db389edd80a0c6dd0186e3e4ccfb49a",
+  "scope": "Open posting for active authenticated users, moderation required, restrictions/quotas retained, legacy revision privacy preserved.",
+  "migration": 51,
+  "suites": {
+    "platform": {
+      "pass": 191,
+      "fail": 0,
+      "skipped": 8,
+      "durationMs": 54278.6576,
+      "skippedTests": [
+        "community codec runs in a networkless, read-only 256 MiB container # SKIP",
+        "PostgreSQL save transactions, durability receipts, retention and authorization # SKIP",
+        "PostgreSQL game session isolation, atomic quota, expiry and revocation generations # SKIP",
+        "real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE_URL is provided # SKIP",
+        "PostgreSQL room lifecycle is capacity-safe and transfers ownership # SKIP",
+        "API-issued Redis ticket opens exactly one realtime session # SKIP",
+        "Redis room coordinator broadcasts across instances and counts live connections # SKIP",
+        "production rules release operation is isolated, digest-gated and rollback-capable # SKIP POSIX shell is not installed on this development host"
+      ],
+      "logSha256": "66b7f2c518c21abfbdf030c6e439d1119ec06846f5539bfdc9a4e907a521e831"
+    },
+    "client": {
+      "pass": 135,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 31267.1116,
+      "skippedTests": [],
+      "logSha256": "8674ab9e3d74918b87f06d557017c3baec576005b42e6d9ae470e0eda08553ad"
+    }
+  },
+  "checks": {
+    "contracts": "passed",
+    "webBuild": "passed",
+    "vsixPackage": "passed",
+    "harnessPackage": "passed",
+    "deploymentBashSyntax": "passed"
+  },
+  "sourceSha256": {
+    "apps/api/src/community-service.mjs": "c3da625c7af7f0964c9b0b781fc68ab39cc800c0472c981e222952c8843bf084",
+    "apps/api/migrations/0051_community_open_posting.sql": "903773cf2adc731ed0d9bfe48fca69a201324077936c1b2f1eda0013f4c01fc5",
+    "packages/platform-client/src/CommunityPage.jsx": "0ecc202a263ecaf424ba4c03366eb09ac9cfab6f5527fe81790900ed5e5808ef",
+    "deploy/update-community-sharing.sh": "16edd42ede3d25e31df11fcb12e34d843cebdcdf7379242f73e2cf28e85eed6f",
+    "extensions/vscode/package.json": "a61cac876a1b731678feb8c86656dee080336811679d6a6c1d22a2140b5776ab",
+    "extensions/harness/package.json": "c04f6228675ecda5b1cac5305aff9119b5436d9d57f6688f7853e3faf01f7775",
+    "tests/community-database.cjs": "2c33b6fbb313d5e1eb3fea96c58ae579a3a9911192d25e6a587d244df1726197",
+    "tests/platform/community-postgres.test.cjs": "d88c1c430a319bbd7da81dced24c46ac38431d96a401e88febcdee7ed26f9432",
+    "tests/platform/community-posting-migration.test.cjs": "e965c86ab72a6245fc44b3bdc05fa5480be064c6374044f0b6ddd55c019ac7b1",
+    "tests/client/community-browser.test.cjs": "83938e145c2d42b1ba3dbcffceca836bb4785b78201f1cd0eea4c3f6efaca428"
+  },
+  "artifacts": [
+    {
+      "filename": "gamehub-agent-0.3.30.vsix",
+      "bytes": 7446554,
+      "sha256": "88d702d8990998edacc80f630578c243545151751e5a72fb331b9dd7f45e42be"
+    },
+    {
+      "filename": "gamehub-dsh-plugin-0.1.12.tgz",
+      "bytes": 2435143,
+      "sha256": "e4a18d6280e7dca9c51385d07b0724daca937f1c864a64f64f10082db3f45c36"
+    }
+  ],
+  "boundaries": [
+    "Local PostgreSQL and headless browser; fixture authentication is not production email login.",
+    "No production deployment or new Cursor/Harness manual installation in this follow-up.",
+    "Prior mixed-load reports retain their original source identity; not rerun for migration 51."
+  ],
+  "resolvedFailures": [
+    "Legacy fixture SQL integer/bigint parameter ambiguity fixed with explicit casts.",
+    "Migration count assertion updated from 50 to 51.",
+    "Concurrent test workers sharing DB but different media roots isolated into disposable databases."
+  ]
+}

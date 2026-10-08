@@ -6,14 +6,14 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   const {chromium}=require(playwrightPath);
   const Fastify=require('../../apps/api/node_modules/fastify'),sharp=require('../../apps/api/node_modules/sharp');
   const {build}=require('../../extensions/harness/node_modules/esbuild');
-  const {createDatabase}=await import('../../apps/api/src/database.mjs');
+  const {createCommunityTestDatabase}=require('../community-database.cjs');
   const {applyMigrations}=await import('../../apps/api/src/migrations.mjs');
   const {CommunityService}=await import('../../apps/api/src/community-service.mjs');
   const {CommunityMediaStore}=await import('../../apps/api/src/community-media-store.mjs');
   const {CommunityMediaService}=await import('../../apps/api/src/community-media-service.mjs');
   const {createCommunityImageRunner}=await import('../../apps/api/src/community-image-runner.mjs');
   const {registerCommunityRoutes}=await import('../../apps/api/src/community-routes.mjs');
-  const database=createDatabase({databaseUrl}),pool=database.pool,app=Fastify();
+  const database=await createCommunityTestDatabase(databaseUrl),pool=database.pool,app=Fastify();
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-community-browser-'));
   let browser,page,timer,processing=false;
   t.after(async()=>{clearInterval(timer);if(page){await fs.mkdir(path.join(root,".runtime/community-acceptance"),{recursive:true});await page.screenshot({path:path.join(root,".runtime/community-acceptance/last-state.png"),fullPage:false});}await browser?.close();while(processing)await new Promise(r=>setTimeout(r,25));await app.close();await database.close();await fs.rm(directory,{recursive:true,force:true});});
@@ -21,8 +21,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   const actors={};
   for(const name of ['owner','reader','admin']){
     const userId=crypto.randomUUID();actors[name]={id:userId,displayName:name==='owner'?'像素观察员':name==='reader'?'路过的玩家':'审核员',role:name==='admin'?'admin':'user',canPublish:false,avatar:{kind:'preset',presetKey:'robot',url:null,staticUrl:null,animated:false}};
-    await pool.query("INSERT INTO users(id,display_name,role,social_visibility,profile_handle) VALUES($1,$2,$3,'public',$4)",[userId,actors[name].displayName,actors[name].role,'t'+userId.replaceAll('-','').slice(0,12)]);
-    await pool.query("INSERT INTO community_members(user_id,posting_allowed,reason,updated_by) VALUES($1,true,'local browser acceptance',$1)",[userId]);
+    await pool.query("INSERT INTO users(id,display_name,role,social_visibility,profile_handle) VALUES($1,$2,$3,'private',$4)",[userId,actors[name].displayName,actors[name].role,'t'+userId.replaceAll('-','').slice(0,12)]);
   }
   const service=new CommunityService({pool,config:{enabled:true,postingEnabled:true,imagesEnabled:true}});
   const store=new CommunityMediaStore(path.join(directory,'media'));
@@ -54,6 +53,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   const title='新发现：像素世界里的 AI '+Date.now();
   await page.goto(base+'/#/community');
   await page.getByRole('button',{name:'＋ 分享发现',exact:true}).click();
+  await page.getByText('内容和修改审核通过后，将连同你的昵称公开。个人主页仍按原隐私设置展示。',{exact:false}).waitFor();
   await page.getByLabel('标题',{exact:true}).fill(title);
   await page.getByLabel('主题',{exact:true}).selectOption('ai');
   await page.getByLabel('文字',{exact:true}).fill('一个把像素创作与 AI 实验放在一起的小发现。\n画面、玩法和技术，都可以从这里继续聊起。');
@@ -101,6 +101,23 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   await page.getByRole('heading',{name:'还没有收藏',exact:true}).waitFor();
   await page.evaluate(()=>{location.hash='/social';});
   await page.getByRole('heading',{name:'分享',exact:false}).waitFor();
+  await page.evaluate(()=>{window.communityFixture.setActor('admin');location.hash='/community/review';});
+  await page.getByText('投稿限制管理',{exact:true}).click();
+  await page.getByLabel('用户 ID',{exact:true}).fill(actors.owner.id);
+  await page.getByLabel('调整原因',{exact:true}).fill('测试违规限制');
+  await page.getByRole('button',{name:'限制投稿',exact:true}).click();
+  await page.getByText('已限制该账号投稿。',{exact:true}).waitFor();
+  await page.evaluate(()=>{window.communityFixture.setActor('owner');location.hash='/community/mine';});
+  assert.equal(await page.getByRole('button',{name:'投稿已受限',exact:true}).isDisabled(),true);
+  await page.getByText('当前账号已被限制投稿；已有分享仍可查看、撤回或删除。',{exact:true}).waitFor();
+  await page.evaluate(()=>{window.communityFixture.setActor('admin');location.hash='/community/review';});
+  await page.getByText('投稿限制管理',{exact:true}).click();
+  await page.getByLabel('用户 ID',{exact:true}).fill(actors.owner.id);
+  await page.getByLabel('调整原因',{exact:true}).fill('解除测试限制');
+  await page.getByRole('button',{name:'解除投稿限制',exact:true}).click();
+  await page.getByText('投稿限制已解除。',{exact:true}).waitFor();
+  await page.evaluate(()=>{window.communityFixture.setActor('owner');location.hash='/community/mine';});
+  assert.equal(await page.getByRole('button',{name:'＋ 分享发现',exact:true}).isEnabled(),true);
   assert.deepEqual(errors,[]);
   // Keep fixture metadata consistent after the test's temporary image directory is removed.
   const posts=await service.list({userId:actors.owner.id},{kind:'mine'});

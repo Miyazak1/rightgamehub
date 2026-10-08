@@ -41,7 +41,7 @@ try{
       await pool.query("INSERT INTO users(id,display_name,role,social_visibility,profile_handle) VALUES($1,$2,$3,'public',$4)",[id,i?'分享测试审核员':'分享测试玩家',i?'admin':'user','share'+id.replaceAll('-','').slice(0,12)]);
       await pool.query("INSERT INTO auth_identities(id,user_id,provider,subject) VALUES($1,$2,'email',$3)",[crypto.randomUUID(),id,email]);
     }
-    await pool.query("INSERT INTO community_members(user_id,posting_allowed,reason,updated_by) VALUES($1,true,'Local installed acceptance only',$1) ON CONFLICT(user_id) DO NOTHING",[id]);userIds.push(id);
+    userIds.push(id);
   }
   const require=createRequire(new URL('../extensions/harness/package.json',import.meta.url)),{build}=require('esbuild');
   const web=path.join(stateRoot,'web');await fs.mkdir(web,{recursive:true});

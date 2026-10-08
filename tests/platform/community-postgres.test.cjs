@@ -12,26 +12,25 @@ const etag=post=>'"'+post.version+'"';
 const content=title=>({channel:'ai',title,blocks:[{type:'paragraph',text:'一条与 AI 和游戏相关的发现。'},{type:'link',url:'https://example.com/news',label:'原文'}]});
 
 test('community PostgreSQL: immutable review, privacy, concurrency and bounded image processing',{skip:!url,timeout:60000},async t=>{
-  const {createDatabase}=await import('../../apps/api/src/database.mjs');
+  const {createCommunityTestDatabase}=require('../community-database.cjs');
   const {applyMigrations}=await import('../../apps/api/src/migrations.mjs');
   const {CommunityService}=await import('../../apps/api/src/community-service.mjs');
   const {CommunityMediaService}=await import('../../apps/api/src/community-media-service.mjs');
   const {CommunityMediaStore}=await import('../../apps/api/src/community-media-store.mjs');
   const {createCommunityImageRunner}=await import('../../apps/api/src/community-image-runner.mjs');
   const {hash}=await import('../../apps/api/src/community-contract.mjs');
-  const database=createDatabase({databaseUrl:url}),pool=database.pool;
+  const database=await createCommunityTestDatabase(url),pool=database.pool;
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-community-test-'));
   t.after(async()=>{await database.close();await fs.rm(directory,{recursive:true,force:true});});
-  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,50);
+  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,51);
   const config={enabled:true,postingEnabled:true,imagesEnabled:true};
   const service=new CommunityService({pool,config});
   const store=new CommunityMediaStore(path.join(directory,'media'));
   const runner=createCommunityImageRunner({root:path.join(directory,'processor'),mediaRoot:store.root});
   const media=new CommunityMediaService({service,store,runner});
-  async function user(role='user') {
+  async function user(role='user',visibility='public') {
     const userId=key();
-    await pool.query("INSERT INTO users(id,display_name,role,social_visibility) VALUES($1,'测试玩家',$2,'public')",[userId,role]);
-    await pool.query("INSERT INTO community_members(user_id,posting_allowed,reason,updated_by) VALUES($1,true,'test fixture',$1)",[userId]);
+    await pool.query("INSERT INTO users(id,display_name,role,social_visibility) VALUES($1,'测试玩家',$2,$3)",[userId,role,visibility]);
     return {userId};
   }
   const owner=await user(),reader=await user(),admin=await user('admin');
@@ -40,6 +39,64 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
     post=await service.submit(author,post.id,etag(post),key());
     return service.decide(admin,post.id,{action:'approve',revisionId:post.revisionId,reason:'审核通过'},etag(post),key());
   }
+  await t.test('ordinary private-profile accounts post without membership and publish only after review',async()=>{
+    const author=await user('user','private');
+    const capability=await service.capabilities(author);
+    assert.equal(capability.canShare,true);assert.equal(capability.imagesEnabled,true);assert.equal(capability.reason,null);
+    assert.equal((await service.capabilities(admin)).canShare,true);
+    assert.equal((await service.capabilities(null)).reason,'AUTH_REQUIRED');
+    assert.equal((await pool.query('SELECT count(*)::int n FROM community_members WHERE user_id=$1',[author.userId])).rows[0].n,0);
+    let post=await service.save(author,null,content('默认可投稿'),null,key());
+    await assert.rejects(service.get(null,post.id),{code:'POST_NOT_FOUND'});
+    post=await service.submit(author,post.id,etag(post),key());
+    await assert.rejects(service.get(null,post.id),{code:'POST_NOT_FOUND'});
+    post=await service.decide(admin,post.id,{action:'approve',revisionId:post.revisionId,reason:'审核后公开'},etag(post),key());
+    assert.equal((await service.get(null,post.id)).title,'默认可投稿');
+    assert.equal((await service.get(null,post.id)).author.handle,null);
+    const account=(await pool.query('SELECT social_visibility,can_publish FROM users WHERE id=$1',[author.userId])).rows[0];
+    assert.equal(account.social_visibility,'private');assert.equal(account.can_publish,false);
+    await service.interaction(reader,post.id,'like',true);
+    await service.report(reader,post.id,{category:'other',details:'独立公开分享仍可举报'});
+    const paused=new CommunityService({pool,config:{...config,postingEnabled:false}});
+    assert.equal((await paused.capabilities(author)).reason,'POSTING_PAUSED');
+    await assert.rejects(paused.save(author,null,content('暂停投稿'),null,key()),{code:'POSTING_PAUSED'});
+    await pool.query("UPDATE users SET status='suspended' WHERE id=$1",[author.userId]);
+    assert.equal((await service.capabilities(author)).reason,'ACCOUNT_UNAVAILABLE');
+    await assert.rejects(service.save(author,null,content('封禁账号'),null,key()),{code:'AUTH_REQUIRED'});
+    await assert.rejects(service.get(null,post.id),{code:'POST_NOT_FOUND'});
+  });
+  await t.test('explicit posting restrictions block every write and can be lifted without granting game publishing',async()=>{
+    const author=await user('user','private');
+    let post=await service.save(author,null,content('限制前的草稿'),null,key());
+    const input={bytes:4,sha256:hash(Buffer.from('test')),contentType:'image/png'};
+    const asset=await media.reserve(author,post.id,input,key());
+    await assert.rejects(service.allowMember(reader,author.userId,{allowed:false,reason:'无权限'}),{code:'FORBIDDEN'});
+    await service.allowMember(admin,author.userId,{allowed:false,reason:'测试违规限制'});
+    assert.equal((await service.capabilities(author)).reason,'POSTING_RESTRICTED');
+    assert.equal((await service.capabilities(author)).imagesEnabled,false);
+    for(const run of [
+      ()=>service.save(author,null,content('限制后创建'),null,key()),
+      ()=>service.save(author,post.id,content('限制后编辑'),etag(post),key()),
+      ()=>service.submit(author,post.id,etag(post),key()),
+      ()=>media.reserve(author,post.id,input,key()),
+      ()=>media.upload(author,asset.id,Readable.from([Buffer.from('test')])),
+      ()=>media.complete(author,asset.id),
+    ])await assert.rejects(run(),{code:'POSTING_RESTRICTED'});
+    assert.equal((await service.get(author,post.id,{manage:true})).id,post.id);
+    await service.allowMember(admin,author.userId,{allowed:true,reason:'解除测试限制'});
+    assert.equal((await service.capabilities(author)).canShare,true);
+    post=await service.submit(author,post.id,etag(post),key());assert.equal(post.reviewStatus,'pending');
+    await service.allowMember(admin,author.userId,{allowed:false,reason:'再次限制'});
+    assert.deepEqual(await service.withdraw(author,post.id,etag(post),true),{deleted:true});
+    await pool.query("UPDATE community_media_assets SET expires_at=now()-interval '1 day' WHERE id=$1",[asset.id]);
+    await media.cleanOnce();
+  });
+  await t.test('default posting still enforces pending submission limits',async()=>{
+    const author=await user('user','private');
+    for(let i=0;i<3;i++){const post=await service.save(author,null,content('待审 '+i),null,key());await service.submit(author,post.id,etag(post),key());}
+    const fourth=await service.save(author,null,content('待审超限'),null,key());
+    await assert.rejects(service.submit(author,fourth.id,etag(fourth),key()),{code:'RATE_LIMITED'});
+  });
   await t.test('exact revision approval, owner CAS, receipt replay and no unreviewed reads',async()=>{
     const requestKey=key();
     let post=await service.save(owner,null,content('初稿'),null,requestKey);
@@ -66,7 +123,7 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
     assert.equal(post.moderationState,'hidden');
     await assert.rejects(service.get(reader,post.id),{code:'POST_NOT_FOUND'});
   });
-  await t.test('idempotent concurrent likes, private bookmarks and block/private/hide visibility',async()=>{
+  await t.test('idempotent concurrent likes, private bookmarks and block/hide visibility',async()=>{
     let post=await publish();
     await Promise.all(Array.from({length:10},()=>service.interaction(reader,post.id,'like',true)));
     assert.equal((await service.get(owner,post.id)).likeCount,'1');
@@ -79,7 +136,7 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
     await service.interaction(reader,post.id,'bookmark',false);
     await pool.query('DELETE FROM user_blocks WHERE blocker_user_id=$1',[owner.userId]);
     await pool.query("UPDATE users SET social_visibility='private' WHERE id=$1",[owner.userId]);
-    await assert.rejects(service.get(null,post.id),{code:'POST_NOT_FOUND'});
+    assert.equal((await service.get(null,post.id)).id,post.id);
     await pool.query("UPDATE users SET social_visibility='public' WHERE id=$1",[owner.userId]);
     post=await service.decide(admin,post.id,{action:'hide',revisionId:post.revisionId,reason:'测试隐藏'},etag(post),key());
     await assert.rejects(service.get(null,post.id),{code:'POST_NOT_FOUND'});
@@ -115,6 +172,7 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
     await assert.rejects(service.list(owner,{author:author.userId,cursor:first.nextCursor}),{code:'CURSOR_INVALID'});
   });
   await t.test('image ownership, checksum, derivative-only reads and durable garbage collection',async()=>{
+    await pool.query("UPDATE users SET social_visibility='private' WHERE id=$1",[owner.userId]);
     const sharp=require(path.join(root,'apps/api/node_modules/sharp'));
     let post=await service.save(owner,null,content('图片草稿'),null,key());
     const bytes=await sharp({create:{width:80,height:60,channels:3,background:'#7f5cd2'}}).png().toBuffer();

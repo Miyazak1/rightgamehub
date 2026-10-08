@@ -3,9 +3,10 @@ import { withTransaction } from './database.mjs';
 import { fail } from './community-errors.mjs';
 import { CHANNELS, LIMITS, hash, uuid, normalizeContent, receiptKey, expectedVersion, cursorFor, readCursor } from './community-contract.mjs';
 
-const visible = "p.publication_state='published' AND p.moderation_state='clear' AND u.status='active' AND u.social_visibility='public' AND c.enabled AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.blocker_user_id=$1 AND b.blocked_user_id=p.author_id) OR (b.blocked_user_id=$1 AND b.blocker_user_id=p.author_id))";
-const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,u.profile_handle,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked";
+const visible = "p.publication_state='published' AND p.moderation_state='clear' AND u.status='active' AND (r.visibility_policy='post' OR u.social_visibility='public') AND c.enabled AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.blocker_user_id=$1 AND b.blocked_user_id=p.author_id) OR (b.blocked_user_id=$1 AND b.blocker_user_id=p.author_id))";
+const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS profile_handle,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked";
 const joins = " JOIN users u ON u.id=p.author_id JOIN community_channels c ON c.key=p.channel_key LEFT JOIN community_post_stats s ON s.post_id=p.id ";
+const publishedRevision = ' JOIN community_post_revisions r ON r.id=p.published_revision_id ';
 const view = (row,manage=false) => ({
   id:row.id,author:{id:row.author_id,displayName:row.display_name,handle:row.profile_handle},
   channel:row.revision_channel,title:row.title,blocks:row.blocks,schemaVersion:1,
@@ -21,17 +22,20 @@ export class CommunityService {
   enabled() { if(!this.config.enabled) fail('COMMUNITY_DISABLED',503,'分享板块暂未开放。'); }
   async actor(client,actor,{posting=false,admin=false}={}) {
     if(!actor?.userId) fail('AUTH_REQUIRED',401,'请登录后继续。');
-    const user=(await client.query("SELECT u.*,COALESCE(m.posting_allowed,false) AS posting_allowed FROM users u LEFT JOIN community_members m ON m.user_id=u.id WHERE u.id=$1 FOR SHARE OF u",[actor.userId])).rows[0];
+    if(posting) await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['community-user:'+actor.userId]);
+    const user=(await client.query("SELECT u.*,COALESCE(m.posting_allowed,true) AS posting_allowed FROM users u LEFT JOIN community_members m ON m.user_id=u.id WHERE u.id=$1 FOR SHARE OF u",[actor.userId])).rows[0];
     if(!user||user.status!=='active') fail('AUTH_REQUIRED',401,'账号当前不可用。');
     if(admin&&user.role!=='admin') fail('FORBIDDEN',403,'需要管理员权限。');
-    if(posting&&(!this.config.postingEnabled||!user.posting_allowed||user.social_visibility!=='public')) fail('SHARE_NOT_ALLOWED',403,'暂不具备投稿资格，或个人资料未设为公开。');
+    if(posting&&!this.config.postingEnabled) fail('POSTING_PAUSED',403,'投稿暂时暂停，请稍后再试。');
+    if(posting&&!user.posting_allowed) fail('POSTING_RESTRICTED',403,'当前账号已被限制投稿；已有分享仍可查看、撤回或删除。');
     return user;
   }
   async capabilities(actor) {
     let member=null;
-    if(this.config.enabled&&actor?.userId) member=(await this.pool.query("SELECT u.status,u.role,u.social_visibility,COALESCE(m.posting_allowed,false) AS posting_allowed FROM users u LEFT JOIN community_members m ON m.user_id=u.id WHERE u.id=$1",[actor.userId])).rows[0];
-    const canShare=Boolean(this.config.enabled&&this.config.postingEnabled&&member?.status==='active'&&member.posting_allowed&&member.social_visibility==='public');
-    return {readEnabled:this.config.enabled,postingEnabled:this.config.postingEnabled&&this.config.enabled,imagesEnabled:this.config.imagesEnabled&&canShare,likesEnabled:this.config.enabled,bookmarksEnabled:this.config.enabled,commentsEnabled:false,canShare,isAdmin:member?.role==='admin',reason:canShare?null:!this.config.enabled?'COMMUNITY_DISABLED':!actor?.userId?'AUTH_REQUIRED':member?.social_visibility!=='public'?'PROFILE_NOT_PUBLIC':'SHARE_NOT_ALLOWED',channels:CHANNELS,limits:{...LIMITS,totalBytes:this.config.totalMediaBytes??LIMITS.totalBytes}};
+    if(this.config.enabled&&actor?.userId) member=(await this.pool.query("SELECT u.status,u.role,COALESCE(m.posting_allowed,true) AS posting_allowed FROM users u LEFT JOIN community_members m ON m.user_id=u.id WHERE u.id=$1",[actor.userId])).rows[0];
+    const reason=!this.config.enabled?'COMMUNITY_DISABLED':!actor?.userId?'AUTH_REQUIRED':member?.status!=='active'?'ACCOUNT_UNAVAILABLE':!this.config.postingEnabled?'POSTING_PAUSED':!member.posting_allowed?'POSTING_RESTRICTED':null;
+    const canShare=reason===null;
+    return {readEnabled:this.config.enabled,postingEnabled:this.config.postingEnabled&&this.config.enabled,imagesEnabled:this.config.imagesEnabled&&canShare,likesEnabled:this.config.enabled,bookmarksEnabled:this.config.enabled,commentsEnabled:false,canShare,isAdmin:member?.status==='active'&&member.role==='admin',reason,channels:CHANNELS,limits:{...LIMITS,totalBytes:this.config.totalMediaBytes??LIMITS.totalBytes}};
   }
   async tx(action) {
     return withTransaction(this.pool,async client=>{
@@ -48,7 +52,7 @@ export class CommunityService {
     this.enabled();const keyHash=receiptKey(key),requestHash=hash(JSON.stringify(input));
     return this.tx(async client=>{
       await this.actor(client,actor,options);
-      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['community-user:'+actor.userId]);
+      if(!options.posting) await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['community-user:'+actor.userId]);
       const prior=(await client.query('SELECT * FROM community_write_receipts WHERE actor_id=$1 AND operation=$2 AND key_hash=$3',[actor.userId,operation,keyHash])).rows[0];
       if(prior) {
         if(prior.request_hash!==requestHash) fail('IDEMPOTENCY_CONFLICT',409,'请求标识已用于其他内容。');
@@ -107,7 +111,7 @@ export class CommunityService {
     const expected=expectedVersion(version);
     return this.mutation(actor,'submit',key,{id,expected},async client=>{
       const post=await this.postLock(client,id,actor,expected);
-      const revision=(await client.query('SELECT * FROM community_post_revisions WHERE id=$1',[post.working_revision_id])).rows[0];
+      let revision=(await client.query('SELECT * FROM community_post_revisions WHERE id=$1',[post.working_revision_id])).rows[0];
       if(!['draft','rejected'].includes(revision.review_status)) fail('REVIEW_STATE_INVALID',409,'当前版本不能再次提交。');
       const counts=(await client.query("SELECT (SELECT count(*) FROM community_write_receipts WHERE actor_id=$1 AND operation='submit' AND created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,(SELECT count(*) FROM community_posts p JOIN community_post_revisions r ON r.id=p.working_revision_id WHERE p.author_id=$1 AND r.review_status='pending') AS pending",[actor.userId])).rows[0];
       if(Number(counts.daily)>=LIMITS.dailyPosts||Number(counts.pending)>=LIMITS.pending) fail('RATE_LIMITED',429,'投稿次数或待审核数量已达上限。');
@@ -115,6 +119,16 @@ export class CommunityService {
       const total=Number((await client.query("SELECT count(*) FROM community_post_revisions WHERE review_status='pending'")).rows[0].count);
       if(total>=200) fail('REVIEW_QUEUE_FULL',429,'审核队列已满，请稍后再试。');
       await this.assertMedia(client,id,actor.userId,revision.blocks);
+      if(revision.visibility_policy==='profile') {
+        const count=Number((await client.query('SELECT count(*) FROM community_post_revisions WHERE post_id=$1',[id])).rows[0].count);
+        if(count>=100) fail('REVISION_LIMIT',429,'该分享的修订数量已达上限。');
+        const next=crypto.randomUUID();
+        await client.query('INSERT INTO community_post_revisions(id,post_id,channel_key,title,blocks,content_hash) VALUES($1,$2,$3,$4,$5,$6)',[next,id,revision.channel_key,revision.title,JSON.stringify(revision.blocks),revision.content_hash]);
+        await client.query('INSERT INTO community_revision_media(post_id,revision_id,asset_id) SELECT post_id,$2,asset_id FROM community_revision_media WHERE revision_id=$1',[revision.id,next]);
+        await client.query("UPDATE community_post_revisions SET review_status='superseded' WHERE id=$1",[revision.id]);
+        await client.query('UPDATE community_posts SET working_revision_id=$2 WHERE id=$1',[id,next]);
+        revision={...revision,id:next};
+      }
       await client.query("UPDATE community_post_revisions SET review_status='pending',review_reason=NULL,submitted_at=now() WHERE id=$1",[revision.id]);
       await client.query('UPDATE community_posts SET version=version+1,updated_at=now() WHERE id=$1',[id]);
       return this.own(client,id,actor.userId);
@@ -162,7 +176,7 @@ export class CommunityService {
       await this.interactionLimit(client,actor);
       await client.query('SELECT id FROM community_posts WHERE id=$1 FOR UPDATE',[id]);
       if(add) {
-        const allowed=(await client.query('SELECT p.id FROM community_posts p'+joins+' WHERE '+visible+' AND p.id=$2',[actor.userId,id])).rowCount;
+        const allowed=(await client.query('SELECT p.id FROM community_posts p'+joins+publishedRevision+' WHERE '+visible+' AND p.id=$2',[actor.userId,id])).rowCount;
         if(!allowed) fail('POST_NOT_FOUND',404,'分享不存在或不可见。');
       }
       const table=type==='like'?'community_post_likes':'community_post_bookmarks';
@@ -211,10 +225,11 @@ export class CommunityService {
   }
   async allowMember(actor,userId,input) {
     this.enabled();
-    if(!uuid(userId)||typeof input?.allowed!=='boolean'||typeof input.reason!=='string'||!input.reason.trim()||input.reason.length>1000) fail('SCHEMA_INVALID',400,'资格设置无效。');
+    if(!uuid(userId)||typeof input?.allowed!=='boolean'||typeof input.reason!=='string'||!input.reason.trim()||input.reason.length>1000) fail('SCHEMA_INVALID',400,'投稿限制设置无效。');
     return this.tx(async client=>{
       await this.actor(client,actor,{admin:true});
       if(!(await client.query("SELECT id FROM users WHERE id=$1 AND status='active'",[userId])).rowCount) fail('NOT_FOUND',404,'用户不存在。');
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['community-user:'+userId]);
       await client.query('INSERT INTO community_members(user_id,posting_allowed,reason,updated_by) VALUES($1,$2,$3,$4) ON CONFLICT(user_id) DO UPDATE SET posting_allowed=EXCLUDED.posting_allowed,reason=EXCLUDED.reason,updated_by=EXCLUDED.updated_by,updated_at=now()',[userId,input.allowed,input.reason.trim(),actor.userId]);
       await this.audit(client,actor,null,null,'member_policy',input.reason.trim(),{userId,allowed:input.allowed});
       return {allowed:input.allowed};
@@ -225,7 +240,7 @@ export class CommunityService {
     if(!['unsafe','harassment','copyright','spam','other'].includes(input?.category)||typeof input.details!=='string'||!input.details.trim()||input.details.length>1000) fail('SCHEMA_INVALID',400,'举报内容无效。');
     return this.tx(async client=>{
       await this.actor(client,actor);
-      const allowed=(await client.query('SELECT p.id FROM community_posts p'+joins+' WHERE '+visible+' AND p.id=$2',[actor.userId,id])).rowCount;
+      const allowed=(await client.query('SELECT p.id FROM community_posts p'+joins+publishedRevision+' WHERE '+visible+' AND p.id=$2',[actor.userId,id])).rowCount;
       if(!allowed) fail('POST_NOT_FOUND',404,'分享不存在或不可见。');
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['community-user:'+actor.userId]);
       const recent=Number((await client.query("SELECT count(*) FROM community_reports WHERE reporter_id=$1 AND created_at>now()-interval '1 day'",[actor.userId])).rows[0].count);
