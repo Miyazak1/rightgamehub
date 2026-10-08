@@ -53,6 +53,7 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
     post=await service.decide(admin,post.id,{action:'approve',revisionId:post.revisionId,reason:'审核后公开'},etag(post),key());
     assert.equal((await service.get(null,post.id)).title,'默认可投稿');
     assert.equal((await service.get(null,post.id)).author.handle,null);
+    assert.deepEqual((await service.get(null,post.id)).author.avatar,{kind:'preset',presetKey:'cat',url:null,staticUrl:null,mediaType:null,animated:false});
     const account=(await pool.query('SELECT social_visibility,can_publish FROM users WHERE id=$1',[author.userId])).rows[0];
     assert.equal(account.social_visibility,'private');assert.equal(account.can_publish,false);
     await service.interaction(reader,post.id,'like',true);

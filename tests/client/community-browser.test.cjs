@@ -85,10 +85,10 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   await page.waitForFunction(title=>!document.querySelector('main')?.textContent.includes(title),title);
   await page.evaluate(()=>{window.communityFixture.setActor('reader');location.hash='/community';});
   const card=page.locator('article').filter({has:page.getByRole('heading',{name:title,exact:true})});
-  await card.getByRole('button',{name:'♡ 0',exact:true}).click();
-  await card.getByRole('button',{name:'♡ 1',exact:true}).waitFor();
-  await card.getByRole('button',{name:'▣ 收藏',exact:true}).click();
-  await card.getByRole('button',{name:'▣ 已收藏',exact:true}).waitFor();
+  await card.getByRole('button',{name:'点赞 0',exact:true}).click();
+  await card.getByRole('button',{name:'点赞 1',exact:true}).waitFor();
+  await card.getByRole('button',{name:'收藏',exact:true}).click();
+  await card.getByRole('button',{name:'取消收藏',exact:true}).waitFor();
   await card.getByRole('img',{name:'像素实验'}).waitFor();
   await fs.mkdir(path.join(root,'.runtime/community-acceptance'),{recursive:true});
   await page.screenshot({path:path.join(root,'.runtime/community-acceptance/desktop.png'),fullPage:false});
