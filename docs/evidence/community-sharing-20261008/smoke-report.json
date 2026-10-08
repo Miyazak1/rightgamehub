@@ -1,0 +1,2482 @@
+{
+  "schemaVersion": 1,
+  "project": "gamehub-community-load-1791437161348-78f5d0",
+  "smoke": true,
+  "at": "2026-10-08T05:26:01.351Z",
+  "productionReady": false,
+  "coverage": [
+    "real bearer auth",
+    "signed authoritative matches and WebSocket heartbeats",
+    "sharing feed/detail",
+    "likes/private bookmarks",
+    "upload/reservation/moderation",
+    "isolated image service",
+    "PostgreSQL/Redis"
+  ],
+  "excluded": [
+    "production host/disk/network",
+    "TLS/proxy",
+    "other source/rule builders and validation jobs",
+    "concurrent backup",
+    "long-duration soak"
+  ],
+  "thresholds": {
+    "read": {
+      "p95": 200,
+      "p99": 500
+    },
+    "interaction": {
+      "p95": 300,
+      "p99": 1000
+    },
+    "command": {
+      "p95": 150,
+      "p99": 500
+    },
+    "heartbeat": {
+      "p95": 100,
+      "p99": 250
+    },
+    "image": {
+      "p95": 15000,
+      "p99": 20000
+    }
+  },
+  "offered": {
+    "actors": 4,
+    "pairs": 1,
+    "fillerMiB": 0,
+    "cloudSaves": false,
+    "feedIntervalMs": 4000,
+    "detailIntervalMs": 5000,
+    "interactionIntervalMs": 12000,
+    "commandIntervalMs": 1000,
+    "heartbeatIntervalMs": 2000,
+    "imageStreams": 4,
+    "imageIntervalMs": 24000
+  },
+  "phases": [
+    {
+      "name": "baseline",
+      "seconds": 12,
+      "metrics": {
+        "read": {
+          "count": 22,
+          "p50": 26.82289999999921,
+          "p95": 133.7164000000048,
+          "p99": 149.2850999999937,
+          "max": 149.2850999999937
+        },
+        "interaction": {
+          "count": 4,
+          "p50": 54.80470000000787,
+          "p95": 133.4426999999996,
+          "p99": 133.4426999999996,
+          "max": 133.4426999999996
+        },
+        "command": {
+          "count": 12,
+          "p50": 82.11749999999302,
+          "p95": 243.35580000000482,
+          "p99": 243.35580000000482,
+          "max": 243.35580000000482
+        },
+        "fanout": {
+          "count": 12,
+          "p50": 85.72759999999835,
+          "p95": 246.64250000000175,
+          "p99": 246.64250000000175,
+          "max": 246.64250000000175
+        },
+        "heartbeat": {
+          "count": 12,
+          "p50": 2.1362000000081025,
+          "p95": 4.229500000001281,
+          "p99": 4.229500000001281,
+          "max": 4.229500000001281
+        },
+        "image": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null
+        }
+      },
+      "observations": [
+        {
+          "at": "2026-10-08T05:27:34.198Z",
+          "pg": {
+            "database_bytes": "14029283",
+            "wal_bytes": "16777216",
+            "connections": 7,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020676607,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.021757951,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437253.029,
+            "gamehub_realtime_process_rss_bytes": 87412736,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 4,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 2194547,
+              "user_usec": 1884283,
+              "system_usec": 310263,
+              "nice_usec": 0,
+              "nr_periods": 124,
+              "nr_throttled": 30,
+              "throttled_usec": 3403395,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 61693952,
+              "memoryPeak": 78540800
+            },
+            "community-image": {
+              "usage_usec": 1211800,
+              "user_usec": 1043949,
+              "system_usec": 167850,
+              "nice_usec": 0,
+              "nr_periods": 104,
+              "nr_throttled": 19,
+              "throttled_usec": 1283991,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15343616,
+              "memoryPeak": 71290880
+            },
+            "postgres": {
+              "usage_usec": 2682806,
+              "user_usec": 1499215,
+              "system_usec": 1183591,
+              "nice_usec": 0,
+              "nr_periods": 456,
+              "nr_throttled": 15,
+              "throttled_usec": 821851,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 114438144,
+              "memoryPeak": 114438144
+            },
+            "realtime": {
+              "usage_usec": 1226047,
+              "user_usec": 976818,
+              "system_usec": 249229,
+              "nice_usec": 0,
+              "nr_periods": 154,
+              "nr_throttled": 22,
+              "throttled_usec": 1885425,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 42237952,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 729067,
+              "user_usec": 465449,
+              "system_usec": 263617,
+              "nice_usec": 0,
+              "nr_periods": 393,
+              "nr_throttled": 34,
+              "throttled_usec": 1593500,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 8929280,
+              "memoryPeak": 9199616
+            },
+            "worker": {
+              "usage_usec": 755550,
+              "user_usec": 640354,
+              "system_usec": 115195,
+              "nice_usec": 0,
+              "nr_periods": 109,
+              "nr_throttled": 42,
+              "throttled_usec": 6055677,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 61722624,
+              "memoryPeak": 61722624
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:27:39.191Z",
+          "pg": {
+            "database_bytes": "14127587",
+            "wal_bytes": "16777216",
+            "connections": 8,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.022183935,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.068157439,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437258.03,
+            "gamehub_realtime_process_rss_bytes": 86941696,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 14,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 2482369,
+              "user_usec": 2107171,
+              "system_usec": 375197,
+              "nice_usec": 0,
+              "nr_periods": 150,
+              "nr_throttled": 33,
+              "throttled_usec": 3642596,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 65101824,
+              "memoryPeak": 78540800
+            },
+            "community-image": {
+              "usage_usec": 1232567,
+              "user_usec": 1060581,
+              "system_usec": 171986,
+              "nice_usec": 0,
+              "nr_periods": 115,
+              "nr_throttled": 19,
+              "throttled_usec": 1283991,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15687680,
+              "memoryPeak": 71290880
+            },
+            "postgres": {
+              "usage_usec": 2831891,
+              "user_usec": 1618223,
+              "system_usec": 1213667,
+              "nice_usec": 0,
+              "nr_periods": 484,
+              "nr_throttled": 15,
+              "throttled_usec": 821851,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 114667520,
+              "memoryPeak": 115908608
+            },
+            "realtime": {
+              "usage_usec": 1533794,
+              "user_usec": 1237585,
+              "system_usec": 296208,
+              "nice_usec": 0,
+              "nr_periods": 193,
+              "nr_throttled": 25,
+              "throttled_usec": 2096201,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 42229760,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 797216,
+              "user_usec": 505847,
+              "system_usec": 291368,
+              "nice_usec": 0,
+              "nr_periods": 429,
+              "nr_throttled": 37,
+              "throttled_usec": 1768294,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 6340608,
+              "memoryPeak": 9199616
+            },
+            "worker": {
+              "usage_usec": 783730,
+              "user_usec": 664467,
+              "system_usec": 119263,
+              "nice_usec": 0,
+              "nr_periods": 121,
+              "nr_throttled": 43,
+              "throttled_usec": 6055677,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 61300736,
+              "memoryPeak": 61722624
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:27:44.191Z",
+          "pg": {
+            "database_bytes": "14127587",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.023658495,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.079560703,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437263.029,
+            "gamehub_realtime_process_rss_bytes": 87105536,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 24,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 2677391,
+              "user_usec": 2254043,
+              "system_usec": 423348,
+              "nice_usec": 0,
+              "nr_periods": 173,
+              "nr_throttled": 35,
+              "throttled_usec": 3710448,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 67588096,
+              "memoryPeak": 78540800
+            },
+            "community-image": {
+              "usage_usec": 1258446,
+              "user_usec": 1078083,
+              "system_usec": 180363,
+              "nice_usec": 0,
+              "nr_periods": 127,
+              "nr_throttled": 19,
+              "throttled_usec": 1283991,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15998976,
+              "memoryPeak": 71290880
+            },
+            "postgres": {
+              "usage_usec": 3036535,
+              "user_usec": 1769609,
+              "system_usec": 1266926,
+              "nice_usec": 0,
+              "nr_periods": 515,
+              "nr_throttled": 15,
+              "throttled_usec": 821851,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 116965376,
+              "memoryPeak": 120307712
+            },
+            "realtime": {
+              "usage_usec": 1829730,
+              "user_usec": 1475323,
+              "system_usec": 354407,
+              "nice_usec": 0,
+              "nr_periods": 229,
+              "nr_throttled": 28,
+              "throttled_usec": 2299684,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 50835456,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 893659,
+              "user_usec": 576816,
+              "system_usec": 316842,
+              "nice_usec": 0,
+              "nr_periods": 463,
+              "nr_throttled": 43,
+              "throttled_usec": 2362170,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 6393856,
+              "memoryPeak": 10321920
+            },
+            "worker": {
+              "usage_usec": 816068,
+              "user_usec": 678377,
+              "system_usec": 137690,
+              "nice_usec": 0,
+              "nr_periods": 133,
+              "nr_throttled": 44,
+              "throttled_usec": 6170574,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 61161472,
+              "memoryPeak": 61722624
+            }
+          }
+        }
+      ],
+      "missed": 0,
+      "attempts": 53,
+      "errors": []
+    },
+    {
+      "name": "mixed",
+      "seconds": 30,
+      "metrics": {
+        "read": {
+          "count": 54,
+          "p50": 23.476000000009662,
+          "p95": 120.6817999999912,
+          "p99": 123.27379999999539,
+          "max": 123.27379999999539
+        },
+        "interaction": {
+          "count": 10,
+          "p50": 53.54780000000028,
+          "p95": 304.89680000000226,
+          "p99": 304.89680000000226,
+          "max": 304.89680000000226
+        },
+        "command": {
+          "count": 30,
+          "p50": 54.918900000004214,
+          "p95": 215.98050000000512,
+          "p99": 454.07590000001073,
+          "max": 454.07590000001073
+        },
+        "fanout": {
+          "count": 30,
+          "p50": 57.26900000000023,
+          "p95": 219.69620000000577,
+          "p99": 456.7563000000082,
+          "max": 456.7563000000082
+        },
+        "heartbeat": {
+          "count": 30,
+          "p50": 2.2480000000068685,
+          "p95": 57.02709999999206,
+          "p99": 215.45809999998892,
+          "max": 215.45809999998892
+        },
+        "image": {
+          "count": 8,
+          "p50": 2296.077000000005,
+          "p95": 2604.7302999999956,
+          "p99": 2604.7302999999956,
+          "max": 2604.7302999999956
+        }
+      },
+      "observations": [
+        {
+          "at": "2026-10-08T05:27:46.209Z",
+          "pg": {
+            "database_bytes": "14160355",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.023658495,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.079560703,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437263.029,
+            "gamehub_realtime_process_rss_bytes": 87490560,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 28,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 2860620,
+              "user_usec": 2404912,
+              "system_usec": 455707,
+              "nice_usec": 0,
+              "nr_periods": 184,
+              "nr_throttled": 39,
+              "throttled_usec": 3939116,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 65196032,
+              "memoryPeak": 78540800
+            },
+            "community-image": {
+              "usage_usec": 1284922,
+              "user_usec": 1096083,
+              "system_usec": 188838,
+              "nice_usec": 0,
+              "nr_periods": 131,
+              "nr_throttled": 19,
+              "throttled_usec": 1283991,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 16510976,
+              "memoryPeak": 71290880
+            },
+            "postgres": {
+              "usage_usec": 3180027,
+              "user_usec": 1859093,
+              "system_usec": 1320934,
+              "nice_usec": 0,
+              "nr_periods": 527,
+              "nr_throttled": 16,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 121663488,
+              "memoryPeak": 122798080
+            },
+            "realtime": {
+              "usage_usec": 1940887,
+              "user_usec": 1581312,
+              "system_usec": 359574,
+              "nice_usec": 0,
+              "nr_periods": 245,
+              "nr_throttled": 30,
+              "throttled_usec": 2504345,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 42860544,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 920189,
+              "user_usec": 593011,
+              "system_usec": 327178,
+              "nice_usec": 0,
+              "nr_periods": 475,
+              "nr_throttled": 44,
+              "throttled_usec": 2372303,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 8728576,
+              "memoryPeak": 10321920
+            },
+            "worker": {
+              "usage_usec": 845316,
+              "user_usec": 705000,
+              "system_usec": 140315,
+              "nice_usec": 0,
+              "nr_periods": 139,
+              "nr_throttled": 45,
+              "throttled_usec": 6173257,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 61743104,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:27:51.192Z",
+          "pg": {
+            "database_bytes": "14201315",
+            "wal_bytes": "16777216",
+            "connections": 10,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020709375,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.079757311,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437268.03,
+            "gamehub_realtime_process_rss_bytes": 87654400,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 38,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 3376930,
+              "user_usec": 2853256,
+              "system_usec": 523674,
+              "nice_usec": 0,
+              "nr_periods": 228,
+              "nr_throttled": 41,
+              "throttled_usec": 4072481,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 68943872,
+              "memoryPeak": 81723392
+            },
+            "community-image": {
+              "usage_usec": 2410638,
+              "user_usec": 1987365,
+              "system_usec": 423272,
+              "nice_usec": 0,
+              "nr_periods": 161,
+              "nr_throttled": 39,
+              "throttled_usec": 2788175,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15810560,
+              "memoryPeak": 73605120
+            },
+            "postgres": {
+              "usage_usec": 3499580,
+              "user_usec": 2055439,
+              "system_usec": 1444141,
+              "nice_usec": 0,
+              "nr_periods": 570,
+              "nr_throttled": 17,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 118624256,
+              "memoryPeak": 122798080
+            },
+            "realtime": {
+              "usage_usec": 2252770,
+              "user_usec": 1839830,
+              "system_usec": 412939,
+              "nice_usec": 0,
+              "nr_periods": 287,
+              "nr_throttled": 34,
+              "throttled_usec": 2696866,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 43307008,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1016019,
+              "user_usec": 662621,
+              "system_usec": 353398,
+              "nice_usec": 0,
+              "nr_periods": 513,
+              "nr_throttled": 50,
+              "throttled_usec": 2937625,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 9248768,
+              "memoryPeak": 10321920
+            },
+            "worker": {
+              "usage_usec": 1030566,
+              "user_usec": 868027,
+              "system_usec": 162539,
+              "nice_usec": 0,
+              "nr_periods": 178,
+              "nr_throttled": 52,
+              "throttled_usec": 7686220,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 55349248,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:27:56.195Z",
+          "pg": {
+            "database_bytes": "14258659",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020791295,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.021069823,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437273.029,
+            "gamehub_realtime_process_rss_bytes": 87982080,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 48,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 3581027,
+              "user_usec": 3030100,
+              "system_usec": 550927,
+              "nice_usec": 0,
+              "nr_periods": 253,
+              "nr_throttled": 42,
+              "throttled_usec": 4132314,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 68665344,
+              "memoryPeak": 81723392
+            },
+            "community-image": {
+              "usage_usec": 2432457,
+              "user_usec": 2004150,
+              "system_usec": 428306,
+              "nice_usec": 0,
+              "nr_periods": 167,
+              "nr_throttled": 39,
+              "throttled_usec": 2788175,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15761408,
+              "memoryPeak": 73605120
+            },
+            "postgres": {
+              "usage_usec": 3675556,
+              "user_usec": 2156326,
+              "system_usec": 1519229,
+              "nice_usec": 0,
+              "nr_periods": 604,
+              "nr_throttled": 17,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 117956608,
+              "memoryPeak": 122798080
+            },
+            "realtime": {
+              "usage_usec": 2456072,
+              "user_usec": 2010628,
+              "system_usec": 445444,
+              "nice_usec": 0,
+              "nr_periods": 323,
+              "nr_throttled": 35,
+              "throttled_usec": 2775196,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 42577920,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1085582,
+              "user_usec": 699597,
+              "system_usec": 385984,
+              "nice_usec": 0,
+              "nr_periods": 553,
+              "nr_throttled": 53,
+              "throttled_usec": 3084792,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 6262784,
+              "memoryPeak": 10321920
+            },
+            "worker": {
+              "usage_usec": 1056674,
+              "user_usec": 889831,
+              "system_usec": 166843,
+              "nice_usec": 0,
+              "nr_periods": 189,
+              "nr_throttled": 52,
+              "throttled_usec": 7686220,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 55128064,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:28:01.202Z",
+          "pg": {
+            "database_bytes": "14316003",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020627455,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.028704767,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437278.03,
+            "gamehub_realtime_process_rss_bytes": 88092672,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 58,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 3859389,
+              "user_usec": 3266836,
+              "system_usec": 592552,
+              "nice_usec": 0,
+              "nr_periods": 277,
+              "nr_throttled": 45,
+              "throttled_usec": 4243977,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 69455872,
+              "memoryPeak": 82038784
+            },
+            "community-image": {
+              "usage_usec": 2455757,
+              "user_usec": 2027170,
+              "system_usec": 428587,
+              "nice_usec": 0,
+              "nr_periods": 177,
+              "nr_throttled": 39,
+              "throttled_usec": 2788175,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15798272,
+              "memoryPeak": 73605120
+            },
+            "postgres": {
+              "usage_usec": 3838078,
+              "user_usec": 2242979,
+              "system_usec": 1595098,
+              "nice_usec": 0,
+              "nr_periods": 639,
+              "nr_throttled": 17,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 118878208,
+              "memoryPeak": 122798080
+            },
+            "realtime": {
+              "usage_usec": 2748869,
+              "user_usec": 2251647,
+              "system_usec": 497222,
+              "nice_usec": 0,
+              "nr_periods": 364,
+              "nr_throttled": 39,
+              "throttled_usec": 2915653,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 43581440,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1174319,
+              "user_usec": 756341,
+              "system_usec": 417978,
+              "nice_usec": 0,
+              "nr_periods": 586,
+              "nr_throttled": 58,
+              "throttled_usec": 3879215,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 7323648,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1087243,
+              "user_usec": 913005,
+              "system_usec": 174237,
+              "nice_usec": 0,
+              "nr_periods": 200,
+              "nr_throttled": 53,
+              "throttled_usec": 7734663,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 55459840,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:28:06.202Z",
+          "pg": {
+            "database_bytes": "14373347",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020529151,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.020725759,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437283.028,
+            "gamehub_realtime_process_rss_bytes": 88256512,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 68,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 4025550,
+              "user_usec": 3393019,
+              "system_usec": 632530,
+              "nice_usec": 0,
+              "nr_periods": 297,
+              "nr_throttled": 46,
+              "throttled_usec": 4307805,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 68337664,
+              "memoryPeak": 82198528
+            },
+            "community-image": {
+              "usage_usec": 2478347,
+              "user_usec": 2049090,
+              "system_usec": 429256,
+              "nice_usec": 0,
+              "nr_periods": 187,
+              "nr_throttled": 39,
+              "throttled_usec": 2788175,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 15818752,
+              "memoryPeak": 73605120
+            },
+            "postgres": {
+              "usage_usec": 3999535,
+              "user_usec": 2354365,
+              "system_usec": 1645169,
+              "nice_usec": 0,
+              "nr_periods": 674,
+              "nr_throttled": 18,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 119304192,
+              "memoryPeak": 124084224
+            },
+            "realtime": {
+              "usage_usec": 2933547,
+              "user_usec": 2409409,
+              "system_usec": 524137,
+              "nice_usec": 0,
+              "nr_periods": 402,
+              "nr_throttled": 41,
+              "throttled_usec": 2992643,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 43474944,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1248535,
+              "user_usec": 806931,
+              "system_usec": 441604,
+              "nice_usec": 0,
+              "nr_periods": 619,
+              "nr_throttled": 62,
+              "throttled_usec": 4130167,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 6004736,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1117689,
+              "user_usec": 939558,
+              "system_usec": 178131,
+              "nice_usec": 0,
+              "nr_periods": 210,
+              "nr_throttled": 53,
+              "throttled_usec": 7734663,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 56008704,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:28:11.191Z",
+          "pg": {
+            "database_bytes": "14373347",
+            "wal_bytes": "16777216",
+            "connections": 9,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020479999,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.080281599,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437288.029,
+            "gamehub_realtime_process_rss_bytes": 88793088,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 78,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 4385753,
+              "user_usec": 3693266,
+              "system_usec": 692487,
+              "nice_usec": 0,
+              "nr_periods": 326,
+              "nr_throttled": 50,
+              "throttled_usec": 4562853,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 70692864,
+              "memoryPeak": 82337792
+            },
+            "community-image": {
+              "usage_usec": 2695996,
+              "user_usec": 2238567,
+              "system_usec": 457428,
+              "nice_usec": 0,
+              "nr_periods": 199,
+              "nr_throttled": 42,
+              "throttled_usec": 3052369,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 16166912,
+              "memoryPeak": 73605120
+            },
+            "postgres": {
+              "usage_usec": 4217338,
+              "user_usec": 2518059,
+              "system_usec": 1699278,
+              "nice_usec": 0,
+              "nr_periods": 709,
+              "nr_throttled": 18,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 120238080,
+              "memoryPeak": 124084224
+            },
+            "realtime": {
+              "usage_usec": 3231668,
+              "user_usec": 2686959,
+              "system_usec": 544708,
+              "nice_usec": 0,
+              "nr_periods": 437,
+              "nr_throttled": 46,
+              "throttled_usec": 3202923,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 43380736,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1311232,
+              "user_usec": 834420,
+              "system_usec": 476811,
+              "nice_usec": 0,
+              "nr_periods": 651,
+              "nr_throttled": 65,
+              "throttled_usec": 4266709,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 8278016,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1158190,
+              "user_usec": 979197,
+              "system_usec": 178993,
+              "nice_usec": 0,
+              "nr_periods": 228,
+              "nr_throttled": 54,
+              "throttled_usec": 7757551,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 55685120,
+              "memoryPeak": 61747200
+            }
+          }
+        }
+      ],
+      "missed": 0,
+      "attempts": 138,
+      "errors": []
+    },
+    {
+      "name": "recovery",
+      "seconds": 12,
+      "metrics": {
+        "read": {
+          "count": 22,
+          "p50": 21.02040000000852,
+          "p95": 89.58009999999194,
+          "p99": 95.57219999999506,
+          "max": 95.57219999999506
+        },
+        "interaction": {
+          "count": 4,
+          "p50": 48.146100000012666,
+          "p95": 90.45019999999204,
+          "p99": 90.45019999999204,
+          "max": 90.45019999999204
+        },
+        "command": {
+          "count": 11,
+          "p50": 43.04259999998612,
+          "p95": 114.95809999998892,
+          "p99": 114.95809999998892,
+          "max": 114.95809999998892
+        },
+        "fanout": {
+          "count": 11,
+          "p50": 46.33419999998296,
+          "p95": 121.30959999997867,
+          "p99": 121.30959999997867,
+          "max": 121.30959999997867
+        },
+        "heartbeat": {
+          "count": 12,
+          "p50": 1.8380999999935739,
+          "p95": 5.744899999990594,
+          "p99": 5.744899999990594,
+          "max": 5.744899999990594
+        },
+        "image": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "p99": null,
+          "max": null
+        }
+      },
+      "observations": [
+        {
+          "at": "2026-10-08T05:28:16.216Z",
+          "pg": {
+            "database_bytes": "14471651",
+            "wal_bytes": "16777216",
+            "connections": 8,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020611071,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.021020671,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437293.029,
+            "gamehub_realtime_process_rss_bytes": 88956928,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 88,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 4684211,
+              "user_usec": 3951813,
+              "system_usec": 732397,
+              "nice_usec": 0,
+              "nr_periods": 364,
+              "nr_throttled": 52,
+              "throttled_usec": 4704962,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 74002432,
+              "memoryPeak": 88985600
+            },
+            "community-image": {
+              "usage_usec": 3530652,
+              "user_usec": 2953643,
+              "system_usec": 577009,
+              "nice_usec": 0,
+              "nr_periods": 225,
+              "nr_throttled": 56,
+              "throttled_usec": 3960542,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 18292736,
+              "memoryPeak": 75653120
+            },
+            "postgres": {
+              "usage_usec": 4468733,
+              "user_usec": 2678759,
+              "system_usec": 1789973,
+              "nice_usec": 0,
+              "nr_periods": 747,
+              "nr_throttled": 18,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 117542912,
+              "memoryPeak": 124084224
+            },
+            "realtime": {
+              "usage_usec": 3399468,
+              "user_usec": 2831538,
+              "system_usec": 567930,
+              "nice_usec": 0,
+              "nr_periods": 471,
+              "nr_throttled": 48,
+              "throttled_usec": 3291855,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 44527616,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1395078,
+              "user_usec": 892308,
+              "system_usec": 502769,
+              "nice_usec": 0,
+              "nr_periods": 685,
+              "nr_throttled": 70,
+              "throttled_usec": 4898629,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 6569984,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1219143,
+              "user_usec": 1030212,
+              "system_usec": 188931,
+              "nice_usec": 0,
+              "nr_periods": 258,
+              "nr_throttled": 55,
+              "throttled_usec": 7821311,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 54587392,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:28:21.213Z",
+          "pg": {
+            "database_bytes": "14496227",
+            "wal_bytes": "16777216",
+            "connections": 8,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020725759,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.077922303,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437298.03,
+            "gamehub_realtime_process_rss_bytes": 89448448,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 99,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 4950805,
+              "user_usec": 4170965,
+              "system_usec": 779840,
+              "nice_usec": 0,
+              "nr_periods": 389,
+              "nr_throttled": 55,
+              "throttled_usec": 4840901,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 74174464,
+              "memoryPeak": 88985600
+            },
+            "community-image": {
+              "usage_usec": 3551033,
+              "user_usec": 2966584,
+              "system_usec": 584449,
+              "nice_usec": 0,
+              "nr_periods": 233,
+              "nr_throttled": 56,
+              "throttled_usec": 3960542,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 17129472,
+              "memoryPeak": 75653120
+            },
+            "postgres": {
+              "usage_usec": 4625343,
+              "user_usec": 2780956,
+              "system_usec": 1844386,
+              "nice_usec": 0,
+              "nr_periods": 774,
+              "nr_throttled": 18,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 120995840,
+              "memoryPeak": 124084224
+            },
+            "realtime": {
+              "usage_usec": 3654151,
+              "user_usec": 3053246,
+              "system_usec": 600904,
+              "nice_usec": 0,
+              "nr_periods": 506,
+              "nr_throttled": 52,
+              "throttled_usec": 3461940,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 45359104,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1457422,
+              "user_usec": 918375,
+              "system_usec": 539046,
+              "nice_usec": 0,
+              "nr_periods": 716,
+              "nr_throttled": 73,
+              "throttled_usec": 5133884,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 5877760,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1243302,
+              "user_usec": 1048698,
+              "system_usec": 194603,
+              "nice_usec": 0,
+              "nr_periods": 270,
+              "nr_throttled": 55,
+              "throttled_usec": 7821311,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 57786368,
+              "memoryPeak": 61747200
+            }
+          }
+        },
+        {
+          "at": "2026-10-08T05:28:26.214Z",
+          "pg": {
+            "database_bytes": "14512611",
+            "wal_bytes": "16777216",
+            "connections": 8,
+            "lock_waiters": 0
+          },
+          "realtime": {
+            "gamehub_realtime_event_loop_delay_p99_seconds": 0.020774911,
+            "gamehub_realtime_event_loop_delay_max_seconds": 0.021102591,
+            "gamehub_realtime_event_loop_sample_timestamp_seconds": 1791437303.03,
+            "gamehub_realtime_process_rss_bytes": 89563136,
+            "gamehub_realtime_connections": 2,
+            "gamehub_realtime_connections_total": 2,
+            "gamehub_realtime_messages_total": 109,
+            "gamehub_realtime_command_failures_total": 0
+          },
+          "cgroups": {
+            "api": {
+              "usage_usec": 5213152,
+              "user_usec": 4377155,
+              "system_usec": 835997,
+              "nice_usec": 0,
+              "nr_periods": 414,
+              "nr_throttled": 58,
+              "throttled_usec": 4984523,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 72482816,
+              "memoryPeak": 88985600
+            },
+            "community-image": {
+              "usage_usec": 3572555,
+              "user_usec": 2987221,
+              "system_usec": 585334,
+              "nice_usec": 0,
+              "nr_periods": 241,
+              "nr_throttled": 56,
+              "throttled_usec": 3960542,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 16125952,
+              "memoryPeak": 75653120
+            },
+            "postgres": {
+              "usage_usec": 4780596,
+              "user_usec": 2873290,
+              "system_usec": 1907305,
+              "nice_usec": 0,
+              "nr_periods": 800,
+              "nr_throttled": 19,
+              "throttled_usec": 837982,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 118312960,
+              "memoryPeak": 124084224
+            },
+            "realtime": {
+              "usage_usec": 3918222,
+              "user_usec": 3280088,
+              "system_usec": 638133,
+              "nice_usec": 0,
+              "nr_periods": 540,
+              "nr_throttled": 56,
+              "throttled_usec": 3696656,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 42487808,
+              "memoryPeak": 67141632
+            },
+            "redis": {
+              "usage_usec": 1521869,
+              "user_usec": 971748,
+              "system_usec": 550121,
+              "nice_usec": 0,
+              "nr_periods": 749,
+              "nr_throttled": 76,
+              "throttled_usec": 5323222,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 8286208,
+              "memoryPeak": 12664832
+            },
+            "worker": {
+              "usage_usec": 1269375,
+              "user_usec": 1063237,
+              "system_usec": 206137,
+              "nice_usec": 0,
+              "nr_periods": 283,
+              "nr_throttled": 56,
+              "throttled_usec": 7855474,
+              "nr_bursts": 0,
+              "burst_usec": 0,
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "memoryCurrent": 57790464,
+              "memoryPeak": 61747200
+            }
+          }
+        }
+      ],
+      "missed": 0,
+      "attempts": 53,
+      "errors": []
+    }
+  ],
+  "errors": [],
+  "imageReads": 44,
+  "gitHead": "5f40233e1b800811831deecebecc49afa5520a4c",
+  "gitDirty": true,
+  "sourceFiles": {
+    "scripts/run-community-mixed-load.mjs": "9ee95ceb5b8c85dac396b52a3982c4527d68a477e6648f848809525805f56056",
+    "scripts/save-mixed-load-support.mjs": "443b95979b8807b392c36cfdd04e28b1815bee9722365fa3f1e8119de80bcf75",
+    "scripts/community-mixed-load-gate.mjs": "8c39dfe7a483b90648f257f3b5332b100b09e0014445187b05ffc821e91e8ece",
+    "deploy/compose.community-load.yml": "6183ca445d5360f31806ce0916dfd6215292d01b13b040cce1316303fe96f527",
+    "apps/api/src/community-media-service.mjs": "d1f5a9d5dc924563ce60bc058c0b07a7b2e0492f3245a1f9ca5397300f00e348",
+    "apps/api/src/community-image-cli.mjs": "138cf382006b7a8070a610c7c7c088c6bb39c36650e65ea7a715b7b1baa7bc5a"
+  },
+  "budget": {
+    "cpu": 2,
+    "memoryBytes": 2248146944,
+    "kind": "sum of service quotas; not whole-host isolation",
+    "containers": [
+      {
+        "id": "eb5bc15cb3fc3a7aab7ab00cba070a280c435c6c9019bace3bc5fc005978a9eb",
+        "service": "api",
+        "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+        "cpus": 0.45,
+        "memoryBytes": 402653184,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "01ba6e81bc20891dd64c123cd97f2cecf86dacc861abd1db747854104e04679b",
+        "service": "community-image",
+        "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+        "cpus": 0.5,
+        "memoryBytes": 268435456,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "2266dd0c019f0689d1d630ce1829a20f6ca4d2f2f5edf902206734dd94d9c16c",
+        "service": "migrate",
+        "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+        "cpus": 0.4,
+        "memoryBytes": 402653184,
+        "status": "exited",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "9cad83e7e4d44c77b498fec441694c6569b63be4ea93f8aea8baf76c19d1c543",
+        "service": "postgres",
+        "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "cpus": 0.4,
+        "memoryBytes": 671088640,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "11f206f8509b11012eb231db09604a1cd41ed01f19df205803dd94c0bbfd83d0",
+        "service": "realtime",
+        "image": "sha256:5a0977fc64c6a6f575ada9a37d95a3d8393a16d6372d6d6be706047ad7956055",
+        "cpus": 0.4,
+        "memoryBytes": 201326592,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "5ba916692c3aec443e4dd0b302450ce90273335965a5a6c2a0d01af091244fdd",
+        "service": "redis",
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+        "cpus": 0.1,
+        "memoryBytes": 167772160,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      },
+      {
+        "id": "7ea570df4aed9806a6dba589f3c665265aa2e34a18ac685d081af52f4f64293f",
+        "service": "worker",
+        "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+        "cpus": 0.15,
+        "memoryBytes": 536870912,
+        "status": "running",
+        "exitCode": 0,
+        "oomKilled": false,
+        "restartCount": 0
+      }
+    ]
+  },
+  "docker": "20 CPUs; 12407336960 bytes; linux",
+  "cloudSavesDisabled": true,
+  "images": [
+    {
+      "width": 1600,
+      "height": 900,
+      "bytes": 172192
+    },
+    {
+      "width": 4000,
+      "height": 3000,
+      "bytes": 1428277
+    }
+  ],
+  "rules": {
+    "installed": true,
+    "protocol": "gamehub.rules-manifest.v1",
+    "manifestSha256": "3294b07765d1e48a50c8ee7d9292f361e24656d5b037f1e3fc44d9447989df1c",
+    "keyId": "mizhen-release-2026-09",
+    "createdAt": "2026-09-30T00:00:00.000Z",
+    "adapterCount": 1
+  },
+  "invariants": {
+    "bad_likes": 0,
+    "bad_publication": 0,
+    "bad_media": 0,
+    "unfinished_images": 0,
+    "unexpected_cloud_saves": 0,
+    "bad_match_sequence": 0
+  },
+  "matchCommandsVerified": true,
+  "unexpectedSocketErrors": 0,
+  "finalContainers": [
+    {
+      "id": "eb5bc15cb3fc3a7aab7ab00cba070a280c435c6c9019bace3bc5fc005978a9eb",
+      "service": "api",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.45,
+      "memoryBytes": 402653184,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "01ba6e81bc20891dd64c123cd97f2cecf86dacc861abd1db747854104e04679b",
+      "service": "community-image",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.5,
+      "memoryBytes": 268435456,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "2266dd0c019f0689d1d630ce1829a20f6ca4d2f2f5edf902206734dd94d9c16c",
+      "service": "migrate",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.4,
+      "memoryBytes": 402653184,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "9cad83e7e4d44c77b498fec441694c6569b63be4ea93f8aea8baf76c19d1c543",
+      "service": "postgres",
+      "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "cpus": 0.4,
+      "memoryBytes": 671088640,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "11f206f8509b11012eb231db09604a1cd41ed01f19df205803dd94c0bbfd83d0",
+      "service": "realtime",
+      "image": "sha256:5a0977fc64c6a6f575ada9a37d95a3d8393a16d6372d6d6be706047ad7956055",
+      "cpus": 0.4,
+      "memoryBytes": 201326592,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "5ba916692c3aec443e4dd0b302450ce90273335965a5a6c2a0d01af091244fdd",
+      "service": "redis",
+      "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "cpus": 0.1,
+      "memoryBytes": 167772160,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "7ea570df4aed9806a6dba589f3c665265aa2e34a18ac685d081af52f4f64293f",
+      "service": "worker",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.15,
+      "memoryBytes": 536870912,
+      "status": "running",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    }
+  ],
+  "finalCgroups": {
+    "api": {
+      "usage_usec": 5241383,
+      "user_usec": 4405246,
+      "system_usec": 836136,
+      "nice_usec": 0,
+      "nr_periods": 420,
+      "nr_throttled": 58,
+      "throttled_usec": 4984523,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 72769536,
+      "memoryPeak": 88985600
+    },
+    "community-image": {
+      "usage_usec": 3594284,
+      "user_usec": 3004660,
+      "system_usec": 589624,
+      "nice_usec": 0,
+      "nr_periods": 246,
+      "nr_throttled": 56,
+      "throttled_usec": 3960542,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 16670720,
+      "memoryPeak": 75653120
+    },
+    "postgres": {
+      "usage_usec": 4855750,
+      "user_usec": 2924158,
+      "system_usec": 1931592,
+      "nice_usec": 0,
+      "nr_periods": 811,
+      "nr_throttled": 19,
+      "throttled_usec": 837982,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 119525376,
+      "memoryPeak": 124084224
+    },
+    "realtime": {
+      "usage_usec": 3965866,
+      "user_usec": 3314389,
+      "system_usec": 651477,
+      "nice_usec": 0,
+      "nr_periods": 556,
+      "nr_throttled": 56,
+      "throttled_usec": 3696656,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 41828352,
+      "memoryPeak": 67141632
+    },
+    "redis": {
+      "usage_usec": 1591071,
+      "user_usec": 1017965,
+      "system_usec": 573106,
+      "nice_usec": 0,
+      "nr_periods": 770,
+      "nr_throttled": 81,
+      "throttled_usec": 6014061,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 9056256,
+      "memoryPeak": 12664832
+    },
+    "worker": {
+      "usage_usec": 1292206,
+      "user_usec": 1081678,
+      "system_usec": 210527,
+      "nice_usec": 0,
+      "nr_periods": 289,
+      "nr_throttled": 56,
+      "throttled_usec": 7855474,
+      "nr_bursts": 0,
+      "burst_usec": 0,
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "memoryCurrent": 57524224,
+      "memoryPeak": 61747200
+    }
+  },
+  "stoppedContainers": [
+    {
+      "id": "eb5bc15cb3fc3a7aab7ab00cba070a280c435c6c9019bace3bc5fc005978a9eb",
+      "service": "api",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.45,
+      "memoryBytes": 402653184,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "01ba6e81bc20891dd64c123cd97f2cecf86dacc861abd1db747854104e04679b",
+      "service": "community-image",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.5,
+      "memoryBytes": 268435456,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "2266dd0c019f0689d1d630ce1829a20f6ca4d2f2f5edf902206734dd94d9c16c",
+      "service": "migrate",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.4,
+      "memoryBytes": 402653184,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "9cad83e7e4d44c77b498fec441694c6569b63be4ea93f8aea8baf76c19d1c543",
+      "service": "postgres",
+      "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "cpus": 0.4,
+      "memoryBytes": 671088640,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "11f206f8509b11012eb231db09604a1cd41ed01f19df205803dd94c0bbfd83d0",
+      "service": "realtime",
+      "image": "sha256:5a0977fc64c6a6f575ada9a37d95a3d8393a16d6372d6d6be706047ad7956055",
+      "cpus": 0.4,
+      "memoryBytes": 201326592,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "5ba916692c3aec443e4dd0b302450ce90273335965a5a6c2a0d01af091244fdd",
+      "service": "redis",
+      "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "cpus": 0.1,
+      "memoryBytes": 167772160,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    },
+    {
+      "id": "7ea570df4aed9806a6dba589f3c665265aa2e34a18ac685d081af52f4f64293f",
+      "service": "worker",
+      "image": "sha256:e1fcca4321809093b13dba5e22dc520c12020013d3cfbef7734cd37f668a517b",
+      "cpus": 0.15,
+      "memoryBytes": 536870912,
+      "status": "exited",
+      "exitCode": 0,
+      "oomKilled": false,
+      "restartCount": 0
+    }
+  ],
+  "checks": [
+    {
+      "name": "all three phases",
+      "ok": true
+    },
+    {
+      "name": "baseline: sustained offered load",
+      "ok": true
+    },
+    {
+      "name": "baseline: read samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: read p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: read p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: interaction samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: interaction p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: interaction p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: command samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: command p95",
+      "ok": false
+    },
+    {
+      "name": "baseline: command p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "baseline: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "baseline: fanout",
+      "ok": true
+    },
+    {
+      "name": "baseline: loop samples",
+      "ok": true
+    },
+    {
+      "name": "baseline: loop delay",
+      "ok": true
+    },
+    {
+      "name": "mixed: sustained offered load",
+      "ok": true
+    },
+    {
+      "name": "mixed: read samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: read p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: read p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: interaction samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: interaction p95",
+      "ok": false
+    },
+    {
+      "name": "mixed: interaction p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: command samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: command p95",
+      "ok": false
+    },
+    {
+      "name": "mixed: command p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: image samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: image p95",
+      "ok": true
+    },
+    {
+      "name": "mixed: image p99",
+      "ok": true
+    },
+    {
+      "name": "mixed: fanout",
+      "ok": true
+    },
+    {
+      "name": "mixed: loop samples",
+      "ok": true
+    },
+    {
+      "name": "mixed: loop delay",
+      "ok": true
+    },
+    {
+      "name": "recovery: sustained offered load",
+      "ok": true
+    },
+    {
+      "name": "recovery: read samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: read p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: read p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: interaction samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: interaction p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: interaction p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: command samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: command p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: command p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat p95",
+      "ok": true
+    },
+    {
+      "name": "recovery: heartbeat p99",
+      "ok": true
+    },
+    {
+      "name": "recovery: fanout",
+      "ok": true
+    },
+    {
+      "name": "recovery: loop samples",
+      "ok": true
+    },
+    {
+      "name": "recovery: loop delay",
+      "ok": true
+    },
+    {
+      "name": "CPU and memory bounded",
+      "ok": true
+    },
+    {
+      "name": "no OOM/restarts",
+      "ok": true
+    },
+    {
+      "name": "database invariants",
+      "ok": true
+    },
+    {
+      "name": "cloud saves disabled",
+      "ok": true
+    },
+    {
+      "name": "ACK identities persisted",
+      "ok": true
+    },
+    {
+      "name": "image reads checked",
+      "ok": true
+    },
+    {
+      "name": "sockets and runner clean",
+      "ok": true
+    }
+  ],
+  "localGatePassed": false,
+  "qualification": "smoke-only",
+  "dataRetained": true
+}

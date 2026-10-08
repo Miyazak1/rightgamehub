@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-08T05:37:07.505Z",
+  "strictModeBeforeFix": {
+    "passed": false,
+    "reason": "Submitted draft never reached API; UI remained busy under React.StrictMode"
+  },
+  "strictModeAfterFix": {
+    "passed": true,
+    "retryKeepsContentAndIdempotencyKey": true
+  },
+  "clientRegression": {
+    "passed": 134,
+    "skipped": 1,
+    "failed": 0
+  },
+  "loadGateTests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "builds": [
+    "Web",
+    "VSIX",
+    "Harness"
+  ],
+  "installedBundleSha256": "FC95E3C92C89345E024ACDCB9F0D6EB70F6B93C41B4065FA0246B2B6D89C2642",
+  "manualImageAndCollectionConfirmation": "pending"
+}

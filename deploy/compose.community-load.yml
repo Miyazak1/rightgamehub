@@ -1,0 +1,135 @@
+# Dedicated local laboratory. Never combine with compose.prod.yml.
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_DB: gamehub_community_load_test
+      POSTGRES_USER: gamehub_test
+      POSTGRES_PASSWORD: ${MIXED_PASSWORD:?generated test password required}
+    ports: ["127.0.0.1:${MIXED_PG_PORT:-55839}:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    mem_limit: 640m
+    cpus: 0.40
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gamehub_test", "-d", "gamehub_community_load_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes: ["redis-data:/data"]
+    mem_limit: 160m
+    cpus: 0.10
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: ${MIXED_API_IMAGE:?generated image tag required}
+    environment: &api-env
+      NODE_ENV: production
+      DATABASE_URL: postgresql://gamehub_test:${MIXED_PASSWORD}@postgres:5432/gamehub_community_load_test
+      REDIS_URL: redis://redis:6379
+      OTP_HMAC_KEY: ${MIXED_OTP:?generated test key required}
+      API_HOST: 0.0.0.0
+      API_PORT: "3090"
+      REALTIME_PUBLIC_URL: wss://localhost:${MIXED_RT_PORT:-55893}/v1/realtime
+      GUESS_BAIKE_AUTOMATION_ENABLED: "false"
+      CLOUD_SAVE_ENABLED: "false"
+      COMMUNITY_ENABLED: "true"
+      COMMUNITY_POSTING_ENABLED: "true"
+      COMMUNITY_IMAGES_ENABLED: "true"
+      COMMUNITY_MEDIA_ROOT: /data/community-media
+      COMMUNITY_PROCESSOR_ROOT: /data/community-processor
+      SAVE_STORAGE_REQUIRED: "true"
+      RULES_MANIFEST_PATH: /app/rules/manifest.json
+      RULES_TRUSTED_KEYS_JSON: ${MIXED_RULE_KEYS:?trusted public keys required}
+      RULES_ALLOW_UNSIGNED: "false"
+      QUARANTINE_ROOT: /data/quarantine
+      AVATAR_ROOT: /data/avatars
+      COVER_ROOT: /data/covers
+      RUNTIME_ROOT: /data/runtime
+      VALIDATOR_ROOT: /data/validator
+      NODE_OPTIONS: --max-old-space-size=256
+    command: ["node", "apps/api/src/migrate-cli.mjs"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    mem_limit: 384m
+    cpus: 0.40
+  api:
+    image: ${MIXED_API_IMAGE}
+    environment: *api-env
+    ports: ["127.0.0.1:${MIXED_API_PORT:-55890}:3090"]
+    volumes: ["../rules:/app/rules:ro", "community-media:/data/community-media", "community-processor:/data/community-processor"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    mem_limit: 384m
+    cpus: 0.45
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3090/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  realtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.realtime
+    image: ${MIXED_RT_IMAGE:?generated image tag required}
+    environment:
+      NODE_ENV: production
+      REALTIME_HOST: 0.0.0.0
+      REALTIME_PORT: "3093"
+      DATABASE_URL: postgresql://gamehub_test:${MIXED_PASSWORD}@postgres:5432/gamehub_community_load_test
+      REDIS_URL: redis://redis:6379
+      RULES_MANIFEST_PATH: /app/rules/manifest.json
+      RULES_TRUSTED_KEYS_JSON: ${MIXED_RULE_KEYS}
+      RULES_ALLOW_UNSIGNED: "false"
+      NODE_OPTIONS: --max-old-space-size=128
+    ports: ["127.0.0.1:${MIXED_RT_PORT:-55893}:3093"]
+    volumes: ["../rules:/app/rules:ro"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    mem_limit: 192m
+    cpus: 0.40
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3093/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  worker:
+    image: ${MIXED_API_IMAGE}
+    command: ["node", "apps/api/src/validation-worker-cli.mjs"]
+    environment: *api-env
+    volumes: ["community-media:/data/community-media", "community-processor:/data/community-processor"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    mem_limit: 512m
+    cpus: 0.15
+  community-image:
+    image: ${MIXED_API_IMAGE}
+    command: ["node", "apps/api/src/community-image-service.mjs"]
+    environment:
+      COMMUNITY_MEDIA_ROOT: /data/community-media
+      COMMUNITY_PROCESSOR_ROOT: /data/community-processor
+      NODE_OPTIONS: --max-old-space-size=64
+    volumes: ["community-media:/data/community-media:ro", "community-processor:/data/community-processor"]
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    mem_limit: 256m
+    cpus: 0.50
+volumes:
+  postgres-data:
+  redis-data:
+  community-media:
+  community-processor:

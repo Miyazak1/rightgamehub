@@ -73,7 +73,7 @@ export async function openSocket(url){
     close(){socket.close();}
   };
 }
-export async function seedMixedFixture(pool,{actors=16,pairs=4,fillerMiB=64}={}){
+export async function seedMixedFixture(pool,{actors=16,pairs=4,fillerMiB=64,cloudSaves=true}={}){
   const workId='1a13df55-8906-4b03-a19a-5e5a3b776649',releaseId=uuid(),modeId=uuid(),people=[];
   if((await pool.query('SELECT count(*)::int n FROM users')).rows[0].n>1)throw failure('NONEMPTY_TEST_DATABASE');
   for(let i=0;i<actors;i++){
@@ -85,19 +85,21 @@ export async function seedMixedFixture(pool,{actors=16,pairs=4,fillerMiB=64}={})
   }
   await pool.query("INSERT INTO works(id,owner_user_id,title,kind,state,visibility) VALUES($1,$2,'Mixed load signed Mizhen fixture','game','published','public')",[workId,people[0].userId]);
   await pool.query("INSERT INTO work_targets(work_id,target_key,state) VALUES($1,'web','published')",[workId]);
-  await pool.query("INSERT INTO releases(id,work_id,target_key,label,package_type,validation_state,serving_state,approved_capabilities) VALUES($1,$2,'web','mixed-load','web_zip','ready','enabled','[\"cloudSave\",\"multiplayer\"]')",[releaseId,workId]);
+  await pool.query("INSERT INTO releases(id,work_id,target_key,label,package_type,validation_state,serving_state,approved_capabilities) VALUES($1,$2,'web','mixed-load','web_zip','ready','enabled',$3)",[releaseId,workId,JSON.stringify(cloudSaves?['cloudSave','multiplayer']:['multiplayer'])]);
   await pool.query("UPDATE work_targets SET current_release_id=$2 WHERE work_id=$1",[workId,releaseId]);
-  await pool.query("INSERT INTO game_release_service_scopes(work_id,release_id,channel,status,namespaces,approved_by,reason) VALUES($1,$2,'production','active',$3,$4,'isolated mixed load fixture only')",[workId,releaseId,JSON.stringify({default:{readSchema:{min:1,max:1},writeSchema:1}}),people[0].userId]);
-  await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,approved_by,reason,content_types) VALUES($1,$2,'default','active',$3,'isolated mixed load fixture only',ARRAY['application/octet-stream'])",[uuid(),workId,people[0].userId]);
+  if(cloudSaves) {
+    await pool.query("INSERT INTO game_release_service_scopes(work_id,release_id,channel,status,namespaces,approved_by,reason) VALUES($1,$2,'production','active',$3,$4,'isolated mixed load fixture only')",[workId,releaseId,JSON.stringify({default:{readSchema:{min:1,max:1},writeSchema:1}}),people[0].userId]);
+    await pool.query("INSERT INTO game_save_policies(id,work_id,namespace,status,approved_by,reason,content_types) VALUES($1,$2,'default','active',$3,'isolated mixed load fixture only',ARRAY['application/octet-stream'])",[uuid(),workId,people[0].userId]);
+  }
   await pool.query("INSERT INTO multiplayer_game_modes(id,work_id,key,name,authority,min_players,max_players,ruleset_version,config) VALUES($1,$2,'duel','Mixed load duel','platform_authoritative',2,2,'1.0.0','{\"turnSeconds\":90}')",[modeId,workId]);
   // Incompressible, explicitly synthetic backup background; not user save data.
   await pool.query('CREATE TABLE mixed_load_fixture(id integer PRIMARY KEY,payload bytea NOT NULL)');
   for(let i=0;i<fillerMiB*4;i++)await pool.query('INSERT INTO mixed_load_fixture VALUES($1,$2)',[i,crypto.randomBytes(262144)]);
   return {workId,releaseId,modeId,people,pairs};
 }
-export async function prepareMixedClients({api,realtime,fixture,adapter}){
+export async function prepareMixedClients({api,realtime,fixture,adapter,cloudSaves=true}){
   const {people,workId,releaseId,modeId,pairs}=fixture,rooms=[];
-  for(const actor of people){
+  for(const actor of cloudSaves?people:[]){
     actor.session=(await jsonRequest(api,actor,'/v1/game-sessions',{method:'POST',body:{workId,releaseId,channel:'production',launchNonce:uuid()}})).gameSessionId;
     actor.path='/v1/me/game-saves/'+workId+'/slots/autosave?namespace=default';
     actor.headers={authorization:'Bearer '+actor.token,'x-gamehub-session':actor.session};
@@ -118,7 +120,7 @@ export async function prepareMixedClients({api,realtime,fixture,adapter}){
     if(digest(bytes)!==response.headers.get('x-content-sha256'))throw failure('READ_DIGEST_MISMATCH');
     if(latest&&(digest(bytes)!==actor.writes.at(-1).hash||response.headers.get('etag')!==actor.etag))throw failure('LATEST_ACK_NOT_READABLE');
   };
-  for(const actor of people)await save(actor);
+  if(cloudSaves)for(const actor of people)await save(actor);
   for(let i=0;i<pairs*2;i++){
     const ticket=await jsonRequest(api,people[i],'/v1/realtime/tickets',{method:'POST'});
     // TLS is deliberately outside this loopback laboratory; authentication is real.

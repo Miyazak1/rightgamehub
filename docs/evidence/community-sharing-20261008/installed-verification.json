@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-08T05:32:39.035Z",
+  "userId": "2f21e531-84c8-4bf1-9861-17fc4c0ecf91",
+  "postId": "f8edf59b-9414-4af6-b90d-bb991a326674",
+  "assetId": "65f8c839-a655-4244-832a-dd67d68420bf",
+  "title": "测试一些分享",
+  "version": "5",
+  "cursorLogin": [
+    {
+      "client_kind": "cursor",
+      "authenticated_at": "2026-10-08T05:24:29.294Z"
+    }
+  ],
+  "image": {
+    "declared_bytes": 107263,
+    "width": 400,
+    "height": 400,
+    "state": "ready",
+    "variants": {
+      "thumb": {
+        "key": "7f6435d6c72cf918ef9b7437a44ab458ef4d02a7e090447828557cee9923e6d4-thumb.webp",
+        "bytes": 44330,
+        "sha256": "7f6435d6c72cf918ef9b7437a44ab458ef4d02a7e090447828557cee9923e6d4"
+      },
+      "display": {
+        "key": "7f6435d6c72cf918ef9b7437a44ab458ef4d02a7e090447828557cee9923e6d4-display.webp",
+        "bytes": 44330,
+        "sha256": "7f6435d6c72cf918ef9b7437a44ab458ef4d02a7e090447828557cee9923e6d4"
+      }
+    }
+  },
+  "manualReports": [
+    "Cursor login complete",
+    "Initial submission stuck; screenshot received",
+    "After StrictMode fix and VSIX reinstall/reload, submitted and pending"
+  ],
+  "approvedViaRealApi": true,
+  "publicReadVerified": true,
+  "displayBytes": 44330,
+  "thumbBytes": 44330,
+  "interactions": {
+    "liked": 1,
+    "bookmarked": 1,
+    "like_count": 1
+  },
+  "checkedAt": "2026-10-08T05:34:56.971Z"
+}

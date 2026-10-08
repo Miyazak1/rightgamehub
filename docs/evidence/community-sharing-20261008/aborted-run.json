@@ -1,0 +1,148 @@
+{
+  "at": "2026-10-08T05:27:32.811Z",
+  "localGatePassed": false,
+  "productionReady": false,
+  "reason": "Node process exited with unsettled top-level await while waiting for readiness. No workload ran. Runner keepalive and response cleanup were then added.",
+  "cleanup": [
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:33 +0800 CST",
+      "ID": "bf7e352ec24d",
+      "Image": "gamehub-community-load-1791436953998-ad4df1-api:test",
+      "Labels": "com.docker.compose.config-hash=d56f32d6dbf7181771bb2c745f36dce7338f0a335f228094b4cc6e89e5e7ab09,com.docker.compose.container-number=1,com.docker.compose.depends_on=migrate:service_completed_successfully:false,com.docker.compose.image=sha256:e4deb7f44e30ddab8b10ccf026b72706af8975fcb750c1bb2c341edcd36d9bcc,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=worker,com.docker.compose.version=2.40.3,desktop.docker.io/ports.scheme=v2",
+      "LocalVolumes": "2",
+      "Mounts": "gamehub-commun…,gamehub-commun…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-worker-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "3 minutes ago",
+      "Size": "4.1kB (virtual 298MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:33 +0800 CST",
+      "ID": "3608355d4a83",
+      "Image": "gamehub-community-load-1791436953998-ad4df1-api:test",
+      "Labels": "com.docker.compose.config-hash=d91706c47e06f7728056ba7a3dc8774e5d40a0bff314d9d7bd88023e65c66cab,com.docker.compose.container-number=1,com.docker.compose.depends_on=redis:service_healthy:false,migrate:service_completed_successfully:false,com.docker.compose.image=sha256:e4deb7f44e30ddab8b10ccf026b72706af8975fcb750c1bb2c341edcd36d9bcc,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=api,com.docker.compose.version=2.40.3,desktop.docker.io/binds/0/Source=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\rules,desktop.docker.io/binds/0/SourceKind=hostFile,desktop.docker.io/binds/0/Target=/app/rules,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/3090/tcp=127.0.0.1:55890",
+      "LocalVolumes": "2",
+      "Mounts": "/run/desktop/m…,gamehub-commun…,gamehub-commun…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-api-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "3 minutes ago",
+      "Size": "12.3kB (virtual 298MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:33 +0800 CST",
+      "ID": "3b1cf6f9cee7",
+      "Image": "gamehub-community-load-1791436953998-ad4df1-realtime:test",
+      "Labels": "com.docker.compose.config-hash=97c59c012d26fb1243c529c652ede50be9e358a5af6a3deaa51842cb20b21239,com.docker.compose.container-number=1,com.docker.compose.depends_on=migrate:service_completed_successfully:false,redis:service_healthy:false,com.docker.compose.image=sha256:045860190969a498355ca97d3821eeab5be4b5639bb11877792d5f56814c453e,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=realtime,com.docker.compose.version=2.40.3,desktop.docker.io/binds/0/Source=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\rules,desktop.docker.io/binds/0/SourceKind=hostFile,desktop.docker.io/binds/0/Target=/app/rules,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/3093/tcp=127.0.0.1:55893",
+      "LocalVolumes": "0",
+      "Mounts": "/run/desktop/m…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-realtime-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "3 minutes ago",
+      "Size": "12.3kB (virtual 260MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:31 +0800 CST",
+      "ID": "ba92466059ad",
+      "Image": "gamehub-community-load-1791436953998-ad4df1-api:test",
+      "Labels": "com.docker.compose.config-hash=07746b7be415bc31c3a6bce3a0e208771cddf440fb366c8e1defcfbd7500797f,com.docker.compose.container-number=1,com.docker.compose.depends_on=postgres:service_healthy:false,com.docker.compose.image=sha256:e4deb7f44e30ddab8b10ccf026b72706af8975fcb750c1bb2c341edcd36d9bcc,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=migrate,com.docker.compose.version=2.40.3,desktop.docker.io/ports.scheme=v2",
+      "LocalVolumes": "0",
+      "Mounts": "",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-migrate-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "4 minutes ago",
+      "Size": "4.1kB (virtual 298MB)",
+      "State": "exited",
+      "Status": "Exited (0) 2 minutes ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:24 +0800 CST",
+      "ID": "2524102a210d",
+      "Image": "postgres:16.10-alpine",
+      "Labels": "com.docker.compose.config-hash=84347fe03471747472cded2af3654e1fac147caeb23858ef6666d02103743e6d,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=postgres,com.docker.compose.version=2.40.3,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/5432/tcp=127.0.0.1:55839",
+      "LocalVolumes": "1",
+      "Mounts": "gamehub-commun…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-postgres-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "4 minutes ago",
+      "Size": "16.4kB (virtual 284MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:24 +0800 CST",
+      "ID": "887af4ef3570",
+      "Image": "gamehub-community-load-1791436953998-ad4df1-api:test",
+      "Labels": "com.docker.compose.config-hash=8965b030134c1eda468ea7624fa16f232e1e8658af16fb61d3d5a1d68902d6fc,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:e4deb7f44e30ddab8b10ccf026b72706af8975fcb750c1bb2c341edcd36d9bcc,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=community-image,com.docker.compose.version=2.40.3,desktop.docker.io/ports.scheme=v2",
+      "LocalVolumes": "2",
+      "Mounts": "gamehub-commun…,gamehub-commun…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-community-image-1",
+      "Networks": "none",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "4 minutes ago",
+      "Size": "4.1kB (virtual 298MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-10-08 13:23:24 +0800 CST",
+      "ID": "18aaee7375c2",
+      "Image": "redis:7.4-alpine",
+      "Labels": "com.docker.compose.config-hash=704e4f0e8235263f265e4aee0ce7a908f68824b71c4c11c7f058131357d7113b,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy\\compose.community-load.yml,com.docker.compose.project.environment_file=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\.runtime\\community-load\\gamehub-community-load-1791436953998-ad4df1\\test.env,com.docker.compose.project.working_dir=C:\\Users\\pc\\.codex\\worktrees\\game-services\\Right\\deploy,com.docker.compose.project=gamehub-community-load-1791436953998-ad4df1,com.docker.compose.service=redis,com.docker.compose.version=2.40.3,desktop.docker.io/ports.scheme=v2",
+      "LocalVolumes": "1",
+      "Mounts": "gamehub-commun…",
+      "Names": "gamehub-community-load-1791436953998-ad4df1-redis-1",
+      "Networks": "gamehub-community-load-1791436953998-ad4df1_default",
+      "Platform": {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      "Ports": "",
+      "RunningFor": "4 minutes ago",
+      "Size": "4.1kB (virtual 41.1MB)",
+      "State": "exited",
+      "Status": "Exited (0) About a minute ago"
+    }
+  ]
+}
