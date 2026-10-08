@@ -172,6 +172,12 @@ export function createStorageCapacityService({
   };
 
   return Object.freeze({
+    async assertCanReserve(additions) {
+      const snapshot = await inspect({ additions });
+      if (snapshot.level === 'unavailable') throw new StorageCapacityError('STORAGE_CAPACITY_UNAVAILABLE', 503, '暂时无法确认存储空间。', true);
+      if (snapshot.level === 'blocked') throw new StorageCapacityError('STORAGE_CAPACITY_EXCEEDED', 507, '存储空间不足，暂停新图片上传。', true);
+      return snapshot;
+    },
     async assertCanAccept({ packageType, declaredBytes, existingReservations = {} }) {
       const snapshot = await inspect({ additions: additionsFor({ packageType, declaredBytes, existingReservations }) });
       if (snapshot.level === 'unavailable') throw new StorageCapacityError('STORAGE_CAPACITY_UNAVAILABLE', 503, '服务器暂时无法确认可用存储空间，请稍后重试。', true);

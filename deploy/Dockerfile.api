@@ -24,7 +24,7 @@ COPY --chown=node:node packages/multiplayer-protocol ./packages/multiplayer-prot
 COPY --chown=node:node packages/rules-sdk ./packages/rules-sdk
 COPY --chown=node:node packages/platform-client/src/guess-baike-policy.mjs packages/platform-client/src/guess-baike-policy.mjs
 COPY --chown=node:node packages/platform-client/src/guess-baike-puzzles.json packages/platform-client/src/guess-baike-puzzles.json
-RUN mkdir -p /data/quarantine /data/runtime /data/avatars /data/covers /data/validator /data/builder /data/source-worker /data/rule-builder /data/rule-worker && chown -R node:node /data
+RUN mkdir -p /data/quarantine /data/runtime /data/avatars /data/covers /data/validator /data/builder /data/source-worker /data/rule-builder /data/rule-worker /data/community-media /data/community-processor && chown -R node:node /data
 USER node
 EXPOSE 3090 3092
 CMD ["node", "apps/api/src/server.mjs"]

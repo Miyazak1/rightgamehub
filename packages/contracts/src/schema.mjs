@@ -1,4 +1,5 @@
 import {saveOperationsSchemas,saveOperationsRoutes} from './save-operations-schema.mjs';
+import {communitySchemas,communityRoutes} from './community-schema.mjs';
 const stringEnum = values => ({ type: 'string', enum: values });
 const object = (properties, required = Object.keys(properties)) => ({
   type: 'object', additionalProperties: false, properties, required,
@@ -36,6 +37,7 @@ const saveMetadata = {
 
 export const schemas = Object.freeze({
   ...saveOperationsSchemas,
+  ...communitySchemas,
   SaveLibraryQuery: object({afterSlotId:id},[]),
   SaveLibrarySlotParams: object({slotId:id}),
   SaveLibraryRevisionParams: object({slotId:id,revisionId:id}),
@@ -668,6 +670,7 @@ const errorResponses = {
 
 export const operations = Object.freeze([
   ...saveOperationsRoutes,
+  ...communityRoutes,
   {method:'get',path:'/v1/me/save-library',operationId:'listSaveLibrary',auth:'bearer',saveLibrary:true,saveLibraryPage:true,response:'SaveLibraryPage'},
   {method:'get',path:'/v1/me/save-library/{slotId}/history',operationId:'getSaveLibraryHistory',auth:'bearer',saveLibrary:true,pathId:'slotId',saveHistory:true,response:'SaveLibraryHistory'},
   {method:'get',path:'/v1/me/save-library/{slotId}/revisions/{revisionId}/content',operationId:'readSaveLibraryRevision',auth:'bearer',saveLibrary:true,pathId:'slotId',saveRevision:true,saveContent:true,response:'GameSaveMetadata'},
@@ -818,7 +821,7 @@ export const operations = Object.freeze([
 export function createOpenApiDocument() {
   const paths = {};
   for (const operation of operations) {
-    const parameters = [];
+    const parameters = [...(operation.parameters ?? [])];
     if (operation.saveHealthPage) parameters.push({name:'afterWorkId',in:'query',required:false,schema:id});
     if (operation.saveLibraryPage) parameters.push({name:'afterSlotId',in:'query',required:false,schema:id});
     if (operation.saveRevision) parameters.push({name:'revisionId',in:'path',required:true,schema:id});
@@ -879,9 +882,9 @@ export function createOpenApiDocument() {
     paths[operation.path][operation.method] = {
       operationId: operation.operationId,
       tags: [operation.path.split('/')[2]],
-      ...(operation.auth === 'bearer' ? { security: [{ bearerAuth: [] }] } : operation.auth === 'upload' ? { security: [{ uploadGrant: [] }] } : { security: [] }),
+      ...(operation.auth === 'optional' ? { security: [{ bearerAuth: [] }, {}] } : operation.auth === 'bearer' ? { security: [{ bearerAuth: [] }] } : operation.auth === 'upload' ? { security: [{ uploadGrant: [] }] } : { security: [] }),
       ...(parameters.length ? { parameters } : {}),
-      ...(operation.saveBody ? {requestBody:{required:true,content:{'application/json':{schema:{type:'object',additionalProperties:true}},'application/octet-stream':{schema:{type:'string',contentEncoding:'binary',maxLength:1048576}}}}} : operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
+      ...(operation.communityImageBody ? { requestBody: { required: true, content: { 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } } } } } : operation.saveBody ? {requestBody:{required:true,content:{'application/json':{schema:{type:'object',additionalProperties:true}},'application/octet-stream':{schema:{type:'string',contentEncoding:'binary',maxLength:1048576}}}}} : operation.request ? { requestBody: { required: true, content: json({ $ref: `#/components/schemas/${operation.request}` }) } } : operation.avatarBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/gif','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 2097152 } }])) } } : operation.coverBody ? { requestBody: { required: true, content: Object.fromEntries(['image/png','image/jpeg','image/webp'].map(type => [type, { schema: { type: 'string', contentEncoding: 'binary', maxLength: 5242880 } }])) } } : operation.rawBody ? { requestBody: { required: true, content: { 'application/zip': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/x-zip-compressed': { schema: { type: 'string', contentEncoding: 'binary' } }, 'application/octet-stream': { schema: { type: 'string', contentEncoding: 'binary' } } } } } : operation.webhookBody ? { requestBody: { required: true, content: json({ type: 'object', additionalProperties: true }) } } : {}),
       responses: {
         [operation.successStatus ?? '200']: operation.saveContent ? {description:'Private save bytes; ETag and schema/digest headers describe the returned revision.',content:{'application/json':{schema:{type:'object',additionalProperties:true}},'application/octet-stream':{schema:{type:'string',contentEncoding:'binary'}}}} : operation.binaryResponse ? { description: 'Processed work cover.', content: { 'image/webp': { schema: { type: 'string', contentEncoding: 'binary' } } } } : operation.zipResponse ? { description: 'Quarantined rule source archive.',content: { 'application/zip': { schema: { type: 'string',contentEncoding: 'binary' } } } } : operation.ruleBundleResponse ? { description: 'Controlled rule bundle for offline signing.',content: { 'application/javascript': { schema: { type: 'string',contentEncoding: 'binary' } } } } : response(operation.responseArray
           ? object({ data: { type: 'array', items: { $ref: `#/components/schemas/${operation.response}` } } })

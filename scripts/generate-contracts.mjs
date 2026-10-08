@@ -1,4 +1,5 @@
 import {saveOperationsSchemas} from '../packages/contracts/src/save-operations-schema.mjs';
+import {communitySchemas} from '../packages/contracts/src/community-schema.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -23,6 +24,7 @@ function validateSource() {
 }
 
 function operationSchemaType(s) {
+  if(s.type==='object'&&s.additionalProperties&&typeof s.additionalProperties==='object')return 'Record<string, '+operationSchemaType(s.additionalProperties)+'>';
   if(s.$ref)return s.$ref.split('/').at(-1);
   if(s.oneOf)return s.oneOf.map(operationSchemaType).join(' | ');
   if(s.const!==undefined)return JSON.stringify(s.const);
@@ -41,6 +43,7 @@ function generateTypes() {
   }
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
   for(const [name,schema] of Object.entries(saveOperationsSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
+  for(const [name,schema] of Object.entries(communitySchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');
   lines.push('export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }');

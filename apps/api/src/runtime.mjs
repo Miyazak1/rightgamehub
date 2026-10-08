@@ -14,6 +14,10 @@ import { PostgresAuthRepository } from './auth-repository.mjs';
 import { createAuthService } from './auth-service.mjs';
 import { createGitHubOAuthClient } from './github-oauth-client.mjs';
 import { createApp } from './app.mjs';
+import { CommunityService } from './community-service.mjs';
+import { CommunityMediaService } from './community-media-service.mjs';
+import { CommunityMediaStore } from './community-media-store.mjs';
+import { createCommunityImageRunner } from './community-image-runner.mjs';
 import { PostgresWorkRepository } from './work-repository.mjs';
 import { createWorkService } from './work-service.mjs';
 import { PostgresUploadRepository } from './upload-repository.mjs';
@@ -106,6 +110,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
       runtime: config.runtimeRoot,
       avatars: config.avatarRoot,
       covers: config.coverRoot,
+      ...(config.community.imagesEnabled ? {communityMedia:config.community.mediaRoot,communityProcessor:config.community.processorRoot} : {}),
     },
     warnPercent: config.storageWarnPercent,
     blockPercent: config.storageBlockPercent,
@@ -139,6 +144,13 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
+  const communityStore=new CommunityMediaStore(config.community.mediaRoot);
+  const communityService=new CommunityService({pool:database.pool,config:config.community,store:communityStore});
+  const communityMediaService=new CommunityMediaService({
+    service:communityService,store:communityStore,
+    runner:createCommunityImageRunner({root:config.community.processorRoot,mediaRoot:config.community.mediaRoot,mode:config.community.executionMode}),
+    capacity:bytes=>storageCapacityService.assertCanReserve({communityMedia:bytes,communityProcessor:2*bytes}),
+  });
   const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool), builtInWorks: [guessBaikeWork] });
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(database.pool) });
@@ -181,6 +193,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     guessBaikeAutomation,
     moderationService,
     socialService,
+    communityService,
+    communityMediaService,
     publicProfileService,
     analyticsService,
     creatorFeedbackService,
@@ -215,6 +229,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     guessBaikeAutomation,
     moderationService,
     socialService,
+    communityService,
+    communityMediaService,
     publicProfileService,
     analyticsService,
     creatorFeedbackService,

@@ -1,3 +1,4 @@
+import { communityApi } from './community.mjs';
 export class ApiError extends Error {
   constructor({ code = 'NETWORK_ERROR', message = '请求失败，请稍后重试。', status = 0, retryable = true, requestId = null, details = {} } = {}) {
     super(message); this.name = 'ApiError'; this.code = code; this.status = status; this.retryable = retryable; this.requestId = requestId; this.details = details && typeof details === 'object' && !Array.isArray(details) ? details : {};
@@ -114,6 +115,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     return { data: await response.blob(),digest: response.headers.get('digest') };
   }
   return {
+    ...communityApi(request),
     listWorks: ({ limit = 20, kind } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),

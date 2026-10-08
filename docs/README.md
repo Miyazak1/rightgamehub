@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [用户分享板块底层设计](./community-sharing-foundation-design.zh-CN.md) | **首版已实现、本地验证通过，未上线：游戏/AI/计算机图文分享、点赞与私人收藏；评论关闭；版本审核、图片额度、隔离处理与发布边界** |
 | [69 G3.3 新手贡献任务](./69-g3-contribution-tasks.zh-CN.md) | **作者确认后公开任务、玩家领取与提交、作者验收、`good first issue` 预填映射和公开贡献履历** |
 | [68 G3.2 结构化玩家反馈](./68-g3-structured-player-feedback.zh-CN.md) | **玩家反馈表单、作者私人收件箱、仅追加状态记录，以及作者确认后的 GitHub Issue 预填页** |
 | [67 G3.1 作者增长基础](./67-g3-creator-growth-phase-1.zh-CN.md) | **作者私有聚合数据、浏览/有效试玩/复访/收藏/构建指标，以及公开作品 README 在线体验徽章** |

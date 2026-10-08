@@ -46,6 +46,12 @@ x-api-environment: &api-environment
   VALIDATOR_ROOT: /data/validator
   VALIDATOR_EXECUTION_MODE: isolated
   CLOUD_SAVE_ENABLED: ${CLOUD_SAVE_ENABLED:-false}
+  COMMUNITY_ENABLED: ${COMMUNITY_ENABLED:-false}
+  COMMUNITY_POSTING_ENABLED: ${COMMUNITY_POSTING_ENABLED:-false}
+  COMMUNITY_IMAGES_ENABLED: ${COMMUNITY_IMAGES_ENABLED:-false}
+  COMMUNITY_MEDIA_ROOT: /data/community-media
+  COMMUNITY_PROCESSOR_ROOT: /data/community-processor
+  COMMUNITY_MEDIA_BUDGET_BYTES: ${COMMUNITY_MEDIA_BUDGET_BYTES:-2147483648}
   SAVE_STORAGE_REQUIRED: "true"
   SAVE_STORAGE_MAX_AGE_SECONDS: ${SAVE_STORAGE_MAX_AGE_SECONDS:-90}
   SAVE_STORAGE_MIN_FREE_BYTES: ${SAVE_STORAGE_MIN_FREE_BYTES:-1073741824}
@@ -102,6 +108,8 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     volumes:
+      - community-media:/data/community-media
+      - community-processor:/data/community-processor
       - avatars:/data/avatars
       - covers:/data/covers
       - quarantine:/data/quarantine
@@ -121,6 +129,8 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     volumes:
+      - community-media:/data/community-media
+      - community-processor:/data/community-processor
       - ../rules:/app/rules:ro
       - avatars:/data/avatars
       - covers:/data/covers
@@ -196,6 +206,32 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  community-image:
+    profiles: [community-images]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "apps/api/src/community-image-service.mjs"]
+    environment:
+      NODE_ENV: production
+      COMMUNITY_MEDIA_ROOT: /data/community-media
+      COMMUNITY_PROCESSOR_ROOT: /data/community-processor
+      NODE_OPTIONS: --max-old-space-size=64
+    volumes:
+      - community-media:/data/community-media:ro
+      - community-processor:/data/community-processor
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none
+    pids_limit: 32
+    cpus: "0.50"
+    mem_limit: 256m
 
   source-builder:
     build:
@@ -318,6 +354,8 @@ services:
       migrate: { condition: service_completed_successfully }
       validator: { condition: service_healthy }
     volumes:
+      - community-media:/data/community-media
+      - community-processor:/data/community-processor
       - quarantine:/data/quarantine:ro
       - runtime-assets:/data/runtime
       - validator:/data/validator
@@ -435,6 +473,8 @@ networks:
   backend:
 
 volumes:
+  community-media:
+  community-processor:
   postgres-data:
   redis-data:
   avatars:
