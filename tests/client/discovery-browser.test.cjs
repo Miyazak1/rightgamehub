@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const root=path.resolve(__dirname,'../..'),playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
-test('discovery browser: complete catalog, remote search, private recent plays, optional shares and narrow navigation',{skip:!playwrightPath,timeout:90000},async t=>{
+test('discovery browser: complete catalog, remote search, private recent plays and narrow navigation',{skip:!playwrightPath,timeout:90000},async t=>{
   const {chromium}=require(playwrightPath),{build}=require('../../extensions/harness/node_modules/esbuild');
   const app=require('../../apps/api/node_modules/fastify')();let browser;
   t.after(async()=>{await browser?.close();await app.close();});
@@ -60,7 +60,7 @@ test('discovery browser: complete catalog, remote search, private recent plays, 
   assert.ok(requests.some(req=>req.url.includes('/v1/me/library?limit=3&recent=true')&&req.auth==='Bearer a'));
   await page.evaluate(()=>window.discoveryFixture.signIn('b'));await page.getByRole('button',{name:'账号',exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'最近玩过',exact:true}).count(),0);
-  await page.goto(base+'/?small=1');await page.locator('.discovery-catalog__grid .discovery-game').nth(5).waitFor();await page.getByRole('heading',{name:'最新分享',exact:true}).waitFor();
+  await page.goto(base+'/?small=1');await page.locator('.discovery-catalog__grid .discovery-game').nth(5).waitFor();assert.equal(await page.getByRole('heading',{name:'最新分享',exact:true}).count(),0);assert.equal(await page.locator('.discovery-welcome__pixel').count(),0);assert.equal(requests.some(req=>req.url.startsWith('/v1/community/posts')),false);
   const shots=path.join(root,'.runtime/discovery-preview');await fs.mkdir(shots,{recursive:true});
   await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(shots,'desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'当前light主题，点击切换',exact:true}).click();
