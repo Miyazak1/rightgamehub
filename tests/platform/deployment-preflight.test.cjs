@@ -1,0 +1,70 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const {execFileSync,spawnSync} = require('node:child_process');
+
+const bash = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : '/bin/bash';
+test('deployment preflight preserves both release branches and rejects missing ancestry or local edits', {skip:!fs.existsSync(bash)}, t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(),'gamehub-deploy-preflight-'));
+  t.after(() => {
+    assert.equal(path.dirname(path.resolve(directory)),path.resolve(os.tmpdir()));
+    assert.match(path.basename(directory),/^gamehub-deploy-preflight-/);
+    fs.rmSync(directory,{recursive:true,force:true});
+  });
+  const git = (cwd,...args) => execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe'],windowsHide:true}).trim();
+  const remote = path.join(directory,'origin.git'),source = path.join(directory,'source');
+  git(directory,'init','--bare',remote);
+  git(directory,'init','--initial-branch=base',source);
+  const identity = cwd => {git(cwd,'config','user.name','Deployment fixture');git(cwd,'config','user.email','deploy-fixture@example.test');git(cwd,'config','core.autocrlf','false');};
+  identity(source);
+  fs.writeFileSync(path.join(source,'.gitignore'),'deploy/\n');
+  const migrations = path.join(source,'apps/api/migrations');fs.mkdirSync(migrations,{recursive:true});
+  fs.writeFileSync(path.join(migrations,'0053_competition_boards.sql'),'-- fixture migration\n');
+  git(source,'add','.');git(source,'commit','-m','base');
+  git(source,'switch','-c','codex/game-services-foundation');
+  fs.writeFileSync(path.join(source,'home.txt'),'homepage fix\n');git(source,'add','.');git(source,'commit','-m','home');
+  const home = git(source,'rev-parse','HEAD');
+  git(source,'switch','-c','codex/community-visual-upgrade','base');
+  fs.writeFileSync(path.join(source,'community.txt'),'community visual update\n');git(source,'add','.');git(source,'commit','-m','community');
+  const community = git(source,'rev-parse','HEAD');
+  git(source,'switch','codex/game-services-foundation');git(source,'merge','--no-ff','codex/community-visual-upgrade','-m','integrated release');
+  const release = git(source,'rev-parse','HEAD');
+  git(source,'remote','add','origin',remote);git(source,'push','origin','--all');
+  const deployment = fs.readFileSync(path.resolve(__dirname,'../../deploy/update-community-sharing.sh'),'utf8').replaceAll('\r\n','\n');
+  const boundary = deployment.indexOf('\nset_env()');assert.ok(boundary>0,'preflight must finish before environment changes or Docker work');
+  const preflight = deployment.slice(0,boundary);
+  assert.equal(preflight.split('cd /www/gamehub').length,2);
+  const runCase = (name,start,branch,target,edit) => {
+    const checkout = path.join(directory,name);git(directory,'clone','--no-checkout',remote,checkout);identity(checkout);
+    git(checkout,'switch','-c',branch,start);
+    fs.mkdirSync(path.join(checkout,'deploy'),{recursive:true});fs.writeFileSync(path.join(checkout,'deploy/.env.prod'),'FIXTURE_ONLY=true\n');
+    edit?.(checkout);
+    const before = git(checkout,'rev-parse','HEAD');
+    const script = path.join(directory,name+'.sh');
+    fs.writeFileSync(script,preflight.replace('cd /www/gamehub',"cd '"+checkout.replaceAll('\\','/').replaceAll("'","'\\''")+"'"));
+    const result = spawnSync(bash,[script.replaceAll('\\','/'),target],{encoding:'utf8',windowsHide:true});
+    return {checkout,before,result,output:result.stdout+result.stderr};
+  };
+  for(const [name,start,branch] of [['foundation',home,'codex/game-services-foundation'],['community',community,'codex/community-visual-upgrade']]) {
+    const value = runCase(name,start,branch,release);
+    assert.equal(value.result.status,0,value.output);
+    assert.equal(git(value.checkout,'rev-parse','HEAD'),release);
+    assert.equal(git(value.checkout,'branch','--show-current'),branch,'do not force-switch the deployed branch');
+    assert.equal(fs.readFileSync(path.join(value.checkout,'community.txt'),'utf8'),'community visual update\n');
+    assert.equal(fs.readFileSync(path.join(value.checkout,'home.txt'),'utf8'),'homepage fix\n');
+    const backups = path.join(value.checkout,'deploy/backups');
+    const record = fs.readdirSync(backups)[0];
+    assert.equal(fs.readFileSync(path.join(backups,record,'previous-branch.txt'),'utf8').trim(),branch);
+  }
+  const incompatible = runCase('incompatible',community,'codex/community-visual-upgrade',home);
+  assert.notEqual(incompatible.result.status,0);assert.match(incompatible.output,/目标版本未包含当前线上提交/);
+  assert.equal(git(incompatible.checkout,'rev-parse','HEAD'),community);
+  const dirty = runCase('dirty',community,'codex/community-visual-upgrade',release,cwd=>fs.appendFileSync(path.join(cwd,'community.txt'),'local changes\n'));
+  assert.notEqual(dirty.result.status,0);assert.match(dirty.output,/工作区有改动/);
+  assert.equal(git(dirty.checkout,'rev-parse','HEAD'),community);
+  const local = runCase('local-commit',community,'codex/community-visual-upgrade',release,cwd=>{fs.writeFileSync(path.join(cwd,'local.txt'),'unmerged local commit\n');git(cwd,'add','.');git(cwd,'commit','-m','local');});
+  assert.notEqual(local.result.status,0);assert.match(local.output,/目标版本未包含当前线上提交/);
+  assert.equal(git(local.checkout,'rev-parse','HEAD'),local.before);
+});

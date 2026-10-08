@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 # Existing production installation: reviewed sharing, local saves, bounded images.
 set -euo pipefail
+trap 'status=$?; printf "更新中止（退出码 %s，脚本第 %s 行）。请保留末尾输出；不要 reset/clean。\n" "$status" "$LINENO" >&2; exit "$status"' ERR
 umask 077
 EXPECTED=${1:?Usage: bash update-community-sharing.sh FULL_COMMIT_SHA}
 [[ "$EXPECTED" =~ ^[0-9a-f]{40}$ ]] || { echo '需要完整提交 SHA。'; exit 1; }
 cd /www/gamehub
-test -f deploy/.env.prod
-test "$(git branch --show-current)" = codex/game-services-foundation
+test -f deploy/.env.prod || { echo '缺少 /www/gamehub/deploy/.env.prod，停止更新。'; exit 1; }
 test -z "$(git status --porcelain)" || { echo '工作区有改动，停止；不要 reset/clean。'; exit 1; }
+CURRENT=$(git rev-parse HEAD)
+BRANCH=$(git branch --show-current)
+printf '当前版本：%s；当前分支：%s；目标版本：%s\n' "$CURRENT" "${BRANCH:-detached HEAD}" "$EXPECTED"
+git fetch origin codex/game-services-foundation
+git merge-base --is-ancestor "$EXPECTED" origin/codex/game-services-foundation || { echo '目标版本不在已获取的发布分支中，停止更新。'; exit 1; }
+git merge-base --is-ancestor "$CURRENT" "$EXPECTED" || { echo '目标版本未包含当前线上提交，停止更新以保留已有改动。请合并后再部署；不要强制切换或重置分支。'; exit 1; }
 RECORD="$PWD/deploy/backups/community-open-posting-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$RECORD"
-git rev-parse HEAD > "$RECORD/previous-commit.txt"
+printf '%s\n' "$CURRENT" > "$RECORD/previous-commit.txt"
+printf '%s\n' "${BRANCH:-detached HEAD}" > "$RECORD/previous-branch.txt"
 cp deploy/.env.prod "$RECORD/env.before"
-git fetch origin codex/game-services-foundation
-git merge-base --is-ancestor "$EXPECTED" origin/codex/game-services-foundation
+# Keep the current local branch and only fast-forward to a release containing it.
 git merge --ff-only "$EXPECTED"
 test "$(git rev-parse HEAD)" = "$EXPECTED"
 test -f apps/api/migrations/0053_competition_boards.sql

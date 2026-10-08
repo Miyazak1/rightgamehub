@@ -61,9 +61,11 @@
 
 ### 线上更新
 
-已准备 [更新脚本](../../deploy/update-community-sharing.sh)，仅供现有 /www/gamehub、codex/game-services-foundation 分支和 gamehub-production Compose 项目使用。将发布消息中的完整提交 SHA 作为参数，脚本检查工作区、按指定提交快进、保留原配置、串行构建、备份数据库与媒体、迁移到 51，然后更新 API、worker、runtime、Web、图片服务及已经运行的源码/规则 worker。数据库、Redis 和联机服务不主动重建。
+已准备 [更新脚本](../deploy/update-community-sharing.sh)，供现有 /www/gamehub 和 gamehub-production Compose 项目使用。将发布消息中的完整提交 SHA 作为参数，目标必须位于远端 codex/game-services-foundation 发布分支，且包含当前线上提交。脚本保留当前本地分支，仅作快进；其他会话的已发布分支需要先合并到目标，不能通过强制切换绕过检查。未提交改动或未合并提交会明确阻止更新。
 
-脚本开启分享读取、投稿、图片；继续关闭云存档，保留已有媒体总额度，未配置时使用 512 MiB 磁盘额度。不会写入普通用户白名单，也不会改用户主页隐私。执行后检查 ready 的 expected/applied 均为 51、分享可读、匿名用户仍需登录、云存档拒绝访问和图片服务状态。刷新页面后，用正常登录账号提交并审核公开作为线上验收。
+2026-10-09 已整合分享页优化 3b3818c 与首页/柱图修复 7a07c18。部署前打印当前分支、当前与目标 SHA；备份记录保存原分支、原提交和配置。随后串行构建、备份数据库与媒体、迁移到 53，再更新 API、worker、runtime、Web、校验器、图片服务及已经运行的源码/规则 worker，并通过原上传流程安装 2048 排行榜接入包。数据库、Redis 和联机服务不主动重建。部署检查在临时 Git 仓库验证两个分支均可快进到合并版本，且分叉、未合并本地提交和未提交改动均不会被覆盖。
+
+脚本开启分享读取、投稿、图片；继续关闭云存档，保留已有媒体总额度，未配置时使用 512 MiB 磁盘额度。不会写入普通用户白名单，也不会改用户主页隐私。执行后检查 ready 的 expected/applied 均为 53、分享可读、匿名用户仍需登录、云存档拒绝访问和图片服务状态。刷新页面后，用正常登录账号提交并审核公开作为线上验收。
 
 ```bash
 cd /www/gamehub
@@ -73,4 +75,4 @@ git show "$RELEASE":deploy/update-community-sharing.sh > /tmp/gamehub-community-
 bash /tmp/gamehub-community-update.sh "$RELEASE"
 ```
 
-紧急关闭时将三个 COMMUNITY 开关设为 false，按当前 51 版镜像重建 API/worker 并停止 community-image，保留数据。旧 077b130 更新命令的迁移 50 断言不适用于本版；不要删除迁移或直接回退旧镜像。
+紧急关闭时将三个 COMMUNITY 开关设为 false，使用包含全部 53 份迁移的兼容代码重建 API/worker 并停止 community-image，保留数据。旧 077b130 更新命令的迁移 50 断言不适用于本版；不要删除迁移或直接回退旧镜像。
