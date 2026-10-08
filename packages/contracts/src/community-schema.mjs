@@ -8,7 +8,7 @@ const blocks={type:'array',minItems:1,maxItems:32,items:{oneOf:[
   obj({type:{const:'image',type:'string'},assetId:id,alt:{type:'string',maxLength:240}}),
 ]}};
 const post={
-  id,author:obj({id,displayName:text,handle:nullable(text)}),channel,title:{type:'string',minLength:1,maxLength:120},blocks,
+  id,author:obj({id,displayName:text,handle:nullable(text),avatar:ref('AccountAvatar')}),channel,title:{type:'string',minLength:1,maxLength:120},blocks,
   schemaVersion:{type:'integer',const:1},publicationState:en(['draft','published','withdrawn','deleted']),moderationState:en(['clear','hidden']),
   revisionId:id,reviewStatus:en(['draft','pending','approved','rejected','superseded']),reviewReason:nullable(text),version:uint,likeCount:uint,liked:bool,bookmarked:bool,publishedAt:nullable(time),updatedAt:time,
 };

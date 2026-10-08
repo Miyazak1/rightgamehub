@@ -1338,7 +1338,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;
-  else if (route === '/social' || parts[0] === 'community') content = <CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route={route} accountProfile={accountProfile} demo={demo}/>;
+  else if (route === '/social' || parts[0] === 'community') content = <CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route={route} accountProfile={accountProfile} AvatarView={AvatarView} demo={demo}/>;
   else if (route === '/contribute') content = <ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile}/>;
   else if (parts[0] === 'challenge' && parts[1]) content = <ChallengePage api={api} go={go} demo={demo} code={parts[1]}/>;
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;

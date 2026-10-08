@@ -4,11 +4,17 @@ import { fail } from './community-errors.mjs';
 import { CHANNELS, LIMITS, hash, uuid, normalizeContent, receiptKey, expectedVersion, cursorFor, readCursor } from './community-contract.mjs';
 
 const visible = "p.publication_state='published' AND p.moderation_state='clear' AND u.status='active' AND (r.visibility_policy='post' OR u.social_visibility='public') AND c.enabled AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.blocker_user_id=$1 AND b.blocked_user_id=p.author_id) OR (b.blocked_user_id=$1 AND b.blocker_user_id=p.author_id))";
-const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS profile_handle,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked";
-const joins = " JOIN users u ON u.id=p.author_id JOIN community_channels c ON c.key=p.channel_key LEFT JOIN community_post_stats s ON s.post_id=p.id ";
+const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS profile_handle,a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked";
+const joins = " JOIN users u ON u.id=p.author_id JOIN community_channels c ON c.key=p.channel_key LEFT JOIN user_avatars a ON a.user_id=u.id LEFT JOIN community_post_stats s ON s.post_id=p.id ";
 const publishedRevision = ' JOIN community_post_revisions r ON r.id=p.published_revision_id ';
+const avatarView = row => row.avatar_kind === 'upload' ? {
+  kind:'upload',presetKey:null,
+  url:`/v1/avatars/${row.author_id}?v=${Buffer.from(row.sha256).toString('hex').slice(0,12)}`,
+  staticUrl:(row.poster_body||row.poster_key)?`/v1/avatars/${row.author_id}?variant=static&v=${Buffer.from(row.sha256).toString('hex').slice(0,12)}`:null,
+  mediaType:row.media_type,animated:row.animated,
+} : {kind:'preset',presetKey:row.preset_key||'cat',url:null,staticUrl:null,mediaType:null,animated:false};
 const view = (row,manage=false) => ({
-  id:row.id,author:{id:row.author_id,displayName:row.display_name,handle:row.profile_handle},
+  id:row.id,author:{id:row.author_id,displayName:row.display_name,handle:row.profile_handle,avatar:avatarView(row)},
   channel:row.revision_channel,title:row.title,blocks:row.blocks,schemaVersion:1,
   publicationState:row.publication_state,moderationState:row.moderation_state,
   revisionId:row.revision_id,reviewStatus:row.review_status,reviewReason:manage?row.review_reason??null:null,

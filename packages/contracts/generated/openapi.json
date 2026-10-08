@@ -20317,12 +20317,16 @@
                     "type": "null"
                   }
                 ]
+              },
+              "avatar": {
+                "$ref": "#/components/schemas/AccountAvatar"
               }
             },
             "required": [
               "id",
               "displayName",
-              "handle"
+              "handle",
+              "avatar"
             ]
           },
           "channel": {
@@ -20716,12 +20720,16 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "avatar": {
+                      "$ref": "#/components/schemas/AccountAvatar"
                     }
                   },
                   "required": [
                     "id",
                     "displayName",
-                    "handle"
+                    "handle",
+                    "avatar"
                   ]
                 },
                 "channel": {
