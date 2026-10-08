@@ -193,7 +193,7 @@ test('official Harness bundle registers platform and local-lab entries without b
 });
 
 test('shared client scopes theme writes and responds to its sidebar container', async () => {
-  const app = await readFile('packages/platform-client/src/App.jsx', 'utf8');
+  const app = await readFile('packages/platform-client/src/App.jsx', 'utf8') + await readFile('packages/platform-client/src/DiscoverPage.jsx', 'utf8');
   const css = await readFile('packages/platform-client/src/styles.css', 'utf8');
   assert.match(app, /applyThemeTokens\(themeRoot\.current, theme\)/);
   assert.doesNotMatch(app, /applyThemeTokens\(document\.documentElement/);
@@ -210,8 +210,8 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(app, /当前宿主：/);
   assert.doesNotMatch(app, /Astra|Sol|Luna|Sage/);
   assert.doesNotMatch(app, /setAccent/);
-  assert.match(app, /今日摸鱼/);
-  assert.match(app, /function DailyPick/);
+  assert.match(app, /推荐游玩/);
+  assert.match(app, /function GameCard/);
   assert.match(app, /function SocialPage/);
   assert.match(app, /ASYNC BREAK ROOM/);
   assert.match(app, /api\.blockUser/);
@@ -315,7 +315,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.30');
+  assert.equal(manifest.version, '0.3.31');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);

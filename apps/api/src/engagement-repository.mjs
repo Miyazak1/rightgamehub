@@ -1,12 +1,12 @@
 export class PostgresEngagementRepository {
   constructor(pool) { this.pool = pool; }
 
-  async list(userId) {
+  async list(userId,{limit=null,recent=false}={}) {
     return (await this.pool.query(
       `SELECT work_key,saved_at,last_played_at,play_count
-         FROM user_library WHERE user_id=$1
-        ORDER BY GREATEST(COALESCE(saved_at,'epoch'),COALESCE(last_played_at,'epoch')) DESC`,
-      [userId],
+         FROM user_library WHERE user_id=$1 AND (NOT $2::boolean OR last_played_at IS NOT NULL)
+        ORDER BY CASE WHEN $2::boolean THEN last_played_at ELSE GREATEST(COALESCE(saved_at,'epoch'),COALESCE(last_played_at,'epoch')) END DESC,work_key LIMIT $3`,
+      [userId,recent,limit],
     )).rows;
   }
 

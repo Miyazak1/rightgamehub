@@ -12,6 +12,7 @@ import { createWebGameHost } from './web-game-host.mjs';
 import CloudSaveStatus from './CloudSaveStatus.jsx';
 import SaveManager from './SaveManager.jsx';
 import CommunityPage from './CommunityPage.jsx';
+import DiscoverPage from './DiscoverPage.jsx';
 
 import { playerRuntimeOptions } from './player-runtime-options.mjs';
 import MultiplayerDeveloperCenter from './MultiplayerDeveloperCenter.jsx';
@@ -24,7 +25,7 @@ const icons = {
 };
 
 const hostIdentities = {
-  browser: { id: 'browser', label: 'Web 预览', short: 'WEB' },
+  browser: { id: 'browser', label: '网页版', short: 'WEB' },
   codex: { id: 'codex', label: 'Codex', short: 'CX' },
   cursor: { id: 'cursor', label: 'Cursor', short: 'CU' },
   harness: { id: 'harness', label: 'Harness', short: 'DSH' },
@@ -122,28 +123,41 @@ function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdenti
     <div className="header__tools">
       <div className="host-chip" aria-label={`当前宿主：${hostIdentity.label}`} title={`界面主题跟随 ${hostIdentity.label}`}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div>
       <button className="icon-button" disabled={!canChangeTheme} onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'high-contrast' : 'dark')} aria-label={canChangeTheme ? `当前${themeMode}主题，点击切换` : `当前${themeMode}主题，跟随宿主`} title={canChangeTheme ? '切换主题' : `主题跟随 ${hostIdentity.label}`}>{themeMode === 'light' ? '☼' : themeMode === 'high-contrast' ? '◐' : '☾'}</button>
-      <button className="avatar" onClick={() => go('/account')} aria-label="账号">{accountProfile ? <AvatarView avatar={accountProfile.avatar} api={api} alt=""/> : 'R'}</button>
+      <button className={accountProfile ? "avatar" : "account-login"} onClick={() => go('/account')} aria-label={accountProfile ? "账号" : "登录"}>{accountProfile ? <AvatarView avatar={accountProfile.avatar} api={api} alt=""/> : '登录'}</button>
     </div>
   </header>;
 }
 
 function NavItem({ active, icon, children, ...props }) { return <button className={`nav-item ${active ? 'is-active' : ''}`} {...props}><span aria-hidden="true">{icon}</span>{children}</button>; }
 
-function MobileNav({ route, go }) {
+function MobileNav({ route, go, accountProfile }) {
+  const [open,setOpen]=useState(false),more=useRef(null);
+  useEffect(()=>setOpen(false),[route]);
+  useEffect(()=>{
+    const outside=event=>{if(!more.current?.contains(event.target))setOpen(false);};
+    const escape=event=>{if(event.key==='Escape'){setOpen(false);if(more.current?.contains(document.activeElement))more.current.querySelector('[aria-controls]')?.focus();}};
+    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
+  },[]);
+  const navigate=path=>{setOpen(false);go(path);};
   return <nav className="mobile-nav" aria-label="侧栏导航">
-    <NavItem active={route.startsWith('/discover') || route.startsWith('/works/')} onClick={() => go('/discover')} icon={icons.discover}>游玩</NavItem>
-    <NavItem active={route === '/library'} onClick={() => go('/library')} icon={icons.library}>游戏库</NavItem>
-    <NavItem active={route === '/social' || route.startsWith('/community')} onClick={() => go('/community')} icon={icons.social}>分享</NavItem>
-    <NavItem active={route === '/contribute'} onClick={() => go('/contribute')} icon="↗">共建</NavItem>
-    <NavItem active={route.startsWith('/creator')} onClick={() => go('/creator')} icon={icons.creator}>创作</NavItem>
-    <NavItem active={route === '/install'} onClick={() => go('/install')} icon="＋">安装</NavItem>
+    <NavItem active={route.startsWith('/discover') || route.startsWith('/works/')} onClick={() => navigate('/discover')} icon={icons.discover}>游玩</NavItem>
+    <NavItem active={route === '/library'} onClick={() => navigate('/library')} icon={icons.library}>游戏库</NavItem>
+    <NavItem active={route === '/social' || route.startsWith('/community')} onClick={() => navigate('/community')} icon={icons.social}>分享</NavItem>
+    <NavItem active={route.startsWith('/creator')} onClick={() => navigate('/creator')} icon={icons.creator}>创作</NavItem>
+    <div className="mobile-more" ref={more} onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
+      <NavItem active={['/contribute','/install','/account'].includes(route)||route.startsWith('/admin')} icon="⋯" aria-expanded={open} aria-controls="mobile-more-links" onClick={()=>setOpen(value=>!value)}>更多</NavItem>
+      {open&&<div id="mobile-more-links" className="mobile-more__links" role="group" aria-label="更多入口"><button onClick={()=>navigate('/contribute')}>↗ 共建</button><button onClick={()=>navigate('/install')}>＋ 添加到 Agent</button><button onClick={()=>navigate('/account')}>○ {accountProfile?'账号与设置':'登录'}</button>{accountProfile?.role==='admin'&&<button onClick={()=>navigate('/admin')}>平台治理</button>}</div>}
+    </div>
   </nav>;
 }
 
 function Art({ work, large = false }) {
   if (work.id === GUESS_BAIKE_WORK_ID || work.art === 'baike') return <div className={`art art--baike ${large ? 'art--large' : ''}`}><div className="baike-cover"><span className="baike-cover__book"><i/><i/><i/><b>百</b></span><span className="baike-cover__copy"><small>GAMEHUB ORIGINAL</small><strong>猜百科</strong><em>逐字揭开 · 推理标题</em></span></div><span className="art__pixel-corner" aria-hidden="true" /></div>;
   if (work.coverUrl) return <div className={`art art--cover ${large ? 'art--large' : ''}`}><img src={work.coverUrl} alt=""/><span className="art__pixel-corner" aria-hidden="true" /></div>;
-  return <div className={`art art--${work.art ?? 'violet'} ${large ? 'art--large' : ''}`}><div className="art__pixel" style={{ backgroundImage: `url(${pixelCoverAtlas})` }} /><span className="art__pixel-corner" aria-hidden="true" /></div>;
+  if(!work.art)return <div className={`art art--placeholder ${large?'art--large':''}`}><span className="art__placeholder-mark" aria-hidden="true">✦</span><span className="art__placeholder-label">GAMEHUB</span></div>;
+  const [x,y]=({violet:[0,0],cyan:[256,0],lime:[0,256],orange:[256,256]})[work.art]||[0,0];
+  return <div className={`art art--${work.art} ${large ? 'art--large' : ''}`}><svg className="art__atlas" viewBox={`${x} ${y} 256 256`} preserveAspectRatio="xMidYMid slice" aria-hidden="true"><image href={pixelCoverAtlas} width="512" height="512"/></svg><span className="art__pixel-corner" aria-hidden="true" /></div>;
 }
 
 const workHasWebRelease = work => work.id === GUESS_BAIKE_WORK_ID || work.targets?.some(target => target.targetKey === 'web' && target.currentReleaseId);
@@ -161,7 +175,6 @@ function WorkCard({ work, go, featured = false }) {
 
 const workTag = work => work.tags?.[0] ?? work.tag ?? (work.kind === 'game' ? '游戏' : work.kind === 'tool' ? '工具' : '互动');
 const workPlays = work => work.plays ?? (work.playCount ? `${work.playCount.toLocaleString('zh-CN')} 次` : '新作');
-const workHeat = work => Number(work.playCount ?? 0) + Number(work.saveCount ?? 0) * 4;
 
 function QuietWorkRow({ work, go }) {
   return <article className="quiet-work-row">
@@ -173,56 +186,7 @@ function QuietWorkRow({ work, go }) {
   </article>;
 }
 
-function DailyPick({ work, go, index }) {
-  return <article className="daily-pick">
-    <button className="daily-pick__open" onClick={() => go(`/works/${work.id}`)} aria-label={`查看今日推荐 ${work.title}`}>
-      <Art work={work} />
-      <span className="daily-pick__number" aria-hidden="true">0{index + 1}</span>
-    </button>
-    <div className="daily-pick__body">
-      <div><span>{workTag(work)}</span><small>约 {work.estimatedMinutes ?? 3} 分钟</small></div>
-      <strong>{work.title}</strong>
-      <button onClick={() => go(workActionPath(work))} aria-label={`${workHasWebRelease(work) ? '开始玩' : '查看 Windows 启动方式'} ${work.title}`}>{icons.play}<span>{workHasWebRelease(work) ? '开始' : 'Windows'}</span></button>
-    </div>
-  </article>;
-}
-
-function CommunityProject({ work, go }) {
-  return <article className="community-project">
-    <button className="community-project__art" onClick={() => go(`/works/${work.id}`)} aria-label={`查看社区项目 ${work.title}`}><Art work={work}/></button>
-    <div className="community-project__copy">
-      <div className="project-badges"><span>{workTag(work)}</span>{work.agentLabel && <span>{work.agentLabel}</span>}{work.repositoryUrl && <span>OPEN SOURCE</span>}</div>
-      <button onClick={() => go(`/works/${work.id}`)}><strong>{work.title}</strong><small>by {work.creatorDisplayName ?? '社区作者'}</small></button>{work.creatorHandle && <button className="creator-profile-link" onClick={() => go(`/u/${work.creatorHandle}`)}>查看作者主页 →</button>}
-      <p>{work.description}</p>
-      <div><span>{work.estimatedMinutes ?? 3} MIN</span><span>{workPlays(work)}</span><button onClick={() => go(workActionPath(work))}>{icons.play} {workHasWebRelease(work) ? '玩一下' : 'Windows 版'}</button></div>
-    </div>
-  </article>;
-}
-
 function LoadingCards() { return <div className="work-grid" aria-label="正在载入作品">{[1,2,3,4].map(x => <div className="skeleton-card" key={x}><span /><i /><i /></div>)}</div>; }
-
-function DiscoverPage({ api, demo, go, hostIdentity }) {
-  const [status, setStatus] = useState('loading'); const [works, setWorks] = useState([]); const [filter, setFilter] = useState('all'); const [query, setQuery] = useState('');
-  const load = async () => { setStatus('loading'); try { const result = demo ? { data: demoWorks } : await api.listWorks({ limit: 20 }); setWorks(result.data); setStatus(result.data.length ? 'ready' : 'empty'); } catch { setStatus('error'); } };
-  useEffect(() => { load(); }, [demo]);
-  const shown = works.filter(w => (filter === 'all' || w.kind === filter) && (!query || `${w.title} ${w.description} ${(w.tags ?? []).join(' ')} ${w.creatorDisplayName ?? ''} ${w.agentLabel ?? ''}`.toLowerCase().includes(query.toLowerCase())));
-  const dailyPicks = status === 'ready' ? works.slice(0, 3) : [];
-  const communityPicks = status === 'ready' ? works.filter(work => work.id !== GUESS_BAIKE_WORK_ID).sort((a, b) => workHeat(b) - workHeat(a) || String(b.firstPublishedAt).localeCompare(String(a.firstPublishedAt))).slice(0, 4) : [];
-  const dailyIds = new Set(dailyPicks.map(work => work.id));
-  const list = shown.filter(work => query || filter !== 'all' || !dailyIds.has(work.id));
-  return <main className="page discover-page">
-    <header className="quiet-heading"><div><span className="quiet-presence"><i/>{hostIdentity.label} 里的休息站</span><h1>休息一下？</h1><p>选个轻量游戏，几分钟后继续写代码。</p></div></header>
-    {status === 'loading' && <LoadingCards />}
-    {status === 'error' && <StatePanel title="暂时无法加载作品" body="网络可能开了个小差。你的本地游戏与上传任务不会受影响。" action="重新连接" onAction={load} />}
-    {status === 'empty' && <StatePanel title="这里还很安静" body="第一批作品正在路上。成为第一个发布创意的人吧。" action="发布作品" onAction={() => go('/creator')} />}
-    {!!dailyPicks.length && <section className="daily-section" aria-labelledby="daily-title"><div className="daily-section__heading"><div><span>DAILY BREAK</span><h2 id="daily-title">今日摸鱼</h2></div><small>短局 · 静音友好 · 随时停</small></div><div className="daily-grid">{dailyPicks.map((work, index) => <DailyPick work={work} go={go} index={index} key={work.id}/>)}</div></section>}
-    {!!communityPicks.length && <section className="community-showcase" aria-labelledby="community-title"><div className="community-showcase__heading"><div><span>MADE WITH AGENTS</span><h2 id="community-title">社区在玩</h2></div><small>真实发布 · 自动按游玩与收藏发现</small></div><div className="community-projects">{communityPicks.map(work => <CommunityProject work={work} go={go} key={work.id}/>)}</div></section>}
-    <section id="catalog" className="catalog-section quiet-catalog"><div className="section-heading"><div><h2>换个脑子</h2><p>不离开 {hostIdentity.label}，随开随停。</p></div><label className="search"><span>{icons.search}</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索小游戏" /></label></div>
-      <div className="filter-row" role="group" aria-label="作品类型">{[['all','全部'],['game','游戏'],['creative','互动'],['tool','工具']].map(([id,label]) => <button key={id} className={filter === id ? 'is-active' : ''} onClick={() => setFilter(id)}>{label}</button>)}</div>
-      {status === 'ready' && (shown.length ? (list.length ? <div className="quiet-work-list">{list.map(work => <QuietWorkRow work={work} go={go} key={work.id} />)}</div> : <p className="quiet-all-seen">更多轻量作品正在路上。</p>) : <StatePanel title="没有找到匹配作品" body="换一个关键词或类型试试。" action="清除筛选" onAction={() => { setQuery(''); setFilter('all'); }} />)}
-    </section>
-  </main>;
-}
 
 function StatePanel({ title, body, action, onAction }) { return <div className="state-panel"><span>{icons.spark}</span><h3>{title}</h3><p>{body}</p>{action && <Button kind="secondary" onClick={onAction}>{action}</Button>}</div>; }
 
@@ -1371,7 +1335,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (route === '/social' || parts[0] === 'community') content = <CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route={route} accountProfile={accountProfile} demo={demo}/>;
   else if (route === '/contribute') content = <ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile}/>;
   else if (parts[0] === 'challenge' && parts[1]) content = <ChallengePage api={api} go={go} demo={demo} code={parts[1]}/>;
-  else content = <DiscoverPage api={api} demo={demo} go={go} hostIdentity={hostIdentity}/>;
+  else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play';
-  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}`} data-host={hostIdentity.id}>{!player && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} api={api}/>} {!player && <MobileNav route={route} go={go}/>}<div className="ambient" aria-hidden="true"/>{content}<div className="notice-region" aria-live="polite"/></div>;
+  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}`} data-host={hostIdentity.id}>{!player && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} api={api}/>} {!player && <MobileNav route={route} go={go} accountProfile={accountProfile}/>}<div className="ambient" aria-hidden="true"/>{content}<div className="notice-region" aria-live="polite"/></div>;
 }

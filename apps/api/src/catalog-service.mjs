@@ -1,4 +1,5 @@
 import { GUESS_BAIKE_WORK_ID, guessBaikeWork } from './built-in-works.mjs';
+import { presentCatalogWork, editorialSearchIds } from './catalog-presentation.mjs';
 
 export class CatalogError extends Error {
   constructor(code, statusCode, message) { super(message); this.name = 'CatalogError'; this.code = code; this.statusCode = statusCode; this.retryable = false; }
@@ -15,14 +16,19 @@ export function createCatalogService({ repository, config, artifactStore }) {
     async list(query = {}) {
       const limit = query.limit == null ? 20 : Number(query.limit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new CatalogError('SCHEMA_INVALID', 400, 'limit must be between 1 and 50.');
-      const works = await repository.list({ limit, kind: query.kind ?? null });
-      return (!query.kind || query.kind === 'game') ? [guessBaikeWork, ...works].slice(0, limit) : works;
+      const offset=query.offset==null?0:Number(query.offset),q=String(query.q??'').trim().toLowerCase();
+      if(!Number.isInteger(offset)||offset<0||offset>100000||q.length>100||query.kind&&!['game','creative','tool'].includes(query.kind))throw new CatalogError('SCHEMA_INVALID',400,'目录查询参数无效。');
+      const builtIn=(!query.kind||query.kind==='game')&&(!q||[guessBaikeWork.title,guessBaikeWork.description,...guessBaikeWork.tags,'GameHub'].join(' ').toLowerCase().includes(q));
+      const includeBuiltIn=builtIn&&offset===0;
+      const remaining=limit-(includeBuiltIn?1:0);
+      const works=remaining?await repository.list({limit:remaining,kind:query.kind??null,q,offset:Math.max(0,offset-(builtIn?1:0)),editorialIds:editorialSearchIds(q)}):[];
+      return [...(includeBuiltIn?[guessBaikeWork]:[]),...works.map(presentCatalogWork)];
     },
     async get(workId) {
       if (workId === GUESS_BAIKE_WORK_ID) return guessBaikeWork;
       const work = await repository.get(workId);
       if (!work) throw new CatalogError('NOT_FOUND', 404, 'Work not found.');
-      return work;
+      return presentCatalogWork(work);
     },
     async download(workId, releaseId) {
       const release = await repository.getDownload(workId, releaseId);

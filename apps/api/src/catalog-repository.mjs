@@ -14,7 +14,7 @@ const workView = rows => ({
 export class PostgresCatalogRepository {
   constructor(pool) { this.pool = pool; }
 
-  async list({ limit, kind }) {
+  async list({ limit, kind, q='', offset=0, editorialIds=[] }) {
     const result = await this.pool.query(
       `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
@@ -27,13 +27,15 @@ export class PostgresCatalogRepository {
          JOIN upload_jobs ru ON ru.id=r.upload_job_id
         WHERE w.state='published' AND w.visibility='public' AND t.state='published'
           AND r.validation_state='ready' AND r.serving_state='enabled'
-          AND ($1::text IS NULL OR w.kind=$1)
           AND w.id IN (
-            SELECT visible.id FROM works visible JOIN work_targets visible_target ON visible_target.work_id=visible.id
-             WHERE visible.state='published' AND visible.visibility='public' AND visible_target.current_release_id IS NOT NULL
-             ORDER BY visible.first_published_at DESC,visible.id LIMIT $2
+            SELECT visible.id FROM works visible JOIN users author ON author.id=visible.owner_user_id
+             WHERE visible.state='published' AND visible.visibility='public'
+               AND ($1::text IS NULL OR visible.kind=$1)
+               AND ($3::text='' OR strpos(lower(concat_ws(' ',visible.title,visible.description,array_to_string(visible.tags,' '),author.display_name,visible.agent_label)),$3)>0 OR EXISTS(SELECT 1 FROM jsonb_to_recordset($5::jsonb) AS copy(id uuid,title text) WHERE copy.id=visible.id AND copy.title=visible.title))
+               AND EXISTS(SELECT 1 FROM work_targets vt JOIN releases vr ON vr.id=vt.current_release_id AND vr.work_id=vt.work_id AND vr.target_key=vt.target_key JOIN upload_jobs vj ON vj.id=vr.upload_job_id WHERE vt.work_id=visible.id AND vt.state='published' AND vr.validation_state='ready' AND vr.serving_state='enabled')
+             ORDER BY visible.first_published_at DESC,visible.id LIMIT $2 OFFSET $4
           )
-        ORDER BY w.first_published_at DESC,w.id,t.target_key`, [kind, limit],
+        ORDER BY w.first_published_at DESC,w.id,t.target_key`, [kind, limit,q,offset,JSON.stringify(editorialIds)],
     );
     const groups = new Map();
     for (const row of result.rows) { if (!groups.has(row.id)) groups.set(row.id, []); groups.get(row.id).push(row); }

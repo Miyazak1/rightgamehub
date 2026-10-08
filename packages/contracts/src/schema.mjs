@@ -733,7 +733,7 @@ export const operations = Object.freeze([
   { method: 'patch', path: '/v1/me', operationId: 'updateProfile', auth: 'bearer', request: 'UpdateProfileRequest', response: 'AccountProfile' },
   { method: 'patch', path: '/v1/me/avatar', operationId: 'selectAvatar', auth: 'bearer', request: 'SelectAvatarRequest', response: 'AccountProfile' },
   { method: 'put', path: '/v1/me/avatar', operationId: 'uploadAvatar', auth: 'bearer', response: 'AccountProfile', avatarBody: true },
-  { method: 'get', path: '/v1/me/library', operationId: 'listLibrary', auth: 'bearer', response: 'LibraryItem', responseArray: true },
+  { method: 'get', path: '/v1/me/library', operationId: 'listLibrary', auth: 'bearer', response: 'LibraryItem', responseArray: true,queryLibrary:true },
   { method: 'get', path: '/v1/me/library/{workId}', operationId: 'getLibraryState', auth: 'bearer', response: 'LibraryState', pathWorkKey: true },
   { method: 'put', path: '/v1/me/library/{workId}', operationId: 'saveToLibrary', auth: 'bearer', response: 'LibraryState', pathWorkKey: true },
   { method: 'delete', path: '/v1/me/library/{workId}', operationId: 'removeFromLibrary', auth: 'bearer', response: 'LibraryState', pathWorkKey: true },
@@ -766,7 +766,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/me/retention', operationId: 'getPlayerRetention', auth: 'bearer', response: 'PlayerRetention' },
   { method: 'get', path: '/v1/me/notification-preferences', operationId: 'getNotificationPreferences', auth: 'bearer', response: 'NotificationPreferences' },
   { method: 'put', path: '/v1/me/notification-preferences', operationId: 'updateNotificationPreferences', auth: 'bearer', request: 'NotificationPreferences', response: 'NotificationPreferences' },
-  { method: 'get', path: '/v1/works', operationId: 'listWorks', auth: 'anonymous', response: 'Work', responseArray: true },
+  { method: 'get', path: '/v1/works', operationId: 'listWorks', auth: 'anonymous', response: 'Work', responseArray: true, queryCatalog:true },
   { method: 'get', path: '/v1/works/{workId}', operationId: 'getWork', auth: 'anonymous', response: 'Work', pathWorkKey: true },
   { method: 'get', path: '/v1/works/{workId}/launch', operationId: 'getWorkLaunch', auth: 'anonymous', response: 'LaunchDescriptor', pathWorkKey: true, queryReleaseId: true },
   { method: 'post', path: '/v1/works/{workId}/reports', operationId: 'createContentReport', auth: 'bearer', request: 'CreateContentReportRequest', response: 'ContentReport', pathWorkKey: true },
@@ -851,6 +851,13 @@ export function createOpenApiDocument() {
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
+    if (operation.queryLibrary) parameters.push({name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:100}},{name:'recent',in:'query',required:false,schema:{type:'boolean'}});
+    if (operation.queryCatalog) parameters.push(
+      {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:50,default:20}},
+      {name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:100000,default:0}},
+      {name:'q',in:'query',required:false,schema:{type:'string',maxLength:100}},
+      {name:'kind',in:'query',required:false,schema:{type:'string',enum:['game','creative','tool']}}
+    );
     if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: operation.analyticsDefaultDays ?? 7 } });
     if (operation.queryMultiplayerRooms) parameters.push(
       { name: 'modeId', in: 'query', required: true, schema: id },

@@ -116,7 +116,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
   }
   return {
     ...communityApi(request),
-    listWorks: ({ limit = 20, kind } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}`, options),
+    listWorks: ({ limit = 20, kind, q, offset } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
@@ -227,7 +227,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     selectAvatar: (presetKey, options) => request('/v1/me/avatar', { ...options, method: 'PATCH', body: { presetKey }, auth: true }),
     uploadAvatar: (file, options) => request('/v1/me/avatar', { ...options, method: 'PUT', rawBody: file, headers: { 'Content-Type': file.type, ...(options?.headers ?? {}) }, auth: true }),
     avatarUrl: (avatar, variant = 'animated') => { const path = variant === 'static' ? avatar?.staticUrl : avatar?.url; return path ? `${baseUrl}${path}` : null; },
-    listLibrary: options => request('/v1/me/library', { ...options, auth: true }),
+    listLibrary: ({limit,recent,...options}={}) => request('/v1/me/library'+(limit||recent?'?'+new URLSearchParams({...limit?{limit}:{},...recent?{recent:'true'}:{}}):''), { ...options, auth: true }),
     getLibraryState: (workId, options) => request(`/v1/me/library/${encodeURIComponent(workId)}`, { ...options, auth: true }),
     saveToLibrary: (workId, options) => request(`/v1/me/library/${encodeURIComponent(workId)}`, { ...options, method: 'PUT', auth: true }),
     removeFromLibrary: (workId, options) => request(`/v1/me/library/${encodeURIComponent(workId)}`, { ...options, method: 'DELETE', auth: true }),

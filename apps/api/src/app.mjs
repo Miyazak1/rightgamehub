@@ -377,7 +377,7 @@ export function createApp(dependencies) {
   }
   if (catalogService) {
     app.get('/v1/works', {
-      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] } } } },
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000} } } },
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.list(request.query));
@@ -522,9 +522,9 @@ export function createApp(dependencies) {
 
   if (engagementService) {
     const libraryParams = { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } };
-    app.get('/v1/me/library', { preHandler: requireAuth }, async (request, reply) => {
+    app.get('/v1/me/library', { preHandler: requireAuth,schema:{querystring:{type:'object',additionalProperties:false,properties:{limit:{type:'integer',minimum:1,maximum:100},recent:{type:'boolean'}}}} }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
-      return envelope(await engagementService.list(request.actor));
+      return envelope(await engagementService.list(request.actor,request.query));
     });
     app.get('/v1/me/library/:workId', { preHandler: requireAuth, schema: { params: libraryParams } }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');

@@ -17,8 +17,10 @@ export function createEngagementService({ repository, catalogService, clock = ()
     try { return await catalogService.get(workKey); } catch { throw new EngagementError('NOT_FOUND', 404, '作品不存在或已经撤下。'); }
   };
   return {
-    async list(actor) {
-      const entries = await repository.list(actor.userId);
+    async list(actor,query={}) {
+      const limit=query.limit==null?null:Number(query.limit),recent=query.recent===true;
+      if(limit!==null&&(!Number.isInteger(limit)||limit<1||limit>100))throw new EngagementError('SCHEMA_INVALID',400,'limit must be between 1 and 100.');
+      const entries = await repository.list(actor.userId,{limit,recent});
       const items = [];
       for (const row of entries) {
         try { items.push({ ...view(row), work: await getWork(row.work_key) }); } catch {}
