@@ -5,11 +5,12 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { crc32 } from 'node:zlib';
 import path from 'node:path';
+import {normalizeCompetition} from '../../../packages/contracts/src/competition.mjs';
 import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
 const invalid = (code, message) => Object.assign(new Error(message), { code });
-const supportedCapabilities = new Set(['fullscreen', 'multiplayer', 'pointerLock', 'localSave']);
+const supportedCapabilities = new Set(['fullscreen', 'multiplayer', 'pointerLock', 'localSave', 'competition']);
 
 async function readPlatformManifest(output, assets) {
   if (!assets['platform.json']) {
@@ -27,13 +28,14 @@ async function readPlatformManifest(output, assets) {
   let value;
   try { value = JSON.parse(await readFile(containedPath(output, 'platform.json'), 'utf8')); } catch { throw invalid('MANIFEST_INVALID', 'platform.json is not valid JSON.'); }
   if (!value || Array.isArray(value) || typeof value !== 'object') throw invalid('MANIFEST_INVALID', 'platform.json must be an object.');
-  const allowed = new Set(['version', 'entry', 'capabilities']);
+  const allowed = new Set(['version', 'entry', 'capabilities', 'competition']);
   if (Object.keys(value).some(key => !allowed.has(key)) || value.version !== 1) throw invalid('MANIFEST_INVALID', 'platform.json has unknown fields or version.');
   const entry = validateAssetPath(value.entry ?? 'index.html');
   const capabilities = value.capabilities ?? [];
   if (!Array.isArray(capabilities) || new Set(capabilities).size !== capabilities.length || capabilities.some(item => typeof item !== 'string' || !supportedCapabilities.has(item))) throw invalid('CAPABILITY_UNSUPPORTED', 'platform.json requests unsupported capabilities.');
   if (!assets[entry] || !/^text\/html/.test(assets[entry].mime)) throw invalid('MANIFEST_INVALID', 'The declared entry must be an HTML file in the package.');
-  return { entry, approvedCapabilities: [...capabilities].sort() };
+  if(capabilities.includes('competition')!==(value.competition!==undefined))throw invalid('MANIFEST_COMPETITION_INVALID','Declare both the competition capability and its board definitions.');
+  return { entry, approvedCapabilities: [...capabilities].sort(), ...(value.competition?{competition:normalizeCompetition(value.competition)}:{}) };
 }
 
 export async function validateWebZip(input, output, totalLimit = WEB_LIMITS.totalBytes) {

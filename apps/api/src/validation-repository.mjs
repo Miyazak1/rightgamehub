@@ -1,4 +1,5 @@
 import { withTransaction } from './database.mjs';
+import {registerCompetitionRelease} from './competition-service.mjs';
 
 export class ValidationError extends Error {
   constructor(code, message) { super(message); this.name = 'ValidationError'; this.code = code; }
@@ -104,6 +105,7 @@ export class PostgresValidationRepository {
       );
       const release = (await client.query('SELECT * FROM releases WHERE upload_job_id=$1', [upload.id])).rows[0];
       if (!release || release.id !== upload.release_id) throw new ValidationError('RELEASE_ID_CONFLICT', 'Upload already produced a different release.');
+      await registerCompetitionRelease(client,{workId:upload.work_id,releaseId:release.id,ownerUserId:upload.owner_user_id,competition:published.manifest.competition});
       const sourceBuild = (await client.query("UPDATE build_jobs SET state=CASE WHEN state='validating' THEN 'ready' ELSE state END,release_id=$2,error_code=CASE WHEN state='validating' THEN NULL ELSE error_code END,completed_at=now(),updated_at=now() WHERE upload_job_id=$1 AND state IN('validating','superseded') RETURNING *", [upload.id, release.id])).rows[0];
       if (sourceBuild) {
         await client.query(

@@ -44,6 +44,14 @@ export type CommunityMediaRequest = { bytes: number; contentType: "image/jpeg" |
 export type CommunityMediaResult = { id: string; state: "reserved" | "uploaded" | "processing" | "ready" | "failed" | "deleting" | "deleted" };
 export type CommunityMediaUploaded = { id: string; uploaded: true };
 export type CommunityMediaStatus = { id: string; state: "reserved" | "uploaded" | "processing" | "ready" | "failed" | "deleting" | "deleted"; width: number | null; height: number | null; errorCode: string | null };
+export type CompetitionBoard = { id: string; key: string; title: string; modeKey: string; rulesetVersion: number; period: "daily" | "all-time"; timeZone: string; verification: "client_reported" | "replay_verified"; verifier?: string; challengeScoped?: boolean; playerCenter?: string; metrics: Array<{ key: string; label: string; unit: string; min?: number; max?: number }>; ranking: Array<{ metric: string; direction: "asc" | "desc" }> };
+export type CompetitionStart = { boardId: string; requestId: string };
+export type CompetitionFinish = { metrics?: Record<string, number>; evidence?: { format: "tile-merge-v1"; moves: string } };
+export type CompetitionRun = { id: string; boardId: string; status: "issued" | "accepted" | "abandoned" | "invalidated"; periodKey: string; seed: number; expiresAt: string; metrics: Record<string, number> | null; channel: "production" | "preview"; verification?: "client_reported" | "replay_verified" };
+export type CompetitionAbandoned = { abandoned: boolean };
+export type CompetitionDecision = { action: "invalidate" | "restore"; reason: string };
+export type CompetitionDecisionResult = { status: "accepted" | "invalidated" };
+export type CompetitionLeaderboard = { workId: string; boardId: string; title: string; date: string | null; timeZone: string; puzzleId: string | null; verification: "client_reported" | "replay_verified"; definition: CompetitionBoard; metrics: Array<{ key: string; label: string; unit: string; min?: number; max?: number; direction?: "asc" | "desc" }>; entries: Array<WorkLeaderboardEntry>; myEntry: WorkLeaderboardEntry | null; total: number; limit: number; offset: number; hasMore: boolean };
 export type WorkLeaderboardEntry = { rank: number | null; player: { id: string; displayName: string; isMe: boolean; avatar: AccountAvatar }; scores: Record<string, number>; completedAt: string };
 export type WorkLeaderboard = { workId: string; boardId: string; title: string; date: string; timeZone: string; puzzleId: string | null; verification: "client_reported"; metrics: Array<{ key: string; label: string; unit: string; direction: "asc" | "desc" }>; entries: Array<WorkLeaderboardEntry>; myEntry: WorkLeaderboardEntry | null; total: number; offset: number; limit: number; hasMore: boolean };
 export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }

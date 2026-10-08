@@ -1,3 +1,4 @@
+import {createCompetitionService} from './competition-service.mjs';
 import {createSaveOperationsService} from './save-operations-service.mjs';
 import {createSaveHealthMetrics} from './save-health-metrics.mjs';
 import {createSaveLibraryService} from './save-library-service.mjs';
@@ -169,6 +170,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const gameSessionService = createGameSessionService({ cloudSaveEnabled: config.cloudSaveEnabled, repository: new PostgresGameSessionRepository(database.pool) });
+  const competitionService = createCompetitionService({pool:database.pool,gameSessionService,socialService});
   const gameSaveRepository = config.cloudSaveEnabled ? new PostgresGameSaveRepository(database.pool,{storageProtection:config.saveStorageProtection}) : null;
   const saveMetrics=config.cloudSaveEnabled ? createSaveHealthMetrics({pool:database.pool}) : null;
   const saveOperationsService=config.cloudSaveEnabled ? createSaveOperationsService({repository:gameSaveRepository,metrics:saveMetrics}) : null;
@@ -179,6 +181,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     saveLibraryService,
     saveOperationsService,
     gameSessionService,
+    competitionService,
     config,
     database,
     migrations,
@@ -242,6 +245,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
     gameSessionService,
+    competitionService,
     runtimeEdgeApp,
     gameSaveService,
     saveLibraryService,

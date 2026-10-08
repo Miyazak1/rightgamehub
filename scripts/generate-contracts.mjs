@@ -1,3 +1,4 @@
+import {competitionSchemas} from '../packages/contracts/src/competition-schema.mjs';
 import {saveOperationsSchemas} from '../packages/contracts/src/save-operations-schema.mjs';
 import {communitySchemas} from '../packages/contracts/src/community-schema.mjs';
 import assert from 'node:assert/strict';
@@ -44,6 +45,7 @@ function generateTypes() {
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
   for(const [name,schema] of Object.entries(saveOperationsSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   for(const [name,schema] of Object.entries(communitySchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
+  for(const [name,schema] of Object.entries(competitionSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   for(const name of ['WorkLeaderboardEntry','WorkLeaderboard']) lines.push('export type '+name+' = '+operationSchemaType(schemas[name])+';');
   lines.push('export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }');
   lines.push('export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }');

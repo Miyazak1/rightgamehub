@@ -116,6 +116,13 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
   }
   return {
     ...communityApi(request),
+    listWorkLeaderboards: (workId,options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards`,options),
+    readCompetitionLeaderboard: (workId,boardId,query={},options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards/${encodeURIComponent(boardId)}?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!=null))}`,{...options,auth:true}),
+    listCompetitionModes: (session,options) => request('/v1/competition/modes',{...options,auth:true,headers:{'X-GameHub-Session':session}}),
+    startCompetitionRun: (session,body,options) => request('/v1/competition/runs',{...options,auth:true,method:'POST',body,headers:{'X-GameHub-Session':session}}),
+    getCompetitionRun: (session,id,options) => request('/v1/competition/runs/'+encodeURIComponent(id),{...options,auth:true,headers:{'X-GameHub-Session':session}}),
+    finishCompetitionRun: (session,id,body,options) => request('/v1/competition/runs/'+encodeURIComponent(id)+'/finish',{...options,auth:true,method:'POST',body,headers:{'X-GameHub-Session':session}}),
+    abandonCompetitionRun: (session,id,options) => request('/v1/competition/runs/'+encodeURIComponent(id)+'/abandon',{...options,auth:true,method:'POST',headers:{'X-GameHub-Session':session}}),
     listWorks: ({ limit = 20, kind, q, offset } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     getWorkLeaderboard: (id, {date,puzzleId,limit=10,offset=0}={}, options) => request(`/v1/works/${encodeURIComponent(id)}/leaderboard?${new URLSearchParams({limit,offset,...(date?{date}:{}),...(puzzleId?{puzzleId}:{})})}`, {...options,auth:true}),

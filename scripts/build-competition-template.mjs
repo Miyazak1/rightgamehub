@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {createZipBuffer} from '../apps/api/src/zip-buffer-writer.mjs';
+const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url),{build}=require('../extensions/harness/node_modules/esbuild');
+const directory=path.join(root,'templates/competition-score'),artifact=path.join(root,'artifacts/gamehub-competition-score-template.zip');
+const bundled=await build({entryPoints:[path.join(root,'packages/web-game-sdk/src/index.mjs')],bundle:true,write:false,platform:'browser',format:'iife',globalName:'GameHubSDK',minify:true});
+const files=await Promise.all(['index.html','platform.json'].map(async name=>({name,data:await fs.readFile(path.join(directory,name))})));
+const guide=await fs.readFile(path.join(root,'docs/competition-creator-guide.zh-CN.md'));
+files.push({name:'gamehub-sdk.js',data:bundled.outputFiles[0].contents},{name:'game.js',data:(await fs.readFile(path.join(directory,'game.mjs'),'utf8')).replace(/^import .*\n/,'const {createGameHubClient}=GameHubSDK;\n')},{name:'README.txt',data:guide});await fs.mkdir(path.dirname(artifact),{recursive:true});await fs.writeFile(artifact,createZipBuffer(files));
+const downloads=path.join(root,'apps/web/public/downloads');await fs.mkdir(downloads,{recursive:true});await fs.copyFile(artifact,path.join(downloads,path.basename(artifact)));await fs.writeFile(path.join(downloads,'competition-guide.md'),guide);console.log(artifact);

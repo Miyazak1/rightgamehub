@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {normalizeCompetition} from '../../../packages/contracts/src/competition.mjs';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -28,6 +29,8 @@ function validateReport(report) {
     total += asset.size;
   }
   if (total !== report.totalBytes || !report.assets[report.entry] || !Array.isArray(report.approvedCapabilities)) throw Object.assign(new Error('Validator report totals or entry are invalid.'), { code: 'VALIDATOR_REPORT_INVALID' });
+  if(report.approvedCapabilities.includes('competition')!==(report.competition!==undefined))throw Object.assign(new Error('Competition policy missing from validator report.'),{code:'VALIDATOR_REPORT_INVALID'});
+  if(report.competition)report.competition=normalizeCompetition(report.competition);
   return report;
 }
 

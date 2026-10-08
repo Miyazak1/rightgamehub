@@ -57,7 +57,7 @@ export function createCatalogService({ repository, config, artifactStore }) {
         apiVersion: 1, workId, releaseId: release.id, releaseLabel: release.label,
         entryUrl: `${origin}/${entry}`, runtimeOrigin: origin,
         playerProtocol: { min: 1, max: 1 },
-        capabilities: { localSave: capabilities.has('localSave') || capabilities.has('cloudSave'), fullscreen: capabilities.has('fullscreen'), pointerLock: capabilities.has('pointerLock'), multiplayer: capabilities.has('multiplayer') },
+        capabilities: { competition: capabilities.has('competition'), localSave: capabilities.has('localSave') || capabilities.has('cloudSave'), fullscreen: capabilities.has('fullscreen'), pointerLock: capabilities.has('pointerLock'), multiplayer: capabilities.has('multiplayer') },
       };
     },
   };

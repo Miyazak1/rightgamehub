@@ -43,7 +43,7 @@ export class LocalRuntimeStore {
         if (size !== expected.size || digest !== expected.sha256) throw Object.assign(new Error('Validated asset changed before publication.'), { code: 'ASSET_INTEGRITY_CHANGED' });
         manifestAssets[relative] = { size, sha256: digest, mime: expected.mime };
       }
-      const manifest = { policyVersion: report.policyVersion, entry: report.entry, approvedCapabilities: report.approvedCapabilities, totalBytes: report.totalBytes, fileCount: report.fileCount, assets: manifestAssets };
+      const manifest = { policyVersion: report.policyVersion, entry: report.entry, approvedCapabilities: report.approvedCapabilities, ...(report.competition?{competition:report.competition}:{}), totalBytes: report.totalBytes, fileCount: report.fileCount, assets: manifestAssets };
       const manifestBytes = Buffer.from(`${stableJson(manifest)}\n`);
       const manifestSha256 = crypto.createHash('sha256').update(manifestBytes).digest('hex');
       await fsp.writeFile(path.join(target, 'asset-manifest.json'), manifestBytes, { flag: 'wx' });

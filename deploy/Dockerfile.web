@@ -29,6 +29,10 @@ COPY extensions/vscode extensions/vscode
 COPY plugins plugins
 COPY poc/m0 poc/m0
 COPY templates/multiplayer-turn-based templates/multiplayer-turn-based
+COPY templates/competition-score templates/competition-score
+COPY docs/competition-creator-guide.zh-CN.md docs/competition-creator-guide.zh-CN.md
+COPY apps/api/src/zip-buffer-writer.mjs apps/api/src/zip-buffer-writer.mjs
+COPY scripts/build-competition-template.mjs scripts/build-competition-template.mjs
 COPY .agents .agents
 COPY .claude-plugin .claude-plugin
 COPY scripts/build-extension.mjs scripts/build-extension.mjs

@@ -1,0 +1,28 @@
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path');
+test('uploaded games declare boards through real validation and publication without work allowlists',{skip:!process.env.GAMEHUB_COMMUNITY_DATABASE_URL,timeout:120000},async t=>{
+  const {createCompetitionFixture}=require('../competition-fixture.cjs');const fixture=await createCompetitionFixture(process.env.GAMEHUB_COMMUNITY_DATABASE_URL);t.after(()=>fixture.close());
+  const {createZipBuffer}=await import('../../apps/api/src/zip-buffer-writer.mjs');
+  const policy={version:1,entry:'index.html',capabilities:['competition'],competition:{version:1,boards:[{key:'speed',title:'解谜速度榜',modeKey:'puzzle',rulesetVersion:1,period:'all-time',verification:'client_reported',metrics:[{key:'time',label:'用时',unit:'毫秒',min:0,max:100000}],ranking:[{metric:'time',direction:'asc'}]}]}};
+  const bytes=createZipBuffer([{name:'index.html',data:'<!doctype html><title>Generic game</title>'},{name:'platform.json',data:JSON.stringify(policy)}]);
+  const release=await fixture.publish(bytes);assert.equal(release.outcome,'published');
+  const boards=await fixture.competition.boards(release.workId);assert.equal(boards.length,1);assert.equal(boards[0].metrics[0].key,'time');
+  const session=await fixture.sessions.create(fixture.actor,{workId:release.workId,releaseId:release.releaseId,channel:'production',launchNonce:crypto.randomUUID()});assert.ok(session.capabilities.includes('competition'));
+  const {createApp}=await import('../../apps/api/src/app.mjs');const app=createApp({config:{requestBodyLimit:65536,corsOrigins:[]},competitionService:fixture.competition,authService:{authenticateBearer:async()=>fixture.actor}});t.after(()=>app.close());
+  const publicBoards=await app.inject({url:'/v1/works/'+release.workId+'/leaderboards'});assert.equal(publicBoards.statusCode,200);assert.equal(publicBoards.json().data[0].id,boards[0].id);
+  const headers={authorization:'Bearer fixture','x-gamehub-session':session.gameSessionId};
+  const started=await app.inject({method:'POST',url:'/v1/competition/runs',headers,payload:{boardId:boards[0].id,requestId:crypto.randomUUID()}});assert.equal(started.statusCode,200,started.body);
+  const run=started.json().data,finished=await app.inject({method:'POST',url:'/v1/competition/runs/'+run.id+'/finish',headers,payload:{metrics:{time:321}}});assert.equal(finished.statusCode,200,finished.body);
+  assert.equal(finished.json().data.verification,'client_reported');
+  const board=await app.inject({url:'/v1/works/'+release.workId+'/leaderboards/'+boards[0].id});assert.equal(board.json().data.entries[0].scores.time,321);assert.match(board.headers['cache-control'],/no-store/);
+  const forbidden=await app.inject({method:'POST',url:'/v1/competition/runs',headers,payload:{boardId:boards[0].id,requestId:crypto.randomUUID(),userId:crypto.randomUUID()}});assert.equal(forbidden.statusCode,400);
+  const invalid=structuredClone(policy);invalid.competition.boards[0].verification='authoritative';
+  await assert.rejects(fixture.publish(createZipBuffer([{name:'index.html',data:'x'},{name:'platform.json',data:JSON.stringify(invalid)}])),{code:'MANIFEST_COMPETITION_INVALID'});
+  const replayPackage=await fs.readFile(path.resolve(__dirname,'../../apps/api/bundled/2048-competition-v1.zip'));
+  const provenance=JSON.parse(await fs.readFile(path.resolve(__dirname,'../../apps/api/bundled/2048-competition-v1.json'),'utf8'));
+  await fixture.pool.query('UPDATE works SET repository_url=$2,license_spdx=$3 WHERE id=$1',[release.workId,provenance.repository,provenance.license]);
+  const {installCompetitionPackage}=await import('../../apps/api/src/install-competition-package.mjs');
+  const replay=await installCompetitionPackage({runtime:fixture,workId:release.workId,bytes:replayPackage,provenance,wait:async()=>{}});
+  assert.equal((await fixture.competition.boards(replay.workId))[0].verification,'replay_verified');assert.equal(replay.previousReleaseId,release.releaseId);
+  const repeated=await installCompetitionPackage({runtime:fixture,workId:release.workId,bytes:replayPackage,provenance,wait:async()=>{}});assert.equal(repeated.alreadyInstalled,true);assert.equal(repeated.releaseId,replay.releaseId);
+  const template=await fs.readFile(path.resolve(__dirname,'../../artifacts/gamehub-competition-score-template.zip'));const third=await fixture.publish(template,'十次点击');assert.equal((await fixture.competition.boards(third.workId))[0].key,'quick-click');
+});

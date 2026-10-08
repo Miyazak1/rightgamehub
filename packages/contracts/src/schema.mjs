@@ -1,3 +1,4 @@
+import {competitionSchemas,competitionRoutes} from './competition-schema.mjs';
 import {saveOperationsSchemas,saveOperationsRoutes} from './save-operations-schema.mjs';
 import {communitySchemas,communityRoutes} from './community-schema.mjs';
 const stringEnum = values => ({ type: 'string', enum: values });
@@ -38,6 +39,7 @@ const saveMetadata = {
 export const schemas = Object.freeze({
   ...saveOperationsSchemas,
   ...communitySchemas,
+  ...competitionSchemas,
   SaveLibraryQuery: object({afterSlotId:id},[]),
   SaveLibrarySlotParams: object({slotId:id}),
   SaveLibraryRevisionParams: object({slotId:id,revisionId:id}),
@@ -684,6 +686,7 @@ const errorResponses = {
 export const operations = Object.freeze([
   ...saveOperationsRoutes,
   ...communityRoutes,
+  ...competitionRoutes,
   {method:'get',path:'/v1/me/save-library',operationId:'listSaveLibrary',auth:'bearer',saveLibrary:true,saveLibraryPage:true,response:'SaveLibraryPage'},
   {method:'get',path:'/v1/me/save-library/{slotId}/history',operationId:'getSaveLibraryHistory',auth:'bearer',saveLibrary:true,pathId:'slotId',saveHistory:true,response:'SaveLibraryHistory'},
   {method:'get',path:'/v1/me/save-library/{slotId}/revisions/{revisionId}/content',operationId:'readSaveLibraryRevision',auth:'bearer',saveLibrary:true,pathId:'slotId',saveRevision:true,saveContent:true,response:'GameSaveMetadata'},

@@ -3,6 +3,7 @@ import { createRuntime } from './runtime.mjs';
 const runtime = createRuntime({ loadTrustedRules: false });
 let stopping = false;
 let nextCommunityCleanup = 0;
+let nextCompetitionCleanup = 0;
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const stop = () => { stopping = true; };
 process.once('SIGTERM', stop);
@@ -16,6 +17,10 @@ try {
       if (Date.now() >= nextCommunityCleanup) {
         await runtime.communityMediaService.cleanOnce();
         nextCommunityCleanup = Date.now() + 60000;
+      }
+      if (Date.now() >= nextCompetitionCleanup) {
+        await runtime.competitionService.cleanOnce();
+        nextCompetitionCleanup = Date.now() + 60000;
       }
       if (!result && !mediaResult) await pause(1000);
     } catch (error) {

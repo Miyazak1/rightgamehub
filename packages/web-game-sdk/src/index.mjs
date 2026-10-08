@@ -96,6 +96,14 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     getPlayer: () => request('player.get'),
     cloudSave,
     localSave: cloudSave.local,
+    competition: Object.freeze({
+      listBoards: () => request('competition.modes.list'),
+      start: ({boardId,requestId=randomId()}) => request('competition.runs.start',{boardId,requestId}),
+      get: runId => request('competition.runs.get',{runId}),
+      finish: (runId,submission) => request('competition.runs.finish',{...submission,runId}),
+      abandon: runId => request('competition.runs.abandon',{runId}),
+      leaderboard: (boardId,query={}) => request('competition.leaderboards.get',{...query,boardId}),
+    }),
     multiplayer: Object.freeze({
       listModes: () => request('multiplayer.modes.list'), rooms: Object.freeze(rooms), matches: Object.freeze(matches),
       connect: () => request('multiplayer.realtime.connect'),

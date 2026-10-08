@@ -1,4 +1,6 @@
-> 当前生产仅开放 localSave。本机存档使用 client.localSave（兼容 client.cloudSave.local），需要新版宿主；cloudSave 仅用于显式启用的内部测试。游戏的 platform.json 可声明 capabilities: ["localSave"]。本机进度不会自动上传。
+> 存档能力当前仅开放 localSave。本机存档使用 client.localSave（兼容 client.cloudSave.local），需要新版宿主；cloudSave 仅用于显式启用的内部测试。本机进度不会自动上传。
+>
+> 通用排行榜使用独立的 `competition` 能力，包含声明式榜单、运行签发、成绩提交和查询。参见 [排行榜创作者接入说明](../../docs/competition-creator-guide.zh-CN.md)。
 
 # GameHub 网页游戏 SDK：在线云存档
 

@@ -1,11 +1,24 @@
 # 游戏存档与竞赛基础设施：实施状态
 
-更新：2026-10-06。实施分支：`codex/game-services-foundation`。
+更新：2026-10-08。实施分支：`codex/game-services-foundation`。
 
 权威设计：
 
 - [71 通用竞赛成绩与排行榜](71-platform-competition-leaderboards-design.zh-CN.md)
 - [72 通用游戏存档](72-game-save-platform-infrastructure-design.zh-CN.md)
+
+## 当前状态：声明式排行榜 v1（2026-10-08）
+
+以下第一至第五阶段保留历史验收记录；本节描述最新实现。云存档继续关闭，本机存档保留。排行榜独立于云存档，不新增服务。
+
+- 创作者以 `platform.json` 声明榜单、整数指标、排序与规则版本；经过上传校验和发布绑定后，SDK 可签发运行、提交/重试成绩。游戏详情页自动展示相应指标、周期和本人名次，无需前端作品白名单。
+- 首版支持明确标记的休闲榜与平台固定的 2048 回放验证榜。猜百科沿用旧成绩及题目隔离；2048 提供独立排行挑战，第三方「十次点击」模板通过同一上传流程接入。规则版本不可覆盖修改，预览成绩不入公开榜；身份、屏蔽、隐私、作废/恢复及审计生效。
+- 每账号每小时最多 60 局，全平台最多保留 20,000 条运行记录；达到容量后暂停新局，已签发局提交、榜单读取和自由游玩继续可用。复用 worker 限量清理过期原始回放与未完成运行。完整范围见 [接入合同与限制](competition-creator-guide.zh-CN.md)。
+- 迁移为 `0053_competition_boards.sql`。VS Code / Cursor 版本 `0.3.34`、Harness `0.1.16`。这轮没有执行生产部署；更新脚本备份后迁移，更新校验器，并通过原上传流程发布 2048 新版本，保留旧版本。2048 原生存储在正式沙箱中使用页面内存，本轮只隔离自由模式和排行挑战，不承诺刷新续玩；其他已接入平台本机存档的游戏不受影响。
+- `npm run verify:m1-foundation`：391 通过、20 跳过、0 失败。另在真实 PostgreSQL 执行通用发布/成绩专项：8 项通过；实际 Chromium 的 2048、可编辑第三方模板、猜百科详情页回归：3 项通过，覆盖 360–1200 px。2048 和模板使用正式 runtime 资源响应与 `sandbox="allow-scripts"`。API 与校验器生产镜像、Web 镜像的构建阶段通过，API 镜像入口可加载；Web、VSIX、Harness 本机构建通过。
+- 浏览器验收使用本地数据库和测试身份，不是生产投稿或本轮新安装的 Cursor 人工验收。没有完成混合负载测试、独立 Windows 宿主、团队/Elo、通用异步验证器审核与重算流水线，不把本版视为完整 C0–C4。
+
+复验入口：`tests/platform/competition.test.cjs`、`tests/platform/competition-publication.test.cjs`、`tests/client/competition-browser.test.cjs`。数据库专项需要 `GAMEHUB_COMMUNITY_DATABASE_URL` 指向专用测试库，浏览器专项另需 `GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH`。
 
 ## 第一阶段：共享前置切片
 

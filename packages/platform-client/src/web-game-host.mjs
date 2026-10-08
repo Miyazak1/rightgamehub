@@ -1,4 +1,5 @@
 import {createLocalSaveHandlers} from './web-game-local-save-handlers.mjs';
+import {createCompetitionHandlers} from './web-game-competition-handlers.mjs';
 import { bridgeEnvelope, isBridgeConnectMessage, parseBridgeRequest, bridgeMethodCapability, WEB_GAME_BRIDGE_MAX_BYTES } from '@gamehub/web-game-sdk/protocol';
 import { createGameSessionManager } from './game-session-manager.mjs';
 import { createGameTransfer } from '@gamehub/web-game-sdk/transfer';
@@ -18,7 +19,7 @@ export function createWebGameHost({
   if (!windowImpl?.addEventListener || !frame?.contentWindow || !descriptor?.workId || !apiClient || !MessageChannelImpl) {
     throw new TypeError('A window, mounted frame, launch descriptor, API client and MessageChannel are required.');
   }
-  const factories = { cloudSave: createCloudSaveHandlers, multiplayer: createMultiplayerHandlers, ...modules };
+  const factories = { competition:createCompetitionHandlers, cloudSave: createCloudSaveHandlers, multiplayer: createMultiplayerHandlers, ...modules };
   let closed = false;
   let connection = null;
   let identityTimer = null;

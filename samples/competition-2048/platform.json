@@ -1,0 +1,9 @@
+{
+  "version":1,"entry":"index.html","capabilities":["competition"],
+  "competition":{"version":1,"boards":[{
+    "key":"classic-score","modeKey":"classic","title":"2048 高分榜","rulesetVersion":1,"period":"all-time",
+    "verification":"replay_verified","verifier":"tile-merge-v1",
+    "metrics":[{"key":"score","label":"得分","unit":"分","min":0,"max":100000000},{"key":"max-tile","label":"最大方块","unit":"","min":2,"max":65536},{"key":"moves","label":"步数","unit":"步","min":1,"max":8192}],
+    "ranking":[{"metric":"score","direction":"desc"},{"metric":"max-tile","direction":"desc"},{"metric":"moves","direction":"asc"}]
+  }]}
+}

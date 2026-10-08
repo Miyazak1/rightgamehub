@@ -56,6 +56,14 @@ export interface GameHubClient {
   connect(): Promise<string[]>;
   getPlayer(): Promise<{id: string; displayName: string; avatar: unknown | null}>;
   cloudSave: CloudSaveClient;
+  competition: {
+    listBoards(): Promise<CompetitionBoard[]>;
+    start(input:{boardId:string;requestId?:string}): Promise<CompetitionRun>;
+    get(runId:string): Promise<CompetitionRun>;
+    finish(runId:string,submission:{metrics?:Record<string,number>;evidence?:{format:'tile-merge-v1';moves:string}}): Promise<CompetitionRun>;
+    abandon(runId:string): Promise<{abandoned:boolean}>;
+    leaderboard(boardId:string,query?:{date?:string;limit?:number;offset?:number}): Promise<unknown>;
+  };
   multiplayer: {
     listModes(): Promise<unknown[]>; rooms: MultiplayerRooms;
     connect(): Promise<unknown>; disconnect(): Promise<unknown>;
@@ -73,6 +81,8 @@ export interface GameHubClient {
 export function createGameHubClient(options?: {
   windowImpl?: Window; parentWindow?: Window; requestTimeoutMs?: number; cloudSaveTimeoutMs?: number;
 }): GameHubClient;
+export interface CompetitionBoard {id:string;key:string;title:string;modeKey:string;rulesetVersion:number;period:'daily'|'all-time';verification:'client_reported'|'replay_verified';metrics:Array<{key:string;label:string;unit:string;min:number;max:number}>;ranking:Array<{metric:string;direction:'asc'|'desc'}>}
+export interface CompetitionRun {id:string;boardId:string;status:'issued'|'accepted'|'abandoned'|'invalidated';periodKey:string;seed:number;expiresAt:string;metrics:Record<string,number>|null;channel:'production'|'preview';verification?:'client_reported'|'replay_verified'}
 export const WEB_GAME_BRIDGE_PROTOCOL: 'gamehub.web-game.v1';
 export const WEB_GAME_BRIDGE_VERSION: 1;
 export const WEB_GAME_BRIDGE_MAX_BYTES: number;

@@ -1,0 +1,8 @@
+{
+  "version":1,"entry":"index.html","capabilities":["competition"],
+  "competition":{"version":1,"boards":[{
+    "key":"quick-click","modeKey":"practice","title":"十次点击榜","rulesetVersion":1,"period":"daily","verification":"client_reported",
+    "metrics":[{"key":"duration","label":"用时","unit":"毫秒","min":0,"max":600000},{"key":"clicks","label":"点击","unit":"次","min":10,"max":10}],
+    "ranking":[{"metric":"duration","direction":"asc"}]
+  }]}
+}

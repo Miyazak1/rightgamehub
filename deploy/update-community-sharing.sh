@@ -16,7 +16,7 @@ git fetch origin codex/game-services-foundation
 git merge-base --is-ancestor "$EXPECTED" origin/codex/game-services-foundation
 git merge --ff-only "$EXPECTED"
 test "$(git rev-parse HEAD)" = "$EXPECTED"
-test -f apps/api/migrations/0052_daily_leaderboard_lookup.sql
+test -f apps/api/migrations/0053_competition_boards.sql
 
 set_env() {
   sed -i -E "/^[[:space:]]*(export[[:space:]]+)?$1[[:space:]]*=/d" deploy/.env.prod
@@ -36,16 +36,17 @@ dc() { docker compose --project-name gamehub-production --env-file deploy/.env.p
 dc config --quiet
 test -n "$(dc ps --status running --quiet postgres)"
 RUNNING=$(dc ps --status running --services)
-SERVICES=(api worker runtime community-image web)
+SERVICES=(api worker runtime community-image web validator)
 for service in source-worker rule-worker; do
   if printf '%s\n' "$RUNNING" | grep -qx "$service"; then SERVICES+=("$service"); fi
 done
 
 # Build serially, then back up DB and media before applying the additive migration.
-dc build migrate api worker runtime source-worker rule-worker community-image web
+dc build migrate api worker runtime source-worker rule-worker community-image web validator
 BACKUP_ROOT="$RECORD/data" ENV_FILE=.env.prod sh deploy/backup.sh
 dc run --rm --no-deps migrate
 dc up -d --no-build --no-deps --wait --wait-timeout 180 "${SERVICES[@]}"
+dc exec -T api node apps/api/src/install-competition-2048-cli.mjs | tee "$RECORD/2048-release.json"
 dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 const get=async path=>{const response=await fetch('http://127.0.0.1:3090'+path,{signal:AbortSignal.timeout(10000)});assert.equal(response.status,200);return (await response.json()).data;};
@@ -53,7 +54,10 @@ const ready=await get('/ready'),cap=await get('/v1/community/capabilities'),feed
 const leaderboard=await get('/v1/works/gamehub-guess-baike/leaderboard?limit=10');
 assert.equal(leaderboard.workId,'gamehub-guess-baike');assert.equal(leaderboard.myEntry,null);
 assert.ok(Array.isArray(leaderboard.entries)&&leaderboard.entries.length<=10);
-assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,52);assert.equal(ready.migrations.applied,52);
+assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,53);assert.equal(ready.migrations.applied,53);
+const tileBoards=await get('/v1/works/7359a350-cc0a-4a09-875d-cec9b5b8f93f/leaderboards');
+assert.ok(tileBoards.some(board=>board.key==='classic-score'&&board.verification==='replay_verified'));
+const tileLaunch=await get('/v1/works/7359a350-cc0a-4a09-875d-cec9b5b8f93f/launch');assert.equal(tileLaunch.capabilities.competition,true);
 assert.equal(ready.saves.cloudEnabled,false);assert.equal(ready.saves.mode,'local');
 assert.equal(cap.readEnabled,true);assert.equal(cap.postingEnabled,true);assert.equal(cap.commentsEnabled,false);
 assert.equal(cap.canShare,false);assert.equal(cap.reason,'AUTH_REQUIRED');
