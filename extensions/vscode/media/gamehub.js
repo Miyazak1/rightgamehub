@@ -27079,7 +27079,11 @@ ${GUESS_BAIKE_SHARE_URL}`;
     const [post, setPost] = (0, import_react4.useState)(initial), [draft, setDraft] = (0, import_react4.useState)(initial ? { channel: initial.channel, title: initial.title, blocks: initial.blocks } : blank);
     const [files, setFiles] = (0, import_react4.useState)([]), [busy, setBusy] = (0, import_react4.useState)(false), [message, setMessage] = (0, import_react4.useState)(""), [error, setError] = (0, import_react4.useState)("");
     const requestKeys = (0, import_react4.useRef)(/* @__PURE__ */ new Map()), uploads = (0, import_react4.useRef)(/* @__PURE__ */ new Map()), abort = (0, import_react4.useRef)(new AbortController()), running = (0, import_react4.useRef)(false);
-    (0, import_react4.useEffect)(() => () => abort.current.abort(), []);
+    (0, import_react4.useEffect)(() => {
+      const controller = new AbortController();
+      abort.current = controller;
+      return () => controller.abort();
+    }, []);
     const keyFor = (value) => {
       const map = requestKeys.current;
       if (!map.has(value)) map.set(value, newKey());
@@ -27091,9 +27095,9 @@ ${GUESS_BAIKE_SHARE_URL}`;
       running.current = true;
       setBusy(true);
       setError("");
+      const signal = abort.current.signal;
       try {
         if (!draft.title.trim()) throw Error("\u8BF7\u586B\u5199\u6807\u9898\u3002");
-        const signal = abort.current.signal;
         let current = post;
         const blocks = draft.blocks.filter((block) => block.type !== "paragraph" || block.text.trim());
         if (!blocks.length && !files.length) throw Error("\u8BF7\u5199\u4E00\u70B9\u5185\u5BB9\u3001\u6DFB\u52A0\u6765\u6E90\u94FE\u63A5\u6216\u56FE\u7247\u3002");
@@ -27144,10 +27148,10 @@ ${GUESS_BAIKE_SHARE_URL}`;
         }
         onDone(submit ? "\u5DF2\u63D0\u4EA4\uFF0C\u5BA1\u6838\u901A\u8FC7\u540E\u4F1A\u51FA\u73B0\u5728\u5206\u4EAB\u9875\u3002" : "\u8349\u7A3F\u5DF2\u4FDD\u5B58\u3002");
       } catch (caught) {
-        if (!abort.current.signal.aborted) setError(failure(caught));
+        if (!signal.aborted) setError(failure(caught));
       } finally {
         running.current = false;
-        if (!abort.current.signal.aborted) {
+        if (!signal.aborted) {
           setBusy(false);
           setMessage("");
         }

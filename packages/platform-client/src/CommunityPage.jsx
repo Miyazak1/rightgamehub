@@ -30,15 +30,18 @@ function Editor({api,initial,capabilities,onDone,onCancel}) {
   const [post,setPost]=useState(initial),[draft,setDraft]=useState(initial?{channel:initial.channel,title:initial.title,blocks:initial.blocks}:blank);
   const [files,setFiles]=useState([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
   const requestKeys=useRef(new Map()),uploads=useRef(new Map()),abort=useRef(new AbortController()),running=useRef(false);
-  useEffect(()=>()=>abort.current.abort(),[]);
+  useEffect(()=>{
+    const controller=new AbortController();abort.current=controller;
+    return()=>controller.abort();
+  },[]);
   const keyFor=value=>{const map=requestKeys.current;if(!map.has(value))map.set(value,newKey());return map.get(value);};
   const change=(index,patch)=>setDraft(value=>({...value,blocks:value.blocks.map((block,at)=>at===index?{...block,...patch}:block)}));
   async function persist(submit) {
     if(running.current)return;
     running.current=true;setBusy(true);setError('');
+    const signal=abort.current.signal;
     try{
       if(!draft.title.trim())throw Error('请填写标题。');
-      const signal=abort.current.signal;
       let current=post;
       const blocks=draft.blocks.filter(block=>block.type!=='paragraph'||block.text.trim());
       if(!blocks.length&&!files.length)throw Error('请写一点内容、添加来源链接或图片。');
@@ -84,8 +87,8 @@ function Editor({api,initial,capabilities,onDone,onCancel}) {
         current=(await api.communitySubmit(current,{key:keyFor('submit:'+current.id+':'+current.version),signal})).data;setPost(current);
       }
       onDone(submit?'已提交，审核通过后会出现在分享页。':'草稿已保存。');
-    }catch(caught){if(!abort.current.signal.aborted)setError(failure(caught));}
-    finally{running.current=false;if(!abort.current.signal.aborted){setBusy(false);setMessage('');}}
+    }catch(caught){if(!signal.aborted)setError(failure(caught));}
+    finally{running.current=false;if(!signal.aborted){setBusy(false);setMessage('');}}
   }
   return <section className="community-editor panel" aria-labelledby="community-editor-title"><div className="community-card-head"><h2 id="community-editor-title">{initial?'编辑分享':'分享新发现'}</h2><Button disabled={busy} onClick={onCancel}>关闭</Button></div><p className="community-muted">内容和修改都需审核。请附上消息来源，只上传有权分享的图片。</p>
     <fieldset disabled={busy}><label>标题<input maxLength={120} value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})} placeholder="这个发现有什么值得一看？"/></label><label>主题<select aria-label="主题" value={draft.channel} onChange={event=>setDraft({...draft,channel:event.target.value})}>{Object.entries(labels).map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>

@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto'),os=require('node:os');
 const root=path.resolve(__dirname,'../..'),databaseUrl=process.env.GAMEHUB_COMMUNITY_DATABASE_URL,playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
-test('community browser: submit image, review, like, private bookmark and narrow layout',{skip:!databaseUrl||!playwrightPath,timeout:90000},async t=>{
+test('community browser: StrictMode, failed-submit recovery, image, review and private bookmark',{skip:!databaseUrl||!playwrightPath,timeout:90000},async t=>{
   const connection=new URL(databaseUrl);
   assert.ok(['127.0.0.1','localhost'].includes(connection.hostname)&&connection.pathname==='/community_test','Browser fixture requires the dedicated local community_test database.');
   const {chromium}=require(playwrightPath);
@@ -39,7 +39,7 @@ test('community browser: submit image, review, like, private bookmark and narrow
     'import{createApiClient}from'+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
     'const actors='+JSON.stringify(actors)+';let actor=actors.owner;',
     'const api=createApiClient({getAccessToken:()=>actor.id});const root=createRoot(document.getElementById("root"));',
-    'function render(){root.render(<App key={actor.id} apiClient={api} demo={false}/>);}window.communityFixture={setActor(name){actor=actors[name];render();}};render();',
+    'function render(){root.render(<React.StrictMode><App key={actor.id} apiClient={api} demo={false}/></React.StrictMode>);}window.communityFixture={setActor(name){actor=actors[name];render();}};render();',
   ].join('\n');
   const bundled=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',target:'chrome110',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
@@ -62,9 +62,22 @@ test('community browser: submit image, review, like, private bookmark and narrow
   await page.getByLabel('链接说明',{exact:true}).fill('项目介绍与原文');
   const png=await sharp({create:{width:640,height:240,channels:3,background:'#473461'}}).png().toBuffer();
   await page.locator('input[type=file]').setInputFiles({name:'像素实验.png',mimeType:'image/png',buffer:png});
+  // A failed request must restore the controls and retain content and request identity.
+  let failedCreate=false;const createKeys=[];
+  await page.route('**/v1/community/posts',async route=>{
+    if(route.request().method()!=='POST')return route.continue();
+    createKeys.push(route.request().headers()['idempotency-key']);
+    if(!failedCreate){failedCreate=true;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'API_UNAVAILABLE',message:'测试：暂时不可用，请重试。'}})});}
+    return route.continue();
+  });
+  await page.getByRole('button',{name:'提交分享',exact:true}).click();
+  await page.getByRole('alert').filter({hasText:'测试：暂时不可用，请重试。'}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'提交分享',exact:true}).isEnabled(),true);
+  assert.equal(await page.getByLabel('标题',{exact:true}).inputValue(),title);
   await page.getByRole('button',{name:'提交分享',exact:true}).click();
   await page.getByRole('heading',{name:title,exact:true}).waitFor();
   await page.getByText('待审核',{exact:true}).waitFor();
+  assert.equal(createKeys.length,2);assert.equal(createKeys[0],createKeys[1]);
   await page.evaluate(()=>{window.communityFixture.setActor('admin');location.hash='/community/review';});
   const review=page.locator('article').filter({has:page.getByRole('heading',{name:title,exact:true})});
   await review.getByLabel('处理理由').fill('来源和图片已核对。');
