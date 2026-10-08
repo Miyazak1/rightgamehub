@@ -1,8 +1,7 @@
 import crypto from 'node:crypto';
-
-export class SocialError extends Error {
-  constructor(code, statusCode, message) { super(message); this.name = 'SocialError'; this.code = code; this.statusCode = statusCode; this.retryable = false; }
-}
+import { readWorkLeaderboard } from './work-leaderboard.mjs';
+import { SocialError } from './social-errors.mjs';
+export { SocialError } from './social-errors.mjs';
 
 const requireActor = actor => { if (!actor?.userId) throw new SocialError('AUTH_REQUIRED', 401, '需要登录后使用社交功能。'); };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -50,6 +49,7 @@ const retentionView = (row, today) => {
 
 export function createSocialService({ repository, clock = () => new Date() }) {
   return {
+    workLeaderboard(actor,input) { return readWorkLeaderboard(repository,actor,input,clock()); },
     async getSettings(actor) {
       requireActor(actor);
       const row = await repository.getProfile(actor.userId, actor.userId);

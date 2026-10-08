@@ -493,6 +493,19 @@ export const schemas = Object.freeze({
   }, ['handle','headline','about','visibility','links','featuredWorkIds']),
   FollowState: object({ following: { type: 'boolean' } }),
   BlockState: object({ blocked: { type: 'boolean' } }),
+  WorkLeaderboardEntry: object({
+    rank:{oneOf:[{type:'integer',minimum:1},{type:'null'}]},
+    player:object({id,displayName:{type:'string'},isMe:{type:'boolean'},avatar:{$ref:'#/components/schemas/AccountAvatar'}}),
+    scores:{type:'object',additionalProperties:{type:'number'}},completedAt:dateTime,
+  }),
+  WorkLeaderboard: object({
+    workId:workKey,boardId:{type:'string'},title:{type:'string'},date:{type:'string',format:'date'},timeZone:{type:'string'},
+    puzzleId:{oneOf:[{type:'string'},{type:'null'}]},verification:stringEnum(['client_reported']),
+    metrics:{type:'array',items:object({key:{type:'string'},label:{type:'string'},unit:{type:'string'},direction:stringEnum(['asc','desc'])})},
+    entries:{type:'array',maxItems:50,items:{$ref:'#/components/schemas/WorkLeaderboardEntry'}},
+    myEntry:{oneOf:[{$ref:'#/components/schemas/WorkLeaderboardEntry'},{type:'null'}]},
+    total:{type:'integer',minimum:0},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50},hasMore:{type:'boolean'},
+  }),
   GuessBaikeLeaderboardEntry: object({
     rank: { type: 'integer', minimum: 1 }, player: { $ref: '#/components/schemas/SocialProfile' },
     guessedCount: { type: 'integer', minimum: 0, maximum: 500 }, elapsedSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
@@ -767,6 +780,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/me/notification-preferences', operationId: 'getNotificationPreferences', auth: 'bearer', response: 'NotificationPreferences' },
   { method: 'put', path: '/v1/me/notification-preferences', operationId: 'updateNotificationPreferences', auth: 'bearer', request: 'NotificationPreferences', response: 'NotificationPreferences' },
   { method: 'get', path: '/v1/works', operationId: 'listWorks', auth: 'anonymous', response: 'Work', responseArray: true, queryCatalog:true },
+  { method:'get',path:'/v1/works/{workId}/leaderboard',operationId:'getWorkLeaderboard',auth:'optional',response:'WorkLeaderboard',pathWorkKey:true,queryWorkLeaderboard:true },
   { method: 'get', path: '/v1/works/{workId}', operationId: 'getWork', auth: 'anonymous', response: 'Work', pathWorkKey: true },
   { method: 'get', path: '/v1/works/{workId}/launch', operationId: 'getWorkLaunch', auth: 'anonymous', response: 'LaunchDescriptor', pathWorkKey: true, queryReleaseId: true },
   { method: 'post', path: '/v1/works/{workId}/reports', operationId: 'createContentReport', auth: 'bearer', request: 'CreateContentReportRequest', response: 'ContentReport', pathWorkKey: true },
@@ -884,6 +898,12 @@ export function createOpenApiDocument() {
     if (operation.queryLeaderboard) parameters.push(
       { name: 'date', in: 'query', required: true, schema: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
       { name: 'scope', in: 'query', required: true, schema: stringEnum(['global','following']) },
+    );
+    if(operation.queryWorkLeaderboard)parameters.push(
+      {name:'date',in:'query',required:false,schema:{type:'string',format:'date'}},
+      {name:'puzzleId',in:'query',required:false,schema:{type:'string',minLength:1,maxLength:120}},
+      {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:50,default:10}},
+      {name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:100000,default:0}},
     );
     paths[operation.path] ??= {};
     paths[operation.path][operation.method] = {

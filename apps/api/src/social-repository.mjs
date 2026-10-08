@@ -76,6 +76,37 @@ export class PostgresSocialRepository {
     )).rows;
   }
 
+  async workLeaderboard({viewerId,date,puzzleId,limit,offset}) {
+    // Rank the complete visible public set before paging. Fetch the owner's row
+    // independently, including a private score without a public rank.
+    const avatar = `a.kind AS avatar_kind,a.preset_key,a.media_type,a.animated,
+      encode(a.sha256,'hex') AS sha256_hex,(a.poster_key IS NOT NULL OR a.poster_body IS NOT NULL) AS has_poster`;
+    return (await this.pool.query(`
+      WITH chosen AS (
+        SELECT COALESCE($3::text,
+          (SELECT puzzle_id FROM guess_baike_schedule WHERE puzzle_date=$2::date),
+          (SELECT puzzle_id FROM guess_baike_results WHERE puzzle_date=$2::date ORDER BY completed_at DESC,user_id LIMIT 1)) AS puzzle_id
+      ), ranked AS (
+        SELECT r.*,u.display_name,(u.id=$1::uuid) AS is_me,
+          row_number() OVER(ORDER BY r.hints,r.guessed_count,r.elapsed_seconds,r.completed_at,r.user_id) AS rank
+        FROM guess_baike_results r JOIN users u ON u.id=r.user_id CROSS JOIN chosen c
+        WHERE r.puzzle_date=$2::date AND r.puzzle_id=c.puzzle_id AND u.status='active' AND u.social_visibility='public'
+          AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE
+            (b.blocker_user_id=$1::uuid AND b.blocked_user_id=u.id) OR (b.blocker_user_id=u.id AND b.blocked_user_id=$1::uuid))
+      ), page AS (SELECT * FROM ranked ORDER BY rank LIMIT $4 OFFSET $5),
+      public_rows AS (SELECT p.*,${avatar} FROM page p LEFT JOIN user_avatars a ON a.user_id=p.user_id),
+      mine AS (
+        SELECT r.*,u.display_name,true AS is_me,ranked.rank,${avatar}
+        FROM guess_baike_results r JOIN users u ON u.id=r.user_id CROSS JOIN chosen c
+        LEFT JOIN ranked ON ranked.user_id=r.user_id LEFT JOIN user_avatars a ON a.user_id=r.user_id
+        WHERE r.user_id=$1::uuid AND r.puzzle_date=$2::date AND r.puzzle_id=c.puzzle_id AND u.status='active'
+      )
+      SELECT c.puzzle_id,(SELECT count(*) FROM ranked)::int AS total,
+        COALESCE((SELECT jsonb_agg(public_rows ORDER BY rank) FROM public_rows),'[]'::jsonb) AS entries,
+        (SELECT to_jsonb(mine) FROM mine) AS my_entry FROM chosen c
+    `,[viewerId,date,puzzleId,limit,offset])).rows[0];
+  }
+
   async react(input) {
     const client = await this.pool.connect();
     try {

@@ -582,6 +582,17 @@ export function createApp(dependencies) {
   }
 
   if (socialService) {
+    app.get('/v1/works/:workId/leaderboard', {
+      preHandler: identifyOptional,
+      schema:{params:{type:'object',additionalProperties:false,required:['workId'],properties:{workId:workKeySchema}},
+        querystring:{type:'object',additionalProperties:false,properties:{
+          date:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'},puzzleId:{type:'string',minLength:1,maxLength:120},
+          limit:{type:'integer',minimum:1,maximum:50},offset:{type:'integer',minimum:0,maximum:100000},
+        }}},
+    },async(request,reply)=>{
+      reply.header('Cache-Control','private, no-store');
+      return envelope(await socialService.workLeaderboard(request.actor,{...request.query,workId:request.params.workId}));
+    });
     const userParams = { type: 'object', additionalProperties: false, required: ['userId'], properties: { userId: { type: 'string', format: 'uuid' } } };
     const puzzleDateBody = { type: 'object', additionalProperties: false, required: ['puzzleDate'], properties: { puzzleDate: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } } };
     app.get('/v1/me/social', { preHandler: requireAuth }, async (request, reply) => {

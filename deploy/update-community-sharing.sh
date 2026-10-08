@@ -16,7 +16,7 @@ git fetch origin codex/game-services-foundation
 git merge-base --is-ancestor "$EXPECTED" origin/codex/game-services-foundation
 git merge --ff-only "$EXPECTED"
 test "$(git rev-parse HEAD)" = "$EXPECTED"
-test -f apps/api/migrations/0051_community_open_posting.sql
+test -f apps/api/migrations/0052_daily_leaderboard_lookup.sql
 
 set_env() {
   sed -i -E "/^[[:space:]]*(export[[:space:]]+)?$1[[:space:]]*=/d" deploy/.env.prod
@@ -50,17 +50,20 @@ dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 const get=async path=>{const response=await fetch('http://127.0.0.1:3090'+path,{signal:AbortSignal.timeout(10000)});assert.equal(response.status,200);return (await response.json()).data;};
 const ready=await get('/ready'),cap=await get('/v1/community/capabilities'),feed=await get('/v1/community/posts');
-assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,51);assert.equal(ready.migrations.applied,51);
+const leaderboard=await get('/v1/works/gamehub-guess-baike/leaderboard?limit=10');
+assert.equal(leaderboard.workId,'gamehub-guess-baike');assert.equal(leaderboard.myEntry,null);
+assert.ok(Array.isArray(leaderboard.entries)&&leaderboard.entries.length<=10);
+assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,52);assert.equal(ready.migrations.applied,52);
 assert.equal(ready.saves.cloudEnabled,false);assert.equal(ready.saves.mode,'local');
 assert.equal(cap.readEnabled,true);assert.equal(cap.postingEnabled,true);assert.equal(cap.commentsEnabled,false);
 assert.equal(cap.canShare,false);assert.equal(cap.reason,'AUTH_REQUIRED');
 assert.equal(process.env.COMMUNITY_IMAGES_ENABLED,'true');assert.ok(Array.isArray(feed.items));
 const disabled=await fetch('http://127.0.0.1:3090/v1/me/save-library');assert.equal(disabled.status,503);assert.equal((await disabled.json()).error.code,'CLOUD_SAVE_DISABLED');
-console.log(JSON.stringify({ready,community:cap,serverImageSwitch:process.env.COMMUNITY_IMAGES_ENABLED,feedItems:feed.items.length},null,2));
+console.log(JSON.stringify({ready,community:cap,serverImageSwitch:process.env.COMMUNITY_IMAGES_ENABLED,feedItems:feed.items.length,leaderboard:{date:leaderboard.date,total:leaderboard.total,shown:leaderboard.entries.length}},null,2));
 NODE
 dc exec -T community-image node -e "require('node:fs').accessSync('/data/community-processor/requests'); console.log('image processor started')"
 docker inspect "$(dc ps -q community-image)" --format 'image: {{.State.Status}} OOM={{.State.OOMKilled}} restarts={{.RestartCount}} CPU={{.HostConfig.NanoCpus}} memory={{.HostConfig.Memory}}'
 curl -fsS --retry 6 --retry-delay 2 --max-time 20 https://mooyu.fun/ready
 printf '\n'
 dc ps
-printf '更新完成。备份及原配置：%s\n刷新页面后，正常登录用户可投稿；内容审核后公开。\n' "$RECORD"
+printf '更新完成。备份及原配置：%s\n刷新页面查看游戏详情页排行榜；分享投稿仍为审核后公开。\n' "$RECORD"

@@ -44,6 +44,8 @@ export type CommunityMediaRequest = { bytes: number; contentType: "image/jpeg" |
 export type CommunityMediaResult = { id: string; state: "reserved" | "uploaded" | "processing" | "ready" | "failed" | "deleting" | "deleted" };
 export type CommunityMediaUploaded = { id: string; uploaded: true };
 export type CommunityMediaStatus = { id: string; state: "reserved" | "uploaded" | "processing" | "ready" | "failed" | "deleting" | "deleted"; width: number | null; height: number | null; errorCode: string | null };
+export type WorkLeaderboardEntry = { rank: number | null; player: { id: string; displayName: string; isMe: boolean; avatar: AccountAvatar }; scores: Record<string, number>; completedAt: string };
+export type WorkLeaderboard = { workId: string; boardId: string; title: string; date: string; timeZone: string; puzzleId: string | null; verification: "client_reported"; metrics: Array<{ key: string; label: string; unit: string; direction: "asc" | "desc" }>; entries: Array<WorkLeaderboardEntry>; myEntry: WorkLeaderboardEntry | null; total: number; offset: number; limit: number; hasMore: boolean };
 export interface ErrorResponse { error: { code: string; message: string; requestId: UUID; retryable: boolean; details: Record<string, unknown> } }
 export interface Profile { id: UUID; displayName: string; role: "user" | "admin"; canPublish: boolean }
 export interface GameSaveWriteReceiptRequest { schemaVersion: number; contentType: "application/json" | "application/octet-stream"; sha256: string }

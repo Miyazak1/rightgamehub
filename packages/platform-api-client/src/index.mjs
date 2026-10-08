@@ -118,6 +118,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     ...communityApi(request),
     listWorks: ({ limit = 20, kind, q, offset } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
+    getWorkLeaderboard: (id, {date,puzzleId,limit=10,offset=0}={}, options) => request(`/v1/works/${encodeURIComponent(id)}/leaderboard?${new URLSearchParams({limit,offset,...(date?{date}:{}),...(puzzleId?{puzzleId}:{})})}`, {...options,auth:true}),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
     trackAnalytics: (events, options) => request('/v1/analytics/events', { ...options, method: 'POST', body: { events }, auth: true, keepalive: true }),

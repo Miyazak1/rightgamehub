@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import puzzleBank from './guess-baike-puzzles.json';
 import { countGuessOccurrences, isGuessTitleSolved, isVisibleGuessPunctuation, normalizeGuessCharacter, uniqueGuessCharacters } from './guess-baike-policy.mjs';
+import { workLeaderboardPath } from './work-leaderboards.mjs';
 
 const puzzles = puzzleBank.puzzles;
 
@@ -41,12 +42,15 @@ const localDaily = () => {
   return { date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), puzzle: puzzles[dailyIndex] };
 };
 
-export default function GuessBaikeGame({ api, demo = false, challengeCode = null }) {
+export default function GuessBaikeGame({ api, demo = false, challengeCode = null, go }) {
   const [daily, setDaily] = useState(localDaily);
+  const [dailyStatus,setDailyStatus] = useState(api&&!demo?'loading':'ready');
+  const [scoreSaveStatus,setScoreSaveStatus] = useState('idle'),[saveRetry,setSaveRetry] = useState(0);
   const resultSaved = useRef(null);
-  useEffect(() => { let live = true; if (!api || demo) return undefined; api.getGuessBaikeDaily().then(({ data }) => { if (live) setDaily(data); }).catch(() => {}); return () => { live = false; }; }, [api, demo]);
+  useEffect(() => { let live = true; if (!api || demo) return undefined; api.getGuessBaikeDaily().then(({ data }) => { if (live) {setDaily(data);setDailyStatus('ready');} }).catch(() => {if(live)setDailyStatus('offline');}); return () => { live = false; }; }, [api, demo]);
   const puzzle = daily.puzzle;
   const storageKey = `gamehub:guess-baike:daily:${daily.date}:${puzzle.id}`;
+  const [restoredKey,setRestoredKey] = useState(storageKey);
   const restored = useMemo(() => loadGame(storageKey), [storageKey]);
   const [guessed, setGuessed] = useState(() => new Set(restored?.guessed ?? []));
   const [history, setHistory] = useState(() => restored?.history ?? []);
@@ -79,12 +83,13 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
     setStartedAt(saved?.startedAt ?? Date.now());
     setCompletedElapsed(Number.isSafeInteger(saved?.completedElapsed) ? saved.completedElapsed : null);
     setElapsed(Number.isSafeInteger(saved?.completedElapsed) ? saved.completedElapsed : 0);
-    setInput(''); setFeedback(null); setRecent(new Set()); setCopied(false); setShowResult(false); setChallengeResult(null);
+    setInput(''); setFeedback(null); setRecent(new Set()); setCopied(false); setShowResult(false); setChallengeResult(null);setScoreSaveStatus('idle');setRestoredKey(storageKey);
   }, [storageKey, challengeCode]);
 
   useEffect(() => {
+    if(restoredKey!==storageKey)return;
     localStorage.setItem(storageKey, JSON.stringify({ guessed: [...guessed], history, phase, hints, startedAt, completedElapsed }));
-  }, [storageKey, guessed, history, phase, hints, startedAt, completedElapsed]);
+  }, [storageKey, restoredKey, guessed, history, phase, hints, startedAt, completedElapsed]);
 
   useEffect(() => {
     if (phase !== 'playing') {
@@ -97,11 +102,11 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   }, [startedAt, phase, completedElapsed]);
 
   useEffect(() => {
-    if (phase !== 'playing' || !isGuessTitleSolved(puzzle.title, guessed)) return;
+    if (restoredKey!==storageKey || phase !== 'playing' || !isGuessTitleSolved(puzzle.title, guessed)) return;
     setFeedback({ kind: 'win', text: '标题已完整揭开！百科档案已解密。' });
     setCompletedElapsed(current => current ?? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
     setPhase('won');
-  }, [puzzle.title, guessed, phase, startedAt]);
+  }, [puzzle.title, guessed, phase, startedAt, restoredKey, storageKey]);
 
   useEffect(() => {
     if (phase !== 'won') { setShowResult(false); return undefined; }
@@ -111,16 +116,24 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   }, [phase, puzzle.id]);
 
   useEffect(() => {
-    const saveKey = `${daily.date}:${puzzle.id}:${challengeCode || 'daily'}`;
-    if (phase !== 'won' || demo || !api || resultSaved.current === saveKey) return;
-    resultSaved.current = saveKey;
-    (async () => {
-      try {
-        await api.saveGuessBaikeResult({ puzzleDate: daily.date, puzzleId: puzzle.id, guessedCount: guessed.size, elapsedSeconds: elapsed, hints });
-        if (challengeCode) setChallengeResult((await api.completeGuessBaikeChallenge(challengeCode)).data);
-      } catch { if (challengeCode) setChallengeResult({ error: true }); }
-    })();
-  }, [phase, demo, api, daily.date, puzzle.id, guessed.size, elapsed, hints, challengeCode]);
+    if (phase !== 'won' || restoredKey!==storageKey) return;
+    if(demo){setScoreSaveStatus('demo');return;}
+    if(dailyStatus!=='ready'||!api){setScoreSaveStatus(dailyStatus==='loading'?'loading':'offline');return;}
+    if(!Number.isSafeInteger(completedElapsed)){setScoreSaveStatus('historical');return;}
+    const saveKey = `${daily.date}:${puzzle.id}:${challengeCode || 'daily'}:${saveRetry}`;
+    let live=true;setScoreSaveStatus('saving');
+    // Reuse the same in-flight mutation during StrictMode's effect replay.
+    if(resultSaved.current?.key!==saveKey)resultSaved.current={key:saveKey,promise:(async()=>{
+      try{
+        await api.saveGuessBaikeResult({puzzleDate:daily.date,puzzleId:puzzle.id,guessedCount:guessed.size,elapsedSeconds:completedElapsed,hints});
+        let challenge=null;
+        if(challengeCode){try{challenge=(await api.completeGuessBaikeChallenge(challengeCode)).data;}catch{challenge={error:true};}}
+        return {status:'saved',challenge};
+      }catch(error){return {status:error.status===401?'auth':'error',challenge:challengeCode?{error:true}:null};}
+    })()};
+    resultSaved.current.promise.then(result=>{if(live){setScoreSaveStatus(result.status);if(result.challenge)setChallengeResult(result.challenge);}});
+    return()=>{live=false;};
+  }, [phase, demo, api, daily.date, puzzle.id, guessed.size, completedElapsed, hints, challengeCode, saveRetry, dailyStatus, restoredKey, storageKey]);
 
   useEffect(() => {
     if (!showResult) return undefined;
@@ -218,7 +231,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
     </div>
 
     {showResult && <div className="guess-result" role="dialog" aria-modal="true" aria-label="挑战完成" onClick={event => { if (event.target === event.currentTarget) setShowResult(false); }}>
-      <div className="guess-result__panel"><span className="guess-result__badge">档案已解密</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? (challengeResult.outcome === 'win' ? '挑战胜出！' : challengeResult.outcome === 'loss' ? '差一点点' : '势均力敌') : puzzle.title}</h2><p>{guessAttempts} 次猜测 · {guessed.size} 个猜字 · {resultTimeLabel} · {hints} 次提示</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? '结算暂时未完成，稍后可从挑战记录继续。' : challengeResult ? <><span>我：{challengeResult.participant.hints} 提示 · {challengeResult.participant.guessedCount} 字 · {challengeResult.participant.elapsedSeconds} 秒</span><span>对手：{challengeResult.creator.hints} 提示 · {challengeResult.creator.guessedCount} 字 · {challengeResult.creator.elapsedSeconds} 秒</span></> : '正在结算挑战…'}</div>}<div className="guess-result__actions"><button className="is-primary" onClick={share}>{copied ? '已复制成绩 ✓' : '复制像素成绩'}</button><button onClick={() => setShowResult(false)}>查看全文</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">阅读中文维基百科原文 ↗</a></div>
+      <div className="guess-result__panel"><span className="guess-result__badge">档案已解密</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? (challengeResult.outcome === 'win' ? '挑战胜出！' : challengeResult.outcome === 'loss' ? '差一点点' : '势均力敌') : puzzle.title}</h2><p>{guessAttempts} 次猜测 · {guessed.size} 个猜字 · {resultTimeLabel} · {hints} 次提示</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? '结算暂时未完成，稍后可从挑战记录继续。' : challengeResult ? <><span>我：{challengeResult.participant.hints} 提示 · {challengeResult.participant.guessedCount} 字 · {challengeResult.participant.elapsedSeconds} 秒</span><span>对手：{challengeResult.creator.hints} 提示 · {challengeResult.creator.guessedCount} 字 · {challengeResult.creator.elapsedSeconds} 秒</span></> : '正在结算挑战…'}</div>}<div className="guess-result__save" role="status">{({idle:'准备保存成绩…',loading:'正在确认本局题目…',saving:'正在保存本局成绩…',saved:'成绩已保存，可查看本局排名。',auth:'本局进度已保存在本机；登录后才会记录到排行榜。',error:'本局成绩尚未保存到排行榜，请重试。',offline:'当前使用本机题目，本局成绩未上传。',historical:'这份历史记录缺少计时数据，不重复上传成绩。',demo:'演示成绩不会上传。'})[scoreSaveStatus]}{scoreSaveStatus==='error'&&<button onClick={()=>setSaveRetry(value=>value+1)}>重试保存成绩</button>}{scoreSaveStatus==='auth'&&go&&<button onClick={()=>go('/account')}>前往登录</button>}</div><div className="guess-result__actions">{go&&<button className="is-primary" disabled={['idle','loading','saving'].includes(scoreSaveStatus)} onClick={()=>go(workLeaderboardPath('gamehub-guess-baike',daily.date,puzzle.id))}>查看本局排名</button>}<button onClick={share}>{copied ? '已复制成绩 ✓' : '复制像素成绩'}</button><button onClick={() => setShowResult(false)}>查看全文</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">阅读中文维基百科原文 ↗</a></div>
     </div>}
   </section>;
 }
