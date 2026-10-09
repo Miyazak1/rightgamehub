@@ -954,7 +954,9 @@ button { cursor: pointer; }
 .rule-state--approved_for_build { border-color: var(--gh-success); color: var(--gh-success); }
 .rule-state--changes_requested { border-color: #e7ad48; color: #e7ad48; }
 .rule-state--rejected,.rule-state--failed { border-color: var(--gh-danger); color: var(--gh-danger); }
-.rule-review-queue { border: 2px solid color-mix(in srgb,var(--gh-action) 55%,var(--gh-border)); }
+.rule-review-queue { display: grid; gap: 15px; margin-bottom: 20px; padding: 20px; border: 2px solid color-mix(in srgb,var(--gh-action) 55%,var(--gh-border)); background: var(--gh-raised); box-shadow: 3px 3px 0 color-mix(in srgb,var(--gh-border) 42%,transparent); }
+.rule-review-queue > .puzzle-ops__head { margin-bottom: 0; }
+.rule-review-queue > .admin-empty { box-shadow: none; }
 .rule-review-card dl { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0; }
 .rule-review-card dl div { min-width: 0; padding: 9px; border: 1px solid var(--gh-border); }
 .rule-review-card dt { color: var(--gh-secondary); font-size: 8px; }
@@ -962,6 +964,7 @@ button { cursor: pointer; }
 .rule-review-card textarea { width: 100%; min-height: 84px; padding: 10px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); resize: vertical; }
 @container (max-width: 760px) { .rule-submit-layout { grid-template-columns: 1fr; }.rule-review-card dl { grid-template-columns: 1fr; } }
 @container (max-width: 520px) { .rule-evidence-files,.rule-submission-history { grid-template-columns: 1fr; }.rule-submission-history > .button { width: 100%; }.rule-review-card .dialog-actions { align-items: stretch; flex-direction: column; } }
+@container (max-width: 560px) { .rule-review-queue { padding: 12px; } }
 .profile-skill-list span { background: var(--gh-raised); }
 
 /* Public profile and profile studio: use the same quiet, square surfaces as GameHub. */

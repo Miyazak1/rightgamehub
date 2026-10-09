@@ -560,6 +560,13 @@ test('multiplayer rule UI states that approval is not execution, signing or depl
   assert.match(review,/approve_for_build/);
 });
 
+test('multiplayer rule review panel keeps its heading and queue inset from the governance border', async () => {
+  const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
+  assert.match(styles, /\.rule-review-queue \{[^}]*padding: 20px;/);
+  assert.match(styles, /\.rule-review-queue > \.puzzle-ops__head \{ margin-bottom: 0; \}/);
+  assert.match(styles, /@container \(max-width: 560px\) \{ \.rule-review-queue \{ padding: 12px; \} \}/);
+});
+
 test('API client refreshes an expired access token once and updates host memory', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let access = 'expired-access'; let saved; const requests = [];
