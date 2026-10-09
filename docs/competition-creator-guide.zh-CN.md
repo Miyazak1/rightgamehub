@@ -4,7 +4,7 @@
 
 ## 从模板开始
 
-在创作者中心选择「开发者中心 / 排行榜」，下载 `gamehub-competition-score-template.zip`。解压后包含可编辑的 `game.js`、`index.html`、`platform.json`、浏览器版 `gamehub-sdk.js` 和本说明。修改完成后将这些文件放在 ZIP 根目录上传，不必给平台增加作品白名单。
+在创作中心选择「让 AI 添加排行榜」可生成任务说明；如需自行接入，进入「技术文档与官方模板」下载 `gamehub-competition-score-template.zip`。解压后包含可编辑的 `game.js`、`index.html`、`platform.json`、浏览器版 `gamehub-sdk.js` 和本说明。修改完成后将这些文件放在 ZIP 根目录上传，不必给平台增加作品白名单。
 
 本仓库开发者执行 `node scripts/build-competition-template.mjs` 生成同一模板。带打包工具的工程也可以直接引用工作区 `@gamehub/web-game-sdk`；这里不要求从公共 npm 安装尚未发布的包。
 
