@@ -1,12 +1,12 @@
 // Shared, data-only publication contract. No author-provided comparator or code is executed.
-export const COMPETITION_LIMITS = Object.freeze({boards:3,metrics:4,magnitude:1_000_000_000_000,moves:8192,runsPerHour:60,retainedRuns:20000});
+export const COMPETITION_LIMITS = Object.freeze({boards:8,metrics:4,magnitude:1_000_000_000_000,moves:8192,runsPerHour:60,retainedRuns:20000});
 export const competitionKey = /^[a-z][a-z0-9-]{0,47}$/;
 const fail = message => { throw Object.assign(new Error(message),{code:'MANIFEST_COMPETITION_INVALID',statusCode:400}); };
 const object = (value,allowed) => { if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!allowed.includes(key)))fail('Unknown or invalid competition fields.'); };
 const text = (value,max) => typeof value==='string'&&value.trim().length>0&&value.length<=max&&!/[\u0000-\u001f]/.test(value);
 export function normalizeCompetition(value) {
   object(value,['version','boards']);
-  if(value.version!==1||!Array.isArray(value.boards)||!value.boards.length||value.boards.length>COMPETITION_LIMITS.boards)fail('Competition requires version 1 and 1–3 boards.');
+  if(value.version!==1||!Array.isArray(value.boards)||!value.boards.length||value.boards.length>COMPETITION_LIMITS.boards)fail(`Competition requires version 1 and 1–${COMPETITION_LIMITS.boards} boards.`);
   const keys=new Set();
   const boards=value.boards.map(board=>{
     object(board,['key','title','modeKey','rulesetVersion','period','metrics','ranking','verification','verifier']);

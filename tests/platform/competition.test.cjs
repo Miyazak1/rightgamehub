@@ -4,7 +4,7 @@ test('competition declarations are bounded data and versioned; evidence is repla
   const {normalizeCompetition,validateCompetitionMetrics}=await import('../../packages/contracts/src/competition.mjs');
   const {createTileMerge,verifyTileMerge}=await import('../../packages/competition-rules/tile-merge-v1.mjs');
   const original=await definition();assert.equal(normalizeCompetition(original).boards[0].verification,'replay_verified');
-  for(const mutate of [x=>delete x.boards[0].key,x=>x.boards[0].ranking[0].direction='sql',x=>x.boards[0].metrics[0].max=Infinity,x=>x.boards[0].verifier='user-script.js',x=>x.boards[0].metrics[0].key='unknown',x=>x.boards.push(...Array(4).fill(x.boards[0])),x=>x.boards[0].comparator='return 1']){
+  for(const mutate of [x=>delete x.boards[0].key,x=>x.boards[0].ranking[0].direction='sql',x=>x.boards[0].metrics[0].max=Infinity,x=>x.boards[0].verifier='user-script.js',x=>x.boards[0].metrics[0].key='unknown',x=>x.boards.push(...Array.from({length:8},(_,index)=>({...structuredClone(x.boards[0]),key:`extra-${index}`,modeKey:`extra-mode-${index}`}))),x=>x.boards[0].comparator='return 1']){
     const input=structuredClone(original);mutate(input);assert.throws(()=>normalizeCompetition(input),{code:'MANIFEST_COMPETITION_INVALID'});
   }
   assert.throws(()=>validateCompetitionMetrics(original.boards[0],{score:1.5,'max-tile':4,moves:1}));

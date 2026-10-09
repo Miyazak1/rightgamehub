@@ -4,13 +4,15 @@ export const WEB_POLICY_VERSION = 1;
 export const WEB_LIMITS = Object.freeze({ archiveBytes: 100 * 1024 ** 2, totalBytes: 300 * 1024 ** 2, fileBytes: 100 * 1024 ** 2, files: 5000, depth: 16, manifestBytes: 16 * 1024, timeoutMs: 120_000 });
 export const MIME = Object.freeze({
   '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.wasm': 'application/wasm', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json',
+  '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.md': 'text/markdown; charset=utf-8', '.wasm': 'application/wasm', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json',
   '.bin': 'application/octet-stream', '.data': 'application/octet-stream', '.pak': 'application/octet-stream', '.mem': 'application/octet-stream',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.avif': 'image/avif',
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.otf': 'font/otf', '.eot': 'application/vnd.ms-fontobject',
   '.flac': 'audio/flac', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.mp4': 'video/mp4', '.webm': 'video/webm',
   '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml', '.map': 'application/json',
 });
+
+const ROOT_TEXT_FILES = new Set(['AUTHORS', 'COPYING', 'LICENSE', 'NOTICE', 'README']);
 
 export function validateAssetPath(value) {
   if (typeof value !== 'string' || !value || Buffer.byteLength(value) > 512 || value !== value.normalize('NFC') || /[\\%?#:\x00-\x1f\x7f<>"|*]/u.test(value)) throw Object.assign(new Error('Package path contains unsupported characters.'), { code: 'ZIP_PATH_INVALID' });
@@ -28,7 +30,9 @@ export function containedPath(root, relative) {
 }
 
 export function mimeFor(relative) {
-  const mime = MIME[path.posix.extname(relative).toLowerCase()];
-  if (!mime) throw Object.assign(new Error('Package contains an unsupported file type.'), { code: 'ZIP_TYPE_UNSUPPORTED' });
+  const extension = path.posix.extname(relative).toLowerCase();
+  const rootText = !relative.includes('/') && ROOT_TEXT_FILES.has(relative.toUpperCase());
+  const mime = MIME[extension] ?? (rootText ? 'text/plain; charset=utf-8' : undefined);
+  if (!mime) throw Object.assign(new Error(`Package contains an unsupported file type: ${relative}`), { code: 'ZIP_TYPE_UNSUPPORTED' });
   return mime;
 }
