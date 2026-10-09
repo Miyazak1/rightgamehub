@@ -7,7 +7,8 @@ import { demoUploads, demoWorks } from './demo.mjs';
 import pixelCoverAtlas from './assets/game-covers-pixel-v1-optimized.png';
 import avatarAtlas from './assets/avatar-atlas-pixel-v1.png';
 import GuessBaikeGame from './GuessBaikeGame.jsx';
-import { formatBytes, uploadErrorMessage } from './upload-display.mjs';
+import { formatBytes, isUploadTerminalState, uploadDisplay } from './upload-display.mjs';
+import { UploadStatusNote, UploadTimeline } from './UploadStatus.jsx';
 import { createWebGameHost } from './web-game-host.mjs';
 import CloudSaveStatus from './CloudSaveStatus.jsx';
 import SaveManager from './SaveManager.jsx';
@@ -70,11 +71,6 @@ function resolveHostIdentity(capabilities = {}) {
   const id = String(capabilities.host || 'browser').toLowerCase();
   return hostIdentities[id] ?? { id, label: capabilities.host || '未知宿主', short: id.slice(0, 3).toUpperCase() };
 }
-
-const uploadSteps = [
-  ['created', '已创建'], ['receiving', '正在上传'], ['uploaded', '上传完成'], ['queued', '等待检查'], ['validating', '正在校验'], ['scanning', '安全规则检查'], ['succeeded', '可发布'], ['published', '已发布'],
-];
-const processingStates = new Set(['queued', 'validating', 'scanning']);
 
 function useRoute(mode) {
   const [path, setPath] = useState(() => mode === 'hash' ? location.hash.slice(1) || '/discover' : '/discover');
@@ -829,36 +825,37 @@ function CreatorRow({ work, api, demo, go, onChanged, onCopyBadge, copied }) {
 
 function DemoUploadPage({ workId, go }) {
   const [file, setFile] = useState(null); const [upload, setUpload] = useState(demoUploads[0]); const [progress, setProgress] = useState(100);
-  const current = upload.state === 'succeeded' ? 6 : Math.max(0, uploadSteps.findIndex(([id]) => id === upload.state));
-  const choose = e => { const next = e.target.files[0]; if (next) { setFile(next); setUpload({ ...upload, state: 'created', fileName: next.name, declaredBytes: String(next.size), actualBytes: null }); setProgress(0); } };
+  const display = uploadDisplay(upload);
+  const choose = e => { const next = e.target.files[0]; if (next) { setFile(next); setUpload({ ...upload, state: 'created', publicationOutcome: 'pending', fileName: next.name, declaredBytes: String(next.size), actualBytes: null }); setProgress(0); } };
   const start = () => { setUpload(u => ({ ...u, state: 'receiving' })); let value = 0; const timer = setInterval(() => { value += 10; setProgress(value); if (value >= 100) { clearInterval(timer); setUpload(u => ({ ...u, state: 'validating', actualBytes: u.declaredBytes })); } }, 90); };
-  return <main className="page upload-page"><div className="upload-heading"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><span className="kicker">NEW RELEASE</span><h1>上传 Web 版本</h1><p>文件传完后还会经历结构校验与发布。你可以离开本页，任务会继续。</p></div><div className="upload-layout"><section className="panel upload-form"><label className="file-drop"><input type="file" accept=".zip,application/zip" onChange={choose}/><span className="file-icon">{icons.file}</span><strong>{file?.name ?? upload.fileName ?? '选择 Web ZIP'}</strong><small>{file ? `${(file.size / 1048576).toFixed(1)} MB` : 'ZIP · 最大 200 MB'}</small><em>{file ? '重新选择' : '浏览文件'}</em></label><div className="form-grid"><label>版本名称<input defaultValue="1.4.0"/></label><label>目标平台<select defaultValue="web"><option value="web">Web · 侧栏游玩</option></select></label></div><label className="check-row"><input type="checkbox" defaultChecked/><span><strong>校验通过后自动发布</strong><small>若检查失败，当前线上版本保持不变。</small></span></label>{upload.state === 'created' && <Button icon={icons.upload} onClick={start}>开始上传</Button>}{upload.state === 'receiving' && <div className="byte-progress"><div><span>正在上传</span><strong>{progress}%</strong></div><progress value={progress} max="100"/><button>取消</button></div>}{processingStates.has(upload.state) && <div className="processing-note"><span className="spinner"/><div><strong>文件已安全收到</strong><p>现在进行结构校验。收到 100% 字节不等于已经发布。</p></div></div>}</section><aside className="panel timeline"><span className="kicker">RELEASE STATUS</span><h2>处理进度</h2><ol>{uploadSteps.slice(0,7).map(([id,label], i) => <li className={i < current ? 'is-done' : i === current ? 'is-current' : ''} key={id}><span>{i < current ? icons.check : i + 1}</span><div><strong>{label}</strong>{i === current && <small>{processingStates.has(upload.state) ? '通常不到一分钟' : '当前阶段'}</small>}</div></li>)}</ol></aside></div></main>;
+  return <main className="page upload-page"><div className="upload-heading"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><span className="kicker">NEW RELEASE</span><h1>上传 Web 版本</h1><p>文件传完后还会经历结构校验与发布。你可以离开本页，任务会继续。</p></div><div className="upload-layout"><section className="panel upload-form"><label className="file-drop"><input type="file" accept=".zip,application/zip" onChange={choose}/><span className="file-icon">{icons.file}</span><strong>{file?.name ?? upload.fileName ?? '选择 Web ZIP'}</strong><small>{file ? `${(file.size / 1048576).toFixed(1)} MB` : 'ZIP · 最大 200 MB'}</small><em>{file ? '重新选择' : '浏览文件'}</em></label><div className="form-grid"><label>版本名称<input defaultValue="1.4.0"/></label><label>目标平台<select defaultValue="web"><option value="web">Web · 侧栏游玩</option></select></label></div><label className="check-row"><input type="checkbox" defaultChecked/><span><strong>校验通过后自动发布</strong><small>若检查失败，当前线上版本保持不变。</small></span></label>{upload.state === 'created' && <Button icon={icons.upload} onClick={start}>开始上传</Button>}{upload.state === 'receiving' && <div className="byte-progress"><div><span>正在上传</span><strong>{progress}%</strong></div><progress value={progress} max="100"/><button>取消</button></div>}{!['created','receiving'].includes(display.state) && <UploadStatusNote display={display}/>}</section><UploadTimeline display={display}/></div></main>;
 }
 
 const sha256 = async file => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())), value => value.toString(16).padStart(2, '0')).join('');
 
 function LiveUploadPage({ workId, api, go }) {
   const [file, setFile] = useState(null); const [upload, setUpload] = useState(null); const [progress, setProgress] = useState(0); const [phase, setPhase] = useState('select'); const [error, setError] = useState(''); const [releaseLabel, setReleaseLabel] = useState('1.0.0'); const [targetKey, setTargetKey] = useState('web'); const controller = useRef(null);
-  const terminal = new Set(['succeeded', 'failed', 'expired', 'review_required']);
   const watch = async (uploadId, signal) => {
     while (!signal.aborted) {
-      const { data } = await api.getUpload(uploadId, { signal }); setUpload(data);
-      if (terminal.has(data.state)) { sessionStorage.removeItem(`gamehub-upload:${workId}`); setPhase(data.state === 'succeeded' ? 'done' : 'error'); if (data.state !== 'succeeded') setError(uploadErrorMessage(data.errorCode)); return; }
+      const { data } = await api.getUpload(uploadId, { signal }); if (signal.aborted) return; setUpload(data);
+      if (isUploadTerminalState(data.state)) { sessionStorage.removeItem(`gamehub-upload:${workId}`); setPhase(data.state === 'succeeded' ? 'done' : 'error'); if (data.state !== 'succeeded') setError(uploadDisplay(data).description); return; }
       await new Promise(resolve => setTimeout(resolve, 1400));
     }
   };
   useEffect(() => {
-    const uploadId = sessionStorage.getItem(`gamehub-upload:${workId}`); if (!uploadId) return undefined;
+    setUpload(null); setFile(null); setProgress(0); setError(''); setPhase('select');
+    const stop = () => { controller.current?.abort(); controller.current = null; };
+    const uploadId = sessionStorage.getItem(`gamehub-upload:${workId}`); if (!uploadId) return stop;
     controller.current = new AbortController(); const signal = controller.current.signal;
     (async () => {
-      const { data } = await api.getUpload(uploadId, { signal }); setUpload(data);
+      const { data } = await api.getUpload(uploadId, { signal }); if (signal.aborted) return; setUpload(data); setTargetKey(data.targetKey || 'web');
       if (['created', 'receiving'].includes(data.state)) { setPhase('select'); return; }
       if (data.state === 'uploaded') { setPhase('processing'); await api.completeUpload(uploadId, { signal }); await watch(uploadId, signal); return; }
-      if (terminal.has(data.state)) { sessionStorage.removeItem(`gamehub-upload:${workId}`); setPhase(data.state === 'succeeded' ? 'done' : 'error'); if (data.state !== 'succeeded') setError(uploadErrorMessage(data.errorCode)); return; }
+      if (isUploadTerminalState(data.state)) { sessionStorage.removeItem(`gamehub-upload:${workId}`); setPhase(data.state === 'succeeded' ? 'done' : 'error'); if (data.state !== 'succeeded') setError(uploadDisplay(data).description); return; }
       setPhase('processing'); await watch(uploadId, signal);
-    })().catch(caught => { if (caught.code !== 'UPLOAD_CANCELLED') { setError(caught.message); setPhase('error'); } });
-    return () => controller.current?.abort();
-  }, [workId]);
+    })().catch(caught => { if (!signal.aborted) { setError(caught.message); setPhase('error'); } });
+    return stop;
+  }, [workId, api]);
   const choose = event => { const next = event.target.files?.[0] ?? null; setFile(next); setProgress(0); setError(''); setUpload(current => current && ['created', 'receiving'].includes(current.state) ? current : null); setPhase('select'); };
   const start = async () => {
     if (!file || phase !== 'select') return;
@@ -877,12 +874,11 @@ function LiveUploadPage({ workId, api, go }) {
       setPhase('processing');
       const { data: queued } = await api.completeUpload(created.id, { signal }); setUpload(queued);
       await watch(created.id, signal);
-    } catch (caught) { if (!signal.aborted || caught.code === 'UPLOAD_CANCELLED') { setError(caught.message || '上传未完成。'); setPhase('error'); } }
+    } catch (caught) { if (controller.current?.signal === signal && (!signal.aborted || caught.code === 'UPLOAD_CANCELLED')) { setError(caught.message || '上传未完成。'); setPhase('error'); } }
   };
-  const state = upload?.state ?? (phase === 'receiving' ? 'receiving' : 'created');
-  const current = state === 'succeeded' ? 6 : Math.max(0, uploadSteps.findIndex(([id]) => id === state));
+  const display = uploadDisplay(upload, { phase });
   const displayedBytes = upload?.actualBytes ?? file?.size ?? upload?.declaredBytes;
-  return <main className="page upload-page"><div className="upload-heading"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><span className="kicker">NEW RELEASE</span><h1>上传 {targetKey === 'web' ? 'Web' : 'Windows'} 版本</h1><p>{targetKey === 'web' ? '上传网页导出 ZIP。单 HTML 作品可自动识别入口；多页面作品请在根目录提供 index.html。' : '上传单文件 Windows x64 或 x86 图形界面 EXE；校验后提供下载运行。'}</p></div><div className="upload-layout"><section className="panel upload-form"><label className="file-drop"><input type="file" accept={targetKey === 'web' ? '.zip,application/zip' : '.exe,application/vnd.microsoft.portable-executable,application/octet-stream'} disabled={!['select','error'].includes(phase)} onChange={choose}/><span className="file-icon">{icons.file}</span><strong>{file?.name ?? upload?.fileName ?? '选择 Web ZIP'}</strong><small>{displayedBytes !== undefined && displayedBytes !== null ? formatBytes(displayedBytes) : targetKey === 'web' ? 'ZIP · 最大 100 MB' : 'EXE · 最大 500 MB'}</small><em>{file ? '重新选择' : '浏览文件'}</em></label><div className="form-grid"><label>版本名称<input value={releaseLabel} disabled={phase !== 'select'} onChange={event => setReleaseLabel(event.target.value.slice(0,64))}/></label><label>目标平台<select value={targetKey} disabled={phase !== 'select'} onChange={event => { setTargetKey(event.target.value); setFile(null); setUpload(null); setProgress(0); setError(''); }}><option value="web">Web · 侧栏游玩</option><option value="windows-x64">Windows x64 / x86 · 独立窗口</option></select></label></div><label className="check-row"><input type="checkbox" defaultChecked disabled/><span><strong>校验通过后自动发布</strong><small>失败时保留当前线上版本。</small></span></label>{phase === 'select' && <Button icon={icons.upload} disabled={!file || !releaseLabel} onClick={start}>开始上传</Button>}{phase === 'hashing' && <div className="processing-note"><span className="spinner"/><div><strong>正在计算文件摘要</strong><p>摘要用于确认服务端收到的字节完全一致。</p></div></div>}{phase === 'receiving' && <div className="byte-progress"><div><span>正在上传</span><strong>{progress}%</strong></div><progress value={progress} max="100"/><button onClick={() => controller.current?.abort()}>取消本机传输</button></div>}{['processing','done'].includes(phase) && <div className="processing-note"><span className={phase === 'done' ? 'success-mark' : 'spinner'}>{phase === 'done' ? icons.check : ''}</span><div><strong>{phase === 'done' ? '检查完成' : '文件已安全收到'}</strong><p>{phase === 'done' ? (upload?.publicationOutcome === 'published' ? '新版本已经发布。' : '版本已通过检查并保留为草稿。') : '正在进行结构校验；100% 字节不代表已发布。'}</p></div></div>}{error && <div className="form-error" role="alert">{error}<button onClick={() => setPhase('select')}>重新选择</button></div>}</section><aside className="panel timeline"><span className="kicker">RELEASE STATUS</span><h2>处理进度</h2><ol>{uploadSteps.slice(0,7).map(([id,label], index) => <li className={index < current ? 'is-done' : index === current ? 'is-current' : ''} key={id}><span>{index < current ? icons.check : index + 1}</span><div><strong>{label}</strong>{index === current && <small>{phase === 'error' ? '需要处理' : '当前阶段'}</small>}</div></li>)}</ol></aside></div></main>;
+  return <main className="page upload-page"><div className="upload-heading"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><span className="kicker">NEW RELEASE</span><h1>上传 {targetKey === 'web' ? 'Web' : 'Windows'} 版本</h1><p>{targetKey === 'web' ? '上传网页导出 ZIP。单 HTML 作品可自动识别入口；多页面作品请在根目录提供 index.html。' : '上传单文件 Windows x64 或 x86 图形界面 EXE；校验后提供下载运行。'}</p></div><div className="upload-layout"><section className="panel upload-form"><label className="file-drop"><input type="file" accept={targetKey === 'web' ? '.zip,application/zip' : '.exe,application/vnd.microsoft.portable-executable,application/octet-stream'} disabled={!['select','error'].includes(phase)} onChange={choose}/><span className="file-icon">{icons.file}</span><strong>{file?.name ?? upload?.fileName ?? '选择 Web ZIP'}</strong><small>{displayedBytes !== undefined && displayedBytes !== null ? formatBytes(displayedBytes) : targetKey === 'web' ? 'ZIP · 最大 100 MB' : 'EXE · 最大 500 MB'}</small><em>{file ? '重新选择' : '浏览文件'}</em></label><div className="form-grid"><label>版本名称<input value={releaseLabel} disabled={phase !== 'select'} onChange={event => setReleaseLabel(event.target.value.slice(0,64))}/></label><label>目标平台<select value={targetKey} disabled={phase !== 'select'} onChange={event => { setTargetKey(event.target.value); setFile(null); setUpload(null); setProgress(0); setError(''); }}><option value="web">Web · 侧栏游玩</option><option value="windows-x64">Windows x64 / x86 · 独立窗口</option></select></label></div><label className="check-row"><input type="checkbox" defaultChecked disabled/><span><strong>校验通过后自动发布</strong><small>失败时保留当前线上版本。</small></span></label>{phase === 'select' && <Button icon={icons.upload} disabled={!file || !releaseLabel} onClick={start}>开始上传</Button>}{phase === 'hashing' && <div className="processing-note"><span className="spinner"/><div><strong>正在计算文件摘要</strong><p>摘要用于确认服务端收到的字节完全一致。</p></div></div>}{phase === 'receiving' && <div className="byte-progress"><div><span>正在上传</span><strong>{progress}%</strong></div><progress value={progress} max="100"/><button onClick={() => controller.current?.abort()}>取消本机传输</button></div>}{['processing','done'].includes(phase) && <UploadStatusNote display={display}/>}{error && <div className="form-error" role="alert">{error}<button onClick={() => setPhase('select')}>重新选择</button></div>}</section><UploadTimeline display={display}/></div></main>;
 }
 
 function UploadPage(props) { return props.demo ? <DemoUploadPage {...props}/> : <LiveUploadPage {...props}/>; }

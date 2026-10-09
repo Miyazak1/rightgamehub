@@ -1386,3 +1386,21 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   .creator-workspace__head .button { padding-inline: 9px; font-size: 11px; }
   .creator-workspace__nav a { flex-basis: 40%; }
 }
+
+.upload-timeline__result { margin: 10px 0 0; font-size: 12px; font-weight: 700; }
+.upload-timeline__result.is-success,.upload-result-mark.is-success { color: var(--gh-success); }
+.upload-timeline__result.is-warning,.upload-result-mark.is-warning { color: var(--gh-warning); }
+.upload-timeline__result.is-error,.upload-result-mark.is-error { color: var(--gh-danger); }
+.upload-result-mark { font-size: 18px; }
+.upload-timeline li small { color: var(--gh-secondary); }
+.upload-timeline li.is-current small { color: var(--gh-action); }
+.upload-timeline li.is-done small { color: var(--gh-success); }
+@container (max-width: 767px) {
+  .upload-timeline ol { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px 8px; }
+  .upload-timeline li { display: grid; grid-template-columns: minmax(0,1fr); min-height: 0; gap: 7px; justify-items: center; text-align: center; }
+  .upload-timeline li:last-child { justify-content: normal; }
+  .upload-timeline li::after { display: none; }
+  .upload-timeline li div { display: grid; min-width: 0; }
+  .upload-timeline strong { font-size: 11px; }
+  .upload-timeline small { font-size: 10px; line-height: 1.5; }
+}
