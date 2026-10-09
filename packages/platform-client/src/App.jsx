@@ -17,6 +17,7 @@ import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
 import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
 import WorkEditPage from './WorkEditPage.jsx';
+import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
 import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
 import { workLeaderboardPath } from './work-leaderboards.mjs';
@@ -116,48 +117,18 @@ function AvatarView({ avatar, api, alt = '', className = '' }) {
   return <span className={`avatar-sprite avatar-sprite--${avatar?.presetKey || 'cat'} ${className}`} style={{ backgroundImage: `url(${avatarAtlas})` }} role={alt ? 'img' : undefined} aria-label={alt || undefined}/>;
 }
 
-function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, accountProfile, api }) {
+function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, accountProfile, accountStatus, api }) {
+  const creator = route === '/creator' || route.startsWith('/creator/');
   return <header className="header">
     <button className="brand-button" onClick={() => go('/discover')}><Logo /></button>
-    <nav className="desktop-nav" aria-label="主导航">
-      <NavItem active={route.startsWith('/discover') || route.startsWith('/works/')} onClick={() => go('/discover')} icon={icons.discover}>发现</NavItem>
-      <NavItem active={route === '/library'} onClick={() => go('/library')} icon={icons.library}>游戏库</NavItem>
-      <NavItem active={route === '/social' || route.startsWith('/community')} onClick={() => go('/community')} icon={icons.social}>分享</NavItem>
-      <NavItem active={route === '/contribute'} onClick={() => go('/contribute')} icon="↗">共建</NavItem>
-      <NavItem active={route.startsWith('/creator')} onClick={() => go('/creator')} icon={icons.creator}>创作中心</NavItem>
-      <NavItem active={route === '/install'} onClick={() => go('/install')} icon="＋">添加到 Agent</NavItem>
-      {accountProfile?.role === 'admin' && <NavItem active={route.startsWith('/admin')} onClick={() => go('/admin')} icon="!">治理</NavItem>}
-    </nav>
+    {creator ? <span className="header__workspace-label">创作空间</span> : <PlayerNavigation route={route} go={go}/>}
     <div className="header__tools">
+      <button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>＋ 添加到 Agent</button>
       <div className="host-chip" aria-label={`当前宿主：${hostIdentity.label}`} title={`界面主题跟随 ${hostIdentity.label}`}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div>
       <button className="icon-button" disabled={!canChangeTheme} onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'high-contrast' : 'dark')} aria-label={canChangeTheme ? `当前${themeMode}主题，点击切换` : `当前${themeMode}主题，跟随宿主`} title={canChangeTheme ? '切换主题' : `主题跟随 ${hostIdentity.label}`}>{themeMode === 'light' ? '☼' : themeMode === 'high-contrast' ? '◐' : '☾'}</button>
-      <button className={accountProfile ? "avatar" : "account-login"} onClick={() => go('/account')} aria-label={accountProfile ? "账号" : "登录"}>{accountProfile ? <AvatarView avatar={accountProfile.avatar} api={api} alt=""/> : '登录'}</button>
+      <AccountMenu route={route} go={go} profile={accountProfile} status={accountStatus} avatar={<AvatarView avatar={accountProfile?.avatar} api={api} alt=""/>}/>
     </div>
   </header>;
-}
-
-function NavItem({ active, icon, children, ...props }) { return <button className={`nav-item ${active ? 'is-active' : ''}`} {...props}><span aria-hidden="true">{icon}</span>{children}</button>; }
-
-function MobileNav({ route, go, accountProfile }) {
-  const [open,setOpen]=useState(false),more=useRef(null);
-  useEffect(()=>setOpen(false),[route]);
-  useEffect(()=>{
-    const outside=event=>{if(!more.current?.contains(event.target))setOpen(false);};
-    const escape=event=>{if(event.key==='Escape'){setOpen(false);if(more.current?.contains(document.activeElement))more.current.querySelector('[aria-controls]')?.focus();}};
-    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
-    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
-  },[]);
-  const navigate=path=>{setOpen(false);go(path);};
-  return <nav className="mobile-nav" aria-label="侧栏导航">
-    <NavItem active={route.startsWith('/discover') || route.startsWith('/works/')} onClick={() => navigate('/discover')} icon={icons.discover}>游玩</NavItem>
-    <NavItem active={route === '/library'} onClick={() => navigate('/library')} icon={icons.library}>游戏库</NavItem>
-    <NavItem active={route === '/social' || route.startsWith('/community')} onClick={() => navigate('/community')} icon={icons.social}>分享</NavItem>
-    <NavItem active={route.startsWith('/creator')} onClick={() => navigate('/creator')} icon={icons.creator}>创作</NavItem>
-    <div className="mobile-more" ref={more} onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
-      <NavItem active={['/contribute','/install','/account'].includes(route)||route.startsWith('/admin')} icon="⋯" aria-expanded={open} aria-controls="mobile-more-links" onClick={()=>setOpen(value=>!value)}>更多</NavItem>
-      {open&&<div id="mobile-more-links" className="mobile-more__links" role="group" aria-label="更多入口"><button onClick={()=>navigate('/contribute')}>↗ 共建</button><button onClick={()=>navigate('/install')}>＋ 添加到 Agent</button><button onClick={()=>navigate('/account')}>○ {accountProfile?'账号与设置':'登录'}</button>{accountProfile?.role==='admin'&&<button onClick={()=>navigate('/admin')}>平台治理</button>}</div>}
-    </div>
-  </nav>;
 }
 
 function Art({ work, large = false }) {
@@ -1335,11 +1306,12 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
     setTokens: tokens => host.account?.setTokens?.(tokens),
   }), [apiClient, host]);
   const [savedWork, setSavedWork] = useState(null);
+  const [accountStatus, setAccountStatus] = useState(demo ? 'ready' : 'loading');
   const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [hostReady, setHostReady] = useState(false); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
   useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) { setHostIdentity(resolveHostIdentity(capabilities)); setHostReady(true); } }).catch(() => { if (live) setHostReady(true); }); return () => { live = false; }; }, [host]);
   useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host]);
   useEffect(() => { setSavedWork(null); }, [accountProfile?.id]);
-  useEffect(() => { if (demo) return undefined; let live = true; api.getProfile().then(({ data }) => { if (live) setAccountProfile(data); }).catch(() => {}); return () => { live = false; }; }, [api, demo]);
+  useEffect(() => { if (demo) return undefined; let live = true; setAccountProfile(null); setAccountStatus('loading'); api.getProfile().then(({ data }) => { if (live) { setAccountProfile(data); setAccountStatus('ready'); } }).catch(() => { if (live) setAccountStatus('anonymous'); }); return () => { live = false; }; }, [api, demo]);
   useEffect(() => { if (hostReady) emitAnalytics(api, hostIdentity.id, { type: 'page_view', route: routeCategory(route) }, demo); }, [api, hostIdentity.id, hostReady, route, demo]);
   useEffect(() => {
     if (demo || !hostReady) return undefined;
@@ -1352,7 +1324,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={parts[2] === 'challenge' ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[3] === 'room' ? parts[4] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (['/saves','/creator/save-health','/admin/saves'].includes(route)) content = <main className="page"><StatePanel title="当前仅使用本机存档" body="云存档暂未开放。进入支持平台存档的游戏后，可在“存档管理”中导出或恢复本机进度。" action="返回游戏库" onAction={() => go('/library')}/></main>;
-  else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={setAccountProfile}/>;
+  else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
   else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator'); }}/>;
@@ -1376,5 +1348,6 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (parts[0] === 'challenge' && parts[1]) content = <ChallengePage api={api} go={go} demo={demo} code={parts[1]}/>;
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play';
-  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}`} data-host={hostIdentity.id}>{!player && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} api={api}/>} {!player && <MobileNav route={route} go={go} accountProfile={accountProfile}/>}<div className="ambient" aria-hidden="true"/>{content}<div className="notice-region" aria-live="polite"/></div>;
+  const creator = parts[0] === 'creator';
+  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}`} data-host={hostIdentity.id}>{!player && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<div className="notice-region" aria-live="polite"/></div>;
 }

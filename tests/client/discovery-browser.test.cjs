@@ -58,7 +58,7 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   await page.getByRole('button',{name:'查看全部作品',exact:true}).click();await page.locator('.discovery-catalog__grid .discovery-game').nth(23).waitFor();
   await page.evaluate(()=>window.discoveryFixture.signIn('a'));await page.getByRole('heading',{name:'最近玩过',exact:true}).waitFor();
   assert.ok(requests.some(req=>req.url.includes('/v1/me/library?limit=3&recent=true')&&req.auth==='Bearer a'));
-  await page.evaluate(()=>window.discoveryFixture.signIn('b'));await page.getByRole('button',{name:'账号',exact:true}).waitFor();
+  await page.evaluate(()=>window.discoveryFixture.signIn('b'));await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'最近玩过',exact:true}).count(),0);
   await page.goto(base+'/?small=1');await page.locator('.discovery-catalog__grid .discovery-game').nth(5).waitFor();assert.equal(await page.getByRole('heading',{name:'最新分享',exact:true}).count(),0);assert.equal(await page.locator('.discovery-welcome__pixel').count(),0);assert.equal(requests.some(req=>req.url.startsWith('/v1/community/posts')),false);
   const shots=path.join(root,'.runtime/discovery-preview');await fs.mkdir(shots,{recursive:true});
@@ -73,11 +73,10 @@ test('discovery browser: complete catalog, remote search, private recent plays a
     await page.setViewportSize({width,height:844});await page.evaluate(()=>scrollTo(0,0));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'narrow page must not overflow');
     const nav=page.getByRole('navigation',{name:'侧栏导航'});
-    assert.equal(await nav.getByRole('button').count(),5);
+    assert.equal(await nav.getByRole('button').count(),4);
     const tops=await nav.getByRole('button').evaluateAll(buttons=>buttons.map(button=>Math.round(button.getBoundingClientRect().top)));
-    assert.equal(new Set(tops).size,1,'all five navigation entries must stay on one row');
-    await nav.getByRole('button',{name:'更多',exact:false}).click();await page.getByRole('button',{name:'＋ 添加到 Agent',exact:true}).waitFor();
-    await page.keyboard.press('Escape');assert.equal(await page.getByRole('group',{name:'更多入口'}).count(),0);
+    assert.equal(new Set(tops).size,1,'all four navigation entries must stay on one row');
+    await nav.getByRole('button',{name:'共建',exact:true}).waitFor();await page.locator('.header__tools').getByRole('button',{name:'＋ 添加到 Agent',exact:true}).waitFor();
     await page.getByRole('heading',{name:'休息一下？',exact:true}).click();
     await page.screenshot({path:path.join(shots,'narrow-'+width+'.png'),fullPage:true});
   }

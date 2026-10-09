@@ -315,7 +315,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.40');
+  assert.equal(manifest.version, '0.3.41');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);
