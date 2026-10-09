@@ -567,6 +567,18 @@ test('multiplayer rule review panel keeps its heading and queue inset from the g
   assert.match(styles, /@container \(max-width: 560px\) \{ \.rule-review-queue \{ padding: 12px; \} \}/);
 });
 
+test('creator contribution empty state stays centered and omits redundant first-page controls', async () => {
+  const [source, styles] = await Promise.all([
+    fs.readFile('packages/platform-client/src/ContributionCenter.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+  ]);
+
+  assert.match(source, /className="creator-contributions__empty"/);
+  assert.match(source, /\(page>0\|\|state\.data\.length>pageSize\)&&<Pages/);
+  assert.match(styles, /\.creator-contributions__list\.is-empty\{[^}]*place-items:center/);
+  assert.match(styles, /\.creator-contributions__empty,\.creator-contributions__state\{[^}]*text-align:center/);
+});
+
 test('API client refreshes an expired access token once and updates host memory', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let access = 'expired-access'; let saved; const requests = [];
