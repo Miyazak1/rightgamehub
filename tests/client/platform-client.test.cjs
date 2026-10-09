@@ -110,6 +110,24 @@ test('API client exposes catalog data without inventing local works', async () =
   assert.deepEqual((await client.listWorks()).data, []);
 });
 
+test('API client creates authenticated playable shares and opens them publicly', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({ getAccessToken:()=>'account-token',fetchImpl:async(url,init)=>{
+    requests.push({ url,init });
+    return new Response(JSON.stringify({ data:{ code:'BingoLink1234567890abcdef123456' } }),{ status:200,headers:{ 'content-type':'application/json' } });
+  } });
+  const gameSessionId='a'.repeat(43);
+  await client.createGameShare(gameSessionId,{ title:'动画 Bingo',payload:{ kind:'bingo-pack' } });
+  await client.getGameShare('BingoLink1234567890abcdef123456');
+  assert.deepEqual(requests.map(item=>item.init.method),['POST','GET']);
+  assert.equal(requests[0].init.headers.Authorization,'Bearer account-token');
+  assert.equal(requests[0].init.headers['X-GameHub-Session'],gameSessionId);
+  assert.equal(requests[1].init.headers.Authorization,undefined);
+  assert.match(requests[0].url,/\/v1\/game-shares$/u);
+  assert.match(requests[1].url,/\/v1\/game-shares\/BingoLink1234567890abcdef123456$/u);
+});
+
 test('API client submits analytics and reads administrator and creator overviews', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];

@@ -10,6 +10,8 @@ export type PublicationOutcome = "pending" | "published" | "draft" | "skipped_ne
 export type ReleaseValidationState = "processing" | "scanning" | "ready" | "failed" | "review_required";
 export type ReleaseServingState = "disabled" | "enabled" | "revoked";
 export type SourceBuildState = "queued" | "preparing" | "building" | "packaging" | "validating" | "ready" | "failed" | "superseded";
+export type CreatorStudio = "bingo" | "puzzle" | "story" | "world";
+export type CreatorDraftStatus = "active" | "archived" | "published";
 
 export type UIntString = `${number}`;
 export type UUID = string;
@@ -97,9 +99,13 @@ export interface MultiplayerAbortResult { match: MultiplayerMatch; event: Multip
 export interface MultiplayerAdminEvent { id: UUID; actorUserId: UUID; actorDisplayName: string; matchId: UUID; action: "abort"; reason: string; beforeState: Record<string, unknown>; afterState: Record<string, unknown>; createdAt: string }
 export interface WorkTarget { targetKey: TargetKey; state: WorkState; currentReleaseId: UUID | null; revision: UIntString }
 export interface Work { id: UUID; ownerUserId: UUID; title: string; description: string; instructions: string; kind: WorkKind; state: WorkState; visibility: Visibility; revision: UIntString; firstPublishedAt: string | null; coverUrl: string | null; estimatedMinutes: number; tags: string[]; agentLabel: string | null; repositoryUrl: string | null; licenseSpdx: string | null; creatorDisplayName: string | null; creatorHandle: string | null; playCount: number; saveCount: number; targets: WorkTarget[] }
+export interface CreatorDraftSummary { id: UUID; studio: CreatorStudio; schemaVersion: number; title: string; status: CreatorDraftStatus; workId: UUID | null; revision: UIntString; createdAt: string; updatedAt: string }
+export interface CreatorDraft extends CreatorDraftSummary { content: Record<string, unknown> }
+export interface CreatorDraftPreview { draftId: UUID; revision: UIntString; html: string }
 export interface ReleaseSummary { id: UUID; targetKey: TargetKey; label: string; packageType: PackageType; validationState: ReleaseValidationState; servingState: ReleaseServingState; createdAt: string }
 export interface SourceBuildJob { id: UUID; workId: UUID; revisionId: UUID; commitSha: string; treeSha: string; templateKey: "static-v1"; templateVersion: "1"; config: Record<string, unknown>; configSha256: string; builderImageDigest: string; releaseLabel: string; state: SourceBuildState; errorCode: string | null; artifactSha256: string | null; artifactBytes: UIntString | null; uploadId: UUID | null; releaseId: UUID | null; createdAt: string; startedAt: string | null; completedAt: string | null; updatedAt: string }
 export interface UploadJob { id: UUID; workId: UUID; targetKey: TargetKey; packageType: PackageType; state: UploadState; publicationOutcome: PublicationOutcome; declaredBytes: UIntString; actualBytes: UIntString | null; createdAt: string; expiresAt: string; errorCode: string | null }
+export interface CreatorDraftBuild { draft: CreatorDraft; workId: UUID; upload: UploadJob; artifactSha256: string; artifactBytes: UIntString }
 export interface LaunchDescriptor { apiVersion: 1; workId: UUID; releaseId: UUID; releaseLabel: string; entryUrl: string; runtimeOrigin: string; playerProtocol: { min: number; max: number }; capabilities: { fullscreen: boolean; pointerLock: boolean; multiplayer: boolean; cloudSave?: boolean; competition?: boolean; localSave?: boolean; fileExport?: boolean; shareLinks?: boolean } }
 export interface ContentReport { id: UUID; workId: UUID; workTitle: string; reporterUserId: UUID; category: "unsafe" | "malware" | "harassment" | "copyright" | "other"; details: string; status: "open" | "resolved" | "dismissed"; resolutionAction: "suspend" | "dismiss" | null; resolutionNote: string | null; createdAt: string; resolvedAt: string | null }
 export interface ContributionIdentity { id: UUID; handle: string; displayName: string }

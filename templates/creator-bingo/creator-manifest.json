@@ -1,0 +1,8 @@
+{
+  "format": "gamehub.creator-package",
+  "version": 1,
+  "studio": "bingo",
+  "schemaVersion": 1,
+  "title": "我的年代作品 Bingo",
+  "source": "source/bingo.json"
+}

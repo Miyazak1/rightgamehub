@@ -71,6 +71,8 @@ import { createSourceBuildWorker } from './source-build-worker.mjs';
 import { PostgresMultiplayerRuleBuildRepository } from './multiplayer-rule-build-repository.mjs';
 import { createMultiplayerRuleBuildWorker } from './multiplayer-rule-build-worker.mjs';
 import { createRuleBuildRunner } from './rule-build-runner.mjs';
+import { PostgresCreatorDraftRepository } from './creator-draft-repository.mjs';
+import { createCreatorDraftService } from './creator-draft-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -124,6 +126,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     repository: uploadRepository,
     objectStore: quarantineStore,
     storageCapacityService,
+  });
+  const creatorDraftService = createCreatorDraftService({
+    repository: new PostgresCreatorDraftRepository(database.pool), workService, uploadService,
   });
   const validationWorker = createValidationWorker({
     repository: new PostgresValidationRepository(database.pool), quarantineStore,
@@ -190,6 +195,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     migrations,
     authService,
     workService,
+    creatorDraftService,
     githubSourceService,
     sourceBuildService,
     uploadService,
@@ -208,6 +214,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
+    rulesRegistry,
     multiplayerRoomService,
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
@@ -223,6 +230,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     coverStore,
     authService,
     workService,
+    creatorDraftService,
     githubSourceService,
     sourceBuildService,
     sourceBuildWorker,
@@ -230,6 +238,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     uploadService,
     validationWorker,
     catalogService,
+    gameShareService,
     engagementService,
     guessBaikeService,
     guessBaikeAutomation,
@@ -248,7 +257,6 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
     gameSessionService,
-    gameShareService,
     competitionService,
     runtimeEdgeApp,
     gameSaveService,

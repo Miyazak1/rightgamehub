@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Discover, launch and publish GameHub experiences from supported AI agents.",
   "author": {
     "name": "GameHub",

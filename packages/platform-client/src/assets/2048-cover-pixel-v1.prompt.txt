@@ -1,0 +1,15 @@
+2048 游戏封面
+生成方式：内置 image_gen。
+参考风格：game-covers-pixel-v1-optimized.png、table-cat-cover-pixel-v1.png 的复古像素插画。
+交付规格：960 x 540，16:9，WebP；使用项目现有 processCoverImage 导出。
+保留原图：2048-cover-pixel-v1-source.png。
+生成提示词：
+Use case: stylized-concept.
+Asset type: finished 2048 puzzle game cover for a game discovery catalog.
+Create one landscape 16:9 image, ideally 1536 x 864 pixels, suitable for a final 960 x 540 cover.
+Style: richly detailed handcrafted retro 16-bit pixel illustration, like a cohesive indie game catalog whose other covers show a pixel-art spaceship in an asteroid field, an arctic aurora station, a cozy miniature indoor garden, and a glowing puzzle workshop. Distinct square pixel clusters and stepped edges, restrained dithering, strong readable silhouettes, cinematic environmental depth. This must read as pixel art, NOT smooth 3D rendering, NOT vector art, NOT a flat app icon.
+Subject: the number-merging puzzle 2048 imagined as a beautiful miniature illuminated tabletop world. A clear dark-teal 4-by-4 sliding-tile board occupies the lower middle of the image in a gentle three-quarter perspective. A striking golden-amber square tile with a front-facing face clearly labeled "2048" is the hero near the center; it emits a warm glow. Several smaller solid tactile tiles around it display "2", "4", "8", "16", "32", "64", "128", and "1024", all exact readable white or cream pixel numerals, one number per tile. Two smaller teal tiles close to the hero suggest merging with a short sparse trail of square sparks. Keep the board orderly and the hero instantly recognizable at thumbnail scale.
+Scene/backdrop: an atmospheric dark petrol-teal puzzle chamber, a low stone platform with subtle tiled geometric patterns, small pixel lights receding softly into a deep midnight background. Do not add unrelated characters, plants, cats, spaceships, or tools. Detail supports the numeric puzzle.
+Composition: a single finished edge-to-edge illustration, no collage. Keep hero and all important numbers within the central 70 percent, leave comfortable margins for responsive catalog cropping. The hero occupies roughly one quarter of the image width. Frame tightly enough that tiles remain legible on a small card. Full opaque background.
+Lighting/palette: teal, jade, deep ink-blue, cream and a concentrated amber-gold light on the 2048 tile; inviting, clever, quietly magical, distinct from the existing purple spaceship and orange cat palettes.
+Text constraints: only numerals printed directly on the tiles; exact main text "2048"; no title banner, no subtitle, no score UI, no buttons, no badges, no logos, no watermark, no rounded external border. Avoid smooth gradients, photorealism, blur over the main tiles, excessive particles, incorrect numerals and clutter.

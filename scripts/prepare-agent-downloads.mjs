@@ -30,6 +30,11 @@ const pluginPaths = [
   'plugins/gamehub/plugin.json',
   'plugins/gamehub/.claude-plugin/plugin.json',
   'plugins/gamehub/skills/gamehub/SKILL.md',
+  'plugins/gamehub/bin/creator-submit.mjs',
+  'plugins/gamehub/templates/creator-bingo/.gitignore',
+  'plugins/gamehub/templates/creator-bingo/README.md',
+  'plugins/gamehub/templates/creator-bingo/creator-manifest.json',
+  'plugins/gamehub/templates/creator-bingo/source/bingo.json',
 ];
 const pluginFiles = await Promise.all(pluginPaths.map(async path => {
   const content = await readFile(new URL(path, root));
