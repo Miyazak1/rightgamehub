@@ -77,6 +77,24 @@ test('player mounts an opaque-origin sandbox without host storage access', async
   assert.doesNotMatch(attributes.sandbox, /allow-same-origin/);
 });
 
+test('platform player shell exposes honest lifecycle controls and recoverable stage states', async () => {
+  const [source, styles] = await Promise.all([
+    fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+  ]);
+  assert.match(source, /className="player-bar__identity"/);
+  assert.match(source, /进入全屏/);
+  assert.match(source, /游戏已最小化/);
+  assert.match(source, /游戏已停止/);
+  assert.match(source, /重新启动游戏/);
+  assert.match(source, /停止会结束当前游戏会话/);
+  assert.match(source, /className="player-frame-host" ref=\{mount\}/);
+  assert.doesNotMatch(source, /隐藏或显示游戏/);
+  assert.match(styles, /\.player-stage \{[^}]*border-radius: 2px/);
+  assert.match(styles, /\.player-stage-state \{/);
+  assert.match(styles, /\.player-frame-host,\.player-built-in/);
+});
+
 test('API client maps server errors and sends idempotency and bearer headers', async () => {
   const { createApiClient, ApiError } = await import('../../packages/platform-api-client/src/index.mjs');
   let request;
@@ -540,6 +558,13 @@ test('multiplayer rule UI states that approval is not execution, signing or depl
   assert.match(submission,/提交不等于上线/);
   assert.match(review,/“批准构建”不会自动签名、部署或注册模式/);
   assert.match(review,/approve_for_build/);
+});
+
+test('multiplayer rule review panel keeps its heading and queue inset from the governance border', async () => {
+  const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
+  assert.match(styles, /\.rule-review-queue \{[^}]*padding: 20px;/);
+  assert.match(styles, /\.rule-review-queue > \.puzzle-ops__head \{ margin-bottom: 0; \}/);
+  assert.match(styles, /@container \(max-width: 560px\) \{ \.rule-review-queue \{ padding: 12px; \} \}/);
 });
 
 test('API client refreshes an expired access token once and updates host memory', async () => {
