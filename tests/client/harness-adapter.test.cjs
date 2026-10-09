@@ -276,12 +276,20 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   const codexMarketplace = JSON.parse(await readFile('.agents/plugins/marketplace.json', 'utf8'));
   const claudeManifest = JSON.parse(await readFile('plugins/gamehub/.claude-plugin/plugin.json', 'utf8'));
   const claudeMarketplace = JSON.parse(await readFile('.claude-plugin/marketplace.json', 'utf8'));
+  const publisher = await readFile('plugins/gamehub/bin/creator-submit.mjs', 'utf8');
+  const skill = await readFile('plugins/gamehub/skills/gamehub/SKILL.md', 'utf8');
   assert.equal(portable.name, 'gamehub');
+  assert.equal(portable.version, claudeManifest.version);
   assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
   assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
   assert.equal(claudeManifest.name, 'gamehub');
   assert.equal(claudeMarketplace.owner.name, 'GameHub');
   assert.equal(claudeMarketplace.plugins[0].source, './plugins/gamehub');
+  assert.match(publisher, /credentials\.gamehub\.local/);
+  assert.match(publisher, /GitHub Agent Publisher|GameHub Agent Publisher/);
+  assert.doesNotMatch(publisher, /GAMEHUB_(?:ACCESS|REFRESH)_TOKEN/);
+  assert.match(skill, /creator-submit\.mjs/);
+  assert.match(skill, /Never ask the user to paste a token/);
 });
 
 
@@ -294,6 +302,10 @@ test('official editor installers use verified mooyu.fun artifacts without source
   const shell = await readFile('apps/web/public/install.sh', 'utf8');
   assert.match(rootPackage.scripts['pack:vscode'], /package-vscode-extension\.mjs/);
   assert.match(dockerfile, /prepare-agent-downloads\.mjs/);
+  assert.match(dockerfile, /COPY packages\/creator-tools packages\/creator-tools/);
+  assert.match(dockerfile, /COPY templates\/creator-bingo templates\/creator-bingo/);
+  assert.match(dockerfile, /COPY scripts\/build-agent-plugin\.mjs scripts\/build-agent-plugin\.mjs/);
+  assert.match(dockerfile, /node scripts\/build-agent-plugin\.mjs && node scripts\/prepare-agent-downloads\.mjs/);
   assert.match(packer, /0x06054b50/);
   assert.match(downloads, /createHash\('sha256'\)/);
   assert.match(downloads, /harnessPlugin/);
@@ -316,7 +328,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.23');
+  assert.equal(manifest.version, '0.3.24');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);

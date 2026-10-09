@@ -271,12 +271,14 @@ test('ready returns success only when database and migrations are current', asyn
     migrations: { status: async () => ({ ready: true, applied: 10, expected: 10, reason: null }) },
     authService: { requestChallenge: async () => ({}), verifyChallenge: async () => ({}) },
     rulesStatus: rules,
+    rulesRegistry: { describe: () => ({ installed: true,manifestSha256: 'a'.repeat(64),adapterCount: 2 }) },
   });
   t.after(() => app.close());
   const response = await app.inject({ url: '/ready' });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().data.status, 'ready');
   assert.deepEqual(response.json().data.rules,rules);
+  assert.deepEqual(response.json().data.rules, rules);
 });
 
 test('authenticated users can create no-store realtime connection tickets', async t => {

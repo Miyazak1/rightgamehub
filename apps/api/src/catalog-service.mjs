@@ -51,7 +51,13 @@ export function createCatalogService({ repository, config, artifactStore }) {
         apiVersion: 1, workId, releaseId: release.id, releaseLabel: release.label,
         entryUrl: `${origin}/${entry}`, runtimeOrigin: origin,
         playerProtocol: { min: 1, max: 1 },
-        capabilities: { fullscreen: capabilities.has('fullscreen'), pointerLock: capabilities.has('pointerLock'), multiplayer: capabilities.has('multiplayer') },
+        capabilities: {
+          fileExport: capabilities.has('fileExport'),
+          fullscreen: capabilities.has('fullscreen'),
+          pointerLock: capabilities.has('pointerLock'),
+          multiplayer: capabilities.has('multiplayer'),
+          shareLinks: capabilities.has('shareLinks'),
+        },
       };
     },
   };

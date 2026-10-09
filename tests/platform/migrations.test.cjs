@@ -8,7 +8,18 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 43);
+  assert.equal(files.length, 46);
+  const creatorStudio = fs.readFileSync(path.join(migrationDir, '0045_creator_studio_drafts.sql'), 'utf8');
+  const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0046_creator_generation_lifecycle.sql'), 'utf8');
+  assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
+  assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
+  assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
+  assert.match(creatorGeneration, /prompt_version text NOT NULL/);
+  assert.match(creatorGeneration, /one_active_per_draft/);
+  assert.match(creatorStudio, /octet_length\(content::text\) <= 1048576/);
+  const gameShares = fs.readFileSync(path.join(migrationDir, '0044_game_share_links.sql'), 'utf8');
+  assert.match(gameShares, /CREATE TABLE game_share_links/);
+  assert.match(gameShares, /payload_bytes integer NOT NULL/);
   const moderation = fs.readFileSync(path.join(migrationDir, '0020_content_moderation.sql'), 'utf8');
   assert.match(moderation, /CREATE TABLE content_reports/);
   assert.match(moderation, /CREATE TABLE moderation_audit_events/);
@@ -122,6 +133,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'multiplayer_rule_submissions', 'multiplayer_rule_submission_grants', 'multiplayer_rule_submission_events',
     'source_revisions', 'build_jobs', 'release_provenance', 'multiplayer_rule_builds', 'multiplayer_rule_build_events',
     'creator_feedback', 'creator_feedback_events',
+    'game_share_links', 'creator_drafts', 'creator_draft_revisions', 'creator_generation_jobs',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

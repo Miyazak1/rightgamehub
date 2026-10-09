@@ -14,6 +14,7 @@ COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/pa
 COPY packages/platform-api-client/package.json packages/platform-api-client/package.json
 COPY packages/host-contract/package.json packages/host-contract/package.json
 COPY packages/player-core/package.json packages/player-core/package.json
+COPY packages/creator-tools/package.json packages/creator-tools/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin...
 COPY apps/web apps/web
 COPY packages/platform-client packages/platform-client
@@ -23,22 +24,26 @@ COPY packages/multiplayer-protocol packages/multiplayer-protocol
 COPY packages/platform-api-client packages/platform-api-client
 COPY packages/host-contract packages/host-contract
 COPY packages/player-core packages/player-core
+COPY packages/creator-tools packages/creator-tools
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
 COPY plugins plugins
 COPY poc/m0 poc/m0
 COPY templates/multiplayer-turn-based templates/multiplayer-turn-based
+COPY templates/creator-bingo templates/creator-bingo
 COPY .agents .agents
 COPY .claude-plugin .claude-plugin
 COPY scripts/build-extension.mjs scripts/build-extension.mjs
 COPY scripts/build-harness.mjs scripts/build-harness.mjs
 COPY scripts/build-multiplayer-templates.mjs scripts/build-multiplayer-templates.mjs
+COPY scripts/build-agent-plugin.mjs scripts/build-agent-plugin.mjs
+COPY scripts/submit-creator-package.mjs scripts/submit-creator-package.mjs
 COPY scripts/package-vscode-extension.mjs scripts/package-vscode-extension.mjs
 COPY scripts/prepare-agent-downloads.mjs scripts/prepare-agent-downloads.mjs
 COPY scripts/zip-fixture.cjs scripts/zip-fixture.cjs
 ARG VITE_RUNTIME_DOMAIN
 ENV VITE_RUNTIME_DOMAIN=$VITE_RUNTIME_DOMAIN
-RUN node scripts/build-extension.mjs && node scripts/package-vscode-extension.mjs && node scripts/build-harness.mjs && npm pack ./extensions/harness --ignore-scripts --pack-destination ./artifacts --cache ./.runtime/npm-cache && node scripts/prepare-agent-downloads.mjs
+RUN node scripts/build-extension.mjs && node scripts/package-vscode-extension.mjs && node scripts/build-harness.mjs && npm pack ./extensions/harness --ignore-scripts --pack-destination ./artifacts --cache ./.runtime/npm-cache && node scripts/build-agent-plugin.mjs && node scripts/prepare-agent-downloads.mjs
 RUN pnpm --filter @gamehub/web build
 
 FROM caddy:2-builder-alpine AS caddy-build

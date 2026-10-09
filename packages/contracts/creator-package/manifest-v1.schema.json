@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/creator-package/manifest-v1.json",
+  "title": "GameHub Creator Package Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "studio", "schemaVersion", "title", "source"],
+  "properties": {
+    "format": { "const": "gamehub.creator-package" },
+    "version": { "const": 1 },
+    "studio": { "const": "bingo" },
+    "schemaVersion": { "const": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "source": { "type": "string", "pattern": "^source/[A-Za-z0-9._-]+\\.json$", "maxLength": 255 }
+  }
+}

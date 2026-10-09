@@ -4,11 +4,11 @@
 
 ## 安装
 
-正式发布前可在仓库根目录运行 `npm run pack:vscode`，然后在 VS Code、Cursor 或兼容编辑器的扩展面板菜单中选择 **Install from VSIX...**，安装 `artifacts/gamehub-agent-0.3.0.vsix`。也可以使用宿主 CLI：
+正式发布前可在仓库根目录运行 `npm run pack:vscode`，然后在 VS Code、Cursor 或兼容编辑器的扩展面板菜单中选择 **Install from VSIX...**，安装 `artifacts/gamehub-agent-<版本>.vsix`。也可以使用宿主 CLI：
 
 ```bash
-code --install-extension gamehub-agent-0.3.0.vsix
-cursor --install-extension gamehub-agent-0.3.0.vsix
+code --install-extension gamehub-agent-<版本>.vsix
+cursor --install-extension gamehub-agent-<版本>.vsix
 ```
 
 重载编辑器后，点击 Activity Bar 的 GameHub 图标。扩展默认连接 `https://mooyu.fun`；私有部署可在编辑器设置中调整 `gamehub.apiUrl` 和 `gamehub.browserUrl`。
@@ -18,7 +18,8 @@ cursor --install-extension gamehub-agent-0.3.0.vsix
 - 共享大厅、猜百科、账号、创作中心与管理界面；
 - VS Code/Cursor 主题色和高对比度跟随；
 - access/refresh token 通过 SecretStorage 保存；
+- 用户主动执行“GameHub: 提交当前创作包”时，读取工作区内的 `creator-manifest.json` 和声明的结构化源码，本地校验后提交为私有草稿；
 - Web 作品在隔离运行页游玩；
-- 不读取工作区文件、不运行 Shell，也不向游戏 frame 暴露编辑器 API。
+- 除上述显式提交操作外不读取工作区文件；不运行 Shell，也不向游戏 frame 暴露编辑器 API。
 
 当前 VSIX 不接管下载目录，也不在 Webview 中启动 EXE；界面必须按 HostAdapter 的能力说明显示这些限制。

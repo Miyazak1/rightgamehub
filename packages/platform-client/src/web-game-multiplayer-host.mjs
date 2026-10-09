@@ -1,22 +1,52 @@
 import { createMultiplayerSession } from './multiplayer-session.mjs';
-import { WEB_GAME_BRIDGE_PROTOCOL, WEB_GAME_BRIDGE_VERSION, bridgeEnvelope, isBridgeConnectMessage, parseBridgeRequest } from '@gamehub/web-game-sdk/protocol';
+import { WEB_GAME_BRIDGE_PROTOCOL, WEB_GAME_BRIDGE_VERSION, WEB_GAME_EXPORT_MAX_BYTES, bridgeEnvelope, isBridgeConnectMessage, parseBridgeRequest } from '@gamehub/web-game-sdk/protocol';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const requireUuid = (value, label) => { if (!uuid.test(value ?? '')) throw Object.assign(new Error(`${label} is invalid.`), { code: 'BRIDGE_PARAMETER_INVALID' }); return value; };
 const publicProfile = profile => ({ id: profile.id,displayName: profile.displayName,avatar: profile.avatar ?? null });
+const exportTypes = new Map([['image/png','.png'],['application/json','.json']]);
+const arrayBuffer = value => Object.prototype.toString.call(value) === '[object ArrayBuffer]';
+
+function validateFileExport({ filename,mimeType,data } = {}) {
+  if (typeof filename !== 'string' || filename.length < 1 || filename.length > 120 || /[\\/\u0000-\u001f\u007f]/u.test(filename)) throw Object.assign(new Error('Export filename is invalid.'), { code: 'FILE_EXPORT_INVALID' });
+  const extension = exportTypes.get(mimeType);
+  if (!extension || !filename.toLocaleLowerCase('en-US').endsWith(extension)) throw Object.assign(new Error('Export file type is not allowed.'), { code: 'FILE_EXPORT_TYPE_NOT_ALLOWED' });
+  if (!arrayBuffer(data) || data.byteLength < 1 || data.byteLength > WEB_GAME_EXPORT_MAX_BYTES) throw Object.assign(new Error('Export file bytes are invalid or too large.'), { code: 'FILE_EXPORT_INVALID' });
+  return { filename,mimeType,data };
+}
+
+export function createBrowserFileExporter({ documentImpl = globalThis.document,URLImpl = globalThis.URL,BlobImpl = globalThis.Blob,revokeDelayMs = 60_000 } = {}) {
+  if (!documentImpl?.createElement || !URLImpl?.createObjectURL || !BlobImpl) throw new TypeError('Browser file export is unavailable.');
+  return async input => {
+    const { filename,mimeType,data } = validateFileExport(input);
+    const url = URLImpl.createObjectURL(new BlobImpl([data], { type: mimeType }));
+    const anchor = documentImpl.createElement('a');
+    anchor.href = url; anchor.download = filename; anchor.hidden = true;
+    documentImpl.body.append(anchor);
+    try { anchor.click(); } finally { anchor.remove(); setTimeout(() => URLImpl.revokeObjectURL(url), revokeDelayMs); }
+    return { accepted: true,filename,sizeBytes: data.byteLength };
+  };
+}
 
 export function createWebGameMultiplayerHost({
   windowImpl = globalThis.window,
   frame,
   launchId,
+  descriptor = {},
   workId,
   initialRoomId = null,
+  initialShareCode = null,
   apiClient,
   sessionFactory = options => createMultiplayerSession(options),
   MessageChannelImpl = globalThis.MessageChannel,
+  fileExporter = null,
   logger = console,
 } = {}) {
-  if (!windowImpl?.addEventListener || !frame?.contentWindow || !apiClient || !workId || !MessageChannelImpl) throw new TypeError('A window, game frame, work, API client and MessageChannel are required.');
+  const multiplayerEnabled = Boolean(descriptor.capabilities?.multiplayer);
+  const fileExportEnabled = Boolean(descriptor.capabilities?.fileExport);
+  const shareLinksEnabled = Boolean(descriptor.capabilities?.shareLinks);
+  if (!windowImpl?.addEventListener || !frame?.contentWindow || !workId || !MessageChannelImpl || ((multiplayerEnabled || shareLinksEnabled) && !apiClient)) throw new TypeError('A window, game frame, work, required API client and MessageChannel are required.');
+  const exportFile = fileExportEnabled ? (fileExporter ?? createBrowserFileExporter({ documentImpl: windowImpl.document,URLImpl: windowImpl.URL ?? globalThis.URL })) : null;
   let port = null;
   let session = null;
   let sessionOff = [];
@@ -64,6 +94,18 @@ export function createWebGameMultiplayerHost({
   };
   const handlers = {
     'player.get': async () => publicProfile((await apiClient.getProfile()).data),
+    'files.download': async params => exportFile(validateFileExport(params)),
+    'shares.create': async ({ title,payload }) => {
+      const share = (await apiClient.createGameShare(workId, { title,payload })).data;
+      const origin = windowImpl.location?.origin ?? '';
+      return { ...share,url: `${origin}/#/play/${encodeURIComponent(workId)}/share/${encodeURIComponent(share.code)}` };
+    },
+    'shares.current': async () => {
+      if (!initialShareCode) return null;
+      const share = (await apiClient.getGameShare(initialShareCode)).data;
+      if (share?.workId !== workId) throw Object.assign(new Error('Share link belongs to another game.'), { code: 'SHARE_WORK_MISMATCH' });
+      return share;
+    },
     'multiplayer.modes.list': loadModes,
     'multiplayer.rooms.list': async ({ modeId,query = '' }) => { await requireMode(modeId); const result = (await apiClient.listMultiplayerRooms(modeId,30,String(query).slice(0,80))).data; await Promise.all(result.map(trackRoom)); return result; },
     'multiplayer.rooms.create': async params => { await requireMode(params.modeId); return trackRoom((await apiClient.createMultiplayerRoom(params)).data); },
@@ -97,6 +139,14 @@ export function createWebGameMultiplayerHost({
     let request;
     try { request = parseBridgeRequest(event.data); }
     catch (error) { return reject(event.data?.id ?? null, error); }
+    const authorized = request.method === 'files.download'
+      ? fileExportEnabled
+      : request.method.startsWith('shares.')
+        ? shareLinksEnabled
+      : request.method === 'player.get' || request.method.startsWith('multiplayer.')
+        ? multiplayerEnabled
+        : false;
+    if (!authorized) return reject(request.id, Object.assign(new Error('Bridge capability was not approved for this release.'), { code: 'BRIDGE_CAPABILITY_REQUIRED' }));
     try { respond(request.id, await handlers[request.method](request.params ?? {})); }
     catch (error) { reject(request.id, error); }
   };
@@ -105,7 +155,8 @@ export function createWebGameMultiplayerHost({
     port?.close?.();
     const channel = new MessageChannelImpl(); port = channel.port1;
     port.addEventListener?.('message', onPortMessage); if (!port.addEventListener) port.onmessage = onPortMessage; port.start?.();
-    frame.contentWindow.postMessage(bridgeEnvelope({ type: 'gamehub.bridge.ready',clientNonce: event.data.clientNonce,launchId,capabilities: ['identity','multiplayer'] }), '*', [channel.port2]);
+    const capabilities = [multiplayerEnabled && 'identity',multiplayerEnabled && 'multiplayer',fileExportEnabled && 'fileExport',shareLinksEnabled && 'shareLinks'].filter(Boolean);
+    frame.contentWindow.postMessage(bridgeEnvelope({ type: 'gamehub.bridge.ready',clientNonce: event.data.clientNonce,launchId,capabilities }), '*', [channel.port2]);
   };
   windowImpl.addEventListener('message', onConnect);
   return Object.freeze({

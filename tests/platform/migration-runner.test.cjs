@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 43);
+  assert.equal(migrations.length, 46);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -43,6 +43,9 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[38].version, '0039');
   assert.equal(migrations[41].version, '0042');
   assert.equal(migrations[42].version, '0043');
+  assert.equal(migrations[43].version, '0044');
+  assert.equal(migrations[44].version, '0045');
+  assert.equal(migrations[45].version, '0046');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);
@@ -182,7 +185,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       const archive = makeZip([
         { name: 'index.html', data: '<!doctype html><script src="assets/game.js"></script><h1>Integration Game</h1>' },
         { name: 'assets/game.js', data: 'globalThis.gamehubIntegration=true' },
-        { name: 'platform.json', data: JSON.stringify({ version: 1, capabilities: ['fullscreen'] }) },
+        { name: 'platform.json', data: JSON.stringify({ version: 1, capabilities: ['fullscreen','fileExport','shareLinks'] }) },
       ]);
       const uploadPayload = {
         fileName: 'integration-game.zip', declaredBytes: String(archive.length),
@@ -369,6 +372,8 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       assert.equal(launchData.runtimeOrigin, `https://${releaseHost}`);
       assert.equal(launchData.entryUrl, `https://${releaseHost}/index.html`);
       assert.equal(launchData.capabilities.fullscreen, true);
+      assert.equal(launchData.capabilities.fileExport, true);
+      assert.equal(launchData.capabilities.shareLinks, true);
       assert.equal((await app.inject({ url: `/v1/works/${workId}/launch?releaseId=${staleRelease.id}` })).statusCode, 404);
 
       const runtimeIndex = await runtimeEdgeApp.inject({ url: '/', headers: { host: releaseHost } });

@@ -47,13 +47,13 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
     });
     return connectPromise;
   };
-  const request = async (method, params = {}) => {
+  const request = async (method, params = {}, transfer = []) => {
     await connect();
     const id = randomId();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { pending.delete(id); reject(Object.assign(new Error('GameHub bridge request timed out.'), { code: 'BRIDGE_TIMEOUT' })); }, requestTimeoutMs);
       pending.set(id, { resolve,reject,timer });
-      port.postMessage(bridgeEnvelope({ type: 'request',id,method,params }));
+      port.postMessage(bridgeEnvelope({ type: 'request',id,method,params }), transfer);
     });
   };
   const rooms = {
@@ -78,6 +78,17 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   return Object.freeze({
     connect,
     getPlayer: () => request('player.get'),
+    files: Object.freeze({
+      download: async (blob, filename) => {
+        if (!(blob instanceof Blob)) throw new TypeError('files.download requires a Blob.');
+        const data = await blob.arrayBuffer();
+        return request('files.download', { filename,mimeType: blob.type,data }, [data]);
+      },
+    }),
+    shares: Object.freeze({
+      create: (title, payload) => request('shares.create', { title,payload }),
+      current: () => request('shares.current'),
+    }),
     multiplayer: Object.freeze({
       listModes: () => request('multiplayer.modes.list'), rooms: Object.freeze(rooms), matches: Object.freeze(matches),
       connect: () => request('multiplayer.realtime.connect'),

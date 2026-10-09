@@ -67,6 +67,8 @@ try {
   Add-FileEntry 'extension/package.json' (Join-Path $extensionRoot 'package.json')
   Add-FileEntry 'extension/gamehub-extension.cjs' (Join-Path $extensionRoot 'gamehub-extension.cjs')
   Add-FileEntry 'extension/desktop-launcher.mjs' (Join-Path $projectRoot 'extensions\harness\src\desktop-launcher.mjs')
+  Add-FileEntry 'extension/creator-package.mjs' (Join-Path $projectRoot 'packages\creator-tools\src\creator-package.mjs')
+  Add-FileEntry 'extension/platform-api-client.mjs' (Join-Path $projectRoot 'packages\platform-api-client\src\index.mjs')
   Add-FileEntry 'extension/media/gamehub.js' (Join-Path $extensionRoot 'media\gamehub.js')
   Add-FileEntry 'extension/media/arcade.svg' (Join-Path $extensionRoot 'media\arcade.svg')
 } finally {

@@ -1,7 +1,7 @@
 {
   "name": "gamehub",
   "displayName": "GameHub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Discover, launch and publish GameHub experiences from Claude Code.",
   "author": {
     "name": "GameHub",

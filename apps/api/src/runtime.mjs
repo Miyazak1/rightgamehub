@@ -57,6 +57,10 @@ import { createSourceBuildWorker } from './source-build-worker.mjs';
 import { PostgresMultiplayerRuleBuildRepository } from './multiplayer-rule-build-repository.mjs';
 import { createMultiplayerRuleBuildWorker } from './multiplayer-rule-build-worker.mjs';
 import { createRuleBuildRunner } from './rule-build-runner.mjs';
+import { PostgresGameShareRepository } from './game-share-repository.mjs';
+import { createGameShareService } from './game-share-service.mjs';
+import { PostgresCreatorDraftRepository } from './creator-draft-repository.mjs';
+import { createCreatorDraftService } from './creator-draft-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -110,6 +114,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     objectStore: quarantineStore,
     storageCapacityService,
   });
+  const creatorDraftService = createCreatorDraftService({
+    repository: new PostgresCreatorDraftRepository(database.pool), workService, uploadService,
+  });
   const validationWorker = createValidationWorker({
     repository: new PostgresValidationRepository(database.pool), quarantineStore,
     runtimeStore: new LocalRuntimeStore(config.runtimeRoot), validatorRoot: config.validatorRoot,
@@ -121,6 +128,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
   const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config, artifactStore: quarantineStore });
+  const gameShareService = createGameShareService({ repository: new PostgresGameShareRepository(database.pool),catalogService });
   const engagementService = createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService });
   const guessBaikeRepository = new PostgresGuessBaikeRepository(database.pool);
   const guessBaikeService = createGuessBaikeService({ repository: guessBaikeRepository });
@@ -153,6 +161,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     migrations,
     authService,
     workService,
+    creatorDraftService,
     githubSourceService,
     sourceBuildService,
     uploadService,
@@ -168,9 +177,11 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
+    rulesRegistry,
     multiplayerRoomService,
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
+    gameShareService,
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
@@ -183,6 +194,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     coverStore,
     authService,
     workService,
+    creatorDraftService,
     githubSourceService,
     sourceBuildService,
     sourceBuildWorker,
@@ -190,6 +202,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     uploadService,
     validationWorker,
     catalogService,
+    gameShareService,
     engagementService,
     guessBaikeService,
     guessBaikeAutomation,

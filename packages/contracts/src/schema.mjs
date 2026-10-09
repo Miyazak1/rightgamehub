@@ -14,6 +14,8 @@ export const enums = Object.freeze({
   ReleaseValidationState: ['processing', 'scanning', 'ready', 'failed', 'review_required'],
   ReleaseServingState: ['disabled', 'enabled', 'revoked'],
   SourceBuildState: ['queued', 'preparing', 'building', 'packaging', 'validating', 'ready', 'failed', 'superseded'],
+  CreatorStudio: ['bingo', 'puzzle', 'story', 'world'],
+  CreatorDraftStatus: ['active', 'archived', 'published'],
 });
 
 const id = { type: 'string', format: 'uuid' };
@@ -266,6 +268,31 @@ export const schemas = Object.freeze({
     playCount: { type: 'integer', minimum: 0 },
     saveCount: { type: 'integer', minimum: 0 },
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
+  }),
+  CreateCreatorDraftRequest: object({
+    studio: stringEnum(enums.CreatorStudio), schemaVersion: { type: 'integer', minimum: 1, maximum: 1000 },
+    title: { type: 'string', minLength: 1, maxLength: 120 }, content: { type: 'object', additionalProperties: true, maxProperties: 5000 },
+  }, ['studio','title','content']),
+  UpdateCreatorDraftRequest: object({
+    schemaVersion: { type: 'integer', minimum: 1, maximum: 1000 }, title: { type: 'string', minLength: 1, maxLength: 120 },
+    content: { type: 'object', additionalProperties: true, maxProperties: 5000 },
+  }, []),
+  CreatorDraftSummary: object({
+    id, studio: stringEnum(enums.CreatorStudio), schemaVersion: { type: 'integer', minimum: 1 }, title: { type: 'string' },
+    status: stringEnum(enums.CreatorDraftStatus), workId: { oneOf: [id,{ type: 'null' }] }, revision: uintString, createdAt: dateTime, updatedAt: dateTime,
+  }),
+  CreatorDraft: object({
+    id, studio: stringEnum(enums.CreatorStudio), schemaVersion: { type: 'integer', minimum: 1 }, title: { type: 'string' },
+    status: stringEnum(enums.CreatorDraftStatus), content: { type: 'object', additionalProperties: true },
+    workId: { oneOf: [id,{ type: 'null' }] }, revision: uintString, createdAt: dateTime, updatedAt: dateTime,
+  }),
+  CreatorDraftPreview: object({
+    draftId: id, revision: uintString, html: { type: 'string', minLength: 1, maxLength: 1048576 },
+  }),
+  CreateCreatorDraftBuildRequest: object({ releaseLabel: { type: 'string', minLength: 1, maxLength: 64 } }),
+  CreatorDraftBuild: object({
+    draft: { $ref: '#/components/schemas/CreatorDraft' }, workId: id, upload: { $ref: '#/components/schemas/UploadJob' },
+    artifactSha256: sha256, artifactBytes: uintString,
   }),
   GitHubSourceInstallStart: object({ installUrl: { type: 'string', pattern: '^https://github\\.com/apps/' }, expiresAt: dateTime }),
   GitHubSourceInstallCompleteRequest: object({ state: { type: 'string', minLength: 32, maxLength: 128 }, installationId: uintString }),
@@ -685,6 +712,12 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/creator/analytics', operationId: 'getCreatorAnalytics', auth: 'bearer', response: 'CreatorAnalyticsOverview', queryAnalyticsDays: true, analyticsDefaultDays: 30 },
   { method: 'get', path: '/v1/admin/storage', operationId: 'getAdminStorage', auth: 'bearer', response: 'StorageCapacityOverview' },
   { method: 'get', path: '/v1/creator/works', operationId: 'listCreatorWorks', auth: 'bearer', response: 'Work', responseArray: true },
+  { method: 'get', path: '/v1/creator/drafts', operationId: 'listCreatorDrafts', auth: 'bearer', response: 'CreatorDraftSummary', responseArray: true, queryCreatorStudio: true },
+  { method: 'post', path: '/v1/creator/drafts', operationId: 'createCreatorDraft', auth: 'bearer', request: 'CreateCreatorDraftRequest', response: 'CreatorDraft', idempotent: true },
+  { method: 'get', path: '/v1/creator/drafts/{draftId}', operationId: 'getCreatorDraft', auth: 'bearer', response: 'CreatorDraft', pathId: 'draftId' },
+  { method: 'get', path: '/v1/creator/drafts/{draftId}/preview', operationId: 'previewCreatorDraft', auth: 'bearer', response: 'CreatorDraftPreview', pathId: 'draftId' },
+  { method: 'put', path: '/v1/creator/drafts/{draftId}', operationId: 'updateCreatorDraft', auth: 'bearer', request: 'UpdateCreatorDraftRequest', response: 'CreatorDraft', pathId: 'draftId', idempotent: true, ifMatch: true },
+  { method: 'post', path: '/v1/creator/drafts/{draftId}/builds', operationId: 'buildCreatorDraft', auth: 'bearer', request: 'CreateCreatorDraftBuildRequest', response: 'CreatorDraftBuild', pathId: 'draftId', idempotent: true, ifMatch: true, successStatus: '202' },
   { method: 'post', path: '/v1/creator/source-connections/github/install', operationId: 'startGitHubSourceInstall', auth: 'bearer', response: 'GitHubSourceInstallStart' },
   { method: 'post', path: '/v1/creator/source-connections/github/complete', operationId: 'completeGitHubSourceInstall', auth: 'bearer', request: 'GitHubSourceInstallCompleteRequest', response: 'GitHubSourceConnection' },
   { method: 'get', path: '/v1/creator/source-connections', operationId: 'listGitHubSourceConnections', auth: 'bearer', response: 'GitHubSourceConnection', responseArray: true },
@@ -724,10 +757,12 @@ export function createOpenApiDocument() {
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });
     if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
     if (operation.pathBuildId) parameters.push({ name: 'buildId', in: 'path', required: true, schema: id });
+    if (operation.pathJobId) parameters.push({ name: 'jobId', in: 'path', required: true, schema: id });
     if (operation.pathToken) parameters.push({ name: 'token', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } });
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
+    if (operation.queryCreatorStudio) parameters.push({ name: 'studio', in: 'query', required: false, schema: stringEnum(enums.CreatorStudio) });
     if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: operation.analyticsDefaultDays ?? 7 } });
     if (operation.queryMultiplayerRooms) parameters.push(
       { name: 'modeId', in: 'query', required: true, schema: id },

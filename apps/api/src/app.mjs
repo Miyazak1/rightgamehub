@@ -19,6 +19,8 @@ import { MultiplayerMatchError } from './multiplayer-match-service.mjs';
 import { GitHubSourceError } from './github-source-service.mjs';
 import { MultiplayerRuleSubmissionError } from './multiplayer-rule-submission-service.mjs';
 import { SourceBuildRepositoryError } from './source-build-repository.mjs';
+import { GameShareError } from './game-share-service.mjs';
+import { CreatorDraftError, CREATOR_STUDIOS } from './creator-draft-service.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -51,12 +53,15 @@ export function createApp(dependencies) {
     publicProfileService,
     analyticsService,
     creatorFeedbackService,
+    creatorDraftService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus = null,
+    rulesRegistry = null,
     multiplayerRoomService,
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
+    gameShareService,
     logger = false,
   } = dependencies;
   const app = Fastify({
@@ -79,7 +84,7 @@ export function createApp(dependencies) {
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError || error instanceof GameShareError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: {} } });
@@ -91,7 +96,7 @@ export function createApp(dependencies) {
     try {
       const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
       if (!databaseOk || !migration.ready || !realtimeOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk }));
-      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus });
+      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null });
     } catch {
       return reply.status(503).send(envelope({ status: 'not-ready', database: false }));
     }
@@ -390,6 +395,25 @@ export function createApp(dependencies) {
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
       return envelope(await catalogService.launch(request.params.workId, request.query.releaseId));
+    });
+  }
+  if (gameShareService) {
+    const shareCodeParams = { type: 'object', additionalProperties: false, required: ['code'], properties: { code: { type: 'string', pattern: '^[A-Za-z0-9_-]{12,24}$' } } };
+    app.post('/v1/works/:workId/game-shares', {
+      preHandler: requireAuth,
+      schema: {
+        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } },
+        body: { type: 'object', additionalProperties: false, required: ['title','payload'], properties: {
+          title: { type: 'string', minLength: 1, maxLength: 120 }, payload: { type: 'object' },
+        } },
+      },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await gameShareService.create(request.actor, request.params.workId, request.body));
+    });
+    app.get('/v1/game-shares/:code', { schema: { params: shareCodeParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'public, max-age=60');
+      return envelope(await gameShareService.get(request.params.code));
     });
   }
   app.get('/v1/me', { preHandler: requireAuth }, async request => envelope(await authService.getProfile(request.actor)));
@@ -798,6 +822,55 @@ export function createApp(dependencies) {
       const result = await workService.withdraw(request.actor, request.params.workId, request.headers['idempotency-key'], request.headers['if-match']);
       reply.header('ETag', result.etag);
       return envelope(result.work);
+    });
+  }
+  if (creatorDraftService) {
+    const draftParams = { type: 'object', additionalProperties: false, required: ['draftId'], properties: { draftId: { type: 'string', format: 'uuid' } } };
+    const contentSchema = { type: 'object', additionalProperties: true, maxProperties: 5000 };
+    app.get('/v1/creator/drafts', {
+      preHandler: requireAuth,
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { studio: { type: 'string', enum: CREATOR_STUDIOS } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await creatorDraftService.list(request.actor, request.query.studio));
+    });
+    app.post('/v1/creator/drafts', {
+      preHandler: requireAuth,
+      schema: { body: { type: 'object', additionalProperties: false, required: ['studio','title','content'], properties: {
+        studio: { type: 'string', enum: CREATOR_STUDIOS }, schemaVersion: { type: 'integer', minimum: 1, maximum: 1000 },
+        title: { type: 'string', minLength: 1, maxLength: 120 }, content: contentSchema,
+      } } },
+    }, async (request, reply) => {
+      const result = await creatorDraftService.create(request.actor, request.body, request.headers['idempotency-key']);
+      reply.header('Cache-Control', 'no-store').header('ETag', result.etag);
+      return envelope(result.draft);
+    });
+    app.get('/v1/creator/drafts/:draftId', { preHandler: requireAuth, schema: { params: draftParams } }, async (request, reply) => {
+      const result = await creatorDraftService.get(request.actor, request.params.draftId);
+      reply.header('Cache-Control', 'no-store').header('ETag', result.etag);
+      return envelope(result.draft);
+    });
+    app.get('/v1/creator/drafts/:draftId/preview', { preHandler: requireAuth, schema: { params: draftParams } }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await creatorDraftService.preview(request.actor, request.params.draftId));
+    });
+    app.put('/v1/creator/drafts/:draftId', {
+      preHandler: requireAuth,
+      schema: { params: draftParams, body: { type: 'object', additionalProperties: false, minProperties: 1, properties: {
+        title: { type: 'string', minLength: 1, maxLength: 120 }, schemaVersion: { type: 'integer', minimum: 1, maximum: 1000 }, content: contentSchema,
+      } } },
+    }, async (request, reply) => {
+      const result = await creatorDraftService.update(request.actor, request.params.draftId, request.body, request.headers['idempotency-key'], request.headers['if-match']);
+      reply.header('Cache-Control', 'no-store').header('ETag', result.etag);
+      return envelope(result.draft);
+    });
+    app.post('/v1/creator/drafts/:draftId/builds', {
+      preHandler: requireAuth,
+      schema: { params: draftParams, body: { type: 'object', additionalProperties: false, required: ['releaseLabel'], properties: { releaseLabel: { type: 'string', minLength: 1, maxLength: 64 } } } },
+    }, async (request, reply) => {
+      const result = await creatorDraftService.build(request.actor, request.params.draftId, request.body, request.headers['idempotency-key'], request.headers['if-match']);
+      reply.status(202).header('Cache-Control', 'no-store');
+      return envelope(result);
     });
   }
   if (githubSourceService) {

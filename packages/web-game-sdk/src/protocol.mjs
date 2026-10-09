@@ -1,9 +1,13 @@
 export const WEB_GAME_BRIDGE_PROTOCOL = 'gamehub.web-game.v1';
 export const WEB_GAME_BRIDGE_VERSION = 1;
-export const WEB_GAME_BRIDGE_MAX_BYTES = 32 * 1024;
+export const WEB_GAME_BRIDGE_MAX_BYTES = 64 * 1024;
+export const WEB_GAME_EXPORT_MAX_BYTES = 16 * 1024 * 1024;
 
 export const WEB_GAME_BRIDGE_METHODS = Object.freeze([
   'player.get',
+  'files.download',
+  'shares.create',
+  'shares.current',
   'multiplayer.modes.list',
   'multiplayer.rooms.list',
   'multiplayer.rooms.create',
@@ -38,7 +42,14 @@ export function isBridgeConnectMessage(value) {
 }
 
 export function parseBridgeRequest(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || byteLength(value) > WEB_GAME_BRIDGE_MAX_BYTES) throw Object.assign(new Error('Bridge request is invalid or too large.'), { code: 'BRIDGE_REQUEST_INVALID' });
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Object.assign(new Error('Bridge request is invalid or too large.'), { code: 'BRIDGE_REQUEST_INVALID' });
+  const exportBytes = value.method === 'files.download' && value.params?.data instanceof ArrayBuffer
+    ? value.params.data.byteLength
+    : 0;
+  const measured = exportBytes
+    ? { ...value,params: { ...value.params,data: null } }
+    : value;
+  if (byteLength(measured) > WEB_GAME_BRIDGE_MAX_BYTES || exportBytes > WEB_GAME_EXPORT_MAX_BYTES) throw Object.assign(new Error('Bridge request is invalid or too large.'), { code: 'BRIDGE_REQUEST_INVALID' });
   const allowed = new Set(['protocol','version','type','id','method','params']);
   if (Object.keys(value).some(key => !allowed.has(key)) || value.protocol !== WEB_GAME_BRIDGE_PROTOCOL || value.version !== WEB_GAME_BRIDGE_VERSION || value.type !== 'request') throw Object.assign(new Error('Bridge request envelope is invalid.'), { code: 'BRIDGE_REQUEST_INVALID' });
   if (!uuid.test(value.id ?? '')) throw Object.assign(new Error('Bridge request id must be a UUID.'), { code: 'BRIDGE_REQUEST_ID_INVALID' });

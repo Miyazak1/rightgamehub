@@ -118,3 +118,14 @@ export async function inspectMultiplayerProject(root) {
   findings.push(item('warning','HEURISTIC_LIMIT','Creator Doctor 是合规与明显泄漏检查，不是安全证明；发布前仍需平台代码审核、受控构建与双账号验收。'));
   return result(projectRoot,findings);
 }
+
+export {
+  CREATOR_PACKAGE_FORMAT,
+  CREATOR_PACKAGE_VERSION,
+  CREATOR_DRAFT_STATE_FORMAT,
+  CREATOR_DRAFT_STATE_VERSION,
+  CreatorPackageError,
+  inspectCreatorPackage,
+  loadCreatorPackage,
+  submitCreatorPackage,
+} from './creator-package.mjs';

@@ -9,7 +9,7 @@ import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
 const invalid = (code, message) => Object.assign(new Error(message), { code });
-const supportedCapabilities = new Set(['fullscreen', 'multiplayer', 'pointerLock']);
+const supportedCapabilities = new Set(['fileExport', 'fullscreen', 'multiplayer', 'pointerLock', 'shareLinks']);
 
 async function readPlatformManifest(output, assets) {
   if (!assets['platform.json']) {

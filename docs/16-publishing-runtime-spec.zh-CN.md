@@ -158,7 +158,9 @@ Content-Security-Policy:
 
 TD-1.1 的公开免费游戏响应不设置 frame-ancestors 或 X-Frame-Options，以接纳实际桌面 Webview 的完整祖先链；不靠父站来源授予权限。业务账户页面仍限制嵌入，游戏的 sandbox、独立域、子资源 CSP 与游戏通道限制保留。frame-ancestors 会检查全部祖先，不能只核对最内层 iframe 的 URL；三宿主都要实测。[MDN frame-ancestors](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors)
 
-iframe 固定 `sandbox="allow-scripts allow-same-origin"`、`referrerpolicy="no-referrer"`。默认无 forms、popups、downloads、top-navigation 和原生桥。批准 pointerLock 时 iframe 与 HTTP sandbox 同时添加 `allow-pointer-lock`；不靠 manifest 直接授权。fullscreen 经 Permissions-Policy 和 iframe allow 按批准能力委派，用户操作触发。
+iframe 固定 `sandbox="allow-scripts allow-same-origin"`、`referrerpolicy="no-referrer"`。默认无 forms、popups、downloads、top-navigation 和原生桥。需要导出用户生成的 PNG/JSON 时，作品声明 `fileExport`，通过受控 MessageChannel 把文件交给可信播放器；播放器校验 MIME、扩展名、文件名与 16 MiB 上限后从沙箱外触发保存，不向 iframe 添加 `allow-downloads`。批准 pointerLock 时 iframe 与 HTTP sandbox 同时添加 `allow-pointer-lock`；不靠 manifest 直接授权。fullscreen 经 Permissions-Policy 和 iframe allow 按批准能力委派，用户操作触发。
+
+需要让玩家分享可再次游玩的内容实例时，作品声明 `shareLinks` 并通过桥调用 `shares.create`。平台保存不超过 48 KiB 的结构化 JSON，返回短链接 `/play/<workId>/share/<code>`；接收者打开链接后由同一桥的 `shares.current` 读取内容。链接只绑定公开作品，不携带账号令牌，也不向游戏暴露平台数据库或父页面 URL。
 
 Permissions-Policy 默认拒绝 camera、microphone、geolocation、usb、serial、hid、payment、display-capture 和 clipboard 权限；fullscreen 只为相应游戏开放。必须测试宿主上层策略，子 frame 无法扩大父层禁止的权限。
 
