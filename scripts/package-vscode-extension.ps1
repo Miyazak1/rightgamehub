@@ -70,6 +70,7 @@ try {
   foreach ($saveModule in @('store-contract.mjs', 'store-rpc.mjs', 'sqlite-store.mjs')) {
     Add-FileEntry "extension/save-cache/$saveModule" (Join-Path $projectRoot "packages/save-cache/src/$saveModule")
   }
+  Add-FileEntry 'extension/media/file-export.cjs' (Join-Path $extensionRoot 'media\file-export.cjs')
   Add-FileEntry 'extension/media/gamehub.js' (Join-Path $extensionRoot 'media\gamehub.js')
   Add-FileEntry 'extension/media/arcade.svg' (Join-Path $extensionRoot 'media\arcade.svg')
 } finally {

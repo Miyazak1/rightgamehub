@@ -22,7 +22,7 @@ test('community PostgreSQL: immutable review, privacy, concurrency and bounded i
   const database=await createCommunityTestDatabase(url),pool=database.pool;
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-community-test-'));
   t.after(async()=>{await database.close();await fs.rm(directory,{recursive:true,force:true});});
-  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,54);
+  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,55);
   const config={enabled:true,postingEnabled:true,imagesEnabled:true};
   const service=new CommunityService({pool,config});
   const store=new CommunityMediaStore(path.join(directory,'media'));

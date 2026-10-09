@@ -45,7 +45,7 @@ test('open posting migration preserves legacy private audiences and restrictions
   const approved=await legacy('approved'),pending=await legacy('pending'),draft=await legacy('draft',true);
   await store.put(assetId,imageKey,image);
   const migration=await applyMigrations(pool,path.join(root,'apps/api/migrations'));
-  assert.deepEqual(migration.applied,['0051_community_open_posting.sql','0052_daily_leaderboard_lookup.sql','0053_competition_boards.sql','0054_contribution_workflow.sql']);assert.equal(migration.total,54);
+  assert.deepEqual(migration.applied,['0051_community_open_posting.sql','0052_daily_leaderboard_lookup.sql','0053_competition_boards.sql','0054_contribution_workflow.sql','0055_game_share_links.sql']);assert.equal(migration.total,55);
   assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).applied.length,0);
   assert.ok((await pool.query('SELECT visibility_policy FROM community_post_revisions')).rows.every(r=>r.visibility_policy==='profile'));
   const service=new CommunityService({pool,config:{enabled:true,postingEnabled:true,imagesEnabled:true}}),media=new CommunityMediaService({service,store});

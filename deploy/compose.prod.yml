@@ -4,6 +4,7 @@ x-api-environment: &api-environment
   NODE_ENV: production
   API_HOST: 0.0.0.0
   API_PORT: 3090
+  GAME_SHARE_SITE_ORIGIN: https://${APP_DOMAIN}
   DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
   DATABASE_SSL: "false"
   REDIS_URL: redis://redis:6379

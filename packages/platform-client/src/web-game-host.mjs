@@ -1,3 +1,4 @@
+import {createFileExportHandlers,createShareLinkHandlers} from './web-game-sharing-handlers.mjs';
 import {createLocalSaveHandlers} from './web-game-local-save-handlers.mjs';
 import {createCompetitionHandlers} from './web-game-competition-handlers.mjs';
 import { bridgeEnvelope, isBridgeConnectMessage, parseBridgeRequest, bridgeMethodCapability, WEB_GAME_BRIDGE_MAX_BYTES } from '@gamehub/web-game-sdk/protocol';
@@ -13,13 +14,14 @@ const byteLength = value => new TextEncoder().encode(JSON.stringify(value)).byte
 /** Factories are trusted host code; the iframe can never register handlers. */
 export function createWebGameHost({
   windowImpl = globalThis.window, frame, launchId, descriptor, apiClient,
-  initialRoomId = null, sessionFactory, MessageChannelImpl = globalThis.MessageChannel,
+  initialShareCode = null, exportFile, initialRoomId = null, sessionFactory, MessageChannelImpl = globalThis.MessageChannel,
   logger = console, modules = {}, signal, getAccountIdentity, onCloudSaveStatus, saveCache, getSaveOwner, saveOrigin, onLocalSaveController,
 } = {}) {
   if (!windowImpl?.addEventListener || !frame?.contentWindow || !descriptor?.workId || !apiClient || !MessageChannelImpl) {
     throw new TypeError('A window, mounted frame, launch descriptor, API client and MessageChannel are required.');
   }
-  const factories = { competition:createCompetitionHandlers, cloudSave: createCloudSaveHandlers, multiplayer: createMultiplayerHandlers, ...modules };
+  const factories = { fileExport:createFileExportHandlers, shareLinks:createShareLinkHandlers, competition:createCompetitionHandlers, cloudSave: createCloudSaveHandlers, multiplayer: createMultiplayerHandlers, ...modules };
+  const fileExportState = {busy:false,requests:[]};
   let closed = false;
   let connection = null;
   let identityTimer = null;
@@ -76,10 +78,10 @@ export function createWebGameHost({
         }
         capabilities.push('localSave');
       }
-      for (const capability of ['cloudSave', 'competition', 'multiplayer']) {
+      for (const capability of ['cloudSave', 'competition', 'multiplayer', 'fileExport', 'shareLinks']) {
         if (descriptor.capabilities?.[capability] !== true || !factories[capability]) continue;
         const module = factories[capability]({
-          apiClient, workId: descriptor.workId, descriptor, initialRoomId, sessionFactory,
+          apiClient, workId: descriptor.workId, descriptor, initialRoomId, initialShareCode, exportFile, fileExportState, sessionFactory,
           sendEvent, logger, signal: controller.signal, transfer, checkIdentity, onCloudSaveStatus, getGameSession: capability => gameSession.get(capability),
         });
         if(capability==='cloudSave'&&saveCache&&getSaveOwner){
@@ -130,7 +132,7 @@ export function createWebGameHost({
           post(bridgeEnvelope({ type: 'response', id: request.id, ok: true, result }), capability !== 'multiplayer');
         } catch (error) {
           reject(request.id, error);
-          if (['GAME_SESSION_INVALID','GAME_SESSION_RELEASE_NOT_ALLOWED','AUTH_REQUIRED'].includes(error.code)) {
+          if (['GAME_SESSION_INVALID','GAME_SESSION_RELEASE_NOT_ALLOWED','AUTH_REQUIRED'].includes(error.code) && !(error.code === 'AUTH_REQUIRED' && request.method === 'shares.create')) {
             if (bridgeMethodCapability(request.method) === 'cloudSave') onCloudSaveStatus?.({state:'blocked',code:error.code});
             sendEvent('bridge.closed', {reason:'authorization_revoked'}); close();
           }

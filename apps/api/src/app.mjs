@@ -1,3 +1,5 @@
+import { GameShareError } from './game-share-service.mjs';
+import { registerGameShareRoutes } from './game-share-routes.mjs';
 import {CompetitionError} from './competition-service.mjs';
 import {registerCompetitionRoutes} from './competition-routes.mjs';
 import {registerSaveOperationsRoutes} from './save-operations-routes.mjs';
@@ -68,6 +70,7 @@ export function createApp(dependencies) {
     storageCapacityService,
     realtimeTicketService,
     gameSessionService,
+    gameShareService,
     competitionService,
     gameSaveService,
     saveLibraryService,
@@ -108,7 +111,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -190,6 +193,7 @@ export function createApp(dependencies) {
   if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
   if (config.cloudSaveEnabled === true && saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
   if (config.cloudSaveEnabled === true && gameSaveService) registerGameSaveRoutes(app, { service: gameSaveService, requireAuth });
+  if (gameShareService) registerGameShareRoutes(app, {service:gameShareService,requireAuth});
   if (gameSessionService) registerGameSessionRoutes(app, { service: gameSessionService, requireAuth });
   const identifyOptional = async request => {
     request.actor = request.headers.authorization ? await authService.authenticateBearer(request.headers.authorization) : null;

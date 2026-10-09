@@ -58,3 +58,9 @@ test('web validator still requires an explicit index when several HTML files exi
     await assert.rejects(validateWebZip(archive, path.join(directory, 'output')), error => error.code === 'ENTRY_MISSING');
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test('Bingo fileExport/shareLinks manifest validates while unknown capabilities remain rejected',async()=>{
+ const {validateWebZip}=await import('../../apps/api/src/web-zip-validator.mjs');const directory=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-sharing-validator-'));
+ try{for(const capabilities of [['fileExport','shareLinks'],['fileExport','shellExec']]){const key=capabilities[1],archive=path.join(directory,key+'.zip');await fs.writeFile(archive,makeZip([{name:'index.html',data:'<!doctype html><title>Bingo</title>'},{name:'platform.json',data:JSON.stringify({version:1,entry:'index.html',capabilities})}]));if(key==='shareLinks'){assert.deepEqual((await validateWebZip(archive,path.join(directory,key))).approvedCapabilities,capabilities);}else await assert.rejects(validateWebZip(archive,path.join(directory,key)),{code:'CAPABILITY_UNSUPPORTED'});}}
+ finally{assert.equal(path.dirname(directory),os.tmpdir());await fs.rm(directory,{recursive:true,force:true});}
+});

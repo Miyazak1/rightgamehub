@@ -15,7 +15,7 @@ test('work leaderboard ranks before pagination and protects dates, puzzle groups
   const {createApp}=await import('../../apps/api/src/app.mjs');
   const database=await createCommunityTestDatabase(databaseUrl),pool=database.pool;let app;
   t.after(async()=>{await app?.close();await database.close();});
-  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,54);
+  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,55);
   const ids=Array.from({length:65},()=>crypto.randomUUID());
   await pool.query(`INSERT INTO users(id,display_name,social_visibility,status)
     SELECT id,name,visibility,status FROM jsonb_to_recordset($1::jsonb) AS x(id uuid,name text,visibility text,status text)`,

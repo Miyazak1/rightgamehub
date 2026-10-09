@@ -1,9 +1,10 @@
+import { FILE_EXPORT_BYTES } from './sharing-protocol.mjs';
 export const WEB_GAME_BRIDGE_PROTOCOL = 'gamehub.web-game.v1';
 export const WEB_GAME_BRIDGE_VERSION = 1;
 export const WEB_GAME_BRIDGE_MAX_BYTES = 32 * 1024;
 
 export const WEB_GAME_BRIDGE_METHODS = Object.freeze([
-  'player.get',
+  'player.get', 'files.download', 'shares.create', 'shares.current',
   'cloudSave.local.read',
   'cloudSave.local.write',
   'cloudSave.local.sync',
@@ -76,6 +77,7 @@ export function isBridgeConnectMessage(value) {
 }
 
 export function parseBridgeRequest(value) {
+  if (value?.method === 'files.download' && (!(value.params?.data instanceof ArrayBuffer) || !value.params.data.byteLength || value.params.data.byteLength > FILE_EXPORT_BYTES)) throw Object.assign(new Error('Export data must be an ArrayBuffer within 2 MiB.'), {code:'FILE_EXPORT_INVALID'});
   if (!value || typeof value !== 'object' || Array.isArray(value) || byteLength(value) > WEB_GAME_BRIDGE_MAX_BYTES) throw Object.assign(new Error('Bridge request is invalid or too large.'), { code: 'BRIDGE_REQUEST_INVALID' });
   const allowed = new Set(['protocol','version','type','id','method','params']);
   if (Object.keys(value).some(key => !allowed.has(key)) || value.protocol !== WEB_GAME_BRIDGE_PROTOCOL || value.version !== WEB_GAME_BRIDGE_VERSION || value.type !== 'request') throw Object.assign(new Error('Bridge request envelope is invalid.'), { code: 'BRIDGE_REQUEST_INVALID' });
@@ -89,5 +91,7 @@ export const bridgeEnvelope = fields => ({ protocol: WEB_GAME_BRIDGE_PROTOCOL, v
 
 export function bridgeMethodCapability(method) {
   if (!methods.has(method)) return null;
+  if (method.startsWith('files.')) return 'fileExport';
+  if (method.startsWith('shares.')) return 'shareLinks';
   return method === 'player.get' ? 'identity' : method.split('.')[0];
 }

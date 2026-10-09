@@ -52,7 +52,13 @@ export interface MultiplayerRooms {
   leave(roomId: string): Promise<unknown>; ready(roomId: string, ready: boolean): Promise<unknown>;
   start(roomId: string): Promise<unknown>; subscribe(roomId: string): Promise<unknown>; unsubscribe(roomId: string): Promise<unknown>;
 }
+export interface GameFileExport { filename:string; mimeType:'image/png'|'application/json'; data:ArrayBuffer }
+export interface GameShareInput { title:string; payload:Record<string,unknown> }
+export interface GameShareLink { code:string; url:string; expiresAt:string }
+export interface CurrentGameShare extends GameShareInput { code:string; workId:string; releaseId:string; expiresAt:string }
 export interface GameHubClient {
+  files: { download(input:GameFileExport):Promise<{status:'saved'|'download_started';filename:string}> };
+  shares: { create(input:GameShareInput):Promise<GameShareLink>; current():Promise<CurrentGameShare|null> };
   connect(): Promise<string[]>;
   getPlayer(): Promise<{id: string; displayName: string; avatar: unknown | null}>;
   cloudSave: CloudSaveClient;

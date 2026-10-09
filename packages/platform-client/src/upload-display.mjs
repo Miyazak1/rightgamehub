@@ -1,4 +1,5 @@
 const ERROR_MESSAGES = Object.freeze({
+  CAPABILITY_UNSUPPORTED: '请检查 ZIP 根目录 platform.json 的 capabilities：当前支持 fullscreen、pointerLock、multiplayer、localSave、competition、fileExport、shareLinks。能力名称区分大小写，未知名称会拒绝上传。',
   ENTRY_MISSING: 'ZIP 中没有可用的网页入口。若只有一个 HTML 文件，平台会自动识别；若包含多个 HTML，请把主入口命名为 index.html 并放在 ZIP 根目录。',
 });
 

@@ -95,6 +95,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     nodeEnv,
     host: env.API_HOST ?? '127.0.0.1',
     port: integer(env.API_PORT, 3090, 'API_PORT', 1, 65535),
+    gameShareSiteOrigin: env.GAME_SHARE_SITE_ORIGIN?.trim() || 'https://mooyu.fun',
     databaseUrl: databaseUrl ?? '',
     databaseSsl: env.DATABASE_SSL === 'true',
     otpHmacKey,

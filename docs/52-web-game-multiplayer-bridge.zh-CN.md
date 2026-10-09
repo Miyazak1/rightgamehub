@@ -87,3 +87,5 @@ GameHub 的 Web ZIP 继续运行在无平台凭据、默认无外网的隔离 if
 - 重连后可恢复房间和对局订阅；播放器退出后端口及 socket 被释放。
 - API、Web 和生产镜像均能在 frozen lockfile 下构建。
 
+
+2026-10-09 更新：通用桥也支持独立声明的 fileExport/shareLinks；最新能力列表与隔离约束见 [文件导出与分享指南](game-file-export-share-links.zh-CN.md)。只声明这些能力的游戏也会创建桥。

@@ -10,7 +10,7 @@ import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
 const invalid = (code, message) => Object.assign(new Error(message), { code });
-const supportedCapabilities = new Set(['fullscreen', 'multiplayer', 'pointerLock', 'localSave', 'competition']);
+const supportedCapabilities = new Set(['fullscreen', 'multiplayer', 'pointerLock', 'localSave', 'competition', 'fileExport', 'shareLinks']);
 
 async function readPlatformManifest(output, assets) {
   if (!assets['platform.json']) {
@@ -32,7 +32,7 @@ async function readPlatformManifest(output, assets) {
   if (Object.keys(value).some(key => !allowed.has(key)) || value.version !== 1) throw invalid('MANIFEST_INVALID', 'platform.json has unknown fields or version.');
   const entry = validateAssetPath(value.entry ?? 'index.html');
   const capabilities = value.capabilities ?? [];
-  if (!Array.isArray(capabilities) || new Set(capabilities).size !== capabilities.length || capabilities.some(item => typeof item !== 'string' || !supportedCapabilities.has(item))) throw invalid('CAPABILITY_UNSUPPORTED', 'platform.json requests unsupported capabilities.');
+  if (!Array.isArray(capabilities) || new Set(capabilities).size !== capabilities.length || capabilities.some(item => typeof item !== 'string' || !supportedCapabilities.has(item))) throw invalid('CAPABILITY_UNSUPPORTED', 'platform.json capabilities 仅支持 fullscreen、pointerLock、multiplayer、localSave、competition、fileExport、shareLinks；请检查拼写并删除不支持的声明。');
   if (!assets[entry] || !/^text\/html/.test(assets[entry].mime)) throw invalid('MANIFEST_INVALID', 'The declared entry must be an HTML file in the package.');
   if(capabilities.includes('competition')!==(value.competition!==undefined))throw invalid('MANIFEST_COMPETITION_INVALID','Declare both the competition capability and its board definitions.');
   return { entry, approvedCapabilities: [...capabilities].sort(), ...(value.competition?{competition:normalizeCompetition(value.competition)}:{}) };

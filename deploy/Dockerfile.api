@@ -20,6 +20,7 @@ COPY --from=dependencies /app/packages/creator-tools/node_modules ./packages/cre
 COPY --chown=node:node apps/api ./apps/api
 COPY --chown=node:node packages/creator-tools ./packages/creator-tools
 COPY --chown=node:node packages/contracts ./packages/contracts
+COPY --chown=node:node packages/web-game-sdk/src/sharing-protocol.mjs ./packages/web-game-sdk/src/sharing-protocol.mjs
 COPY --chown=node:node packages/competition-rules ./packages/competition-rules
 COPY --chown=node:node packages/multiplayer-protocol ./packages/multiplayer-protocol
 COPY --chown=node:node packages/rules-sdk ./packages/rules-sdk

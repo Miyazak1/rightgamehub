@@ -83,7 +83,7 @@ export class PostgresCatalogRepository {
         WHERE r.work_id=$1 AND r.target_key='web'
           AND ($2::uuid IS NULL AND r.id=t.current_release_id OR $2::uuid IS NOT NULL AND r.id=$2)
           AND w.state='published' AND w.visibility='public' AND t.state='published'
-          AND r.validation_state='ready' AND r.serving_state='enabled'`, [workId, releaseId],
+          AND r.validation_state='ready' AND r.serving_state='enabled' AND (r.retire_after IS NULL OR r.retire_after>clock_timestamp())`, [workId, releaseId],
     )).rows[0] ?? null;
   }
 }

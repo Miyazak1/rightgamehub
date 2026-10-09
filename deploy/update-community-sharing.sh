@@ -22,7 +22,7 @@ cp deploy/.env.prod "$RECORD/env.before"
 # Keep the current local branch and only fast-forward to a release containing it.
 git merge --ff-only "$EXPECTED"
 test "$(git rev-parse HEAD)" = "$EXPECTED"
-test -f apps/api/migrations/0054_contribution_workflow.sql
+test -f apps/api/migrations/0055_game_share_links.sql
 
 set_env() {
   sed -i -E "/^[[:space:]]*(export[[:space:]]+)?$1[[:space:]]*=/d" deploy/.env.prod
@@ -57,12 +57,17 @@ dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 const get=async path=>{const response=await fetch('http://127.0.0.1:3090'+path,{signal:AbortSignal.timeout(10000)});assert.equal(response.status,200);return (await response.json()).data;};
 const ready=await get('/ready'),cap=await get('/v1/community/capabilities'),feed=await get('/v1/community/posts');
+const shareRead=await fetch('http://127.0.0.1:3090/v1/game-shares/'+ 'A'.repeat(32));
+assert.equal(shareRead.status,404);assert.equal((await shareRead.json()).error.code,'SHARE_UNAVAILABLE');
+const shareCreate=await fetch('http://127.0.0.1:3090/v1/game-shares',{method:'POST',headers:{'Content-Type':'application/json','X-GameHub-Session':'A'.repeat(43)},body:JSON.stringify({title:'deployment check',payload:{}})});
+assert.equal(shareCreate.status,401);assert.equal((await shareCreate.json()).error.code,'AUTH_REQUIRED');
+assert.equal(new URL(process.env.GAME_SHARE_SITE_ORIGIN).protocol,'https:');
 const tasks=await get('/v1/contribution-tasks?limit=1');assert.ok(Array.isArray(tasks));
 const privateTasks=await fetch('http://127.0.0.1:3090/v1/contribution-tasks?mine=true');assert.equal(privateTasks.status,401);
 const leaderboard=await get('/v1/works/gamehub-guess-baike/leaderboard?limit=10');
 assert.equal(leaderboard.workId,'gamehub-guess-baike');assert.equal(leaderboard.myEntry,null);
 assert.ok(Array.isArray(leaderboard.entries)&&leaderboard.entries.length<=10);
-assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,54);assert.equal(ready.migrations.applied,54);
+assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,55);assert.equal(ready.migrations.applied,55);
 const tileBoards=await get('/v1/works/7359a350-cc0a-4a09-875d-cec9b5b8f93f/leaderboards');
 assert.ok(tileBoards.some(board=>board.key==='classic-score'&&board.verification==='replay_verified'));
 const tileLaunch=await get('/v1/works/7359a350-cc0a-4a09-875d-cec9b5b8f93f/launch');assert.equal(tileLaunch.capabilities.competition,true);

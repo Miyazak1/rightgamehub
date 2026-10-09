@@ -326,6 +326,7 @@ async function activate(context) {
       const nonce = randomBytes(18).toString('base64');
       const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
       view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>GameHub</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
+      const exportRequests=new Map();
       const subscription = view.webview.onDidReceiveMessage(async message => {
         if (!message || message.type !== 'gamehub:request' || !Number.isSafeInteger(message.id)) return;
         try {
@@ -338,6 +339,15 @@ async function activate(context) {
           else if (message.operation.startsWith('saveCache.')) {
             if(!runSaveStoreRequest)throw Object.assign(new Error('本机存档组件不可用。'),{code:'SAVE_LOCAL_STORAGE_UNAVAILABLE'});
             result=await runSaveStoreRequest({store:saveStore,operation:message.operation.slice(10),payload:message.payload,origin:apiUrl.origin,getTokens:async()=>{const value=await context.secrets.get(TOKEN_KEY);return value?JSON.parse(value):null;}});
+          }
+          else if (message.operation === 'files.cancel') { exportRequests.get(message.payload?.operationId)?.abort(); }
+          else if (message.operation === 'files.download') {
+            const operationId=message.payload?.operationId;
+            if(typeof operationId!=='string'||operationId.length!==36||exportRequests.size)throw Object.assign(new Error('已有导出正在处理中。'),{code:'FILE_EXPORT_BUSY',retryable:true});
+            const controller=new AbortController();exportRequests.set(operationId,controller);
+            const timer=setTimeout(()=>controller.abort(),120000);
+            try { result=await require('./media/file-export.cjs').exportNativeFile(message.payload,{vscode,apiOrigin:apiUrl.origin,signal:controller.signal,remote:Boolean(vscode.env.remoteName)}); }
+            finally {clearTimeout(timer);exportRequests.delete(operationId);}
           }
           else if (message.operation === 'external.open') result = await vscode.env.openExternal(vscode.Uri.parse(trustedExternalUrl(message.payload?.url).href));
           else if (message.operation === 'desktop.status') {
@@ -358,7 +368,7 @@ async function activate(context) {
         } catch (error) { await view.webview.postMessage({ type: 'gamehub:response', id: message.id, ok: false, error: String(error.message || error), errorCode: error.code, retryable: error.retryable===true }); }
       });
       const themeSubscription = vscode.window.onDidChangeActiveColorTheme(() => view.webview.postMessage({ type: 'gamehub:theme', theme: { mode: themeMode() } }));
-      view.onDidDispose(() => { subscription.dispose(); themeSubscription.dispose(); if (currentView === view) currentView = undefined; });
+      view.onDidDispose(() => { for(const controller of exportRequests.values())controller.abort(); exportRequests.clear(); subscription.dispose(); themeSubscription.dispose(); if (currentView === view) currentView = undefined; });
     },
   };
   context.subscriptions.push(vscode.window.registerWebviewViewProvider('gamehub.platform', provider, { webviewOptions: { retainContextWhenHidden: true } }));

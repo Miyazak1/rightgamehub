@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from '@gamehub/platform-client';
-import { createEditorHostAdapter } from '@gamehub/host-contract';
+import { createEditorHostAdapter, isTrustedEditorMessage } from '@gamehub/host-contract';
 import { createApiClient } from '@gamehub/platform-api-client';
 
 const vscode = acquireVsCodeApi();
@@ -13,7 +13,7 @@ const bridge = {
   call(operation, payload) {
     const id = ++sequence;
     return new Promise((resolve, reject) => {
-      const timeoutMs = operation === 'desktop.prepare' ? 31 * 60 * 1000 : operation === 'desktop.launch' ? 30000 : 10000;
+      const timeoutMs = operation === 'desktop.prepare' ? 31 * 60 * 1000 : operation === 'files.download' ? 125000 : operation === 'desktop.launch' ? 30000 : 10000;
       const timer = setTimeout(() => { pending.delete(id); reject(new Error('宿主操作超时。')); }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
       vscode.postMessage({ type: 'gamehub:request', id, operation, payload });
@@ -22,6 +22,7 @@ const bridge = {
   onTheme(listener) { themeListeners.add(listener); return () => themeListeners.delete(listener); },
 };
 window.addEventListener('message', event => {
+  if (!isTrustedEditorMessage(event, window)) return;
   const message = event.data;
   if (message?.type === 'gamehub:theme') { themeListeners.forEach(listener => listener(message.theme)); return; }
   if (message?.type !== 'gamehub:response' || !Number.isSafeInteger(message.id)) return;

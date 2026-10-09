@@ -10,6 +10,7 @@
     },
     "./protocol": "./src/protocol.mjs",
     "./transfer": "./src/transfer.mjs",
-    "./cloud-save-protocol": "./src/cloud-save-protocol.mjs"
+    "./cloud-save-protocol": "./src/cloud-save-protocol.mjs",
+    "./sharing-protocol": "./src/sharing-protocol.mjs"
   }
 }

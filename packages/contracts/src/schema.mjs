@@ -141,14 +141,18 @@ export const schemas = Object.freeze({
     refreshToken: { type: 'string', minLength: 32 }, refreshExpiresAt: dateTime,
     grantId: id, profile: { $ref: '#/components/schemas/Profile' },
   }),
+  GameShareParams: object({code:{type:'string',pattern:'^[A-Za-z0-9_-]{32}$'}}),
+  CreateGameShareRequest: object({title:{type:'string',minLength:1,maxLength:120},payload:{type:'object',additionalProperties:true}}),
+  GameShareLink: object({code:{type:'string',pattern:'^[A-Za-z0-9_-]{32}$'},url:{type:'string',format:'uri'},expiresAt:dateTime}),
+  CurrentGameShare: object({code:{type:'string',pattern:'^[A-Za-z0-9_-]{32}$'},title:{type:'string'},payload:{type:'object',additionalProperties:true},workId:id,releaseId:id,expiresAt:dateTime}),
   CreateGameSessionRequest: object({ workId: id, releaseId: id, channel: stringEnum(['production','preview']), launchNonce: id }),
   GameSession: object({
     gameSessionId: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' }, expiresAt: dateTime,
-    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition']), uniqueItems: true },
+    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition','fileExport','shareLinks']), uniqueItems: true },
   }),
   GameSessionStatus: object({
     active: { type: 'boolean', const: true }, expiresAt: dateTime,
-    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition']), uniqueItems: true },
+    capabilities: { type: 'array', items: stringEnum(['identity','multiplayer','cloudSave','competition','fileExport','shareLinks']), uniqueItems: true },
   }),
   GameSessionRevocation: object({ revoked: { type: 'boolean', const: true } }),
   RealtimeTicket: object({
@@ -416,7 +420,7 @@ export const schemas = Object.freeze({
     releaseLabel: { type: 'string', minLength: 1, maxLength: 64 },
     entryUrl: { type: 'string', format: 'uri' }, runtimeOrigin: { type: 'string', format: 'uri' },
     playerProtocol: object({ min: { type: 'integer', minimum: 1 }, max: { type: 'integer', minimum: 1 } }),
-    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' }, localSave: { type: 'boolean' }, cloudSave: { type: 'boolean' }, competition: { type: 'boolean' } }, ['fullscreen', 'pointerLock', 'multiplayer']),
+    capabilities: object({ fullscreen: { type: 'boolean' }, pointerLock: { type: 'boolean' }, multiplayer: { type: 'boolean' }, localSave: { type: 'boolean' }, cloudSave: { type: 'boolean' }, competition: { type: 'boolean' }, fileExport: { type: 'boolean' }, shareLinks: { type: 'boolean' } }, ['fullscreen', 'pointerLock', 'multiplayer']),
   }),
   LibraryState: object({
     workId: workKey,
@@ -707,6 +711,9 @@ export const operations = Object.freeze([
   {"method":"get","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/history","operationId":"listGameSaveHistory","response":"GameSaveHistory","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveHistory":true},
   {"method":"post","path":"/v1/me/game-saves/{workId}/slots/{slotKey}/restore","operationId":"restoreGameSave","response":"GameSaveWriteResult","auth":"bearer","gameSession":true,"pathId":"workId","saveScope":true,"saveSlot":true,"saveMutation":true,"request":"RestoreGameSaveRequest"},
 
+  {method:'post',path:'/v1/game-shares',operationId:'createGameShare',auth:'bearer',gameSession:true,request:'CreateGameShareRequest',response:'GameShareLink',successStatus:'201'},
+  {method:'get',path:'/v1/game-shares/{code}',operationId:'getGameShare',auth:'anonymous',pathShareCode:true,response:'CurrentGameShare'},
+  {method:'delete',path:'/v1/game-shares/{code}',operationId:'revokeGameShare',auth:'bearer',pathShareCode:true,response:'GameSessionRevocation'},
   { method: 'post', path: '/v1/game-sessions', operationId: 'createGameSession', auth: 'bearer', request: 'CreateGameSessionRequest', response: 'GameSession', successStatus: '201' },
   { method: 'get', path: '/v1/game-sessions/current', operationId: 'getGameSession', auth: 'bearer', response: 'GameSessionStatus', gameSession: true },
   { method: 'delete', path: '/v1/game-sessions/current', operationId: 'revokeGameSession', auth: 'bearer', response: 'GameSessionRevocation', gameSession: true },
@@ -869,6 +876,7 @@ export function createOpenApiDocument() {
     );
     if (operation.pathId) parameters.push({ name: operation.pathId, in: 'path', required: true, schema: id });
     if (operation.pathHandle) parameters.push({ name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' } });
+    if (operation.pathShareCode) parameters.push({name:'code',in:'path',required:true,schema:{type:'string',pattern:'^[A-Za-z0-9_-]{32}$'}});
     if (operation.pathCode) parameters.push({ name: 'code', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{10,24}$' } });
       if (operation.pathPuzzleId) parameters.push({ name: 'puzzleId', in: 'path', required: true, schema: { type: 'string', minLength: 1, maxLength: 120 } });
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });

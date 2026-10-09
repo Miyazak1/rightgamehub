@@ -1404,3 +1404,5 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   .upload-timeline strong { font-size: 11px; }
   .upload-timeline small { font-size: 10px; line-height: 1.5; }
 }
+
+.game-export-dialog{max-width:min(440px,calc(100vw - 32px));padding:24px;color:var(--gh-primary);background:var(--gh-panel);border:2px solid var(--gh-border)}.game-export-dialog::backdrop{background:#0008}.game-export-dialog p{overflow-wrap:anywhere}.game-export-dialog button{padding:10px 14px;margin:8px 8px 0 0;cursor:pointer}

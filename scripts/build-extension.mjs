@@ -27,3 +27,5 @@ await build({
   logLevel: 'silent',
 });
 console.log('Built the shared GameHub client for VS Code/Cursor WebviewView.');
+
+await build({entryPoints:[fileURLToPath(new URL('src/file-export.mjs',extensionRoot))],outfile:fileURLToPath(new URL('file-export.cjs',out)),bundle:true,format:'cjs',platform:'node',target:['node20'],logLevel:'silent'});

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { PostgresGameSaveRepository } from './game-save-repository.mjs';
 import { createGameSaveService } from './game-save-service.mjs';
 import { PostgresGameSessionRepository } from './game-session-repository.mjs';
+import { createGameShareService } from './game-share-service.mjs';
 import { createGameSessionService } from './game-session-service.mjs';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.mjs';
@@ -170,6 +171,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const sourceBuildService = createSourceBuildService({ repository:sourceBuildRepository,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const sourceBuildWorker = createSourceBuildWorker({ repository:sourceBuildRepository,githubClient,buildRunner:createSourceBuildRunner({ mode:config.sourceBuilderExecutionMode,builderRoot:config.sourceBuilderRoot }),quarantineStore,storageCapacityService,uploadRepository,workingRoot:config.sourceBuildWorkingRoot,enabled:config.sourceBuildEnabled,builderImageDigest:config.sourceBuilderImageDigest });
   const gameSessionService = createGameSessionService({ cloudSaveEnabled: config.cloudSaveEnabled, repository: new PostgresGameSessionRepository(database.pool) });
+  const gameShareService = createGameShareService({pool:database.pool,gameSessionService,siteOrigin:config.gameShareSiteOrigin});
   const competitionService = createCompetitionService({pool:database.pool,gameSessionService,socialService});
   const gameSaveRepository = config.cloudSaveEnabled ? new PostgresGameSaveRepository(database.pool,{storageProtection:config.saveStorageProtection}) : null;
   const saveMetrics=config.cloudSaveEnabled ? createSaveHealthMetrics({pool:database.pool}) : null;
@@ -181,6 +183,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     saveLibraryService,
     saveOperationsService,
     gameSessionService,
+    gameShareService,
     competitionService,
     config,
     database,
@@ -211,7 +214,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return {
     config,
     database,
@@ -245,6 +248,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
     gameSessionService,
+    gameShareService,
     competitionService,
     runtimeEdgeApp,
     gameSaveService,

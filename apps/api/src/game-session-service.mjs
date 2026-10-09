@@ -11,6 +11,7 @@ const denied = () => { throw new GameSessionError('GAME_SESSION_INVALID', 401, '
 export function deriveGameSessionScope(row, { cloudSaveEnabled = true } = {}) {
   const requested = new Set(Array.isArray(row.approved_capabilities) ? row.approved_capabilities : []);
   const capabilities = ['identity'];
+  for (const key of ['fileExport','shareLinks']) if (requested.has(key)) capabilities.push(key);
   if (requested.has('multiplayer')) capabilities.push('multiplayer');
   const namespaces = {};
   if (cloudSaveEnabled && row.scope_status === 'active' && requested.has('cloudSave')) {

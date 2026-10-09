@@ -32,7 +32,7 @@ async function setup(t, capabilities, modules = {}, api = {}, options = {}) {
     port.addEventListener('message', receive); port.postMessage(bridgeEnvelope({ type: 'request', id, method, params }));
   });
   t.after(() => { bridge.close(); for (const port of ports) port.close(); });
-  return { connect, request, bridge, get ready() { return ready; } };
+  return { host, game, connect, request, bridge, get ready() { return ready; } };
 }
 test('generic bridge supports save-only, competition-only, multiplayer-only and combinations without extra authority', async t => {
   for (const capabilities of [{ cloudSave: true }, { competition: true }, { multiplayer: true }, { cloudSave: true, competition: true, multiplayer: true }]) {
@@ -133,4 +133,19 @@ test('legacy multiplayer responses retain their existing size behavior',async t=
   const payload=[{id:'mode',configuration:'a'.repeat(40000)}];
   const state=await setup(t,{multiplayer:true},{multiplayer:()=>({handlers:{'multiplayer.modes.list':async()=>payload}})});
   state.connect();assert.deepEqual((await state.request('multiplayer.modes.list')).result,payload);
+});
+
+test('file/share-only launches expose declared methods while refusing cross-frame and undeclared requests',async t=>{
+ const descriptor={workId:crypto.randomUUID(),releaseId:crypto.randomUUID(),capabilities:{fileExport:true,shareLinks:true}};let exports=0;
+ const api={getLaunch:async()=>({data:descriptor}),createGameSession:async()=>({data:{gameSessionId:'parent-secret',expiresAt:new Date(Date.now()+300000).toISOString(),capabilities:['shareLinks']}}),createGameShare:async token=>{assert.equal(token,'parent-secret');return {data:{code:'A'.repeat(32),url:'https://mooyu.fun/#/s/'+ 'A'.repeat(32)}};}};
+ const s=await setup(t,descriptor.capabilities,{},api,{descriptor,exportFile:async()=>{exports++;return {status:'saved'};}});const {bridgeEnvelope}=await import('../../packages/web-game-sdk/src/protocol.mjs');s.host.dispatch('message',{source:{},data:bridgeEnvelope({type:'gamehub.bridge.connect',clientNonce:'0123456789abcdef'})});assert.equal(s.ready,undefined);s.connect();assert.deepEqual(s.ready.capabilities,['identity','fileExport','shareLinks']);
+ const request={filename:'Bingo.json',mimeType:'application/json',data:new TextEncoder().encode('{}').buffer};assert.equal((await s.request('files.download',request)).result.status,'saved');assert.equal(exports,1);assert.equal((await s.request('shares.current')).result,null);
+ assert.equal((await s.request('shares.create',{title:'Bingo',payload:{kind:'bingo-pack'}})).ok,true);assert.equal((await s.request('shares.current',{code:'untrusted'})).ok,false);
+ const denied=await setup(t,{},{});denied.connect();assert.equal((await denied.request('files.download',request)).error.code,'BRIDGE_CAPABILITY_NOT_GRANTED');assert.equal((await denied.request('shares.create',{title:'Bingo',payload:{}})).error.code,'BRIDGE_CAPABILITY_NOT_GRANTED');
+});
+
+test('reconnecting the iframe cannot reset export admission limits',async t=>{
+ const descriptor={workId:crypto.randomUUID(),releaseId:crypto.randomUUID(),capabilities:{fileExport:true}};
+ const s=await setup(t,descriptor.capabilities,{}, {getLaunch:async()=>({data:descriptor})},{descriptor,exportFile:async()=>({status:'saved'})});s.connect();
+ const input={filename:'a.json',mimeType:'application/json',data:new TextEncoder().encode('{}').buffer};for(let i=0;i<5;i++)assert.equal((await s.request('files.download',input)).ok,true);s.connect();assert.equal((await s.request('files.download',input)).error.code,'FILE_EXPORT_BUSY');
 });

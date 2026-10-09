@@ -1,3 +1,5 @@
+import {createBrowserFileExporter} from './file-export.mjs';
+import {validateFileExport} from '../../web-game-sdk/src/sharing-protocol.mjs';
 import {createIndexedDbSaveStore} from '../../save-cache/src/indexeddb-store.mjs';
 import {createSaveStoreProxy} from '../../save-cache/src/store-rpc.mjs';
 const MODES = new Set(['light', 'dark', 'high-contrast']);
@@ -43,6 +45,7 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
   const mediaChanged = () => override === 'system' && emit();
   media?.addEventListener?.('change', mediaChanged);
   return {
+    files:createBrowserFileExporter(browserWindow),
     saveCache,
     saveOrigin:browserWindow?.location?.origin,
     async getCapabilities() {
@@ -174,6 +177,7 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
   const launchDesktopRelease = release => desktopRequest('run', release);
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
+    files:createBrowserFileExporter(hostWindow,{allowAnchor:false}),
     apiBaseUrl,
     saveOrigin:apiBaseUrl?new URL(apiBaseUrl).origin:hostWindow.location?.origin,
     saveCache:createSaveStoreProxy(async(operation,payload)=>{
@@ -265,6 +269,12 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
   signal?.addEventListener?.('abort', dispose, { once: true });
   return {
     apiBaseUrl,
+    files:{async download(input,{signal,verify,descriptor}={}){
+      const file=validateFileExport(input);await verify();if(signal?.aborted)throw Object.assign(new Error('导出已取消。'),{code:'FILE_EXPORT_CANCELLED'});
+      const operationId=hostWindow.crypto.randomUUID();let binary='';for(const byte of new Uint8Array(file.data))binary+=String.fromCharCode(byte);
+      const cancel=()=>{bridge.call('files.cancel',{operationId}).catch(()=>{});};signal?.addEventListener('abort',cancel,{once:true});
+      try{const result=await bridge.call('files.download',{operationId,filename:file.filename,mimeType:file.mimeType,dataBase64:hostWindow.btoa(binary),workId:descriptor.workId,releaseId:descriptor.releaseId});if(signal?.aborted)throw Object.assign(new Error('导出已取消。'),{code:'FILE_EXPORT_CANCELLED'});return result;}finally{signal?.removeEventListener('abort',cancel);}
+    }},
     saveOrigin:new URL(apiBaseUrl).origin,
     saveCache:createSaveStoreProxy((operation,payload)=>bridge.call('saveCache.'+operation,payload)),
     runtimeDomain: String(bootstrap.runtimeDomain || '').trim() || undefined,
@@ -336,4 +346,10 @@ export function applyThemeTokens(root, theme) {
   for (const [key, value] of Object.entries(tokens)) root.style.setProperty(`--gh-${key}`, value);
   root.style.colorScheme = theme.mode === 'light' ? 'light' : 'dark';
   return tokens;
+}
+
+// VS Code's webview wrapper forwards extension replies from the parent window.
+// Game iframes are children and must never impersonate credential or native-file responses.
+export function isTrustedEditorMessage(event, hostWindow) {
+  return event?.source === hostWindow || Boolean(hostWindow?.parent && event?.source === hostWindow.parent);
 }

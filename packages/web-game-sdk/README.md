@@ -120,3 +120,7 @@ const status = await gamehub.cloudSave.getSyncStatus(resource);
 常见错误：`SAVE_CONFLICT`（412）、`SAVE_IDEMPOTENCY_MISMATCH`（409）、`SAVE_DOCUMENT_TOO_LARGE`、`SAVE_TRANSFER_BUSY`、`BRIDGE_TIMEOUT`、`BRIDGE_CLOSED`。超时不能证明提交未发生。账号切换或重新连接会使旧连接失效，不能把旧账号的 pending 交给新账号重试。
 
 协议目录中的冲突解决和导出方法仍是保留名称，当前宿主没有注册对应 handler。本版本未提供自动覆盖、持久重试、匿名导入或离线保证。游戏适配、真实网页/Cursor 双宿主验收及 S2/S3 仍须完成。
+
+## 文件导出与游戏分享
+
+`fileExport` / `shareLinks` 已提供 `files.download`、`shares.create` 和 `shares.current`。接入、额度、失败代码和 AI 最小示例见 [文件导出与分享指南](../../docs/game-file-export-share-links.zh-CN.md)。分享创建需要登录，读取可匿名；文件保存必须经过可信宿主确认。
