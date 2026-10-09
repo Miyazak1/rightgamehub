@@ -189,8 +189,6 @@ export class PostgresGitHubSourceRepository {
         );
         return result;
       }
-      const usage = (await client.query('SELECT work_count FROM creator_usage WHERE user_id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
-      if (!usage || usage.work_count >= 5) throw new GitHubSourceError('QUOTA_EXCEEDED', 429, 'The work quota has been reached.');
       const publicEvidence = sourceImport.visibility === 'public' && sourceImport.license_status === 'recognized';
       const work = (await client.query(
         `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,repository_url,license_spdx)

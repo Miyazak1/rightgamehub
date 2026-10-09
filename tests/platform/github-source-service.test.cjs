@@ -45,7 +45,7 @@ test('source draft creation requires creator permission and an idempotency key',
   assert.match(input.requestHash, /^[a-f0-9]{64}$/u);
 });
 
-test('an already imported commit restores its existing draft without consuming quota', async () => {
+test('an already imported commit restores its existing draft without incrementing usage', async () => {
   const workId = crypto.randomUUID();
   const importId = crypto.randomUUID();
   const now = new Date();
@@ -66,7 +66,7 @@ test('an already imported commit restores its existing draft without consuming q
     if (sql.includes('FROM github_source_imports i JOIN')) return { rows: [{ id: importId, work_id: workId, connection_status: 'active', access_state: 'active' }] };
     if (sql.includes('SELECT * FROM works')) return { rows: [work] };
     if (sql.includes('SELECT * FROM work_sources')) return { rows: [source] };
-    if (sql.includes('SELECT work_count FROM creator_usage')) { usageChecked = true; return { rows: [{ work_count: 5 }] }; }
+    if (sql.includes('creator_usage')) { usageChecked = true; return { rows: [] }; }
     throw new Error(`Unexpected query: ${sql}`);
   } };
   const { PostgresGitHubSourceRepository } = await import(moduleUrl);

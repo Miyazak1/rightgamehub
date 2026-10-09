@@ -100,8 +100,6 @@ export class PostgresWorkRepository {
       if (replay) return replay;
       const user = (await client.query('SELECT status,can_publish FROM users WHERE id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
       if (!user || user.status !== 'active' || !user.can_publish) throw new WorkError('PUBLISH_NOT_ENABLED', 403, 'Publishing is not enabled for this account.');
-      const usage = (await client.query('SELECT work_count FROM creator_usage WHERE user_id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
-      if (!usage || usage.work_count >= 5) throw new WorkError('QUOTA_EXCEEDED', 429, 'The work quota has been reached.');
       const row = (await client.query(
         `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,agent_label,repository_url,license_spdx)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
