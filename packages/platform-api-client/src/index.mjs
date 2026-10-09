@@ -310,6 +310,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     getGitHubSourceAdminOverview: options => request('/v1/admin/source-imports/overview', { ...options, auth: true }),
     listGitHubSourceAudit: (limit = 50, options) => request(`/v1/admin/source-imports/audit?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
     createWork: (body, options) => request('/v1/creator/works', { ...options, method: 'POST', body, auth: true, idempotent: true }),
+    updateWork: (workId, revision, body, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}`, { ...options, method: 'PATCH', body, auth: true, idempotent: true, headers: { 'Idempotency-Key': randomKey(), ...(options?.headers ?? {}), 'If-Match': `"work-${workId}-${revision}"` } }),
     uploadWorkCover: (workId, file, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/cover`, { ...options, method: 'PUT', rawBody: file, headers: { 'Content-Type': file.type, ...(options?.headers ?? {}) }, auth: true }),
     listWorkReleases: (workId, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/releases`, { ...options, auth: true }),
     withdrawWork: (workId, revision, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/withdraw`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"work-${workId}-${revision}"`, ...(options?.headers ?? {}) } }),

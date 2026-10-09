@@ -1332,3 +1332,13 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
 .creator-entry-ai span { color: var(--gh-secondary); }
 @container (max-width: 700px) { .creator-ai-layout,.creator-ai-context { grid-template-columns: minmax(0,1fr); } .creator-ai-form,.creator-ai-handoff,.creator-ai-output,.creator-ai-empty { padding: 18px; } }
 @container (max-width: 400px) { .creator-ai-fields { grid-template-columns: minmax(0,1fr); gap: 0; } .creator-ai-output-head .button { width: 100%; } }
+
+.work-edit-fields { min-width: 0; padding: 0; margin: 0; border: 0; display: grid; gap: 18px; }
+.work-edit-fields input,.work-edit-fields textarea { max-width: 100%; }
+.work-edit-fields input[readonly] { color: var(--gh-secondary); background: var(--gh-canvas); cursor: default; }
+.work-edit-notice { padding: 14px; border-left: 3px solid var(--gh-action); background: color-mix(in srgb,var(--gh-action) 7%,var(--gh-panel)); font-size: 12px; line-height: 1.8; }
+.work-edit-notice p { margin-bottom: 0; color: var(--gh-secondary); }
+.work-edit-empty { padding: 24px; }
+.work-edit-empty .text-button { margin: 12px; }
+.work-edit-success { padding: 14px; border: 1px solid var(--gh-success); color: var(--gh-primary); background: var(--gh-panel); }
+.work-edit-form .form-error { overflow-wrap: anywhere; }
