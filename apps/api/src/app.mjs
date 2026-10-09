@@ -756,7 +756,7 @@ export function createApp(dependencies) {
     app.get('/v1/creator/feedback', {
       preHandler: requireAuth,
       schema: { querystring: { type: 'object', additionalProperties: false, properties: {
-        status: { type: 'string', enum: ['new','reviewed','archived','issue_drafted','issue_linked','all'] },
+        status: { type: 'string', enum: ['new','reviewed','archived','issue_drafted','issue_linked','resolved','all'] },
         limit: { type: 'integer', minimum: 1, maximum: 100 },
       } } },
     }, async (request, reply) => {
@@ -783,6 +783,7 @@ export function createApp(dependencies) {
   }
 
   if (contributionTaskService) {
+    const pageProperties = { limit: { type: 'integer', minimum: 1, maximum: 100 }, offset: { type: 'integer', minimum: 0, maximum: 1000000 } };
     const taskParams = { type: 'object', additionalProperties: false, required: ['taskId'], properties: { taskId: { type: 'string', format: 'uuid' } } };
     const contributionTaskBody = { type: 'object', additionalProperties: false, required: ['title','description','difficulty','skills'], properties: {
       title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
@@ -798,12 +799,13 @@ export function createApp(dependencies) {
     });
     app.get('/v1/creator/contribution-tasks', {
       preHandler: requireAuth,
-      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 } } } },
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: pageProperties } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.listForCreator(request.actor, request.query)); });
     app.patch('/v1/creator/contribution-tasks/:taskId', {
       preHandler: requireAuth,
-      schema: { params: taskParams, body: { type: 'object', additionalProperties: false, required: ['action'], properties: {
-        action: { type: 'string', enum: ['publish','close','reopen','complete','request_changes','link_issue'] }, issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
+      schema: { params: taskParams, body: { type: 'object', additionalProperties: false, required: ['action','expectedVersion'], properties: {
+        ...contributionTaskBody.properties, expectedVersion: { type: 'integer', minimum: 1 }, reason: { type: 'string', maxLength: 2000 }, releaseId: { type: ['string','null'], format: 'uuid' },
+        action: { type: 'string', enum: ['edit','publish','close','reopen','complete','request_changes','link_issue','link_release'] }, issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
       } } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.creatorAction(request.actor, request.params.taskId, request.body)); });
     app.post('/v1/creator/contribution-tasks/:taskId/issue-draft', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {
@@ -812,7 +814,7 @@ export function createApp(dependencies) {
     app.get('/v1/contribution-tasks', {
       preHandler: identifyOptional,
       schema: { querystring: { type: 'object', additionalProperties: false, properties: {
-        status: { type: 'string', enum: ['all','open','claimed','submitted','completed'] }, limit: { type: 'integer', minimum: 1, maximum: 100 },
+        status: { type: 'string', enum: ['all','open','claimed','submitted','completed','closed'] }, ...pageProperties, mine: { type: 'boolean' },
       } } },
     }, async (request, reply) => { reply.header('Cache-Control', request.actor ? 'private, no-store' : 'public, max-age=30'); return envelope(await contributionTaskService.listPublic(request.actor, request.query)); });
     app.post('/v1/contribution-tasks/:taskId/claim', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {
@@ -824,9 +826,21 @@ export function createApp(dependencies) {
     app.post('/v1/contribution-tasks/:taskId/submission', {
       preHandler: requireAuth,
       schema: { params: taskParams, body: { type: 'object', additionalProperties: false, required: ['url','note'], properties: {
-        url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 },
+        expectedVersion: { type: 'integer', minimum: 1 }, url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 },
       } } },
     }, async (request, reply) => { reply.header('Cache-Control', 'no-store'); return envelope(await contributionTaskService.submit(request.actor, request.params.taskId, request.body)); });
+    app.get('/v1/contribution-tasks/:taskId', { preHandler: identifyOptional, schema: { params: taskParams } }, async (request, reply) => {
+      reply.header('Cache-Control','private, no-store'); return envelope(await contributionTaskService.get(request.actor,request.params.taskId));
+    });
+    for (const action of ['renew','withdraw']) app.post('/v1/contribution-tasks/:taskId/'+action, { preHandler: requireAuth, schema: { params: taskParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await contributionTaskService[action](request.actor,request.params.taskId));
+    });
+    app.get('/v1/contribution-notifications', { preHandler: requireAuth, schema: { querystring: { type:'object',additionalProperties:false,properties:pageProperties } } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await contributionTaskService.notifications(request.actor,request.query));
+    });
+    app.post('/v1/contribution-notifications/:taskId/read', { preHandler: requireAuth, schema: { params:taskParams } }, async (request,reply) => {
+      reply.header('Cache-Control','no-store'); return envelope(await contributionTaskService.readNotification(request.actor,request.params.taskId));
+    });
   }
 
   if (workService) {

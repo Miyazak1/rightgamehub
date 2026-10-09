@@ -1,124 +1,87 @@
-# G3.3 新手贡献任务与公开贡献履历
+# G3.3 共建任务与贡献履历
 
-状态：代码完成，待生产部署验收
-更新日期：2026-10-02
+状态：代码完成；本地真实数据库、53→54 升级与双账号浏览器验收通过；待生产部署确认。
+更新日期：2026-10-09
 
-## 1. 本阶段交付
+## 1. 协作流程
 
-G3.3 把作者已经确认的玩家反馈变成一个受控、可追踪的新手贡献闭环：
+作者从已查看的玩家反馈创建私有草稿，填写标题、完成标准、难度和技能，再明确公开。玩家领取、提交成果；作者可填写原因退回修改，或验收并记入贡献履历。原反馈随验收标记为“已解决（贡献已验收）”，可直接打开关联任务。
 
-1. 作者只能从自己作品中已查看或已关联 Issue 的反馈创建私有任务草稿。
-2. 作者补充标题、完成标准、难度和技能标签后，必须再次明确点击“公开任务”。
-3. 玩家可浏览公开任务，领取其中一个任务，并提交公开的 PR、commit 或演示地址。
-4. 作者可以验收完成、退回修改、关闭或重新开放任务。
-5. 只有作者验收完成且存在公开成果地址的贡献，才显示在贡献者公开主页。
+验收和上线分开记录。作者可在验收时选择当前已发布版本，也可先验收、发布后再关联。平台验证版本属于该作品且当前可用；是否包含此项修改由作者核对。未关联时明确显示“尚未关联上线版本”。关联版本后若停止服务，界面会显示当前不可用。
 
-导航新增“共建”入口。作者的任务管理仍位于创作中心，避免把作者操作和玩家任务市场混在一起。
+## 2. 任务与异常处理
 
-## 2. 信任与 GitHub 边界
+- 草稿和已关闭任务可编辑；草稿可关闭。每条反馈保持唯一任务，避免重复招募。
+- 发布、重开、提交与验收检查作品公开状态和作者有效状态。
+- 最多同时领取 3 个未到期进行中任务或待验收任务；作者不能领取自己的任务。
+- 领取有效期 7 天，当前贡献者可以续期 7 天；退回或撤回提交后重新计算期限。
+- 待验收任务不自动超时。贡献者可以撤回修改，也可以确认释放；作者可以填写原因关闭。
+- 到期后名额立即不再计入上限；列表访问按索引每 30 秒最多整理 100 个过期任务，访问单个任务或执行动作时也会检查并整理，无需常驻轮询进程。
+- 作品撤下、设为私有或暂停时，在同一数据库事务关闭其未完成任务、释放领取，并保存提交记录和通知。作品重新公开不会自动重开旧任务。
+- 发布后的任务范围不可直接改写；需要调整时先说明原因关闭，编辑后重开。
+- 作者操作携带 `expectedVersion`，防止旧页面覆盖编辑、验收已经撤回或重提的成果。
 
-GitHub App 权限保持只读。本阶段没有增加 GitHub 写权限，也不会：
-
-- 自动创建 Issue；
-- 自动创建分支、commit 或 Pull Request；
-- 给贡献者授予仓库写权限；
-- 拉取或执行贡献者提交的代码；
-- 把私有反馈内容未经作者确认直接公开。
-
-“生成 Issue 草稿”只返回 GitHub `issues/new` 预填地址，并附带 `good first issue` 标签建议。作者必须检查内容、确认仓库已启用 Issues，并在 GitHub 手动提交。领取任务只表示站内协作意向；实际贡献仍通过仓库既有 fork / PR 流程完成。
-
-## 3. 数据模型与状态机
-
-迁移 `0044_contribution_tasks.sql` 增加：
-
-- `contribution_tasks`：作品、来源反馈、作者、认领者、难度、技能、仓库/Issue/成果地址和状态；
-- `contribution_task_events`：创建草稿、公开、领取、释放、提交、退回、验收、关闭、重开和 Issue 操作的仅追加事件；
-- 作者队列、公开任务队列和贡献者活动任务索引；
-- 事件表更新/删除阻断触发器；
-- 状态、认领者、提交地址和时间戳之间的数据库一致性约束。
-
-状态流：
+任务流：
 
 ```text
 draft -> open -> claimed -> submitted -> completed
-           ^        |          |
-           |        + release  + request_changes -> claimed
-           |
-         reopen <- closed
+  |        ^       |           |
+ close     |       + release   + request_changes / withdraw -> claimed
+  |        |       + expiry    + release -> open
+closed -> reopen              + close -> closed
 ```
 
-规则包括：
+## 3. 查找、沟通与隐私
 
-- 仅公开发布且关联有效 GitHub 仓库的作品可以公开任务；
-- 作者不能领取自己的任务；
-- 每位玩家最多同时保有 3 个 `claimed` / `submitted` 任务；
-- 只有当前认领者能释放或提交任务；
-- 只有作品作者能验收、退回、关闭、重开和关联 Issue；
-- Issue 地址必须属于作品关联仓库；
-- 提交地址必须是公开 HTTPS 地址；
-- 匿名公开列表不返回来源反馈 ID、提交说明或未验收贡献者身份；成果地址和贡献者仅在完成验收后公开。
+“任务大厅”和“我的任务”分别查询，支持状态筛选和分页。我的任务保留过去领取的记录，包括已释放、到期、作品下架后的任务。创作中心也支持分页。任务详情使用独立地址 `/contribute/{taskId}`，可从通知、任务卡片、原反馈进入。
 
-## 4. API
+作者能看到成果地址和完整提交说明；退回修改、关闭必须填写 5–2000 字原因。相关账号在共建页面或创作中心查看任务通知，点击后标记已读。通知是站内记录，进入页面或手动刷新时读取，不发送邮件、不持续轮询。
+
+处理记录仅追加。详情展示最近 100 条与当前账号相关的记录；作者可查看该任务记录。历史参与者只能查看自己参与期间的私有提交与处理说明，不能读取后来贡献者的私有说明。通知读取与已读标记均按当前账号隔离。
+
+公开任务详情与列表隐藏反馈 ID、私有提交说明和处理原因。未验收时也隐藏其他贡献者身份及成果链接；验收后公开贡献者与成果链接，个人主页仍遵循原有隐私规则。
+
+## 4. 数据和接口
+
+基础迁移为 `0044_contribution_tasks.sql`；本次迁移为 `0054_contribution_workflow.sql`。
+
+新增任务版本号、领取到期时间、退回/关闭原因和上线版本关联；新增历史参与者与事件通知回执。作品下架触发器覆盖所有作品状态写入入口，迁移时也整理已经隐藏的未完成任务。既有公开任务的领取期限从迁移时起给予 7 天。
 
 ```text
 POST  /v1/creator/feedback/{feedbackId}/contribution-task
-GET   /v1/creator/contribution-tasks
+GET   /v1/creator/contribution-tasks?limit=21&offset=0
 PATCH /v1/creator/contribution-tasks/{taskId}
 POST  /v1/creator/contribution-tasks/{taskId}/issue-draft
-
-GET   /v1/contribution-tasks?status=all|open|claimed|submitted|completed
+GET   /v1/contribution-tasks?status=all&limit=21&offset=0&mine=true
+GET   /v1/contribution-tasks/{taskId}
 POST  /v1/contribution-tasks/{taskId}/claim
 POST  /v1/contribution-tasks/{taskId}/release
+POST  /v1/contribution-tasks/{taskId}/renew
+POST  /v1/contribution-tasks/{taskId}/withdraw
 POST  /v1/contribution-tasks/{taskId}/submission
+GET   /v1/contribution-notifications?limit=21&offset=0
+POST  /v1/contribution-notifications/{eventId}/read
 ```
 
-除公开列表外，所有接口都要求 GameHub 登录。作者接口还要求创作者权限。公开列表仅包含公开作品的 `open`、`claimed`、`submitted` 或 `completed` 任务。
+作者 PATCH 操作：`edit / publish / close / reopen / complete / request_changes / link_issue / link_release`，均须携带 `expectedVersion`；关闭和退回需要 `reason`。`complete` 的 `releaseId` 可为空，`link_release` 必填。提交接口支持 `expectedVersion`。
 
-## 5. 界面行为
+`mine=true`、通知及所有写操作要求登录；作者操作要求创作者权限。分页默认 50、最大 100，页面每次请求 21 条显示 20 条并判断下一页。每账号每小时最多 120 次有记录的任务操作，数据库事务串行检查额度；系统到期与下架整理不计入额度。
 
-作者侧：
+## 5. GitHub 边界
 
-- 玩家反馈需要先“标记已查看”；
-- “从反馈创建共建任务”展示私有草稿表单；
-- 共建任务区提供公开、关闭、重开、Issue 草稿、Issue 关联、退回修改和验收入口；
-- 验收按钮明确写为“验收并记入履历”。
+领取任务不会获得仓库写权限。平台不执行提交的代码，不自动创建 Issue、分支或 PR，也不自动合并。GitHub Issue 草稿仅打开预填页，作者检查后手动提交。Issue 地址须属于任务关联仓库，成果地址验证 HTTPS 及基本安全格式；平台不据此保证代码正确或外部链接永久可用。
 
-玩家侧：
+## 6. 验证与部署
 
-- “共建”页面可按状态筛选；
-- 卡片展示作者、作品、难度、技能、仓库、Issue 和成果；
-- 未登录领取时转到登录页；
-- 当前认领者可以提交成果或释放任务；
-- 已完成任务展示贡献者和公开成果。
+自动验证入口：
 
-公开主页新增“已完成贡献”，只展示作者验收后的任务、关联作品、完成日期和公开成果链接。
+- `tests/platform/contribution-tasks.test.cjs`：输入校验、鉴权和 Issue 草稿。
+- `tests/platform/contribution-workflow-postgres.test.cjs`：真实 PostgreSQL 的双账号流程、并发领取、旧版本验收、通知隐私、分页、到期、名额、下架与不可篡改历史。
+- `tests/client/contribution-browser.test.cjs`：真实 API 与数据库上的浏览器操作，包括编辑、领取、提交失败恢复、退回重提、验收、版本关联和窄屏布局。
+- `tests/platform/deployment-preflight.test.cjs`：只快进包含当前线上提交的版本，保护现有分支与本地修改。
 
-## 6. 部署与生产验收
+真实数据库测试使用专用本地 `GAMEHUB_COMMUNITY_DATABASE_URL`（`community_test`）；测试创建独立临时数据库。浏览器测试另需 `GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH`。测试截图位于 `.runtime/contribution-acceptance/`。
 
-服务器拉取包含本阶段提交的版本后，继续使用现有部署入口：
+生产使用发布提交内的 `deploy/update-community-sharing.sh`，以确认的提交 SHA 为参数。脚本先校验祖先关系、构建和备份，再应用迁移；更新后 `/ready` 的 expected/applied 都应为 54。云存档保持关闭。网页与 Agent 客户端一起发布；旧客户端需更新并重新加载后使用带版本检查的作者操作。
 
-```sh
-cd /www/gamehub
-git pull --ff-only origin main
-cd /www/gamehub/deploy
-sh deploy.sh
-curl -fsS https://mooyu.fun/ready
-```
-
-`deploy.sh` 会重建镜像并由 `migrate` 服务应用 `0044`。`/ready` 必须显示迁移 `expected` 与 `applied` 均为 `44`，且 API、Web、Worker、Source Builder、Rule Builder/Worker 保持健康。
-
-生产验收至少覆盖两个账号：
-
-1. 作者从一条“已查看”反馈创建草稿；草稿不会出现在公开共建页。
-2. 作者公开任务；另一账号在“共建”页可以看到并领取。
-3. 作者账号无法领取自己的任务；贡献者同时领取第 4 个任务会被拒绝。
-4. 贡献者提交公开 PR 地址；作者可退回，贡献者可再次提交。
-5. 作者验收后，贡献者公开主页出现该成果；关闭或未验收任务不会出现。
-6. Issue 预填页指向正确仓库；跨仓库 Issue 地址被拒绝；GitHub 仓库没有被平台自动写入。
-7. 桌面与窄屏页面都可完成领取、提交和验收。
-
-自动验证已覆盖契约生成、迁移顺序、服务状态与权限、路由鉴权、客户端请求和 Web 正式构建。真实 PostgreSQL 集成测试仍需在设置 `GAMEHUB_TEST_DATABASE_URL` 的环境运行。
-
-## 7. 后续路线
-
-G3.3 生产验收后，G3 主线可以进入 Remix / 衍生作品来源链：显式记录来源作品与固定版本、作者确认公开、许可证兼容提示和衍生关系展示。它不应自动复制私有仓库，也不应把许可证提示表述为法律结论。
+生产验收仍须用作者和贡献者两个账号确认任务、退回原因、贡献履历及通知，并核对页面版本和服务健康。自动验证结果不能替代“线上已更新”的确认。

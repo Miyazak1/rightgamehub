@@ -36,6 +36,18 @@ const saveMetadata = {
   updatedAt: dateTime, deleted: {type:'boolean'}, restoredFromRevisionId: nullable(id),
 };
 
+const contributionTaskProperties = {
+    id, workId: id, workTitle: { type: 'string', minLength: 1, maxLength: 120 }, feedbackId: { oneOf: [id,{ type: 'null' }] },
+    title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
+    difficulty: stringEnum(['starter','intermediate','advanced']), skills: { type: 'array', maxItems: 8, items: { type: 'string', minLength: 1, maxLength: 30 } },
+    status: stringEnum(['draft','open','claimed','submitted','completed','closed']), version:{type:'integer',minimum:1}, reviewReason:{type:'string',maxLength:2000}, workAvailable:{type:'boolean'}, claimExpiresAt:{oneOf:[dateTime,{type:'null'}]}, resolvedRelease:{oneOf:[object({id,label:{type:'string'},available:{type:'boolean'}}),{type:'null'}]},
+    repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, issueUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] },
+    submissionUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, submissionNote: { type: 'string', maxLength: 2000 },
+    author: { $ref: '#/components/schemas/ContributionIdentity' }, claimant: { oneOf: [{ $ref: '#/components/schemas/ContributionIdentity' },{ type: 'null' }] },
+    publishedAt: { oneOf: [dateTime,{ type: 'null' }] }, claimedAt: { oneOf: [dateTime,{ type: 'null' }] }, submittedAt: { oneOf: [dateTime,{ type: 'null' }] }, completedAt: { oneOf: [dateTime,{ type: 'null' }] },
+    createdAt: dateTime, updatedAt: dateTime,
+  };
+
 export const schemas = Object.freeze({
   ...saveOperationsSchemas,
   ...communitySchemas,
@@ -577,7 +589,7 @@ export const schemas = Object.freeze({
     category: stringEnum(['bug','idea','compatibility','other']),
     summary: { type: 'string', minLength: 5, maxLength: 160 }, details: { type: 'string', minLength: 10, maxLength: 2000 },
     reproductionSteps: { type: 'string', maxLength: 2000 }, environment: { type: 'string', maxLength: 500 },
-    status: stringEnum(['new','reviewed','archived','issue_drafted','issue_linked']),
+    status: stringEnum(['new','reviewed','archived','issue_drafted','issue_linked','resolved']), contributionTaskId: { oneOf:[id,{type:'null'}] },
     issueUrl: { oneOf: [{ type: 'string', maxLength: 2048 }, { type: 'null' }] },
     repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 }, { type: 'null' }] },
     createdAt: dateTime, updatedAt: dateTime,
@@ -597,21 +609,15 @@ export const schemas = Object.freeze({
     difficulty: stringEnum(['starter','intermediate','advanced']),
     skills: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 30 } },
   }),
-  ContributionTask: object({
-    id, workId: id, workTitle: { type: 'string', minLength: 1, maxLength: 120 }, feedbackId: { oneOf: [id,{ type: 'null' }] },
-    title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
-    difficulty: stringEnum(['starter','intermediate','advanced']), skills: { type: 'array', maxItems: 8, items: { type: 'string', minLength: 1, maxLength: 30 } },
-    status: stringEnum(['draft','open','claimed','submitted','completed','closed']),
-    repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, issueUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] },
-    submissionUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, submissionNote: { type: 'string', maxLength: 2000 },
-    author: { $ref: '#/components/schemas/ContributionIdentity' }, claimant: { oneOf: [{ $ref: '#/components/schemas/ContributionIdentity' },{ type: 'null' }] },
-    publishedAt: { oneOf: [dateTime,{ type: 'null' }] }, claimedAt: { oneOf: [dateTime,{ type: 'null' }] }, submittedAt: { oneOf: [dateTime,{ type: 'null' }] }, completedAt: { oneOf: [dateTime,{ type: 'null' }] },
-    createdAt: dateTime, updatedAt: dateTime,
-  }),
+  ContributionTask: object(contributionTaskProperties),
+  ContributionTaskDetail: object({...contributionTaskProperties,events:{type:'array',maxItems:100,items:{$ref:'#/components/schemas/ContributionEvent'}},releases:{type:'array',maxItems:20,items:object({id,label:{type:'string'},target:{type:'string'}})}}),
   UpdateContributionTaskRequest: object({
-    action: stringEnum(['publish','close','reopen','complete','request_changes','link_issue']), issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
-  }, ['action']),
-  ContributionSubmissionRequest: object({ url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 } }),
+    action:stringEnum(['edit','publish','close','reopen','complete','request_changes','link_issue','link_release']),expectedVersion:{type:'integer',minimum:1},issueUrl:{type:'string',minLength:1,maxLength:2048},reason:{type:'string',maxLength:2000},releaseId:{oneOf:[id,{type:'null'}]},title:{type:'string',minLength:5,maxLength:160},description:{type:'string',minLength:20,maxLength:4000},difficulty:stringEnum(['starter','intermediate','advanced']),skills:{type:'array',maxItems:8,uniqueItems:true,items:{type:'string',minLength:1,maxLength:30}},
+  },['action','expectedVersion']),
+  ContributionSubmissionRequest: object({ url: { type: 'string', minLength: 1, maxLength: 2048 }, note: { type: 'string', minLength: 5, maxLength: 2000 }, expectedVersion:{type:'integer',minimum:1} }, ['url','note']),
+
+  ContributionEvent: object({id,action:{type:'string'},details:{type:'object',additionalProperties:true},createdAt:dateTime}),
+  ContributionNotifications: object({unread:{type:'integer',minimum:0},items:{type:'array',items:object({id,taskId:id,title:{type:'string'},action:{type:'string'},details:{type:'object',additionalProperties:true},read:{type:'boolean'},createdAt:dateTime})}}),
   ContributionIssueDraft: object({
     taskId: id, title: { type: 'string', minLength: 1, maxLength: 200 }, body: { type: 'string', minLength: 1, maxLength: 10000 },
     repositoryUrl: { oneOf: [{ type: 'string', maxLength: 2048 },{ type: 'null' }] }, createUrl: { oneOf: [{ type: 'string', maxLength: 16000 },{ type: 'null' }] },
@@ -792,9 +798,14 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/creator/feedback/{feedbackId}/issue-draft', operationId: 'createCreatorFeedbackIssueDraft', auth: 'bearer', response: 'CreatorFeedbackIssueDraft', pathId: 'feedbackId' },
   { method: 'patch', path: '/v1/creator/feedback/{feedbackId}', operationId: 'updateCreatorFeedback', auth: 'bearer', request: 'UpdateCreatorFeedbackRequest', response: 'CreatorFeedback', pathId: 'feedbackId' },
   { method: 'post', path: '/v1/creator/feedback/{feedbackId}/contribution-task', operationId: 'createContributionTaskFromFeedback', auth: 'bearer', request: 'CreateContributionTaskRequest', response: 'ContributionTask', pathId: 'feedbackId', successStatus: '201' },
-  { method: 'get', path: '/v1/creator/contribution-tasks', operationId: 'listCreatorContributionTasks', auth: 'bearer', response: 'ContributionTask', responseArray: true, queryLimit: true },
+  { method: 'get', path: '/v1/creator/contribution-tasks', operationId: 'listCreatorContributionTasks', auth: 'bearer', response: 'ContributionTask', responseArray: true, queryLimit: true, queryOffset:true },
   { method: 'patch', path: '/v1/creator/contribution-tasks/{taskId}', operationId: 'updateCreatorContributionTask', auth: 'bearer', request: 'UpdateContributionTaskRequest', response: 'ContributionTask', pathId: 'taskId' },
   { method: 'post', path: '/v1/creator/contribution-tasks/{taskId}/issue-draft', operationId: 'createContributionIssueDraft', auth: 'bearer', response: 'ContributionIssueDraft', pathId: 'taskId' },
+  { method:'get',path:'/v1/contribution-tasks/{taskId}',operationId:'getContributionTask',auth:'anonymous',response:'ContributionTaskDetail',pathId:'taskId' },
+  { method:'post',path:'/v1/contribution-tasks/{taskId}/renew',operationId:'renewContributionTask',auth:'bearer',response:'ContributionTask',pathId:'taskId' },
+  { method:'post',path:'/v1/contribution-tasks/{taskId}/withdraw',operationId:'withdrawContributionTask',auth:'bearer',response:'ContributionTask',pathId:'taskId' },
+  { method:'get',path:'/v1/contribution-notifications',operationId:'listContributionNotifications',auth:'bearer',response:'ContributionNotifications',queryLimit:true,queryOffset:true },
+  { method:'post',path:'/v1/contribution-notifications/{taskId}/read',operationId:'readContributionNotification',auth:'bearer',response:'NotificationReadState',pathId:'taskId' },
   { method: 'get', path: '/v1/contribution-tasks', operationId: 'listContributionTasks', auth: 'anonymous', response: 'ContributionTask', responseArray: true, queryContributionTasks: true },
   { method: 'post', path: '/v1/contribution-tasks/{taskId}/claim', operationId: 'claimContributionTask', auth: 'bearer', response: 'ContributionTask', pathId: 'taskId' },
   { method: 'post', path: '/v1/contribution-tasks/{taskId}/release', operationId: 'releaseContributionTask', auth: 'bearer', response: 'ContributionTask', pathId: 'taskId' },
@@ -894,8 +905,11 @@ export function createOpenApiDocument() {
       { name: 'limit',in: 'query',required: false,schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } },
     );
     if (operation.queryLimit) parameters.push({ name: 'limit', in: 'query', required: false, schema: { type: 'integer',minimum: 1,maximum: 100,default: 50 } });
+    if (operation.queryOffset) parameters.push({name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:1000000,default:0}});
     if (operation.queryContributionTasks) parameters.push(
-      { name: 'status', in: 'query', required: false, schema: stringEnum(['all','open','claimed','submitted','completed']) },
+      {name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:1000000,default:0}},
+      {name:'mine',in:'query',required:false,schema:{type:'boolean',default:false}},
+      { name: 'status', in: 'query', required: false, schema: stringEnum(['all','open','claimed','submitted','completed','closed']) },
       { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 } },
     );
     if (operation.queryLeaderboard) parameters.push(

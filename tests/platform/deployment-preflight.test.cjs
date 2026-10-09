@@ -21,7 +21,7 @@ test('deployment preflight preserves both release branches and rejects missing a
   identity(source);
   fs.writeFileSync(path.join(source,'.gitignore'),'deploy/\n');
   const migrations = path.join(source,'apps/api/migrations');fs.mkdirSync(migrations,{recursive:true});
-  fs.writeFileSync(path.join(migrations,'0053_competition_boards.sql'),'-- fixture migration\n');
+  fs.writeFileSync(path.join(migrations,'0054_contribution_workflow.sql'),'-- fixture migration\n');
   git(source,'add','.');git(source,'commit','-m','base');
   git(source,'switch','-c','codex/game-services-foundation');
   fs.writeFileSync(path.join(source,'home.txt'),'homepage fix\n');git(source,'add','.');git(source,'commit','-m','home');

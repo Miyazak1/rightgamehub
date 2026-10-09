@@ -3,7 +3,7 @@ import { withTransaction } from './database.mjs';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const categories = new Set(['bug', 'idea', 'compatibility', 'other']);
-const statuses = new Set(['new', 'reviewed', 'archived', 'issue_drafted', 'issue_linked']);
+const statuses = new Set(['new', 'reviewed', 'archived', 'issue_drafted', 'issue_linked', 'resolved']);
 const actions = new Set(['review', 'archive', 'reopen', 'link_issue']);
 
 export class CreatorFeedbackError extends Error {
@@ -21,16 +21,18 @@ const feedbackView = row => ({
   environment: row.environment,
   status: row.status,
   issueUrl: row.issue_url,
+  contributionTaskId: row.contribution_task_id ?? null,
   repositoryUrl: row.repository_url,
   createdAt: new Date(row.created_at).toISOString(),
   updatedAt: new Date(row.updated_at).toISOString(),
 });
 
 const lockFeedback = async (client, feedbackId, ownerUserId) => {
+  await client.query('SELECT w.id FROM works w WHERE w.id=(SELECT work_id FROM creator_feedback WHERE id=$1) FOR UPDATE', [feedbackId]);
   const row = (await client.query(
-    `SELECT f.*,w.title AS work_title,w.repository_url
+    `SELECT f.*,w.title AS work_title,w.repository_url,(SELECT id FROM contribution_tasks WHERE feedback_id=f.id) AS contribution_task_id
      FROM creator_feedback f JOIN works w ON w.id=f.work_id
-     WHERE f.id=$1 AND w.owner_user_id=$2 FOR UPDATE OF f,w`,
+     WHERE f.id=$1 AND w.owner_user_id=$2 FOR UPDATE OF f`,
     [feedbackId, ownerUserId],
   )).rows[0];
   if (!row) throw new CreatorFeedbackError('FEEDBACK_NOT_FOUND', 404, '反馈不存在，或不属于你的作品。');
@@ -73,7 +75,7 @@ export class PostgresCreatorFeedbackRepository {
 
   async listForCreator({ actor, status, limit }) {
     const rows = (await this.pool.query(
-      `SELECT f.*,w.title AS work_title,w.repository_url
+      `SELECT f.*,w.title AS work_title,w.repository_url,(SELECT id FROM contribution_tasks WHERE feedback_id=f.id) AS contribution_task_id
        FROM creator_feedback f JOIN works w ON w.id=f.work_id
        WHERE w.owner_user_id=$1 AND ($2::text IS NULL OR f.status=$2)
        ORDER BY CASE WHEN f.status='new' THEN 0 WHEN f.status='issue_drafted' THEN 1 WHEN f.status='reviewed' THEN 2 WHEN f.status='issue_linked' THEN 3 ELSE 4 END,
@@ -85,7 +87,7 @@ export class PostgresCreatorFeedbackRepository {
 
   async getForCreator({ actor, feedbackId }) {
     const row = (await this.pool.query(
-      `SELECT f.*,w.title AS work_title,w.repository_url
+      `SELECT f.*,w.title AS work_title,w.repository_url,(SELECT id FROM contribution_tasks WHERE feedback_id=f.id) AS contribution_task_id
        FROM creator_feedback f JOIN works w ON w.id=f.work_id
        WHERE f.id=$1 AND w.owner_user_id=$2`,
       [feedbackId, actor.userId],
@@ -96,7 +98,7 @@ export class PostgresCreatorFeedbackRepository {
   async issueDrafted({ actor, feedbackId, eventId }) {
     return withTransaction(this.pool, async client => {
       const current = await lockFeedback(client, feedbackId, actor.userId);
-      if (current.status === 'archived') throw new CreatorFeedbackError('FEEDBACK_ARCHIVED', 409, '已归档反馈需要先重新打开。');
+      if (['archived','resolved'].includes(current.status)) throw new CreatorFeedbackError('FEEDBACK_ARCHIVED', 409, '已归档或解决的反馈需要先重新打开。');
       if (current.status === 'issue_linked') throw new CreatorFeedbackError('ISSUE_ALREADY_LINKED', 409, '这条反馈已经关联 GitHub Issue。');
       const row = (await client.query(
         `UPDATE creator_feedback SET status='issue_drafted',updated_at=now() WHERE id=$1
@@ -113,8 +115,8 @@ export class PostgresCreatorFeedbackRepository {
       const current = await lockFeedback(client, feedbackId, actor.userId);
       const transitions = {
         review: { from: ['new','issue_drafted'], status: 'reviewed', event: 'reviewed' },
-        archive: { from: ['new','reviewed','issue_drafted','issue_linked'], status: 'archived', event: 'archived' },
-        reopen: { from: ['archived'], status: 'reviewed', event: 'reopened' },
+        archive: { from: ['new','reviewed','issue_drafted','issue_linked','resolved'], status: 'archived', event: 'archived' },
+        reopen: { from: ['archived','resolved'], status: 'reviewed', event: 'reopened' },
         link_issue: { from: ['new','reviewed','issue_drafted'], status: 'issue_linked', event: 'issue_linked' },
       };
       const transition = transitions[action];
