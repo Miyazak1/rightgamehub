@@ -579,6 +579,25 @@ test('creator contribution empty state stays centered and omits redundant first-
   assert.match(styles, /\.creator-contributions__empty,\.creator-contributions__state\{[^}]*text-align:center/);
 });
 
+test('community navigation unifies sharing and contribution without breaking legacy task routes', async () => {
+  const [navigation, shell, app, contribution, community] = await Promise.all([
+    fs.readFile('packages/platform-client/src/PlatformNavigation.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityShell.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/ContributionCenter.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityPage.jsx', 'utf8'),
+  ]);
+
+  assert.match(navigation, /\['\/community', '社区'/);
+  assert.doesNotMatch(navigation, /\['\/contribute', '共建'/);
+  assert.match(shell, /'首页'.*'动态'.*'一起做'.*'活动'.*'游戏组队'.*'我的参与'/s);
+  assert.match(app, /parts\[0\] === 'community' && parts\[1\] === 'projects'/);
+  assert.match(app, /route === '\/contribute'.*<CommunityShell/s);
+  assert.match(contribution, /\/community\/projects\/tasks\/\$\{item\.id\}/);
+  assert.match(community, /<CommunityShell route=\{route\} go=\{go\}>/);
+  assert.match(community, /今天，和谁一起做点什么/);
+});
+
 test('API client refreshes an expired access token once and updates host memory', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let access = 'expired-access'; let saved; const requests = [];

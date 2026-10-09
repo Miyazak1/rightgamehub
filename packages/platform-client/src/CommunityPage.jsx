@@ -1,4 +1,5 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
+import { CommunityShell } from './CommunityShell.jsx';
 const labels={game:'游戏',ai:'AI',computing:'计算机'};
 const statuses={draft:'草稿',pending:'待审核',approved:'已通过',rejected:'需修改',superseded:'待重新编辑'};
 const newKey=()=>crypto.randomUUID();
@@ -123,11 +124,13 @@ function PostingRestrictions({api,onNotice,onError}) {
   return <details className="community-members panel"><summary>投稿限制管理</summary><p className="community-muted">正常登录用户默认可投稿。按用户 ID 限制违规账号，或解除已有投稿限制；内容仍需审核。</p><label>用户 ID<input value={id} onChange={event=>setId(event.target.value.trim())}/></label><label>调整原因<input maxLength={1000} value={reason} onChange={event=>setReason(event.target.value)}/></label><div className="community-actions"><Button disabled={busy||!id||!reason.trim()} onClick={()=>save(false)}>限制投稿</Button><Button disabled={busy||!id||!reason.trim()} onClick={()=>save(true)}>解除投稿限制</Button></div></details>;
 }
 export default function CommunityPage({api,go,route,accountProfile,AvatarView,demo=false}) {
-  const [cap,setCap]=useState(null),[items,setItems]=useState([]),[cursor,setCursor]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(''),[editor,setEditor]=useState(null),[report,setReport]=useState(null),[confirm,setConfirm]=useState(null);
-  const mode=route==='/community/mine'?'mine':route==='/community/bookmarks'?'bookmarks':route==='/community/review'?'review':'feed';
-  const channel=['game','ai','computing'].includes(route.split('/')[2])?route.split('/')[2]:null;
+  const [cap,setCap]=useState(null),[items,setItems]=useState([]),[cursor,setCursor]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(''),[editor,setEditor]=useState(route==='/community/feed/new'?'new':null),[report,setReport]=useState(null),[confirm,setConfirm]=useState(null);
+  const mode=['/community/mine','/community/me'].includes(route)?'mine':route==='/community/bookmarks'?'bookmarks':route==='/community/review'?'review':'feed';
+  const parts=route.split('/').filter(Boolean),candidate=parts[1]==='feed'?parts[2]:parts[1];
+  const channel=['game','ai','computing'].includes(candidate)?candidate:null;
   const author=route.startsWith('/community/author/')?route.split('/')[3]:null;
   const detail=route.startsWith('/community/posts/')?route.split('/')[3]:null;
+  const home=route==='/community'||route==='/social';
   const generation=useRef(0);
   const load=useCallback(async(more=false)=>{
     const current=++generation.current;setLoading(true);setError('');
@@ -143,7 +146,7 @@ export default function CommunityPage({api,go,route,accountProfile,AvatarView,de
     }catch(caught){if(current===generation.current)setError(failure(caught));}
     finally{if(current===generation.current)setLoading(false);}
   },[api,mode,channel,detail,author,cursor,demo]);
-  useEffect(()=>{setItems([]);setCursor(null);setEditor(null);setReport(null);setConfirm(null);load();return()=>{generation.current++;};},[api,mode,channel,detail,author,demo]);
+  useEffect(()=>{setItems([]);setCursor(null);setEditor(route==='/community/feed/new'?'new':null);setReport(null);setConfirm(null);load();return()=>{generation.current++;};},[api,mode,channel,detail,author,demo,route]);
   async function interact(post,type) {
     if(busy)return;setBusy(post.id);setError('');
     const property=type==='like'?'liked':'bookmarked',active=!post[property];
@@ -157,12 +160,14 @@ export default function CommunityPage({api,go,route,accountProfile,AvatarView,de
     setBusy(confirm.post.id);try{await api.communityWithdraw(confirm.post,confirm.remove);setConfirm(null);setNotice(confirm.remove?'分享已删除。':'分享已撤回。');await load();}catch(caught){setError(failure(caught));}finally{setBusy('');}
   }
   async function sendReport(event){event.preventDefault();setBusy(report.post.id);try{await api.communityReport(report.post.id,{category:report.category,details:report.details});setReport(null);setNotice('举报已提交。');}catch(caught){setError(failure(caught));}finally{setBusy('');}}
-  return <main className="page community-page"><header className="community-heading"><div><span className="kicker">THE NEXT FIND</span><h1>分享<span aria-hidden="true">✦</span></h1><p>游戏、AI、计算机。把值得一看的新发现留在这里。</p></div><Button primary disabled={Boolean(accountProfile)&&!cap?.canShare} onClick={()=>cap?.canShare?setEditor('new'):go('/account')}>{cap?.canShare?'＋ 分享发现':accountProfile?cap?.reason==='POSTING_RESTRICTED'?'投稿已受限':'暂不可投稿':'登录后参与'}</Button></header>
-    <nav className="community-nav" aria-label="分享导航">{[['/community','最新发现'],['/community/mine','我的分享'],['/community/bookmarks','私人收藏']].map(([path,name])=><button key={path} className={(path==='/community'?mode==='feed':route===path)?'is-active':''} onClick={()=>go(path)}>{name}</button>)}{cap?.isAdmin&&<button className={mode==='review'?'is-active':''} onClick={()=>go('/community/review')}>审核管理</button>}</nav>
+  return <CommunityShell route={route} go={go}><section className={`community-page${home?' is-home':''}`}>
+    {home&&<section className="community-home-intro" aria-labelledby="community-home-title"><div className="community-home-intro__copy"><span className="kicker">WHAT IS HAPPENING</span><h2 id="community-home-title">今天，和谁一起做点什么？</h2><p>从一个小任务开始参与作品，也可以看看社区刚刚分享的新发现。</p></div><div className="community-home-paths"><button type="button" className="is-project" onClick={()=>go('/community/projects')}><span aria-hidden="true">↗</span><strong>一起做</strong><small>领取开放任务，留下可信贡献</small><em>查看项目与任务 →</em></button><button type="button" className="is-feed" onClick={()=>go('/community/feed')}><span aria-hidden="true">✦</span><strong>看看动态</strong><small>游戏、AI 与计算机的新发现</small><em>进入动态 →</em></button></div><div className="community-home-future" aria-label="正在准备的社区能力"><span><i aria-hidden="true">◫</i><b>线上活动</b><small>试玩会与社区聚会</small></span><span><i aria-hidden="true">◉</i><b>游戏组队</b><small>围绕真实游戏找队友</small></span><em>设计已完成 · 分阶段开放</em></div></section>}
+    {!home&&!detail&&!author&&<header className="community-section-heading"><div><span className="kicker">{mode==='mine'?'MY COMMUNITY':mode==='bookmarks'?'SAVED FOR LATER':mode==='review'?'COMMUNITY REVIEW':'COMMUNITY FEED'}</span><h2>{mode==='mine'?'我的参与':mode==='bookmarks'?'私人收藏':mode==='review'?'审核管理':'动态'}</h2><p>{mode==='mine'?'管理自己的分享，并继续处理已经参与的共建任务。':mode==='bookmarks'?'只有你能看到收藏；原内容不可用后不会泄露正文。':mode==='review'?'处理投稿、举报与账号投稿限制。':'游戏、AI、计算机。把值得一看的新发现留在这里。'}</p></div>{mode==='feed'&&<Button primary disabled={Boolean(accountProfile)&&!cap?.canShare} onClick={()=>cap?.canShare?setEditor('new'):go('/account')}>{cap?.canShare?'＋ 发布动态':accountProfile?cap?.reason==='POSTING_RESTRICTED'?'投稿已受限':'暂不可投稿':'登录后参与'}</Button>}</header>}
+    {['mine','bookmarks'].includes(mode)&&<nav className="community-personal-nav" aria-label="我的参与"><button className={mode==='mine'?'is-active':''} onClick={()=>go('/community/me')}>我的分享</button><button className={mode==='bookmarks'?'is-active':''} onClick={()=>go('/community/bookmarks')}>私人收藏</button><button onClick={()=>go('/community/projects')}>我的任务 ↗</button></nav>}
     {notice&&<p className="social-notice" role="status">{notice}</p>}{error&&<div className="community-error" role="alert"><p>{error}</p><Button onClick={()=>load()}>重新加载</Button>{!accountProfile&&<Button onClick={()=>go('/account')}>登录</Button>}</div>}
-    {editor&&cap?.canShare&&<Editor key={editor.id||'new'} api={api} initial={editor==='new'?null:editor} capabilities={cap} onCancel={()=>setEditor(null)} onDone={message=>{setEditor(null);setNotice(message);if(mode==='mine')load();else go('/community/mine');}}/>}
+    {editor&&cap?.canShare&&<Editor key={editor.id||'new'} api={api} initial={editor==='new'?null:editor} capabilities={cap} onCancel={()=>{setEditor(null);if(route==='/community/feed/new')go('/community/feed');}} onDone={message=>{setEditor(null);setNotice(message);if(mode==='mine')load();else go('/community/me');}}/>}
     {cap&&!cap.readEnabled?<section className="community-empty panel"><span aria-hidden="true">◇</span><h2>{demo?'分享板块预览':'分享板块即将开放'}</h2><p>{demo?'预览模式不发布内容。连接服务后可查看实际分享。':'先去玩一局，下一次来看看大家的新发现。'}</p><Button onClick={()=>go('/discover')}>去发现游戏</Button></section>:<>
-    {author&&<p className="community-muted">这位玩家的公开分享</p>}{mode==='feed'&&!detail&&!author&&<div className="filter-row" aria-label="主题筛选">{[[null,'全部'],...Object.entries(labels)].map(([key,name])=><button key={key||'all'} className={channel===key?'is-active':''} onClick={()=>go('/community'+(key?'/'+key:''))}>{name}</button>)}<span className="community-sort">最新发布</span></div>}
+    {author&&<p className="community-muted">这位玩家的公开动态</p>}{mode==='feed'&&!detail&&!author&&<div className="community-feed-head"><div><span className="kicker">{home?'LATEST FROM THE COMMUNITY':'BROWSE BY TOPIC'}</span><h2>{home?'最新动态':'按主题浏览'}</h2></div><div className="filter-row" aria-label="主题筛选">{[[null,'全部'],...Object.entries(labels)].map(([key,name])=><button key={key||'all'} className={channel===key?'is-active':''} onClick={()=>go('/community/feed'+(key?'/'+key:''))}>{name}</button>)}<span className="community-sort">最新发布</span></div></div>}
     {mode==='bookmarks'&&<p className="community-muted">只有你能查看这里的收藏。已撤回、隐藏或不再向你公开的内容会自动从列表中隐藏。</p>}
     {cap&&!cap.canShare&&<p className="community-muted" role="status">{postingMessage(cap.reason)}</p>}
     {mode==='review'&&cap?.isAdmin&&<PostingRestrictions api={api} onNotice={setNotice} onError={setError}/>}
@@ -171,5 +176,5 @@ export default function CommunityPage({api,go,route,accountProfile,AvatarView,de
     {confirm?.post.id===post.id&&<div className="community-confirm" role="group" aria-label="确认操作"><p>{confirm.remove?'删除后无法恢复编辑。确认删除这条分享？':'撤回后其他人将无法查看。确认撤回？'}</p><Button disabled={Boolean(busy)} onClick={()=>setConfirm(null)}>取消</Button> <Button disabled={Boolean(busy)} onClick={remove}>确认{confirm.remove?'删除':'撤回'}</Button></div>}
     {report?.post.id===post.id&&<form className="community-report-form" onSubmit={sendReport}><label>举报原因<select aria-label="举报原因" value={report.category} onChange={event=>setReport({...report,category:event.target.value})}>{[['unsafe','不适宜内容'],['harassment','骚扰'],['copyright','侵权'],['spam','垃圾信息'],['other','其他']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>补充说明<textarea required maxLength={1000} value={report.details} onChange={event=>setReport({...report,details:event.target.value})}/></label><Button type="button" onClick={()=>setReport(null)}>取消</Button> <Button type="submit" disabled={Boolean(busy)}>提交举报</Button></form>}</article>)}</div>
     {cursor&&<div className="community-more"><Button disabled={loading} onClick={()=>load(true)}>{loading?'载入中…':'加载更多'}</Button></div>}</>}
-  </main>;
+  </section></CommunityShell>;
 }
