@@ -1,6 +1,6 @@
 # Agent 优先的结构化创作与发布路线
 
-状态：方向已调整；外部工具与 Agent 负责创作，平台只负责预览和发布
+状态：方向已调整；用户自己的 Agent 负责本地创作，平台提供只读工具服务、校验和发布
 更新日期：2026-10-10
 
 ## 1. 决策
@@ -9,6 +9,8 @@ GameHub 不承担通用模型调用，也不建设另一套网页 AI IDE。用�
 
 ```text
 用户 Agent / 本地编辑器
+  -> 读取版本化的 GameHub 工具目录与任务约定
+  -> 用户本地源码与第三方工具（按需、经同意）
   -> 结构化创作包
   -> 本地 Creator Validator
   -> 平台待发布草稿
@@ -33,7 +35,7 @@ GameHub 不承担通用模型调用，也不建设另一套网页 AI IDE。用�
 
 ### 平台
 
-- 发布创作包协议、JSON Schema、模板和校验器；
+- 发布 Agent 可读取的工具目录、创作包协议、JSON Schema、模板和本地校验器；
 - 进行服务端 schema、安全和大小检查；
 - 保存待发布修订，并使用 ETag 防止并发覆盖；
 - 使用版本固定的可信编译器生成 Web ZIP；
@@ -47,18 +49,24 @@ GameHub 不承担通用模型调用，也不建设另一套网页 AI IDE。用�
 - 选择版本名称并确认发布；
 - 不编辑 Bingo 单元格，不承担长对话、批量生成、模型连接和密钥保存。
 
-### 外部开源创作工具
+### Agent 本地创作工具包
 
-平台提供工具目录，但不嵌入或分叉这些编辑器：
+平台提供版本化的机器可读目录，让用户自己的 Agent 知道所需源码格式、产物、校验命令和授权边界。平台不嵌入、不远程运行，也不要求用户手工学习这些编辑器：
 
 | 工具 | 用途 | 进入平台的成果 |
 | --- | --- | --- |
-| Piskel | 像素角色、动画和图块 | PNG、GIF、spritesheet，作为游戏素材 |
-| Bitsy | 微型探索与短篇叙事游戏 | 导出的 HTML，以 `index.html` 打包为 Web ZIP |
-| PuzzleScript | 规则驱动的网格解谜 | 导出的独立 HTML，以 Web ZIP 上传 |
-| Twine | 分支剧情和互动小说 | 发布后的 HTML，以 Web ZIP 上传 |
+| 像素素材约定 / Piskel | 像素角色、动画和图块 | PNG、GIF、spritesheet，作为游戏素材 |
+| Bitsy 适配 | 微型探索与短篇叙事游戏 | 本地源码与 `index.html` Web 项目 |
+| PuzzleScript 适配 | 规则驱动的网格解谜 | 本地规则源码与 `index.html` Web 项目 |
+| Twine / Twee 3 适配 | 分支剧情和互动小说 | 本地 Twee 源码与 `index.html` Web 项目 |
 
-工具在自己的官方站点运行，平台只链接官方入口和源码。用户作品仍需经过现有 Web ZIP Validator 与隔离 Runtime；工具的开源许可证不自动替用户作品选择许可证。
+Agent 默认只读取 GameHub 已安装插件中的签名目录，在用户工作区内生成和修改文件。需要下载、安装或运行第三方编译器时必须先说明并获得用户同意；不能把模型凭据、平台 token、提示词或无关本机文件发送给 GameHub。用户作品仍需先通过本地 Doctor，再经过平台 Web ZIP Validator 与隔离 Runtime；工具的开源许可证不自动替用户作品选择许可证。
+
+工具服务的三个级别：
+
+- `ready`：GameHub 提供完整结构化模板、校验和提交通道；
+- `guided`：GameHub 提供源码/产物约定与本地 Doctor，编译能力取决于用户本机已有工具；
+- `asset-only`：只生成或整理素材，不能独立作为可玩作品发布。
 
 ## 3. 唯一事实来源
 
@@ -158,15 +166,23 @@ npm run creator:validate -- ./my-bingo --json --output ./artifacts/creator-packa
 
 ## 8. 分阶段实施
 
-### P0：方向收敛（本次）
+### P0：方向收敛（已完成）
 
 - 将网站文案改为 Agent-first；
 - 移除平台内生成按钮、服务注册和公开 API；
 - 保留待发布草稿、只读预览和发布闭环，移除平台内 Bingo 编辑入口；
-- 增加 Piskel、Bitsy、PuzzleScript、Twine 官方工具目录；
+- 增加 Bingo、Bitsy、PuzzleScript、Twine 和像素素材的 Agent 可读工具目录；
 - 增加创作包 v1 模板、校验命令与自动测试。
 
-### P1：Agent 提交通道（已完成首个可用切片）
+### P1：Agent 本地工具服务（本次）
+
+- 便携插件内置版本化工具目录与 `creator-toolkit` 命令；
+- `list/show/prompt` 让 Agent 直接读取能力与任务约定，无需用户手工打开外部编辑器；
+- `doctor <目录>` 在本地检查入口、体积、可执行文件、明显凭据、本机路径和远程运行依赖；
+- 网站只负责解释本地工作流、复制 Agent 任务和接收完成后的成品；
+- 下载、安装或执行第三方程序，以及登录、上传和发布，全部要求用户明确授权。
+
+### P2：Agent 提交通道（已完成首个可用切片）
 
 - 已增加“读取 manifest → 本地校验 → 创建草稿”的共享提交核心；
 - VS Code / Cursor 提供“GameHub: 提交当前创作包”命令，使用已有侧栏登录态和 `SecretStorage`；
@@ -179,7 +195,7 @@ npm run creator:validate -- ./my-bingo --json --output ./artifacts/creator-packa
 
 完成条件：用户能在任意 Agent 中修改官方模板，通过一条命令得到平台待发布草稿，并在网页确认发布。
 
-### P2：更多结构化类型
+### P3：更多结构化类型
 
 按照真实需求逐个增加 `puzzle`、`story`、`world` schema 和固定编译器。每种类型必须先具备：
 
@@ -198,6 +214,8 @@ npm run creator:validate -- ./my-bingo --json --output ./artifacts/creator-packa
 - 平台内不存在可触发模型或模板生成的公开入口；
 - Bingo 待发布草稿可只读预览、构建并发布，修改必须回到原创作端；
 - 平台创作页不再出现第二套 Bingo 编辑器；
-- Bitsy、PuzzleScript 和 Twine 的导出结果有明确的 Web ZIP 发布路径，Piskel 被明确标记为素材工具；
+- Agent 能读取 Bingo、Bitsy、PuzzleScript、Twine 和像素素材的版本化能力说明；
+- Bitsy、PuzzleScript 和 Twine 的本地结果有明确的 Doctor 与 Web ZIP 发布路径，像素素材被明确标记为非独立作品；
+- 浏览器页不把外部站点伪装成平台工具，也不要求用户手工掌握第三方编辑器；
 - 已部署数据库无需降级，历史发布版本不受影响；
 - 新类型只能通过结构化协议和固定编译器进入平台。

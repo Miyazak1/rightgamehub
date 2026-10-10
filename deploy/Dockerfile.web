@@ -42,6 +42,7 @@ COPY scripts/build-extension.mjs scripts/build-extension.mjs
 COPY scripts/build-harness.mjs scripts/build-harness.mjs
 COPY scripts/build-multiplayer-templates.mjs scripts/build-multiplayer-templates.mjs
 COPY scripts/build-agent-plugin.mjs scripts/build-agent-plugin.mjs
+COPY scripts/creator-toolkit-cli.mjs scripts/creator-toolkit-cli.mjs
 COPY scripts/submit-creator-package.mjs scripts/submit-creator-package.mjs
 COPY scripts/package-vscode-extension.mjs scripts/package-vscode-extension.mjs
 COPY scripts/prepare-agent-downloads.mjs scripts/prepare-agent-downloads.mjs

@@ -9,7 +9,7 @@
     {
       "name": "gamehub",
       "source": "./plugins/gamehub",
-      "description": "Discover, launch and publish GameHub experiences with a safe browser fallback."
+      "description": "Discover, create locally, validate and publish GameHub experiences with a safe browser fallback."
     }
   ]
 }

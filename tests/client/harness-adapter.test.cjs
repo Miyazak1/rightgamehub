@@ -276,8 +276,11 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   const claudeManifest = JSON.parse(await readFile('plugins/gamehub/.claude-plugin/plugin.json', 'utf8'));
   const claudeMarketplace = JSON.parse(await readFile('.claude-plugin/marketplace.json', 'utf8'));
   const publisher = await readFile('plugins/gamehub/bin/creator-submit.mjs', 'utf8');
+  const toolkitCli = await readFile('plugins/gamehub/bin/creator-toolkit.mjs', 'utf8');
+  const toolkitCatalog = JSON.parse(await readFile('plugins/gamehub/toolkits/catalog.json', 'utf8'));
   const skill = await readFile('plugins/gamehub/skills/gamehub/SKILL.md', 'utf8');
   assert.equal(portable.name, 'gamehub');
+  assert.equal(portable.version, '0.2.0');
   assert.equal(portable.version, claudeManifest.version);
   assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
   assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
@@ -288,7 +291,14 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   assert.match(publisher, /GitHub Agent Publisher|GameHub Agent Publisher/);
   assert.doesNotMatch(publisher, /GAMEHUB_(?:ACCESS|REFRESH)_TOKEN/);
   assert.match(skill, /creator-submit\.mjs/);
+  assert.match(skill, /creator-toolkit\.mjs list/);
+  assert.match(skill, /Creator Doctor/);
   assert.match(skill, /Never ask the user to paste a token/);
+  assert.match(toolkitCli, /GameHub creator toolkit catalog is missing/);
+  assert.equal(toolkitCatalog.execution.workspace, 'user-local');
+  assert.equal(toolkitCatalog.execution.remoteExecution, false);
+  assert.equal(toolkitCatalog.execution.modelProvider, 'user-agent');
+  assert.deepEqual(toolkitCatalog.toolkits.map(item => item.key), ['bingo','bitsy','puzzlescript','twine','pixel-assets']);
 });
 
 
@@ -304,11 +314,14 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(dockerfile, /COPY packages\/creator-tools packages\/creator-tools/);
   assert.match(dockerfile, /COPY templates\/creator-bingo templates\/creator-bingo/);
   assert.match(dockerfile, /COPY scripts\/build-agent-plugin\.mjs scripts\/build-agent-plugin\.mjs/);
+  assert.match(dockerfile, /COPY scripts\/creator-toolkit-cli\.mjs scripts\/creator-toolkit-cli\.mjs/);
   assert.match(dockerfile, /node scripts\/build-agent-plugin\.mjs && node scripts\/prepare-agent-downloads\.mjs/);
   assert.match(packer, /0x06054b50/);
   assert.match(downloads, /createHash\('sha256'\)/);
   assert.match(downloads, /harnessPlugin/);
   assert.match(downloads, /agentPlugin/);
+  assert.match(downloads, /gamehub-creator-tools-v1\.json/);
+  assert.match(downloads, /creator-toolkit\.mjs/);
   assert.match(downloads, /contentBase64/);
   assert.match(powershell, /Get-FileHash -Algorithm SHA256/);
   assert.match(powershell, /dsh plugin --profile web add/);

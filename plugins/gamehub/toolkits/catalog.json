@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "gamehub.agent-creator-toolkit-catalog",
+  "version": "2026.10.10",
+  "serviceUrl": "https://mooyu.fun/downloads/gamehub-creator-tools-v1.json",
+  "execution": {
+    "modelProvider": "user-agent",
+    "workspace": "user-local",
+    "remoteExecution": false,
+    "credentials": "never-send-model-keys-to-gamehub",
+    "publishRequiresExplicitUserAction": true
+  },
+  "toolkits": [
+    {
+      "key": "bingo",
+      "name": "Bingo 表格",
+      "status": "ready",
+      "role": "structured-work",
+      "bestFor": ["经历清单", "兴趣表格", "社交分享图"],
+      "sourceFormat": "gamehub.bingo-v1",
+      "output": "private-platform-draft",
+      "template": "templates/creator-bingo",
+      "agentPrompt": "在当前用户工作区创建或更新一个 GameHub Bingo 创作包。使用官方 creator-bingo 模板，只修改 creator-manifest.json 和 source/bingo.json；本地校验通过后等待用户明确要求再提交。"
+    },
+    {
+      "key": "bitsy",
+      "name": "Bitsy 微型世界",
+      "status": "guided",
+      "role": "local-source-adapter",
+      "bestFor": ["短篇探索", "像素对话", "小型叙事"],
+      "sourceFormat": "bitsy-text",
+      "output": "web-project",
+      "upstream": {
+        "project": "Bitsy",
+        "license": "MIT",
+        "source": "https://codeberg.org/adamledoux/bitsy"
+      },
+      "agentPrompt": "在用户本地工作区制作 Bitsy 游戏。保留可编辑的 .bitsy 文本源码，并生成自包含 index.html；不得把模型密钥、平台令牌或用户目录信息写入成品。若本机没有兼容的 Bitsy 导出工具，先说明缺失项并在下载或运行第三方工具前征得用户同意。"
+    },
+    {
+      "key": "puzzlescript",
+      "name": "PuzzleScript 规则谜题",
+      "status": "guided",
+      "role": "local-source-adapter",
+      "bestFor": ["推箱子", "回合制网格", "机关解谜"],
+      "sourceFormat": "puzzlescript-text",
+      "output": "web-project",
+      "upstream": {
+        "project": "PuzzleScript",
+        "license": "MIT",
+        "source": "https://github.com/increpare/PuzzleScript"
+      },
+      "agentPrompt": "在用户本地工作区创建 PuzzleScript 文本源码，先用小地图验证规则，再导出独立 index.html。保留源码、玩法说明和测试关卡；不得依赖线上运行时，不得把任何凭据写入游戏。若需要取得或运行第三方编译器，必须先征得用户同意。"
+    },
+    {
+      "key": "twine",
+      "name": "Twine 互动故事",
+      "status": "guided",
+      "role": "local-source-adapter",
+      "bestFor": ["分支剧情", "文字冒险", "互动问答"],
+      "sourceFormat": "twee3",
+      "output": "web-project",
+      "upstream": {
+        "project": "Twine",
+        "license": "GPL-3.0",
+        "source": "https://github.com/klembot/twinejs"
+      },
+      "agentPrompt": "在用户本地工作区使用 Twee 3 文本维护互动故事源码，并编译为自包含 index.html。保持段落链接可达，提供至少一条完整通关路径；不得上传模型密钥或本地隐私数据。若本机没有用户认可的兼容编译器，先停下说明，不要静默下载或执行第三方程序。"
+    },
+    {
+      "key": "pixel-assets",
+      "name": "像素素材",
+      "status": "asset-only",
+      "role": "local-asset-contract",
+      "bestFor": ["像素角色", "逐帧动画", "地图图块"],
+      "sourceFormat": "png-gif-spritesheet",
+      "output": "game-assets",
+      "upstream": {
+        "project": "Piskel",
+        "license": "Apache-2.0",
+        "source": "https://github.com/piskelapp/piskel"
+      },
+      "agentPrompt": "为当前本地游戏项目准备像素素材。输出透明 PNG、GIF 或 spritesheet，并同时记录帧尺寸、帧率和排列方式。该工具只产出素材，不能单独提交为可玩游戏；如需打开或安装 Piskel，必须先征得用户同意。"
+    }
+  ]
+}

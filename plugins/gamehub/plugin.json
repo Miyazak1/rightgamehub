@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
-  "version": "0.1.1",
-  "description": "Discover, launch and publish GameHub experiences from supported AI agents.",
+  "version": "0.2.0",
+  "description": "Discover, create locally, validate and publish GameHub experiences from supported AI agents.",
   "author": {
     "name": "GameHub",
     "url": "https://mooyu.fun"
@@ -27,12 +27,14 @@
         "capabilities": [
           "Discover games",
           "Open GameHub",
+          "Create games locally",
+          "Validate local web projects",
           "Publish games"
         ],
         "websiteURL": "https://mooyu.fun",
         "defaultPrompt": [
           "Open GameHub and help me choose a short game.",
-          "Show me how to publish a web game to GameHub."
+          "Use a GameHub creator toolkit to make a game in this workspace."
         ],
         "brandColor": "#8B5CF6"
       }

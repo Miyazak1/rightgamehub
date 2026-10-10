@@ -157,19 +157,24 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
 });
 
-test('creator publishing lists external tools and does not route users into a duplicate Bingo editor', async () => {
+test('creator publishing is Agent-first and does not route users into browser editors', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
-  for (const name of ['Piskel','Bitsy','PuzzleScript','Twine']) assert.match(source, new RegExp(`title: '${name}'`));
-  assert.match(source, /https:\/\/www\.piskelapp\.com\//);
-  assert.match(source, /https:\/\/make\.bitsy\.org\//);
-  assert.match(source, /https:\/\/www\.puzzlescript\.net\/editor\.html/);
-  assert.match(source, /https:\/\/twinery\.org\/2\//);
+  for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));
+  assert.match(source, /在你自己的 Agent 里制作/);
+  assert.match(source, /YOUR AGENT · YOUR MODEL · YOUR WORKSPACE/);
+  assert.match(source, /添加 GameHub 到 Agent/);
+  assert.match(source, /复制这条 Agent 任务/);
+  assert.match(source, /<dt>执行位置<\/dt><dd>用户本地<\/dd>/);
+  assert.match(source, /平台不会替你运行 AI/);
+  assert.match(source, /GameHub 不接收模型 API Key/);
+  assert.doesNotMatch(source, /打开官方工具/);
+  assert.doesNotMatch(source, /editorUrl/);
   assert.doesNotMatch(source, /title: 'Bingo 快速编辑'/);
   assert.doesNotMatch(source, /content = <StudioDraftPage/);
   assert.match(source, /content = <RetiredStudioPage go=\{go\}\/>/);
   assert.match(source, /content = <CreatorDraftReviewPage/);
   assert.match(source, /这里不提供内容编辑/);
-  assert.match(source, /上传导出结果/);
+  assert.match(source, /已有作品，直接发布/);
 });
 
 test('API client creates an authenticated realtime connection ticket', async () => {

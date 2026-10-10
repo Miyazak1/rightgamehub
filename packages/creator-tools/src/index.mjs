@@ -119,6 +119,56 @@ export async function inspectMultiplayerProject(root) {
   return result(projectRoot,findings);
 }
 
+const staticTextExtensions = new Set(['.html','.htm','.css','.js','.mjs','.json','.txt','.md','.xml','.svg','.twee','.bitsy','.puzzlescript']);
+const staticForbiddenExtensions = new Set(['.exe','.dll','.msi','.bat','.cmd','.ps1','.com','.scr','.sys','.dylib','.so','.app','.apk','.jar','.zip','.rar','.7z']);
+const staticSecretPatterns = [
+  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
+  /\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{20,}\b/u,
+  /\b(?:access|refresh|api)[_-]?token\s*[:=]\s*["'][^"']{12,}["']/iu,
+  /\bapi[_-]?key\s*[:=]\s*["'][^"']{12,}["']/iu,
+];
+
+export async function inspectStaticWebProject(root) {
+  const projectRoot = path.resolve(root); const findings = []; const files = [];
+  let totalBytes = 0;
+  const walk = async (directory,prefix='') => {
+    let entries;
+    try { entries = await fs.readdir(directory,{ withFileTypes:true }); }
+    catch (error) { findings.push(item('error','WEB_PROJECT_UNREADABLE',`无法读取 ${prefix || '项目目录'}：${error.message}`)); return; }
+    for (const entry of entries) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isSymbolicLink()) { findings.push(item('error','WEB_SYMLINK_FORBIDDEN',`${relative} 是符号链接。`,'将目标内容复制为项目内普通文件。')); continue; }
+      if (entry.isDirectory()) {
+        if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.gamehub') continue;
+        await walk(path.join(directory,entry.name),relative);
+        continue;
+      }
+      if (!entry.isFile()) { findings.push(item('error','WEB_FILE_TYPE_INVALID',`${relative} 不是普通文件。`)); continue; }
+      const absolute = path.join(directory,entry.name); const stat = await fs.stat(absolute);
+      totalBytes += stat.size; files.push({ relative,absolute,size:stat.size,extension:path.extname(entry.name).toLowerCase() });
+      if (files.length > 2_000) { findings.push(item('error','WEB_FILE_COUNT_EXCEEDED','项目文件超过 2000 个。','删除构建缓存、源码依赖和无关文件，只保留浏览器运行所需资源。')); return; }
+    }
+  };
+  await walk(projectRoot);
+  const entry = files.find(file => file.relative === 'index.html');
+  if (!entry) findings.push(item('error','WEB_ENTRY_MISSING','项目根目录缺少 index.html。','把可玩的网页入口放在项目根目录并命名为 index.html。'));
+  else if (entry.size < 16 || entry.size > 5 * 1024 * 1024) findings.push(item('error','WEB_ENTRY_SIZE_INVALID','index.html 必须是 16 字节至 5 MiB 的普通文件。'));
+  if (totalBytes > 128 * 1024 * 1024) findings.push(item('error','WEB_PROJECT_TOO_LARGE','项目文件总量超过 128 MiB。','移除源素材、编辑器缓存和未使用资源。'));
+  for (const file of files) {
+    if (staticForbiddenExtensions.has(file.extension)) findings.push(item('error','WEB_EXECUTABLE_FORBIDDEN',`${file.relative} 不是网页发布物允许的文件类型。`,'网页包只应包含浏览器可读取的静态资源。'));
+    if (/^(?:\.env(?:\.|$)|credentials?|secrets?)(?:\.|$)/iu.test(path.basename(file.relative))) findings.push(item('error','WEB_SECRET_FILE',`${file.relative} 看起来是凭据文件。`,'从发布目录删除凭据，并立即轮换已经暴露的密钥。'));
+    if (!staticTextExtensions.has(file.extension) || file.size > 1024 * 1024) continue;
+    let source;
+    try { source = await fs.readFile(file.absolute,'utf8'); } catch { continue; }
+    if (staticSecretPatterns.some(pattern => pattern.test(source))) findings.push(item('error','WEB_SECRET_REFERENCE',`${file.relative} 疑似包含密钥或令牌。`,'从成品中移除凭据，并使用平台提供的受限能力桥。'));
+    if (/<(?:script|link)\b[^>]*(?:src|href)\s*=\s*["']https?:\/\//iu.test(source)) findings.push(item('warning','WEB_REMOTE_RUNTIME',`${file.relative} 引用了远程脚本或样式。`,'将运行依赖保存到项目内，确保离线和隔离环境可运行。'));
+    if (/\b(?:file:\/\/\/|[A-Z]:\\Users\\|\/home\/[^/]+\/)/u.test(source)) findings.push(item('warning','WEB_LOCAL_PATH_REFERENCE',`${file.relative} 可能包含本机绝对路径。`,'改用项目内相对路径。'));
+  }
+  if (!findings.some(finding => finding.severity === 'error')) findings.push(item('info','WEB_PROJECT_READY',`本地网页项目包含 ${files.length} 个文件、${totalBytes} 字节，可以继续压缩并上传平台校验。`));
+  findings.push(item('warning','LOCAL_DOCTOR_LIMIT','本地 Doctor 只检查发布结构和明显泄漏；平台仍会重新解包、扫描并在隔离环境中验证。'));
+  return result(projectRoot,findings);
+}
+
 export {
   CREATOR_PACKAGE_FORMAT,
   CREATOR_PACKAGE_VERSION,

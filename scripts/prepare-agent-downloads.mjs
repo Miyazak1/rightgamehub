@@ -31,6 +31,8 @@ const pluginPaths = [
   'plugins/gamehub/.claude-plugin/plugin.json',
   'plugins/gamehub/skills/gamehub/SKILL.md',
   'plugins/gamehub/bin/creator-submit.mjs',
+  'plugins/gamehub/bin/creator-toolkit.mjs',
+  'plugins/gamehub/toolkits/catalog.json',
   'plugins/gamehub/templates/creator-bingo/.gitignore',
   'plugins/gamehub/templates/creator-bingo/README.md',
   'plugins/gamehub/templates/creator-bingo/creator-manifest.json',
@@ -48,6 +50,8 @@ const pluginBundle = Buffer.from(JSON.stringify({
 }, null, 2) + '\n');
 const pluginFilename = `gamehub-agent-plugin-${portablePlugin.version}.json`;
 await writeFile(new URL(pluginFilename, publicRoot), pluginBundle);
+const creatorToolkitCatalog = await readFile(new URL('plugins/gamehub/toolkits/catalog.json', root));
+await writeFile(new URL('gamehub-creator-tools-v1.json', publicRoot), creatorToolkitCatalog);
 
 await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
   schemaVersion: 2,
@@ -96,6 +100,13 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     url: `https://mooyu.fun/downloads/${pluginFilename}`,
     sha256: sha256(pluginBundle),
     supportedHosts: ['codex', 'claude'],
+  },
+  creatorTools: {
+    version: JSON.parse(creatorToolkitCatalog).version,
+    filename: 'gamehub-creator-tools-v1.json',
+    url: 'https://mooyu.fun/downloads/gamehub-creator-tools-v1.json',
+    sha256: sha256(creatorToolkitCatalog),
+    execution: 'user-local-agent',
   },
 }, null, 2) + '\n');
 console.log(`Prepared GameHub downloads: ${filename}, ${harnessFilename}, and ${pluginFilename}`);

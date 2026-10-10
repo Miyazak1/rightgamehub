@@ -1,8 +1,8 @@
 {
   "name": "gamehub",
   "displayName": "GameHub",
-  "version": "0.1.1",
-  "description": "Discover, launch and publish GameHub experiences from Claude Code.",
+  "version": "0.2.0",
+  "description": "Discover, create locally, validate and publish GameHub experiences from Claude Code.",
   "author": {
     "name": "GameHub",
     "url": "https://mooyu.fun"
