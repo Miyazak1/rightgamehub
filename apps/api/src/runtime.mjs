@@ -18,6 +18,7 @@ import { createGitHubOAuthClient } from './github-oauth-client.mjs';
 import { createApp } from './app.mjs';
 import { CommunityService } from './community-service.mjs';
 import { CommunityProjectService } from './community-project-service.mjs';
+import { CommunityEventService, CommunityPartyService, CommunityExperienceService } from './community-activity-service.mjs';
 import { CommunityMediaService } from './community-media-service.mjs';
 import { CommunityMediaStore } from './community-media-store.mjs';
 import { createCommunityImageRunner } from './community-image-runner.mjs';
@@ -148,12 +149,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
   const communityStore=new CommunityMediaStore(config.community.mediaRoot);
-  const communityService=new CommunityService({pool:database.pool,config:config.community,store:communityStore,projects:new CommunityProjectService({pool:database.pool})});
-  const communityMediaService=new CommunityMediaService({
-    service:communityService,store:communityStore,
-    runner:createCommunityImageRunner({root:config.community.processorRoot,mediaRoot:config.community.mediaRoot,mode:config.community.executionMode}),
-    capacity:bytes=>storageCapacityService.assertCanReserve({communityMedia:bytes,communityProcessor:2*bytes}),
-  });
+  const communityProjects=new CommunityProjectService({pool:database.pool});
+  const communityEvents=new CommunityEventService({pool:database.pool});
   const publicProfileService = createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool), builtInWorks: [guessBaikeWork] });
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(database.pool) });
@@ -162,6 +159,14 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
   const multiplayerRoomService = createMultiplayerRoomService({ repository: new PostgresMultiplayerRoomRepository(database.pool), roomCodeHmacKey: config.roomCodeHmacKey,rulesRegistry });
+  const communityParties=new CommunityPartyService({pool:database.pool,multiplayerRoomService});
+  const communityExperience=new CommunityExperienceService({pool:database.pool,events:communityEvents,parties:communityParties,projects:communityProjects});
+  const communityService=new CommunityService({pool:database.pool,config:config.community,store:communityStore,projects:communityProjects,events:communityEvents,parties:communityParties,experience:communityExperience});
+  const communityMediaService=new CommunityMediaService({
+    service:communityService,store:communityStore,
+    runner:createCommunityImageRunner({root:config.community.processorRoot,mediaRoot:config.community.mediaRoot,mode:config.community.executionMode}),
+    capacity:bytes=>storageCapacityService.assertCanReserve({communityMedia:bytes,communityProcessor:2*bytes}),
+  });
   const multiplayerMatchPublisher = createRedisMatchPublisher({ url: config.redisUrl });
   const multiplayerRoomPublisher = createRedisMatchPublisher({ url: config.redisUrl,channelKind: 'room' });
   const multiplayerMatchService = createMultiplayerMatchService({ repository: new PostgresMultiplayerMatchRepository(database.pool), rulesRegistry, publisher: multiplayerMatchPublisher,roomPublisher: multiplayerRoomPublisher });

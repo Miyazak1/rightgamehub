@@ -25,7 +25,7 @@ const view = (row,manage=false) => ({
 });
 
 export class CommunityService {
-  constructor({pool,config,store=null,clock=()=>new Date(),projects=null}) { Object.assign(this,{pool,config,store,clock,projects}); }
+  constructor({pool,config,store=null,clock=()=>new Date(),projects=null,events=null,parties=null,experience=null}) { Object.assign(this,{pool,config,store,clock,projects,events,parties,experience}); }
   enabled() { if(!this.config.enabled) fail('COMMUNITY_DISABLED',503,'分享板块暂未开放。'); }
   async actor(client,actor,{posting=false,admin=false}={}) {
     if(!actor?.userId) fail('AUTH_REQUIRED',401,'请登录后继续。');
