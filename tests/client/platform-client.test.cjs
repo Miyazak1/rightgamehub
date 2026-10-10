@@ -157,16 +157,21 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
 });
 
-test('creator publishing is Agent-first and does not route users into browser editors', async () => {
+test('creator publishing stays direct while Agent toolkits remain optional', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));
-  assert.match(source, /在你自己的 Agent 里制作/);
-  assert.match(source, /YOUR AGENT · YOUR MODEL · YOUR WORKSPACE/);
-  assert.match(source, /添加 GameHub 到 Agent/);
+  assert.match(source, /OPTIONAL CREATOR TOOLS/);
+  assert.match(source, /不是发布流程，也不是上传作品的前置条件/);
+  assert.match(source, /不使用它们也不会影响创建、上传或发布/);
   assert.match(source, /复制这条 Agent 任务/);
   assert.match(source, /<dt>执行位置<\/dt><dd>用户本地<\/dd>/);
-  assert.match(source, /平台不会替你运行 AI/);
-  assert.match(source, /GameHub 不接收模型 API Key/);
+  assert.match(source, /工具与发布相互独立/);
+  assert.match(source, /不会替你创建作品、改变上传入口/);
+  assert.match(source, /onClick=\{\(\) => go\('\/creator\/tools'\)\}>创作工具/);
+  assert.match(source, /onClick=\{\(\) => go\('\/creator\/works\/new'\)\}>新建作品/);
+  assert.match(source, /route === '\/creator\/tools'\) content = <CreatorToolsPage/);
+  assert.match(source, /route === '\/creator\/works\/new'\) content = <NewWorkPage/);
+  assert.doesNotMatch(source, /className="ai-studio-gateway"/);
   assert.doesNotMatch(source, /打开官方工具/);
   assert.doesNotMatch(source, /editorUrl/);
   assert.doesNotMatch(source, /title: 'Bingo 快速编辑'/);
@@ -174,7 +179,7 @@ test('creator publishing is Agent-first and does not route users into browser ed
   assert.match(source, /content = <RetiredStudioPage go=\{go\}\/>/);
   assert.match(source, /content = <CreatorDraftReviewPage/);
   assert.match(source, /这里不提供内容编辑/);
-  assert.match(source, /已有作品，直接发布/);
+  assert.match(source, /建立作品资料后，下一步直接上传可运行的 Web ZIP/);
 });
 
 test('API client creates an authenticated realtime connection ticket', async () => {
