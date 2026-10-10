@@ -93,8 +93,19 @@ export function createGameHubClient({ windowImpl = globalThis.window, parentWind
   const cloudSave = createCloudSaveClient({request:(method,params)=>request(method,params,cloudSaveTimeoutMs)});
   return Object.freeze({
     connect,
-    files: Object.freeze({ download: input => request('files.download', input, 130000) }),
-    shares: Object.freeze({ create: input => request('shares.create', input), current: () => request('shares.current') }),
+    files: Object.freeze({
+      download: async (input, filename) => {
+        if (typeof Blob !== 'undefined' && input instanceof Blob) {
+          const data = await input.arrayBuffer();
+          return request('files.download', { filename,mimeType: input.type,data }, 130000);
+        }
+        return request('files.download', input, 130000);
+      },
+    }),
+    shares: Object.freeze({
+      create: (input, payload) => request('shares.create', typeof input === 'string' ? { title:input,payload } : input),
+      current: () => request('shares.current'),
+    }),
     getPlayer: () => request('player.get'),
     cloudSave,
     localSave: cloudSave.local,

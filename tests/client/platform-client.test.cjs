@@ -110,6 +110,24 @@ test('API client exposes catalog data without inventing local works', async () =
   assert.deepEqual((await client.listWorks()).data, []);
 });
 
+test('API client creates authenticated playable shares and opens them publicly', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({ getAccessToken:()=>'account-token',fetchImpl:async(url,init)=>{
+    requests.push({ url,init });
+    return new Response(JSON.stringify({ data:{ code:'BingoLink1234567890abcdef123456' } }),{ status:200,headers:{ 'content-type':'application/json' } });
+  } });
+  const gameSessionId='a'.repeat(43);
+  await client.createGameShare(gameSessionId,{ title:'动画 Bingo',payload:{ kind:'bingo-pack' } });
+  await client.getGameShare('BingoLink1234567890abcdef123456');
+  assert.deepEqual(requests.map(item=>item.init.method),['POST','GET']);
+  assert.equal(requests[0].init.headers.Authorization,'Bearer account-token');
+  assert.equal(requests[0].init.headers['X-GameHub-Session'],gameSessionId);
+  assert.equal(requests[1].init.headers.Authorization,undefined);
+  assert.match(requests[0].url,/\/v1\/game-shares$/u);
+  assert.match(requests[1].url,/\/v1\/game-shares\/BingoLink1234567890abcdef123456$/u);
+});
+
 test('API client submits analytics and reads administrator and creator overviews', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];
@@ -137,6 +155,26 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /\/v1\/works\/\$\{work\.id\}\/badge\.svg/);
   assert.match(source, /const PUBLIC_GAMEHUB_URL = 'https:\/\/mooyu\.fun'/);
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
+});
+
+test('creator publishing is Agent-first and does not route users into browser editors', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));
+  assert.match(source, /在你自己的 Agent 里制作/);
+  assert.match(source, /YOUR AGENT · YOUR MODEL · YOUR WORKSPACE/);
+  assert.match(source, /添加 GameHub 到 Agent/);
+  assert.match(source, /复制这条 Agent 任务/);
+  assert.match(source, /<dt>执行位置<\/dt><dd>用户本地<\/dd>/);
+  assert.match(source, /平台不会替你运行 AI/);
+  assert.match(source, /GameHub 不接收模型 API Key/);
+  assert.doesNotMatch(source, /打开官方工具/);
+  assert.doesNotMatch(source, /editorUrl/);
+  assert.doesNotMatch(source, /title: 'Bingo 快速编辑'/);
+  assert.doesNotMatch(source, /content = <StudioDraftPage/);
+  assert.match(source, /content = <RetiredStudioPage go=\{go\}\/>/);
+  assert.match(source, /content = <CreatorDraftReviewPage/);
+  assert.match(source, /这里不提供内容编辑/);
+  assert.match(source, /已有作品，直接发布/);
 });
 
 test('API client creates an authenticated realtime connection ticket', async () => {
@@ -614,6 +652,13 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(contribution, /来自项目：\{item\.project\.title\}/);
   assert.match(app, /<CommunityProjects/);
   assert.match(projects, /发布项目更新/);
+});
+
+test('player routes preserve share links and community room entry after integration', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  assert.match(source, /releaseId=\{\['challenge','share','room'\]\.includes\(parts\[2\]\)/);
+  assert.match(source, /initialRoomId=\{parts\[2\] === 'room' \? parts\[3\] : parts\[3\] === 'room' \? parts\[4\] : null\}/);
+  assert.match(source, /initialShareCode=\{parts\[2\] === 'share' \? parts\[3\] : null\}/);
 });
 
 test('API client refreshes an expired access token once and updates host memory', async () => {

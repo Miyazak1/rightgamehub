@@ -579,8 +579,14 @@ function ContributionTaskStarter({ feedback, api, demo, onCreated }) {
   return <section className="contribution-starter"><div><span className="kicker">TURN FEEDBACK INTO ACTION</span><h2>从反馈创建共建任务</h2><p>只会创建私有草稿。补充完成标准后，再由你明确公开给玩家领取。</p></div><div className="contribution-starter__items">{eligible.map(item => <article key={item.id}><span>{item.workTitle}</span><strong>{item.summary}</strong><button type="button" onClick={() => setSelected(item)}>创建任务草稿</button>{selected?.id === item.id && <CreateContributionTaskForm item={item} api={api} demo={demo} onCancel={() => setSelected(null)} onCreated={async () => { setExisting(current => new Set([...current, item.id])); setSelected(null); await onCreated(); }}/>}</article>)}</div></section>;
 }
 
+function CreatorDraftShelf({ drafts, go }) {
+  if (!drafts.length) return null;
+  const studioNames = { bingo: 'Bingo 表格',puzzle: '谜题工坊',story: '互动故事',world: '像素小世界' };
+  return <section className="creator-draft-shelf"><div><span className="kicker">READY TO REVIEW</span><h2>Agent 导入成果</h2><p>平台保存的是待发布快照；内容修改请回到原 Agent 或创作工具，网页端只负责预览与发布。</p></div><div>{drafts.slice(0,6).map(draft => <button type="button" key={draft.id} onClick={() => go(`/creator/drafts/${draft.id}`)}><span>⇧</span><strong>{draft.title}</strong><small>{studioNames[draft.studio] || draft.studio} · 修订 {draft.revision}</small><time>{new Date(draft.updatedAt).toLocaleString('zh-CN')}</time><em>查看与发布 →</em></button>)}</div></section>;
+}
+
 function CreatorPage({ api, demo, go, savedWork }) {
-  const [state, setState] = useState({ status: 'loading', works: [] });
+  const [state, setState] = useState({ status: 'loading', works: [], drafts: [] });
   const [insights, setInsights] = useState({ status: 'loading', days: 30, data: null });
   const [feedback, setFeedback] = useState({ status: 'loading', items: [] });
   const [taskRefresh, setTaskRefresh] = useState(0);
@@ -592,22 +598,22 @@ function CreatorPage({ api, demo, go, savedWork }) {
   const load = async () => {
     setState(current => ({ ...current, status: 'loading' }));
     try {
-      const listedWorks = demo ? demoWorks.slice(0, 2).map(work => savedWork?.id === work.id ? { ...work, ...savedWork } : work) : (await api.listCreatorWorks()).data;
+      const [listedWorks,drafts] = demo ? [demoWorks.slice(0, 2).map(work => savedWork?.id === work.id ? { ...work, ...savedWork } : work),[]] : await Promise.all([api.listCreatorWorks().then(result => result.data),api.listCreatorDrafts().then(result => result.data).catch(() => [])]);
       const works = demo ? listedWorks : await Promise.all(listedWorks.map(async work => {
         try { const source = (await api.getWorkSource(work.id)).data; return { ...work, sourceProvider: source.provider }; }
         catch { return work; }
       }));
-      setAccess(null); setState({ status: 'ready', works });
+      setAccess(null); setState({ status: 'ready', works, drafts });
     } catch (error) {
-      if (error.status === 401) return setState({ status: 'auth', works: [] });
+      if (error.status === 401) return setState({ status: 'auth', works: [], drafts: [] });
       if (error.status === 403) {
         try {
           const result = (await api.getCreatorApplication()).data;
-          setAccess(result); setState({ status: 'forbidden', works: [] });
-        } catch (caught) { setState({ status: caught.status === 401 ? 'auth' : 'error', works: [] }); }
+          setAccess(result); setState({ status: 'forbidden', works: [], drafts: [] });
+        } catch (caught) { setState({ status: caught.status === 401 ? 'auth' : 'error', works: [], drafts: [] }); }
         return;
       }
-      setState({ status: 'error', works: [] });
+      setState({ status: 'error', works: [], drafts: [] });
     }
   };
   useEffect(() => { load(); }, [demo]);
@@ -646,7 +652,7 @@ function CreatorPage({ api, demo, go, savedWork }) {
     try { if (!globalThis.navigator?.clipboard?.writeText) throw new Error('clipboard unavailable'); await globalThis.navigator.clipboard.writeText(markdown); setCopiedWorkId(work.id); globalThis.setTimeout?.(() => setCopiedWorkId(current => current === work.id ? '' : current), 1800); }
     catch { globalThis.prompt?.('复制 README 徽章', markdown); }
   };
-  return <main className="page creator-page">{savedWork && <p className="work-edit-success" role="status">《{savedWork.title}》资料已保存。</p>}<div className="section-heading"><div><span className="kicker">CREATOR STUDIO</span><h1>我的作品</h1><p>管理当前版本、历史记录与公开状态。</p></div><div className="creator-heading-actions"><Button kind="secondary" onClick={() => go('/creator/import')}>从 GitHub 导入</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>新建作品</Button></div></div><button className="multiplayer-creator-gateway" onClick={() => go('/creator/multiplayer')}><span>⇄</span><div><strong>让 AI 接入联机</strong><small>选好作品，描述玩法，生成可交给 AI 的完整接入任务</small></div><em>开始接入 →</em></button><button className="multiplayer-creator-gateway" onClick={() => go('/creator/leaderboards')}><span>↗</span><div><strong>让 AI 添加排行榜</strong><small>说明排名指标与计分方式，让 AI 完成接入、测试和打包</small></div><em>开始接入 →</em></button><div className="creator-summary"><div><span>全部作品</span><strong>{state.works.length}</strong></div><div><span>已发布</span><strong>{published}</strong></div><div><span>已撤下</span><strong>{withdrawn}</strong></div></div><CreatorInsights state={insights} days={insights.days} onDays={days => setInsights(current => ({ ...current, days }))}/><CreatorFeedbackInbox state={feedback} api={api} demo={demo} go={go} onReload={loadFeedback}/><ContributionTaskStarter feedback={feedback} api={api} demo={demo} onCreated={async () => { setTaskRefresh(value => value + 1); await loadFeedback(); }}/><CreatorContributionTasks api={api} demo={demo} go={go} refreshToken={taskRefresh} onChanged={loadFeedback}/>{state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} onCopyBadge={copyBadge} copied={copiedWorkId === work.id} key={work.id}/>)}</section> : <StatePanel title="还没有作品" body="新建作品后即可上传第一个 Web ZIP。" action="新建作品" onAction={() => go('/creator/works/new')} />}<aside className="creator-tip"><span>{icons.spark}</span><div><strong>发布小贴士</strong><p>撤下会立即阻止新的公开访问；历史版本仍保留，上传并通过检查的新版本可以重新发布。</p></div></aside></main>;
+  return <main className="page creator-page">{savedWork && <p className="work-edit-success" role="status">《{savedWork.title}》资料已保存。</p>}<div className="section-heading"><div><span className="kicker">CREATOR & PUBLISHING</span><h1>我的作品</h1><p>接收 Agent 和外部创作工具的成果，管理待发布快照、版本与公开状态。</p></div><div className="creator-heading-actions"><Button kind="secondary" onClick={() => go('/creator/import')}>从 GitHub 导入</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>上传或导入</Button></div></div><button className="ai-studio-gateway" onClick={() => go('/creator/works/new')}><span>⇧</span><div><small>TOOLS TO PLATFORM</small><strong>在熟悉的工具中创作，在平台完成发布</strong><p>平台负责结构校验、隔离预览、可信构建和版本发布，不重复实现内容编辑器。</p></div><em>查看工具与发布方式 →</em></button><button className="multiplayer-creator-gateway" onClick={() => go('/creator/multiplayer')}><span>⇄</span><div><strong>让 AI 接入联机</strong><small>选好作品，描述玩法，生成可交给 AI 的完整接入任务</small></div><em>开始接入 →</em></button><button className="multiplayer-creator-gateway" onClick={() => go('/creator/leaderboards')}><span>↗</span><div><strong>让 AI 添加排行榜</strong><small>说明排名指标与计分方式，让 AI 完成接入、测试和打包</small></div><em>开始接入 →</em></button><div className="creator-summary"><div><span>待发布成果</span><strong>{state.drafts.length}</strong></div><div><span>全部作品</span><strong>{state.works.length}</strong></div><div><span>已发布</span><strong>{published}</strong></div><div><span>已撤下</span><strong>{withdrawn}</strong></div></div><CreatorDraftShelf drafts={state.drafts} go={go}/><CreatorInsights state={insights} days={insights.days} onDays={days => setInsights(current => ({ ...current, days }))}/><CreatorFeedbackInbox state={feedback} api={api} demo={demo} go={go} onReload={loadFeedback}/><ContributionTaskStarter feedback={feedback} api={api} demo={demo} onCreated={async () => { setTaskRefresh(value => value + 1); await loadFeedback(); }}/><CreatorContributionTasks api={api} demo={demo} go={go} refreshToken={taskRefresh} onChanged={loadFeedback}/>{state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} onCopyBadge={copyBadge} copied={copiedWorkId === work.id} key={work.id}/>)}</section> : <StatePanel title="还没有已发布作品" body="可以上传网页作品、从 GitHub 导入，或提交 Agent 已完成的结构化成果。" action="查看发布方式" onAction={() => go('/creator/works/new')} />}<aside className="creator-tip"><span>{icons.spark}</span><div><strong>发布小贴士</strong><p>撤下会立即阻止新的公开访问；历史版本仍保留，上传并通过检查的新版本可以重新发布。</p></div></aside></main>;
 }
 
 const githubVisibilityLabels = { public: '公开仓库', private: '私有仓库', internal: '内部仓库' };
@@ -777,17 +783,210 @@ function SourceBuildPage({ workId, api, demo, go }) {
   return <main className="page source-build-page"><button className="back-link" onClick={()=>go('/creator')}>{icons.back} 我的作品</button><div className="source-build-heading"><div><span className="kicker">CONTROLLED SOURCE BUILD</span><h1>从 GitHub 构建 Web 版本</h1><p>固定到已导入的 commit，在断网、非 root 环境中提取纯静态文件；不会运行 package.json、脚本或自定义命令，也不会安装依赖。</p></div><span className="source-build-policy">STATIC-V1</span></div>{error&&<p className="form-error" role="alert">{error}</p>}<div className="source-build-layout"><form className="panel source-build-card" onSubmit={create}><div className="source-build-card__heading"><span className="github-step-number">01</span><div><small>已锁定源码</small><h2>{source?`${source.owner}/${source.name}`:'正在读取来源…'}</h2></div><span className="source-build-access">只读</span></div>{source&&<dl className="source-build-facts"><div><dt>固定提交</dt><dd><code title={source.commitSha}>{source.commitSha}</code></dd></div><div><dt>构建方式</dt><dd>纯静态复制</dd></div><div><dt>安全边界</dt><dd>断网 · 非 root</dd></div></dl>}<div className="source-build-fields"><label><span>版本名称</span><input required value={releaseLabel} maxLength="64" placeholder="例如 1.0.0" onChange={event=>setReleaseLabel(event.target.value)}/><small>用于区分本次生成的 Web 版本。</small></label><label><span>静态站点目录 <em>可选</em></span><input value={subdirectory} maxLength="255" placeholder="根目录可留空；或填写 dist / web" onChange={event=>setSubdirectory(event.target.value)}/><small>填写的目录中必须直接包含 index.html。</small></label></div><aside className="source-build-note"><strong>构建器会做什么</strong><p>只收集浏览器可运行的静态资源，再交给平台 ZIP 校验器。检测到 package.json、构建脚本或不支持的文件时会停止。</p></aside><div className="source-build-actions"><div><strong>下一步：隔离构建与安全校验</strong><small>失败不会影响当前已发布版本。</small></div><Button type="submit" disabled={!source||!releaseLabel||!!busy}>{busy==='create'?'正在排队…':'开始受控构建'}</Button></div><button type="button" className="source-build-manual" onClick={()=>go(`/creator/works/${workId}/upload`)}>当前仓库不适用？改为手动上传 ZIP →</button></form><aside className="panel source-build-history"><div className="source-build-history__heading"><span className="kicker">BUILD HISTORY</span><h2>构建记录</h2><p>状态会自动刷新，无需重复提交。</p></div>{builds.length?<ol>{builds.map(build=>{ const failed=build.state==='failed'; const current=['queued','preparing','building','packaging','validating'].includes(build.state); return <li className={`${build.state==='ready'?'is-done':''}${failed?' is-failed':''}${current?' is-current':''}`} key={build.id}><span>{build.state==='ready'?icons.check:failed?'!':'·'}</span><div><strong>{build.releaseLabel}</strong><em>{sourceBuildLabels[build.state]||build.state}</em><small><code>{build.commitSha?.slice(0,8)}</code>{build.errorCode&&<><b>{sourceBuildErrorLabels[build.errorCode]||'构建未完成'}</b><code>{build.errorCode}</code></>}</small>{build.state==='ready'&&<Button type="button" disabled={!!busy} onClick={()=>publish(build)}>{busy===build.id?'正在发布…':'发布此版本'}</Button>}</div></li>;})}</ol>:<div className="source-build-empty"><span>01</span><strong>等待首次构建</strong><p>提交后会依次显示源码准备、隔离构建、安全校验和发布状态。</p></div>}</aside></div></main>;
 }
 
-function NewWorkPage({ api, demo, go }) {
-  const [form, setForm] = useState(() => workMetadataForm({})), [kind, setKind] = useState('game');
-  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+const agentCreatorToolkits = [
+  { key: 'bingo', title: 'Bingo 表格', status: '完整支持', statusKey: 'ready', description: 'Agent 复制官方结构化模板，在本地填写内容、校验，并提交为私有待发布草稿。', output: '平台草稿', prompt: '使用 GameHub 的 bingo 创作工具，在当前工作区为我制作一个可以分享和继续游玩的 Bingo。先询问主题与行列内容，本地校验通过后再让我确认是否提交。', mark: '▦' },
+  { key: 'bitsy', title: 'Bitsy 微型世界', status: '本地适配', statusKey: 'guided', description: 'Agent 在本地维护 Bitsy 文本源码，制作短篇探索、像素对话与微型叙事。', output: '网页作品', prompt: '使用 GameHub 的 bitsy 创作工具，在当前工作区制作一个短篇像素探索故事。保留可编辑源码并生成可离线运行的 index.html；不要安装工具或提交平台，除非我明确同意。', mark: '◫' },
+  { key: 'puzzlescript', title: 'PuzzleScript 谜题', status: '本地适配', statusKey: 'guided', description: 'Agent 在本地编写规则和测试关卡，适合推箱、机关与回合制网格谜题。', output: '网页作品', prompt: '使用 GameHub 的 puzzlescript 创作工具，在当前工作区制作一个规则清晰的网格谜题。保留规则源码、测试关卡并生成可离线运行的 index.html；不要安装工具或提交平台，除非我明确同意。', mark: '◆' },
+  { key: 'twine', title: 'Twine 互动故事', status: '本地适配', statusKey: 'guided', description: 'Agent 使用文本化的 Twee 3 源码制作分支剧情、文字冒险和互动问答。', output: '网页作品', prompt: '使用 GameHub 的 twine 创作工具，在当前工作区制作一个有完整通关路径的分支互动故事。保留 Twee 3 源码并生成可离线运行的 index.html；不要安装工具或提交平台，除非我明确同意。', mark: '↝' },
+  { key: 'pixel-assets', title: '像素素材', status: '仅素材', statusKey: 'asset', description: 'Agent 按统一帧尺寸、帧率和 spritesheet 约定制作或整理像素资源，不能单独发布。', output: 'PNG / GIF / spritesheet', prompt: '使用 GameHub 的 pixel-assets 工具约定，为当前本地游戏制作像素素材，同时记录帧尺寸、帧率与排列方式。素材只放入当前项目，不要把它当作独立游戏提交。', mark: '◇' },
+];
+
+function CreationMethodPage({ go }) {
+  const [copied, setCopied] = useState('');
+  const copyPrompt = async toolkit => {
+    try {
+      if (!globalThis.navigator?.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await globalThis.navigator.clipboard.writeText(toolkit.prompt);
+      setCopied(toolkit.key);
+      globalThis.setTimeout?.(() => setCopied(current => current === toolkit.key ? '' : current), 1800);
+    } catch {
+      globalThis.prompt?.('复制给你的 Agent', toolkit.prompt);
+    }
+  };
+  return <main className="page creation-method-page"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 返回创作中心</button>
+    <section className="creation-method-hero agent-creator-hero"><div><span className="kicker">YOUR AGENT · YOUR MODEL · YOUR WORKSPACE</span><h1>在你自己的 Agent 里制作</h1><p>GameHub 提供可读取的工具说明、项目约定、模板和本地校验器。真正的创作由你的 Agent 在本机完成；模型、密钥、提示词和未提交文件都不进入平台。</p><div className="agent-creator-hero__actions"><Button type="button" onClick={() => go('/install')}>添加 GameHub 到 Agent</Button><Button kind="secondary" type="button" onClick={() => go('/creator/works/manual/new')}>已有作品，直接发布</Button></div></div><span className="creation-method-hero__badge">READ-ONLY TOOLS · LOCAL EXECUTION</span></section>
+    <ol className="agent-creator-flow" aria-label="Agent 本地创作流程"><li><span>01</span><div><strong>把目标告诉 Agent</strong><p>安装 GameHub 插件，或复制下面的一条任务。</p></div></li><li><span>02</span><div><strong>在本地制作与检查</strong><p>Agent 读取工具目录，保留源码，并运行本地 Doctor。</p></div></li><li><span>03</span><div><strong>由你确认发布</strong><p>只有你明确确认后，成品才会上传并创建私有草稿。</p></div></li></ol>
+    <div className="agent-toolkit-heading"><div><span className="kicker">AGENT-READABLE TOOLKITS</span><h2>给 Agent 的创作工具包</h2><p>这些不是网页编辑器，而是让 Agent 知道“怎么做、产出什么、怎样检查”的版本化能力。</p></div><code>gamehub-agent-plugin 0.2.0</code></div>
+    <section className="creation-method-grid agent-toolkit-grid" aria-label="Agent 创作工具包">{agentCreatorToolkits.map(toolkit => <article className="agent-toolkit-card" key={toolkit.key}><span className="creation-method-card__mark" aria-hidden="true">{toolkit.mark}</span><div><div className="agent-toolkit-card__meta"><small>{toolkit.key}</small><em className={`is-${toolkit.statusKey}`}>{toolkit.status}</em></div><h2>{toolkit.title}</h2><p>{toolkit.description}</p><dl><div><dt>执行位置</dt><dd>用户本地</dd></div><div><dt>产出</dt><dd>{toolkit.output}</dd></div></dl><blockquote>{toolkit.prompt}</blockquote></div><button className="agent-toolkit-copy" type="button" onClick={() => copyPrompt(toolkit)}>{copied === toolkit.key ? '已复制，可粘贴给 Agent' : '复制这条 Agent 任务 →'}</button></article>)}</section>
+    <aside className="creator-tool-note agent-toolkit-boundary"><strong>平台不会替你运行 AI</strong><p>工具目录是只读说明。下载、安装或执行第三方编译器前，Agent 必须先征得你的同意；登录授权和作品提交也只在你明确要求后发生。GameHub 不接收模型 API Key。</p></aside>
+    <section className="creation-other-paths"><div><span className="kicker">PUBLISH COMPLETED WORK</span><h2>Agent 已经做完了？</h2><p>结构化创作包可以进入私有草稿；普通网页项目先通过本地 Doctor，再上传 Web ZIP 或从 GitHub 固定提交导入。</p></div><div><Button kind="secondary" onClick={() => go('/creator/works/manual/new')}>上传 Web ZIP</Button><Button kind="secondary" onClick={() => go('/creator/import')}>从 GitHub 导入</Button><Button kind="secondary" onClick={() => go('/creator/multiplayer')}>接入联网游戏</Button></div></section>
+  </main>;
+}
+
+function RetiredStudioPage({ go }) {
+  return <main className="page narrow-page"><StatePanel title="平台内编辑器已经下线" body="Bingo 内容请在 Bingo 游戏或你的 Agent 中完成。平台不再维护第二套编辑器，只负责接收、预览和发布成品。" action="查看创作工具与发布方式" onAction={() => go('/creator/works/new')}/></main>;
+}
+
+function CreatorDraftReviewPage({ draftId, api, demo, go }) {
+  const [state, setState] = useState({ status: 'loading', draft: null, preview: '', error: '' });
+  const [releaseLabel, setReleaseLabel] = useState('1.0.0');
+  const [build, setBuild] = useState({ phase: 'idle', uploadId: '', message: '' });
+  useEffect(() => {
+    let live = true;
+    const load = async () => {
+      try {
+        const draft = demo ? { id: draftId, studio: 'bingo', title: 'Agent 导入示例', content: { tableTitle: '示例成果' }, revision: '1' } : (await api.getCreatorDraft(draftId)).data;
+        let preview = '';
+        try { preview = demo ? '<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;padding:32px}main{border:1px solid #222;padding:24px}</style><main><h1>Agent 导入示例</h1><p>这里只预览提交成果，不提供内容编辑。</p></main>' : (await api.previewCreatorDraft(draft.id)).data.html; }
+        catch (caught) { if (live) setState({ status: 'error', draft, preview: '', error: caught.message || '隔离预览暂时无法生成。' }); return; }
+        if (live) setState({ status: 'ready', draft, preview, error: '' });
+      } catch (caught) {
+        if (live) setState({ status: caught.status === 401 ? 'auth' : 'error', draft: null, preview: '', error: caught.message || '待发布成果暂时无法读取。' });
+      }
+    };
+    load();
+    return () => { live = false; };
+  }, [api, demo, draftId]);
+  useEffect(() => {
+    if (!build.uploadId || !['queued', 'processing'].includes(build.phase) || demo) return undefined;
+    let live = true; let timer;
+    const poll = async () => {
+      try {
+        const upload = (await api.getUpload(build.uploadId)).data;
+        if (!live) return;
+        if (['failed', 'expired', 'review_required'].includes(upload.state)) setBuild(current => ({ ...current, phase: 'failed', message: upload.errorCode || '安全校验没有通过。' }));
+        else if (upload.state === 'succeeded') setBuild(current => ({ ...current, phase: upload.publicationOutcome === 'published' ? 'published' : 'ready', message: upload.publicationOutcome === 'published' ? '版本已通过检查并公开。' : '版本已通过检查并保留为草稿。' }));
+        else { setBuild(current => ({ ...current, phase: 'processing', message: '平台正在进行安全校验。' })); timer = globalThis.setTimeout(poll, 1800); }
+      } catch (caught) { if (live) setBuild(current => ({ ...current, phase: 'failed', message: caught.message || '无法读取构建状态。' })); }
+    };
+    timer = globalThis.setTimeout(poll, 800);
+    return () => { live = false; globalThis.clearTimeout(timer); };
+  }, [api, build.uploadId, build.phase, demo]);
+  const startBuild = async () => {
+    if (!state.draft || !releaseLabel.trim() || ['building', 'queued', 'processing'].includes(build.phase)) return;
+    setBuild({ phase: 'building', uploadId: '', message: '正在生成固定版本并提交安全校验…' });
+    try {
+      if (demo) { setBuild({ phase: 'published', uploadId: 'demo-upload', message: '演示模式：版本已通过检查并公开。' }); return; }
+      const result = (await api.buildCreatorDraft(state.draft.id, { releaseLabel: releaseLabel.trim() }, state.draft.revision)).data;
+      setBuild({ phase: 'queued', uploadId: result.upload.id, message: '网页包已生成，正在等待平台校验。' });
+    } catch (caught) { setBuild({ phase: 'failed', uploadId: '', message: caught.message || '构建任务没有启动。' }); }
+  };
+  if (state.status === 'loading') return <main className="page"><LoadingCards/></main>;
+  if (state.status === 'auth') return <main className="page"><StatePanel title="登录后查看导入成果" body="待发布成果只对当前作者账号可见。" action="前往登录" onAction={() => go('/account')}/></main>;
+  if (state.status !== 'ready' || !state.draft) return <main className="page"><StatePanel title="成果没有打开" body={state.error || '请返回创作中心重新选择。'} action="返回创作中心" onAction={() => go('/creator')}/></main>;
+  return <main className="page studio-draft-page"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 返回创作中心</button><header className="studio-draft-header"><div><span className="kicker">AGENT IMPORT · READ ONLY</span><h1>{state.draft.title}</h1></div><div className="studio-save-state is-saved"><i/>待发布快照<small>修订 {state.draft.revision}</small></div></header><aside className="creator-draft-readonly-note"><strong>这里不提供内容编辑</strong><p>如需修改，请回到原 Agent 或 Bingo 游戏完成后重新提交。平台只展示当前快照，并在你确认后构建发布。</p></aside><div className="creator-draft-review-layout"><section className="studio-preview"><div className="studio-preview__head"><div><span className="kicker">SANDBOX PREVIEW</span><h2>隔离预览</h2><p>预览内容来自当前不可变修订。</p></div><span>REV {state.draft.revision}</span></div><iframe className="studio-preview-frame" title="Agent 导入成果隔离预览" sandbox="allow-scripts" srcDoc={state.preview}/></section><aside className="panel creator-draft-release"><span className="kicker">PUBLISH SNAPSHOT</span><h2>检查后发布</h2><p>固定编译器会生成 Web ZIP，再交给平台 Validator。发布不会把模型密钥或本机文件带入作品。</p><label>版本名称<input maxLength="64" value={releaseLabel} onChange={event => setReleaseLabel(event.target.value)}/></label><Button type="button" disabled={!releaseLabel.trim() || ['building', 'queued', 'processing'].includes(build.phase)} onClick={startBuild}>{['building', 'queued', 'processing'].includes(build.phase) ? '正在构建与检查…' : '构建并发布此快照'}</Button>{build.message && <p className={`studio-build-status is-${build.phase}`} role="status">{build.message}</p>}{['published', 'ready'].includes(build.phase) && <button className="text-button" type="button" onClick={() => go('/creator')}>前往作品管理 →</button>}</aside></div></main>;
+}
+
+const newBingoContent = () => ({
+  tableTitle: '我的 Bingo', subtitle: '点亮属于你的经历',
+  columnHeaders: ['时期 / 类型', '动画', '漫画', '游戏', '电影'],
+  rowHeaders: ['小学以前', '小学', '初中', '高中', '大学', '工作以后', '最近一年', '想补的经典'],
+  cells: {},
+});
+const splitStudioLines = value => value.split(/\r?\n/u).map(item => item.trim()).filter(Boolean).slice(0, 30);
+const escapeStudioMarkup = value => String(value ?? '').replace(/[&<>"']/gu, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const demoBingoPreview = content => {
+  const columns = content.columnHeaders ?? []; const rows = content.rowHeaders ?? [];
+  return `<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;margin:0;padding:24px;color:#17191f;background:#f5f5f2}main{background:white;border:1px solid #ccd0d7;padding:24px;overflow:auto}h1{margin:0 0 4px}p{color:#68707e}table{border-collapse:collapse;min-width:680px;width:100%;table-layout:fixed}th,td{border:1px solid #cfd2d8;padding:12px;text-align:center}thead th,tbody th{background:#f4f5f6}button{border:0;background:white;width:100%;min-height:50px}button:focus,button:hover{background:#ff5964;color:white}</style><main><h1>${escapeStudioMarkup(content.tableTitle)}</h1><p>${escapeStudioMarkup(content.subtitle)}</p><table><thead><tr>${columns.map(item => `<th>${escapeStudioMarkup(item)}</th>`).join('')}</tr></thead><tbody>${rows.map((row, rowIndex) => `<tr><th>${escapeStudioMarkup(row)}</th>${columns.slice(1).map((_item, offset) => `<td><button>${escapeStudioMarkup(content.cells?.[`${rowIndex}:${offset + 1}`] || '未填写')}</button></td>`).join('')}</tr>`).join('')}</tbody></table></main>`;
+};
+
+function StudioDraftPage({ draftId, studio, api, demo, go }) {
+  const supported = studio === 'bingo';
+  const [draft, setDraft] = useState(() => draftId ? null : { id: null, studio, schemaVersion: 1, title: '未命名 Bingo', content: newBingoContent(), revision: '0' });
+  const [phase, setPhase] = useState(draftId ? 'loading' : 'new');
+  const [saveState, setSaveState] = useState('idle'); const [error, setError] = useState('');
+  const [preview, setPreview] = useState({ html: '', revision: '', loading: false, error: '' });
+  const [releaseLabel, setReleaseLabel] = useState('1.0.0');
+  const [build, setBuild] = useState({ phase: 'idle', uploadId: '', workId: '', message: '' });
+  const savedSignature = useRef('');
+  useEffect(() => {
+    if (!draftId || !supported) return;
+    let live = true; setPhase('loading'); setError('');
+    (demo ? Promise.resolve({ data: { id: draftId, studio: 'bingo', schemaVersion: 1, title: '演示 Bingo', content: newBingoContent(), revision: '1' } }) : api.getCreatorDraft(draftId)).then(({ data }) => {
+      if (!live) return; savedSignature.current = JSON.stringify({ title: data.title, content: data.content }); setDraft(data); setSaveState('saved'); setPhase('editing');
+    }).catch(caught => { if (live) { setError(caught.message || '草稿暂时无法读取。'); setPhase(caught.status === 401 ? 'auth' : 'error'); } });
+    return () => { live = false; };
+  }, [api, demo, draftId, supported]);
+  useEffect(() => {
+    if (!draft?.id || phase !== 'editing') return undefined;
+    const signature = JSON.stringify({ title: draft.title, content: draft.content });
+    if (signature === savedSignature.current) return undefined;
+    setSaveState('pending');
+    const timer = globalThis.setTimeout(async () => {
+      const payload = { title: draft.title, schemaVersion: draft.schemaVersion, content: draft.content };
+      setSaveState('saving'); setError('');
+      try {
+        const saved = demo ? { ...draft, revision: String(Number(draft.revision) + 1), updatedAt: new Date().toISOString() } : (await api.updateCreatorDraft(draft.id, payload, draft.revision)).data;
+        savedSignature.current = signature;
+        setDraft(current => current ? { ...current, revision: saved.revision, updatedAt: saved.updatedAt } : current);
+        setSaveState('saved');
+      } catch (caught) { setSaveState('error'); setError(caught.message || '自动保存失败，请保留当前页面并重试。'); }
+    }, 900);
+    return () => globalThis.clearTimeout(timer);
+  }, [api, demo, draft?.id, draft?.revision, draft?.title, draft?.content, phase]);
+  const refreshPreview = async () => {
+    if (!draft?.id || ['pending', 'saving'].includes(saveState)) return;
+    setPreview(current => ({ ...current, loading: true, error: '' }));
+    try {
+      const data = demo ? { html: demoBingoPreview(draft.content), revision: draft.revision } : (await api.previewCreatorDraft(draft.id)).data;
+      setPreview({ html: data.html, revision: data.revision, loading: false, error: '' });
+    } catch (caught) { setPreview(current => ({ ...current, loading: false, error: caught.message || '试玩预览暂时无法生成。' })); }
+  };
+  useEffect(() => {
+    if (!draft?.id || phase !== 'editing' || !['idle', 'saved'].includes(saveState)) return;
+    refreshPreview();
+  }, [draft?.id, draft?.revision, phase, saveState]);
+  useEffect(() => {
+    if (!build.uploadId || !['queued', 'processing'].includes(build.phase) || demo) return undefined;
+    let live = true; let timer;
+    const poll = async () => {
+      try {
+        const upload = (await api.getUpload(build.uploadId)).data;
+        if (!live) return;
+        if (upload.state === 'failed' || upload.state === 'expired' || upload.state === 'review_required') setBuild(current => ({ ...current, phase: 'failed', message: upload.errorCode || '构建校验没有通过。' }));
+        else if (upload.state === 'succeeded') setBuild(current => ({ ...current, phase: upload.publicationOutcome === 'published' ? 'published' : 'ready', message: upload.publicationOutcome === 'published' ? '版本已通过检查并公开。' : '版本已通过检查并保留为草稿。' }));
+        else { setBuild(current => ({ ...current, phase: 'processing', message: '固定编译器已经交付文件，平台正在安全校验。' })); timer = globalThis.setTimeout(poll, 1800); }
+      } catch (caught) { if (live) setBuild(current => ({ ...current, phase: 'failed', message: caught.message || '无法读取构建状态。' })); }
+    };
+    timer = globalThis.setTimeout(poll, 800);
+    return () => { live = false; globalThis.clearTimeout(timer); };
+  }, [api, build.uploadId, build.phase, demo]);
+  if (!supported) return <main className="page"><StatePanel title="这种工坊尚未开放" body="当前 C0 只开放 Bingo，用来验证统一草稿和自动保存底座。" action="返回创作方式" onAction={() => go('/creator/works/new')}/></main>;
+  if (phase === 'loading') return <main className="page"><LoadingCards/></main>;
+  if (phase === 'auth') return <main className="page"><StatePanel title="登录后继续草稿" body="创作草稿只对当前作者账号可见。" action="前往登录" onAction={() => go('/account')}/></main>;
+  if (phase === 'error' || !draft) return <main className="page"><StatePanel title="草稿没有打开" body={error || '请返回创作中心重新选择草稿。'} action="返回创作中心" onAction={() => go('/creator')}/></main>;
+  const updateContent = patch => setDraft(current => ({ ...current, content: { ...current.content, ...patch } }));
+  const create = async event => {
+    event.preventDefault(); setSaveState('saving'); setError('');
+    try {
+      const created = demo ? { ...draft, id: globalThis.crypto?.randomUUID?.() ?? '00000000-0000-4000-8000-000000000001', revision: '1', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : (await api.createCreatorDraft({ studio: 'bingo', schemaVersion: 1, title: draft.title, content: draft.content })).data;
+      savedSignature.current = JSON.stringify({ title: created.title, content: created.content }); setDraft(created); setPhase('editing'); setSaveState('saved'); go(`/creator/drafts/${created.id}`);
+    } catch (caught) { setSaveState('error'); setError(caught.message || '草稿没有创建成功。'); }
+  };
+  const columns = draft.content.columnHeaders?.length ? draft.content.columnHeaders : ['项目'];
+  const rows = draft.content.rowHeaders ?? [];
+  const updateCell = (rowIndex, columnIndex, value) => updateContent({ cells: { ...(draft.content.cells ?? {}), [`${rowIndex}:${columnIndex}`]: value.slice(0, 200) } });
+  const startBuild = async () => {
+    if (!draft.id || !releaseLabel.trim() || !['idle', 'saved'].includes(saveState)) return;
+    setBuild({ phase: 'building', uploadId: '', workId: draft.workId || '', message: '正在用固定 Bingo 编译器生成自包含网页包…' }); setError('');
+    try {
+      if (demo) { setBuild({ phase: 'published', uploadId: 'demo-upload', workId: 'demo-work', message: '演示模式：版本已通过检查并公开。' }); return; }
+      const result = (await api.buildCreatorDraft(draft.id, { releaseLabel: releaseLabel.trim() }, draft.revision)).data;
+      setDraft(current => current ? { ...current, workId: result.workId } : current);
+      setBuild({ phase: 'queued', uploadId: result.upload.id, workId: result.workId, message: '网页包已生成，正在等待平台 Validator。' });
+    } catch (caught) { setBuild({ phase: 'failed', uploadId: '', workId: draft.workId || '', message: caught.message || '构建任务没有启动。' }); }
+  };
+  const saveLabel = phase === 'new' ? '尚未创建' : saveState === 'saving' ? '正在保存…' : saveState === 'pending' ? '等待保存' : saveState === 'error' ? '保存失败' : '已自动保存';
+  return <main className="page studio-draft-page"><button className="back-link" onClick={() => go('/creator/works/new')}>{icons.back} 返回创作与发布</button>
+    <header className="studio-draft-header"><div><span className="kicker">BINGO · PUBLISHING DRAFT</span><input aria-label="草稿名称" maxLength="120" value={draft.title} onChange={event => setDraft(current => ({ ...current, title: event.target.value }))}/></div><div className={`studio-save-state is-${saveState}`}><i/>{saveLabel}{draft.id && <small>修订 {draft.revision}</small>}</div></header>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <form className="studio-editor-shell" onSubmit={create}><section className="studio-controls"><div><span className="studio-step">01</span><h2>表格结构</h2><p>行列不要求相同。第一列是纵向导航，其余格子可以填写独立内容。</p></div><label>表格标题<input required maxLength="120" value={draft.content.tableTitle ?? ''} onChange={event => updateContent({ tableTitle: event.target.value })}/></label><label>一句说明<input maxLength="160" value={draft.content.subtitle ?? ''} onChange={event => updateContent({ subtitle: event.target.value })}/></label><label>列标题（每行一个）<textarea value={(draft.content.columnHeaders ?? []).join('\n')} onChange={event => updateContent({ columnHeaders: splitStudioLines(event.target.value) })}/><small>最多 30 列；第一列用于行标题导航。</small></label><label>行标题（每行一个）<textarea className="studio-rows-input" value={(draft.content.rowHeaders ?? []).join('\n')} onChange={event => updateContent({ rowHeaders: splitStudioLines(event.target.value) })}/><small>当前为 {rows.length} 行 × {columns.length} 列。</small></label>
+      {columns.length > 1 && rows.length > 0 && <div className="studio-cell-editor"><div><span className="studio-step">02</span><h2>单元格内容</h2><p>每个输入框对应最终可以点亮的一个格子。</p></div><div className="studio-cell-editor__scroll"><table><thead><tr><th>{columns[0]}</th>{columns.slice(1).map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={`${row}-${rowIndex}`}><th>{row}</th>{columns.slice(1).map((_column, offset) => <td key={offset}><input aria-label={`${row} · ${columns[offset + 1]}`} maxLength="200" placeholder="填写项目" value={draft.content.cells?.[`${rowIndex}:${offset + 1}`] ?? ''} onChange={event => updateCell(rowIndex, offset + 1, event.target.value)}/></td>)}</tr>)}</tbody></table></div></div>}
+      {phase === 'new' ? <Button type="submit" disabled={saveState === 'saving' || !draft.title.trim()}>{saveState === 'saving' ? '正在创建…' : '创建待发布草稿'}</Button> : <section className="studio-build-panel"><div><span className="studio-step">03</span><h2>构建与发布</h2><p>固定编译器生成 Web ZIP，再交给平台 Validator；检查失败不会影响当前线上版本。</p></div><label>版本名称<input maxLength="64" value={releaseLabel} onChange={event => setReleaseLabel(event.target.value)}/></label><Button type="button" disabled={!releaseLabel.trim() || !['idle', 'saved'].includes(saveState) || ['building', 'queued', 'processing'].includes(build.phase)} onClick={startBuild}>{['building', 'queued', 'processing'].includes(build.phase) ? '正在构建与检查…' : draft.workId ? '构建并发布新版本' : '构建并发布作品'}</Button>{build.message && <p className={`studio-build-status is-${build.phase}`} role="status">{build.message}</p>}{['published', 'ready'].includes(build.phase) && <button className="text-button" type="button" onClick={() => go('/creator')}>前往作品管理 →</button>}<small className="studio-foundation-note">发布必须由你主动发起；自动保存不会公开作品。</small></section>}</section>
+      <section className="studio-preview"><div className="studio-preview__head"><div><span className="kicker">SANDBOX PREVIEW</span><h2>隔离试玩</h2><p>{preview.revision ? `使用修订 ${preview.revision} 的固定编译结果` : '保存草稿后生成与发布物一致的预览'}</p></div><div><span>{rows.length} × {columns.length}</span>{draft.id && <button type="button" onClick={refreshPreview} disabled={preview.loading || ['pending', 'saving'].includes(saveState)}>{preview.loading ? '生成中…' : '刷新试玩'}</button>}</div></div>{preview.error && <p className="form-error">{preview.error}</p>}{preview.html ? <iframe className="studio-preview-frame" title="Bingo 隔离试玩预览" sandbox="allow-scripts" srcDoc={preview.html}/> : <div className="studio-table-wrap"><table><thead><tr>{columns.map((column, index) => <th key={`${column}-${index}`}>{column}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={`${row}-${rowIndex}`}>{columns.map((_, columnIndex) => columnIndex === 0 ? <th scope="row" key={columnIndex}>{row}</th> : <td key={columnIndex}><span/></td>)}</tr>)}</tbody></table></div>}{!rows.length && <p className="studio-preview__empty">在左侧填写行标题后，这里会生成干净的白色表格预览。</p>}</section></form>
+  </main>;
+}
+
+function ManualNewWorkPage({ api, demo, go }) {
+  const [form, setForm] = useState({ title: '', description: '', instructions: '', kind: 'game', estimatedMinutes: '3', tags: '', agentLabel: '', repositoryUrl: '', licenseSpdx: '' }); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const submit = async event => {
     event.preventDefault(); if (busy) return; setBusy(true); setError('');
-    try { const payload = { ...workMetadataPayload(form), kind }; const work = demo ? { id: demoWorks[0].id } : (await api.createWork(payload)).data; go(`/creator/works/${work.id}/upload`); }
+    try { const payload = { ...workMetadataPayload(form), kind: form.kind }; const work = demo ? { id: demoWorks[0].id } : (await api.createWork(payload)).data; go(`/creator/works/${work.id}/upload`); }
     catch (caught) { setError(caught.message || '作品暂时无法创建。'); }
     finally { setBusy(false); }
   };
   const update = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }));
-  return <main className="page narrow-page"><button className="back-link" onClick={() => go('/creator')}>{icons.back} 我的作品</button><form className="panel new-work-form" onSubmit={submit}><span className="kicker">NEW PROJECT</span><h1>新建作品</h1><p>先建立作品资料，再上传可运行的 Web ZIP。资料会用于社区发现与自动分栏。</p><fieldset className="work-edit-fields" disabled={busy}><WorkMetadataFields form={form} onChange={update} kind={kind} onKindChange={event => setKind(event.target.value)}/></fieldset>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" disabled={busy}>{busy ? '正在创建…' : '创建并上传版本'}</Button></form></main>;
+  return <main className="page narrow-page"><button className="back-link" onClick={() => go('/creator/works/new')}>{icons.back} 返回创作方式</button><form className="panel new-work-form" onSubmit={submit}><span className="kicker">UPLOAD EXISTING WORK</span><h1>上传现有作品</h1><p>先建立作品资料，再上传可运行的 Web ZIP。资料会用于社区发现与自动分栏。</p><label>作品名称<input required name="title" maxLength="120" value={form.title} onChange={update} placeholder="例如：星港漂移" /></label><div className="form-grid"><label>作品类型<select name="kind" value={form.kind} onChange={update}><option value="game">游戏</option><option value="creative">互动作品</option><option value="tool">创意工具</option></select></label><label>单局时长<select name="estimatedMinutes" value={form.estimatedMinutes} onChange={update}><option value="1">约 1 分钟</option><option value="3">约 3 分钟</option><option value="5">约 5 分钟</option><option value="10">约 10 分钟</option><option value="15">约 15 分钟</option></select></label></div><label>一句话介绍<textarea required name="description" maxLength="4000" value={form.description} onChange={update} placeholder="告诉玩家这是什么，以及为什么值得打开。" /></label><label>玩法说明<textarea name="instructions" maxLength="4000" value={form.instructions} onChange={update} placeholder="方向键移动，空格互动……" /></label><label>发现标签<input name="tags" value={form.tags} onChange={update} placeholder="解谜，静音友好，像素（最多 6 个）" /></label><label>使用的 Coding Agent<select name="agentLabel" value={form.agentLabel} onChange={update}><option value="">不展示</option><option value="Codex">Codex</option><option value="Cursor">Cursor</option><option value="Claude Code">Claude Code</option><option value="GitHub Copilot">GitHub Copilot</option><option value="其他">其他</option></select></label><fieldset className="open-source-fields"><legend>开源项目（可选）</legend><label>GitHub 仓库<input type="url" name="repositoryUrl" value={form.repositoryUrl} onChange={update} pattern="https://github\.com/[^/\s]+/[^/\s]+/?" placeholder="https://github.com/you/project" /></label><label>开源许可证<input name="licenseSpdx" maxLength="40" value={form.licenseSpdx} onChange={update} placeholder="MIT / Apache-2.0" /></label><small>两项需同时填写。平台只展示链接，不会读取或执行仓库内容。</small></fieldset>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" disabled={busy}>{busy ? '正在创建…' : '创建并上传版本'}</Button></form></main>;
 }
 
 function CreatorRow({ work, api, demo, go, onChanged, onCopyBadge, copied }) {
@@ -1327,13 +1526,16 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;
   else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 's' && parts[1]) content = <GameSharePage key={parts[1]} code={parts[1]} api={api} renderPlayer={share=><PlayerPage workId={share.workId} releaseId={share.releaseId} initialShareCode={share.code} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={false} go={go}/>}/>;
-  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','room'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[2] === 'room' ? parts[3] : parts[3] === 'room' ? parts[4] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
+  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','share','room'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[2] === 'room' ? parts[3] : parts[3] === 'room' ? parts[4] : null} initialShareCode={parts[2] === 'share' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (['/saves','/creator/save-health','/admin/saves'].includes(route)) content = <main className="page"><StatePanel title="当前仅使用本机存档" body="云存档暂未开放。进入支持平台存档的游戏后，可在“存档管理”中导出或恢复本机进度。" action="返回游戏库" onAction={() => go('/library')}/></main>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
   else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator'); }}/>;
-  else if (route === '/creator/works/new') content = <NewWorkPage api={api} demo={demo} go={go}/>;
+  else if (route === '/creator/works/new') content = <CreationMethodPage go={go}/>;
+  else if (route === '/creator/works/manual/new') content = <ManualNewWorkPage api={api} demo={demo} go={go}/>;
+  else if (parts[0] === 'creator' && parts[1] === 'studio' && parts[2]) content = <RetiredStudioPage go={go}/>;
+  else if (parts[0] === 'creator' && parts[1] === 'drafts' && parts[2]) content = <CreatorDraftReviewPage draftId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (route === '/creator/multiplayer/submit') content = <MultiplayerRuleSubmissionPage api={api} demo={demo} go={go}/>;
   else if (route === '/creator/multiplayer/docs') content = <MultiplayerDeveloperCenter go={go}/>;
   else if (route === '/creator/leaderboards/docs') content = <CompetitionDeveloperCenter go={go}/>;

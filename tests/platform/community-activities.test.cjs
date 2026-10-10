@@ -32,7 +32,7 @@ test('community activity routes expose real events, parties, overview and partic
 });
 
 test('community activities migration constrains capacity, privacy state and append-only audits',async()=>{
-  const sql=await fs.readFile('apps/api/migrations/0057_community_events_and_parties.sql','utf8');
+  const sql=await fs.readFile('apps/api/migrations/0059_community_events_and_parties.sql','utf8');
   assert.match(sql,/CREATE TABLE community_events/);assert.match(sql,/CREATE TABLE community_event_attendees/);assert.match(sql,/capacity smallint NOT NULL CHECK \(capacity BETWEEN 2 AND 200\)/);
   assert.match(sql,/meeting_url text CHECK \(meeting_url IS NULL OR meeting_url ~ '\^https:\/\/'\)/);assert.match(sql,/CREATE TABLE community_game_parties/);assert.match(sql,/CREATE TABLE community_game_party_members/);
   assert.match(sql,/CREATE TABLE community_participation_notifications/);

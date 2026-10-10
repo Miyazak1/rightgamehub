@@ -1,0 +1,22 @@
+迷阵游戏封面
+生成方式：内置 image_gen。
+玩法参考：迷阵象棋-游戏设计文档.md 与实际游戏截图。
+画面主题：薄雾中的青玉棋阵、统一暗棋背面、红黑双方棋子与翻棋瞬间。
+交付规格：960 x 540，16:9，WebP；使用项目现有 processCoverImage 导出。
+猜百科的封面为自适应 CSS 绘制；本图片按平台封面上传标准输出，适配同一封面展示位。
+保留原图：mizhen-cover-pixel-v1-source.png。
+生成提示词：
+Use case: stylized-concept.
+Asset type: final game-catalog cover for the Chinese game "迷阵" (a hidden-information, two-player turn-based Xiangqi variant).
+Create ONE landscape 16:9 pixel-art cover, ideally 1536 x 864 pixels, to be delivered as a 960 x 540 cover. Full opaque artwork, edge to edge, no border.
+
+Actual game identity: a 10-column by 8-row tactical board island; round Chinese chess disks scattered among empty cells. Most disks are face-down with an IDENTICAL neutral back design: a simple pale question mark. Players reveal hidden pieces and scout, then maneuver red versus black-side armies. Pieces occupy the centers of cells. The game is about uncertainty and strategy, NOT a walking maze or dungeon-crawler.
+
+Visual concept: an elegant jade-green board island seen in a pleasing slightly elevated three-quarter perspective, floating in pale atmospheric mist. Detailed handcrafted 16-bit pixel illustration with visible clean square pixel clusters, stepped contours, selective dithering and exquisite tiny highlights. This should belong to a polished retro indie-game catalog, with the same scene-based richness as pixel-art space, indoor-garden and workshop covers. NOT smooth 3D, NOT vector icon, NOT photorealism, NOT a gameplay screenshot.
+
+Composition: large expressive round chess tokens arranged naturally on the board in the lower two-thirds, clear empty spaces separating them. Around nine visible neutral teal face-down tokens share exactly the SAME '?' marking, with others fading into mist; a few revealed ivory disks bear vivid cinnabar red or dark navy Chinese chess characters. A main red piece near the lower-left center clearly bears "帅"; a dark navy piece farther toward the right-center bears "将". Keep these two clearly separated by several cells. One additional disk near the center is caught partly tipping upward in the act of revelation, with a restrained amber pixel highlight, suggesting discovery. Four tiny soft amber scouting-beacon dots are embedded in distant cells. The board itself has a clean grid, softly irregular beveled island edge and finely shaded layered jade stone; no walls obstructing the board. Important subjects fit well inside the central 75 percent for thumbnail cropping.
+Background: restrained soft sage and mint mist, cream sky, deep ink-green shadows under the board; no extraneous landscapes, no mountains required, no architectural castle, no people or unrelated characters.
+
+Typography: prominently place the exact simplified Chinese title "迷阵" in the upper central area, large beautifully crafted bold pixel lettering, deep ink-jade faces with a subtle ivory edge and short stepped shadow. BOTH characters must be correct: 迷 阵. Make title legible at small thumbnail size, with breathing room above the board. Text permitted only: "迷阵" title, '?' neutral token marks, "帅" and "将" and at most a couple small authentic chess characters on revealed disks. No English translation, no subtitles, no scores, no buttons, no UI frames, no logos, no watermark.
+
+Palette: pale celadon, jade, warm cream, dark ink-teal; controlled cinnabar red versus deep navy accents, tiny amber discovery light. Balanced calm intrigue and tactical tension, luminous and inviting, more airy than dark dungeon art. Favor a clear silhouette, crisp piece details and a striking two-character title. Avoid broken glyphs, Western chess figurines, traditional Xiangqi river text, maze walls, decorative clutter, excessive sparkles and blurred pixels.

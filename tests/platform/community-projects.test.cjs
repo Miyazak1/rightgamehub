@@ -37,7 +37,7 @@ test('community project routes expose browse, create, apply, decide and leave wi
 
 test('community project migration keeps projects, applications and task links as constrained domains',async()=>{
   const fs=require('node:fs/promises');
-  const sql=await fs.readFile('apps/api/migrations/0056_community_projects.sql','utf8');
+  const sql=await fs.readFile('apps/api/migrations/0058_community_projects.sql','utf8');
   assert.match(sql,/CREATE TABLE community_projects/);
   assert.match(sql,/CREATE TABLE community_project_roles/);
   assert.match(sql,/CREATE TABLE community_project_members/);

@@ -335,7 +335,7 @@ services:
       - ../rules:/data/rules
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=16m
+      - /tmp:rw,noexec,nosuid,size=32m
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true

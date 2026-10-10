@@ -314,6 +314,67 @@ async function activate(context) {
     }
     await vscode.env.openExternal(vscode.Uri.parse(url.href));
   };
+  const chooseCreatorPackageRoot = async () => {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const activeFolder = vscode.window.activeTextEditor
+      ? vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri)
+      : null;
+    if (activeFolder) return activeFolder.uri.fsPath;
+    if (folders.length === 1) return folders[0].uri.fsPath;
+    if (folders.length > 1) {
+      const selected = await vscode.window.showQuickPick(
+        folders.map(folder => ({ label: folder.name,description: folder.uri.fsPath,folder })),
+        { placeHolder: '选择包含 creator-manifest.json 的创作包目录' },
+      );
+      return selected?.folder.uri.fsPath ?? null;
+    }
+    const selected = await vscode.window.showOpenDialog({ canSelectFiles: false,canSelectFolders: true,canSelectMany: false,openLabel: '选择创作包目录' });
+    return selected?.[0]?.fsPath ?? null;
+  };
+  const submitCreatorPackageFromWorkspace = async () => {
+    const root = await chooseCreatorPackageRoot();
+    if (!root) return;
+    let tokens = null;
+    try { tokens = JSON.parse(await context.secrets.get(TOKEN_KEY) || 'null'); } catch {}
+    if (!validTokens(tokens)) {
+      const action = await vscode.window.showWarningMessage('请先在 GameHub 侧栏登录，再提交创作包。', '打开 GameHub');
+      if (action === '打开 GameHub') await vscode.commands.executeCommand('gamehub.open');
+      return;
+    }
+    const apiUrl = allowedUrl(config().get('apiUrl', 'http://127.0.0.1:3090'), 'API 地址');
+    const siteUrl = allowedUrl(config().get('browserUrl', apiUrl.origin), '浏览器地址');
+    const creatorModuleUri = vscode.Uri.joinPath(context.extensionUri, 'creator-package.mjs');
+    const apiModuleUri = vscode.Uri.joinPath(context.extensionUri, 'platform-api-client.mjs');
+    try {
+      const submitted = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification,title: 'GameHub：正在校验并提交创作包…',cancellable: false }, async () => {
+        const [{ submitCreatorPackage },{ createApiClient }] = await Promise.all([
+          import(pathToFileURL(creatorModuleUri.fsPath).href),
+          import(pathToFileURL(apiModuleUri.fsPath).href),
+        ]);
+        const readTokens = async () => {
+          try { return JSON.parse(await context.secrets.get(TOKEN_KEY) || 'null'); } catch { return null; }
+        };
+        const apiClient = createApiClient({
+          baseUrl: apiUrl.origin,
+          getAccessToken: async () => (await readTokens())?.accessToken ?? null,
+          getRefreshToken: async () => (await readTokens())?.refreshToken ?? null,
+          setTokens: async value => {
+            if (!validTokens(value)) throw new Error('平台返回了无效的登录凭据。');
+            await context.secrets.store(TOKEN_KEY, JSON.stringify(value));
+          },
+        });
+        return submitCreatorPackage({ root,apiClient,platformOrigin:apiUrl.origin });
+      });
+      siteUrl.hash = `/creator/drafts/${submitted.draft.id}`;
+      const status = submitted.action === 'updated' ? '已更新待发布草稿' : submitted.action === 'unchanged' ? '内容未变化' : '已创建待发布草稿';
+      const action = await vscode.window.showInformationMessage(`“${submitted.draft.title}”${status}。`, '打开草稿', '复制地址');
+      if (action === '打开草稿') await vscode.env.openExternal(vscode.Uri.parse(siteUrl.href));
+      if (action === '复制地址') await vscode.env.clipboard.writeText(siteUrl.href);
+    } catch (error) {
+      const findings = error?.report?.findings?.filter(finding => finding.severity === 'error').slice(0,3).map(finding => finding.message).join('；');
+      await vscode.window.showErrorMessage(findings || String(error.message || error));
+    }
+  };
   const provider = {
     resolveWebviewView(view) {
       currentView = view;
@@ -377,6 +438,7 @@ async function activate(context) {
     catch (error) { await vscode.window.showErrorMessage(String(error.message || error)); }
   }));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.openBrowser', () => openBrowser().catch(error => vscode.window.showErrorMessage(String(error.message || error)))));
+  context.subscriptions.push(vscode.commands.registerCommand('gamehub.submitCreatorPackage', submitCreatorPackageFromWorkspace));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.checkForUpdates', () => runEditorUpdateCheck(context, updateOutput, { force: true, userInitiated: true })));
   const updateTimer = setTimeout(() => void runEditorUpdateCheck(context, updateOutput, { force: true }), 15000);
   const updateInterval = setInterval(() => void runEditorUpdateCheck(context, updateOutput), UPDATE_INTERVAL_MS);

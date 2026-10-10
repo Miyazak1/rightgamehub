@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 57);
+  assert.equal(migrations.length, 59);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -45,6 +45,12 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[42].version, '0043');
   assert.equal(migrations[43].version, '0044');
   assert.equal(migrations[44].version, '0045');
+  assert.equal(migrations[45].version, '0046');
+  assert.equal(migrations[54].version, '0055');
+  assert.equal(migrations[55].version, '0056');
+  assert.equal(migrations[56].version, '0057');
+  assert.equal(migrations[57].version, '0058');
+  assert.equal(migrations[58].version, '0059');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);
@@ -79,7 +85,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
   const pool = database.pool;
   try {
     const first = await applyMigrations(pool, migrationDir);
-    assert.equal(first.total, 55);
+    assert.equal(first.total, 59);
     const second = await applyMigrations(pool, migrationDir);
     assert.deepEqual(second.applied, []);
     assert.equal((await migrationStatus(pool, migrationDir)).ready, true);
@@ -184,7 +190,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       const archive = makeZip([
         { name: 'index.html', data: '<!doctype html><script src="assets/game.js"></script><h1>Integration Game</h1>' },
         { name: 'assets/game.js', data: 'globalThis.gamehubIntegration=true' },
-        { name: 'platform.json', data: JSON.stringify({ version: 1, capabilities: ['fullscreen'] }) },
+        { name: 'platform.json', data: JSON.stringify({ version: 1, capabilities: ['fullscreen','fileExport','shareLinks'] }) },
       ]);
       const uploadPayload = {
         fileName: 'integration-game.zip', declaredBytes: String(archive.length),
@@ -371,6 +377,8 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
       assert.equal(launchData.runtimeOrigin, `https://${releaseHost}`);
       assert.equal(launchData.entryUrl, `https://${releaseHost}/index.html`);
       assert.equal(launchData.capabilities.fullscreen, true);
+      assert.equal(launchData.capabilities.fileExport, true);
+      assert.equal(launchData.capabilities.shareLinks, true);
       assert.equal((await app.inject({ url: `/v1/works/${workId}/launch?releaseId=${staleRelease.id}` })).statusCode, 404);
 
       const runtimeIndex = await runtimeEdgeApp.inject({ url: '/', headers: { host: releaseHost } });

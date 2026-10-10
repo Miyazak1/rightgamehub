@@ -20,7 +20,7 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
   gameWindow.parent = hostWindow;
   hostWindow.postMessage = data => hostWindow.dispatch('message', { data,source: gameWindow,ports: [] });
   gameWindow.postMessage = (data, _origin, ports = []) => gameWindow.dispatch('message', { data,source: hostWindow,ports });
-  const modeId = crypto.randomUUID(); const roomId = crypto.randomUUID(); const matchId = crypto.randomUUID();
+  const modeId = crypto.randomUUID(); const roomId = crypto.randomUUID(); const matchId = crypto.randomUUID(); const workId = crypto.randomUUID();
   let scopedJoinCalls = 0; let listArgs = null; const sessionListeners = new Map(); const sent = [];
   const session = {
     on(type, listener) { sessionListeners.set(type, listener); return () => sessionListeners.delete(type); },
@@ -38,7 +38,7 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
     joinMultiplayerRoomScoped: async () => { scopedJoinCalls += 1; return { data: room }; },leaveMultiplayerRoom: async () => ({ data: room }),setMultiplayerReady: async () => ({ data: room }),
     startMultiplayerRoom: async () => ({ data: match }),getMultiplayerMatch: async () => ({ data: match }),createRealtimeTicket: async () => ({ data: {} }),
   };
-  const bridge = createWebGameMultiplayerHost({ windowImpl: hostWindow,frame: { contentWindow: gameWindow },launchId: crypto.randomUUID(),workId: crypto.randomUUID(),initialRoomId: roomId,apiClient,sessionFactory: () => session,MessageChannelImpl: MessageChannel,logger: { warn() {} } });
+  const bridge = createWebGameMultiplayerHost({ windowImpl: hostWindow,frame: { contentWindow: gameWindow },launchId: crypto.randomUUID(),descriptor: { workId, capabilities: { multiplayer: true } },initialRoomId: roomId,apiClient,sessionFactory: () => session,MessageChannelImpl: MessageChannel,logger: { warn() {} } });
   t.after(() => bridge.close());
   const client = createGameHubClient({ windowImpl: gameWindow,parentWindow: hostWindow,requestTimeoutMs: 1_000 });
   t.after(() => client.close());
@@ -61,7 +61,60 @@ test('web game bridge exposes scoped multiplayer without credentials', async t =
   assert.equal(scopedJoinCalls,1);
 });
 
-test('player core creates and closes a bridge only for an approved multiplayer release', async () => {
+test('web game bridge exports approved PNG files outside the sandbox', async t => {
+  const { createWebGameMultiplayerHost } = await import('../../packages/platform-client/src/web-game-multiplayer-host.mjs');
+  const { createGameHubClient } = await import('../../packages/web-game-sdk/src/index.mjs');
+  const hostWindow = eventTarget(); const gameWindow = eventTarget(); gameWindow.parent = hostWindow;
+  hostWindow.postMessage = data => hostWindow.dispatch('message', { data,source: gameWindow,ports: [] });
+  gameWindow.postMessage = (data, _origin, ports = []) => gameWindow.dispatch('message', { data,source: hostWindow,ports });
+  const exported = []; const workId = crypto.randomUUID(); const releaseId = crypto.randomUUID();
+  const descriptor = { workId,releaseId,capabilities: { fileExport: true } };
+  const bridge = createWebGameMultiplayerHost({
+    windowImpl: hostWindow,frame: { contentWindow: gameWindow },launchId: crypto.randomUUID(),
+    descriptor,apiClient: { getLaunch: async () => ({ data: descriptor }),getProfile: async () => ({ data:{ id:'user-1',displayName:'Player',avatar:null } }) },MessageChannelImpl: MessageChannel,
+    exportFile: async file => { exported.push(file); return { accepted: true,filename: file.filename,sizeBytes: file.data.byteLength }; },
+  });
+  t.after(() => bridge.close());
+  const client = createGameHubClient({ windowImpl: gameWindow,parentWindow: hostWindow,requestTimeoutMs: 1_000 });
+  t.after(() => client.close());
+  const capabilities = await client.connect();
+  assert.deepEqual(capabilities, ['identity','fileExport']);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADUlEQVQImWOosLnzHwAFUAKQJastWQAAAABJRU5ErkJggg==', 'base64');
+  const result = await client.files.download(new Blob([png], { type: 'image/png' }), '我的-bingo.png');
+  assert.deepEqual(result, { accepted: true,filename: '我的-bingo.png',sizeBytes: png.byteLength });
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].mimeType, 'image/png');
+  assert.deepEqual([...new Uint8Array(exported[0].data).subarray(0,8)], [137,80,78,71,13,10,26,10]);
+  assert.deepEqual(await client.getPlayer(), { id:'user-1',displayName:'Player',avatar:null });
+});
+
+test('web game bridge creates and opens scoped playable share links', async t => {
+  const { createWebGameMultiplayerHost } = await import('../../packages/platform-client/src/web-game-multiplayer-host.mjs');
+  const { createGameHubClient } = await import('../../packages/web-game-sdk/src/index.mjs');
+  const hostWindow = eventTarget(); hostWindow.location = { origin:'https://mooyu.fun' };
+  const gameWindow = eventTarget(); gameWindow.parent = hostWindow;
+  hostWindow.postMessage = data => hostWindow.dispatch('message', { data,source:gameWindow,ports:[] });
+  gameWindow.postMessage = (data,_origin,ports=[]) => gameWindow.dispatch('message', { data,source:hostWindow,ports });
+  const workId = crypto.randomUUID(); const releaseId = crypto.randomUUID(); const code = 'BingoLink123';
+  const payload = { kind:'bingo-pack',schemaVersion:1,pack:{ title:'动画 Bingo' } };
+  const apiClient = {
+    getProfile: async () => ({ data:{ id:'user-1',displayName:'Player',avatar:null } }),
+    createGameSession: async () => ({ data:{ gameSessionId:'session-1',capabilities:['shareLinks'],expiresAt:'2099-10-09T00:30:00.000Z' } }),
+    revokeGameSession: async () => ({ data:{ revoked:true } }),
+    createGameShare: async (_session,body) => ({ data:{ code,url:`https://mooyu.fun/#/s/${code}`,expiresAt:'2026-11-08T00:00:00.000Z',title:body.title } }),
+    getGameShare: async () => ({ data:{ code,workId,releaseId,title:'动画 Bingo',payload,expiresAt:'2026-11-08T00:00:00.000Z' } }),
+  };
+  const bridge = createWebGameMultiplayerHost({ windowImpl:hostWindow,frame:{ contentWindow:gameWindow },launchId:crypto.randomUUID(),initialShareCode:code,descriptor:{ workId,releaseId,capabilities:{ shareLinks:true } },apiClient,MessageChannelImpl:MessageChannel });
+  t.after(() => bridge.close());
+  const client = createGameHubClient({ windowImpl:gameWindow,parentWindow:hostWindow,requestTimeoutMs:1_000 });
+  t.after(() => client.close());
+  assert.deepEqual(await client.connect(), ['identity','shareLinks']);
+  const created = await client.shares.create('动画 Bingo',payload);
+  assert.equal(created.url,`https://mooyu.fun/#/s/${code}`);
+  assert.deepEqual((await client.shares.current()).payload,payload);
+});
+
+test('player core creates and closes a bridge only for approved bridge capabilities', async () => {
   const { PlayerCore } = await import('../../packages/player-core/src/index.mjs');
   let created = 0; let closed = 0;
   const frame = { setAttribute() {},addEventListener() {},remove() {},contentWindow: null };
@@ -72,4 +125,8 @@ test('player core creates and closes a bridge only for an approved multiplayer r
   assert.equal(created,1); assert.equal(closed,1);
   core.mount(container,{ ...descriptor,capabilities: { multiplayer: false } }); core.stop();
   assert.equal(created,1);
+  core.mount(container,{ ...descriptor,capabilities: { fileExport: true } }); core.stop();
+  assert.equal(created,2); assert.equal(closed,2);
+  core.mount(container,{ ...descriptor,capabilities: { shareLinks: true } }); core.stop();
+  assert.equal(created,3); assert.equal(closed,3);
 });
