@@ -193,7 +193,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /<link rel="canonical" href="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777">/u);
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
   assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/cover"/u);
-  assert.match(page.body, /window\.location\.replace\("https:\/\/games\.example\/#\/works\/00000000-0000-4000-8000-000000000777"\)/u);
+  assert.match(page.body, /window\.location\.replace\("https:\/\/games\.example\/#\/works\/00000000-0000-4000-8000-000000000777\?public=1"\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);
   assert.deepEqual(calls[2], ['catalog', workId]);
 });

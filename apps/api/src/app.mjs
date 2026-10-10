@@ -43,7 +43,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character =
 const publicWorkPage = ({ work, siteOrigin, nonce }) => {
   const encodedWorkId = encodeURIComponent(work.id);
   const canonicalUrl = `${siteOrigin}/w/${encodedWorkId}`;
-  const appUrl = `${siteOrigin}/#/works/${encodedWorkId}`;
+  const appUrl = `${siteOrigin}/#/works/${encodedWorkId}?public=1`;
   const title = `${work.title} | GameHub`;
   const description = String(work.description || `在 GameHub 在线体验《${work.title}》。`).replace(/\s+/gu, ' ').trim().slice(0, 200);
   const creator = work.creatorDisplayName ? `作者：${work.creatorDisplayName}` : 'GameHub 社区作品';

@@ -161,6 +161,26 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{encodeURIComponent\(work\.id\)\}/);
 });
 
+test('stable public work handoff keeps the public URL visible and leaves it cleanly on navigation', async () => {
+  const { readBrowserRoute, consumePublicWorkHandoff, navigateBrowserRoute } = await import('../../packages/platform-client/src/public-work-route.mjs');
+  const location = { pathname: '/', hash: '#/works/work-123?public=1' };
+  const calls = [];
+  const history = {
+    state: { test: true },
+    replaceState: (_state, _title, url) => { calls.push(['replace', url]); location.pathname = url; location.hash = ''; },
+    pushState: (_state, _title, url) => { calls.push(['push', url]); location.pathname = '/'; location.hash = url.slice(1); },
+  };
+  assert.equal(readBrowserRoute('hash', location), '/works/work-123');
+  assert.equal(consumePublicWorkHandoff(location, history), true);
+  assert.equal(location.pathname, '/w/work-123');
+  assert.equal(readBrowserRoute('hash', location), '/works/work-123');
+  let route = '';
+  navigateBrowserRoute('hash', '/discover', location, history, next => { route = next; });
+  assert.deepEqual(calls, [['replace', '/w/work-123'], ['push', '/#/discover']]);
+  assert.equal(route, '/discover');
+  assert.equal(location.pathname, '/');
+});
+
 test('creator publishing stays direct while Agent toolkits remain optional', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));

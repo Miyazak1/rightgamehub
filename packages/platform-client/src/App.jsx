@@ -30,6 +30,7 @@ import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavig
 import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
 import { workLeaderboardPath } from './work-leaderboards.mjs';
+import { consumePublicWorkHandoff, navigateBrowserRoute, readBrowserRoute } from './public-work-route.mjs';
 const decodeRouteValue = value => { try { return decodeURIComponent(value||''); } catch { return value||''; } };
 
 import { playerRuntimeOptions } from './player-runtime-options.mjs';
@@ -81,15 +82,17 @@ function resolveHostIdentity(capabilities = {}) {
 }
 
 function useRoute(mode) {
-  const [path, setPath] = useState(() => mode === 'hash' ? location.hash.slice(1) || '/discover' : '/discover');
+  const [path, setPath] = useState(() => readBrowserRoute(mode, location));
   useEffect(() => {
     if (mode !== 'hash') return undefined;
-    const onHash = () => setPath(location.hash.slice(1) || '/discover');
-    addEventListener('hashchange', onHash);
-    return () => removeEventListener('hashchange', onHash);
+    consumePublicWorkHandoff(location, history);
+    const onNavigation = () => setPath(readBrowserRoute(mode, location));
+    addEventListener('hashchange', onNavigation);
+    addEventListener('popstate', onNavigation);
+    return () => { removeEventListener('hashchange', onNavigation); removeEventListener('popstate', onNavigation); };
   }, [mode]);
   useEffect(() => { globalThis.scrollTo?.({ top: 0, left: 0, behavior: 'instant' }); }, [path]);
-  const go = next => { if (mode === 'hash') location.hash = next; else setPath(next); };
+  const go = next => navigateBrowserRoute(mode, next, location, history, setPath);
   return [path, go];
 }
 
