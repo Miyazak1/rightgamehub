@@ -157,6 +157,21 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
 });
 
+test('creator publishing lists external tools and does not route users into a duplicate Bingo editor', async () => {
+  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  for (const name of ['Piskel','Bitsy','PuzzleScript','Twine']) assert.match(source, new RegExp(`title: '${name}'`));
+  assert.match(source, /https:\/\/www\.piskelapp\.com\//);
+  assert.match(source, /https:\/\/make\.bitsy\.org\//);
+  assert.match(source, /https:\/\/www\.puzzlescript\.net\/editor\.html/);
+  assert.match(source, /https:\/\/twinery\.org\/2\//);
+  assert.doesNotMatch(source, /title: 'Bingo 快速编辑'/);
+  assert.doesNotMatch(source, /content = <StudioDraftPage/);
+  assert.match(source, /content = <RetiredStudioPage go=\{go\}\/>/);
+  assert.match(source, /content = <CreatorDraftReviewPage/);
+  assert.match(source, /这里不提供内容编辑/);
+  assert.match(source, /上传导出结果/);
+});
+
 test('API client creates an authenticated realtime connection ticket', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let request;
