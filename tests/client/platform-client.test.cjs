@@ -673,17 +673,19 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(projects, /发布项目更新/);
 });
 
-test('community typography keeps Chinese copy and form controls readable', async () => {
+test('community typography follows the navigation scale and styles form controls', async () => {
   const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
-  const baselineStart = styles.indexOf('/* Community readability baseline');
+  const baselineStart = styles.indexOf('/* Community typography hierarchy');
   assert.ok(baselineStart >= 0);
   const baseline = styles.slice(baselineStart);
-  assert.match(baseline, /\.community-hub-page \{[^}]*font-size: 16px;/s);
-  assert.match(baseline, /\.community-hub-page \.button \{[^}]*min-height: 44px;[^}]*font-size: 14px;/s);
-  assert.match(baseline, /\.community-hub-page input,[\s\S]*?\.community-hub-page textarea \{[^}]*font-size: 16px;/);
-  assert.match(baseline, /\.community-hub-page :is\([^}]*\) label \{[^}]*font-size: 14px;/s);
-  assert.match(baseline, /\.community-hub-page \.community-project-detail__body > div > p,[\s\S]*?font-size: 16px;/);
-  assert.match(baseline, /@container \(max-width: 600px\) \{[\s\S]*?\.community-hub-page \.community-hub-nav button \{[^}]*font-size: 13px;/);
+  assert.match(baseline, /\.community-hub-page \{[^}]*--community-control-font:[^}]*Cascadia Mono[^}]*font-size: 14px;/s);
+  assert.match(baseline, /\.community-hub-page \.button \{[^}]*min-height: 40px;[^}]*font-size: 12px;/s);
+  assert.match(baseline, /\.community-hub-page input:not\([^}]*\),[\s\S]*?\.community-hub-page select \{[^}]*height: 42px;[^}]*min-height: 42px;/);
+  assert.match(baseline, /\.community-hub-page input,[\s\S]*?\.community-hub-page textarea \{[^}]*font-family: var\(--community-control-font\);[^}]*font-size: 14px;/);
+  assert.match(baseline, /\.community-hub-page select \{[^}]*appearance: none;[^}]*background-image:/s);
+  assert.match(baseline, /\.community-hub-page :is\([^}]*\) label \{[^}]*font-size: 12px;/s);
+  assert.match(baseline, /\.community-hub-page \.community-project-detail__body > div > p,[\s\S]*?font-size: 14px;/);
+  assert.match(baseline, /@container \(max-width: 600px\) \{[\s\S]*?\.community-hub-page \.community-hub-nav button \{[^}]*font-size: 12px;/);
 });
 
 test('player routes preserve share links and community room entry after integration', async () => {
