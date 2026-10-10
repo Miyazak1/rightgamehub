@@ -106,8 +106,10 @@ test('API client maps server errors and sends idempotency and bearer headers', a
 
 test('API client exposes catalog data without inventing local works', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
-  const client = createApiClient({ fetchImpl: async () => new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } }) });
-  assert.deepEqual((await client.listWorks()).data, []);
+  let requested='';
+  const client = createApiClient({ fetchImpl: async url => {requested=String(url);return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'content-type': 'application/json' } });} });
+  assert.deepEqual((await client.listWorks({openSource:true,remixable:true,claimable:true,runtime:'web',source:'github_import'})).data, []);
+  assert.match(requested,/openSource=true/);assert.match(requested,/remixable=true/);assert.match(requested,/claimable=true/);assert.match(requested,/runtime=web/);assert.match(requested,/source=github_import/);
 });
 
 test('API client creates authenticated playable shares and opens them publicly', async () => {

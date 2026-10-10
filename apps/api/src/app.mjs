@@ -392,7 +392,7 @@ export function createApp(dependencies) {
   }
   if (catalogService) {
     app.get('/v1/works', {
-      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000} } } },
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000},openSource:{type:'boolean'},remixable:{type:'boolean'},claimable:{type:'boolean'},runtime:{type:'string',enum:['web','windows']},source:{type:'string',enum:['platform','github_import','zip_upload','community_catalog']} } } },
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.list(request.query));

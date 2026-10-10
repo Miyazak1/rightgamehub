@@ -4,8 +4,8 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   const {chromium}=require(playwrightPath),{build}=require('../../extensions/harness/node_modules/esbuild');
   const app=require('../../apps/api/node_modules/fastify')();let browser;
   t.after(async()=>{await browser?.close();await app.close();});
-  const make=(id,title,extra={})=>({id,title,description:'休息时打开，体验一段小小的游戏时光。',kind:'game',creatorDisplayName:'玩家',tags:['益智'],estimatedMinutes:3,targets:[{targetKey:'web',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}],...extra});
-  let small=[make('gamehub-guess-baike','猜百科',{tags:['推理'],estimatedMinutes:5}),make('7359a350-cc0a-4a09-875d-cec9b5b8f93f','2048'),make('314fb01a-27da-4c28-947a-68b20176a6cf','OI 重开模拟器',{tags:['文字','模拟']}),make('1a13df55-8906-4b03-a19a-5e5a3b776649','迷阵'),make('f8537969-5f6b-41a8-8c43-f46a0f4a1293','桌猫'),make('a7a26e9f-4db8-4e6f-9d4d-7ae51b94bec6','宇宙巡航机',{targets:[{targetKey:'windows-x64',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}]})];
+  const make=(id,title,extra={})=>({id,title,description:'休息时打开，体验一段小小的游戏时光。',kind:'game',creatorDisplayName:'玩家',tags:['益智'],estimatedMinutes:3,targets:[{targetKey:'web',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}],ingestionMethod:'zip_upload',attributionKind:'publisher',openSource:false,remixable:false,claimEligible:false,claimStatus:'publisher',...extra});
+  let small=[make('gamehub-guess-baike','猜百科',{tags:['推理'],estimatedMinutes:5,ingestionMethod:'platform'}),make('7359a350-cc0a-4a09-875d-cec9b5b8f93f','2048',{repositoryUrl:'https://github.com/gabrielecirulli/2048',licenseSpdx:'MIT',ingestionMethod:'github_import',openSource:true,remixable:true}),make('314fb01a-27da-4c28-947a-68b20176a6cf','OI 重开模拟器',{tags:['文字','模拟'],attributionKind:'community_catalog',claimEligible:true,claimStatus:'unclaimed'}),make('1a13df55-8906-4b03-a19a-5e5a3b776649','迷阵'),make('f8537969-5f6b-41a8-8c43-f46a0f4a1293','桌猫'),make('a7a26e9f-4db8-4e6f-9d4d-7ae51b94bec6','宇宙巡航机',{targets:[{targetKey:'windows-x64',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}]})];
   if(process.env.GAMEHUB_DISCOVERY_VISUAL_CATALOG){
     const {presentCatalogWork}=await import('../../apps/api/src/catalog-presentation.mjs');
     const report=JSON.parse(await fs.readFile(process.env.GAMEHUB_DISCOVERY_VISUAL_CATALOG,'utf8'));
@@ -16,10 +16,10 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   app.addHook('onRequest',async req=>requests.push({url:req.url,auth:req.headers.authorization}));
   let failedOnce=false;
   app.get('/v1/works',async(req,reply)=>{
-    const {q='',kind,limit=20,offset=0}=req.query;
+    const {q='',kind,limit=20,offset=0,openSource,remixable,claimable,runtime,source}=req.query;
     if(q==='慢搜索')await new Promise(resolve=>setTimeout(resolve,700));
     if(q==='故障'&&!failedOnce){failedOnce=true;return reply.code(503).send({error:{code:'API_UNAVAILABLE',message:'测试网络故障'}});}
-    return {data:(req.headers['x-small']==='true'?small:works).filter(work=>(!kind||work.kind===kind)&&[work.title,work.description].join(' ').includes(q)).slice(Number(offset),Number(offset)+Number(limit))};
+    return {data:(req.headers['x-small']==='true'?small:works).filter(work=>(!kind||work.kind===kind)&&(!openSource||work.openSource)&&(!remixable||work.remixable)&&(!claimable||work.claimEligible)&&(!runtime||runtime==='web'&&work.targets.some(target=>target.targetKey==='web')||runtime==='windows'&&work.targets.some(target=>target.targetKey==='windows-x64'))&&(!source||source==='community_catalog'&&work.attributionKind==='community_catalog'||source!=='community_catalog'&&work.ingestionMethod===source)&&[work.title,work.description].join(' ').includes(q)).slice(Number(offset),Number(offset)+Number(limit))};
   });
   app.get('/v1/me',async(req,reply)=>req.headers.authorization?{data:{id:req.headers.authorization.slice(7),displayName:'测试玩家',role:'user',avatar:{kind:'preset',presetKey:'cat'}}}:reply.code(401).send({error:{code:'AUTH_REQUIRED'}}));
   app.get('/v1/me/library',async req=>({data:req.headers.authorization==='Bearer a'?[{work:small[1],lastPlayedAt:'2026-10-08T06:00:00Z'},{work:small[0],lastPlayedAt:'2026-10-08T05:00:00Z'}]:[]}));
@@ -42,7 +42,13 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   await page.goto(base);await page.locator('.discovery-catalog__grid .discovery-game').nth(23).waitFor();
   assert.equal(await page.locator('.discovery-picks [data-work-id="1a13df55-8906-4b03-a19a-5e5a3b776649"]').count(),0);
   assert.equal(await page.locator('.discovery-catalog [data-work-id="gamehub-guess-baike"]').count(),1);
+  assert.equal(await page.locator('[data-work-id="7359a350-cc0a-4a09-875d-cec9b5b8f93f"] .discovery-game__provenance').getByText('MIT · 可二创').count(),1);
   assert.equal(requests.some(req=>req.url.startsWith('/v1/me/library')),false);
+  await page.getByRole('button',{name:'开放源码',exact:true}).click();await page.getByRole('heading',{name:'2048',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('openSource=true')));
+  await page.getByRole('button',{name:'待认领',exact:true}).click();await page.getByRole('heading',{name:'OI 重开模拟器',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('claimable=true')));
+  await page.getByRole('button',{name:'全部权益',exact:true}).click();await page.getByLabel('运行方式').selectOption('windows');await page.getByRole('heading',{name:'宇宙巡航机',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('runtime=windows')));
+  await page.getByLabel('运行方式').selectOption('all');await page.getByLabel('来源').selectOption('github_import');await page.getByRole('heading',{name:'2048',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('source=github_import')));
+  await page.getByLabel('来源').selectOption('all');await page.locator('.discovery-catalog__grid .discovery-game').nth(23).waitFor();
   await page.getByRole('button',{name:'加载更多作品',exact:true}).click();await page.getByRole('heading',{name:'很远的画板',exact:true}).waitFor();
   assert.equal(await page.locator('.discovery-catalog__grid .discovery-game').count(),34);
   const search=page.getByRole('searchbox',{name:'找个想玩的'});

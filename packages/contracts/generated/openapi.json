@@ -14620,6 +14620,56 @@
                 "tool"
               ]
             }
+          },
+          {
+            "name": "openSource",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "remixable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "claimable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "runtime",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "windows"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform",
+                "github_import",
+                "zip_upload",
+                "community_catalog"
+              ]
+            }
           }
         ],
         "responses": {
@@ -27590,6 +27640,55 @@
               }
             ]
           },
+          "ingestionMethod": {
+            "type": "string",
+            "enum": [
+              "platform",
+              "zip_upload",
+              "github_import"
+            ]
+          },
+          "attributionKind": {
+            "type": "string",
+            "enum": [
+              "publisher",
+              "community_catalog"
+            ]
+          },
+          "sourceCommitSha": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "openSource": {
+            "type": "boolean"
+          },
+          "remixable": {
+            "type": "boolean"
+          },
+          "claimStatus": {
+            "type": "string",
+            "enum": [
+              "publisher",
+              "unclaimed",
+              "pending",
+              "verified",
+              "rejected",
+              "cancelled",
+              "disputed",
+              "suspended",
+              "revoked"
+            ]
+          },
+          "claimEligible": {
+            "type": "boolean"
+          },
           "creatorDisplayName": {
             "oneOf": [
               {
@@ -27646,6 +27745,13 @@
           "agentLabel",
           "repositoryUrl",
           "licenseSpdx",
+          "ingestionMethod",
+          "attributionKind",
+          "sourceCommitSha",
+          "openSource",
+          "remixable",
+          "claimStatus",
+          "claimEligible",
           "creatorDisplayName",
           "creatorHandle",
           "playCount",

@@ -330,6 +330,11 @@ export const schemas = Object.freeze({
     agentLabel: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
     repositoryUrl: { oneOf: [{ type: 'string', format: 'uri' }, { type: 'null' }] },
     licenseSpdx: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
+    ingestionMethod: stringEnum(['platform','zip_upload','github_import']),
+    attributionKind: stringEnum(['publisher','community_catalog']),
+    sourceCommitSha: { oneOf: [{ type: 'string', pattern: '^[a-f0-9]{40}$' }, { type: 'null' }] },
+    openSource: { type: 'boolean' }, remixable: { type: 'boolean' },
+    claimStatus: stringEnum(enums.ProjectClaimStatus), claimEligible: { type: 'boolean' },
     creatorDisplayName: { oneOf: [{ type: 'string', minLength: 1, maxLength: 120 }, { type: 'null' }] },
     creatorHandle: { oneOf: [{ type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, { type: 'null' }] },
     playCount: { type: 'integer', minimum: 0 },
@@ -980,7 +985,12 @@ export function createOpenApiDocument() {
       {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:50,default:20}},
       {name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:100000,default:0}},
       {name:'q',in:'query',required:false,schema:{type:'string',maxLength:100}},
-      {name:'kind',in:'query',required:false,schema:{type:'string',enum:['game','creative','tool']}}
+      {name:'kind',in:'query',required:false,schema:{type:'string',enum:['game','creative','tool']}},
+      {name:'openSource',in:'query',required:false,schema:{type:'boolean'}},
+      {name:'remixable',in:'query',required:false,schema:{type:'boolean'}},
+      {name:'claimable',in:'query',required:false,schema:{type:'boolean'}},
+      {name:'runtime',in:'query',required:false,schema:{type:'string',enum:['web','windows']}},
+      {name:'source',in:'query',required:false,schema:{type:'string',enum:['platform','github_import','zip_upload','community_catalog']}}
     );
     if (operation.queryCreatorStudio) parameters.push({ name: 'studio', in: 'query', required: false, schema: stringEnum(enums.CreatorStudio) });
     if (operation.queryAnalyticsDays) parameters.push({ name: 'days', in: 'query', required: false, schema: { type: 'integer', enum: [7,30,90], default: operation.analyticsDefaultDays ?? 7 } });

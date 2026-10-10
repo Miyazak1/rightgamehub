@@ -179,8 +179,9 @@ function WorkProvenance({work,claim,accountProfile,onClaim,go}) {
     publisher:claim.ingestionMethod==='platform'?'GameHub 官方发布':claim.ingestionMethod==='github_import'?'发布者通过 GitHub 导入':'发布者直接上传',
     unclaimed:'社区收录，尚未认领',pending:'认领审核中',verified:'✓ 作者或维护者已认领',disputed:'认领存在争议',suspended:'认领已暂停',rejected:'认领未通过',cancelled:'认领已撤回',revoked:'认领已撤销',
   };
-  const sourceText=work.repositoryUrl?`${work.licenseSpdx||'未标注'} 开源许可`:claim.attributionKind==='community_catalog'?'平台仅提供游戏收录信息':'该版本没有关联 GitHub 仓库';
-  return <div className="source-link work-provenance"><div>{work.repositoryUrl?<a href={work.repositoryUrl} target="_blank" rel="noreferrer">查看源码仓库 ↗</a>:<strong>来源与权益</strong>}<small>{sourceText}</small></div><div className={`claim-state is-${claim.status}`}><strong>{labels[claim.status]||'来源待确认'}</strong>{claim.status==='verified'&&claim.claimantDisplayName&&<small>{claim.claimantDisplayName}</small>}{claim.eligible&&claim.status==='unclaimed'&&<button type="button" onClick={()=>accountProfile?onClaim():go('/account')}>我是作者/维护者</button>}</div></div>;
+  const sourceText=work.repositoryUrl?(work.openSource?`${work.licenseSpdx} 开源许可证`:work.licenseSpdx?`许可证：${work.licenseSpdx}（开放性待核验）`:'源码仓库未标注许可证'):claim.attributionKind==='community_catalog'?'平台仅提供游戏收录信息':'该版本没有关联 GitHub 仓库';
+  const commitUrl=work.repositoryUrl&&work.sourceCommitSha?work.repositoryUrl.replace(/\/$/,'')+'/commit/'+work.sourceCommitSha:null;
+  return <div className="source-link work-provenance"><div>{work.repositoryUrl?<a href={work.repositoryUrl} target="_blank" rel="noreferrer">查看源码仓库 ↗</a>:<strong>来源与权益</strong>}<small>{sourceText}</small>{commitUrl&&<a className="work-provenance__commit" href={commitUrl} target="_blank" rel="noreferrer" title={work.sourceCommitSha}>固定版本 {work.sourceCommitSha.slice(0,7)} ↗</a>}</div><div className={`claim-state is-${claim.status}`}><strong>{labels[claim.status]||'来源待确认'}</strong>{claim.status==='verified'&&claim.claimantDisplayName&&<small>{claim.claimantDisplayName}</small>}{claim.eligible&&claim.status==='unclaimed'&&<button type="button" onClick={()=>accountProfile?onClaim():go('/account')}>我是作者/维护者</button>}</div></div>;
 }
 
 function DetailPage({ workId, api, host, hostKind, demo, go, accountProfile, boardDate, boardPuzzleId, focusBoard }) {

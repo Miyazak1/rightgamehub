@@ -23,6 +23,8 @@ test('discovery catalog searches beyond page one, filters before paging, and res
     return id;
   }
   for(let i=0;i<32;i++)ids.push(await work(i,{title:i===31?'冷门画板 100%_完成':'作品 '+i,kind:i===31?'tool':'game'}));
+  await pool.query("UPDATE works SET repository_url='https://github.com/example/open-game',license_spdx='MIT',ingestion_method='github_import',attribution_kind='community_catalog' WHERE id=$1",[ids[0]]);
+  await pool.query("UPDATE works SET repository_url='https://github.com/example/copyleft-game',license_spdx='GPL-3.0-only',ingestion_method='github_import' WHERE id=$1",[ids[1]]);
   const oi=await work(40,{id:'314fb01a-27da-4c28-947a-68b20176a6cf',title:'oi-remake-game'});
   await work(-5,{title:'不可见 私密',visibility:'private'});await work(-4,{title:'不可见 撤回',state:'withdrawn'});await work(-3,{title:'不可见 暂停版本',serving:'disabled'});
   const service=createCatalogService({repository:new PostgresCatalogRepository(pool),config:{}});
@@ -31,6 +33,11 @@ test('discovery catalog searches beyond page one, filters before paging, and res
   assert.equal(second.length,14);assert.equal(new Set([...first,...second].map(work=>work.id)).size,34);
   assert.equal((await service.list({q:'冷门画板'}))[0].id,ids[31]);
   assert.deepEqual((await service.list({kind:'tool',limit:1})).map(work=>work.id),[ids[31]]);
+  assert.deepEqual((await service.list({openSource:true})).map(work=>work.id),[ids[0],ids[1]]);
+  assert.deepEqual((await service.list({remixable:true})).map(work=>work.id),[ids[0]]);
+  assert.deepEqual((await service.list({claimable:true})).map(work=>work.id),[ids[0]]);
+  assert.deepEqual((await service.list({source:'platform'})).map(work=>work.id),['gamehub-guess-baike']);
+  assert.equal((await service.get(ids[0])).claimStatus,'unclaimed');assert.equal((await service.get(ids[0])).remixable,true);
   assert.equal((await service.list({q:'%_'})).length,1);
   assert.equal((await service.list({q:'不可见'})).length,0);
   assert.equal((await service.list({q:'重开'}))[0].title,'OI 重开模拟器');
@@ -39,12 +46,12 @@ test('discovery catalog searches beyond page one, filters before paging, and res
   assert.equal((await service.list({limit:1,offset:1}))[0].id,ids[0]);
   await pool.query("UPDATE works SET title='作者的新标题',description='作者自己的简介',tags=ARRAY['养成'] WHERE id=$1",[oi]);
   assert.equal((await service.get(oi)).title,'作者的新标题');assert.equal((await service.list({q:'重开'})).length,0);
-  for(const query of [{limit:51},{offset:-1},{offset:100001},{q:'x'.repeat(101)}])await assert.rejects(service.list(query),{code:'SCHEMA_INVALID'});
+  for(const query of [{limit:51},{offset:-1},{offset:100001},{q:'x'.repeat(101)},{runtime:'dos'},{source:'crawler'}])await assert.rejects(service.list(query),{code:'SCHEMA_INVALID'});
   const engagement=createEngagementService({repository:new PostgresEngagementRepository(pool),catalogService:service});
   for(let i=0;i<5;i++)await pool.query("INSERT INTO user_library(user_id,work_key,saved_at,last_played_at,play_count) VALUES($1,$2,now()+$3::integer*interval '1 hour',now()-$3::integer*interval '1 hour',1)",[actor,ids[i],i]);
   assert.deepEqual((await engagement.list({userId:actor},{limit:3,recent:true})).map(item=>item.workId),ids.slice(0,3));
   assert.equal((await engagement.list({userId:actor})).length,5);
   app=createApp({config:{requestBodyLimit:65536,corsOrigins:[]},catalogService:service});
   assert.equal((await app.inject({url:'/v1/works?q='+encodeURIComponent('冷门画板')+'&limit=1&offset=0'})).json().data[0].id,ids[31]);
-  for(const query of ['offset=-1','limit=51','kind=nope','q='+('x'.repeat(101))])assert.equal((await app.inject({url:'/v1/works?'+query})).statusCode,400);
+  for(const query of ['offset=-1','limit=51','kind=nope','runtime=dos','source=crawler','q='+('x'.repeat(101))])assert.equal((await app.inject({url:'/v1/works?'+query})).statusCode,400);
 });

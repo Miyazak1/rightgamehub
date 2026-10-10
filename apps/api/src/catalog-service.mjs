@@ -17,11 +17,11 @@ export function createCatalogService({ repository, config, artifactStore }) {
       const limit = query.limit == null ? 20 : Number(query.limit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new CatalogError('SCHEMA_INVALID', 400, 'limit must be between 1 and 50.');
       const offset=query.offset==null?0:Number(query.offset),q=String(query.q??'').trim().toLowerCase();
-      if(!Number.isInteger(offset)||offset<0||offset>100000||q.length>100||query.kind&&!['game','creative','tool'].includes(query.kind))throw new CatalogError('SCHEMA_INVALID',400,'目录查询参数无效。');
-      const builtIn=(!query.kind||query.kind==='game')&&(!q||[guessBaikeWork.title,guessBaikeWork.description,...guessBaikeWork.tags,'GameHub'].join(' ').toLowerCase().includes(q));
+      if(!Number.isInteger(offset)||offset<0||offset>100000||q.length>100||query.kind&&!['game','creative','tool'].includes(query.kind)||query.runtime&&!['web','windows'].includes(query.runtime)||query.source&&!['platform','github_import','zip_upload','community_catalog'].includes(query.source))throw new CatalogError('SCHEMA_INVALID',400,'目录查询参数无效。');
+      const builtIn=(!query.kind||query.kind==='game')&&(!q||[guessBaikeWork.title,guessBaikeWork.description,...guessBaikeWork.tags,'GameHub'].join(' ').toLowerCase().includes(q))&&(!query.runtime||query.runtime==='web')&&(!query.source||query.source==='platform')&&!query.openSource&&!query.remixable&&!query.claimable;
       const includeBuiltIn=builtIn&&offset===0;
       const remaining=limit-(includeBuiltIn?1:0);
-      const works=remaining?await repository.list({limit:remaining,kind:query.kind??null,q,offset:Math.max(0,offset-(builtIn?1:0)),editorialIds:editorialSearchIds(q)}):[];
+      const works=remaining?await repository.list({limit:remaining,kind:query.kind??null,q,offset:Math.max(0,offset-(builtIn?1:0)),editorialIds:editorialSearchIds(q),runtime:query.runtime??null,source:query.source??null,openSource:Boolean(query.openSource),remixable:Boolean(query.remixable),claimable:Boolean(query.claimable)}):[];
       return [...(includeBuiltIn?[guessBaikeWork]:[]),...works.map(presentCatalogWork)];
     },
     async get(workId) {
