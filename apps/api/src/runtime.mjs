@@ -30,6 +30,9 @@ import { LocalQuarantineStore } from './local-object-store.mjs';
 import { LocalRuntimeStore } from './local-runtime-store.mjs';
 import { LocalAvatarStore } from './local-avatar-store.mjs';
 import { LocalCoverStore } from './local-cover-store.mjs';
+import { createOssClientProvider } from './oss-client.mjs';
+import { OssAvatarStore, OssCoverStore } from './oss-media-store.mjs';
+import { OssRuntimeStore } from './oss-runtime-store.mjs';
 import { PostgresValidationRepository } from './validation-repository.mjs';
 import { createValidationWorker } from './validation-worker.mjs';
 import { PostgresCatalogRepository } from './catalog-repository.mjs';
@@ -85,8 +88,20 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     apply: () => applyMigrations(database.pool, migrationDirectory),
     status: () => migrationStatus(database.pool, migrationDirectory),
   };
-  const avatarStore = new LocalAvatarStore(config.avatarRoot);
-  const coverStore = new LocalCoverStore(config.coverRoot);
+  const localAvatarStore = new LocalAvatarStore(config.avatarRoot);
+  const localCoverStore = new LocalCoverStore(config.coverRoot);
+  const localRuntimeStore = new LocalRuntimeStore(config.runtimeRoot);
+  const getOssClient = config.objectStorageProvider === 'aliyun-oss'
+    ? createOssClientProvider({
+      region: config.ossRegion,
+      endpoint: config.ossEndpoint,
+      bucket: config.ossBucket,
+      roleName: config.ossEcsRoleName,
+    })
+    : null;
+  const avatarStore = getOssClient ? new OssAvatarStore({ getClient: getOssClient, fallback: localAvatarStore }) : localAvatarStore;
+  const coverStore = getOssClient ? new OssCoverStore({ getClient: getOssClient, fallback: localCoverStore }) : localCoverStore;
+  const runtimeStore = getOssClient ? new OssRuntimeStore({ getClient: getOssClient, fallback: localRuntimeStore }) : localRuntimeStore;
   const repository = new PostgresAuthRepository(database.pool, avatarStore);
   const safeMailer = mailer ?? createConfiguredMailer(config);
   const authService = createAuthService({
@@ -134,14 +149,13 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const validationWorker = createValidationWorker({
     repository: new PostgresValidationRepository(database.pool), quarantineStore,
-    runtimeStore: new LocalRuntimeStore(config.runtimeRoot), validatorRoot: config.validatorRoot,
+    runtimeStore, validatorRoot: config.validatorRoot,
     validationRunner: createWebValidationRunner({
       mode: config.validatorExecutionMode,
       validatorRoot: config.validatorRoot,
       quarantineRoot: config.quarantineRoot,
     }),
   });
-  const runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
   const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config, artifactStore: quarantineStore });
   const engagementService = createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService });
   const guessBaikeRepository = new PostgresGuessBaikeRepository(database.pool);
