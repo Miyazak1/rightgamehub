@@ -623,12 +623,13 @@ test('creator contribution empty state stays centered and omits redundant first-
 });
 
 test('community navigation unifies sharing and contribution without breaking legacy task routes', async () => {
-  const [navigation, shell, app, contribution, community] = await Promise.all([
+  const [navigation, shell, app, contribution, community, styles] = await Promise.all([
     fs.readFile('packages/platform-client/src/PlatformNavigation.jsx', 'utf8'),
     fs.readFile('packages/platform-client/src/CommunityShell.jsx', 'utf8'),
     fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
     fs.readFile('packages/platform-client/src/ContributionCenter.jsx', 'utf8'),
     fs.readFile('packages/platform-client/src/CommunityPage.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
   ]);
 
   assert.match(navigation, /\['\/community', '社区'/);
@@ -639,6 +640,10 @@ test('community navigation unifies sharing and contribution without breaking leg
   assert.match(contribution, /\/community\/projects\/tasks\/\$\{item\.id\}/);
   assert.match(community, /<CommunityShell route=\{route\} go=\{go\}>/);
   assert.match(community, /今天，和谁一起做点什么/);
+  assert.match(community, /mode==='feed'\?' is-feed':''/);
+  const narrowCommunityPage = styles.indexOf('.community-page:not(.is-home)');
+  const wideCommunityFeed = styles.indexOf('.community-page.is-feed{width:100%;max-width:none;margin-inline:0}');
+  assert.ok(narrowCommunityPage >= 0 && wideCommunityFeed > narrowCommunityPage);
 });
 
 test('community projects add a real project workflow and reuse contribution tasks', async () => {
