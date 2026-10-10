@@ -1459,3 +1459,240 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
 .agent-toolkit-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-top:34px}.agent-toolkit-heading h2{margin:7px 0 3px;font-size:28px}.agent-toolkit-heading p{margin:0;color:var(--gh-secondary)}.agent-toolkit-heading code{padding:7px 9px;border:1px solid var(--gh-border);background:var(--gh-raised);color:var(--gh-secondary);font-size:10px;white-space:nowrap}.agent-toolkit-grid article{min-height:360px;grid-template-rows:1fr auto}.agent-toolkit-card__meta{display:flex;align-items:center;justify-content:space-between;gap:12px}.agent-toolkit-card__meta em{padding:4px 6px;border:1px solid var(--gh-border);color:var(--gh-secondary);font:800 8px ui-monospace,monospace;font-style:normal;letter-spacing:.08em}.agent-toolkit-card__meta em.is-ready{border-color:var(--gh-success);color:var(--gh-success)}.agent-toolkit-card__meta em.is-guided{border-color:var(--gh-action);color:var(--gh-action)}.agent-toolkit-card dl{display:flex;flex-wrap:wrap;gap:8px;margin:17px 0 0}.agent-toolkit-card dl div{display:flex;gap:6px;padding:5px 7px;border:1px solid var(--gh-border);font:700 9px ui-monospace,monospace}.agent-toolkit-card dt{color:var(--gh-secondary)}.agent-toolkit-card dd{margin:0}.agent-toolkit-card blockquote{margin:14px 0 0;padding:12px;border-left:3px solid var(--gh-action);background:var(--gh-raised);color:var(--gh-secondary);font-size:10px;line-height:1.65}.agent-toolkit-copy{grid-column:2;justify-self:start;padding:8px 0;border:0;border-bottom:1px solid currentColor;background:transparent;color:var(--gh-action);font-weight:800;cursor:pointer}.agent-toolkit-boundary{border:1px solid var(--gh-border);border-left:4px solid var(--gh-action)}
 @media(max-width:820px){.agent-toolkit-heading{align-items:flex-start;flex-direction:column}.agent-toolkit-grid article{min-height:0}}
 @media(max-width:520px){.agent-toolkit-copy{grid-column:1}.agent-toolkit-heading code{white-space:normal}.agent-toolkit-grid article{padding:17px}.agent-toolkit-card blockquote{font-size:11px}}
+
+/* Community readability baseline: keep Chinese copy and form controls legible at 100% zoom. */
+.community-hub-page {
+  max-width: 1180px;
+  font-size: 16px;
+}
+.community-hub-page .kicker,
+.community-hub-page .eyebrow {
+  font-size: 11px;
+}
+.community-hub-page .button {
+  min-height: 44px;
+  padding-inline: 16px;
+  font-size: 14px;
+}
+.community-hub-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.community-hub-page select {
+  min-height: 46px;
+}
+.community-hub-page input,
+.community-hub-page select,
+.community-hub-page textarea {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.community-hub-page textarea {
+  min-height: 112px;
+}
+.community-hub-page :is(.community-project-form, .community-project-join, .community-activity-form, .community-page, .contribution-page) label {
+  color: var(--gh-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.community-hub-page :is(.community-project-form, .community-activity-form) label small {
+  color: var(--gh-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Community shell and launch menu. */
+.community-hub-page .community-hub-nav button,
+.community-hub-page .community-launch__trigger {
+  min-height: 42px;
+  font-size: 14px;
+}
+.community-hub-page .community-launch__menu button strong,
+.community-hub-page .community-launch__menu-head strong {
+  font-size: 14px;
+}
+.community-hub-page .community-launch__menu button small,
+.community-hub-page .community-launch__menu-head small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.community-hub-page .community-home-paths button small,
+.community-hub-page .community-home-future small,
+.community-hub-page .community-home-future > em,
+.community-hub-page .community-personal-nav button,
+.community-hub-page .community-ranking-note {
+  font-size: 12px;
+  line-height: 1.55;
+}
+.community-hub-page .community-home-paths button em,
+.community-hub-page .community-home-future b {
+  font-size: 13px;
+}
+
+/* Feed and publishing forms. */
+.community-hub-page .community-section-heading p,
+.community-hub-page .community-card-head,
+.community-hub-page .community-members,
+.community-hub-page .community-file-row {
+  font-size: 14px;
+}
+.community-hub-page .community-blocks p {
+  font-size: 16px;
+  line-height: 1.8;
+}
+.community-hub-page .community-tag,
+.community-hub-page .community-author__copy small,
+.community-hub-page .community-action-button b {
+  font-size: 12px;
+}
+.community-hub-page .community-author__copy strong,
+.community-hub-page .community-source strong,
+.community-hub-page .community-source small,
+.community-hub-page .community-image figcaption,
+.community-hub-page .community-text-button,
+.community-hub-page footer.community-actions > button:not(.button) {
+  font-size: 13px;
+}
+.community-hub-page footer.community-actions > button:not(.button) {
+  min-height: 40px;
+  padding-inline: 10px;
+}
+
+/* Projects: cards, detail copy and join/create forms. */
+.community-hub-page .community-project-card header span,
+.community-hub-page .community-project-card header > b,
+.community-hub-page .community-project-card__meta,
+.community-hub-page .community-project-card__roles span,
+.community-hub-page .community-project-card footer,
+.community-hub-page .community-project-detail__facts span,
+.community-hub-page .community-project-detail__hero aside small,
+.community-hub-page .community-project-role-grid em,
+.community-hub-page .community-project-manage > article span,
+.community-hub-page .contribution-project-context {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.community-hub-page .community-project-card > p,
+.community-hub-page .community-project-role-grid p,
+.community-hub-page .community-project-manage > article p,
+.community-hub-page .community-independent-tasks > div > p,
+.community-hub-page .community-project-tasks > div > p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.community-hub-page .community-project-detail__hero > div > p,
+.community-hub-page .community-project-detail__body > div > p,
+.community-hub-page .community-project-join > p {
+  font-size: 16px;
+  line-height: 1.75;
+}
+.community-hub-page .community-project-card h3 {
+  font-size: 19px;
+}
+.community-hub-page .community-project-card footer button,
+.community-hub-page .community-context-link {
+  min-height: 38px;
+  padding-inline: 11px;
+  font-size: 13px;
+}
+.community-hub-page .community-project-detail__body h2,
+.community-hub-page .community-project-join h2,
+.community-hub-page .community-project-manage h2 {
+  font-size: 21px;
+}
+.community-hub-page .community-project-role-grid article,
+.community-hub-page .community-project-manage > article {
+  padding: 16px;
+}
+
+/* Events, parties and participation inbox. */
+.community-hub-page .community-event-card header,
+.community-hub-page .community-party-card header,
+.community-hub-page .community-event-card footer,
+.community-hub-page .community-party-card footer,
+.community-hub-page .community-party-meta,
+.community-hub-page .community-party-cover small,
+.community-hub-page .community-activity-facts span,
+.community-hub-page .community-party-members span,
+.community-hub-page .community-inbox small,
+.community-hub-page .community-reminders p {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.community-hub-page .community-event-card p,
+.community-hub-page .community-party-card p,
+.community-hub-page .community-activity-detail-grid p,
+.community-hub-page .community-dashboard__projects button p,
+.community-hub-page .community-dashboard__empty p,
+.community-hub-page .community-inbox p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.community-hub-page .community-event-card footer,
+.community-hub-page .community-party-card footer {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.community-hub-page .community-event-card footer button,
+.community-hub-page .community-party-card footer button,
+.community-hub-page .community-dashboard__heading > button,
+.community-hub-page .community-dashboard__empty button,
+.community-hub-page .community-inbox article > button,
+.community-hub-page .community-reminders button {
+  min-height: 38px;
+  padding-inline: 11px;
+  font-size: 13px;
+}
+.community-hub-page .community-activity-detail-grid h3,
+.community-hub-page .community-party-members strong,
+.community-hub-page .community-dashboard__intro aside strong,
+.community-hub-page .community-dashboard__projects button > strong,
+.community-hub-page .community-dashboard__empty strong,
+.community-hub-page .community-inbox strong {
+  font-size: 15px;
+}
+.community-hub-page .community-dashboard__intro aside span,
+.community-hub-page .community-dashboard__projects button > span,
+.community-hub-page .community-dashboard__projects button small {
+  font-size: 12px;
+}
+
+/* Contribution workflows are embedded in the community shell. */
+.community-hub-page .contribution-card > p,
+.community-hub-page .creator-contributions article > p,
+.community-hub-page .contribution-message,
+.community-hub-page .contribution-state {
+  font-size: 14px;
+  line-height: 1.65;
+}
+.community-hub-page .contribution-card header span,
+.community-hub-page .creator-contributions article header span,
+.community-hub-page .contribution-card header > strong,
+.community-hub-page .creator-contributions article header > strong,
+.community-hub-page .contribution-tags span,
+.community-hub-page .contribution-tags em,
+.community-hub-page .contribution-card footer small,
+.community-hub-page .creator-contributions article footer small,
+.community-hub-page .contribution-links a,
+.community-hub-page .creator-contributions__claim a {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@container (max-width: 600px) {
+  .community-hub-page {
+    font-size: 16px;
+  }
+  .community-hub-page .community-hub-hero__copy p {
+    font-size: 14px;
+  }
+  .community-hub-page .community-launch__trigger {
+    font-size: 0;
+  }
+  .community-hub-page .community-launch__trigger::before {
+    font-size: 20px;
+  }
+  .community-hub-page .community-hub-nav button {
+    font-size: 13px;
+  }
+  .community-hub-page .community-project-detail__hero h1 {
+    font-size: 28px;
+  }
+}

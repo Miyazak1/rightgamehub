@@ -673,6 +673,19 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(projects, /发布项目更新/);
 });
 
+test('community typography keeps Chinese copy and form controls readable', async () => {
+  const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
+  const baselineStart = styles.indexOf('/* Community readability baseline');
+  assert.ok(baselineStart >= 0);
+  const baseline = styles.slice(baselineStart);
+  assert.match(baseline, /\.community-hub-page \{[^}]*font-size: 16px;/s);
+  assert.match(baseline, /\.community-hub-page \.button \{[^}]*min-height: 44px;[^}]*font-size: 14px;/s);
+  assert.match(baseline, /\.community-hub-page input,[\s\S]*?\.community-hub-page textarea \{[^}]*font-size: 16px;/);
+  assert.match(baseline, /\.community-hub-page :is\([^}]*\) label \{[^}]*font-size: 14px;/s);
+  assert.match(baseline, /\.community-hub-page \.community-project-detail__body > div > p,[\s\S]*?font-size: 16px;/);
+  assert.match(baseline, /@container \(max-width: 600px\) \{[\s\S]*?\.community-hub-page \.community-hub-nav button \{[^}]*font-size: 13px;/);
+});
+
 test('player routes preserve share links and community room entry after integration', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /releaseId=\{\['challenge','share','room'\]\.includes\(parts\[2\]\)/);
