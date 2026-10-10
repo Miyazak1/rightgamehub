@@ -640,6 +640,12 @@ test('community navigation unifies sharing and contribution without breaking leg
   assert.match(contribution, /\/community\/projects\/tasks\/\$\{item\.id\}/);
   assert.match(community, /<CommunityShell route=\{route\} go=\{go\}>/);
   assert.match(community, /今天，和谁一起做点什么/);
+  assert.match(shell, /className="community-hub-toolbar"/);
+  assert.match(shell, /aria-haspopup="menu"/);
+  assert.match(shell, /event\.key==='Escape'/);
+  assert.match(shell, /open\('\/community\/projects\/new'\)/);
+  assert.doesNotMatch(shell, /<details className="community-launch"/);
+  assert.match(styles, /\.community-launch__backdrop\{position:fixed;z-index:80;inset:0;display:block/);
   assert.match(community, /mode==='feed'\?' is-feed':''/);
   const narrowCommunityPage = styles.indexOf('.community-page:not(.is-home)');
   const wideCommunityFeed = styles.indexOf('.community-page.is-feed{width:100%;max-width:none;margin-inline:0}');
@@ -661,6 +667,9 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(projects, /<ContributionCenterPage[^>]*projectId=\{project\.id\}/);
   assert.match(contribution, /来自项目：\{item\.project\.title\}/);
   assert.match(app, /<CommunityProjects/);
+  assert.match(app, /startCreating=\{parts\[2\]==='new'\}/);
+  assert.match(projects, /startCreating=false/);
+  assert.match(projects, /if\(startCreating\).*setCreating\(true\).*go\('\/account'\)/);
   assert.match(projects, /发布项目更新/);
 });
 

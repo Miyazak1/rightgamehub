@@ -43,8 +43,9 @@ function ProjectDetail({api,demo,go,accountProfile,projectId}){
   </div>;
 }
 
-export default function CommunityProjects({api,demo,go,accountProfile,projectId}){
-  const [mine,setMine]=useState(false),[creating,setCreating]=useState(false);
+export default function CommunityProjects({api,demo,go,accountProfile,projectId,startCreating=false}){
+  const [mine,setMine]=useState(false),[creating,setCreating]=useState(Boolean(startCreating&&accountProfile));
+  useEffect(()=>{if(startCreating){if(accountProfile)setCreating(true);else go('/account');}},[startCreating,accountProfile?.id]);
   const [state,reload]=useRemote(async()=>demo?[demoProject]:(await api.communityProjects(mine?{mine:true}:{})).data,[api,demo,mine,accountProfile?.id]);
   if(projectId)return <ProjectDetail api={api} demo={demo} go={go} accountProfile={accountProfile} projectId={projectId}/>;
   const created=project=>{setCreating(false);reload();go(`/community/projects/${project.id}`);};
