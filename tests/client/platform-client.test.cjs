@@ -688,6 +688,18 @@ test('community typography follows the navigation scale and styles form controls
   assert.match(baseline, /@container \(max-width: 600px\) \{[\s\S]*?\.community-hub-page \.community-hub-nav button \{[^}]*font-size: 12px;/);
 });
 
+test('community home spacing stays compact and a lone project uses the full row', async () => {
+  const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
+  assert.match(styles, /\.community-hub-hero\{min-height:124px;[^}]*padding:20px 24px;/);
+  assert.match(styles, /\.community-hub-toolbar\{[^}]*margin:12px 0 20px;/);
+  assert.match(styles, /\.community-card,\.community-editor,\.community-members \{ padding:20px;/);
+  assert.match(styles, /\.community-blocks \{ margin:14px 0 18px;[^}]*gap:10px;/);
+  assert.match(styles, /\.community-dashboard__intro\{margin-bottom:0;padding:22px;/);
+  assert.match(styles, /\.community-dashboard__section\{margin-top:24px\}/);
+  assert.match(styles, /\.community-dashboard__heading\{margin-bottom:12px;[^}]*padding-bottom:8px/);
+  assert.match(styles, /@container\(min-width:761px\)\{\.community-dashboard__projects>button:only-child\{grid-column:1\/-1;/);
+});
+
 test('player routes preserve share links and community room entry after integration', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /releaseId=\{\['challenge','share','room'\]\.includes\(parts\[2\]\)/);
