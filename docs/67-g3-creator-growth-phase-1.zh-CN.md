@@ -44,7 +44,7 @@ GET /v1/works/{workId}/badge.svg
 创作中心复制的 Markdown 形态为：
 
 ```md
-[![在 GameHub 在线体验](https://mooyu.fun/v1/works/{workId}/badge.svg)](https://mooyu.fun/#/works/{workId})
+[![在 GameHub 在线体验](https://mooyu.fun/v1/works/{workId}/badge.svg)](https://mooyu.fun/w/{workId})
 ```
 
 SVG 是固定文案，不插入作品标题等用户输入；响应启用 `nosniff` 和限制性 CSP，可短时公开缓存。

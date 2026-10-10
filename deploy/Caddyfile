@@ -26,6 +26,10 @@
     reverse_proxy api:3090
   }
 
+  handle /w/* {
+    reverse_proxy api:3090
+  }
+
   handle {
     root * /srv/gamehub
     try_files {path} /index.html

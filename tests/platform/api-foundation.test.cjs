@@ -158,17 +158,17 @@ test('creator work routes accept discovery metadata from the creation form', asy
   assert.deepEqual(received, payload);
 });
 
-test('creator analytics is authenticated and public work badges stay catalog-gated', async t => {
+test('creator analytics, public work pages and badges stay catalog-gated', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const { AuthError } = await import(moduleUrl('auth-service.mjs'));
   const workId = '00000000-0000-4000-8000-000000000777';
   const actor = { userId: 'creator-user', scopes: ['works:read'], profile: { canPublish: true } };
   const calls = [];
   const app = createApp({
-    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    config: { requestBodyLimit: 65536, gameShareSiteOrigin: 'https://games.example' }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
     authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
     analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async () => ({ accepted: 1 }) },
-    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏' }; } },
+    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover` }; } },
   });
   t.after(() => app.close());
   const denied = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30' });
@@ -183,6 +183,29 @@ test('creator analytics is authenticated and public work badges stay catalog-gat
   assert.equal(badge.headers['x-content-type-options'], 'nosniff');
   assert.match(badge.body, /PLAY ON GAMEHUB/u);
   assert.deepEqual(calls[1], ['catalog', workId]);
+  const page = await app.inject({ method: 'GET', url: `/w/${workId}` });
+  assert.equal(page.statusCode, 200);
+  assert.match(page.headers['content-type'], /^text\/html/u);
+  assert.equal(page.headers['x-content-type-options'], 'nosniff');
+  assert.equal(page.headers['referrer-policy'], 'no-referrer');
+  assert.match(page.headers['content-security-policy'], /script-src 'nonce-/u);
+  assert.match(page.body, /<title>公开游戏 &lt;测试&gt; \| GameHub<\/title>/u);
+  assert.match(page.body, /<link rel="canonical" href="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777">/u);
+  assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
+  assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/cover"/u);
+  assert.match(page.body, /window\.location\.replace\("https:\/\/games\.example\/#\/works\/00000000-0000-4000-8000-000000000777"\)/u);
+  assert.doesNotMatch(page.body, /作者 "甲"/u);
+  assert.deepEqual(calls[2], ['catalog', workId]);
+});
+
+test('production edge sends stable public work links to the metadata route before the SPA fallback', async () => {
+  const caddy = await fs.readFile(path.join(root, 'deploy/Caddyfile'), 'utf8');
+  const publicWorkRoute = caddy.indexOf('handle /w/*');
+  const staticFallback = caddy.indexOf('try_files {path} /index.html');
+  assert.notEqual(publicWorkRoute, -1);
+  assert.notEqual(staticFallback, -1);
+  assert.ok(publicWorkRoute < staticFallback);
+  assert.match(caddy.slice(publicWorkRoute, staticFallback), /reverse_proxy api:3090/u);
 });
 
 test('GitHub source routes authenticate creators and preserve raw webhook bytes', async t => {

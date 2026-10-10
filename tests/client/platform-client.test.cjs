@@ -156,7 +156,9 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /复制 README 徽章/);
   assert.match(source, /\/v1\/works\/\$\{work\.id\}\/badge\.svg/);
   assert.match(source, /const PUBLIC_GAMEHUB_URL = 'https:\/\/mooyu\.fun'/);
-  assert.match(source, /PUBLIC_GAMEHUB_URL}\/\#\/works\/\$\{work\.id\}/);
+  assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{work\.id\}/);
+  assert.match(source, /复制分享链接/);
+  assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{encodeURIComponent\(work\.id\)\}/);
 });
 
 test('creator publishing stays direct while Agent toolkits remain optional', async () => {
