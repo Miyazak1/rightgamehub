@@ -1,0 +1,552 @@
+{
+  "schema": 1,
+  "title": "Inter School Quiz Competition 2026",
+  "savedAt": "2026-05-31T00:30:22.956Z",
+  "state": {
+    "view": "main-board",
+    "numTeams": 7,
+    "teams": [
+      {
+        "number": 1,
+        "name": "NAV Balchautari North",
+        "score": 20
+      },
+      {
+        "number": 2,
+        "name": "Cardinia Nepali Community School",
+        "score": 75
+      },
+      {
+        "number": 3,
+        "name": "Cranbourne Gyanjyoti Pathshala",
+        "score": 30
+      },
+      {
+        "number": 4,
+        "name": "Nepali Pathashala Geelong",
+        "score": 30
+      },
+      {
+        "number": 5,
+        "name": "NASEM Balchautari",
+        "score": 55
+      },
+      {
+        "number": 6,
+        "name": "NAV Balchautari West",
+        "score": 60
+      },
+      {
+        "number": 7,
+        "name": "Hamro Nepali Pathsala",
+        "score": 60
+      }
+    ],
+    "picks": {
+      "Mathematics & Science": {
+        "1": {
+          "scoringTeam": 2,
+          "points": 5,
+          "originatorTeam": 1,
+          "passedTeams": [],
+          "seq": 1
+        },
+        "2": {
+          "scoringTeam": 6,
+          "points": 10,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 6
+        },
+        "3": {
+          "scoringTeam": 7,
+          "points": 10,
+          "originatorTeam": 7,
+          "passedTeams": [],
+          "seq": 7
+        },
+        "4": {
+          "scoringTeam": 5,
+          "points": 5,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 9
+        },
+        "5": {
+          "scoringTeam": 2,
+          "points": 10,
+          "originatorTeam": 2,
+          "passedTeams": [],
+          "seq": 2
+        },
+        "6": {
+          "scoringTeam": 7,
+          "points": 5,
+          "originatorTeam": 1,
+          "passedTeams": [],
+          "seq": 14
+        },
+        "7": {
+          "scoringTeam": 2,
+          "points": 10,
+          "originatorTeam": 2,
+          "passedTeams": [],
+          "seq": 13
+        },
+        "8": {
+          "scoringTeam": 7,
+          "points": 10,
+          "originatorTeam": 7,
+          "passedTeams": [],
+          "seq": 8
+        },
+        "10": {
+          "scoringTeam": 3,
+          "points": 10,
+          "originatorTeam": 3,
+          "passedTeams": [],
+          "seq": 3
+        },
+        "12": {
+          "scoringTeam": 6,
+          "points": 5,
+          "originatorTeam": 4,
+          "passedTeams": [
+            3,
+            2,
+            1,
+            7
+          ],
+          "seq": 4
+        },
+        "13": {
+          "scoringTeam": 4,
+          "points": 10,
+          "originatorTeam": 4,
+          "passedTeams": [],
+          "seq": 11
+        },
+        "14": {
+          "scoringTeam": 5,
+          "points": 10,
+          "originatorTeam": 5,
+          "passedTeams": [],
+          "seq": 5
+        },
+        "15": {
+          "scoringTeam": 2,
+          "points": 5,
+          "originatorTeam": 3,
+          "passedTeams": [],
+          "seq": 12
+        },
+        "16": {
+          "scoringTeam": 5,
+          "points": 10,
+          "originatorTeam": 5,
+          "passedTeams": [],
+          "seq": 10
+        }
+      },
+      "Environment and Sustainability": {
+        "1": {
+          "scoringTeam": 4,
+          "points": 10,
+          "originatorTeam": 4,
+          "passedTeams": [],
+          "seq": 18
+        },
+        "2": {
+          "scoringTeam": 6,
+          "points": 10,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 20
+        },
+        "3": {
+          "scoringTeam": 2,
+          "points": 10,
+          "originatorTeam": 2,
+          "passedTeams": [],
+          "seq": 16
+        },
+        "4": {
+          "scoringTeam": 1,
+          "points": 10,
+          "originatorTeam": 1,
+          "passedTeams": [],
+          "seq": 15
+        },
+        "5": {
+          "scoringTeam": 3,
+          "points": 10,
+          "originatorTeam": 3,
+          "passedTeams": [],
+          "seq": 17
+        },
+        "6": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 1,
+          "passedTeams": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "seq": 28
+        },
+        "7": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 2,
+          "passedTeams": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            1
+          ],
+          "seq": 27
+        },
+        "8": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 7,
+          "passedTeams": [
+            6,
+            5,
+            4,
+            3,
+            2,
+            1
+          ],
+          "seq": 21
+        },
+        "9": {
+          "scoringTeam": 4,
+          "points": 10,
+          "originatorTeam": 4,
+          "passedTeams": [],
+          "seq": 25
+        },
+        "10": {
+          "scoringTeam": 2,
+          "points": 5,
+          "originatorTeam": 3,
+          "passedTeams": [
+            4,
+            5,
+            6,
+            7,
+            1
+          ],
+          "seq": 26
+        },
+        "11": {
+          "scoringTeam": 6,
+          "points": 10,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 23
+        },
+        "12": {
+          "scoringTeam": 7,
+          "points": 10,
+          "originatorTeam": 7,
+          "passedTeams": [],
+          "seq": 22
+        },
+        "14": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 5,
+          "passedTeams": [
+            4,
+            3,
+            2,
+            1,
+            7,
+            6
+          ],
+          "seq": 19
+        },
+        "16": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 5,
+          "passedTeams": [
+            6,
+            7,
+            1,
+            2,
+            3,
+            4
+          ],
+          "seq": 24
+        }
+      },
+      "Language & Culture": {
+        "1": {
+          "scoringTeam": 2,
+          "points": 5,
+          "originatorTeam": 4,
+          "passedTeams": [
+            5,
+            6,
+            7,
+            1
+          ],
+          "seq": 39
+        },
+        "2": {
+          "scoringTeam": 6,
+          "points": 10,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 34
+        },
+        "3": {
+          "scoringTeam": 2,
+          "points": 10,
+          "originatorTeam": 2,
+          "passedTeams": [],
+          "seq": 30
+        },
+        "4": {
+          "scoringTeam": 7,
+          "points": 10,
+          "originatorTeam": 7,
+          "passedTeams": [],
+          "seq": 35
+        },
+        "5": {
+          "scoringTeam": 5,
+          "points": 5,
+          "originatorTeam": 3,
+          "passedTeams": [
+            4
+          ],
+          "seq": 40
+        },
+        "6": {
+          "scoringTeam": 7,
+          "points": 10,
+          "originatorTeam": 7,
+          "passedTeams": [],
+          "seq": 36
+        },
+        "7": {
+          "scoringTeam": 5,
+          "points": 5,
+          "originatorTeam": 6,
+          "passedTeams": [],
+          "seq": 37
+        },
+        "8": {
+          "scoringTeam": 2,
+          "points": 5,
+          "originatorTeam": 1,
+          "passedTeams": [],
+          "seq": 29
+        },
+        "9": {
+          "scoringTeam": 2,
+          "points": 10,
+          "originatorTeam": 2,
+          "passedTeams": [],
+          "seq": 41
+        },
+        "10": {
+          "scoringTeam": 7,
+          "points": 5,
+          "originatorTeam": 5,
+          "passedTeams": [
+            6
+          ],
+          "seq": 38
+        },
+        "12": {
+          "scoringTeam": 5,
+          "points": 10,
+          "originatorTeam": 5,
+          "passedTeams": [],
+          "seq": 33
+        },
+        "13": {
+          "scoringTeam": 3,
+          "points": 10,
+          "originatorTeam": 3,
+          "passedTeams": [],
+          "seq": 31
+        },
+        "15": {
+          "scoringTeam": 1,
+          "points": 10,
+          "originatorTeam": 1,
+          "passedTeams": [],
+          "seq": 42
+        },
+        "16": {
+          "scoringTeam": null,
+          "points": 0,
+          "originatorTeam": 4,
+          "passedTeams": [
+            3,
+            2,
+            1,
+            7,
+            6,
+            5
+          ],
+          "seq": 32
+        }
+      }
+    },
+    "currentCategory": null,
+    "currentDraw": null,
+    "inTiebreaker": false,
+    "tbIndex": 1,
+    "tbCategoryForJumbled": "Language & Culture",
+    "stage": "idle",
+    "originatorTeam": null,
+    "originatorHighlight": null,
+    "currentPassTeam": null,
+    "passHighlight": null,
+    "passedTeams": [],
+    "timerSeconds": 30,
+    "timerExpiresAt": null,
+    "showAnswer": false,
+    "focusSlot": 0,
+    "pendingOpener": {
+      "Mathematics & Science": {
+        "team": null,
+        "confirmed": false
+      },
+      "Environment and Sustainability": {
+        "team": null,
+        "confirmed": false
+      },
+      "Language & Culture": {
+        "team": null,
+        "confirmed": false
+      }
+    },
+    "overlay": "settings",
+    "rulesDismissed": true,
+    "rulesProgress": {
+      "team": true,
+      "gameplay": true,
+      "timing": true,
+      "scoring": true,
+      "conduct": true
+    },
+    "hintsExpanded": false,
+    "tbParticipants": [
+      5,
+      6
+    ],
+    "tbConfirmed": true,
+    "tbPhase": "penalty",
+    "tbQuestionCount": 6,
+    "tbPendingOpener": {
+      "team": 6,
+      "confirmed": false
+    },
+    "tbPicks": [
+      {
+        "qNum": 1,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Mathematics & Science",
+        "idx": 0,
+        "displayLabel": "TB1",
+        "originatorTeam": 5,
+        "scoringTeam": 5,
+        "points": 10,
+        "passedTeams": [],
+        "seq": 43
+      },
+      {
+        "qNum": 2,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Environment and Sustainability",
+        "idx": 0,
+        "displayLabel": "TB2",
+        "originatorTeam": 6,
+        "scoringTeam": null,
+        "points": 0,
+        "passedTeams": [
+          5
+        ],
+        "seq": 44
+      },
+      {
+        "qNum": 3,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Mathematics & Science",
+        "idx": 1,
+        "displayLabel": "TB4",
+        "originatorTeam": 6,
+        "scoringTeam": null,
+        "points": 0,
+        "passedTeams": [
+          5
+        ],
+        "seq": 45
+      },
+      {
+        "qNum": 4,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Environment and Sustainability",
+        "idx": 1,
+        "displayLabel": "TB5",
+        "originatorTeam": 5,
+        "scoringTeam": null,
+        "points": 0,
+        "passedTeams": [
+          6
+        ],
+        "seq": 46
+      },
+      {
+        "qNum": 5,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Language & Culture",
+        "idx": 0,
+        "displayLabel": "TB3",
+        "originatorTeam": 5,
+        "scoringTeam": 6,
+        "points": 5,
+        "passedTeams": [],
+        "seq": 47
+      },
+      {
+        "qNum": 6,
+        "phase": "penalty",
+        "sdRound": null,
+        "category": "Language & Culture",
+        "idx": 1,
+        "displayLabel": "TB6",
+        "originatorTeam": 6,
+        "scoringTeam": 6,
+        "points": 10,
+        "passedTeams": [],
+        "seq": 48
+      }
+    ],
+    "tbWinnerTeam": 6,
+    "presentationMode": false,
+    "_draftNames": null,
+    "rulesOpenKey": "conduct",
+    "tbDisplayLabel": "TB6",
+    "showScoringLog": true
+  }
+}

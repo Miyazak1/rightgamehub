@@ -1,0 +1,4138 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Runner</title>
+<style>
+  /* ============================================================
+     Palette. A warm-white background keeps the accent colours easy
+     on the eye at projector distance.
+       --blue   primary actions, draw numbers, slot numbers, headings
+       --green  used by the green category tile (and a common accent)
+       --ans    answer-panel maroon
+       --teal   header underline and secondary accents
+     Category tiles map their `colour` to the tile-* classes further down.
+     ============================================================ */
+  :root {
+    --bg: #fbf9f4;
+    --bg-soft: #f1ebde;
+    --panel: #ffffff;
+    --border: #d8d2c4;
+    --line: #c8c0ad;
+
+    --blue: #00468c;             /* text, draw numbers, headings */
+    --blue-bg: #ebf2fa;          /* pastel category fill */
+    --blue-border: #dce6f3;
+    --blue-soft: #4775b3;
+    --teal: #345e5c;             /* header rule, secondary accents */
+    --teal-bg: #e8efee;
+    --green: #006e3c;
+    --green-bg: #e8f2ec;         /* soft mint tile fill */
+    --ans: #780000;
+    --ans-bg: #fdecec;
+    --warm-bg: #faecd5;          /* soft amber tile fill */
+    --warm-border: #ecdcc4;
+
+    --text: #2a2e34;
+    --text-soft: #5b6471;
+    --text-dim: #8a8f99;
+    --good: #1f7a3f;
+    --good-bg: #d9f0e1;
+    --bad: #a83242;
+    --bad-bg: #fbe1e4;
+    --warn: #a87a14;
+    --warn-bg: #fcf1d0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+  }
+  /* Secondary-language text. The font family and colour are injected at
+     runtime from DATA.config.secondaryLanguage (see applySecondaryLanguage()),
+     so this rule only needs a sensible cross-platform fallback stack. The same
+     stack covers Devanagari, CJK, Arabic, etc. when no custom font is set. */
+  .secondary-lang {
+    font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans CJK SC',
+                 'Hiragino Sans', 'Arial Unicode MS', sans-serif;
+  }
+
+  /* ---------- app shell: header / stage / op-bar ----------
+     Most sizes use clamp(min, viewport-relative, max) so the same runner reads
+     well on a small laptop and scales up on a large external display or
+     projector without any per-device tweaking. */
+  #app {
+    display: grid;
+    grid-template-rows: clamp(96px, 9vh, 156px) 1fr clamp(40px, 4vh, 64px);
+    height: 100vh;
+  }
+  body.cover-view #app { display: block; height: 100vh; }
+  body.cover-view #app > .stage { height: 100vh; overflow: auto; }
+  .app-header {
+    background: var(--panel);
+    border-bottom: 2px solid var(--teal);
+    padding: clamp(8px, 1vh, 18px) clamp(18px, 2.5vw, 40px);
+    display: grid;
+    grid-template-columns: clamp(180px, 18vw, 320px) 1fr clamp(180px, 18vw, 320px);
+    align-items: center;
+    gap: 18px;
+  }
+  .app-header .logo-slot { display: flex; align-items: center; }
+  .app-header .logo-slot.right { justify-content: flex-end; }
+  /* Logo max-height and title fonts use clamp() so the same runner reads well
+     on a laptop and scales up on a large external display / projector. */
+  .app-header img { max-height: clamp(72px, 7.5vh, 124px); max-width: 100%; object-fit: contain; }
+  .app-header .title-block { text-align: center; }
+  .app-header .title-block .en { color: var(--blue); font-weight: 700; font-size: clamp(28px, 2.6vw, 56px); line-height: 1.05; letter-spacing: 0.5px; }
+  .app-header .title-block .secondary-lang { font-size: clamp(20px, 1.9vw, 40px); line-height: 1.2; }
+  body.presentation .app-header { background: var(--bg); }
+
+  .op-bar {
+    background: var(--blue);
+    color: #fff;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+  }
+  .op-bar .hint { flex: 1; opacity: 0.92; }
+  .op-bar .hint kbd {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.32);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    margin: 0 2px;
+  }
+  .op-bar .actions { display: flex; gap: 6px; }
+  .op-bar button {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .op-bar button:hover { background: rgba(255,255,255,0.22); }
+  body.presentation .op-bar { display: none; }
+
+  .stage {
+    overflow: auto;
+    padding: 18px 32px 22px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* ---------- buttons (no transforms — keeps bounding box stable) ---------- */
+  button.btn {
+    font: inherit;
+    cursor: pointer;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    user-select: none;
+  }
+  button.btn:hover { background: var(--bg-soft); }
+  button.btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  button.btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button.btn.primary:hover { background: var(--blue-soft); }
+  button.btn.teal { background: var(--teal); color: #fff; border-color: var(--teal); }
+  button.btn.teal:hover { background: #4b7c79; }
+  button.btn.good { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+  button.btn.good:hover { background: #c6e7d2; }
+  button.btn.bad { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+  button.btn.bad:hover { background: #f5cdd2; }
+  button.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+  button.btn .key {
+    display: inline-block;
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 8px;
+    font-size: 11px;
+    font-family: ui-monospace, Menlo, monospace;
+    opacity: 0.85;
+  }
+  button.btn.primary .key,
+  button.btn.teal .key { background: rgba(255,255,255,0.22); }
+
+  /* ---------- splash ----------
+     v5.7: page now opens with a clear "Team Setup" header + a subtitle in
+     parentheses (matches the header pattern used elsewhere). Credits are
+     pushed to the bottom via space-between so the form sits visually in the
+     upper third while the supporters lineup hugs the page foot. */
+  .splash {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    text-align: center;
+    padding: clamp(18px, 3vh, 40px) clamp(20px, 3vw, 60px) clamp(14px, 2vh, 28px);
+  }
+  /* v5.7: splash header — matches the cover-title visual hierarchy.
+     The h2 is the main label, the .sub line in parentheses is the cue. */
+  .splash .setup-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: clamp(6px, 1vh, 14px);
+  }
+  .splash .setup-header h2 {
+    margin: 0;
+    color: var(--blue);
+    font-size: clamp(28px, 2.6vw, 48px);
+    font-weight: 700;
+  }
+  .splash .setup-header .sub {
+    color: var(--text-soft);
+    font-size: clamp(14px, 1.2vw, 19px);
+    font-style: italic;
+  }
+  .splash .form-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .splash .credits-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(8px, 1.2vh, 16px);
+    margin-top: auto;
+  }
+  .splash .org-row { display: flex; gap: 22px; align-items: center; justify-content: center; }
+  .splash .org-row img { height: 64px; max-width: 180px; object-fit: contain; }
+  .splash h1 { margin: 10px 0 0; font-size: 40px; color: var(--blue); }
+  .splash .meta { color: var(--text-soft); }
+  .splash .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 22px;
+    margin-top: 10px;
+    min-width: 540px;
+  }
+  .splash .row { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
+  .splash label { width: 110px; text-align: right; color: var(--text-soft); font-size: 14px; }
+  .splash input {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font: inherit;
+  }
+  .splash input[type=number] { max-width: 80px; }
+  /* Credit / footer line under the team-setup form. */
+  .splash .assoc { color: var(--text-dim); font-size: 14px; margin-top: 10px; }
+  .splash .assoc-logos { display: flex; gap: 18px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+  .splash .assoc-logos img { height: 38px; max-width: 130px; object-fit: contain; opacity: 0.88; }
+
+  /* ---------- main board (category tiles) ----------
+     v5.3: tile h2 centered + scaled with viewport so the category names read
+     from the back of the hall. Tile padding stays modest so the bigger
+     header has room to breathe. */
+  .main-board {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(14px, 1.5vw, 28px);
+    align-items: stretch;
+    margin: clamp(8px, 1vh, 20px) 0;
+  }
+  .cat-tile {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: 14px;
+    padding: clamp(14px, 1.4vw, 26px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    gap: clamp(8px, 1vh, 18px);
+    cursor: pointer;
+    transition: filter 0.12s, border-color 0.12s;
+  }
+  /* Named category-tile colours. config.json sets a `colour` per category and
+     build.js maps it to one of these classes. Add more here if you need them. */
+  .cat-tile.tile-blue   { background: var(--blue-bg);  border-color: var(--blue-border); }
+  .cat-tile.tile-green  { background: var(--green-bg); border-color: #d4e6da; }
+  .cat-tile.tile-amber  { background: var(--warm-bg);  border-color: var(--warm-border); }
+  .cat-tile.tile-teal   { background: var(--teal-bg);  border-color: #cfe0de; }
+  .cat-tile.tile-purple { background: #efe9f7;         border-color: #ddd0ee; }
+  .cat-tile.tile-rose   { background: #fbe9ec;         border-color: #f2d2d9; }
+  .cat-tile:hover { filter: brightness(0.97); border-color: var(--blue); }
+  /* v5.4: bumped 15% from v5.3 (20→23, 2.2→2.5, 44→50). */
+  .cat-tile h2 { margin: 0; font-size: clamp(23px, 2.5vw, 50px); color: var(--blue); line-height: 1.2; }
+  .cat-tile .sub { color: var(--text-soft); font-size: clamp(12px, 1vw, 20px); }
+  .cat-tile .progress { color: var(--text-soft); font-size: clamp(12px, 1vw, 20px); }
+  .cat-tile .progress-bar { background: var(--bg-soft); height: 10px; border-radius: 5px; overflow: hidden; width: 100%; }
+  .cat-tile .progress-bar > div { background: var(--blue); height: 100%; transition: width 0.3s; }
+  .cat-tile .tile-head { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cat-tile .shortcut {
+    display: inline-block;
+    background: var(--blue-bg);
+    color: var(--blue);
+    border: 1px solid var(--blue);
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .secondary-actions { display: flex; gap: 12px; justify-content: center; padding: 6px 0 0; }
+
+  /* ---------- category / tiebreaker boards: compact slot grid ---------- */
+  .board-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .board-head h2 { margin: 0; color: var(--blue); font-size: 24px; }
+  .board-head .sub { color: var(--text-soft); font-size: 13px; }
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+    padding: 14px 0;
+    align-content: start;
+  }
+  .slot-grid.tb { grid-template-columns: repeat(5, 1fr); }
+  .slot {
+    aspect-ratio: 1.4 / 1;
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter 0.1s, border-color 0.1s;
+    position: relative;
+  }
+  .slot .num { font-size: 28px; font-weight: 700; color: var(--blue); line-height: 1; }
+  .slot.focus { border-color: var(--blue); background: #d6e3f4; }
+  .slot:hover { border-color: var(--blue); filter: brightness(0.96); }
+  .slot.done {
+    background: var(--bg-soft);
+    border-style: dashed;
+    cursor: not-allowed;
+  }
+  .slot.done .num { color: var(--text-dim); }
+  .slot.done .tag {
+    position: absolute;
+    bottom: 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .slot.done:hover { background: var(--bg-soft); border-color: var(--border); }
+  /* Tiebreaker slots show the source ID since the operator needs it; */
+  /* main board slots intentionally hide it from participant view.   */
+  .slot-grid.tb .slot .num { font-size: 22px; }
+  .slot-grid.tb .slot .sid { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ============================================================
+     Question view layout:
+       row 1: meta strip (top-left) + timer (top-right)
+       row 2: question text (flex-grows, on top)
+       row 3: image bay (only present when imageFile set)
+       row 4: answer panel (visibility-flipped; height reserved)
+       row 5: status banner (visibility-flipped; height reserved)
+       row 6: team chips (only when relevant stage)
+       row 7: action buttons
+     No dashed placeholder when image is absent — the space is
+     simply unused, but rows above/below still occupy their natural
+     positions so the question text always lives at the top.
+     ============================================================ */
+  .qview {
+    /* v5.7: shrink-to-content so the qstatus/team-row/qactions below it
+       sit immediately under the question (instead of pushed to the bottom
+       of the available stage area). */
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .qlower {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+  .qmeta-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 18px;
+  }
+  .qmeta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    color: var(--text-soft);
+    font-size: 14px;
+  }
+  .qmeta .draw {
+    color: var(--blue);
+    font-weight: 700;
+    font-size: 22px;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .qmeta .pill {
+    background: var(--teal-bg);
+    color: var(--teal);
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .qmeta .cat { color: var(--text-dim); font-size: 13px; }
+
+  /* v5.5: question container expanded to use most of the screen width on
+     bigger displays — was capped near 1200 px, leaving big margins on a 27".
+     Switched to min(2200px, 94vw) so it scales naturally with viewport.
+     v5.7: alignment switched from center to flex-start so the question text
+     sits high on the page (was vertically centred, which floated it down on
+     short prompts). qview also no longer flex-grows so the status/team-row/
+     actions block at the bottom moves up alongside the question. */
+  .qquestion {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: clamp(6px, 0.8vh, 14px) clamp(16px, 2vw, 48px);
+    min-height: 80px;
+  }
+  .qquestion .eng { color: var(--blue); font-size: clamp(24px, 2.6vw, 60px); line-height: 1.3; max-width: min(2200px, 94vw); }
+  .qquestion .secondary-lang { font-size: clamp(20px, 2.2vw, 52px); line-height: 1.45; max-width: min(2200px, 94vw); }
+
+  .qimage {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 30vh;
+  }
+  .qimage img {
+    max-height: 36vh;
+    max-width: 90vw;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .qimage .missing {
+    color: var(--bad);
+    font-size: 13px;
+    background: var(--bad-bg);
+    border: 1px solid var(--bad);
+    padding: 8px 14px;
+    border-radius: 6px;
+  }
+
+  .qanswer {
+    flex: 0 0 auto;
+    background: var(--ans-bg);
+    border: 1px solid var(--ans);
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: var(--ans);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    visibility: hidden;
+    min-height: 70px;
+  }
+  .qanswer.shown { visibility: visible; }
+  .qanswer .eng { font-size: 22px; font-style: italic; }
+  .qanswer .secondary-lang { font-size: 20px; font-style: italic; margin-top: 4px; }
+
+  /* ---------- timer ring (top-right of qmeta row) ---------- */
+  .qtimer-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .timer {
+    --pct: 1;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: conic-gradient(var(--blue) calc(var(--pct) * 360deg), var(--bg-soft) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .timer::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: var(--panel);
+  }
+  .timer .num {
+    position: relative;
+    z-index: 1;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+  }
+  .timer.warn { background: conic-gradient(var(--warn) calc(var(--pct) * 360deg), var(--bg-soft) 0); }
+  .timer.warn .num { color: var(--warn); }
+  .timer.danger { background: conic-gradient(var(--bad) calc(var(--pct) * 360deg), var(--bg-soft) 0); }
+  .timer.danger .num { color: var(--bad); }
+  .timer.idle { background: var(--bg-soft); }
+  .timer.idle .num { color: var(--text-dim); }
+  .timer-label { color: var(--text-soft); font-size: 11px; text-align: center; max-width: 160px; }
+
+  /* ---------- status banner + team chips + action buttons ----------
+     v5.7: status banner is now centred at ~half-width with a taller
+     vertical footprint (~+20%). Reads more like a callout than a
+     wall-spanning bar. */
+  .qstatus {
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    font-size: 16px;
+    text-align: center;
+    visibility: hidden;
+    min-height: 44px;
+    max-width: 50%;
+    width: clamp(280px, 50%, 640px);
+    margin: 0 auto;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qstatus.shown { visibility: visible; }
+  .qstatus.good { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+  .qstatus.bad { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+  .qstatus.blue { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+
+  .team-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-height: 60px;
+  }
+  .team-row .label { color: var(--text-soft); font-size: 13px; }
+  .team-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .team-chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .team-chip:hover { background: var(--blue-bg); border-color: var(--blue); }
+  .team-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .team-chip.highlight {
+    background: var(--blue-bg);
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue-bg);
+    outline: 2px dashed var(--blue);
+    outline-offset: 2px;
+  }
+  .team-chip.passed { opacity: 0.55; text-decoration: line-through; cursor: not-allowed; }
+  .team-chip .n {
+    background: var(--blue-bg);
+    color: var(--blue);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 12px;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .team-chip.active .n { background: rgba(255,255,255,0.25); color: #fff; }
+  .team-chip .score { font-size: 12px; color: var(--text-dim); }
+  .team-chip.active .score { color: rgba(255,255,255,0.85); }
+
+  .qactions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 42px; }
+
+  /* ---------- overlays (help, settings, leaderboard) ---------- */
+  .overlay-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 25, 30, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
+  }
+  .overlay-card {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 24px 28px;
+    max-width: 880px;
+    max-height: 86vh;
+    width: 90vw;
+    overflow: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .overlay-card h2 { margin-top: 0; color: var(--blue); }
+  .overlay-card h3 { color: var(--teal); margin-top: 18px; margin-bottom: 6px; }
+  .overlay-card kbd {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    margin: 0 1px;
+  }
+  .overlay-card table { width: 100%; border-collapse: collapse; }
+  .overlay-card td { padding: 5px 10px; vertical-align: top; font-size: 14px; }
+  .overlay-card td:first-child { white-space: nowrap; width: 220px; }
+  .overlay-card p { color: var(--text-soft); line-height: 1.5; font-size: 14px; }
+  .overlay-card code {
+    background: var(--bg-soft);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 13px;
+  }
+
+  /* ---------- leaderboard overlay ----------
+     v5.7: card dimensions bumped — the leaderboard now reads at nearly twice
+     the previous height so per-round columns, the scoring log, and the
+     pre-TB/Total split don't crowd. Cap to viewport so it stays scrollable
+     on smaller laptop screens. */
+  .overlay-card.leaderboard {
+    max-width: min(1200px, 92vw);
+    width: min(1200px, 92vw);
+    max-height: 95vh;
+    height: min(95vh, 1200px);
+  }
+  .leaderboard h2 { font-size: 32px; }
+  .leaderboard table { font-size: 18px; margin-top: 12px; }
+  .leaderboard th { text-align: left; padding: 8px 12px; color: var(--text-soft); font-weight: 600; border-bottom: 2px solid var(--blue); }
+  .leaderboard td { padding: 9px 12px; border-bottom: 1px solid var(--bg-soft); }
+  .leaderboard td.rank { width: 50px; color: var(--text-soft); font-family: ui-monospace, Menlo, monospace; }
+  .leaderboard td.num, .leaderboard th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .leaderboard td.total { color: var(--blue); font-weight: 700; }
+  .leaderboard tr.first td { background: var(--blue-bg); }
+  .leaderboard tr.first td.total { color: var(--blue); }
+  .leaderboard .footnote { color: var(--text-dim); font-size: 12px; margin-top: 12px; }
+
+  /* ---------- settings overlay ---------- */
+  .settings .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--bg-soft);
+  }
+  .settings .row:last-child { border-bottom: none; }
+  .settings .row .desc { flex: 1; }
+  .settings .row .desc .label { font-weight: 600; color: var(--text); }
+  .settings .row .desc .hint { font-size: 12px; color: var(--text-soft); }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--bg-soft);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: var(--panel);
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: left 0.15s;
+  }
+  .toggle.on { background: var(--blue); border-color: var(--blue); }
+  .toggle.on::after { left: 22px; }
+
+  /* ---------- pick-team stage (legacy; kept for tiebreaker fallback) ---------- */
+  .pick-team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+  }
+  .pick-team .big-draw {
+    font-size: 96px;
+    font-weight: 700;
+    color: var(--blue);
+    line-height: 1;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .pick-team .draw-label { color: var(--text-soft); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .pick-team .prompt { color: var(--teal); font-size: 22px; font-weight: 600; }
+  .pick-team .sub { color: var(--text-soft); font-size: 14px; }
+
+  /* ============================================================
+     Cover page. Press Enter or click "Start setup" to advance to the
+     team-setup splash. Uses space-between so content fills the page
+     top-to-bottom instead of clustering in the middle; all sizes scale
+     with the viewport.
+     ============================================================ */
+  .cover {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+    padding: clamp(28px, 5vh, 80px) clamp(20px, 4vw, 80px);
+    min-height: 100vh;
+    gap: clamp(10px, 1.5vh, 24px);
+  }
+  /* Group 1 — festival + organiser at the top. */
+  .cover .top-group { display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 0.8vh, 14px); margin-bottom: clamp(-6px, -0.8vh, -14px); }
+  /* Group 2 — collaborators in the middle */
+  .cover .mid-group { display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 0.6vh, 10px); }
+  /* Group 3 — runner title + date/venue + CTA (extra top margin on .cta below) */
+  .cover .title-group { display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.5vh, 22px); }
+  /* Group 4 — supporters footer */
+  .cover .footer-group { display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 1vh, 14px); }
+  /* v5.7: push the Start setup CTA visibly below the location/date line so it
+     reads as the next action rather than a footnote of the venue text. */
+  .cover .cta { margin-top: clamp(18px, 3vh, 44px); }
+  /* Festival headline can stretch wide so a long name stays on one line on
+     common laptops/projectors. `text-wrap: balance` distributes the wrap
+     cleanly when it does have to break (older browsers fall back gracefully). */
+  .cover .fest {
+    font-size: clamp(22px, 2.4vw, 56px);
+    color: var(--blue);
+    font-weight: 700;
+    max-width: min(1800px, 94vw);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .cover .org-line { color: var(--text-soft); font-size: clamp(14px, 1.3vw, 26px); }
+  .cover .org-line strong { color: var(--teal); }
+  .cover .org-logo img { height: clamp(60px, 7vh, 110px); object-fit: contain; }
+  .cover .collab-row { display: flex; gap: clamp(20px, 3vw, 60px); align-items: center; justify-content: center; }
+  .cover .collab-row img { height: clamp(70px, 8vh, 130px); max-width: 240px; object-fit: contain; }
+  /* A logo that reads small at equal height (lots of transparent padding) can be
+     enlarged per-logo via the `scale` option in the config — see logoImg(). */
+  .cover .runner-title { font-size: clamp(32px, 3.4vw, 68px); color: var(--blue); font-weight: 700; line-height: 1.1; }
+  .cover .runner-title .secondary-lang { font-size: clamp(22px, 2.4vw, 50px); font-weight: 500; display: block; margin-top: clamp(2px, 0.5vh, 8px); }
+  .cover .when  { color: var(--text); font-size: clamp(16px, 1.5vw, 28px); }
+  .cover .where { color: var(--text); font-size: clamp(14px, 1.3vw, 24px); }
+  .cover .supporters-label { color: var(--text-soft); font-size: clamp(12px, 1.1vw, 20px); }
+  .cover .supporters-row { display: flex; gap: clamp(18px, 2.5vw, 40px); align-items: center; justify-content: center; flex-wrap: wrap; }
+  .cover .supporters-row img { height: clamp(40px, 5vh, 80px); max-width: 200px; object-fit: contain; opacity: 0.9; }
+  .cover .cta .btn { font-size: clamp(15px, 1.4vw, 26px); padding: clamp(11px, 1.2vh, 18px) clamp(22px, 2.4vw, 44px); }
+
+  /* ---------- opener strip (top of category-board) ----------
+     v5.3: strip + confirm button scaled up so it's the dominant CTA when
+     the operator is mid-flow. */
+  .opener-strip {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: 12px;
+    padding: clamp(14px, 1.6vh, 22px) clamp(16px, 1.8vw, 26px);
+    margin-bottom: clamp(12px, 1.5vh, 22px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(12px, 1.5vw, 22px);
+  }
+  .opener-strip .label { color: var(--teal); font-weight: 600; font-size: clamp(15px, 1.4vw, 26px); min-width: 150px; }
+  .opener-strip .chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .opener-strip .actions { display: flex; gap: 10px; }
+  .opener-strip.confirmed { background: var(--good-bg); border-color: var(--good); }
+  .opener-strip.confirmed .label { color: var(--good); }
+  /* Bigger CTA: the "Confirm opener" button is the most-used affordance on
+     this surface — it deserves to be eye-catching. */
+  .opener-strip .actions .btn {
+    font-size: clamp(14px, 1.2vw, 22px);
+    padding: clamp(10px, 1vh, 16px) clamp(18px, 1.8vw, 32px);
+  }
+  .slot-grid.disabled .slot {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ---------- round-end banner (v5) ---------- */
+  .round-banner {
+    background: var(--good-bg);
+    border: 1px solid var(--good);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+  .round-banner .text { flex: 1; color: var(--good); font-size: 15px; }
+  .round-banner .text strong { color: var(--good); }
+  .round-banner .actions { display: flex; gap: 8px; }
+
+  /* ---------- rulebook overlay (v5) ---------- */
+  .rules-card h3 { color: var(--blue); }
+  .rules-card .toc {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .rules-card .toc a { color: var(--blue); text-decoration: none; margin-right: 14px; }
+  .rules-card .toc a:hover { text-decoration: underline; }
+  .rules-card ol { padding-left: 22px; line-height: 1.55; }
+
+  /* ---------- locked-setting visual (v5) ---------- */
+  .settings .row.locked { opacity: 0.55; }
+  .settings .row.locked .toggle { cursor: not-allowed; }
+  .settings .row.locked .lock-pill {
+    display: inline-block;
+    background: var(--warn-bg);
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 10px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .settings h3 { color: var(--blue); margin-top: 18px; margin-bottom: 6px; font-size: 15px; border-bottom: 1px solid var(--bg-soft); padding-bottom: 4px; }
+
+  /* ---------- jumbled tiebreaker grid (v5) ---------- */
+  .slot-grid.tb-jumbled { grid-template-columns: repeat(6, 1fr); }
+  .slot-grid.tb-jumbled .slot { aspect-ratio: 1.2 / 1; }
+  .slot-grid.tb-jumbled .slot .cat-mini {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---------- hints pill (v5.2) ----------
+     A small floating shortcut hint anchored bottom-right. Stays visible
+     even in presentation mode so the operator never has to recall keys
+     blind. Click to expand a per-view shortcut list. */
+  .hints-pill {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 90;
+    background: rgba(0, 70, 140, 0.92);
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(4px);
+    user-select: none;
+    max-width: 60vw;
+    line-height: 1.4;
+  }
+  .hints-pill:hover { background: rgba(0, 70, 140, 1); }
+  .hints-pill kbd {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    padding: 0 5px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    margin: 0 1px;
+  }
+  .hints-pill.expanded {
+    border-radius: 12px;
+    padding: 12px 18px;
+    max-width: 540px;
+    line-height: 1.7;
+  }
+  .hints-pill .pill-toggle { font-size: 11px; opacity: 0.8; margin-left: 8px; }
+  .hints-pill.hidden { display: none; }
+
+  /* ---------- rulebook (v5.6: constant card size; section scrolls) ----------
+     Card dimensions are now FIXED so the popup never shrinks/grows as the
+     active tile changes. The card uses flex column layout; the section panel
+     takes the remaining height and scrolls internally if a section's body
+     ever outgrows it. Tile grid + nav stay at constant size. */
+  .overlay-card.rules-card {
+    width: min(1100px, 92vw);
+    /* v5.7: vertical size bumped — the rulebook content now reads more
+       comfortably without scrolling on the 27" projector. */
+    height: min(94vh, 1000px);
+    max-width: none;
+    max-height: none;
+    padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .rules-card > h2 { flex: 0 0 auto; margin-bottom: 4px; }
+  .rules-card > p { flex: 0 0 auto; margin-top: 0; }
+  .rules-card .rules-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(10px, 1.2vw, 18px);
+    margin: clamp(12px, 1.4vh, 20px) 0;
+    flex: 0 0 auto;
+  }
+  .rules-card .rules-tile {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: 12px;
+    padding: clamp(14px, 1.6vh, 22px) clamp(16px, 1.8vw, 24px);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.08s;
+  }
+  .rules-card .rules-tile:hover { background: #dbe7f5; border-color: var(--blue); }
+  .rules-card .rules-tile.read {
+    background: var(--good-bg);
+    border-color: var(--good);
+  }
+  .rules-card .rules-tile.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .rules-card .rules-tile.active h3,
+  .rules-card .rules-tile.active .blurb { color: #fff; }
+  .rules-card .rules-tile h3 { margin: 0 0 4px; color: var(--blue); font-size: clamp(15px, 1.3vw, 22px); }
+  .rules-card .rules-tile .blurb { color: var(--text-soft); font-size: clamp(12px, 1vw, 18px); line-height: 1.4; }
+  .rules-card .rules-section {
+    background: var(--bg-soft);
+    border-radius: 12px;
+    padding: clamp(16px, 2vh, 26px) clamp(20px, 2.4vw, 32px);
+    margin-top: clamp(12px, 1.5vh, 20px);
+    font-size: clamp(14px, 1.15vw, 20px);
+    line-height: 1.55;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .rules-card .rules-nav,
+  .rules-card .rules-keyhint,
+  .rules-card .rules-footer-actions { flex: 0 0 auto; }
+  .rules-card .rules-section h3 { margin-top: 0; color: var(--blue); font-size: clamp(18px, 1.6vw, 28px); }
+  .rules-card .rules-section ol { padding-left: 1.4em; }
+  .rules-card .rules-section li { margin-bottom: 0.5em; }
+  .rules-card .rules-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: clamp(12px, 1.5vh, 20px);
+    gap: 10px;
+  }
+  .rules-card .rules-keyhint {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+    margin-top: 6px;
+  }
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script id="quiz-data" type="application/json">{"meta":{"generatedAt":"2026-06-04T11:17:41.207Z","runnerVersion":"1.0.0","imagePrefix":""},"event":{"title":"Community Quiz Competition","titleSecondary":"","festivalTitle":"Community Festival 2026","organiser":"My Organisation","collaborators":["Partner Organisation"],"programSupporters":["Local Council"],"date":"2026-08-01","dateLong":"Saturday, 1 August 2026","timeNote":"10:00 AM","venue":"Community Hall","venueAddress":"1 Main Street, City STATE 1234","coverLayout":"standard","pointsOriginal":10,"pointsPassed":5,"timerSeconds":30,"passTimerSeconds":5,"teamsMin":2,"teamsMax":12,"teamsDefault":4,"picksPerCategoryPerTeam":2,"openingOrder":"snake","tiebreakerPenaltyPerTeam":3,"passingEnabled":true},"config":{"secondaryLanguage":{"enabled":false,"font":"","colour":"#006e3c"},"rulebook":null,"defaultSettings":{"autoReveal":true,"audioOn":true,"tbJumbled":true,"showHintStrip":true}},"assets":{"logos":{"primary":null,"primaryAlt":"My Organisation","secondary":null,"secondaryAlt":"","titleSponsor":null,"titleSponsorAlt":"Title Sponsor","collaborators":[],"supporters":[],"sponsors":[]}},"categories":[{"name":"General Knowledge","shortName":"GK","shortcutKey":"G","colour":"blue","board":[{"draw":1,"id":"Q7","theme":"History","primaryQuestion":"In what year did World War II end?","primaryAnswer":"1945","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":2,"id":"Q5","theme":"Science","primaryQuestion":"What is the chemical symbol for gold?","primaryAnswer":"Au","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":3,"id":"Q4","theme":"Language","primaryQuestion":"What is the most spoken language in Brazil?","primaryAnswer":"Portuguese","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":4,"id":"Q8","theme":"Science","primaryQuestion":"How many bones are in the adult human body?","primaryAnswer":"206","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":5,"id":"Q3","theme":"Geography","primaryQuestion":"Which country has the longest coastline in the world?","primaryAnswer":"Canada","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":6,"id":"Q2","theme":"Science","primaryQuestion":"How many planets are in our solar system?","primaryAnswer":"8","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":7,"id":"Q1","theme":"Geography","primaryQuestion":"What is the capital of Australia?","primaryAnswer":"Canberra","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":8,"id":"Q6","theme":"Geography","primaryQuestion":"What is the largest ocean on Earth?","primaryAnswer":"The Pacific Ocean","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"tiebreakers":[{"id":"Q9","theme":"Science","primaryQuestion":"What is the approximate speed of light?","primaryAnswer":"300,000 km/s","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q10","theme":"Geography","primaryQuestion":"What is the longest river in the world?","primaryAnswer":"The Nile (or Amazon)","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q11","theme":"Language","primaryQuestion":"How many letters are in the English alphabet?","primaryAnswer":"26","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"backup":[{"id":"Q12","theme":"History","primaryQuestion":"What is the name of the ship that sank in 1912?","primaryAnswer":"The Titanic","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q13","theme":"Science","primaryQuestion":"What planet is known as the Red Planet?","primaryAnswer":"Mars","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}]},{"name":"Science & Nature","shortName":"SN","shortcutKey":"S","colour":"green","board":[{"draw":1,"id":"Q16","theme":"Animals","primaryQuestion":"How many legs does a spider have?","primaryAnswer":"8","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":2,"id":"Q19","theme":"Plants","primaryQuestion":"What is the process by which plants make food using sunlight?","primaryAnswer":"Photosynthesis","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":3,"id":"Q21","theme":"Animals","primaryQuestion":"Which bird cannot fly but can swim?","primaryAnswer":"Penguin","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":4,"id":"Q17","theme":"Environment","primaryQuestion":"What percentage of the Earth is covered by oceans (approximately)?","primaryAnswer":"71%","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":5,"id":"Q15","theme":"Plants","primaryQuestion":"What gas do plants absorb from the air during photosynthesis?","primaryAnswer":"Carbon dioxide (CO2)","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":6,"id":"Q20","theme":"Environment","primaryQuestion":"What do you call the layer of gas that surrounds the Earth?","primaryAnswer":"The atmosphere","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":7,"id":"Q18","theme":"Animals","primaryQuestion":"What is the fastest land animal?","primaryAnswer":"Cheetah","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":8,"id":"Q14","theme":"Animals","primaryQuestion":"What is the largest land animal on Earth?","primaryAnswer":"African Elephant","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"tiebreakers":[{"id":"Q22","theme":"Environment","primaryQuestion":"What is the name of the gas that makes up most of Earth's atmosphere?","primaryAnswer":"Nitrogen","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q23","theme":"Animals","primaryQuestion":"How many hearts does an octopus have?","primaryAnswer":"3","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q24","theme":"Plants","primaryQuestion":"What is the tallest type of tree in the world?","primaryAnswer":"Coast Redwood (or Giant Sequoia)","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"backup":[{"id":"Q25","theme":"Animals","primaryQuestion":"What do you call a group of lions?","primaryAnswer":"A pride","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q26","theme":"Environment","primaryQuestion":"What is the main cause of the greenhouse effect?","primaryAnswer":"Greenhouse gases (CO2, methane, etc.)","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}]},{"name":"History & Culture","shortName":"HC","shortcutKey":"H","colour":"amber","board":[{"draw":1,"id":"Q32","theme":"Music","primaryQuestion":"What nationality was Wolfgang Amadeus Mozart?","primaryAnswer":"Austrian","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":2,"id":"Q28","theme":"Music","primaryQuestion":"Which composer wrote the \"Moonlight Sonata\"?","primaryAnswer":"Ludwig van Beethoven","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":3,"id":"Q33","theme":"History","primaryQuestion":"Which country gifted the Statue of Liberty to the United States?","primaryAnswer":"France","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":4,"id":"Q29","theme":"History","primaryQuestion":"Who was the first person to walk on the Moon?","primaryAnswer":"Neil Armstrong","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":5,"id":"Q30","theme":"Art","primaryQuestion":"In which Italian city is the Colosseum located?","primaryAnswer":"Rome","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":6,"id":"Q31","theme":"History","primaryQuestion":"What ancient wonder of the world was located in Alexandria?","primaryAnswer":"The Lighthouse of Alexandria","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":7,"id":"Q34","theme":"Art","primaryQuestion":"Who painted the Mona Lisa?","primaryAnswer":"Leonardo da Vinci","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"draw":8,"id":"Q27","theme":"History","primaryQuestion":"In which country was democracy first developed?","primaryAnswer":"Ancient Greece","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"tiebreakers":[{"id":"Q35","theme":"History","primaryQuestion":"In what year did Australia become a federation?","primaryAnswer":"1901","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q36","theme":"Music","primaryQuestion":"What is the name of the instrument with 88 keys?","primaryAnswer":"Piano","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q37","theme":"Art","primaryQuestion":"Which country is the Eiffel Tower located in?","primaryAnswer":"France","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}],"backup":[{"id":"Q38","theme":"History","primaryQuestion":"Who wrote the play Romeo and Juliet?","primaryAnswer":"William Shakespeare","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false},{"id":"Q39","theme":"Music","primaryQuestion":"What does \"forte\" mean in music?","primaryAnswer":"Loud","secondaryQuestion":"","secondaryAnswer":"","imageData":null,"imageIsPath":false}]}]}</script>
+<script>
+"use strict";
+
+/* ============================================================
+   Data loaded from the inlined JSON block. Inlining means the
+   runner is a single-file artefact that can be opened straight
+   from disk (file://) with no local web server.
+   ============================================================ */
+const DATA = JSON.parse(document.getElementById('quiz-data').textContent);
+// Storage keys are derived from event.title so two different quizzes built from
+// this template don't share localStorage. Without this, opening one quiz could
+// overwrite another's saved team names / scores and settings on the same browser.
+const _STORAGE_SLUG = (DATA.event.title || 'quiz-runner').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const STORAGE_KEY = 'quiz-runner-' + _STORAGE_SLUG;
+const SETTINGS_KEY = 'quiz-runner-' + _STORAGE_SLUG + '-settings';
+// Logos are supplied fully-resolved in DATA.assets.logos (base64 data URIs when
+// images are embedded, or relative paths otherwise) — there is no logo prefix.
+// IMAGE_PREFIX only matters in non-embed mode, where question images are
+// referenced by relative path; build.js puts that prefix in DATA.meta.
+const IMAGE_PREFIX = (DATA.meta && DATA.meta.imagePrefix) || '';
+
+/* ============================================================
+   State machine
+   The question view has five stages — `pre` was added in v3 so
+   the operator can pick the opening team BEFORE the question is
+   shown on the projector. Without this, teams got an extra few
+   seconds of unfair preview while a team was being chosen.
+   ============================================================ */
+function initialState() {
+  return {
+    view: 'cover',                  // v5: 'cover' → 'splash' → 'main-board' → ...
+    numTeams: DATA.event.teamsDefault || 4,
+    teams: [],
+    picks: {},
+    currentCategory: null,
+    currentDraw: null,
+    inTiebreaker: false,
+    tbIndex: 0,
+    tbCategoryForJumbled: null,      // v5: when jumbled mode picks a TB, remember its home category
+    // v5: 'pre' stage removed — opener is set up FRONT in category-board, then
+    // pickSlot drops the user straight into 'idle' with the originator already
+    // committed. Stages now: idle | timing | pass | resolved.
+    stage: 'idle',
+    originatorTeam: null,
+    originatorHighlight: null,       // still used while user is choosing opener on the category board
+    currentPassTeam: null,
+    passHighlight: null,
+    passedTeams: [],
+    timerSeconds: DATA.event.timerSeconds || 30,
+    timerExpiresAt: null,
+    showAnswer: false,
+    focusSlot: 0,
+    // v5: per-category "opener confirmed for next pick" flag. Reset after every
+    // resolved/cancelled question so the operator confirms the opener again
+    // for the next draw in that category.
+    pendingOpener: {},               // { [categoryName]: { team: number, confirmed: bool } }
+    overlay: null,                  // null | help | settings | leaderboard | rules
+    rulesDismissed: false,           // v5: rules auto-open until first dismissal
+    rulesProgress: {},               // v5.2: which rule tiles the operator has read
+    hintsExpanded: false,            // v5.2: hints-pill collapse/expand state
+    // v5.5: tiebreaker setup — participants are operator-confirmed BEFORE any
+    // tb question is played. The flow auto-suggests teams tied at #1 but lets
+    // the operator override (e.g., scorer wants to include a near-tie team).
+    tbParticipants: [],             // team numbers selected for the tiebreaker
+    tbConfirmed: false,             // operator has locked in the participants
+    tbPhase: 'penalty',             // 'penalty' (3 questions per selected team) | 'sudden-death' | 'resolved'
+    tbQuestionCount: 0,             // count of tb questions resolved
+    // v5.7: TB opener strip — mirrors the main-board pendingOpener pattern so
+    // the TB board has the same "pick opener → confirm → pick question" flow
+    // as a regular category. Without this, the opener was only chosen AFTER
+    // the question opened, which broke the flow consistency the operator
+    // already knew from the main rounds.
+    tbPendingOpener: { team: null, confirmed: false },
+    // v5.6: TB-question outcomes recorded chronologically so we can:
+    //   - mark used slots on the TB boards (with +pts → T tag),
+    //   - drive the TB scoring log rows,
+    //   - compute per-team TB points for the leaderboard split.
+    // Each entry: { qNum, phase, sdRound, category, idx, displayLabel,
+    //               originatorTeam, scoringTeam, points, passedTeams }
+    tbPicks: [],
+    tbWinnerTeam: null,             // set when operator declares the TB winner
+    presentationMode: false,
+    _draftNames: null
+  };
+}
+function defaultSettings() {
+  const base = {
+    autoPass: true,
+    audioOn: true,
+    autoReveal: true,
+    // v5: pass direction is now round-aware by default. When roundAwarePass is
+    // ON, odd rounds use forward (1→2→3…) and even rounds use reverse, mirroring
+    // the snake-order opening pattern. When OFF, the manual passDirection
+    // setting applies globally.
+    roundAwarePass: true,
+    passDirection: 'forward',        // 'forward' or 'reverse' — used when roundAwarePass is OFF
+    suggestOriginator: true,         // snake-order auto-highlight in opener strip
+    showTiebreakerSection: true,     // v5: hide the tiebreaker entry from the main board
+    tbJumbled: true,                 // v5: default to a single jumbled tiebreaker grid
+    previewMode: false,              // v5: when ON, picking a slot reveals without scoring
+    showHintStrip: true              // v5: op-bar hint strip visibility
+  };
+  // The setup wizard / config.json can preset a handful of operator toggles via
+  // DATA.config.defaultSettings. We only copy across known keys so an old
+  // saved-settings blob or a stray config field can never inject junk. These
+  // are first-run defaults only — once the operator changes a toggle in
+  // Settings, their saved choice (in localStorage) wins on the next load.
+  const seedable = ['autoReveal', 'audioOn', 'tbJumbled', 'showHintStrip'];
+  const seed = (DATA.config && DATA.config.defaultSettings) || {};
+  for (const k of seedable) {
+    if (typeof seed[k] === 'boolean') base[k] = seed[k];
+  }
+  return base;
+}
+
+// Passing is on by default. When the event is configured with passing turned
+// off (DATA.event.passingEnabled === false), a missed main-round question
+// simply scores nobody — no pass flow. The tiebreaker's pass-elimination
+// mechanic is independent of this and always applies during sudden death.
+function passingEnabled() {
+  return !DATA.event || DATA.event.passingEnabled !== false;
+}
+
+// Undo stack — snapshots of the state taken before every committed action
+// (markCorrect, markWrong, continueAfterResolved, cancelQuestion). The user
+// can press Z (or click the toolbar button) to roll back the last commit.
+// Capped at 20 entries so we never balloon localStorage.
+const UNDO_MAX = 20;
+let undoStack = [];
+function snapshot(label) {
+  try {
+    undoStack.push({ label, json: JSON.stringify(state), teamsJson: JSON.stringify(state.teams) });
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+  } catch (e) {}
+}
+function canUndo() { return undoStack.length > 0; }
+function undo() {
+  if (!canUndo()) return;
+  const snap = undoStack.pop();
+  try {
+    const restored = JSON.parse(snap.json);
+    state = restored;
+    state.timerExpiresAt = null;  // never resume a stale timer
+    state.overlay = null;
+    saveState();
+    stopTimer();
+    render();
+  } catch (e) {}
+}
+let state = loadState() || initialState();
+let settings = loadSettings();
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    parsed.timerExpiresAt = null;
+    parsed.overlay = null;
+    // v5.6: defensive migrations for state saved before TB-picks tracking
+    // existed. Without these, an in-progress event reloaded from old storage
+    // would throw on tbPicks lookups.
+    if (!Array.isArray(parsed.tbPicks)) parsed.tbPicks = [];
+    if (parsed.tbWinnerTeam === undefined) parsed.tbWinnerTeam = null;
+    if (!parsed.tbPendingOpener) parsed.tbPendingOpener = { team: null, confirmed: false };
+    return parsed;
+  } catch (e) { return null; }
+}
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return defaultSettings();
+    return Object.assign(defaultSettings(), JSON.parse(raw));
+  } catch (e) { return defaultSettings(); }
+}
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }
+function resetState() {
+  if (!confirm('Reset the entire quiz state? Team names and all scores will be cleared.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = initialState();
+  render();
+}
+
+// v5.4: snapshot save / load — gives a fallback if localStorage gets cleared
+// or the browser crashes mid-event. Save downloads a JSON file of the
+// current state; load reads that file back via a hidden <input type=file>.
+function saveSnapshotToFile() {
+  try {
+    const payload = {
+      // schema 2 adds a self-describing block (event + categories + points) so a
+      // results viewer can render the snapshot without the original quiz file.
+      // The viewer still falls back gracefully for schema-1 snapshots.
+      schema: 2,
+      title: DATA.event.title,
+      savedAt: new Date().toISOString(),
+      event: { title: DATA.event.title, dateLong: DATA.event.dateLong || '', venue: DATA.event.venue || '',
+               penaltyPerTeam: DATA.event.tiebreakerPenaltyPerTeam != null ? DATA.event.tiebreakerPenaltyPerTeam : 3 },
+      categories: DATA.categories.map((c) => ({ name: c.name, shortName: c.shortName, colour: c.colour })),
+      points: { original: DATA.event.pointsOriginal, passed: DATA.event.pointsPassed },
+      state: state
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = 'quiz-snapshot-' + stamp + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  } catch (e) {
+    alert('Could not save snapshot: ' + (e.message || e));
+  }
+}
+function loadSnapshotFromFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = function () {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+      try {
+        const payload = JSON.parse(reader.result);
+        const restored = payload && payload.state ? payload.state : payload;
+        if (!restored || !restored.teams) throw new Error('snapshot has no teams');
+        if (!confirm('Load this snapshot? Current state will be replaced (team names, scores, picks).')) return;
+        state = restored;
+        state.timerExpiresAt = null;  // don't resume a stale timer
+        state.overlay = null;
+        saveState();
+        stopTimer();
+        render();
+      } catch (e) {
+        alert('Could not load snapshot: ' + (e.message || e));
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+/* ---------- helpers ---------- */
+function categoryByName(name) { return DATA.categories.find((c) => c.name === name); }
+function pickRecord(cat, draw) { return state.picks[cat] && state.picks[cat][draw]; }
+function isPicked(cat, draw) { return !!pickRecord(cat, draw); }
+
+// v5: returns true once any pick has been made. Used to lock structural
+// settings (snake order, team count, round order) so the operator cannot
+// accidentally change them mid-event in a way that would invalidate state.
+function isGameInProgress() {
+  if (!state.teams || !state.teams.length) return false;
+  if (state.view !== 'main-board' && state.view !== 'category-board' &&
+      state.view !== 'question' && state.view !== 'tb-board' &&
+      state.view !== 'tb-cat-select') return false;
+  for (const c of Object.keys(state.picks || {})) {
+    if (Object.keys(state.picks[c] || {}).length > 0) return true;
+  }
+  return false;
+}
+
+// v5: per-category opener state — exposes confirm/team for the strip.
+function openerForCategory(name) {
+  return (state.pendingOpener && state.pendingOpener[name]) || { team: null, confirmed: false };
+}
+function setPendingOpener(name, team, confirmed) {
+  if (!state.pendingOpener) state.pendingOpener = {};
+  state.pendingOpener[name] = { team, confirmed: !!confirmed };
+}
+function clearPendingOpener(name) {
+  if (state.pendingOpener && state.pendingOpener[name]) delete state.pendingOpener[name];
+}
+
+/* ============================================================
+   Round, snake order, tile classes
+   Each category is one round, played in the order they appear in the
+   config. Within a round the opening-team order is a snake:
+     odd rounds : 1,2,...,n,n,n-1,...,1
+     even round : n,n-1,...,1,1,2,...,n
+   The runner uses this to suggest the next opening team as a
+   HIGHLIGHT only — the operator must confirm before the question
+   is revealed, so we never auto-commit to the wrong team.
+   ============================================================ */
+// ROUND_ORDER + TILE_CLASS derive entirely from DATA.categories, so the runner
+// adapts to whatever categories the config defines.
+const ROUND_ORDER = DATA.categories.map((c) => c.name);
+const TILE_CLASS = {};
+DATA.categories.forEach((c, i) => {
+  // Map the configured colour name to a tile class; fall back to cycling
+  // through the palette if a category omits its colour.
+  const PALETTE = ['tile-blue', 'tile-green', 'tile-amber', 'tile-teal', 'tile-purple', 'tile-rose'];
+  TILE_CLASS[c.name] = c.colour ? ('tile-' + c.colour) : PALETTE[i % PALETTE.length];
+});
+function tileClassFor(name) { return TILE_CLASS[name] || ''; }
+function roundForCategory(name) {
+  const i = ROUND_ORDER.indexOf(name);
+  return i < 0 ? 0 : i + 1;
+}
+function categoryByShortcutKey(k) {
+  if (!k) return null;
+  const up = k.toUpperCase();
+  return DATA.categories.find((c) => (c.shortcutKey || '').toUpperCase() === up) || null;
+}
+// Builds the full opening-team order for a round, with one entry per question
+// (length = teams × picks-per-team). Two modes, set by DATA.event.openingOrder:
+//   'snake'    — 1,2,…,n,n,…,1 (each pass reverses; the round parity sets the
+//                starting direction so the overall order stays fair).
+//   'circular' — 1,2,…,n,1,2,…,n (always ascending, every pass and round).
+function openingSequence(round, n) {
+  const picks = DATA.event.picksPerCategoryPerTeam || 2;
+  const mode = DATA.event.openingOrder || 'snake';
+  const asc = [];
+  for (let i = 1; i <= n; i++) asc.push(i);
+  const desc = asc.slice().reverse();
+  const out = [];
+  for (let p = 0; p < picks; p++) {
+    if (mode === 'circular') {
+      out.push.apply(out, asc);
+    } else {
+      // Snake: alternate direction each pass; odd rounds start ascending.
+      const ascending = (round % 2 === 1) ? (p % 2 === 0) : (p % 2 === 1);
+      out.push.apply(out, ascending ? asc : desc);
+    }
+  }
+  return out;
+}
+function picksMadeInCategory(name) {
+  return Object.keys(state.picks[name] || {}).length;
+}
+function nextExpectedOriginator(name) {
+  // Returns the team number the snake pattern predicts will open the next
+  // question in this category. Returns null if the round is full or the
+  // category is unknown.
+  const round = roundForCategory(name);
+  if (round === 0) return null;
+  const n = state.teams.length;
+  if (n === 0) return null;
+  const seq = openingSequence(round, n);
+  const idx = picksMadeInCategory(name);
+  if (idx >= seq.length) return null;
+  return seq[idx];
+}
+function currentQuestion() {
+  if (state.inTiebreaker) {
+    const cat = categoryByName(state.currentCategory);
+    return cat && cat.tiebreakers[state.tbIndex];
+  }
+  if (!state.currentCategory || state.currentDraw == null) return null;
+  const cat = categoryByName(state.currentCategory);
+  return cat && cat.board.find((b) => b.draw === state.currentDraw);
+}
+
+// v5: jumbled tiebreaker list — a flat array spanning all categories, in a
+// deterministic interleaved order (so refresh keeps the same layout).
+// Each entry carries enough metadata to dispatch to pickTb(cat, idx).
+function jumbledTiebreakerList() {
+  const out = [];
+  const buckets = DATA.categories.map((c) => (c.tiebreakers || []).map((tb, idx) => ({
+    category: c.name,
+    short: c.shortName,
+    idx, tb
+  })));
+  const maxLen = Math.max.apply(null, buckets.map((b) => b.length).concat(0));
+  for (let i = 0; i < maxLen; i++) {
+    for (const b of buckets) if (b[i]) out.push(b[i]);
+  }
+  return out;
+}
+// v5.1: pass direction follows the LOCAL snake step, not just round parity.
+// Round 1 with 7 teams: 1,2,3,4,5,6,7,7,6,5,4,3,2,1.
+//   Positions 1–7 step forward (1→2), so pass forward.
+//   Positions 8–14 step backward (7→6), so pass reverse.
+// Round 2 is the mirror — positions 1–7 reverse, 8–14 forward.
+// This matches what participants experience: the team who's *next to open*
+// is also the team most naturally suited to receive a pass.
+function effectivePassDirection() {
+  if (state.inTiebreaker) return 'forward';
+  if (!settings || !settings.roundAwarePass) {
+    return (settings && settings.passDirection) || 'forward';
+  }
+  const r = roundForCategory(state.currentCategory);
+  if (r === 0) return 'forward';
+  const n = state.teams.length;
+  if (!n) return 'forward';
+  // Position of THIS question in the snake (1-indexed).
+  const pos = picksMadeInCategory(state.currentCategory) + 1;
+  const firstHalf = pos <= n;
+  // Round 1 first half = forward. Round 2 first half = reverse. Round 3 = round 1.
+  const isForward = (r % 2 === 1) === firstHalf;
+  return isForward ? 'forward' : 'reverse';
+}
+function nextSeatTeam(currentTeamNumber, alreadyTried) {
+  // v5.5: during tiebreaker, rotate through the participant pool (which
+  // may be non-contiguous, e.g., teams 2, 4, 7). Otherwise stick with the
+  // main-game contiguous seat rotation.
+  if (state.inTiebreaker) {
+    const pool = tiebreakerPool();
+    if (!pool.length) return null;
+    const startIdx = pool.indexOf(currentTeamNumber);
+    if (startIdx < 0) return pool.find((n) => !alreadyTried.has(n)) || null;
+    const dir = effectivePassDirection() === 'reverse' ? -1 : 1;
+    for (let i = 1; i <= pool.length; i++) {
+      const idx = (((startIdx + i * dir) % pool.length) + pool.length) % pool.length;
+      if (!alreadyTried.has(pool[idx])) return pool[idx];
+    }
+    return null;
+  }
+  const n = state.teams.length;
+  const dir = effectivePassDirection() === 'reverse' ? -1 : 1;
+  for (let i = 1; i <= n; i++) {
+    const offset = i * dir;
+    const candidate = (((currentTeamNumber - 1 + offset) % n) + n) % n + 1;
+    if (!alreadyTried.has(candidate)) return candidate;
+  }
+  return null;
+}
+function arrowNextTeam(current, allowed) {
+  // Arrow-right step through `allowed` set; wraps. Used for pre and pass
+  // highlight nav so the operator can cycle through eligible teams.
+  if (!current) return allowed.length ? allowed[0] : null;
+  const idx = allowed.indexOf(current);
+  if (idx < 0) return allowed[0] || null;
+  return allowed[(idx + 1) % allowed.length];
+}
+function arrowPrevTeam(current, allowed) {
+  if (!current) return allowed.length ? allowed[allowed.length - 1] : null;
+  const idx = allowed.indexOf(current);
+  if (idx < 0) return allowed[allowed.length - 1] || null;
+  return allowed[(idx - 1 + allowed.length) % allowed.length];
+}
+// v5.5: during tiebreakers, only confirmed participants are eligible — both
+// as the opener and as pass recipients. This is what isolates the tiebreaker
+// "round" from the main game's seat rotation.
+function tiebreakerPool() {
+  return (state.tbParticipants && state.tbParticipants.length)
+    ? state.tbParticipants.slice()
+    : state.teams.map((t) => t.number);
+}
+function allowedOriginatorTeams() {
+  if (state.inTiebreaker) return tiebreakerPool();
+  return state.teams.map((t) => t.number);
+}
+function allowedPassTeams() {
+  const pool = state.inTiebreaker ? tiebreakerPool() : state.teams.map((t) => t.number);
+  return pool.filter((n) => n !== state.originatorTeam && !state.passedTeams.includes(n));
+}
+function roundScores() {
+  // Per-team per-category totals derived from `picks`. Tiebreaker scoring
+  // does not feed picks (recordPick early-returns) so this reflects the
+  // three category rounds only. Tiebreaker delta is computed separately.
+  const cats = DATA.categories.map((c) => c.name);
+  const rounds = {};
+  state.teams.forEach((t) => {
+    rounds[t.number] = { byCat: {}, total: 0 };
+    cats.forEach((c) => { rounds[t.number].byCat[c] = 0; });
+  });
+  for (const catName of cats) {
+    const inCat = state.picks[catName] || {};
+    for (const draw of Object.keys(inCat)) {
+      const p = inCat[draw];
+      if (p.scoringTeam && rounds[p.scoringTeam]) {
+        rounds[p.scoringTeam].byCat[catName] += p.points;
+        rounds[p.scoringTeam].total += p.points;
+      }
+    }
+  }
+  return rounds;
+}
+function leaderboardRows() {
+  const rounds = roundScores();
+  return state.teams
+    .map((t) => {
+      const r = rounds[t.number];
+      const tieBreak = (t.score || 0) - r.total;
+      return {
+        number: t.number,
+        name: t.name,
+        byCat: r.byCat,
+        roundsTotal: r.total,
+        tieBreak,
+        total: t.score
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+// Quotes a value for CSV: wraps in double-quotes and doubles any internal ones
+// (RFC 4180), so team names with commas or quotes survive a round-trip.
+function csvCell(v) {
+  const s = (v == null ? '' : String(v));
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+// Downloads the current standings as a CSV: rank, team, per-category points,
+// (tiebreaker points when any tiebreaker has been played) and total. Mirrors
+// the columns shown in the leaderboard overlay so the operator can hand the
+// file straight to a scorer or publish it after the event.
+function exportLeaderboard() {
+  const rows = leaderboardRows();
+  const cats = DATA.categories;
+  const anyTb = rows.some((r) => r.tieBreak !== 0);
+  const header = ['Rank', 'Team'].concat(cats.map((c) => c.name));
+  if (anyTb) header.push('Total (no TB)', 'Tiebreaker', 'Total');
+  else header.push('Total');
+  const lines = [header.map(csvCell).join(',')];
+  rows.forEach((r, i) => {
+    const cells = ['#' + (i + 1), r.name].concat(cats.map((c) => r.byCat[c.name]));
+    if (anyTb) cells.push(r.roundsTotal, r.tieBreak, r.total);
+    else cells.push(r.total);
+    lines.push(cells.map(csvCell).join(','));
+  });
+  try {
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = 'leaderboard-' + stamp + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  } catch (e) {
+    alert('Could not export results: ' + (e.message || e));
+  }
+}
+
+/* ---------- audio (v5.5: trivia-show "tring" call bell) ----------
+   The previous version sounded too round, like a beep. Real reception
+   bells / trivia bells have:
+     - a sharp metallic click at the strike (noise burst, high-pass)
+     - strongly inharmonic partials (Rayleigh's plate-bell ratios:
+         1.00, 2.76, 5.40, 8.93 ≈ real circular plate modes)
+     - higher fundamental (1300 Hz) so the timbre reads "tring"
+     - moderate decay so it cuts but still rings.
+   Played as a "ding-ding" — two strikes ~220 ms apart. */
+let audioCtx = null;
+function ensureAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function strikeBell(startOffsetSec, fundamentalHz) {
+  const ctx = ensureAudioCtx();
+  const now = ctx.currentTime + startOffsetSec;
+  const decaySec = 0.95;
+  // Plate-bell-style inharmonic partial ratios.
+  const partials = [
+    { freq: fundamentalHz * 1.00, gain: 0.46, dec: decaySec * 1.00 },
+    { freq: fundamentalHz * 2.76, gain: 0.30, dec: decaySec * 0.80 },
+    { freq: fundamentalHz * 5.40, gain: 0.18, dec: decaySec * 0.55 },
+    { freq: fundamentalHz * 8.93, gain: 0.10, dec: decaySec * 0.40 }
+  ];
+  // Tiny high-passed noise burst at the strike — gives the percussive click.
+  try {
+    const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.02), ctx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      // Fast-decaying noise (~3 ms tail).
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.003));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 3000;
+    const ngain = ctx.createGain();
+    ngain.gain.value = 0.35;
+    noise.connect(hp); hp.connect(ngain); ngain.connect(ctx.destination);
+    noise.start(now); noise.stop(now + 0.025);
+  } catch (e) {}
+  // Sine partials with sharp attack.
+  for (const p of partials) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = p.freq;
+    osc.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(p.gain, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + p.dec);
+    osc.start(now);
+    osc.stop(now + p.dec + 0.05);
+  }
+}
+function bellRing(durationMs, fundamentalHz) {
+  if (!settings.audioOn) return;
+  try {
+    const f = fundamentalHz || 1320;
+    // Two strikes ~220 ms apart — sharper cadence than the old hotel-bell.
+    strikeBell(0, f);
+    strikeBell(0.22, f);
+  } catch (e) {}
+}
+// Used by the "Hear the bell" preview button in the rulebook. Plays even if
+// settings.audioOn is currently off — the user is asking for a preview.
+function bellPreview() {
+  try {
+    strikeBell(0, 1320);
+    strikeBell(0.22, 1320);
+  } catch (e) {}
+}
+// Back-compat alias — old `beep` callers route to the call bell.
+function beep(durationMs, frequencyHz) { bellRing(durationMs || 1800, frequencyHz); }
+
+/* ---------- timer (DOM-only updates, no whole-stage re-render) ---------- */
+let timerInterval = null;
+let beepedFor = null;
+function startTimer(durationSec) {
+  state.timerExpiresAt = Date.now() + durationSec * 1000;
+  beepedFor = state.timerExpiresAt;
+  saveState();
+  updateTimerDom();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const remaining = (state.timerExpiresAt - Date.now()) / 1000;
+    if (remaining <= 0 && beepedFor === state.timerExpiresAt) { bellRing(2200, 660); beepedFor = null; }
+    updateTimerDom();
+    if (remaining <= -2) { clearInterval(timerInterval); timerInterval = null; }
+  }, 100);
+}
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  state.timerExpiresAt = null;
+  beepedFor = null;
+}
+function remainingSeconds() {
+  if (!state.timerExpiresAt) return null;
+  return Math.max(0, (state.timerExpiresAt - Date.now()) / 1000);
+}
+function updateTimerDom() {
+  const ring = document.querySelector('.timer');
+  const num  = document.querySelector('.timer .num');
+  if (!ring || !num) return;
+  const remaining = remainingSeconds();
+  if (remaining == null) {
+    ring.className = 'timer idle';
+    ring.style.setProperty('--pct', 0);
+    num.textContent = '—';
+    return;
+  }
+  const pct = Math.max(0, remaining / state.timerSeconds);
+  ring.style.setProperty('--pct', pct.toFixed(3));
+  num.textContent = Math.ceil(remaining) + 's';
+  ring.className = 'timer' + (pct < 0.25 ? ' danger' : pct < 0.5 ? ' warn' : '');
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function gotoSplash() {
+  state.view = 'splash';
+  // Preserve any draft names: rebuilt from teams if quiz already started,
+  // else from the in-progress draft. Allows toggling cover ↔ splash without
+  // losing input.
+  if (!state._draftNames) {
+    state._draftNames = state.teams.length ? state.teams.map((t) => t.name) : [];
+  }
+  saveState(); render();
+}
+function gotoCover() { state.view = 'cover'; saveState(); render(); }
+// Returns true once at least one question has been scored. Unlike
+// isGameInProgress(), this does NOT depend on the current view, so it is safe
+// to call from the splash screen to decide between "start fresh" and "rename".
+function gameHasScores() {
+  if (!state.teams || !state.teams.length) return false;
+  for (const c of Object.keys(state.picks || {})) {
+    if (Object.keys(state.picks[c] || {}).length > 0) return true;
+  }
+  return false;
+}
+// Updates only the team names from the splash draft, preserving every score,
+// pick and pending opener. Used when the operator revisits team setup mid-game.
+function renameTeamsOnly() {
+  if (state._draftNames) {
+    state.teams.forEach((t, i) => {
+      const name = state._draftNames[i];
+      if (name != null && name.trim()) t.name = name;
+    });
+  }
+  state._draftNames = null;
+  state.view = 'main-board';
+  saveState(); render();
+}
+// Adds one team after the quiz has started. Guarded by a name prompt and a
+// double confirmation, because it shifts the snake order for every remaining
+// question and is deliberately NOT placed on the undo stack.
+function addTeamMidGame() {
+  const max = DATA.event.teamsMax || 12;
+  if (state.teams.length >= max) { alert('Already at the maximum of ' + max + ' teams.'); return; }
+  const nextNum = state.teams.length + 1;
+  const name = prompt('Name for the new team (Team ' + nextNum + '):', 'Team ' + nextNum);
+  if (name == null) return;  // operator cancelled the prompt
+  if (!confirm('Add "' + (name.trim() || ('Team ' + nextNum)) + '" as team ' + nextNum + '?\n\n' +
+      'This changes the opening (snake) order for the rest of the quiz.')) return;
+  if (!confirm('Are you sure? This cannot be undone with Z.')) return;
+  state.teams.push({ number: nextNum, name: name.trim() || ('Team ' + nextNum), score: 0 });
+  state.numTeams = state.teams.length;
+  closeOverlay();
+  saveState(); render();
+}
+function startQuiz() {
+  const min = DATA.event.teamsMin || 2;
+  const max = DATA.event.teamsMax || 12;
+  // Mid-game: only rename, never rebuild teams (which would wipe scores).
+  if (gameHasScores()) { renameTeamsOnly(); return; }
+  const n = state.numTeams;
+  if (n < min || n > max) { alert('Pick between ' + min + ' and ' + max + ' teams.'); return; }
+  state.teams = [];
+  for (let i = 1; i <= n; i++) {
+    state.teams.push({
+      number: i,
+      name: (state._draftNames && state._draftNames[i - 1]) || ('Team ' + i),
+      score: 0
+    });
+  }
+  state._draftNames = null;
+  state.view = 'main-board';
+  // v5: rules overlay shows on first arrival at main-board, unless dismissed.
+  if (!state.rulesDismissed) state.overlay = 'rules';
+  saveState(); render();
+}
+function gotoMainBoard() {
+  stopTimer();
+  Object.assign(state, {
+    view: 'main-board',
+    currentCategory: null,
+    currentDraw: null,
+    inTiebreaker: false,
+    stage: 'idle',
+    originatorTeam: null,
+    currentPassTeam: null,
+    passedTeams: [],
+    showAnswer: false,
+    focusSlot: 0
+  });
+  saveState(); render();
+}
+function openCategory(categoryName) {
+  state.view = 'category-board';
+  state.currentCategory = categoryName;
+  state.focusSlot = 0;
+  // v5: seed the opener strip with the snake-order suggestion if nothing
+  // confirmed yet for this category.
+  const opener = openerForCategory(categoryName);
+  if (!opener.confirmed) {
+    const next = settings.suggestOriginator ? nextExpectedOriginator(categoryName) : null;
+    setPendingOpener(categoryName, opener.team || next, false);
+  }
+  saveState(); render();
+}
+// v5.5: tiebreaker entry now routes through a participant-selection screen.
+// We auto-suggest the teams tied at the top of the leaderboard (per the
+// rules: only ties for first place trigger a tiebreaker) and let the
+// operator add/remove teams before locking it in.
+function topTiedTeams() {
+  const rows = leaderboardRows();
+  if (!rows.length) return [];
+  const topScore = rows[0].total;
+  return rows.filter((r) => r.total === topScore).map((r) => r.number);
+}
+function suggestTbParticipants() {
+  const tied = topTiedTeams();
+  return tied.length >= 2 ? tied : [];
+}
+function startTbSetup() {
+  // Pre-fill participants only if it's a fresh tiebreaker; preserve operator
+  // edits if they re-enter setup mid-tiebreaker.
+  if (!state.tbConfirmed) {
+    state.tbParticipants = suggestTbParticipants().slice();
+  }
+  state.view = 'tb-setup';
+  state.focusSlot = 0;
+  saveState(); render();
+}
+function toggleTbParticipant(num) {
+  const i = state.tbParticipants.indexOf(num);
+  if (i >= 0) state.tbParticipants.splice(i, 1);
+  else state.tbParticipants.push(num);
+  state.tbParticipants.sort((a, b) => a - b);
+  saveState(); render();
+}
+function confirmTbParticipants() {
+  if (state.tbParticipants.length < 2) {
+    alert('Pick at least 2 teams for the tiebreaker.');
+    return;
+  }
+  state.tbConfirmed = true;
+  // Reset phase tracking when participants are freshly confirmed so a new
+  // tiebreaker run starts at penalty phase with zero question count.
+  state.tbPhase = 'penalty';
+  state.tbQuestionCount = 0;
+  // v5.6: also reset the TB picks log so a fresh tiebreaker starts with
+  // empty per-team TB scores (relevant for boards + leaderboard split).
+  state.tbPicks = [];
+  state.tbWinnerTeam = null;
+  // v5.7: pre-seed the opener strip with the snake-order suggestion (first
+  // team in the pool) so the operator sees an opener candidate as soon as
+  // they land on the TB board.
+  setTbPendingOpener(nextTbOpener(), false);
+  state.view = settings.tbJumbled ? 'tb-jumbled' : 'tb-cat-select';
+  state.focusSlot = 0;
+  saveState(); render();
+}
+function restartTiebreaker() {
+  // Re-opens setup and lets the operator re-choose participants. We also
+  // refund any TB-derived points so re-starting doesn't double-count.
+  if (!confirm('Restart the tiebreaker? Selected participants, phase, and tiebreaker points will reset; main-game scores are not affected.')) return;
+  // Refund TB points already awarded — they live on team.score because
+  // awardPoints was called during the resolved-question step. Without this,
+  // restarting would leave stale TB points on the leaderboard.
+  refundTbPoints();
+  state.tbConfirmed = false;
+  state.tbParticipants = [];
+  state.tbPhase = 'penalty';
+  state.tbQuestionCount = 0;
+  state.tbPicks = [];
+  state.tbWinnerTeam = null;
+  setTbPendingOpener(null, false);
+  startTbSetup();
+}
+function refundTbPoints() {
+  // Walk tbPicks and subtract awarded points from the corresponding team.score
+  // so the leaderboard returns to its pre-TB state.
+  for (const p of (state.tbPicks || [])) {
+    if (p.scoringTeam && p.points) {
+      const t = state.teams.find((x) => x.number === p.scoringTeam);
+      if (t) t.score -= p.points;
+    }
+  }
+}
+// v5.6: TB helpers — used by the boards (greying out used slots) and the
+// leaderboard split (pre-TB vs total).
+function tbPickFor(catName, idx) {
+  // Find the most recent TB pick for this (category, idx) — there is normally
+  // only one per slot, but we walk in reverse just in case of replays.
+  const picks = state.tbPicks || [];
+  for (let i = picks.length - 1; i >= 0; i--) {
+    if (picks[i].category === catName && picks[i].idx === idx) return picks[i];
+  }
+  return null;
+}
+function tbPointsByTeam() {
+  // Aggregates TB-question points per team number. Used by the leaderboard
+  // split column and to determine the candidate sudden-death winner.
+  const out = {};
+  for (const p of (state.tbPicks || [])) {
+    if (p.scoringTeam && p.points) {
+      out[p.scoringTeam] = (out[p.scoringTeam] || 0) + p.points;
+    }
+  }
+  return out;
+}
+function tbPenaltyQuestionTarget() {
+  // The penalty phase gives every tied team `penaltyPerTeam` attempts before
+  // sudden death begins. Configurable; defaults to 3.
+  const per = (DATA.event.tiebreakerPenaltyPerTeam != null) ? DATA.event.tiebreakerPenaltyPerTeam : 3;
+  return tiebreakerPool().length * per;
+}
+// v5.7: snake-order opener suggestion for the TB pool. Continuous snake
+// across the pool, indexed by tbPicks.length so each call returns the next
+// suggested opener as questions are played.
+//
+// 3-team pool [A, B, C]: openers cycle A, B, C, C, B, A, A, B, C, … so each
+// team gets fair share of "first crack" across rounds. 2-team pool [A, B]:
+// A, B, B, A, A, B, …  The snake mirror at the pool boundary means we never
+// get two same openers in a row across a round boundary.
+function nextTbOpener() {
+  const pool = tiebreakerPool();
+  if (!pool.length) return null;
+  const idx = (state.tbPicks || []).length;
+  const period = 2 * pool.length;
+  const pos = idx % period;
+  return (pos < pool.length) ? pool[pos] : pool[period - 1 - pos];
+}
+function setTbPendingOpener(team, confirmed) {
+  state.tbPendingOpener = { team, confirmed: !!confirmed };
+}
+function confirmTbOpenerOnBoard() {
+  // Lock in the opener for the next TB slot pick. If nothing is highlighted,
+  // fall back to the snake suggestion.
+  const cur = state.tbPendingOpener || {};
+  const team = cur.team || state.originatorHighlight || nextTbOpener();
+  if (!team) return;
+  setTbPendingOpener(team, true);
+  state.originatorHighlight = team;
+  saveState(); render();
+}
+function unconfirmTbOpenerOnBoard() {
+  const cur = state.tbPendingOpener || {};
+  setTbPendingOpener(cur.team, false);
+  saveState(); render();
+}
+function highlightTbOpener(num) {
+  if (!tiebreakerPool().includes(num)) return;
+  state.originatorHighlight = num;
+  setTbPendingOpener(num, false);
+  saveState(); render();
+}
+function tbWinnerCandidate() {
+  // Returns the unique top-scoring TB participant, or null if there is no
+  // tiebreaker yet, or multiple teams are tied at the top of the TB pool.
+  const pool = tiebreakerPool();
+  if (!pool.length) return null;
+  const points = tbPointsByTeam();
+  const scored = pool.map((n) => ({ n, p: points[n] || 0 }));
+  if (!scored.length) return null;
+  scored.sort((a, b) => b.p - a.p);
+  // No points awarded yet → no candidate.
+  if (scored[0].p === 0) return null;
+  // Tie at the top → no unique winner.
+  if (scored.length > 1 && scored[1].p === scored[0].p) return null;
+  return scored[0].n;
+}
+function declareTbWinner() {
+  const target = tbPenaltyQuestionTarget();
+  if ((state.tbPicks || []).length < target) {
+    alert('Finish the penalty phase first. That means ' + target + ' tiebreaker questions for the current team pool.');
+    return;
+  }
+  const winner = tbWinnerCandidate();
+  if (!winner) {
+    alert('No unique leader yet — the tiebreaker is still tied at the top.');
+    return;
+  }
+  const t = state.teams.find((x) => x.number === winner);
+  if (!confirm('Declare ' + (t ? t.name : ('Team ' + winner)) + ' the tiebreaker winner and return to the main board?')) return;
+  state.tbPhase = 'resolved';
+  state.tbWinnerTeam = winner;
+  gotoMainBoard();
+}
+function reopenTbSlot(catName, idx) {
+  // Mirrors reopenSlot for main board: refund points, drop the pick from the
+  // log, and route back to the TB board so the operator can replay the slot.
+  const prev = tbPickFor(catName, idx);
+  if (!prev) return;
+  if (!confirm('Reopen this tiebreaker? The previous result will be undone and the tiebreaker will be replayed.')) return;
+  snapshot('reopen tb slot');
+  if (prev.scoringTeam && prev.points) {
+    const t = state.teams.find((x) => x.number === prev.scoringTeam);
+    if (t) t.score -= prev.points;
+  }
+  // Remove the pick (and any later picks for the same slot, just in case).
+  state.tbPicks = (state.tbPicks || []).filter((p) => !(p.category === catName && p.idx === idx));
+  // Pull tbQuestionCount back so phase tracking stays consistent.
+  state.tbQuestionCount = Math.max(0, (state.tbQuestionCount || 0) - 1);
+  if (state.tbQuestionCount < tbPenaltyQuestionTarget() && state.tbPhase === 'sudden-death') state.tbPhase = 'penalty';
+  // v5.7: pre-seat the previous opener so the operator can simply confirm it
+  // again if they want to replay with the same opener (or change via the strip).
+  setTbPendingOpener(prev.originatorTeam || nextTbOpener(), false);
+  state.view = settings.tbJumbled ? 'tb-jumbled' : 'tb-board';
+  state.currentCategory = catName;
+  state.currentDraw = null;
+  state.inTiebreaker = true;
+  state.stage = 'idle';
+  state.originatorTeam = null;
+  state.originatorHighlight = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = false;
+  stopTimer(); saveState(); render();
+}
+function openTiebreakers() {
+  state.focusSlot = 0;
+  startTbSetup();
+}
+function openTbBoard(categoryName) { state.view = 'tb-board'; state.currentCategory = categoryName; state.focusSlot = 0; saveState(); render(); }
+function openRules() { state.overlay = 'rules'; render(); }
+function dismissRules() {
+  state.rulesDismissed = true;
+  state.overlay = null;
+  saveState(); render();
+}
+function jumpToNextRound() {
+  // v5: round-end banner action — jump to next round's category board.
+  const i = ROUND_ORDER.indexOf(state.currentCategory);
+  if (i < 0 || i + 1 >= ROUND_ORDER.length) { gotoMainBoard(); return; }
+  openCategory(ROUND_ORDER[i + 1]);
+}
+function categoryComplete(catName) {
+  const cat = categoryByName(catName);
+  if (!cat) return false;
+  return picksMadeInCategory(catName) >= cat.board.length;
+}
+
+function pickSlot(categoryName, draw) {
+  // v5: opener must already be confirmed via the opener strip on the
+  // category board. If not, this call is a no-op and we just render the
+  // opener strip in attention-grabbing mode.
+  if (isPicked(categoryName, draw)) return;
+  const opener = openerForCategory(categoryName);
+  if (!opener.confirmed || !opener.team) {
+    state.originatorHighlight = opener.team || nextExpectedOriginator(categoryName);
+    saveState(); render();
+    return;
+  }
+  snapshot('pickSlot');
+  state.view = 'question';
+  state.currentCategory = categoryName;
+  state.currentDraw = draw;
+  state.inTiebreaker = false;
+  // v5: question reveals immediately at 'idle' with originator committed.
+  state.stage = 'idle';
+  state.originatorTeam = opener.team;
+  state.originatorHighlight = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = !!settings.previewMode;  // v5: preview mode reveals up front
+  stopTimer(); saveState(); render();
+}
+function pickTb(categoryName, idx, jumbledOrigCat, displayNumber) {
+  // v5.7: TB board now has an opener strip (mirrors the main category board).
+  // If the operator hasn't confirmed an opener yet, refuse the pick and flag
+  // the strip — the slot grid renders disabled until confirmation. Otherwise
+  // route straight to the question with the opener already committed (skips
+  // the legacy tb-opener stage), so the flow matches a regular category.
+  const opener = state.tbPendingOpener || { team: null, confirmed: false };
+  if (!opener.confirmed || !opener.team) {
+    state.originatorHighlight = opener.team || nextTbOpener();
+    setTbPendingOpener(state.originatorHighlight, false);
+    saveState(); render();
+    return;
+  }
+  snapshot('pickTb');
+  state.view = 'question';
+  state.currentCategory = categoryName;
+  state.tbCategoryForJumbled = jumbledOrigCat || null;
+  state.currentDraw = null;
+  state.inTiebreaker = true;
+  state.tbIndex = idx;
+  // v5.4: participant-facing label is "TB1", "TB2", … — no source category.
+  // The operator picks via the board, which assigns the display number.
+  state.tbDisplayLabel = 'TB' + (displayNumber || (idx + 1));
+  // Opener already committed via the strip — drop straight to 'idle'.
+  state.stage = 'idle';
+  state.originatorTeam = opener.team;
+  state.originatorHighlight = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = !!settings.previewMode;
+  stopTimer(); saveState(); render();
+}
+function highlightOriginator(num) {
+  // v5: used on category-board (opener strip) and tb-opener stage.
+  state.originatorHighlight = num;
+  if (state.view === 'category-board') {
+    setPendingOpener(state.currentCategory, num, false);
+  }
+  saveState(); render();
+}
+function confirmOpenerOnBoard() {
+  // v5: lock in the opener for the next slot pick on the category board.
+  const cat = state.currentCategory;
+  if (!cat) return;
+  const opener = openerForCategory(cat);
+  const team = opener.team || state.originatorHighlight ||
+               (settings.suggestOriginator ? nextExpectedOriginator(cat) : null);
+  if (!team) return;
+  setPendingOpener(cat, team, true);
+  saveState(); render();
+}
+function unconfirmOpenerOnBoard() {
+  const cat = state.currentCategory;
+  if (!cat) return;
+  const opener = openerForCategory(cat);
+  setPendingOpener(cat, opener.team, false);
+  saveState(); render();
+}
+function confirmOriginator() {
+  // v5: only used by the inline tb-opener stage now (tiebreaker fast path).
+  if (state.stage !== 'tb-opener') return;
+  const team = state.originatorHighlight;
+  if (!team) return;
+  state.originatorTeam = team;
+  state.stage = 'idle';
+  saveState(); render();
+}
+function setOriginator(num) {
+  // Mouse / number-key path: highlight AND commit in one step.
+  if (state.stage === 'tb-opener') {
+    state.originatorHighlight = num;
+    confirmOriginator();
+    return;
+  }
+  if (state.stage === 'idle') {
+    // Allow swapping the opener even after the question is revealed (mistake fix).
+    state.originatorTeam = num;
+    saveState(); render();
+  }
+}
+function startMainTimer() {
+  if (state.stage !== 'idle' || !state.originatorTeam) return;
+  state.stage = 'timing';
+  startTimer(state.timerSeconds);
+  saveState(); render();
+}
+function markCorrect() {
+  if (state.stage === 'timing') {
+    snapshot('mark correct (original)');
+    awardPoints(state.originatorTeam, DATA.event.pointsOriginal);
+    recordPick(state.originatorTeam, DATA.event.pointsOriginal);
+    state.stage = 'resolved';
+    if (settings.autoReveal) state.showAnswer = true;
+    stopTimer(); saveState(); render();
+    return;
+  }
+  if (state.stage === 'pass') {
+    // v5: STRICT gate — G only fires if the pass team has been committed
+    // (Enter, number key, or chip click). Highlight alone is not enough.
+    // Fixes the "greyed buttons still register keystroke" bug.
+    if (state.currentPassTeam == null) return;
+    snapshot('mark correct (pass)');
+    awardPoints(state.currentPassTeam, DATA.event.pointsPassed);
+    recordPick(state.currentPassTeam, DATA.event.pointsPassed);
+    state.stage = 'resolved';
+    if (settings.autoReveal) state.showAnswer = true;
+    stopTimer(); saveState(); render();
+  }
+}
+function markWrong() {
+  if (state.stage === 'timing') {
+    snapshot('originator missed');
+    stopTimer();
+    // Passing turned off (main rounds only): a miss scores nobody and the
+    // question resolves immediately. The tiebreaker always keeps its pass flow.
+    if (!state.inTiebreaker && !passingEnabled()) {
+      recordPick(null, 0);
+      state.passHighlight = null;
+      state.passedTeams = [];
+      state.stage = 'resolved';
+      if (settings.autoReveal) state.showAnswer = true;
+      saveState(); render();
+      return;
+    }
+    state.passedTeams = [];
+    state.stage = 'pass';
+    // Auto-pass: pre-highlight the next team in seat order; commit waits
+    // for operator (Enter / click / number).
+    const suggested = settings.autoPass
+      ? nextSeatTeam(state.originatorTeam, new Set([state.originatorTeam]))
+      : null;
+    state.passHighlight = suggested;
+    state.currentPassTeam = null;
+    saveState(); render();
+    return;
+  }
+  if (state.stage === 'pass') {
+    // v5: STRICT gate — same as markCorrect.
+    if (state.currentPassTeam == null) return;
+    snapshot('pass team missed');
+    state.passedTeams.push(state.currentPassTeam);
+    const tried = new Set([state.originatorTeam, ...state.passedTeams]);
+    const next = nextSeatTeam(state.currentPassTeam, tried);
+    state.currentPassTeam = null;
+    if (next == null) {
+      recordPick(null, 0);
+      state.passHighlight = null;
+      state.stage = 'resolved';
+      if (settings.autoReveal) state.showAnswer = true;
+    } else {
+      state.passHighlight = settings.autoPass ? next : null;
+    }
+    saveState(); render();
+  }
+}
+function highlightPassTeam(num) {
+  if (state.stage !== 'pass') return;
+  if (!allowedPassTeams().includes(num)) return;
+  state.passHighlight = num;
+  saveState(); render();
+}
+function confirmPassTeam() {
+  if (state.stage !== 'pass') return;
+  if (!state.passHighlight) return;
+  state.currentPassTeam = state.passHighlight;
+  saveState(); render();
+}
+function pickPassTeam(num) {
+  // Mouse / number-key path: highlight AND commit in one step.
+  if (state.stage !== 'pass') return;
+  if (num === state.originatorTeam) return;
+  if (state.passedTeams.includes(num)) return;
+  state.passHighlight = num;
+  state.currentPassTeam = num;
+  saveState(); render();
+}
+function revealAnswer() {
+  if (state.view !== 'question') return;
+  // v5: allow reveal in 'idle' too — needed for preview mode and the P key.
+  if (state.stage === 'tb-opener') return;
+  state.showAnswer = true;
+  saveState(); render();
+}
+function hideAnswer() {
+  if (state.view !== 'question') return;
+  state.showAnswer = false;
+  saveState(); render();
+}
+function cancelQuestion() {
+  if (state.view !== 'question') return;
+  if (state.stage === 'timing' || state.stage === 'pass') {
+    if (!confirm('Cancel this question without scoring? The slot will go back to "unused".')) return;
+  }
+  snapshot('cancel question');
+  const back = state.inTiebreaker ? (settings.tbJumbled ? 'tb-jumbled' : 'tb-board') : 'category-board';
+  const cat = state.currentCategory;
+  state.view = back;
+  state.currentDraw = null;
+  state.stage = 'idle';
+  state.originatorTeam = null;
+  state.originatorHighlight = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = false;
+  // v5: clear the confirmed-opener so the operator confirms again for the
+  // next slot pick. Preserves their last opener choice for convenience.
+  if (cat && !state.inTiebreaker) {
+    const opener = openerForCategory(cat);
+    setPendingOpener(cat, opener.team, false);
+  }
+  // v5.7: when cancelling a TB question, drop the opener confirmation too so
+  // the strip on the TB board prompts the operator to choose again (rather
+  // than auto-firing into the next slot they click).
+  if (state.inTiebreaker) {
+    setTbPendingOpener(nextTbOpener(), false);
+  }
+  stopTimer(); saveState(); render();
+}
+function continueAfterResolved() {
+  if (state.view !== 'question') return;
+  if (state.stage !== 'resolved') return;
+  snapshot('continue from resolved');
+  const wasTb = state.inTiebreaker;
+  const cat = state.currentCategory;
+  // Tiebreaker phase advance:
+  //   - penalty phase lasts 3 questions per selected team
+  //   - if there is a unique leader at that point, stay in penalty and let
+  //     the operator declare the winner
+  //   - otherwise move into sudden death
+  // Also clear tbPendingOpener so the operator picks the next opener on the
+  // TB board (mirrors the main-category-board opener strip behaviour).
+  if (wasTb) {
+    state.tbQuestionCount = (state.tbPicks || []).length;
+    const penaltyTarget = tbPenaltyQuestionTarget();
+    if (state.tbPhase === 'penalty' &&
+        state.tbQuestionCount >= penaltyTarget &&
+        !tbWinnerCandidate()) {
+      state.tbPhase = 'sudden-death';
+    }
+    setTbPendingOpener(nextTbOpener(), false);
+  }
+  state.view = wasTb ? (settings.tbJumbled ? 'tb-jumbled' : 'tb-board') : 'category-board';
+  state.currentDraw = null;
+  state.stage = 'idle';
+  state.originatorTeam = null;
+  state.originatorHighlight = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = false;
+  // v5: advance opener suggestion to the snake-order pick for next pick.
+  if (cat && !wasTb) {
+    const next = settings.suggestOriginator ? nextExpectedOriginator(cat) : null;
+    setPendingOpener(cat, next, false);
+  }
+  stopTimer(); saveState(); render();
+}
+function reopenSlot(catName, draw) {
+  // Mistake-correction path: clicking an already-played slot reopens it.
+  // v5: drop back to the category board with the previous originator as the
+  // tentative opener — operator confirms (Enter) before the slot reveals.
+  const prev = pickRecord(catName, draw);
+  if (!prev) return;
+  if (!confirm('Reopen this question? The previous result will be undone and the slot will be replayed.')) return;
+  snapshot('reopen slot');
+  if (prev.scoringTeam) {
+    const t = state.teams.find((x) => x.number === prev.scoringTeam);
+    if (t) t.score -= prev.points || 0;
+  }
+  delete state.picks[catName][draw];
+  state.view = 'category-board';
+  state.currentCategory = catName;
+  setPendingOpener(catName, prev.originatorTeam || nextExpectedOriginator(catName), false);
+  state.originatorHighlight = prev.originatorTeam || nextExpectedOriginator(catName);
+  state.currentDraw = null;
+  state.inTiebreaker = false;
+  state.stage = 'idle';
+  state.originatorTeam = null;
+  state.currentPassTeam = null;
+  state.passHighlight = null;
+  state.passedTeams = [];
+  state.showAnswer = false;
+  stopTimer(); saveState(); render();
+}
+function awardPoints(num, pts) {
+  const t = state.teams.find((x) => x.number === num);
+  if (t) t.score += pts;
+}
+function recordPick(scoringTeam, points) {
+  // Monotonic play-order counter so a results view can show questions in the
+  // true order they were opened (which need not match the question/draw number).
+  state.playSeq = (state.playSeq || 0) + 1;
+  const seq = state.playSeq;
+  if (state.inTiebreaker) {
+    // v5.6: tiebreaker resolutions are logged separately in state.tbPicks so
+    // they do NOT pollute state.picks (which drives per-round leaderboard
+    // columns + the main scoring log). The qNum field is 1-indexed against
+    // the current TB pool — phase + sdRound are derived at render time.
+    if (!state.tbPicks) state.tbPicks = [];
+    const qNum = (state.tbQuestionCount || 0) + 1;
+    const penaltyTarget = tbPenaltyQuestionTarget();
+    state.tbPicks.push({
+      qNum,
+      phase: qNum <= penaltyTarget ? 'penalty' : 'sudden-death',
+      sdRound: qNum <= penaltyTarget ? null : (qNum - penaltyTarget),
+      category: state.currentCategory,
+      idx: state.tbIndex,
+      displayLabel: state.tbDisplayLabel,
+      originatorTeam: state.originatorTeam,
+      scoringTeam,
+      points,
+      passedTeams: state.passedTeams.slice(),
+      seq
+    });
+    return;
+  }
+  if (!state.picks[state.currentCategory]) state.picks[state.currentCategory] = {};
+  state.picks[state.currentCategory][state.currentDraw] = {
+    scoringTeam,
+    points,
+    originatorTeam: state.originatorTeam,
+    passedTeams: state.passedTeams.slice(),
+    seq
+  };
+}
+function openHelp()        { state.overlay = 'help'; render(); }
+function openSettings()    { state.overlay = 'settings'; render(); }
+function openLeaderboard() { state.overlay = 'leaderboard'; render(); }
+function closeOverlay()    { state.overlay = null; render(); }
+function togglePresentation() {
+  state.presentationMode = !state.presentationMode;
+  document.body.classList.toggle('presentation', state.presentationMode);
+  saveState(); render();
+}
+
+/* ============================================================
+   Keyboard
+   Scoped per-view; modifier-key combos (Cmd/Ctrl/Alt) are always
+   ignored so browser shortcuts still work.
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  const k = e.key;
+
+  // ----- overlays first (capture global keys to close) -----
+  if (state.overlay) {
+    if (k === 'Escape') { if (state.overlay === 'rules') dismissRules(); else closeOverlay(); e.preventDefault(); return; }
+    if (k === '?'  && state.overlay === 'help')        { closeOverlay(); e.preventDefault(); return; }
+    if ((k === 'l' || k === 'L') && state.overlay === 'leaderboard') { closeOverlay(); e.preventDefault(); return; }
+    if ((k === 'o' || k === 'O' || k === ',') && state.overlay === 'settings') { closeOverlay(); e.preventDefault(); return; }
+    if ((k === 'b' || k === 'B') && state.overlay === 'rules')      { dismissRules(); e.preventDefault(); return; }
+    // v5.4: rules overlay nav — arrows + Enter walk through sections.
+    if (state.overlay === 'rules') {
+      if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'Enter' || k === ' ') {
+        rulesAdvance(+1); e.preventDefault(); return;
+      }
+      if (k === 'ArrowLeft' || k === 'ArrowUp') {
+        rulesAdvance(-1); e.preventDefault(); return;
+      }
+    }
+    return;
+  }
+
+  // ----- global shortcuts available from every view -----
+  if (k === '?')                                  { openHelp();         e.preventDefault(); return; }
+  if (k === 'F' || k === 'f')                     { togglePresentation();e.preventDefault(); return; }
+  if (k === 'L' || k === 'l')                     { openLeaderboard();  e.preventDefault(); return; }
+  if (k === 'O' || k === 'o' || k === ',')        { openSettings();     e.preventDefault(); return; }
+  if (k === 'B' || k === 'b')                     { openRules();        e.preventDefault(); return; }
+  if (k === 'Z' || k === 'z')                     { undo();             e.preventDefault(); return; }
+  // C jumps to the cover (from which team setup is reachable). It only steps
+  // aside on the category-picking views (main board, tiebreaker category select)
+  // AND only when a category actually uses "C" as its shortcut — otherwise C
+  // works everywhere, including the main board.
+  if (k === 'C' || k === 'c') {
+    const cIsCategoryKey = DATA.categories.some((cat) => (cat.shortcutKey || '').toUpperCase() === 'C');
+    const onPickView = state.view === 'main-board' || state.view === 'tb-cat-select';
+    if (!(cIsCategoryKey && onPickView)) { gotoCover(); e.preventDefault(); return; }
+  }
+  // v5.2: T opens tiebreakers from any view (when the section is enabled).
+  // The previous version only handled T on the main board, which made the
+  // tiebreaker pool effectively unreachable after one was already played.
+  if ((k === 'T' || k === 't') && settings.showTiebreakerSection &&
+      state.view !== 'tb-board' && state.view !== 'tb-jumbled' &&
+      state.view !== 'tb-cat-select' && state.view !== 'tb-setup' &&
+      state.view !== 'cover' &&
+      state.view !== 'splash' && state.view !== 'question') {
+    openTiebreakers(); e.preventDefault(); return;
+  }
+
+  switch (state.view) {
+    case 'cover':
+      if (k === 'Enter' || k === ' ' || k === 'ArrowRight') { gotoSplash(); e.preventDefault(); }
+      break;
+
+    case 'splash':
+      if (k === 'Enter') { startQuiz(); e.preventDefault(); }
+      else if (k === 'ArrowLeft' || k === 'Escape') { gotoCover(); e.preventDefault(); }
+      break;
+
+    case 'main-board': {
+      // Shortcut letters come from each category's configured shortcutKey, so
+      // any set of categories wires up correctly.
+      const matchCat = categoryByShortcutKey(k);
+      if (matchCat) { openCategory(matchCat.name); e.preventDefault(); }
+      else return;
+      break;
+    }
+
+    case 'category-board': {
+      // v5.1: number keys only engage WHILE the opener is unconfirmed. Once
+      // confirmed, 1-9 are inert so the operator cannot misfire and re-pick
+      // an opener when they meant to nav slots (or the audience hears them
+      // typing draw numbers).
+      const cat = categoryByName(state.currentCategory);
+      const list = cat ? cat.board : [];
+      const opener = openerForCategory(state.currentCategory);
+      if (k === 'Escape') { gotoMainBoard(); e.preventDefault(); break; }
+      if (!opener.confirmed) {
+        // Opener-pick mode: numbers commit (instant), arrows cycle, Enter confirms.
+        const numKey = parseInt(k, 10);
+        if (!isNaN(numKey) && numKey >= 1 && numKey <= state.numTeams) {
+          setPendingOpener(state.currentCategory, numKey, true);
+          state.originatorHighlight = numKey;
+          saveState(); render(); e.preventDefault(); break;
+        }
+        const allowed = allowedOriginatorTeams();
+        if (k === 'ArrowRight' || k === 'ArrowDown') {
+          highlightOriginator(arrowNextTeam(opener.team || state.originatorHighlight, allowed));
+          e.preventDefault(); break;
+        }
+        if (k === 'ArrowLeft' || k === 'ArrowUp') {
+          highlightOriginator(arrowPrevTeam(opener.team || state.originatorHighlight, allowed));
+          e.preventDefault(); break;
+        }
+        if (k === 'Enter' || k === ' ') { confirmOpenerOnBoard(); e.preventDefault(); break; }
+      } else {
+        // Slot-pick mode: arrows navigate, Enter picks the focused slot.
+        if (k === 'ArrowRight') { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowLeft')  { state.focusSlot = Math.max(0, state.focusSlot - 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowDown')  { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 8); render(); e.preventDefault(); break; }
+        if (k === 'ArrowUp')    { state.focusSlot = Math.max(0, state.focusSlot - 8); render(); e.preventDefault(); break; }
+        if (k === 'Enter' || k === ' ') {
+          const target = list[state.focusSlot];
+          if (target && !isPicked(state.currentCategory, target.draw)) pickSlot(state.currentCategory, target.draw);
+          e.preventDefault(); break;
+        }
+        // U — change opener. Guarded by a confirm() prompt so a stray keystroke
+        // does not undo a settled choice.
+        if (k === 'u' || k === 'U') {
+          if (confirm('Change the opener for the next pick? Current opener (Team ' + opener.team + ') will need re-confirming.')) {
+            unconfirmOpenerOnBoard();
+          }
+          e.preventDefault(); break;
+        }
+        // Number keys intentionally do nothing while confirmed.
+      }
+      break;
+    }
+
+    case 'tb-board': {
+      // v5.7: same two-phase keyboard model as the main category board —
+      // opener-pick mode first, slot-pick mode after confirmation.
+      const cat = categoryByName(state.currentCategory);
+      const list = cat ? cat.tiebreakers : [];
+      const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+      if (k === 'Escape') { gotoMainBoard(); e.preventDefault(); break; }
+      if (!tbOpener.confirmed) {
+        const numKey = parseInt(k, 10);
+        if (!isNaN(numKey) && tiebreakerPool().includes(numKey)) {
+          setTbPendingOpener(numKey, true);
+          state.originatorHighlight = numKey;
+          saveState(); render(); e.preventDefault(); break;
+        }
+        const pool = tiebreakerPool();
+        if (k === 'ArrowRight' || k === 'ArrowDown') {
+          highlightTbOpener(arrowNextTeam(tbOpener.team || state.originatorHighlight, pool));
+          e.preventDefault(); break;
+        }
+        if (k === 'ArrowLeft' || k === 'ArrowUp') {
+          highlightTbOpener(arrowPrevTeam(tbOpener.team || state.originatorHighlight, pool));
+          e.preventDefault(); break;
+        }
+        if (k === 'Enter' || k === ' ') { confirmTbOpenerOnBoard(); e.preventDefault(); break; }
+      } else {
+        if (k === 'ArrowRight') { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowLeft')  { state.focusSlot = Math.max(0, state.focusSlot - 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowDown')  { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 5); render(); e.preventDefault(); break; }
+        if (k === 'ArrowUp')    { state.focusSlot = Math.max(0, state.focusSlot - 5); render(); e.preventDefault(); break; }
+        if (k === 'Enter' || k === ' ') {
+          if (list[state.focusSlot]) pickTb(state.currentCategory, state.focusSlot, null, state.focusSlot + 1);
+          e.preventDefault();
+        }
+        if (k === 'U' || k === 'u') {
+          if (confirm('Unconfirm the tiebreaker opener so you can pick a different team?')) unconfirmTbOpenerOnBoard();
+          e.preventDefault();
+        }
+      }
+      break;
+    }
+
+    case 'tb-jumbled': {
+      // v5.7: same two-phase model as tb-board above.
+      const list = jumbledTiebreakerList();
+      const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+      if (k === 'Escape') { gotoMainBoard(); e.preventDefault(); break; }
+      if (!tbOpener.confirmed) {
+        const numKey = parseInt(k, 10);
+        if (!isNaN(numKey) && tiebreakerPool().includes(numKey)) {
+          setTbPendingOpener(numKey, true);
+          state.originatorHighlight = numKey;
+          saveState(); render(); e.preventDefault(); break;
+        }
+        const pool = tiebreakerPool();
+        if (k === 'ArrowRight' || k === 'ArrowDown') {
+          highlightTbOpener(arrowNextTeam(tbOpener.team || state.originatorHighlight, pool));
+          e.preventDefault(); break;
+        }
+        if (k === 'ArrowLeft' || k === 'ArrowUp') {
+          highlightTbOpener(arrowPrevTeam(tbOpener.team || state.originatorHighlight, pool));
+          e.preventDefault(); break;
+        }
+        if (k === 'Enter' || k === ' ') { confirmTbOpenerOnBoard(); e.preventDefault(); break; }
+      } else {
+        if (k === 'ArrowRight') { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowLeft')  { state.focusSlot = Math.max(0, state.focusSlot - 1); render(); e.preventDefault(); break; }
+        if (k === 'ArrowDown')  { state.focusSlot = Math.min(list.length - 1, state.focusSlot + 6); render(); e.preventDefault(); break; }
+        if (k === 'ArrowUp')    { state.focusSlot = Math.max(0, state.focusSlot - 6); render(); e.preventDefault(); break; }
+        if (k === 'Enter' || k === ' ') {
+          const entry = list[state.focusSlot];
+          if (entry) pickTb(entry.category, entry.idx, entry.category, state.focusSlot + 1);
+          e.preventDefault();
+        }
+        if (k === 'U' || k === 'u') {
+          if (confirm('Unconfirm the tiebreaker opener so you can pick a different team?')) unconfirmTbOpenerOnBoard();
+          e.preventDefault();
+        }
+      }
+      break;
+    }
+
+    case 'tb-setup': {
+      if (k === 'Escape') { gotoMainBoard(); e.preventDefault(); break; }
+      if (k === 'Enter' || k === ' ') {
+        confirmTbParticipants();
+        e.preventDefault(); break;
+      }
+      // Numbers 1-9 toggle a team in/out of the participant list.
+      const num = parseInt(k, 10);
+      if (!isNaN(num) && num >= 1 && num <= state.numTeams) {
+        toggleTbParticipant(num);
+        e.preventDefault();
+      }
+      break;
+    }
+
+    case 'tb-cat-select': {
+      if (k === 'Escape') { gotoMainBoard(); e.preventDefault(); break; }
+      const matchTbCat = categoryByShortcutKey(k);
+      if (matchTbCat) { openTbBoard(matchTbCat.name); e.preventDefault(); }
+      break;
+    }
+
+    case 'question': {
+      if (k === 'Escape') {
+        if (state.stage === 'resolved') continueAfterResolved();
+        else cancelQuestion();
+        e.preventDefault(); break;
+      }
+      if (k === 'r' || k === 'R') { revealAnswer(); e.preventDefault(); break; }
+      if (k === 'u' || k === 'U') { hideAnswer(); e.preventDefault(); break; }
+      // P toggles preview-mode reveal for THIS question.
+      if (k === 'p' || k === 'P') { if (state.showAnswer) hideAnswer(); else revealAnswer(); e.preventDefault(); break; }
+
+      // Arrow nav for highlight: pass cycles eligible teams, tb-opener cycles all.
+      if (k === 'ArrowRight' || k === 'ArrowDown') {
+        if (state.stage === 'tb-opener') highlightOriginator(arrowNextTeam(state.originatorHighlight, allowedOriginatorTeams()));
+        else if (state.stage === 'pass') highlightPassTeam(arrowNextTeam(state.passHighlight, allowedPassTeams()));
+        e.preventDefault(); break;
+      }
+      if (k === 'ArrowLeft' || k === 'ArrowUp') {
+        if (state.stage === 'tb-opener') highlightOriginator(arrowPrevTeam(state.originatorHighlight, allowedOriginatorTeams()));
+        else if (state.stage === 'pass') highlightPassTeam(arrowPrevTeam(state.passHighlight, allowedPassTeams()));
+        e.preventDefault(); break;
+      }
+      if (k === 'Enter') {
+        if (state.stage === 'tb-opener') confirmOriginator();
+        else if (state.stage === 'pass') confirmPassTeam();
+        else if (state.stage === 'idle' && state.originatorTeam) startMainTimer();
+        else if (state.stage === 'resolved') continueAfterResolved();   // Enter advances after the answer is shown
+        e.preventDefault(); break;
+      }
+      if (k === ' ') {
+        if (state.stage === 'tb-opener' && state.originatorHighlight) confirmOriginator();
+        else if (state.stage === 'idle' && state.originatorTeam) startMainTimer();
+        else if (state.stage === 'resolved') continueAfterResolved();
+        e.preventDefault(); break;
+      }
+      // v5: STRICT gate — G/W only on `timing`, or `pass` with a COMMITTED team.
+      if (k === 'g' || k === 'G') {
+        if (state.stage === 'timing') markCorrect();
+        else if (state.stage === 'pass' && state.currentPassTeam != null) markCorrect();
+        e.preventDefault(); break;
+      }
+      if (k === 'w' || k === 'W') {
+        if (state.stage === 'timing') markWrong();
+        else if (state.stage === 'pass' && state.currentPassTeam != null) markWrong();
+        e.preventDefault(); break;
+      }
+      const num = parseInt(k, 10);
+      if (!isNaN(num) && num >= 1 && num <= state.numTeams) {
+        // v5.1: in 'idle', the opener is already settled — numbers no longer
+        // swap it. If the wrong team was called, the operator presses Esc to
+        // cancel and re-pick from the category board.
+        if (state.stage === 'tb-opener') setOriginator(num);
+        else if (state.stage === 'pass') pickPassTeam(num);
+        e.preventDefault();
+      }
+      break;
+    }
+  }
+});
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+// v5.2: walks a candidate list of extensions when the primary src 404s.
+// The set covers jpg/jpeg/png/webp/avif — modern browsers handle all of them.
+function buildImageWithFallback(primarySrc, alt) {
+  const dot = primarySrc.lastIndexOf('.');
+  const base = dot >= 0 ? primarySrc.slice(0, dot) : primarySrc;
+  const declaredExt = (dot >= 0 ? primarySrc.slice(dot + 1) : '').toLowerCase();
+  const extensions = ['jpg', 'jpeg', 'png', 'webp', 'avif']
+    .filter((x) => x !== declaredExt);
+  let attempt = 0;
+  const img = document.createElement('img');
+  img.alt = alt || '';
+  img.src = primarySrc;
+  img.onerror = function () {
+    if (attempt < extensions.length) {
+      img.src = base + '.' + extensions[attempt++];
+      return;
+    }
+    // All candidates exhausted — hide the img and write a small notice.
+    img.style.display = 'none';
+    const note = document.createElement('div');
+    note.className = 'missing';
+    note.textContent = 'Image not found (tried ' + (extensions.length + 1) + ' extensions)';
+    if (img.parentNode) img.parentNode.appendChild(note);
+  };
+  return img;
+}
+
+// True when the optional secondary language is switched on in config.
+function secondaryEnabled() {
+  return !!(DATA.config && DATA.config.secondaryLanguage && DATA.config.secondaryLanguage.enabled);
+}
+
+// Renders the image for a question, or null when there is none.
+//   - Embedded build: q.imageData is a base64 data URI → used directly.
+//   - Non-embedded build: q.imageIsPath is true and q.imageData is a relative
+//     filename → prefixed with IMAGE_PREFIX and run through the extension
+//     fallback walker (handles a wrong extension in the source data).
+function questionImageEl(q) {
+  if (!q.imageData) return null;
+  if (q.imageIsPath) return buildImageWithFallback(IMAGE_PREFIX + q.imageData, q.id);
+  return el('img', { src: q.imageData, alt: q.id || '', onerror: (e) => e.target.style.display = 'none' });
+}
+
+function el(tag, attrs, children) {
+  const node = document.createElement(tag);
+  for (const k of Object.keys(attrs || {})) {
+    const v = attrs[k];
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k.startsWith('on')) node[k] = v;
+    // Skip null/undefined and false so disabled/checked etc. behave as expected.
+    else if (v != null && v !== false) node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of [].concat(children || [])) {
+    if (c == null || c === false) continue;
+    if (typeof c === 'string' || typeof c === 'number') node.appendChild(document.createTextNode(String(c)));
+    else node.appendChild(c);
+  }
+  return node;
+}
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  // The cover view uses its own full-stage layout — no header / op-bar — so it
+  // reads as a clean title page.
+  document.body.classList.toggle('cover-view', state.view === 'cover');
+  if (state.view === 'cover') {
+    app.appendChild(renderCover());
+  } else {
+    app.appendChild(renderHeader());
+    app.appendChild(renderStage());
+    app.appendChild(renderOpBar());
+  }
+  removeOverlays();
+  removeHintsPill();
+  // v5.3: hints pill ONLY shows in presentation mode. Outside presentation
+  // mode the op-bar already shows the hint strip + action buttons, and the
+  // pill would just block them in the bottom-right corner.
+  if (state.view !== 'cover' && state.presentationMode) document.body.appendChild(renderHintsPill());
+  if (state.overlay === 'help')        document.body.appendChild(renderHelp());
+  else if (state.overlay === 'settings') document.body.appendChild(renderSettings());
+  else if (state.overlay === 'leaderboard') document.body.appendChild(renderLeaderboard());
+  else if (state.overlay === 'rules') document.body.appendChild(renderRules());
+}
+function removeOverlays() {
+  document.querySelectorAll('.overlay-mask').forEach((n) => n.remove());
+}
+function removeHintsPill() {
+  document.querySelectorAll('.hints-pill').forEach((n) => n.remove());
+}
+function renderHintsPill() {
+  // Two display modes: collapsed (top-1 hint only) and expanded (full strip).
+  // Click the pill to toggle. State persists in `state.hintsExpanded`.
+  const expanded = !!state.hintsExpanded;
+  const fullHints = hintForView();
+  let body;
+  if (expanded) {
+    body = fullHints + ' <span class="pill-toggle">collapse</span>';
+  } else {
+    // Pull the first two hint chunks for the collapsed view.
+    const chunks = fullHints.split(' · ').slice(0, 2).join(' · ');
+    body = chunks + ' <span class="pill-toggle">more</span>';
+  }
+  return el('div', {
+    class: 'hints-pill' + (expanded ? ' expanded' : ''),
+    html: body,
+    onclick: () => { state.hintsExpanded = !expanded; saveState(); render(); }
+  });
+}
+
+/* ---------- logo + secondary-language helpers ---------- */
+// Returns an <img> for a resolved logo src, or null when there is none — so the
+// surrounding layout simply omits the slot instead of showing a broken image.
+// `opts.scale` visually enlarges a single mark (some logos carry a lot of
+// transparent padding and read small at an equal max-height).
+function logoImg(src, alt, opts) {
+  if (!src) return null;
+  const o = opts || {};
+  const attrs = { src: src, alt: alt || '', onerror: (e) => e.target.style.display = 'none' };
+  if (o.class) attrs.class = o.class;
+  if (o.scale && o.scale !== 1) attrs.style = 'transform: scale(' + o.scale + '); transform-origin: center;';
+  return el('img', attrs);
+}
+// Secondary-language title line — only rendered when the feature is enabled in
+// config AND a secondary title string is present. Generic: works for any script.
+function secondaryTitleEl(tag, extraClass) {
+  const sl = DATA.config && DATA.config.secondaryLanguage;
+  if (!sl || !sl.enabled || !DATA.event.titleSecondary) return null;
+  return el(tag || 'div', { class: (extraClass ? extraClass + ' ' : '') + 'secondary-lang' }, DATA.event.titleSecondary);
+}
+
+/* ---------- header ---------- */
+function renderHeader() {
+  // Primary (organiser) logo on the left, optional secondary logo on the right.
+  // Either slot is left empty if no logo is configured.
+  const L = DATA.assets.logos || {};
+  return el('div', { class: 'app-header' }, [
+    el('div', { class: 'logo-slot left' }, [ logoImg(L.primary, L.primaryAlt) ]),
+    el('div', { class: 'title-block' }, [
+      el('div', { class: 'en' }, DATA.event.title),
+      secondaryTitleEl('div')
+    ]),
+    el('div', { class: 'logo-slot right' }, [ logoImg(L.secondary, L.secondaryAlt) ])
+  ]);
+}
+
+/* ---------- stage dispatch ---------- */
+function renderStage() {
+  switch (state.view) {
+    case 'splash':            return renderSplash();
+    case 'main-board':        return renderMainBoard();
+    case 'category-board':    return renderCategoryBoard();
+    case 'tb-setup':          return renderTbSetup();
+    case 'tb-cat-select':     return renderTbCatSelect();
+    case 'tb-board':          return renderTbBoard();
+    case 'tb-jumbled':        return renderTbJumbled();
+    case 'question':          return renderQuestion();
+    default:                  return el('div', { class: 'stage' }, 'Unknown view.');
+  }
+}
+
+/* ---------- cover ----------
+   Three layouts, chosen by event.coverLayout:
+     'minimal'      — organiser line + title + date/venue + CTA only.
+     'standard'     — festival + organiser logo, collaborators, title, footer.
+     'sponsor-rich' — title sponsor prominent at the very top; all other
+                      sponsors and supporters grouped in the bottom footer.
+   Every block is conditional, so the cover never shows an empty row. */
+function renderCover() {
+  const ev = DATA.event;
+  const L = DATA.assets.logos || {};
+  const layout = ev.coverLayout || 'standard';
+
+  // Title group (title + secondary + date/venue + Start setup CTA) — shared.
+  const titleChildren = [
+    el('div', { class: 'runner-title' }, [ ev.title || 'Quiz Competition', secondaryTitleEl('span') ])
+  ];
+  const whenBits = [ev.dateLong, ev.timeNote].filter(Boolean).join(' · ');
+  if (whenBits) titleChildren.push(el('div', { class: 'when' }, whenBits));
+  const whereBits = [ev.venue, ev.venueAddress].filter(Boolean).join(' — ');
+  if (whereBits) titleChildren.push(el('div', { class: 'where' }, whereBits));
+  titleChildren.push(el('div', { class: 'cta' }, [
+    el('button', { class: 'btn primary', onclick: gotoSplash }, ['Start setup', el('span', { class: 'key' }, 'Enter')])
+  ]));
+  const titleGroup = el('div', { class: 'title-group' }, titleChildren);
+
+  // Logo rows used by standard / sponsor-rich.
+  const collabImgs = (L.collaborators || []).map((c) => logoImg(c.src, c.alt, { scale: c.scale })).filter(Boolean);
+  const footerImgs = [].concat(L.sponsors || [], L.supporters || []).map((s) => logoImg(s.src, s.alt)).filter(Boolean);
+
+  const groups = [];
+
+  if (layout === 'minimal') {
+    if (ev.organiser) {
+      groups.push(el('div', { class: 'top-group' }, [
+        el('div', { class: 'org-line' }, ['Presented by ', el('strong', {}, ev.organiser)])
+      ]));
+    }
+    groups.push(titleGroup);
+
+  } else if (layout === 'sponsor-rich') {
+    // Title sponsor sits prominently at the very top.
+    if (L.titleSponsor) {
+      groups.push(el('div', { class: 'top-group' }, [
+        el('div', { class: 'supporters-label' }, 'Proudly presented by'),
+        el('div', { class: 'collab-row' }, [ logoImg(L.titleSponsor, L.titleSponsorAlt) ])
+      ]));
+    }
+    if (ev.festivalTitle) {
+      groups.push(el('div', { class: 'top-group' }, [ el('div', { class: 'fest' }, ev.festivalTitle) ]));
+    }
+    if (ev.organiser || collabImgs.length) {
+      groups.push(el('div', { class: 'mid-group' }, [
+        ev.organiser ? el('div', { class: 'org-line' }, ['Organised by ', el('strong', {}, ev.organiser)]) : null,
+        collabImgs.length ? el('div', { class: 'org-line' }, 'in collaboration with') : null,
+        collabImgs.length ? el('div', { class: 'collab-row' }, collabImgs) : null
+      ]));
+    }
+    groups.push(titleGroup);
+    if (footerImgs.length) {
+      groups.push(el('div', { class: 'footer-group' }, [
+        el('div', { class: 'supporters-label' }, 'With the support of'),
+        el('div', { class: 'supporters-row' }, footerImgs)
+      ]));
+    }
+
+  } else {
+    // 'standard'
+    if (ev.festivalTitle || ev.organiser || L.primary) {
+      groups.push(el('div', { class: 'top-group' }, [
+        ev.festivalTitle ? el('div', { class: 'fest' }, ev.festivalTitle) : null,
+        ev.organiser ? el('div', { class: 'org-line' }, ['Organised by ', el('strong', {}, ev.organiser)]) : null,
+        L.primary ? el('div', { class: 'org-logo' }, [ logoImg(L.primary, L.primaryAlt) ]) : null
+      ]));
+    }
+    if (collabImgs.length) {
+      groups.push(el('div', { class: 'mid-group' }, [
+        el('div', { class: 'org-line' }, 'in collaboration with'),
+        el('div', { class: 'collab-row' }, collabImgs)
+      ]));
+    }
+    groups.push(titleGroup);
+    if (footerImgs.length) {
+      groups.push(el('div', { class: 'footer-group' }, [
+        el('div', { class: 'supporters-label' }, 'Program supporters'),
+        el('div', { class: 'supporters-row' }, footerImgs)
+      ]));
+    }
+  }
+
+  return el('div', { class: 'stage', style: 'padding:0;' }, [
+    el('div', { class: 'cover' }, groups)
+  ]);
+}
+
+/* ---------- splash ---------- */
+function renderSplash() {
+  // Cover ↔ splash toggle preserves draft team names via state._draftNames.
+  if (!state._draftNames) state._draftNames = state.teams.length ? state.teams.map((t) => t.name) : [];
+  const ev = DATA.event;
+  const L = DATA.assets.logos || {};
+  const min = ev.teamsMin || 2;
+  const max = ev.teamsMax || 12;
+
+  // When a game is already underway, renaming keeps scores — but changing the
+  // team COUNT would invalidate the snake order, so we lock the count input
+  // and warn the operator. See startQuiz() for the rename-only branch.
+  const inProgress = gameHasScores();
+
+  const teamInputs = [];
+  for (let i = 1; i <= state.numTeams; i++) {
+    teamInputs.push(el('div', { class: 'row' }, [
+      el('label', {}, 'Team ' + i + ':'),
+      el('input', {
+        type: 'text',
+        placeholder: 'Team ' + i,
+        value: state._draftNames[i - 1] || '',
+        oninput: (e) => { state._draftNames[i - 1] = e.target.value; }
+      })
+    ]));
+  }
+
+  // Generic credits, assembled only from whatever the config supplies.
+  const creditParts = [];
+  if (ev.organiser) creditParts.push('Organised by ' + ev.organiser);
+  if (ev.collaborators && ev.collaborators.length) creditParts.push('in collaboration with ' + ev.collaborators.join(', '));
+  const creditLine = creditParts.join(', ');
+  const creditLogos = [logoImg(L.primary, L.primaryAlt)]
+    .concat((L.collaborators || []).map((c) => logoImg(c.src, c.alt, { scale: c.scale })))
+    .filter(Boolean);
+  const supporterLogos = [].concat(L.sponsors || [], L.supporters || [])
+    .map((s) => logoImg(s.src, s.alt)).filter(Boolean);
+  const creditsChildren = [];
+  if (creditLine) creditsChildren.push(el('div', { class: 'assoc' }, creditLine));
+  if (creditLogos.length) creditsChildren.push(el('div', { class: 'assoc-logos' }, creditLogos));
+  if (ev.programSupporters && ev.programSupporters.length)
+    creditsChildren.push(el('div', { class: 'assoc' }, 'Program supporters: ' + ev.programSupporters.join(', ')));
+  if (supporterLogos.length) creditsChildren.push(el('div', { class: 'assoc-logos' }, supporterLogos));
+
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'splash' }, [
+      el('div', { class: 'setup-header' }, [
+        el('h2', {}, 'Team Setup'),
+        el('div', { class: 'sub' }, '(names will appear on chips and on the leaderboard)')
+      ]),
+      el('div', { class: 'form-block' }, [
+        // In-progress notice — only shown once scores exist.
+        inProgress ? el('div', { class: 'qstatus blue shown', style: 'visibility:visible; max-width:560px; margin:0 auto 6px;' },
+          'A quiz is already in progress. Updating names here keeps every score. The number of teams is locked mid-game.') : null,
+        el('div', { class: 'panel' }, [
+          el('div', { class: 'row' }, [
+            el('label', {}, 'Number of teams:'),
+            el('input', {
+              type: 'number', min: min, max: max, value: state.numTeams,
+              disabled: inProgress,
+              onchange: (e) => { state.numTeams = Math.max(min, Math.min(max, parseInt(e.target.value, 10) || min)); render(); }
+            })
+          ]),
+          ...teamInputs
+        ]),
+        el('div', { style: 'display:flex; gap:10px; margin-top:10px; align-items:center;' }, [
+          el('button', { class: 'btn', onclick: gotoCover }, ['← Back to cover', el('span', { class: 'key' }, 'Esc')]),
+          el('button', { class: 'btn primary', style: 'font-size:16px; padding:12px 28px;', onclick: startQuiz },
+            [inProgress ? 'Update names' : 'Start Quiz', el('span', { class: 'key' }, 'Enter')])
+        ])
+      ]),
+      el('div', { class: 'credits-block' }, creditsChildren)
+    ])
+  ]);
+}
+
+/* ---------- main board ---------- */
+function renderMainBoard() {
+  // v5.2: shortcut letter comes from the per-category metadata.
+  const shortcuts = {};
+  DATA.categories.forEach((c) => { shortcuts[c.name] = c.shortcutKey || c.name.charAt(0); });
+  const tiles = DATA.categories.map((cat) => {
+    const done = Object.keys(state.picks[cat.name] || {}).length;
+    const total = cat.board.length;
+    const complete = done >= total;
+    // v5.3: tile content is centered. Shortcut chip sits beside the title so
+    // the operator still sees the keybinding without breaking the symmetry.
+    return el('div', { class: 'cat-tile ' + tileClassFor(cat.name), onclick: () => openCategory(cat.name) }, [
+      el('div', { class: 'tile-head' }, [
+        el('h2', {}, cat.name),
+        el('span', { class: 'shortcut' }, shortcuts[cat.name] || '')
+      ]),
+      el('div', { class: 'sub' }, 'Round ' + roundForCategory(cat.name) + (complete ? ' · complete' : '')),
+      el('div', { style: 'width:100%;' }, [
+        el('div', { class: 'progress' }, done + ' of ' + total + ' picked'),
+        el('div', { class: 'progress-bar' }, [el('div', { style: 'width:' + (100 * done / total) + '%' })])
+      ])
+    ]);
+  });
+  const actions = [];
+  if (settings.showTiebreakerSection) {
+    actions.push(el('button', { class: 'btn', onclick: openTiebreakers }, ['Tiebreakers', el('span', { class: 'key' }, 'T')]));
+  }
+  actions.push(el('button', { class: 'btn', onclick: openRules }, ['Rulebook', el('span', { class: 'key' }, 'B')]));
+  actions.push(el('button', { class: 'btn primary', onclick: openLeaderboard }, ['Leaderboard', el('span', { class: 'key' }, 'L')]));
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'main-board' }, tiles),
+    el('div', { class: 'secondary-actions' }, actions)
+  ]);
+}
+
+/* ---------- category board ---------- */
+function renderCategoryBoard() {
+  const cat = categoryByName(state.currentCategory);
+  if (!cat) return el('div', { class: 'stage' }, 'Unknown category.');
+  const opener = openerForCategory(cat.name);
+  const complete = categoryComplete(cat.name);
+  const round = roundForCategory(cat.name);
+
+  // v5: opener strip — chips for every team. While unconfirmed, arrows /
+  // clicks change the highlight; Enter confirms. Once confirmed, the slot
+  // grid lights up and the strip shows "Opener: Team X — press U to change."
+  const openerChips = state.teams.map((t) => {
+    const cls = ['team-chip'];
+    const focus = opener.team || state.originatorHighlight;
+    if (opener.confirmed && opener.team === t.number) cls.push('active');
+    else if (!opener.confirmed && focus === t.number) cls.push('highlight');
+    return el('div', {
+      class: cls.join(' '),
+      onclick: () => {
+        // Click commits in one step (mouse path).
+        setPendingOpener(cat.name, t.number, true);
+        state.originatorHighlight = t.number;
+        saveState(); render();
+      }
+    }, [
+      el('span', { class: 'n' }, '' + t.number),
+      el('span', {}, t.name),
+      el('span', { class: 'score' }, '· ' + t.score + ' pts')
+    ]);
+  });
+  // v5.1: confirmed change uses a guarded handler. Unconfirmed change is
+  // just a confirmed-toggle, no prompt needed.
+  function confirmedChange() {
+    if (confirm('Change the opener for the next pick? Current opener (Team ' + opener.team + ') will need re-confirming.')) {
+      unconfirmOpenerOnBoard();
+    }
+  }
+  const stripActions = opener.confirmed
+    ? [el('button', { class: 'btn', onclick: confirmedChange }, ['Change opener', el('span', { class: 'key' }, 'U')])]
+    : [el('button', { class: 'btn primary', onclick: confirmOpenerOnBoard, disabled: !((opener.team || state.originatorHighlight)) }, ['Confirm opener', el('span', { class: 'key' }, 'Enter')])];
+  // v5.1: participant-facing label is short and factual. Operator hints
+  // (snake suggestion, what to press) live in the bottom hint strip.
+  const stripLabel = opener.confirmed
+    ? ('Round ' + round + ' · Team ' + opener.team + ' to choose')
+    : ('Round ' + round + ' · choose the team to open');
+  const openerStrip = el('div', { class: 'opener-strip' + (opener.confirmed ? ' confirmed' : '') }, [
+    el('div', { class: 'label' }, stripLabel),
+    el('div', { class: 'chips' }, openerChips),
+    el('div', { class: 'actions' }, stripActions)
+  ]);
+
+  // Slot grid — disabled while opener is unconfirmed.
+  const slots = cat.board.map((slot, i) => {
+    const picked = pickRecord(cat.name, slot.draw);
+    const classes = ['slot'];
+    if (picked) classes.push('done');
+    if (opener.confirmed && i === state.focusSlot) classes.push('focus');
+    return el('div', {
+      class: classes.join(' '),
+      onclick: () => { if (picked) reopenSlot(cat.name, slot.draw); else pickSlot(cat.name, slot.draw); }
+    }, [
+      el('div', { class: 'num' }, '' + slot.draw),
+      picked && el('div', { class: 'tag' }, picked.scoringTeam ? ('+' + picked.points + ' → T' + picked.scoringTeam) : 'no score')
+    ]);
+  });
+
+  // Round-end banner — shown once all 14 expected draws have been played.
+  const children = [
+    el('div', { class: 'board-head' }, [
+      el('h2', {}, cat.name + ' · Round ' + round),
+      el('div', { class: 'sub' }, picksMadeInCategory(cat.name) + ' of ' + cat.board.length + ' played')
+    ])
+  ];
+  if (complete) {
+    // Top team in this round only.
+    const r = roundScores();
+    let top = null;
+    for (const t of state.teams) {
+      const score = r[t.number].byCat[cat.name];
+      if (!top || score > top.score) top = { name: t.name, score };
+    }
+    const i = ROUND_ORDER.indexOf(cat.name);
+    const hasNext = i >= 0 && i + 1 < ROUND_ORDER.length;
+    children.push(el('div', { class: 'round-banner' }, [
+      el('div', { class: 'text' }, [
+        'Round ' + round + ' complete · top of this round: ',
+        el('strong', {}, (top ? (top.name + ' (' + top.score + ' pts)') : '—'))
+      ]),
+      el('div', { class: 'actions' }, [
+        hasNext ? el('button', { class: 'btn primary', onclick: jumpToNextRound }, 'Go to Round ' + (round + 1)) : null,
+        el('button', { class: 'btn', onclick: gotoMainBoard }, 'Main board'),
+        el('button', { class: 'btn', onclick: openLeaderboard }, ['Leaderboard', el('span', { class: 'key' }, 'L')])
+      ])
+    ]));
+  }
+  children.push(openerStrip);
+  children.push(el('div', { class: 'slot-grid' + (opener.confirmed ? '' : ' disabled') }, slots));
+  return el('div', { class: 'stage' }, children);
+}
+
+/* ---------- tiebreaker boards ---------- */
+function renderTbCatSelect() {
+  const shortcuts = {};
+  DATA.categories.forEach((c) => { shortcuts[c.name] = c.shortcutKey || c.name.charAt(0); });
+  const tiles = DATA.categories.map((cat) =>
+    el('div', { class: 'cat-tile ' + tileClassFor(cat.name), onclick: () => openTbBoard(cat.name) }, [
+      el('div', { style: 'display:flex; justify-content:space-between; align-items:center;' }, [
+        el('h2', {}, cat.name),
+        el('span', { class: 'shortcut' }, shortcuts[cat.name] || '')
+      ]),
+      el('div', { class: 'sub' }, cat.tiebreakers.length + ' designated tiebreakers')
+    ])
+  );
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'board-head' }, [
+      el('h2', {}, 'Tiebreakers'),
+      el('div', { class: 'sub' }, '3 questions per selected team, then sudden death if still tied')
+    ]),
+    el('div', { class: 'main-board' }, tiles)
+  ]);
+}
+// v5.4: tiebreaker boards renumber their slots TB1…TBn (the operator never
+// sees the source ID on the participant-facing board) and prepend a phase
+// banner so the audience sees where we are in the tiebreaker.
+// v5.5: banner is now phase-aware (penalty / sudden death) and lists the
+// confirmed participants up front.
+function renderTbRulesBanner() {
+  // v5.6: the banner is now standings-aware. After every TB question, we
+  // peek at the per-team TB totals — if exactly one team uniquely leads, we
+  // surface a "Declare winner" affordance. Phase labels also track the
+  // sudden-death round number (not just "Sudden death" with no context).
+  const phase = state.tbPhase || 'penalty';
+  const partsCount = (state.tbParticipants || []).length;
+  const playedCount = (state.tbPicks || []).length;
+  const penaltyTarget = tbPenaltyQuestionTarget();
+  let phaseLabel;
+  let phaseDetail;
+  if (phase === 'penalty') {
+    if (playedCount >= penaltyTarget) {
+      phaseLabel = 'Penalty phase complete';
+      phaseDetail = 'Each selected team has now started 3 tiebreakers (' + penaltyTarget + ' total). If there is a unique leader, declare the winner. Otherwise continue into sudden death.';
+    } else {
+      const upcoming = Math.min(playedCount + 1, penaltyTarget);
+      phaseLabel = 'Penalty phase · question ' + upcoming + ' of ' + penaltyTarget;
+      phaseDetail = 'Each selected team starts 3 tiebreakers. Standard +10 / +5 scoring; tiebreaker points feed the Total (+ TB) column on the leaderboard.';
+    }
+  } else if (phase === 'sudden-death') {
+    const sdRound = Math.max(1, playedCount - penaltyTarget + 1);
+    phaseLabel = 'Sudden death · round ' + sdRound;
+    phaseDetail = 'Penalty phase covered 3 questions per team (' + penaltyTarget + ' total). Keep going until one team has a unique tiebreaker lead. Standard +10 / +5 scoring applies.';
+  } else {
+    phaseLabel = 'Tiebreaker resolved';
+    phaseDetail = state.tbWinnerTeam ? ('Winner: ' + teamNameByNumber(state.tbWinnerTeam) + '.') : 'No further tiebreaker questions needed.';
+  }
+  // Compose a short standings line — useful when more than one team is tied
+  // or trailing in the pool.
+  const standings = (() => {
+    const pts = tbPointsByTeam();
+    const pool = tiebreakerPool();
+    if (!pool.length) return null;
+    const sorted = pool
+      .map((n) => ({ n, p: pts[n] || 0 }))
+      .sort((a, b) => b.p - a.p);
+    return sorted.map((s) => 'T' + s.n + ': ' + s.p).join(' · ');
+  })();
+  const winner = tbWinnerCandidate();
+  const winnerName = winner ? teamNameByNumber(winner) : null;
+  const actions = [
+    el('button', { class: 'btn', onclick: restartTiebreaker }, 'Change participants')
+  ];
+  if (winner && phase !== 'resolved' && playedCount >= penaltyTarget) {
+    actions.push(el('button', { class: 'btn primary', onclick: declareTbWinner }, 'Declare ' + winnerName + ' winner'));
+  }
+  return el('div', { class: 'round-banner', style: 'background:var(--blue-bg); border-color:var(--blue-border); color:var(--blue);' }, [
+    el('div', { class: 'text', style: 'color:var(--text);' }, [
+      el('strong', { style: 'color:var(--blue);' }, phaseLabel + ' · '),
+      partsCount + ' teams. ',
+      phaseDetail,
+      standings ? el('div', { style: 'margin-top:6px; color:var(--text-soft); font-size:13px;' }, 'TB standings · ' + standings) : null
+    ]),
+    el('div', { class: 'actions' }, actions)
+  ]);
+}
+
+// v5.5: participant-selection screen — shown before any tiebreaker question
+// is played. Default-fills with teams tied for first; operator can add /
+// remove. We do not block entry when there is no tie — the operator may want
+// to rehearse the tiebreaker flow.
+function renderTbSetup() {
+  const tied = topTiedTeams();
+  const noTie = tied.length < 2;
+  const participants = state.tbParticipants || [];
+  const penaltyTarget = Math.max(3, participants.length * 3);
+  const chips = state.teams.map((t) => {
+    const isSelected = participants.includes(t.number);
+    const isAutoTied = tied.includes(t.number);
+    const cls = ['team-chip'];
+    if (isSelected) cls.push('active');
+    else if (isAutoTied) cls.push('highlight');
+    return el('div', {
+      class: cls.join(' '),
+      onclick: () => toggleTbParticipant(t.number),
+      style: 'font-size:clamp(14px,1.2vw,18px); padding:10px 14px;'
+    }, [
+      el('span', { class: 'n' }, '' + t.number),
+      el('span', {}, t.name),
+      el('span', { class: 'score' }, '· ' + t.score + ' pts')
+    ]);
+  });
+  const explainText = noTie
+    ? 'No clear tie for first place — the top team has a unique score. Add at least 2 teams below if you still want to run a tiebreaker (e.g., a deliberate rehearsal).'
+    : ('Teams tied for first: ' + tied.map((n) => 'Team ' + n).join(', ') + '. They are pre-selected. Add or remove teams below, then confirm.');
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'board-head' }, [
+      el('h2', {}, 'Tiebreaker setup'),
+      el('div', { class: 'sub' }, participants.length + ' selected · need at least 2 to start')
+    ]),
+    el('div', { class: 'round-banner', style: 'background:var(--blue-bg); border-color:var(--blue-border); color:var(--blue);' }, [
+      el('div', { class: 'text', style: 'color:var(--text);' }, [
+        el('strong', { style: 'color:var(--blue);' }, 'How the tiebreaker works · '),
+        'Phase 1 (penalty shootout): each selected team starts 3 tiebreakers. With the current pool, that is ' + penaltyTarget + ' questions in total. Standard +10 / +5 scoring. ',
+        'Phase 2 (sudden death): if still tied after that, more tiebreakers are asked until one team has a unique lead. ',
+        'Only selected teams play; pass rotation stays inside this pool.'
+      ])
+    ]),
+    el('div', { style: 'background:var(--bg-soft); padding:clamp(14px,1.6vh,22px) clamp(16px,1.8vw,24px); border-radius:10px; margin-bottom:14px; font-size:clamp(14px,1.1vw,18px); line-height:1.5;' }, explainText),
+    el('div', { class: 'team-row' }, [
+      el('div', { class: 'label' }, 'Tiebreaker participants'),
+      el('div', { class: 'team-chips' }, chips)
+    ]),
+    el('div', { style: 'display:flex; justify-content:space-between; margin-top:18px;' }, [
+      el('button', { class: 'btn', onclick: gotoMainBoard }, ['Cancel', el('span', { class: 'key' }, 'Esc')]),
+      el('button', {
+        class: 'btn primary',
+        onclick: confirmTbParticipants,
+        disabled: participants.length < 2,
+        style: 'font-size:clamp(15px,1.4vw,22px); padding:12px 24px;'
+      }, ['Start tiebreaker', el('span', { class: 'key' }, 'Enter')])
+    ])
+  ]);
+}
+function renderTbBoard() {
+  const cat = categoryByName(state.currentCategory);
+  if (!cat) return el('div', { class: 'stage' }, 'Unknown category.');
+  // v5.7: opener strip first (mirrors main category-board), then slots.
+  // Slot grid is disabled until the opener has been confirmed.
+  const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+  const slots = cat.tiebreakers.map((tb, i) => {
+    const played = tbPickFor(cat.name, i);
+    const classes = ['slot'];
+    if (i === state.focusSlot) classes.push('focus');
+    if (played) classes.push('done');
+    return el('div', {
+      class: classes.join(' '),
+      onclick: () => { if (played) reopenTbSlot(cat.name, i); else pickTb(cat.name, i, null, i + 1); }
+    }, [
+      el('div', { class: 'num' }, 'TB' + (i + 1)),
+      played && el('div', { class: 'tag' }, played.scoringTeam ? ('+' + played.points + ' → T' + played.scoringTeam) : 'no score')
+    ]);
+  });
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'board-head' }, [
+      el('h2', {}, cat.name + ' · Tiebreakers'),
+      el('div', { class: 'sub' }, cat.tiebreakers.length + ' tiebreakers in this category')
+    ]),
+    renderTbRulesBanner(),
+    renderTbOpenerStrip(),
+    el('div', { class: 'slot-grid tb' + (tbOpener.confirmed ? '' : ' disabled') }, slots)
+  ]);
+}
+
+function renderTbJumbled() {
+  // Jumbled grid: every tiebreaker across all categories interleaved. Slot
+  // labels are TB1..TBn by position in the jumbled list — participants see
+  // a single global numbering without category hints.
+  // v5.6: used slots greyed out + tagged with the awarded points → team, and
+  // a click on a used slot reopens it (same as main-board reopen flow).
+  const list = jumbledTiebreakerList();
+  const tiles = list.map((entry, i) => {
+    const played = tbPickFor(entry.category, entry.idx);
+    const classes = ['slot'];
+    if (i === state.focusSlot) classes.push('focus');
+    if (played) classes.push('done');
+    return el('div', {
+      class: classes.join(' '),
+      onclick: () => { if (played) reopenTbSlot(entry.category, entry.idx); else pickTb(entry.category, entry.idx, entry.category, i + 1); }
+    }, [
+      el('div', { class: 'num' }, 'TB' + (i + 1)),
+      played && el('div', { class: 'tag' }, played.scoringTeam ? ('+' + played.points + ' → T' + played.scoringTeam) : 'no score')
+    ]);
+  });
+  const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+  return el('div', { class: 'stage' }, [
+    el('div', { class: 'board-head' }, [
+      el('h2', {}, 'Tiebreakers'),
+      el('div', { class: 'sub' }, list.length + ' tiebreakers · numbered TB1–TB' + list.length)
+    ]),
+    renderTbRulesBanner(),
+    renderTbOpenerStrip(),
+    el('div', { class: 'slot-grid tb-jumbled' + (tbOpener.confirmed ? '' : ' disabled') }, tiles)
+  ]);
+}
+
+// v5.7: TB-specific opener strip — analogous to the main category-board's
+// opener-strip, but the chip list is the tiebreaker pool (not state.teams).
+// Operator picks via click / number key / arrows; confirm via Enter or the
+// "Confirm opener" button. Slot grid disables until confirmed (same idiom
+// as the category board) so the operator cannot misclick a TB before the
+// opener is locked in.
+function renderTbOpenerStrip() {
+  const pool = tiebreakerPool();
+  if (!pool.length) return null;
+  const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+  const suggestion = nextTbOpener();
+  // Mirror the main board: before confirmation, the suggested / current
+  // opener shows as the dotted highlight chip; after confirmation, it flips
+  // to the solid active chip.
+  const focus = tbOpener.team || state.originatorHighlight || suggestion;
+  const chips = state.teams.filter((t) => pool.includes(t.number)).map((t) => {
+    const cls = ['team-chip'];
+    if (tbOpener.confirmed && tbOpener.team === t.number) cls.push('active');
+    else if (!tbOpener.confirmed && focus === t.number) cls.push('highlight');
+    return el('div', {
+      class: cls.join(' '),
+      onclick: () => {
+        if (tbOpener.confirmed) {
+          if (t.number === tbOpener.team) return;
+          if (!confirm('Change the tiebreaker opener to Team ' + t.number + '? Confirmed opener (Team ' + tbOpener.team + ') will be replaced.')) return;
+        }
+        setTbPendingOpener(t.number, true);
+        state.originatorHighlight = t.number;
+        saveState(); render();
+      }
+    }, [
+      el('span', { class: 'n' }, '' + t.number),
+      el('span', {}, t.name),
+      el('span', { class: 'score' }, '· ' + t.score + ' pts')
+    ]);
+  });
+  const actions = [];
+  if (!tbOpener.confirmed) {
+    actions.push(el('button', { class: 'btn primary', onclick: confirmTbOpenerOnBoard, disabled: !(tbOpener.team || state.originatorHighlight || suggestion) }, ['Confirm opener', el('span', { class: 'key' }, 'Enter')]));
+  } else {
+    actions.push(el('button', { class: 'btn', onclick: () => { if (confirm('Unconfirm the tiebreaker opener so you can pick a different team?')) unconfirmTbOpenerOnBoard(); } }, ['Change opener', el('span', { class: 'key' }, 'U')]));
+  }
+  const label = tbOpener.confirmed
+    ? 'Tiebreaker · Team ' + tbOpener.team + ' to choose'
+    : 'Tiebreaker · choose the team to open';
+  return el('div', { class: 'opener-strip' + (tbOpener.confirmed ? ' confirmed' : '') }, [
+    el('div', { class: 'label' }, label),
+    el('div', { class: 'chips' }, chips),
+    el('div', { class: 'actions' }, actions)
+  ]);
+}
+
+/* ---------- question view ---------- */
+function renderQuestion() {
+  const q = currentQuestion();
+  if (!q) return el('div', { class: 'stage' }, 'No question selected.');
+
+  // v5: tb-opener stage — only used for tiebreakers, since main-board questions
+  // arrive with the opener already committed via the category-board strip.
+  // v5.6: chips are limited to the confirmed tiebreaker pool so the operator
+  // cannot accidentally open with a team outside the tiebreaker.
+  if (state.stage === 'tb-opener') {
+    const pool = tiebreakerPool();
+    const chips = state.teams
+      .filter((t) => pool.includes(t.number))
+      .map((t) => {
+        const cls = ['team-chip'];
+        if (state.originatorHighlight === t.number) cls.push('highlight');
+        return el('div', {
+          class: cls.join(' '),
+          onclick: () => setOriginator(t.number)
+        }, [
+          el('span', { class: 'n' }, '' + t.number),
+          el('span', {}, t.name),
+          el('span', { class: 'score' }, '· ' + t.score + ' pts')
+        ]);
+      });
+    // Snake suggestion: pick the tied team that has not opened the most-recent
+    // tiebreaker yet, so the opening team rotates instead of always being T1.
+    return el('div', { class: 'stage' }, [
+      el('div', { class: 'pick-team' }, [
+        el('div', { class: 'draw-label' }, 'Tiebreaker'),
+        el('div', { class: 'big-draw' }, state.tbDisplayLabel || ('TB' + (state.tbIndex + 1))),
+        el('div', { class: 'prompt' }, 'Choose the team to start (from ' + pool.length + ' tiebreaker teams)'),
+        el('div', { class: 'team-chips', style: 'margin-top:8px;' }, chips)
+      ])
+    ]);
+  }
+
+  // Active stages (idle / timing / pass / resolved)
+  const round = state.inTiebreaker ? 0 : roundForCategory(state.currentCategory);
+  const metaBits = [
+    // v5.4: tiebreaker questions show only "TBn" in the meta — no category
+    // and no theme label, so participants can't infer the source.
+    el('span', { class: 'draw' }, state.inTiebreaker
+      ? (state.tbDisplayLabel || ('TB' + (state.tbIndex + 1)))
+      : ('Question ' + state.currentDraw)),
+    state.inTiebreaker ? null : el('span', { class: 'pill' }, (q.theme || '').replace(/^Theme\s+\d+:\s*/i, '')),
+    state.inTiebreaker
+      ? el('span', { class: 'cat' }, 'Tiebreaker')
+      : el('span', { class: 'cat' }, state.currentCategory + (round ? (' · Round ' + round) : ''))
+  ];
+
+  const children = [];
+  // Row 1: meta + timer
+  children.push(el('div', { class: 'qmeta-row' }, [
+    el('div', { class: 'qmeta' }, metaBits),
+    el('div', { class: 'qtimer-slot' }, [
+      el('div', { class: 'timer idle' }, [el('div', { class: 'num' }, '—')]),
+      el('div', { class: 'timer-label' }, renderTimerLabel())
+    ])
+  ]));
+  // Row 2: question text (primary + optional secondary language)
+  const showSecondary = secondaryEnabled();
+  children.push(el('div', { class: 'qquestion' }, [
+    el('div', { class: 'eng' }, q.primaryQuestion),
+    (showSecondary && q.secondaryQuestion) ? el('div', { class: 'secondary-lang' }, q.secondaryQuestion) : null
+  ]));
+  // Row 3: image (only when the question carries one — no placeholder when absent).
+  const imgEl = questionImageEl(q);
+  if (imgEl) children.push(el('div', { class: 'qimage' }, [imgEl]));
+  // Row 4: answer (always reserved space; visibility flips on reveal)
+  children.push(el('div', { class: 'qanswer' + (state.showAnswer ? ' shown' : '') }, [
+    el('div', { class: 'eng' }, 'Answer: ' + q.primaryAnswer),
+    (showSecondary && q.secondaryAnswer) ? el('div', { class: 'secondary-lang' }, q.secondaryAnswer) : null
+  ]));
+
+  // Below the question: status banner + team chips + actions
+  const stage = el('div', { class: 'stage' }, [
+    el('div', { class: 'qview' }, children),
+    el('div', { class: 'qlower' }, [
+      renderQStatus(),
+      renderTeamRow(),
+      renderQActions()
+    ])
+  ]);
+  setTimeout(updateTimerDom, 0);
+  return stage;
+}
+function renderTimerLabel() {
+  // v5.1: short factual labels — operator hints go to the bottom strip.
+  if (state.stage === 'idle') return 'Ready';
+  if (state.stage === 'timing') return (DATA.event.timerSeconds || 30) + ' seconds';
+  if (state.stage === 'pass') return 'Pass';
+  if (state.stage === 'resolved') return '';
+  return '';
+}
+function renderQStatus() {
+  // v5.1: participant-facing banners are short and factual. Operator cues
+  // (Space, Esc, etc.) live in the bottom hint strip — duplicating them here
+  // makes the projection look like a tutorial.
+  if (state.stage === 'idle') {
+    const tname = (state.teams.find((x) => x.number === state.originatorTeam) || {}).name || ('Team ' + state.originatorTeam);
+    return el('div', { class: 'qstatus shown blue' }, tname + ' is up');
+  }
+  if (state.stage === 'pass') {
+    if (state.currentPassTeam) {
+      const tname = (state.teams.find((x) => x.number === state.currentPassTeam) || {}).name || ('Team ' + state.currentPassTeam);
+      return el('div', { class: 'qstatus shown' }, 'Pass to ' + tname);
+    }
+    return el('div', { class: 'qstatus shown' }, 'Choose the next team');
+  }
+  if (state.stage === 'resolved') {
+    if (state.inTiebreaker) {
+      // v5.6: reflect the actual TB scoring outcome instead of always saying
+      // "Tiebreaker complete" (the tiebreaker may still be in progress).
+      const tbPick = (state.tbPicks || []).slice(-1)[0] || {};
+      if (tbPick.scoringTeam) {
+        const tname = (state.teams.find((x) => x.number === tbPick.scoringTeam) || {}).name || ('Team ' + tbPick.scoringTeam);
+        return el('div', { class: 'qstatus shown good' }, tname + ' · +' + tbPick.points + ' tiebreaker points');
+      }
+      return el('div', { class: 'qstatus shown bad' }, 'No team scored this tiebreaker');
+    }
+    const pick = pickRecord(state.currentCategory, state.currentDraw) || {};
+    if (pick.scoringTeam) {
+      const tname = (state.teams.find((x) => x.number === pick.scoringTeam) || {}).name || ('Team ' + pick.scoringTeam);
+      return el('div', { class: 'qstatus shown good' }, tname + ' · +' + pick.points + ' points');
+    }
+    return el('div', { class: 'qstatus shown bad' }, 'No team scored');
+  }
+  return el('div', { class: 'qstatus' }); // placeholder during `timing`
+}
+function renderTeamRow() {
+  if (state.stage === 'timing' || state.stage === 'resolved') return el('div', { class: 'team-row' });
+  // v5.6: in tiebreaker, the team row shows only the confirmed participants so
+  // it cannot be confused with the main-game roster (non-participant teams are
+  // not eligible to open or to receive a pass during the tiebreaker).
+  const pool = state.inTiebreaker ? tiebreakerPool() : state.teams.map((t) => t.number);
+  const chips = state.teams.filter((t) => pool.includes(t.number)).map((t) => {
+    const cls = ['team-chip'];
+    if (state.stage === 'idle' && state.originatorTeam === t.number) cls.push('active');
+    if (state.stage === 'pass') {
+      if (t.number === state.originatorTeam) cls.push('passed');
+      else if (state.passedTeams.includes(t.number)) cls.push('passed');
+      else if (t.number === state.currentPassTeam) cls.push('active');
+      else if (t.number === state.passHighlight) cls.push('highlight');
+    }
+    return el('div', {
+      class: cls.join(' '),
+      onclick: () => {
+        // v5.1: chip click in idle swaps the opener — guard with confirm()
+        // so a stray click cannot quietly change who is answering.
+        if (state.stage === 'idle') {
+          if (t.number === state.originatorTeam) return;
+          if (!confirm('Change the opener to Team ' + t.number + '? Team ' + state.originatorTeam + ' will be replaced.')) return;
+          setOriginator(t.number);
+        } else if (state.stage === 'pass') pickPassTeam(t.number);
+      }
+    }, [
+      el('span', { class: 'n' }, '' + t.number),
+      el('span', {}, t.name),
+      el('span', { class: 'score' }, '· ' + t.score + ' pts')
+    ]);
+  });
+  // v5.1: simple two-word labels — chips show the state visually.
+  const label = state.stage === 'idle'
+    ? 'Answering'
+    : (state.currentPassTeam ? 'Pass to' : 'Choose next team');
+  return el('div', { class: 'team-row' }, [
+    el('div', { class: 'label' }, label),
+    el('div', { class: 'team-chips' }, chips)
+  ]);
+}
+function renderQActions() {
+  const buttons = [];
+  if (state.stage === 'idle') {
+    buttons.push(el('button', { class: 'btn primary', onclick: startMainTimer, disabled: !state.originatorTeam }, ['Start timer', el('span', { class: 'key' }, 'Space / Enter')]));
+  } else if (state.stage === 'timing') {
+    buttons.push(el('button', { class: 'btn good', onclick: markCorrect }, ['Got it (+' + DATA.event.pointsOriginal + ')', el('span', { class: 'key' }, 'G')]));
+    buttons.push(el('button', { class: 'btn bad', onclick: markWrong }, ['Wrong / time up', el('span', { class: 'key' }, 'W')]));
+  } else if (state.stage === 'pass') {
+    const canMark = state.currentPassTeam != null;
+    buttons.push(el('button', { class: 'btn good', onclick: markCorrect, disabled: !canMark }, ['Got it (+' + DATA.event.pointsPassed + ')', el('span', { class: 'key' }, 'G')]));
+    buttons.push(el('button', { class: 'btn bad',  onclick: markWrong,   disabled: !canMark }, ['Wrong', el('span', { class: 'key' }, 'W')]));
+  } else if (state.stage === 'resolved') {
+    buttons.push(el('button', { class: 'btn primary', onclick: continueAfterResolved }, ['Continue', el('span', { class: 'key' }, 'Space / Enter')]));
+  }
+  // v5: allow Reveal / Hide in idle too, so preview mode (and casual checks
+  // before starting the timer) work via the visible button — not just the key.
+  if (state.stage !== 'tb-opener') {
+    if (!state.showAnswer) buttons.push(el('button', { class: 'btn', onclick: revealAnswer }, ['Reveal answer', el('span', { class: 'key' }, 'R')]));
+    else                   buttons.push(el('button', { class: 'btn', onclick: hideAnswer  }, ['Hide answer',   el('span', { class: 'key' }, 'U')]));
+  }
+  return el('div', { class: 'qactions' }, buttons);
+}
+
+/* ---------- op bar (bottom) ---------- */
+function renderOpBar() {
+  const hint = settings.showHintStrip ? hintForView() : '';
+  const actions = [
+    el('button', { onclick: gotoMainBoard }, 'Main board'),
+    // Cover (C) — re-reachable any time; from the cover the operator can revisit
+    // team setup to rename teams (scores are preserved mid-game).
+    el('button', { onclick: gotoCover }, 'Cover (C)'),
+    el('button', { onclick: undo, disabled: !canUndo() }, 'Undo (Z)'),
+    el('button', { onclick: openRules }, 'Rulebook (B)'),
+    el('button', { onclick: openLeaderboard }, 'Leaderboard (L)')
+  ];
+  // v5.2: Tiebreakers button always present on the op-bar (with T keybinding)
+  // so the pool can be reached from any view, not only the main board.
+  if (settings.showTiebreakerSection) {
+    actions.push(el('button', { onclick: openTiebreakers }, 'Tiebreakers (T)'));
+  }
+  actions.push(el('button', { onclick: openSettings }, 'Settings (O)'));
+  actions.push(el('button', { onclick: openHelp }, 'Help (?)'));
+  actions.push(el('button', { onclick: togglePresentation }, state.presentationMode ? 'Show controls' : 'Presentation (F)'));
+  return el('div', { class: 'op-bar' }, [
+    el('div', { class: 'hint', html: hint }),
+    el('div', { class: 'actions' }, actions)
+  ]);
+}
+function hintForView() {
+  // v5: per-view + per-stage hints. Global suffix only includes keys that
+  // work everywhere; stage-specific keys are prepended so the most relevant
+  // shortcuts appear first.
+  const globals = '<kbd>L</kbd> Leaderboard · <kbd>B</kbd> Rulebook · <kbd>F</kbd> Presentation · <kbd>?</kbd> Help';
+  if (state.view === 'cover') return '<kbd>Enter</kbd> Start setup · ' + globals;
+  if (state.view === 'splash') return '<kbd>Enter</kbd> Start quiz · <kbd>Esc</kbd> Back to cover · ' + globals;
+  if (state.view === 'main-board') {
+    const keys = DATA.categories.map((c) => '<kbd>' + (c.shortcutKey || c.name.charAt(0)) + '</kbd>').join('/');
+    return keys + ' Open round' + (settings.showTiebreakerSection ? ' · <kbd>T</kbd> Tiebreakers' : '') + ' · ' + globals;
+  }
+  if (state.view === 'category-board') {
+    const opener = openerForCategory(state.currentCategory);
+    if (!opener.confirmed) return '<kbd>← →</kbd> Change opener · <kbd>Enter</kbd> Confirm · <kbd>1–' + state.numTeams + '</kbd> Instant pick · <kbd>Esc</kbd> Back · ' + globals;
+    return '<kbd>← →</kbd> Navigate slot · <kbd>Enter</kbd> Pick · <kbd>U</kbd> Change opener · <kbd>Esc</kbd> Back · ' + globals;
+  }
+  if (state.view === 'tb-setup') return '<kbd>1–' + state.numTeams + '</kbd> Toggle team · <kbd>Enter</kbd> Start tiebreaker · <kbd>Esc</kbd> Back · ' + globals;
+  if (state.view === 'tb-board' || state.view === 'tb-jumbled') {
+    const tbOpener = state.tbPendingOpener || { team: null, confirmed: false };
+    if (!tbOpener.confirmed) return '<kbd>← →</kbd> Change opener · <kbd>Enter</kbd> Confirm · <kbd>1–' + state.numTeams + '</kbd> Instant pick · <kbd>Esc</kbd> Back · ' + globals;
+    return '<kbd>← →</kbd> Navigate tiebreaker · <kbd>Enter</kbd> Pick · <kbd>U</kbd> Change opener · <kbd>Esc</kbd> Back · ' + globals;
+  }
+  if (state.view === 'tb-cat-select') {
+    const keys = DATA.categories.map((c) => '<kbd>' + (c.shortcutKey || c.name.charAt(0)) + '</kbd>').join('/');
+    return keys + ' Pick category · <kbd>Esc</kbd> Back · ' + globals;
+  }
+  if (state.view === 'question') {
+    if (state.stage === 'tb-opener') return '<kbd>← →</kbd> Move highlight · <kbd>Enter</kbd> Confirm · <kbd>1–' + state.numTeams + '</kbd> Instant · <kbd>Esc</kbd> Cancel · <kbd>Z</kbd> Undo · ' + globals;
+    if (state.stage === 'idle') return '<kbd>Space</kbd>/<kbd>Enter</kbd> Start timer · <kbd>1–' + state.numTeams + '</kbd> Swap opener · <kbd>R</kbd> Reveal · <kbd>Esc</kbd> Cancel · <kbd>Z</kbd> Undo · ' + globals;
+    if (state.stage === 'timing') return '<kbd>G</kbd> Correct (+10) · <kbd>W</kbd> Wrong/timeout · <kbd>R</kbd> Reveal · <kbd>U</kbd> Hide · <kbd>Z</kbd> Undo · ' + globals;
+    if (state.stage === 'pass') {
+      const committed = state.currentPassTeam != null;
+      const status = committed ? '<strong>Pass team committed</strong> — <kbd>G</kbd>/<kbd>W</kbd> active' : '<em>Highlight only</em> — press <kbd>Enter</kbd> or a number to commit';
+      return '<kbd>← →</kbd> Move highlight · ' + status + ' · <kbd>Z</kbd> Undo · ' + globals;
+    }
+    if (state.stage === 'resolved') return '<kbd>Space</kbd>/<kbd>Enter</kbd> Continue · <kbd>U</kbd> Hide answer · <kbd>Z</kbd> Undo · <kbd>Esc</kbd> Back · ' + globals;
+  }
+  return globals;
+}
+
+/* ---------- leaderboard overlay (round breakdown) ---------- */
+// v5.4: scoring-log toggle inside the leaderboard. Mirrors the per-question
+// columns of the printed scoring sheet (Opening Team | Chosen Question |
+// Scoring Team | Scored Points). Operator-only — accessed via the button on
+// the leaderboard overlay so it doesn't expose to participants by default.
+function teamNameByNumber(n) {
+  if (n == null) return '—';
+  const t = state.teams.find((x) => x.number === n);
+  return t ? t.name : ('Team ' + n);
+}
+function scoringLogRows() {
+  const out = [];
+  for (const cat of DATA.categories) {
+    const inCat = state.picks[cat.name] || {};
+    // Sort by question order so the log reads chronologically within a category.
+    const drawList = Object.keys(inCat)
+      .map((d) => parseInt(d, 10))
+      .sort((a, b) => a - b);
+    for (const d of drawList) {
+      const p = inCat[d];
+      out.push({
+        groupKey: 'R' + roundForCategory(cat.name),
+        groupLabel: 'R' + roundForCategory(cat.name) + ' · ' + cat.shortName,
+        chosen: 'Question ' + d,
+        opener: p.originatorTeam,
+        scorer: p.scoringTeam,
+        points: p.points || 0,
+        passed: (p.passedTeams && p.passedTeams.length) || 0
+      });
+    }
+  }
+  // v5.6: tiebreaker rows are appended after the main-game rows in the order
+  // they were played, so the log reads chronologically end-to-end.
+  for (const p of (state.tbPicks || [])) {
+    const phaseLabel = p.phase === 'sudden-death'
+      ? ('TB · Sudden death R' + (p.sdRound || '?'))
+      : ('TB · Penalty Q' + p.qNum);
+    out.push({
+      groupKey: 'TB',
+      groupLabel: phaseLabel,
+      chosen: p.displayLabel || ('TB' + (p.idx + 1)),
+      opener: p.originatorTeam,
+      scorer: p.scoringTeam,
+      points: p.points || 0,
+      passed: (p.passedTeams && p.passedTeams.length) || 0
+    });
+  }
+  return out;
+}
+function renderScoringLog() {
+  const rows = scoringLogRows();
+  if (!rows.length) return el('div', { style: 'margin-top:14px; color:var(--text-soft);' }, 'No scoring rows yet — the log fills in as questions are played.');
+  const head = el('tr', {}, [
+    el('th', {}, 'Phase'),
+    el('th', {}, 'Question'),
+    el('th', {}, 'Opening team'),
+    el('th', {}, 'Scoring team'),
+    el('th', { class: 'num' }, 'Points')
+  ]);
+  const body = rows.map((r) => el('tr', {}, [
+    el('td', {}, r.groupLabel),
+    el('td', {}, r.chosen),
+    el('td', {}, teamNameByNumber(r.opener)),
+    el('td', {}, r.scorer ? teamNameByNumber(r.scorer) + (r.passed ? (' (after ' + r.passed + ' pass' + (r.passed > 1 ? 'es' : '') + ')') : '') : '— no score'),
+    el('td', { class: 'num total' }, r.points ? ('+' + r.points) : '0')
+  ]));
+  return el('div', { style: 'margin-top:18px;' }, [
+    el('h3', { style: 'color:var(--blue); margin-bottom:6px;' }, 'Scoring log'),
+    el('div', { style: 'color:var(--text-soft); font-size:13px; margin-bottom:8px;' }, 'Chronological record of every scored question, including tiebreakers. Mirrors the printed scoring sheet.'),
+    el('table', {}, [el('thead', {}, [head]), el('tbody', {}, body)])
+  ]);
+}
+function renderLeaderboard() {
+  const rows = leaderboardRows();
+  const cats = DATA.categories;
+  const anyTb = rows.some((r) => r.tieBreak !== 0);
+  // v5.6: when a tiebreaker has happened, split the Total column into two:
+  //   - "Total (no TB)"  → sum of per-category scores only (= roundsTotal)
+  //   - "Total (+ TB)"   → includes tiebreaker points (= team.score)
+  // Pre-TB is the meaningful ranking pre-tiebreaker; the TB column shows the
+  // delta; Total (+ TB) is the final ranking. Without the split, it is hard
+  // to see what the standings looked like before the tiebreaker was played.
+  const head = [el('th', {}, '#'), el('th', {}, 'Team')];
+  cats.forEach((c) => head.push(el('th', { class: 'num' }, c.shortName)));
+  if (anyTb) {
+    head.push(el('th', { class: 'num' }, 'Total (no TB)'));
+    head.push(el('th', { class: 'num' }, 'TB'));
+    head.push(el('th', { class: 'num' }, 'Total (+ TB)'));
+  } else {
+    head.push(el('th', { class: 'num' }, 'Total'));
+  }
+
+  const body = rows.map((r, i) => {
+    const tds = [
+      el('td', { class: 'rank' }, '#' + (i + 1)),
+      el('td', {}, r.name)
+    ];
+    cats.forEach((c) => tds.push(el('td', { class: 'num' }, '' + r.byCat[c.name])));
+    if (anyTb) {
+      tds.push(el('td', { class: 'num' }, '' + r.roundsTotal));
+      tds.push(el('td', { class: 'num' }, r.tieBreak ? ('+' + r.tieBreak) : '—'));
+      tds.push(el('td', { class: 'num total' }, '' + r.total));
+    } else {
+      tds.push(el('td', { class: 'num total' }, '' + r.total));
+    }
+    return el('tr', { class: i === 0 ? 'first' : '' }, tds);
+  });
+
+  const logShown = !!state.showScoringLog;
+  return el('div', { class: 'overlay-mask', onclick: (e) => { if (e.target.classList.contains('overlay-mask')) closeOverlay(); } }, [
+    el('div', { class: 'overlay-card leaderboard' }, [
+      el('h2', {}, 'Leaderboard'),
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, head)]),
+        el('tbody', {}, body)
+      ]),
+      el('div', { class: 'footnote' }, anyTb
+        ? 'Total (no TB) is the pre-tiebreaker ranking. TB shows points awarded from tiebreaker questions. Total (+ TB) is the final ranking with tiebreaker points added.'
+        : 'Round columns show points earned per category.'),
+      logShown ? renderScoringLog() : null,
+      el('div', { style: 'display:flex; justify-content:space-between; gap:10px; margin-top:14px;' }, [
+        el('div', { style: 'display:flex; gap:8px;' }, [
+          el('button', { class: 'btn', onclick: () => { state.showScoringLog = !state.showScoringLog; saveState(); render(); } }, logShown ? 'Hide scoring log' : 'Show scoring log'),
+          el('button', { class: 'btn', onclick: exportLeaderboard }, 'Export results (CSV)')
+        ]),
+        el('button', { class: 'btn primary', onclick: closeOverlay }, ['Close', el('span', { class: 'key' }, 'Esc')])
+      ])
+    ])
+  ]);
+}
+
+/* ---------- help overlay ---------- */
+function renderHelp() {
+  const rows = (pairs) => pairs.map(([k, v]) => el('tr', {}, [el('td', { html: k }), el('td', {}, v)]));
+  return el('div', { class: 'overlay-mask', onclick: (e) => { if (e.target.classList.contains('overlay-mask')) closeOverlay(); } }, [
+    el('div', { class: 'overlay-card' }, [
+      el('h2', {}, (DATA.event.title || 'Quiz Runner') + ' — Shortcuts & Setup'),
+      el('p', {}, 'Operator-only; controls are hidden in presentation mode (F). All shortcuts ignore modifier keys (Cmd, Ctrl, Alt) so browser shortcuts still work.'),
+
+      el('h3', {}, 'Global (available from every view)'),
+      el('table', {}, [el('tbody', {}, rows([
+        ['<kbd>L</kbd>', 'Open / close leaderboard overlay'],
+        ['<kbd>B</kbd>', 'Open / close rulebook overlay'],
+        ['<kbd>C</kbd>', 'Jump to the cover (then revisit team setup). Disabled on screens where letter keys pick a category.'],
+        ['<kbd>F</kbd>', 'Toggle presentation mode (hide operator bar)'],
+        ['<kbd>O</kbd> or <kbd>,</kbd>', 'Settings (toggles)'],
+        ['<kbd>Z</kbd>', 'Undo the last committed action (pick / score / cancel)'],
+        ['<kbd>?</kbd>', 'Open / close this help'],
+        ['<kbd>Esc</kbd>', 'Cancel / go back']
+      ]))]),
+
+      el('h3', {}, 'Cover &amp; splash'),
+      el('table', {}, [el('tbody', {}, rows([
+        ['<kbd>Enter</kbd> on cover', 'Advance to team-setup splash'],
+        ['<kbd>Esc</kbd> on splash', 'Back to cover (team names are preserved)'],
+        ['<kbd>Enter</kbd> on splash', 'Start the quiz — or, mid-game, just update the team names (scores are kept)']
+      ]))]),
+
+      el('h3', {}, 'Main board'),
+      el('table', {}, [el('tbody', {}, rows([
+        [DATA.categories.map((c) => '<kbd>' + (c.shortcutKey || c.name.charAt(0)) + '</kbd>').join(' / '),
+         'Open ' + DATA.categories.map((c) => c.name).join(' / ')],
+        ['<kbd>T</kbd>', 'Open the tiebreaker pool (if enabled)']
+      ]))]),
+
+      el('h3', {}, 'Category board (opener-first flow)'),
+      el('table', {}, [el('tbody', {}, rows([
+        ['<kbd>← → ↑ ↓</kbd>', 'Before confirm: cycle opener highlight. After confirm: navigate slot grid.'],
+        ['<kbd>1</kbd>–<kbd>9</kbd>', 'Instant-commit that team as opener'],
+        ['<kbd>Enter</kbd>', 'Confirm opener, then pick the focused slot'],
+        ['<kbd>U</kbd>', 'Unconfirm opener so you can change it'],
+        ['<kbd>Esc</kbd>', 'Back to main board']
+      ]))]),
+
+      el('h3', {}, 'Tiebreaker board'),
+      el('table', {}, [el('tbody', {}, rows([
+        ['<kbd>← → ↑ ↓</kbd>', 'Before confirm: cycle opener highlight inside the tiebreaker pool. After confirm: navigate the tiebreaker grid.'],
+        ['<kbd>1</kbd>–<kbd>9</kbd>', 'Instant-commit that pooled team as opener'],
+        ['<kbd>Enter</kbd>', 'Confirm opener, then pick the highlighted tiebreaker'],
+        ['<kbd>U</kbd>', 'Unconfirm opener so you can change it'],
+        ['<kbd>Esc</kbd>', 'Back to main board']
+      ]))]),
+
+      el('h3', {}, 'Question view'),
+      el('table', {}, [el('tbody', {}, rows([
+        ['<kbd>← → ↑ ↓</kbd>', 'Pass: cycle eligible teams as highlight.'],
+        ['<kbd>Enter</kbd>', 'Pass: commit the highlighted team. Idle: start timer.'],
+        ['<kbd>1</kbd>–<kbd>9</kbd>', 'Instant commit for that team (no confirm needed)'],
+        ['<kbd>Space</kbd>', 'Idle → start the ' + (DATA.event.timerSeconds || 30) + ' s timer · Resolved → continue'],
+        ['<kbd>G</kbd>', 'Correct — only fires if the pass team is committed (or originator in timing)'],
+        ['<kbd>W</kbd>', 'Wrong — same commit gate as G'],
+        ['<kbd>R</kbd>', 'Reveal answer manually'],
+        ['<kbd>U</kbd>', 'Hide answer'],
+        ['<kbd>P</kbd>', 'Toggle preview (reveal/hide answer quickly)'],
+        ['<kbd>Esc</kbd>', 'Cancel question (confirmed mid-flight); back to board if resolved']
+      ]))]),
+
+      el('h3', {}, 'Mistake correction'),
+      el('p', { html: 'Two paths:<br>1. <kbd>Z</kbd> undoes the very last committed action (pick, score, miss, continue, cancel). The undo stack holds 20 entries. Use this for immediate fixes.<br>2. On the category board, clicking an <em>already-played</em> slot reopens it: the previous points are removed from that team and the slot replays from the pre-question screen. Use this when a mistake is noticed several questions later.' }),
+
+      el('h3', {}, 'How to run'),
+      el('p', { html: '1. Open this <code>QuizRunner.html</code> file in Chrome, Firefox, or Safari (double-click it).<br>2. Plug in the projector and mirror the display.<br>3. <kbd>F11</kbd> for browser full-screen; <kbd>F</kbd> for presentation mode (hides the operator bar).<br>4. This file is self-contained: questions, images, and logos are all embedded, so it works offline and can be moved anywhere.<br>5. State auto-saves to this browser. A page refresh keeps team names and scores intact. Use the red “Reset quiz state” button under Settings to start over.' }),
+
+      el('h3', {}, 'Changing the quiz'),
+      el('p', { html: 'To change questions, rules, logos, or the cover, use the <strong>setup wizard</strong> (<code>setup.html</code>) — fill in the form and download a fresh <code>QuizRunner.html</code>. No coding needed.<br>Team names can be changed live from the splash screen (Settings → Rename teams), and a late team can be added under Settings → Teams — neither needs a rebuild.' }),
+
+      el('h3', {}, 'Sharing with someone online'),
+      el('p', { html: 'Because everything is embedded, you only need to share this one HTML file — no internet required at run time.<br>· Email or message the file; the recipient just opens it.<br>· Or host it on any static site (GitHub Pages, Netlify, Cloudflare Pages, Vercel).<br>· State is per-browser; sharing the file does not share the live scores. Export the standings from the leaderboard if you need to send results.' }),
+
+      el('div', { style: 'display:flex; justify-content:flex-end; margin-top:16px;' }, [
+        el('button', { class: 'btn primary', onclick: closeOverlay }, ['Close', el('span', { class: 'key' }, 'Esc')])
+      ])
+    ])
+  ]);
+}
+
+/* ---------- settings overlay (v5: structural-vs-live split, lock affordance) ---------- */
+function renderSettings() {
+  const locked = isGameInProgress();
+  function toggleRow(key, label, hint, lockable) {
+    const on = !!settings[key];
+    const isLocked = lockable && locked;
+    return el('div', { class: 'row' + (isLocked ? ' locked' : '') }, [
+      el('div', { class: 'desc' }, [
+        el('div', { class: 'label' }, [label, isLocked ? el('span', { class: 'lock-pill' }, 'locked') : null]),
+        el('div', { class: 'hint' }, hint)
+      ]),
+      el('div', {
+        class: 'toggle' + (on ? ' on' : ''),
+        onclick: () => { if (isLocked) return; settings[key] = !settings[key]; saveSettings(); render(); }
+      })
+    ]);
+  }
+  function choiceRow(label, hint, current, options, onPick, lockable) {
+    const isLocked = lockable && locked;
+    return el('div', { class: 'row' + (isLocked ? ' locked' : '') }, [
+      el('div', { class: 'desc' }, [
+        el('div', { class: 'label' }, [label, isLocked ? el('span', { class: 'lock-pill' }, 'locked') : null]),
+        el('div', { class: 'hint' }, hint)
+      ]),
+      el('div', { style: 'display:flex; gap:6px;' }, options.map((o) =>
+        el('button', {
+          class: 'btn' + (current === o.value ? ' primary' : ''),
+          onclick: () => { if (isLocked) return; onPick(o.value); }
+        }, o.label)
+      ))
+    ]);
+  }
+  return el('div', { class: 'overlay-mask', onclick: (e) => { if (e.target.classList.contains('overlay-mask')) closeOverlay(); } }, [
+    el('div', { class: 'overlay-card settings' }, [
+      el('h2', {}, 'Settings'),
+      el('p', {}, locked ? 'Some settings are locked while the quiz is in progress — they would change the structure of the event mid-flight. Reset state to unlock them.' : 'All settings are editable. Once any pick is made, structural settings (locked icons below) will be greyed out.'),
+
+      el('h3', {}, 'Structural — locked once any pick is made'),
+      toggleRow('suggestOriginator', 'Snake-order opener suggestion',
+        'On the category board, highlight the team the snake pattern would put next (Round 1: 1,2,…,n,n,…,1; Round 2 reversed; Round 3 same as 1). Operator still confirms.',
+        true),
+      toggleRow('showTiebreakerSection', 'Show tiebreaker section',
+        'When off, the "Tiebreakers" button is hidden from the main board. Useful if you do not expect to need them.',
+        false),
+      toggleRow('tbJumbled', 'Jumbled tiebreaker pool',
+        'When on, the Tiebreakers section opens a single jumbled grid spanning all categories. When off, you pick a category first.',
+        false),
+
+      el('h3', {}, 'Live — change any time'),
+      toggleRow('autoPass', 'Auto-highlight next pass team',
+        'After a missed answer, highlight the next team in seat order. With this off, the operator picks the highlight manually.',
+        false),
+      toggleRow('roundAwarePass', 'Round-aware pass direction',
+        'When on, odd rounds use forward pass (1→2→3…) and even rounds use reverse, mirroring the snake opener order. Overrides the manual pass-direction setting below.',
+        false),
+      choiceRow('Manual pass direction', 'Used only when round-aware pass is off.', settings.passDirection,
+        [{label: 'Forward', value: 'forward'}, {label: 'Reverse', value: 'reverse'}],
+        (v) => { settings.passDirection = v; saveSettings(); render(); }, false),
+      toggleRow('autoReveal', 'Auto-reveal answer on correct',
+        'When a team scores correctly, the answer panel reveals automatically. The "Hide answer" shortcut (U) still works as a failsafe.',
+        false),
+      toggleRow('audioOn', 'Beep at end of original timer',
+        'A single short tone when the ' + (DATA.event.timerSeconds || 30) + ' s opening timer reaches zero. Pass timing has no beep.',
+        false),
+      toggleRow('previewMode', 'Preview mode (read-only reveal)',
+        'When on, picking a slot opens the question with the answer already visible and the timer disabled. Use this to rehearse without affecting scores.',
+        false),
+      toggleRow('showHintStrip', 'Show shortcut hint strip',
+        'The bottom hint strip shows the keys relevant to the current screen. Hide it for a cleaner projection.',
+        false),
+
+      // Team management — rename any time (scores kept) and, if you must,
+      // add a team after the game has started (with strong warnings).
+      el('h3', {}, 'Teams'),
+      el('div', { class: 'row' }, [
+        el('div', { class: 'desc' }, [
+          el('div', { class: 'label' }, 'Rename teams'),
+          el('div', { class: 'hint' }, 'Reopens team setup. Editing names mid-game keeps every score and pick — only the labels change.')
+        ]),
+        el('button', { class: 'btn', onclick: () => { closeOverlay(); gotoSplash(); } }, 'Rename teams…')
+      ]),
+      el('div', { class: 'row' }, [
+        el('div', { class: 'desc' }, [
+          el('div', { class: 'label' }, 'Add a team mid-game'),
+          el('div', { class: 'hint' }, 'Appends one more team. This changes the snake order for the remaining questions and cannot be undone — use only if a team arrives late.')
+        ]),
+        el('button', { class: 'btn', onclick: addTeamMidGame, disabled: state.teams.length >= (DATA.event.teamsMax || 12) }, 'Add team…')
+      ]),
+
+      // Explicit save/load of the whole quiz to a JSON file. Autosave to this
+      // browser is always running; this is the manual, off-machine copy — and
+      // the same file the results viewer reads.
+      el('h3', {}, 'Save / load this quiz'),
+      el('div', { class: 'row' }, [
+        el('div', { class: 'desc' }, [
+          el('div', { class: 'label' }, 'Save or load the quiz as a file'),
+          el('div', { class: 'hint' }, 'The quiz also autosaves to this browser after every action. "Save quiz to file" downloads a JSON copy (use it for an off-machine backup, to move to another computer, or to publish results). "Load quiz from file" restores from one.')
+        ]),
+        el('div', { style: 'display:flex; gap:6px;' }, [
+          el('button', { class: 'btn', onclick: saveSnapshotToFile }, 'Save quiz to file…'),
+          el('button', { class: 'btn', onclick: loadSnapshotFromFile }, 'Load quiz from file…')
+        ])
+      ]),
+      el('div', { style: 'display:flex; justify-content:space-between; margin-top:16px;' }, [
+        el('button', { class: 'btn', onclick: resetState, style: 'border-color:var(--bad); color:var(--bad);' }, 'Reset quiz state'),
+        el('button', { class: 'btn primary', onclick: closeOverlay }, ['Done', el('span', { class: 'key' }, 'Esc')])
+      ])
+    ])
+  ]);
+}
+
+/* ---------- rulebook overlay (tile reveal, gameplay-focused) ----------
+   The tile grid lets the operator surface one section at a time so participants
+   read each rule without being buried in a wall of text. Sections are kept
+   short and punchy; snake order is folded into the Gameplay section. */
+// Builds the rulebook. A fully custom rulebook can be supplied as
+// DATA.config.rulebook (array of { key, title, blurb, body[] }); otherwise the
+// default sections are generated from the configured categories, timer, and
+// point values so the rules always match this event's settings.
+function buildRulesSections() {
+  if (DATA.config && Array.isArray(DATA.config.rulebook) && DATA.config.rulebook.length) {
+    return DATA.config.rulebook.map((s, i) => ({
+      key:   s.key || ('rule' + i),
+      title: s.title || ('Section ' + (i + 1)),
+      blurb: s.blurb || '',
+      body:  s.body || []
+    }));
+  }
+  const ev = DATA.event;
+  const nRounds   = DATA.categories.length;
+  const picks     = ev.picksPerCategoryPerTeam || 2;
+  const timer     = ev.timerSeconds || 30;
+  const passTimer = ev.passTimerSeconds || 5;
+  const ptsO      = ev.pointsOriginal || 10;
+  const ptsP      = ev.pointsPassed || 5;
+  const per       = (ev.tiebreakerPenaltyPerTeam != null) ? ev.tiebreakerPenaltyPerTeam : 3;
+  const passes    = ev.passingEnabled !== false;   // main-round passing on/off
+  const catList   = DATA.categories.map((c) => c.name).join(', ');
+  const orderText = (ev.openingOrder === 'circular')
+    ? 'Teams open in a repeating order (1, 2, …, n, 1, 2, …, n).'
+    : 'Teams open in snake order (1, 2, …, n, n, …, 1), reversing each round so the order stays fair.';
+
+  const gameplayBody = [
+    nRounds + ' round' + (nRounds === 1 ? '' : 's') + ': ' + catList + '.',
+    'Each team answers ' + picks + ' question' + (picks === 1 ? '' : 's') + ' per round'
+      + (passes ? ', plus any passed questions.' : '.'),
+    orderText
+  ];
+  if (secondaryEnabled()) gameplayBody.push('Some questions are shown in a second language; answers may be given in either.');
+  gameplayBody.push('A tiebreaker may follow if teams are tied for first.');
+
+  return [
+    { key: 'team', title: 'Teams', blurb: 'Confer quietly · one final answer',
+      body: [
+        'Each team discusses quietly and gives one final answer.',
+        'Decide who will speak for the team before you begin.'
+      ] },
+    { key: 'gameplay', title: 'Gameplay',
+      blurb: nRounds + ' round' + (nRounds === 1 ? '' : 's') + ' · ' + picks + ' per team · snake order',
+      body: gameplayBody },
+    { key: 'timing', title: 'Timing',
+      blurb: timer + ' seconds · bell at zero' + (passes ? ' · ~' + passTimer + ' s on a pass' : ''),
+      body: ([
+        'Opening team: ' + timer + ' seconds.',
+        'A bell rings when the timer reaches zero.'
+      ]).concat(passes
+        ? [
+            'Passed team: about ' + passTimer + ' seconds, at the quiz master’s discretion.',
+            'A passed team gets one attempt at the question.'
+          ]
+        : ['If the opening team misses, the question is closed — there is no passing.']) },
+    { key: 'scoring', title: 'Scoring',
+      blurb: '+' + ptsO + ' first try' + (passes ? ' · +' + ptsP + ' on a pass' : '') + ' · no penalty',
+      body: ([
+        'Answered correctly by the opening team: +' + ptsO + '.'
+      ]).concat(passes ? ['Answered correctly after a pass: +' + ptsP + '.'] : [])
+        .concat([
+          'Wrong answer: no penalty.',
+          'The leaderboard shows per-round totals and an overall total.'
+        ]) },
+    { key: 'tiebreaker', title: 'Tiebreaker',
+      blurb: (per > 0 ? (per + ' penalty question' + (per === 1 ? '' : 's') + ' each, then sudden death') : 'sudden death'),
+      body: (per > 0
+        ? [
+            'If teams tie for first, each tied team faces ' + per + ' penalty question' + (per === 1 ? '' : 's') + '.',
+            'If still tied after that, sudden death decides it: the tied teams answer in turn.',
+            'In sudden death, if one team misses and the other answers it (including on a pass), that other team wins.',
+            'If both teams score, or both miss, in the same turn, sudden death continues.'
+          ]
+        : [
+            'If teams tie for first, sudden death decides it: the tied teams answer in turn.',
+            'If one team misses and the other answers it (including on a pass), that other team wins.',
+            'If both teams score, or both miss, in the same turn, sudden death continues.'
+          ]) },
+    { key: 'conduct', title: 'Conduct', blurb: 'No phones or outside help',
+      body: [
+        'No calculators, phones, or outside help — including from the audience.',
+        'Wait for the quiz master to finish reading the question.',
+        'Keep discussion within your team. Be respectful.',
+        'The quiz master’s decision is final.'
+      ] }
+  ];
+}
+const RULES_SECTIONS = buildRulesSections();
+// v5.4: rulebook is now bigger and supports keyboard nav — arrows / Tab to
+// move between sections, Enter to advance, Esc / B to close. The overlay's
+// keys are handled inside the global keydown listener (see goToRulesSection).
+function goToRulesSection(key) {
+  state.rulesOpenKey = key;
+  state.rulesProgress = state.rulesProgress || {};
+  state.rulesProgress[key] = true;
+  saveState(); render();
+}
+function rulesAdvance(delta) {
+  const cur = state.rulesOpenKey || RULES_SECTIONS[0].key;
+  const idx = RULES_SECTIONS.findIndex((s) => s.key === cur);
+  const next = idx + delta;
+  if (next < 0 || next >= RULES_SECTIONS.length) return;
+  goToRulesSection(RULES_SECTIONS[next].key);
+}
+function renderRules() {
+  // Default to the first section so the overlay always shows content (the
+  // tile grid + an open panel) instead of an empty card.
+  const openKey = state.rulesOpenKey || RULES_SECTIONS[0].key;
+  const tiles = RULES_SECTIONS.map((s) => {
+    const isRead = state.rulesProgress && state.rulesProgress[s.key];
+    const isActive = openKey === s.key;
+    const cls = ['rules-tile'];
+    if (isRead) cls.push('read');
+    if (isActive) cls.push('active');
+    return el('div', {
+      class: cls.join(' '),
+      onclick: () => goToRulesSection(s.key)
+    }, [
+      el('h3', {}, s.title),
+      el('div', { class: 'blurb' }, s.blurb)
+    ]);
+  });
+  const idx = RULES_SECTIONS.findIndex((s) => s.key === openKey);
+  const s = RULES_SECTIONS[idx];
+  const prev = RULES_SECTIONS[idx - 1];
+  const next = RULES_SECTIONS[idx + 1];
+  // v5.7: Timing section embeds the bell-preview button INSIDE the ordered
+  // list, immediately under the "call-bell rings at zero" line (rule #2).
+  // For all other sections, the body is a plain <ol>.
+  const sectionChildren = [
+    el('h3', {}, (idx + 1) + '. ' + s.title)
+  ];
+  if (s.key === 'timing') {
+    const items = s.body.map((line, i) => {
+      const li = el('li', {}, line);
+      // After the bell rule (index 1, second item), render the preview button
+      // as its own non-list-item block so the OL numbering stays intact.
+      return [li, i === 1 ? el('div', { style: 'margin: 8px 0 14px 0;' }, [
+        el('button', {
+          class: 'btn',
+          onclick: bellPreview,
+          style: 'font-size:clamp(14px,1.2vw,18px); padding:10px 18px;'
+        }, '🔔 Hear the timer bell')
+      ]) : null];
+    });
+    // Flatten and drop nulls. The non-li blocks are intentionally siblings of
+    // the <ol> so they break the visual list without breaking the numbering.
+    sectionChildren.push(el('ol', {}, items.map((pair) => pair[0])));
+    // Insert the bell button right after the second item by re-rendering as
+    // a custom structure (the simplest path that preserves the OL numbering
+    // is to render an <ol> with two items, the button, then a continuing <ol
+    // start=3>).
+    sectionChildren.pop();
+    sectionChildren.push(el('ol', {}, s.body.slice(0, 2).map((line) => el('li', {}, line))));
+    sectionChildren.push(el('div', { style: 'margin: 4px 0 10px 28px;' }, [
+      el('button', {
+        class: 'btn',
+        onclick: bellPreview,
+        style: 'font-size:clamp(14px,1.2vw,18px); padding:10px 18px;'
+      }, '🔔 Hear the timer bell')
+    ]));
+    sectionChildren.push(el('ol', { start: 3 }, s.body.slice(2).map((line) => el('li', {}, line))));
+  } else {
+    sectionChildren.push(el('ol', {}, s.body.map((line) => el('li', {}, line))));
+  }
+  sectionChildren.push(el('div', { class: 'rules-nav' }, [
+    prev ? el('button', { class: 'btn', onclick: () => goToRulesSection(prev.key) }, '← ' + prev.title) : el('span', {}, ''),
+    next ? el('button', { class: 'btn primary', onclick: () => goToRulesSection(next.key) }, next.title + ' →') : el('button', { class: 'btn primary', onclick: dismissRules }, 'Done · close rulebook')
+  ]));
+  const section = el('div', { class: 'rules-section' }, sectionChildren);
+  // Auto-mark the default-open first section as read on first view.
+  if (!state.rulesProgress || !state.rulesProgress[openKey]) {
+    state.rulesProgress = state.rulesProgress || {};
+    state.rulesProgress[openKey] = true;
+    // No render() here — already inside one. The class will catch up next tick.
+  }
+  return el('div', { class: 'overlay-mask', onclick: (e) => { if (e.target.classList.contains('overlay-mask')) dismissRules(); } }, [
+    el('div', { class: 'overlay-card rules-card' }, [
+      el('h2', {}, 'Rulebook'),
+      el('p', {}, 'Click a tile to reveal that section. Sections you have read turn green; the active section is highlighted.'),
+      el('div', { class: 'rules-tiles' }, tiles),
+      section,
+      el('div', { class: 'rules-keyhint' }, [
+        el('kbd', {}, '← →'), ' between sections · ',
+        el('kbd', {}, 'Enter'), ' next · ',
+        el('kbd', {}, 'Esc'), ' or ',
+        el('kbd', {}, 'B'), ' close'
+      ]),
+      el('div', { style: 'display:flex; justify-content:flex-end; margin-top:10px;' }, [
+        el('button', { class: 'btn', onclick: dismissRules }, ['Close', el('span', { class: 'key' }, 'Esc / B')])
+      ])
+    ])
+  ]);
+}
+
+/* ---------- boot ---------- */
+// Set the browser tab/window title from the event so it is not the generic
+// placeholder baked into the static HTML.
+if (DATA.event.title) document.title = DATA.event.title;
+
+// Inject the secondary-language font and colour from config. Doing it here
+// (rather than hardcoding in CSS) keeps the runner language-agnostic: a single
+// rule restyles every .secondary-lang element wherever it appears. We use
+// !important so it wins over the per-context size rules' inherited colour.
+(function applySecondaryLanguage() {
+  const sl = DATA.config && DATA.config.secondaryLanguage;
+  if (!sl || !sl.enabled) return;
+  const decls = [];
+  if (sl.font)   decls.push('font-family: ' + sl.font + ' !important;');
+  if (sl.colour) decls.push('color: ' + sl.colour + ' !important;');
+  if (!decls.length) return;
+  const style = document.createElement('style');
+  style.textContent = '.secondary-lang { ' + decls.join(' ') + ' }';
+  document.head.appendChild(style);
+})();
+
+if (state.presentationMode) document.body.classList.add('presentation');
+render();
+</script>
+</body>
+</html>

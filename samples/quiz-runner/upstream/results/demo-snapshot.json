@@ -1,0 +1,256 @@
+{
+  "schema": 2,
+  "title": "Demo Community Quiz 2026",
+  "savedAt": "2026-06-02T03:35:39.121Z",
+  "event": {
+    "title": "Demo Community Quiz 2026",
+    "dateLong": "Saturday, 1 August 2026",
+    "venue": "Community Hall"
+  },
+  "categories": [
+    {
+      "name": "General Knowledge",
+      "shortName": "GK",
+      "colour": "blue"
+    },
+    {
+      "name": "Science & Nature",
+      "shortName": "SN",
+      "colour": "green"
+    },
+    {
+      "name": "History & Culture",
+      "shortName": "HC",
+      "colour": "amber"
+    }
+  ],
+  "points": {
+    "original": 10,
+    "passed": 5
+  },
+  "state": {
+    "teams": [
+      {
+        "number": 1,
+        "name": "Himalayan Hawks",
+        "score": 40
+      },
+      {
+        "number": 2,
+        "name": "Kathmandu Kestrels",
+        "score": 60
+      },
+      {
+        "number": 3,
+        "name": "Pokhara Pandas",
+        "score": 50
+      },
+      {
+        "number": 4,
+        "name": "Lalitpur Lions",
+        "score": 70
+      }
+    ],
+    "picks": {
+      "General Knowledge": {
+        "1": {
+          "originatorTeam": 1,
+          "scoringTeam": null,
+          "points": 0,
+          "passedTeams": [],
+          "seq": 1
+        },
+        "2": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 5
+        },
+        "3": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 7
+        },
+        "4": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 2
+        },
+        "5": {
+          "originatorTeam": 3,
+          "scoringTeam": 3,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 6
+        },
+        "6": {
+          "originatorTeam": 1,
+          "scoringTeam": null,
+          "points": 0,
+          "passedTeams": [],
+          "seq": 8
+        },
+        "7": {
+          "originatorTeam": 3,
+          "scoringTeam": null,
+          "points": 0,
+          "passedTeams": [],
+          "seq": 3
+        },
+        "8": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 4
+        }
+      },
+      "Science & Nature": {
+        "1": {
+          "originatorTeam": 3,
+          "scoringTeam": 3,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 15
+        },
+        "2": {
+          "originatorTeam": 1,
+          "scoringTeam": 1,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 12
+        },
+        "3": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 11
+        },
+        "4": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 14
+        },
+        "5": {
+          "originatorTeam": 1,
+          "scoringTeam": 1,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 13
+        },
+        "6": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 16
+        },
+        "7": {
+          "originatorTeam": 3,
+          "scoringTeam": 3,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 10
+        },
+        "8": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 9
+        }
+      },
+      "History & Culture": {
+        "1": {
+          "originatorTeam": 3,
+          "scoringTeam": 3,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 22
+        },
+        "2": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 20
+        },
+        "3": {
+          "originatorTeam": 3,
+          "scoringTeam": 3,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 19
+        },
+        "4": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 18
+        },
+        "5": {
+          "originatorTeam": 2,
+          "scoringTeam": 2,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 23
+        },
+        "6": {
+          "originatorTeam": 1,
+          "scoringTeam": 1,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 24
+        },
+        "7": {
+          "originatorTeam": 4,
+          "scoringTeam": 4,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 21
+        },
+        "8": {
+          "originatorTeam": 1,
+          "scoringTeam": 1,
+          "points": 10,
+          "passedTeams": [],
+          "seq": 17
+        }
+      }
+    },
+    "tbPicks": [
+      {
+        "phase": "penalty",
+        "qNum": 1,
+        "idx": 0,
+        "displayLabel": "TB1",
+        "originatorTeam": 2,
+        "scoringTeam": null,
+        "points": 0,
+        "passedTeams": [],
+        "seq": 25
+      },
+      {
+        "phase": "penalty",
+        "qNum": 1,
+        "idx": 1,
+        "displayLabel": "TB2",
+        "originatorTeam": 4,
+        "scoringTeam": 4,
+        "points": 10,
+        "passedTeams": [],
+        "seq": 26
+      }
+    ],
+    "tbWinnerTeam": 4
+  }
+}

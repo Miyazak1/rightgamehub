@@ -1,0 +1,18 @@
+{
+  "name": "quiz-runner",
+  "version": "1.0.0",
+  "description": "A configurable, single-file HTML quiz competition runner for community events.",
+  "scripts": {
+    "validate": "node src/validate.js",
+    "build": "node src/build.js",
+    "build:setup": "node src/build-setup.js",
+    "build:site": "node src/build.js && node -e \"require('fs').copyFileSync('dist/QuizRunner.html','examples/sample-quiz.html')\" && node src/build-setup.js",
+    "test": "node --test",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["quiz", "competition", "event", "html", "runner"],
+  "license": "MIT"
+}

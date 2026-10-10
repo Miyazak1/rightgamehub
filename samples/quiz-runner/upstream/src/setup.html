@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Runner — Setup Wizard</title>
+<style>
+  :root {
+    --bg: #fbf9f4; --panel: #ffffff; --border: #d8d2c4; --line: #c8c0ad;
+    --blue: #00468c; --blue-bg: #ebf2fa; --blue-soft: #4775b3;
+    --teal: #345e5c; --green: #006e3c; --text: #2a2e34; --text-soft: #5b6471;
+    --text-dim: #8a8f99; --good: #1f7a3f; --good-bg: #d9f0e1;
+    --bad: #a83242; --bad-bg: #fbe1e4; --warn: #a87a14; --warn-bg: #fcf1d0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.5;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
+  h1 { color: var(--blue); margin: 0 0 4px; font-size: 30px; }
+  .sub { color: var(--text-soft); margin: 0 0 20px; }
+
+  /* Step progress bar */
+  .steps { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .step-pill {
+    flex: 1 1 auto; text-align: center; padding: 8px 6px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text-soft); font-size: 13px; min-width: 90px;
+  }
+  .step-pill.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .step-pill.done { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px;
+  }
+  .card h2 { color: var(--blue); margin: 0 0 4px; font-size: 22px; }
+  .card .hint { color: var(--text-soft); font-size: 14px; margin: 0 0 16px; }
+
+  label.field { display: block; margin: 12px 0; }
+  label.field > span { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+  label.field .note { font-weight: 400; color: var(--text-dim); font-size: 12px; }
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 6px; font: inherit; background: var(--panel); color: var(--text);
+  }
+  textarea { min-height: 64px; resize: vertical; }
+  input[type=file] { font-size: 13px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+  .btn {
+    font: inherit; cursor: pointer; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 18px; border-radius: 6px; font-size: 15px;
+  }
+  .btn:hover { background: var(--blue-bg); }
+  .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.primary:hover { background: var(--blue-soft); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.bad { color: var(--bad); border-color: var(--bad); }
+  .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .nav { display: flex; justify-content: space-between; margin-top: 8px; }
+
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+  .toggle-row input { width: auto; }
+
+  .repeat-item {
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    margin-bottom: 10px; background: var(--bg);
+  }
+  .repeat-item .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+  .msg { border-radius: 8px; padding: 10px 14px; margin: 8px 0; font-size: 14px; }
+  .msg.error { background: var(--bad-bg); border: 1px solid var(--bad); color: var(--bad); }
+  .msg.warn  { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--warn); }
+  .msg.info  { background: var(--blue-bg); border: 1px solid var(--blue); color: var(--blue); }
+  .msg.good  { background: var(--good-bg); border: 1px solid var(--good); color: var(--good); }
+
+  table.preview { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  table.preview th, table.preview td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bg); }
+  table.preview th { color: var(--text-soft); border-bottom: 2px solid var(--blue); }
+  .thumb { height: 32px; border-radius: 4px; vertical-align: middle; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Quiz Runner — Setup Wizard</h1>
+  <p class="sub">Fill in the steps below, then download a ready-to-use quiz file. No coding required.</p>
+
+  <div class="steps" id="steps"></div>
+  <div id="step-body"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   In-browser CSV importer (mirrors src/importers/csv.js)
+   ============================================================ */
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', inQuotes = false, i = 0;
+  const src = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  while (i < src.length) {
+    const ch = src[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (src[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+    if (ch === '"') { inQuotes = true; i++; continue; }
+    if (ch === ',') { row.push(field); field = ''; i++; continue; }
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += ch; i++;
+  }
+  row.push(field);
+  if (row.some((f) => f !== '')) rows.push(row);
+  return rows;
+}
+const REQUIRED_COLS = ['id', 'category', 'type', 'primaryQuestion', 'primaryAnswer'];
+function parseCsvQuestions(text) {
+  const warnings = [];
+  const rows = parseCSV(text);
+  if (rows.length < 2) return { questions: [], warnings: ['The CSV has no data rows (only a header or empty).'] };
+  const header = rows[0].map((h) => h.trim());
+  for (const col of REQUIRED_COLS) if (!header.includes(col)) warnings.push('Missing required column: "' + col + '"');
+  const idx = {}; header.forEach((h, i) => { idx[h] = i; });
+  const questions = [];
+  for (let r = 1; r < rows.length; r++) {
+    const get = (c) => (idx[c] !== undefined ? (rows[r][idx[c]] || '').trim() : '');
+    const id = get('id');
+    if (!id) { warnings.push('Row ' + (r + 1) + ': empty id, skipped.'); continue; }
+    const type = get('type').toLowerCase();
+    if (!['main', 'tiebreaker', 'backup'].includes(type))
+      warnings.push('Row ' + (r + 1) + ' (id=' + id + '): unknown type "' + get('type') + '", treated as "main".');
+    questions.push({
+      id, category: get('category'),
+      type: ['main', 'tiebreaker', 'backup'].includes(type) ? type : 'main',
+      theme: get('theme'),
+      primaryQuestion: get('primaryQuestion'), primaryAnswer: get('primaryAnswer'),
+      secondaryQuestion: get('secondaryQuestion'), secondaryAnswer: get('secondaryAnswer'),
+      imagePath: get('imagePath'),
+      draw: get('draw') ? parseInt(get('draw'), 10) : null
+    });
+  }
+  return { questions, warnings };
+}
+
+/* ============================================================
+   Validation (mirrors the key checks in src/validate.js)
+   ============================================================ */
+function validateAll(config, questions, images) {
+  const errors = [], warnings = [], info = [];
+  if (!config.event.title || !config.event.title.trim()) errors.push('Event title is required (Step 1).');
+  if (!config.categories.length) errors.push('Add at least one category (Step 3).');
+
+  const teams = config.rules.teamsDefault || 4;
+  const picks = config.rules.picksPerCategoryPerTeam || 2;
+  const boardSize = teams * picks;
+  const catNames = new Set(config.categories.map((c) => c.name));
+
+  // Unknown categories referenced by questions.
+  const unknown = new Set();
+  for (const q of questions) if (q.category && !catNames.has(q.category)) unknown.add(q.category);
+  for (const c of unknown) errors.push('Questions use category "' + c + '" which is not in your category list (Step 3).');
+
+  // Shortcut-key clashes.
+  const keys = {};
+  for (const c of config.categories) {
+    const k = (c.shortcutKey || '').toUpperCase();
+    if (!k) { warnings.push('Category "' + c.name + '" has no shortcut key.'); continue; }
+    if (keys[k]) errors.push('Shortcut key "' + k + '" is used by both "' + keys[k] + '" and "' + c.name + '".');
+    else keys[k] = c.name;
+  }
+
+  for (const cat of config.categories) {
+    const mains = questions.filter((q) => q.category === cat.name && q.type === 'main');
+    const tbs = questions.filter((q) => q.category === cat.name && q.type === 'tiebreaker');
+    // Duplicate ids within the category.
+    const seen = {};
+    for (const q of questions.filter((x) => x.category === cat.name)) {
+      if (seen[q.id]) errors.push(cat.name + ': duplicate question id "' + q.id + '".');
+      seen[q.id] = true;
+    }
+    if (mains.length < boardSize)
+      warnings.push(cat.name + ': only ' + mains.length + ' main questions but the board needs ' + boardSize +
+        ' (' + teams + ' teams × ' + picks + ' picks). Add more, or lower the default team count.');
+    else if (mains.length > boardSize)
+      info.push(cat.name + ': ' + mains.length + ' main questions for a ' + boardSize + '-slot board — ' +
+        (mains.length - boardSize) + ' will not be drawn with ' + teams + ' teams × ' + picks + ' picks.');
+    if (tbs.length < 3)
+      warnings.push(cat.name + ': only ' + tbs.length + ' tiebreaker question(s) — at least 3 is recommended.');
+  }
+
+  // Images referenced but not uploaded.
+  for (const q of questions) {
+    if (q.imagePath && !images[q.imagePath])
+      warnings.push('Image "' + q.imagePath + '" (question ' + q.id + ') was not uploaded — that question will have no image.');
+  }
+  return { errors, warnings, info };
+}
+
+/* ============================================================
+   DATA builder (mirrors buildData in src/build.js; always embeds)
+   ============================================================ */
+function shuffleDraw(mains, drawOrder) {
+  if (drawOrder === 'explicit') {
+    const withDraw = mains.filter((q) => q.draw != null).sort((a, b) => a.draw - b.draw);
+    const without = mains.filter((q) => q.draw == null);
+    const used = new Set(withDraw.map((q) => q.draw)); let next = 1;
+    for (const q of without) { while (used.has(next)) next++; q.draw = next++; }
+    return withDraw.concat(without).sort((a, b) => a.draw - b.draw);
+  }
+  const a = mains.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  a.forEach((q, i) => { q.draw = i + 1; });
+  return a;
+}
+function buildData(config, questions, images, logos) {
+  const teams = config.rules.teamsDefault || 4;
+  const boardSize = teams * (config.rules.picksPerCategoryPerTeam || 2);
+  const drawOrder = config.questions.drawOrder || 'auto';
+
+  const shape = (q) => ({
+    id: q.id, theme: q.theme,
+    primaryQuestion: q.primaryQuestion, primaryAnswer: q.primaryAnswer,
+    secondaryQuestion: q.secondaryQuestion || '', secondaryAnswer: q.secondaryAnswer || '',
+    imageData: q.imagePath && images[q.imagePath] ? images[q.imagePath] : null,
+    imageIsPath: false
+  });
+
+  const cats = config.categories.map((cc) => {
+    const inCat = questions.filter((q) => q.category === cc.name);
+    let mains = inCat.filter((q) => q.type === 'main').map((q) => Object.assign({}, q));
+    mains = shuffleDraw(mains, drawOrder).slice(0, boardSize);
+    return {
+      name: cc.name,
+      shortName: cc.shortName || cc.name.slice(0, 3).toUpperCase(),
+      shortcutKey: cc.shortcutKey || cc.name.charAt(0).toUpperCase(),
+      colour: cc.colour || 'blue',
+      board: mains.map((q) => Object.assign({ draw: q.draw }, shape(q))),
+      tiebreakers: inCat.filter((q) => q.type === 'tiebreaker').map(shape),
+      backup: inCat.filter((q) => q.type === 'backup').map(shape)
+    };
+  });
+
+  const r = config.rules;
+  return {
+    meta: { generatedAt: new Date().toISOString(), runnerVersion: '1.0.0', imagePrefix: '' },
+    event: {
+      title: config.event.title || '', titleSecondary: config.event.titleSecondary || '',
+      festivalTitle: config.event.festivalTitle || '', organiser: config.event.organiser || '',
+      collaborators: config.event.collaborators || [], programSupporters: config.event.programSupporters || [],
+      date: config.event.date || '', dateLong: config.event.dateLong || '',
+      timeNote: config.event.timeNote || '', venue: config.event.venue || '',
+      venueAddress: config.event.venueAddress || '', coverLayout: config.event.coverLayout || 'standard',
+      pointsOriginal: r.pointsOriginal || 10, pointsPassed: r.pointsPassed || 5,
+      timerSeconds: r.timerSeconds || 30, passTimerSeconds: r.passTimerSeconds || 5,
+      teamsMin: r.teamsMin || 2, teamsMax: r.teamsMax || 12, teamsDefault: r.teamsDefault || 4,
+      picksPerCategoryPerTeam: r.picksPerCategoryPerTeam || 2,
+      openingOrder: r.openingOrder || 'snake',
+      tiebreakerPenaltyPerTeam: r.tiebreakerPenaltyPerTeam != null ? r.tiebreakerPenaltyPerTeam : 3,
+      passingEnabled: r.passingEnabled !== false
+    },
+    config: {
+      secondaryLanguage: {
+        enabled: !!config.secondaryLanguage.enabled,
+        font: config.secondaryLanguage.font || '',
+        colour: config.secondaryLanguage.colour || '#006e3c'
+      },
+      // Custom rulebook from the Rulebook step (null = runner defaults).
+      rulebook: (Array.isArray(config.rulebook) && config.rulebook.length) ? config.rulebook : null,
+      // First-run operator toggles (known boolean keys only).
+      defaultSettings: (function () {
+        const d = config.defaults || {}, out = {};
+        for (const k of ['autoReveal', 'audioOn', 'tbJumbled', 'showHintStrip']) {
+          if (typeof d[k] === 'boolean') out[k] = d[k];
+        }
+        return out;
+      })()
+    },
+    assets: { logos: logos },
+    categories: cats
+  };
+}
+
+/* ============================================================
+   Wizard state
+   ============================================================ */
+const COLOURS = ['blue', 'green', 'amber', 'teal', 'purple', 'rose'];
+const config = {
+  event: {
+    title: '', titleSecondary: '', festivalTitle: '', organiser: '',
+    collaborators: [], programSupporters: [],
+    dateLong: '', timeNote: '', venue: '', venueAddress: '', coverLayout: 'standard'
+  },
+  rules: { teamsDefault: 4, teamsMin: 2, teamsMax: 12, picksPerCategoryPerTeam: 2,
+           timerSeconds: 30, passTimerSeconds: 5, pointsOriginal: 10, pointsPassed: 5,
+           openingOrder: 'snake', tiebreakerPenaltyPerTeam: 3, passingEnabled: true },
+  // First-run operator toggles baked into the quiz file (the operator can still
+  // change them in-game under Settings). See defaultSettings() in the runner.
+  defaults: { autoReveal: true, audioOn: true, tbJumbled: true, showHintStrip: true },
+  categories: [
+    { name: 'General Knowledge', shortName: 'GK', shortcutKey: 'G', colour: 'blue' },
+    { name: 'Science & Nature', shortName: 'SN', shortcutKey: 'S', colour: 'green' },
+    { name: 'History & Culture', shortName: 'HC', shortcutKey: 'H', colour: 'amber' }
+  ],
+  questions: { drawOrder: 'auto' },
+  secondaryLanguage: { enabled: false, font: '', colour: '#006e3c' },
+  // null = the runner generates default rules; the Rulebook step fills this in
+  // (an array of { key, title, blurb, body[] }) once the user edits it.
+  rulebook: null
+};
+// Uploaded assets as data URIs.
+const logos = { primary: null, primaryAlt: '', secondary: null, secondaryAlt: '',
+  titleSponsor: null, titleSponsorAlt: '', collaborators: [], supporters: [], sponsors: [] };
+const images = {};         // filename → data URI
+let parsedQuestions = [];   // from the uploaded CSV
+let csvWarnings = [];
+
+const STEPS = ['Event', 'Logos', 'Categories', 'Rules', 'Rulebook', 'Questions', 'Review'];
+let stepIndex = 0;
+
+/* ---------- small DOM helper ---------- */
+function el(tag, attrs, kids) {
+  const n = document.createElement(tag);
+  for (const k of Object.keys(attrs || {})) {
+    const v = attrs[k];
+    if (k === 'class') n.className = v;
+    else if (k === 'html') n.innerHTML = v;
+    else if (k.startsWith('on')) n[k] = v;
+    else if (v != null && v !== false) n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of [].concat(kids || [])) {
+    if (c == null || c === false) continue;
+    n.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
+  }
+  return n;
+}
+// Reads a File as a base64 data URI.
+function fileToDataUri(file) {
+  return new Promise((resolve) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => resolve(null);
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- a labelled text/number/select field bound to an object ---------- */
+function textField(label, obj, key, opts) {
+  opts = opts || {};
+  const input = el('input', {
+    type: opts.type || 'text', value: obj[key] != null ? obj[key] : '',
+    placeholder: opts.placeholder || '',
+    min: opts.min, max: opts.max,
+    oninput: (e) => {
+      obj[key] = opts.type === 'number' ? (parseInt(e.target.value, 10) || 0) : e.target.value;
+    },
+    // opts.rerender refreshes the step on blur so any live worked-examples that
+    // depend on this value update — without interrupting typing (we don't
+    // re-render on every keystroke).
+    onchange: opts.rerender ? () => renderStep() : null
+  });
+  return el('label', { class: 'field' }, [el('span', {}, [label, opts.note ? el('span', { class: 'note' }, ' — ' + opts.note) : null]), input]);
+}
+function selectField(label, obj, key, options, opts) {
+  opts = opts || {};
+  const sel = el('select', { onchange: (e) => { obj[key] = e.target.value; if (opts.rerender) renderStep(); } },
+    options.map((o) => el('option', { value: o.value, selected: obj[key] === o.value }, o.label)));
+  return el('label', { class: 'field' }, [el('span', {}, label), sel]);
+}
+// A labelled checkbox bound to a boolean field. Re-renders the step so any
+// dependent fields / examples update immediately.
+function checkboxField(label, obj, key, note) {
+  const id = 'cb-' + key + '-' + Math.random().toString(36).slice(2, 7);
+  return el('div', { class: 'toggle-row' }, [
+    el('input', { type: 'checkbox', id: id, checked: !!obj[key],
+      onchange: (e) => { obj[key] = e.target.checked; renderStep(); } }),
+    el('label', { for: id }, [label, note ? el('span', { class: 'note' }, ' — ' + note) : null])
+  ]);
+}
+// Worked opening-team order for one round — mirrors openingSequence() in the
+// runner so the wizard can show the operator exactly what their choice produces.
+function previewOpeningSequence(round, n, picks, mode) {
+  const asc = []; for (let i = 1; i <= n; i++) asc.push(i);
+  const desc = asc.slice().reverse();
+  const out = [];
+  for (let p = 0; p < picks; p++) {
+    if (mode === 'circular') { out.push.apply(out, asc); }
+    else { const ascending = (round % 2 === 1) ? (p % 2 === 0) : (p % 2 === 1); out.push.apply(out, ascending ? asc : desc); }
+  }
+  return out;
+}
+// A comma-separated list bound to an array field.
+function listField(label, obj, key, note) {
+  const input = el('input', {
+    type: 'text', value: (obj[key] || []).join(', '), placeholder: 'e.g. Name One, Name Two',
+    oninput: (e) => { obj[key] = e.target.value.split(',').map((s) => s.trim()).filter(Boolean); }
+  });
+  return el('label', { class: 'field' }, [el('span', {}, [label, note ? el('span', { class: 'note' }, ' — ' + note) : null]), input]);
+}
+
+/* ============================================================
+   Step renderers
+   ============================================================ */
+function renderEventStep() {
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '1 · Event details'),
+    el('p', { class: 'hint' }, 'These appear on the cover page and in the header.'),
+    textField('Event title', config.event, 'title', { placeholder: 'Community Quiz Competition' }),
+    el('div', { class: 'toggle-row' }, [
+      el('input', { type: 'checkbox', id: 'sl', checked: config.secondaryLanguage.enabled,
+        onchange: (e) => { config.secondaryLanguage.enabled = e.target.checked; renderStep(); } }),
+      el('label', { for: 'sl' }, 'Use a second language for the title and questions')
+    ]),
+    config.secondaryLanguage.enabled ? el('div', {}, [
+      textField('Secondary title', config.event, 'titleSecondary', { note: 'shown under the main title' }),
+      el('div', { class: 'row2' }, [
+        textField('Secondary font (optional)', config.secondaryLanguage, 'font', { note: 'a font installed on the quiz machine, e.g. Noto Sans Devanagari' }),
+        textField('Secondary text colour', config.secondaryLanguage, 'colour', { note: 'hex code, e.g. #006e3c' })
+      ])
+    ]) : null,
+    el('div', { class: 'row2' }, [
+      textField('Festival / programme name (optional)', config.event, 'festivalTitle'),
+      textField('Organiser', config.event, 'organiser')
+    ]),
+    listField('Collaborators (optional)', config.event, 'collaborators', 'comma separated'),
+    listField('Programme supporters (optional)', config.event, 'programSupporters', 'comma separated'),
+    el('div', { class: 'row3' }, [
+      textField('Date (long form)', config.event, 'dateLong', { placeholder: 'Saturday, 1 August 2026' }),
+      textField('Time note', config.event, 'timeNote', { placeholder: '10:00 AM' }),
+      textField('Venue', config.event, 'venue')
+    ]),
+    textField('Venue address', config.event, 'venueAddress'),
+    selectField('Cover layout', config.event, 'coverLayout', [
+      { value: 'minimal', label: 'Minimal — title and details only' },
+      { value: 'standard', label: 'Standard — organiser, collaborators, supporters' },
+      { value: 'sponsor-rich', label: 'Sponsor-rich — title sponsor at top, others at the foot' }
+    ])
+  ]);
+}
+
+function logoUpload(label, target, key, note) {
+  const current = target[key];
+  return el('label', { class: 'field' }, [
+    el('span', {}, [label, note ? el('span', { class: 'note' }, ' — ' + note) : null]),
+    current ? el('div', {}, [el('img', { src: current, class: 'thumb', style: 'height:44px;' })]) : null,
+    el('input', { type: 'file', accept: 'image/*', onchange: async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      target[key] = await fileToDataUri(f); renderStep();
+    } })
+  ]);
+}
+function renderLogosStep() {
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '2 · Logos (all optional)'),
+    el('p', { class: 'hint' }, 'Upload PNG or JPG logos. They are embedded into the quiz file, so it stays fully self-contained. Skip any you do not have.'),
+    el('div', { class: 'row2' }, [
+      logoUpload('Organiser logo (header, left)', logos, 'primary'),
+      logoUpload('Secondary logo (header, right)', logos, 'secondary')
+    ]),
+    logoUpload('Title sponsor logo', logos, 'titleSponsor', 'shown prominently on the sponsor-rich cover'),
+    el('p', { class: 'hint', style: 'margin-top:16px;' }, 'Collaborator and supporter logos:'),
+    multiLogoEditor('Collaborator logos', logos.collaborators),
+    multiLogoEditor('Supporter / sponsor logos', logos.supporters)
+  ]);
+}
+function multiLogoEditor(label, arr) {
+  return el('div', { class: 'field' }, [
+    el('span', { style: 'font-weight:600; display:block; margin-bottom:6px;' }, label),
+    el('div', {}, arr.map((item, i) => el('div', { class: 'repeat-item' }, [
+      el('div', { class: 'top' }, [
+        item.src ? el('img', { src: item.src, class: 'thumb' }) : el('span', { class: 'note' }, 'no image yet'),
+        el('button', { class: 'btn small bad', onclick: () => { arr.splice(i, 1); renderStep(); } }, 'Remove')
+      ]),
+      el('input', { type: 'file', accept: 'image/*', onchange: async (e) => {
+        const f = e.target.files[0]; if (!f) return; item.src = await fileToDataUri(f); renderStep();
+      } }),
+      el('input', { type: 'text', placeholder: 'Label (alt text)', value: item.alt || '',
+        style: 'margin-top:6px;', oninput: (e) => { item.alt = e.target.value; } })
+    ]))),
+    el('button', { class: 'btn small', onclick: () => { arr.push({ src: null, alt: '' }); renderStep(); } }, '+ Add logo')
+  ]);
+}
+
+function renderCategoriesStep() {
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '3 · Categories'),
+    el('p', { class: 'hint' }, 'Each category is one round of the quiz. Example: three categories below means three rounds. The shortcut key opens that round during the quiz (press it on the main board) — keep keys unique. Colours set the tile appearance.'),
+    el('div', {}, config.categories.map((c, i) => el('div', { class: 'repeat-item' }, [
+      el('div', { class: 'top' }, [
+        el('strong', {}, 'Round ' + (i + 1)),
+        el('button', { class: 'btn small bad', disabled: config.categories.length <= 1,
+          onclick: () => { config.categories.splice(i, 1); renderStep(); } }, 'Remove')
+      ]),
+      el('div', { class: 'row2' }, [
+        textField('Name', c, 'name'),
+        textField('Short name', c, 'shortName', { note: '2–3 letters' })
+      ]),
+      el('div', { class: 'row2' }, [
+        textField('Shortcut key', c, 'shortcutKey', { note: 'one letter' }),
+        selectField('Colour', c, 'colour', COLOURS.map((x) => ({ value: x, label: x })))
+      ])
+    ]))),
+    el('button', { class: 'btn small', onclick: () => {
+      config.categories.push({ name: '', shortName: '', shortcutKey: '', colour: COLOURS[config.categories.length % COLOURS.length] });
+      renderStep();
+    } }, '+ Add category')
+  ]);
+}
+
+function renderRulesStep() {
+  const r = config.rules;
+  const teams = r.teamsDefault || 4;
+  const picks = r.picksPerCategoryPerTeam || 2;
+  const boardSize = teams * picks;
+  const passes = r.passingEnabled !== false;
+  const per = r.tiebreakerPenaltyPerTeam != null ? r.tiebreakerPenaltyPerTeam : 3;
+
+  // ── live worked examples, so the operator sees the consequence of each choice ──
+  const fmtSeq = (arr) => arr.join(' → ');
+  const orderExample = r.openingOrder === 'circular'
+    ? el('div', { class: 'msg info' }, [
+        el('strong', {}, 'Example — circular order, ' + teams + ' teams: '),
+        'every round opens ', el('code', {}, fmtSeq(previewOpeningSequence(1, teams, picks, 'circular'))),
+        '. The same team always opens first.'
+      ])
+    : el('div', { class: 'msg info' }, [
+        el('strong', {}, 'Example — snake order, ' + teams + ' teams:'),
+        el('div', {}, ['Round 1: ', el('code', {}, fmtSeq(previewOpeningSequence(1, teams, picks, 'snake')))]),
+        el('div', {}, ['Round 2: ', el('code', {}, fmtSeq(previewOpeningSequence(2, teams, picks, 'snake')))]),
+        el('div', { class: 'note' }, 'The order flips each round, so no team is always first.')
+      ]);
+
+  const boardExample = el('div', { class: 'msg info' },
+    [el('strong', {}, 'Board size: '), teams + ' teams × ' + picks + ' question' + (picks === 1 ? '' : 's') +
+      ' = ', el('code', {}, boardSize + ' tiles'), ' per round. Provide at least ' + boardSize +
+      ' main questions in each category (extras become spares).']);
+
+  const tbExample = el('div', { class: 'msg info' }, per > 0
+    ? [el('strong', {}, 'Tiebreaker: '), 'if (say) 2 teams tie, each faces ' + per + ' penalty question' +
+        (per === 1 ? '' : 's') + ' — ', el('code', {}, (per * 2) + ' questions'), ' — then sudden death if still level.']
+    : [el('strong', {}, 'Tiebreaker: '), 'tied teams go straight to sudden death (no penalty round).']);
+
+  const passExample = el('div', { class: 'msg ' + (passes ? 'info' : 'warn') }, passes
+    ? [el('strong', {}, 'Passing on: '), 'if the opening team misses, the question passes to other teams for ',
+        el('code', {}, '+' + (r.pointsPassed || 5)), '. Turn this off for a "your question only" format.']
+    : [el('strong', {}, 'Passing off: '), 'a missed question is closed immediately and scores nobody — it is never offered to another team. (The tiebreaker still uses passing in sudden death.)']);
+
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '4 · Rules'),
+    el('p', { class: 'hint' }, 'Sensible defaults are filled in. The examples below update as you change the numbers — they show exactly what each setting does during the quiz.'),
+
+    el('p', { class: 'hint', style: 'font-weight:600; color:var(--text); margin-bottom:4px;' }, 'Teams and board'),
+    el('div', { class: 'row3' }, [
+      textField('Default number of teams', config.rules, 'teamsDefault', { type: 'number', min: 2, max: 24, rerender: true }),
+      textField('Minimum teams', config.rules, 'teamsMin', { type: 'number', min: 2, max: 24 }),
+      textField('Maximum teams', config.rules, 'teamsMax', { type: 'number', min: 2, max: 24 })
+    ]),
+    textField('Questions per team, per round', config.rules, 'picksPerCategoryPerTeam', { type: 'number', min: 1, max: 6, rerender: true }),
+    boardExample,
+
+    el('p', { class: 'hint', style: 'font-weight:600; color:var(--text); margin:18px 0 4px;' }, 'Timing and points'),
+    el('div', { class: 'row2' }, [
+      textField('Timer (seconds)', config.rules, 'timerSeconds', { type: 'number', min: 5, max: 300 }),
+      passes ? textField('Pass timer (seconds)', config.rules, 'passTimerSeconds', { type: 'number', min: 0, max: 120 }) : null
+    ]),
+    el('div', { class: 'row2' }, [
+      textField('Points — answered first try', config.rules, 'pointsOriginal', { type: 'number', min: 0, max: 100, rerender: true }),
+      passes ? textField('Points — answered after a pass', config.rules, 'pointsPassed', { type: 'number', min: 0, max: 100, rerender: true }) : null
+    ]),
+    checkboxField('Allow passing a missed question to other teams', config.rules, 'passingEnabled'),
+    passExample,
+
+    el('p', { class: 'hint', style: 'font-weight:600; color:var(--text); margin:18px 0 4px;' }, 'Opening order'),
+    selectField('Opening-team order', config.rules, 'openingOrder', [
+      { value: 'snake', label: 'Snake — 1, 2, …, n, n, …, 1 (reverses each round)' },
+      { value: 'circular', label: 'Circular — 1, 2, …, n, 1, 2, …, n (same order each time)' }
+    ], { rerender: true }),
+    orderExample,
+
+    el('p', { class: 'hint', style: 'font-weight:600; color:var(--text); margin:18px 0 4px;' }, 'Tiebreaker'),
+    textField('Tiebreaker: penalty attempts per team', config.rules, 'tiebreakerPenaltyPerTeam',
+      { type: 'number', min: 0, max: 10, rerender: true, note: 'each tied team gets this many penalty questions before sudden death (0 = go straight to sudden death)' }),
+    tbExample,
+
+    el('p', { class: 'hint', style: 'font-weight:600; color:var(--text); margin:18px 0 4px;' }, 'Operator defaults'),
+    el('p', { class: 'hint', style: 'margin-bottom:6px;' }, 'How the quiz behaves when it first opens. The operator can still change any of these in-game (press O for Settings).'),
+    checkboxField('Reveal the answer automatically after scoring', config.defaults, 'autoReveal'),
+    checkboxField('Play the call-bell sound', config.defaults, 'audioOn'),
+    checkboxField('Use one combined (jumbled) tiebreaker pool', config.defaults, 'tbJumbled', 'off = pick a tiebreaker per category'),
+    checkboxField('Show the keyboard-shortcut hint strip', config.defaults, 'showHintStrip')
+  ]);
+}
+
+// Builds the default rulebook from the current settings (mirrors the runner's
+// own defaults, including a tiebreaker section), so the editor starts pre-filled.
+function defaultRulebook() {
+  const r = config.rules, nRounds = config.categories.length;
+  const picks = r.picksPerCategoryPerTeam || 2, timer = r.timerSeconds || 30, passTimer = r.passTimerSeconds || 5;
+  const ptsO = r.pointsOriginal || 10, ptsP = r.pointsPassed || 5;
+  const per = r.tiebreakerPenaltyPerTeam != null ? r.tiebreakerPenaltyPerTeam : 3;
+  const passes = r.passingEnabled !== false;
+  const catList = config.categories.map((c) => c.name).filter(Boolean).join(', ');
+  const orderText = r.openingOrder === 'circular'
+    ? 'Teams open in a repeating order (1, 2, …, n, 1, 2, …, n).'
+    : 'Teams open in snake order (1, 2, …, n, n, …, 1), reversing each round so the order stays fair.';
+  const gameplay = [
+    nRounds + ' round' + (nRounds === 1 ? '' : 's') + ': ' + catList + '.',
+    'Each team answers ' + picks + ' question' + (picks === 1 ? '' : 's') + ' per round'
+      + (passes ? ', plus any passed questions.' : '.'),
+    orderText
+  ];
+  if (config.secondaryLanguage.enabled) gameplay.push('Some questions are shown in a second language; answers may be given in either.');
+  gameplay.push('A tiebreaker may follow if teams are tied for first.');
+  const tbBody = per > 0
+    ? ['If teams tie for first, each tied team faces ' + per + ' penalty question' + (per === 1 ? '' : 's') + '.',
+       'If still tied after that, sudden death decides it: the tied teams answer in turn.',
+       'In sudden death, if one team misses and the other answers it (including on a pass), that other team wins.',
+       'If both teams score, or both miss, in the same turn, sudden death continues.']
+    : ['If teams tie for first, sudden death decides it: the tied teams answer in turn.',
+       'If one team misses and the other answers it (including on a pass), that other team wins.',
+       'If both teams score, or both miss, in the same turn, sudden death continues.'];
+  return [
+    { key: 'team', title: 'Teams', blurb: 'Confer quietly · one final answer',
+      body: ['Each team discusses quietly and gives one final answer.', 'Decide who will speak for the team before you begin.'] },
+    { key: 'gameplay', title: 'Gameplay', blurb: nRounds + ' round' + (nRounds === 1 ? '' : 's') + ' · ' + picks + ' per team', body: gameplay },
+    { key: 'timing', title: 'Timing', blurb: timer + ' seconds · bell at zero' + (passes ? ' · ~' + passTimer + ' s on a pass' : ''),
+      body: ['Opening team: ' + timer + ' seconds.', 'A bell rings when the timer reaches zero.'].concat(passes
+        ? ['Passed team: about ' + passTimer + ' seconds, at the quiz master’s discretion.', 'A passed team gets one attempt at the question.']
+        : ['If the opening team misses, the question is closed — there is no passing.']) },
+    { key: 'scoring', title: 'Scoring', blurb: '+' + ptsO + ' first try' + (passes ? ' · +' + ptsP + ' on a pass' : '') + ' · no penalty',
+      body: ['Answered correctly by the opening team: +' + ptsO + '.'].concat(passes ? ['Answered correctly after a pass: +' + ptsP + '.'] : [])
+        .concat(['Wrong answer: no penalty.', 'The leaderboard shows per-round totals and an overall total.']) },
+    { key: 'tiebreaker', title: 'Tiebreaker', blurb: per > 0 ? (per + ' penalty question' + (per === 1 ? '' : 's') + ' each, then sudden death') : 'sudden death', body: tbBody },
+    { key: 'conduct', title: 'Conduct', blurb: 'No phones or outside help',
+      body: ['No calculators, phones, or outside help — including from the audience.', 'Wait for the quiz master to finish reading the question.', 'Keep discussion within your team. Be respectful.', 'The quiz master’s decision is final.'] }
+  ];
+}
+
+function renderRulebookStep() {
+  // Pre-fill from the current settings the first time this step is opened.
+  if (!Array.isArray(config.rulebook) || !config.rulebook.length) config.rulebook = defaultRulebook();
+  const rb = config.rulebook;
+  const sectionCards = rb.map((s, si) => el('div', { class: 'repeat-item' }, [
+    el('div', { class: 'top' }, [
+      el('strong', {}, 'Section ' + (si + 1)),
+      el('button', { class: 'btn small bad', disabled: rb.length <= 1, onclick: () => { rb.splice(si, 1); renderStep(); } }, 'Remove section')
+    ]),
+    el('div', { class: 'row2' }, [
+      textField('Title', s, 'title'),
+      textField('Short sub-label', s, 'blurb', { note: 'shown under the title' })
+    ]),
+    el('div', { class: 'field' }, [
+      el('span', { style: 'font-weight:600; display:block; margin-bottom:4px;' }, 'Rules in this section'),
+      el('div', {}, (s.body || []).map((line, li) => el('div', { style: 'display:flex; gap:8px; margin-bottom:6px;' }, [
+        el('input', { type: 'text', value: line, style: 'flex:1;', oninput: (e) => { s.body[li] = e.target.value; } }),
+        el('button', { class: 'btn small bad', onclick: () => { s.body.splice(li, 1); renderStep(); } }, '×')
+      ]))),
+      el('button', { class: 'btn small', onclick: () => { s.body = s.body || []; s.body.push(''); renderStep(); } }, '+ Add rule')
+    ])
+  ]));
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '5 · Rulebook'),
+    el('p', { class: 'hint' }, 'These are the rules participants read on screen during the quiz. They are pre-filled from your settings — edit the wording, or add and remove rules to match how you run your event.'),
+    el('div', { class: 'msg warn' }, '⚠ Keep the rulebook and your settings consistent. If you change points, the timer, the team order, or the tiebreaker later, update the matching wording here too — or click “Reset to match settings”.'),
+    el('div', {}, sectionCards),
+    el('div', { style: 'display:flex; gap:8px; margin-top:10px;' }, [
+      el('button', { class: 'btn small', onclick: () => { config.rulebook.push({ key: 'custom' + Date.now(), title: 'New section', blurb: '', body: [''] }); renderStep(); } }, '+ Add section'),
+      el('button', { class: 'btn small', onclick: () => { if (confirm('Replace the rulebook with text generated from your current settings? Your edits will be lost.')) { config.rulebook = defaultRulebook(); renderStep(); } } }, 'Reset to match settings')
+    ])
+  ]);
+}
+
+function renderQuestionsStep() {
+  const boardSize = (config.rules.teamsDefault || 4) * (config.rules.picksPerCategoryPerTeam || 2);
+  const previewRows = parsedQuestions.slice(0, 8).map((q) => el('tr', {}, [
+    el('td', {}, q.id), el('td', {}, q.category), el('td', {}, q.type),
+    el('td', {}, (q.primaryQuestion || '').slice(0, 50)),
+    el('td', {}, q.imagePath ? (images[q.imagePath] ? '✓ image' : 'missing') : '')
+  ]));
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '6 · Questions'),
+    el('p', { class: 'hint', html: 'Upload a CSV (a spreadsheet saved as <code>.csv</code>) with one question per row. Easiest path: <strong>download the sample below</strong>, open it in Excel or Google Sheets, replace the rows with your own, and re-upload.' }),
+    el('p', { class: 'hint', html: 'Columns: <code>id, category, type, theme, primaryQuestion, primaryAnswer, secondaryQuestion, secondaryAnswer, imagePath, draw</code>. ' +
+      'The <code>type</code> is <code>main</code> (a normal board question), <code>tiebreaker</code> (used only if scores tie), or <code>backup</code> (spare). ' +
+      '<code>category</code> must match a category name from Step 3 exactly. For your current ' + boardSize + '-tile board you need at least ' + boardSize + ' <code>main</code> questions per category, plus 3+ <code>tiebreaker</code>s each.' }),
+    el('button', { class: 'btn small', onclick: downloadSampleCsv }, 'Download a sample CSV'),
+    el('label', { class: 'field', style: 'margin-top:14px;' }, [
+      el('span', {}, 'Question CSV'),
+      el('input', { type: 'file', accept: '.csv,text/csv', onchange: (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        const fr = new FileReader();
+        fr.onload = () => { const res = parseCsvQuestions(fr.result); parsedQuestions = res.questions; csvWarnings = res.warnings; renderStep(); };
+        fr.readAsText(f);
+      } })
+    ]),
+    el('label', { class: 'field' }, [
+      el('span', {}, [ 'Question images (optional)', el('span', { class: 'note' }, ' — select all files named in the imagePath column') ]),
+      el('input', { type: 'file', accept: 'image/*', multiple: true, onchange: async (e) => {
+        for (const f of e.target.files) images[f.name] = await fileToDataUri(f);
+        renderStep();
+      } })
+    ]),
+    parsedQuestions.length ? el('div', { class: 'msg good' }, parsedQuestions.length + ' question(s) loaded.') : null,
+    csvWarnings.length ? el('div', { class: 'msg warn' }, csvWarnings.slice(0, 6).join(' · ')) : null,
+    parsedQuestions.length ? el('table', { class: 'preview' }, [
+      el('thead', {}, el('tr', {}, ['ID', 'Category', 'Type', 'Question', 'Image'].map((h) => el('th', {}, h)))),
+      el('tbody', {}, previewRows)
+    ]) : null,
+    parsedQuestions.length > 8 ? el('p', { class: 'hint' }, '…and ' + (parsedQuestions.length - 8) + ' more.') : null
+  ]);
+}
+
+function renderReviewStep() {
+  // Sync collaborator/supporter logos into the config-shaped logos object.
+  const v = validateAll(config, parsedQuestions, images);
+  const msgs = [];
+  v.errors.forEach((m) => msgs.push(el('div', { class: 'msg error' }, m)));
+  v.warnings.forEach((m) => msgs.push(el('div', { class: 'msg warn' }, m)));
+  v.info.forEach((m) => msgs.push(el('div', { class: 'msg info' }, m)));
+  const ok = v.errors.length === 0 && parsedQuestions.length > 0;
+  return el('div', { class: 'card' }, [
+    el('h2', {}, '7 · Review & download'),
+    el('p', { class: 'hint' }, 'Fix any red errors before downloading. Warnings (amber) and notes (blue) are advisory.'),
+    parsedQuestions.length === 0 ? el('div', { class: 'msg error' }, 'No questions loaded — go back to Step 6 (Questions).') : null,
+    msgs.length ? el('div', {}, msgs) : el('div', { class: 'msg good' }, 'All checks passed.'),
+    el('div', { id: 'export-status' }),
+    el('button', { class: 'btn primary', disabled: !ok, style: 'margin-top:14px;', onclick: doExport },
+      'Download QuizRunner.html')
+  ]);
+}
+
+/* ============================================================
+   Sample CSV download
+   ============================================================ */
+function downloadSampleCsv() {
+  const header = 'id,category,type,theme,primaryQuestion,primaryAnswer,secondaryQuestion,secondaryAnswer,imagePath,draw';
+  const cat = (config.categories[0] && config.categories[0].name) || 'General Knowledge';
+  const rows = [header,
+    'Q1,' + cat + ',main,Geography,"What is the capital of Australia?","Canberra",,,,',
+    'Q2,' + cat + ',main,Science,"What is the chemical symbol for gold?","Au",,,,',
+    'Q3,' + cat + ',tiebreaker,History,"In what year did WWII end?","1945",,,,',
+    'Q4,' + cat + ',backup,Science,"What planet is the Red Planet?","Mars",,,,'
+  ];
+  downloadBlob(rows.join('\r\n'), 'sample-questions.csv', 'text/csv');
+}
+
+/* ============================================================
+   Export: fetch the runner template, inline DATA, download
+   ============================================================ */
+// The runner template, base64-encoded, is injected here by scripts/build-setup.js
+// so the wizard is fully self-contained and works when opened straight from disk
+// (file://), where fetch() is blocked. In the editable src/setup.html the
+// placeholder is left untouched and we fall back to fetch() for development.
+const RUNNER_TEMPLATE_B64 = "{{RUNNER_TEMPLATE_B64}}";
+function getEmbeddedTemplate() {
+  // The placeholder is still present (dev mode) → no embedded template.
+  if (!RUNNER_TEMPLATE_B64 || RUNNER_TEMPLATE_B64.indexOf('{{') === 0) return null;
+  // Decode base64 → bytes → UTF-8 text (atob alone mangles non-ASCII like “—”).
+  const bin = atob(RUNNER_TEMPLATE_B64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+async function loadRunnerTemplate() {
+  // Preferred: the template embedded at build time (works everywhere).
+  const embedded = getEmbeddedTemplate();
+  if (embedded) return embedded;
+  // Development fallback: fetch the template from disk (needs a web server).
+  for (const url of ['src/runner.html', 'runner.html']) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.text();
+    } catch (e) { /* try next */ }
+  }
+  throw new Error('Could not load the runner template. Rebuild the self-contained wizard with ' +
+    '"npm run build:setup", or open this wizard from a web server (e.g. GitHub Pages).');
+}
+function doExport() {
+  const status = document.getElementById('export-status');
+  status.innerHTML = '';
+  status.appendChild(el('div', { class: 'msg info' }, 'Building…'));
+  // Normalise collaborator/supporter logo arrays for the runner.
+  const outLogos = {
+    primary: logos.primary, primaryAlt: logos.primaryAlt || config.event.organiser || '',
+    secondary: logos.secondary, secondaryAlt: logos.secondaryAlt || '',
+    titleSponsor: logos.titleSponsor, titleSponsorAlt: logos.titleSponsorAlt || '',
+    collaborators: logos.collaborators.filter((l) => l.src).map((l) => ({ src: l.src, alt: l.alt || '', scale: 1 })),
+    supporters: logos.supporters.filter((l) => l.src).map((l) => ({ src: l.src, alt: l.alt || '' })),
+    sponsors: []
+  };
+  const data = buildData(config, parsedQuestions, images, outLogos);
+  loadRunnerTemplate().then((tpl) => {
+    const json = JSON.stringify(data).replace(/<\//g, '<\\/');
+    const html = tpl.replace('{{DATA}}', json);
+    downloadBlob(html, 'QuizRunner.html', 'text/html');
+    status.innerHTML = '';
+    status.appendChild(el('div', { class: 'msg good' }, 'Done — your QuizRunner.html has been downloaded. Double-click it to run the quiz.'));
+  }).catch((err) => {
+    status.innerHTML = '';
+    status.appendChild(el('div', { class: 'msg error' }, err.message));
+  });
+}
+function downloadBlob(text, filename, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: filename });
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+/* ============================================================
+   Wizard chrome
+   ============================================================ */
+function renderSteps() {
+  const wrap = document.getElementById('steps');
+  wrap.innerHTML = '';
+  STEPS.forEach((label, i) => {
+    const cls = 'step-pill' + (i === stepIndex ? ' active' : (i < stepIndex ? ' done' : ''));
+    wrap.appendChild(el('div', { class: cls, onclick: () => { stepIndex = i; renderStep(); } }, (i + 1) + '. ' + label));
+  });
+}
+function renderStep() {
+  renderSteps();
+  const body = document.getElementById('step-body');
+  body.innerHTML = '';
+  const renderers = [renderEventStep, renderLogosStep, renderCategoriesStep, renderRulesStep, renderRulebookStep, renderQuestionsStep, renderReviewStep];
+  body.appendChild(renderers[stepIndex]());
+  body.appendChild(el('div', { class: 'nav' }, [
+    el('button', { class: 'btn', disabled: stepIndex === 0, onclick: () => { stepIndex--; renderStep(); window.scrollTo(0, 0); } }, '← Back'),
+    stepIndex < STEPS.length - 1
+      ? el('button', { class: 'btn primary', onclick: () => { stepIndex++; renderStep(); window.scrollTo(0, 0); } }, 'Next →')
+      : null
+  ]));
+}
+renderStep();
+</script>
+</body>
+</html>

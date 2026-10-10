@@ -1,0 +1,32 @@
+{
+  "event": {
+    "title": "Test Event",
+    "coverLayout": "standard"
+  },
+  "assets": {
+    "organiserLogo": "",
+    "collaboratorLogos": [],
+    "supporterLogos": [],
+    "sponsorLogos": []
+  },
+  "rules": {
+    "teamsDefault": 4,
+    "teamsMin": 2,
+    "teamsMax": 12,
+    "picksPerCategoryPerTeam": 2,
+    "timerSeconds": 30,
+    "passTimerSeconds": 5,
+    "pointsOriginal": 10,
+    "pointsPassed": 5
+  },
+  "categories": [
+    { "name": "Alpha", "shortName": "AL", "shortcutKey": "A", "colour": "blue" },
+    { "name": "Beta",  "shortName": "BE", "shortcutKey": "B", "colour": "green" }
+  ],
+  "questions": {
+    "source": "tests/fixtures/sample/questions.csv",
+    "embedImages": false,
+    "drawOrder": "auto"
+  },
+  "secondaryLanguage": { "enabled": false }
+}

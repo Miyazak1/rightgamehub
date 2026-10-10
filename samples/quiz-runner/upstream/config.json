@@ -1,0 +1,70 @@
+{
+  "_comment": "Edit this file to configure your quiz event. Then run: npm run build",
+
+  "event": {
+    "title": "Community Quiz Competition",
+    "titleSecondary": "",
+    "festivalTitle": "Community Festival 2026",
+    "organiser": "My Organisation",
+    "collaborators": ["Partner Organisation"],
+    "programSupporters": ["Local Council"],
+    "date": "2026-08-01",
+    "dateLong": "Saturday, 1 August 2026",
+    "timeNote": "10:00 AM",
+    "venue": "Community Hall",
+    "venueAddress": "1 Main Street, City STATE 1234",
+    "coverLayout": "standard"
+  },
+
+  "assets": {
+    "organiserLogo": "",
+    "organiserLogoAlt": "My Organisation",
+    "secondaryLogo": "",
+    "secondaryLogoAlt": "",
+    "titleSponsorLogo": "",
+    "titleSponsorLogoAlt": "Title Sponsor",
+    "collaboratorLogos": [],
+    "supporterLogos": [],
+    "sponsorLogos": []
+  },
+
+  "rules": {
+    "teamsDefault": 4,
+    "teamsMin": 2,
+    "teamsMax": 12,
+    "picksPerCategoryPerTeam": 2,
+    "timerSeconds": 30,
+    "passTimerSeconds": 5,
+    "pointsOriginal": 10,
+    "pointsPassed": 5,
+    "openingOrder": "snake",
+    "tiebreakerPenaltyPerTeam": 3,
+    "passingEnabled": true
+  },
+
+  "defaults": {
+    "autoReveal": true,
+    "audioOn": true,
+    "tbJumbled": true,
+    "showHintStrip": true
+  },
+
+  "categories": [
+    { "name": "General Knowledge", "shortName": "GK", "shortcutKey": "G", "colour": "blue"  },
+    { "name": "Science & Nature",  "shortName": "SN", "shortcutKey": "S", "colour": "green" },
+    { "name": "History & Culture", "shortName": "HC", "shortcutKey": "H", "colour": "amber" }
+  ],
+
+  "questions": {
+    "source": "questions/sample.csv",
+    "imageDir": "questions/images/",
+    "embedImages": true,
+    "drawOrder": "auto"
+  },
+
+  "secondaryLanguage": {
+    "enabled": false,
+    "font": "",
+    "colour": "#006e3c"
+  }
+}

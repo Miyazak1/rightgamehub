@@ -1,0 +1,16 @@
+{
+  "quizzes": [
+    {
+      "title": "Inter School Quiz Competition 2026",
+      "date": "31 May 2026",
+      "file": "results/inter-school-quiz-2026.json",
+      "playUrl": "examples/inter-school-quiz-2026.html"
+    },
+    {
+      "title": "Demo Community Quiz 2026",
+      "date": "Saturday, 1 August 2026",
+      "venue": "Community Hall",
+      "file": "results/demo-snapshot.json"
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Runner</title>
+<style>
+  :root {
+    --bg: #fbf9f4; --panel: #ffffff; --border: #d8d2c4;
+    --blue: #00468c; --blue-bg: #ebf2fa; --blue-soft: #4775b3; --teal: #345e5c;
+    --text: #2a2e34; --text-soft: #5b6471;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 { color: var(--blue); margin: 0 0 8px; font-size: clamp(32px, 5vw, 48px); }
+  header p { color: var(--text-soft); font-size: 17px; margin: 0 auto; max-width: 640px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } }
+  a.card {
+    display: flex; flex-direction: column; text-decoration: none; color: var(--text);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px 22px; transition: border-color 0.12s, transform 0.08s, box-shadow 0.12s;
+  }
+  a.card:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  a.card .icon { font-size: 34px; margin-bottom: 10px; }
+  a.card h2 { color: var(--blue); margin: 0 0 6px; font-size: 20px; }
+  a.card p { color: var(--text-soft); font-size: 14px; margin: 0; flex: 1; }
+  a.card .go { color: var(--blue); font-weight: 600; font-size: 14px; margin-top: 14px; }
+
+  a.card .useif {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+    color: var(--text); font-size: 13px;
+  }
+  a.card .useif strong { color: var(--blue); }
+
+  .guide {
+    background: var(--blue-bg); border: 1px solid var(--blue); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 28px; color: var(--text); font-size: 14.5px;
+  }
+  .guide h2 { color: var(--blue); margin: 0 0 8px; font-size: 17px; }
+  .guide ul { margin: 0; padding-left: 20px; }
+  .guide li { margin: 4px 0; }
+  .guide a { color: var(--blue); font-weight: 600; }
+
+  footer { text-align: center; color: var(--text-soft); font-size: 13px; margin-top: 40px; }
+  footer a { color: var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Quiz Runner</h1>
+    <p>A single-file, offline-friendly tool for running community quiz competitions —
+       fair question order, a live timer and bell, automatic scoring, tiebreakers, and
+       shareable results.</p>
+  </header>
+
+  <div class="guide">
+    <h2>Which one do I need?</h2>
+    <ul>
+      <li><strong>Never used this before?</strong> Start with <a href="examples/sample-quiz.html">the sample quiz</a> to see how a round plays out.</li>
+      <li><strong>Running a real event?</strong> Use <a href="setup.html">Build your own quiz</a> to make your quiz file, then open that file on the night.</li>
+      <li><strong>Already ran a quiz and want to share the outcome?</strong> Go to <a href="results.html">View past results</a>.</li>
+    </ul>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="setup.html">
+      <div class="icon">🛠️</div>
+      <h2>Build your own quiz</h2>
+      <p>A step-by-step wizard: add your event details, categories, rules, and questions, then download a ready-to-run quiz file. No coding.</p>
+      <div class="useif"><strong>Use this if</strong> you are preparing your own event.</div>
+      <div class="go">Open the wizard →</div>
+    </a>
+
+    <a class="card" href="examples/sample-quiz.html">
+      <div class="icon">▶️</div>
+      <h2>Try the sample quiz</h2>
+      <p>Open a ready-made example quiz to see exactly how the runner works before building your own.</p>
+      <div class="useif"><strong>Use this if</strong> you want to learn how it plays first.</div>
+      <div class="go">Launch the sample →</div>
+    </a>
+
+    <a class="card" href="results.html">
+      <div class="icon">🏆</div>
+      <h2>View past results</h2>
+      <p>Browse the standings and full game log from quizzes that have already been run, or open a results file you saved.</p>
+      <div class="useif"><strong>Use this if</strong> the quiz is over and you want to share scores.</div>
+      <div class="go">See results →</div>
+    </a>
+  </div>
+
+  <section id="past-quizzes" style="margin-top: 36px;">
+    <h2 style="color: var(--blue); font-size: 20px; margin: 0 0 12px;">Past quizzes</h2>
+    <p style="color: var(--text-soft); font-size: 14px; margin: 0 0 6px;">
+      Events that have been run with Quiz Runner.
+    </p>
+    <p style="color: var(--text-soft); font-size: 13px; margin: 0 0 16px; line-height: 1.6;">
+      To add yours: open a pull request on
+      <a href="https://github.com/yobin-tim/quiz-runner" target="_blank" style="color:var(--blue);font-weight:600;">GitHub</a>.
+      Drop your files in the repo and add an entry to <code>results/manifest.json</code>:<br>
+      &nbsp;·&nbsp; <strong>Results link</strong> — put your snapshot JSON in <code>results/</code> and set <code>"file"</code>.<br>
+      &nbsp;·&nbsp; <strong>Play link</strong> — put your quiz HTML in <code>examples/</code> and set <code>"playUrl"</code>.<br>
+      Both fields are optional; include whichever you have.
+    </p>
+    <div id="past-quizzes-list" style="display: flex; flex-direction: column; gap: 8px; max-width: 600px;"></div>
+  </section>
+
+  <footer>
+    Open source (MIT). <a href="https://github.com/yobin-tim/quiz-runner">Source &amp; documentation on GitHub</a>.
+  </footer>
+</div>
+<script>
+// Populate the past-quizzes list from results/manifest.json.
+// Each entry can have: title, date, venue, file (results JSON), playUrl (playable HTML).
+(function () {
+  const list = document.getElementById('past-quizzes-list');
+  if (!list) return;
+  fetch('results/manifest.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => {
+      const quizzes = (data && (data.quizzes || data)) || [];
+      if (!Array.isArray(quizzes) || !quizzes.length) {
+        list.innerHTML = '<p style="color:var(--text-soft);font-size:14px;margin:0;">No quizzes listed yet.</p>';
+        return;
+      }
+      quizzes.forEach((q) => {
+        // Use a div rather than an <a> so we can put multiple links inside.
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'font-weight:600;color:var(--blue);font-size:15px;';
+        title.textContent = q.title || q.file;
+        card.appendChild(title);
+
+        if (q.date || q.venue) {
+          const meta = document.createElement('div');
+          meta.style.cssText = 'font-size:13px;color:var(--text-soft);margin-top:3px;';
+          meta.textContent = [q.date, q.venue].filter(Boolean).join(' · ');
+          card.appendChild(meta);
+        }
+
+        // Link row: "Play →" and/or "Results →" depending on what the entry has.
+        const links = document.createElement('div');
+        links.style.cssText = 'margin-top:10px;display:flex;gap:14px;';
+        const linkStyle = 'font-size:13px;font-weight:600;color:var(--blue);text-decoration:none;';
+        if (q.playUrl) {
+          const play = document.createElement('a');
+          play.href = q.playUrl;
+          play.style.cssText = linkStyle;
+          play.textContent = 'Play →';
+          links.appendChild(play);
+        }
+        if (q.file) {
+          const results = document.createElement('a');
+          results.href = 'results.html?src=' + q.file;
+          results.style.cssText = linkStyle;
+          results.textContent = 'Results →';
+          links.appendChild(results);
+        }
+        if (links.children.length) card.appendChild(links);
+
+        list.appendChild(card);
+      });
+    })
+    .catch(() => { /* no manifest — list stays empty */ });
+}());
+</script>
+</body>
+</html>
