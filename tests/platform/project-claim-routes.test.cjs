@@ -15,7 +15,10 @@ const create=async()=>{
   const projectClaimService={
     publicStatus:async id=>({workId:id,ingestionMethod:'zip_upload',attributionKind:'community_catalog',eligible:true,status:'unclaimed',relationship:null,claimantDisplayName:null,claimantHandle:null,verifiedAt:null}),
     submit:async(actor,id,body)=>(calls.push(['submit',actor,id,body]),{id:claimId,status:'pending'}),
-    listMine:async()=>[],cancel:async()=>({id:claimId,status:'cancelled'}),listAdmin:async()=>[],listAdminProvenance:async()=>[{workId,title:'Game'}],
+    listMine:async()=>[],cancel:async()=>({id:claimId,status:'cancelled'}),listAdmin:async()=>[],
+    listAdminEvents:async(actor,id)=>(calls.push(['claim-events',actor,id]),[{id:crypto.randomUUID(),action:'submitted'}]),
+    listAdminProvenance:async()=>[{workId,title:'Game'}],
+    listAdminProvenanceEvents:async(actor,id)=>(calls.push(['provenance-events',actor,id]),[{id:crypto.randomUUID(),action:'admin_updated'}]),
     updateProvenance:async(actor,id,body)=>(calls.push(['provenance',actor,id,body]),{workId:id,revision:'2'}),
     decide:async(actor,id,body)=>(calls.push(['decide',actor,id,body]),{id,status:body.action==='approve'?'verified':'rejected'}),
   };
@@ -35,6 +38,10 @@ test('project claim routes expose public status and authenticate mutations',asyn
   assert.equal(decided.statusCode,200);assert.equal(calls[2][1].userId,admin.userId);assert.equal(calls[2][3].action,'approve');
   const provenance=await app.inject({method:'PATCH',url:`/v1/admin/works/${workId}/provenance`,headers:{authorization:'Bearer admin'},payload:{attributionKind:'community_catalog',repositoryUrl:'https://github.com/a/b',licenseSpdx:'MIT',expectedRevision:'1',note:'平台代为收录'}});
   assert.equal(provenance.statusCode,200);assert.equal(calls[3][0],'provenance');assert.equal(calls[3][2],workId);
+  const claimEvents=await app.inject({method:'GET',url:`/v1/admin/project-claims/${claimId}/events`,headers:{authorization:'Bearer admin'}});
+  assert.equal(claimEvents.statusCode,200);assert.equal(claimEvents.json().data[0].action,'submitted');assert.equal(calls[4][1].userId,admin.userId);
+  const provenanceEvents=await app.inject({method:'GET',url:`/v1/admin/works/${workId}/provenance-events`,headers:{authorization:'Bearer admin'}});
+  assert.equal(provenanceEvents.statusCode,200);assert.equal(provenanceEvents.json().data[0].action,'admin_updated');assert.equal(calls[5][2],workId);
 });
 
 test('project claim route schemas reject unknown evidence fields',async t=>{

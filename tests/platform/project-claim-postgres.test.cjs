@@ -1,0 +1,41 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const databaseUrl=process.env.GAMEHUB_COMMUNITY_DATABASE_URL;
+
+test('PostgreSQL project claims transfer and restore ownership with immutable governance history',{skip:!databaseUrl,timeout:120000},async t=>{
+  const fixture=await require('../project-claim-fixture.cjs').createProjectClaimFixture(databaseUrl);t.after(()=>fixture.close());
+  const {app,pool,actors,workId}=fixture,headers={authorization:`Bearer ${actors.claimant.userId}`},adminHeaders={authorization:`Bearer ${actors.admin.userId}`};
+  const submitted=await app.inject({method:'POST',url:`/v1/works/${workId}/claims`,headers,payload:{evidenceType:'website',evidenceUrl:'https://example.com/original-maker/game',relationship:'owner',note:'我是原游戏作者，这个公开页面列出了我的署名。'}});
+  assert.equal(submitted.statusCode,201);const claimId=submitted.json().data.id;
+  const mine=await app.inject({method:'GET',url:'/v1/me/project-claims?status=all&limit=100',headers});
+  assert.equal(mine.statusCode,200);assert.equal(mine.json().data[0].status,'pending');
+  const pending=await app.inject({method:'GET',url:'/v1/admin/project-claims?status=pending&limit=100',headers:adminHeaders});
+  assert.equal(pending.statusCode,200);assert.equal(pending.json().data[0].claimantDisplayName,'原游戏作者');
+  const decide=async(action,note)=>{
+    const response=await app.inject({method:'POST',url:`/v1/admin/project-claims/${claimId}/decision`,headers:adminHeaders,payload:{action,note}});
+    assert.equal(response.statusCode,200,response.body);return response.json().data;
+  };
+  assert.equal((await decide('approve','公开作者页面和署名信息核验一致。')).status,'verified');
+  assert.equal((await app.inject({url:`/v1/works/${workId}/claim`})).json().data.status,'verified');
+  assert.equal((await pool.query('SELECT owner_user_id FROM works WHERE id=$1',[workId])).rows[0].owner_user_id,actors.claimant.userId);
+  await decide('dispute','收到新的权利归属异议，先进入争议状态。');
+  assert.equal((await decide('restore','补充证据已经核实，恢复原作者管理权。')).status,'verified');
+  await decide('suspend','临时暂停管理权，等待进一步人工复核。');
+  assert.equal((await pool.query('SELECT owner_user_id FROM works WHERE id=$1',[workId])).rows[0].owner_user_id,actors.admin.userId);
+  await decide('restore','复核完成，恢复已经确认的管理权。');
+  assert.equal((await decide('revoke','最终证据不足，撤销认领并恢复目录管理。')).status,'revoked');
+  assert.equal((await pool.query('SELECT owner_user_id FROM works WHERE id=$1',[workId])).rows[0].owner_user_id,actors.admin.userId);
+  const usage=(await pool.query('SELECT user_id,work_count FROM creator_usage WHERE user_id=ANY($1::uuid[]) ORDER BY user_id',[Object.values(actors).map(item=>item.userId)])).rows;
+  assert.equal(usage.find(row=>row.user_id===actors.admin.userId).work_count,1);assert.equal(usage.find(row=>row.user_id===actors.claimant.userId).work_count,0);
+  const events=await app.inject({method:'GET',url:`/v1/admin/project-claims/${claimId}/events`,headers:adminHeaders});
+  assert.equal(events.statusCode,200);assert.deepEqual(new Set(events.json().data.map(item=>item.action)),new Set(['submitted','verified','disputed','restored','suspended','revoked']));
+  const eventId=events.json().data[0].id;
+  await assert.rejects(pool.query("UPDATE project_claim_events SET details='{}'::jsonb WHERE id=$1",[eventId]),/append-only/);
+  await assert.rejects(pool.query('DELETE FROM project_claim_events WHERE id=$1',[eventId]),/append-only/);
+  const work=(await pool.query('SELECT revision FROM works WHERE id=$1',[workId])).rows[0];
+  const provenance=await app.inject({method:'PATCH',url:`/v1/admin/works/${workId}/provenance`,headers:adminHeaders,payload:{attributionKind:'publisher',repositoryUrl:null,licenseSpdx:null,expectedRevision:String(work.revision),note:'最终核验为平台拥有明确发布授权。'}});
+  assert.equal(provenance.statusCode,200,provenance.body);
+  const provenanceEvents=await app.inject({method:'GET',url:`/v1/admin/works/${workId}/provenance-events`,headers:adminHeaders});
+  assert.equal(provenanceEvents.statusCode,200);assert.equal(provenanceEvents.json().data[0].note,'最终核验为平台拥有明确发布授权。');
+  await assert.rejects(pool.query('DELETE FROM work_provenance_events WHERE id=$1',[provenanceEvents.json().data[0].id]),/append-only/);
+});

@@ -72,6 +72,22 @@ test('admin provenance updates validate authority, revision and paired open-sour
   assert.equal(received.actorUserId,admin.userId);assert.equal(received.attributionKind,'community_catalog');assert.equal(received.expectedRevision,'1');assert.match(received.eventId,/^[0-9a-f-]{36}$/);
 });
 
+test('claim and provenance audit histories are admin-only and validate resource ids',async()=>{
+  const {createProjectClaimService,ProjectClaimError}=await import(moduleUrl);
+  const calls=[];
+  const repository={
+    listAdminEvents:async id=>(calls.push(['claim',id]),[{id:crypto.randomUUID(),action:'submitted'}]),
+    listAdminProvenanceEvents:async id=>(calls.push(['provenance',id]),[{id:crypto.randomUUID(),action:'admin_updated'}]),
+  };
+  const service=createProjectClaimService({repository});
+  const admin={...actor,profile:{...actor.profile,role:'admin'}};
+  assert.throws(()=>service.listAdminEvents(actor,claimId),error=>error instanceof ProjectClaimError&&error.code==='ADMIN_REQUIRED');
+  assert.throws(()=>service.listAdminProvenanceEvents(admin,'not-a-uuid'),error=>error instanceof ProjectClaimError&&error.code==='WORK_NOT_FOUND');
+  assert.equal((await service.listAdminEvents(admin,claimId))[0].action,'submitted');
+  assert.equal((await service.listAdminProvenanceEvents(admin,workId))[0].action,'admin_updated');
+  assert.deepEqual(calls,[['claim',claimId],['provenance',workId]]);
+});
+
 test('admin provenance repository updates atomically and appends an immutable audit event',async()=>{
   const {PostgresProjectClaimRepository}=await import(moduleUrl);
   const now=new Date('2026-10-10T10:00:00Z');let auditParameters;

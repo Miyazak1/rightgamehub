@@ -9,9 +9,6 @@ ALTER TABLE works
 UPDATE works w SET ingestion_method='github_import'
 WHERE EXISTS (SELECT 1 FROM work_sources s WHERE s.work_id=w.id);
 
-UPDATE works w SET attribution_kind='community_catalog'
-WHERE EXISTS (SELECT 1 FROM users u WHERE u.id=w.owner_user_id AND u.role='admin');
-
 CREATE TABLE work_provenance_events (
   id uuid PRIMARY KEY,
   work_id uuid NOT NULL REFERENCES works(id) ON DELETE RESTRICT,

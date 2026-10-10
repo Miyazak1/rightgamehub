@@ -347,6 +347,10 @@ export const schemas = Object.freeze({
     repositoryUrl:nullable({type:'string',format:'uri'}),licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),hasImmutableGitHubSource:{type:'boolean'},
     claimStatus:nullable(stringEnum(['pending','verified','disputed','suspended'])),claimEligible:{type:'boolean'},updatedAt:dateTime,
   }),
+  WorkProvenanceEvent: object({
+    id,action:stringEnum(['admin_updated']),beforeState:{type:'object',additionalProperties:true},afterState:{type:'object',additionalProperties:true},
+    note:{type:'string',minLength:3,maxLength:1000},actorDisplayName:{type:'string',minLength:1,maxLength:120},createdAt:dateTime,
+  }),
   UpdateAdminWorkProvenanceRequest: object({
     attributionKind:stringEnum(['publisher','community_catalog']),repositoryUrl:nullable({type:'string',pattern:'^https://github\\.com/[^/\\s]+/[^/\\s]+/?$'}),
     licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),expectedRevision:uintString,note:{type:'string',minLength:3,maxLength:1000},
@@ -358,6 +362,12 @@ export const schemas = Object.freeze({
     evidenceType:stringEnum(['github','website','storefront','other']), evidenceUrl:nullable({type:'string',format:'uri'}), repositoryId:nullable(uintString), repositoryUrl:nullable({type:'string',format:'uri'}), applicantNote:{type:'string',maxLength:1000}, decisionNote:{type:'string',maxLength:2000},
     submittedAt:dateTime, decidedAt:nullableDateTime, verifiedAt:nullableDateTime, suspendedAt:nullableDateTime, revokedAt:nullableDateTime,
     updatedAt:dateTime, version:uintString,
+  }),
+  ProjectClaimEvent: object({
+    id,action:stringEnum(['submitted','cancelled','verified','rejected','disputed','suspended','restored','revoked']),
+    fromStatus:nullable(stringEnum(enums.ProjectClaimStatus.filter(value=>!['publisher','unclaimed'].includes(value)))),
+    toStatus:stringEnum(enums.ProjectClaimStatus.filter(value=>!['publisher','unclaimed'].includes(value))),
+    details:{type:'object',additionalProperties:true},actorDisplayName:{type:'string',minLength:1,maxLength:120},createdAt:dateTime,
   }),
   CreateProjectClaimRequest: object({
     evidenceType:stringEnum(['github','website','storefront','other']), connectionId:id, repositoryId:{type:'string',pattern:'^[1-9][0-9]*$'}, evidenceUrl:{type:'string',format:'uri',maxLength:2048}, relationship:stringEnum(['owner','maintainer']), note:{type:'string',maxLength:1000},
@@ -860,7 +870,9 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/me/project-claims', operationId: 'listMyProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
   { method: 'post', path: '/v1/project-claims/{claimId}/cancel', operationId: 'cancelProjectClaim', auth: 'bearer', response: 'ProjectClaim', pathId: 'claimId' },
   { method: 'get', path: '/v1/admin/project-claims', operationId: 'listAdminProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
+  { method: 'get', path: '/v1/admin/project-claims/{claimId}/events', operationId: 'listAdminProjectClaimEvents', auth: 'bearer', response: 'ProjectClaimEvent', responseArray: true, pathId: 'claimId' },
   { method: 'get', path: '/v1/admin/work-provenance', operationId: 'listAdminWorkProvenance', auth: 'bearer', response: 'AdminWorkProvenance', responseArray: true, queryLimit: true },
+  { method: 'get', path: '/v1/admin/works/{workId}/provenance-events', operationId: 'listAdminWorkProvenanceEvents', auth: 'bearer', response: 'WorkProvenanceEvent', responseArray: true, pathId: 'workId' },
   { method: 'patch', path: '/v1/admin/works/{workId}/provenance', operationId: 'updateAdminWorkProvenance', auth: 'bearer', request: 'UpdateAdminWorkProvenanceRequest', response: 'AdminWorkProvenance', pathId: 'workId' },
   { method: 'post', path: '/v1/admin/project-claims/{claimId}/decision', operationId: 'decideProjectClaim', auth: 'bearer', request: 'ProjectClaimDecisionRequest', response: 'ProjectClaim', pathId: 'claimId' },
   { method: 'get', path: '/v1/works/{workId}/launch', operationId: 'getWorkLaunch', auth: 'anonymous', response: 'LaunchDescriptor', pathWorkKey: true, queryReleaseId: true },

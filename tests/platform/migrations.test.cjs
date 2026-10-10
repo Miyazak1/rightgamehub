@@ -26,6 +26,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(projectClaims, /ADD COLUMN ingestion_method/);
   assert.match(projectClaims, /ADD COLUMN attribution_kind/);
   assert.match(projectClaims, /community_catalog/);
+  assert.doesNotMatch(projectClaims, /role\s*=\s*'admin'/i, 'migration must not infer community catalog ownership from an admin role');
   assert.match(projectClaims, /CREATE TABLE work_provenance_events/);
   assert.match(projectClaims, /BEFORE UPDATE ON work_provenance_events/);
   assert.match(projectClaims, /BEFORE DELETE ON work_provenance_events/);

@@ -68,6 +68,16 @@ const provenanceView = row => ({
   claimStatus:row.claim_status??null,claimEligible:row.attribution_kind==='community_catalog'&&!row.claim_status,updatedAt:asIso(row.updated_at),
 });
 
+const claimEventView = row => ({
+  id:row.id,action:row.action,fromStatus:row.from_status??null,toStatus:row.to_status,
+  details:row.details??{},actorDisplayName:row.actor_display_name,createdAt:asIso(row.created_at),
+});
+
+const provenanceEventView = row => ({
+  id:row.id,action:row.action,beforeState:row.before_state,afterState:row.after_state,note:row.note,
+  actorDisplayName:row.actor_display_name,createdAt:asIso(row.created_at),
+});
+
 const appendEvent = (client, input) => client.query(
   `INSERT INTO project_claim_events(id,claim_id,actor_user_id,action,from_status,to_status,details)
    VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -169,6 +179,14 @@ export class PostgresProjectClaimRepository {
     return rows.map(claimView);
   }
 
+  async listAdminEvents(claimId) {
+    const rows=(await this.pool.query(
+      `SELECT e.*,u.display_name AS actor_display_name FROM project_claim_events e
+       JOIN users u ON u.id=e.actor_user_id WHERE e.claim_id=$1 ORDER BY e.created_at DESC,e.id DESC LIMIT 100`,[claimId],
+    )).rows;
+    return rows.map(claimEventView);
+  }
+
   async listAdminProvenance(limit) {
     const rows=(await this.pool.query(
       `SELECT w.id,w.title,w.state,w.visibility,w.revision,w.ingestion_method,w.attribution_kind,w.repository_url,w.license_spdx,w.updated_at,
@@ -210,6 +228,14 @@ export class PostgresProjectClaimRepository {
       );
       return provenanceView({...row,owner_display_name:current.owner_display_name,has_immutable_github_source:current.has_immutable_github_source,claim_status:active?.status??null});
     });
+  }
+
+  async listAdminProvenanceEvents(workId) {
+    const rows=(await this.pool.query(
+      `SELECT e.*,u.display_name AS actor_display_name FROM work_provenance_events e
+       JOIN users u ON u.id=e.actor_user_id WHERE e.work_id=$1 ORDER BY e.created_at DESC,e.id DESC LIMIT 100`,[workId],
+    )).rows;
+    return rows.map(provenanceEventView);
   }
 
   async decide({ actorUserId, claimId, action, note, eventId }) {
@@ -311,7 +337,9 @@ export function createProjectClaimService({ repository, ids = () => crypto.rando
     listMine(actor,query={}) { requireUser(actor); const status=query.status||'all'; if(status!=='all'&&!claimStatuses.has(status))throw new ProjectClaimError('CLAIM_STATUS_INVALID',400,'无效的认领状态。'); return repository.listMine(actor.userId,status==='all'?null:status,Math.min(100,Math.max(1,Number(query.limit)||50))); },
     cancel(actor,claimId) { requireUser(actor); if(!validId(claimId))throw new ProjectClaimError('CLAIM_NOT_FOUND',404,'认领申请不存在。'); return repository.cancel({actorUserId:actor.userId,claimId,eventId:ids()}); },
     listAdmin(actor,query={}) { requireAdmin(actor); const status=query.status||'pending'; if(status!=='all'&&!claimStatuses.has(status))throw new ProjectClaimError('CLAIM_STATUS_INVALID',400,'无效的认领状态。'); return repository.listAdmin(status==='all'?null:status,Math.min(100,Math.max(1,Number(query.limit)||50))); },
+    listAdminEvents(actor,claimId) { requireAdmin(actor); if(!validId(claimId))throw new ProjectClaimError('CLAIM_NOT_FOUND',404,'认领申请不存在。'); return repository.listAdminEvents(claimId); },
     listAdminProvenance(actor,query={}) { requireAdmin(actor); return repository.listAdminProvenance(Math.min(100,Math.max(1,Number(query.limit)||50))); },
+    listAdminProvenanceEvents(actor,workId) { requireAdmin(actor); if(!validId(workId))throw new ProjectClaimError('WORK_NOT_FOUND',404,'游戏不存在。'); return repository.listAdminProvenanceEvents(workId); },
     updateProvenance(actor,workId,body={}) {
       requireAdmin(actor);
       if(!validId(workId))throw new ProjectClaimError('WORK_NOT_FOUND',404,'游戏不存在。');
