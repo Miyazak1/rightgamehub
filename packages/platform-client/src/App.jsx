@@ -15,6 +15,12 @@ import { createWebGameHost } from './web-game-host.mjs';
 import CloudSaveStatus from './CloudSaveStatus.jsx';
 import SaveManager from './SaveManager.jsx';
 import CommunityPage from './CommunityPage.jsx';
+import { CommunityShell } from './CommunityShell.jsx';
+import CommunityProjects from './CommunityProjects.jsx';
+import CommunityEvents from './CommunityEvents.jsx';
+import CommunityParties from './CommunityParties.jsx';
+import CommunityHome from './CommunityHome.jsx';
+import CommunityParticipation from './CommunityParticipation.jsx';
 import DiscoverPage from './DiscoverPage.jsx';
 import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
@@ -60,7 +66,7 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', library: 'library', social: 'social', community: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
+  return ({ discover: 'discover', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
@@ -1518,7 +1524,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;
   else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 's' && parts[1]) content = <GameSharePage key={parts[1]} code={parts[1]} api={api} renderPlayer={share=><PlayerPage workId={share.workId} releaseId={share.releaseId} initialShareCode={share.code} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={false} go={go}/>}/>;
-  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','share'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[3] === 'room' ? parts[4] : null} initialShareCode={parts[2] === 'share' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
+  else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','share','room'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[2] === 'room' ? parts[3] : parts[3] === 'room' ? parts[4] : null} initialShareCode={parts[2] === 'share' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (['/saves','/creator/save-health','/admin/saves'].includes(route)) content = <main className="page"><StatePanel title="当前仅使用本机存档" body="云存档暂未开放。进入支持平台存档的游戏后，可在“存档管理”中导出或恢复本机进度。" action="返回游戏库" onAction={() => go('/library')}/></main>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
@@ -1543,8 +1549,14 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;
+  else if (parts[0] === 'community' && parts[1] === 'projects' && parts[2] === 'tasks') content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={parts[3]} embedded/></CommunityShell>;
+  else if (parts[0] === 'community' && parts[1] === 'projects') content = <CommunityShell route={route} go={go}><CommunityProjects api={api} go={go} demo={demo} accountProfile={accountProfile} projectId={parts[2]||null}/></CommunityShell>;
+  else if (parts[0] === 'community' && parts[1] === 'events') content = <CommunityShell route={route} go={go}><CommunityEvents api={api} go={go} demo={demo} accountProfile={accountProfile} eventId={parts[2]&&parts[2]!=='new'?parts[2]:null} create={parts[2]==='new'}/></CommunityShell>;
+  else if (parts[0] === 'community' && parts[1] === 'parties') content = <CommunityShell route={route} go={go}><CommunityParties api={api} go={go} demo={demo} accountProfile={accountProfile} partyId={parts[2]&&parts[2]!=='new'?parts[2]:null} create={parts[2]==='new'}/></CommunityShell>;
+  else if (route === '/community/me') content = <CommunityShell route={route} go={go}><CommunityParticipation api={api} go={go} demo={demo} accountProfile={accountProfile}/></CommunityShell>;
+  else if (route === '/community') content = <CommunityShell route={route} go={go}><CommunityHome api={api} go={go} demo={demo} accountProfile={accountProfile}><CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route="/community/feed" accountProfile={accountProfile} AvatarView={AvatarView} demo={demo} embedded/></CommunityHome></CommunityShell>;
   else if (route === '/social' || parts[0] === 'community') content = <CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route={route} accountProfile={accountProfile} AvatarView={AvatarView} demo={demo}/>;
-  else if (route === '/contribute' || /^\/contribute\/[^/]+$/.test(route)) content = <ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={route.split('/')[2]}/>;
+  else if (route === '/contribute' || /^\/contribute\/[^/]+$/.test(route)) content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={route.split('/')[2]} embedded/></CommunityShell>;
   else if (parts[0] === 'challenge' && parts[1]) content = <ChallengePage api={api} go={go} demo={demo} code={parts[1]}/>;
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play' || parts[0] === 's';

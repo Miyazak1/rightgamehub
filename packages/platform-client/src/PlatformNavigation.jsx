@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const playerLinks = [
   ['/discover', '发现', '✦', route => route === '/discover' || route.startsWith('/works/')],
-  ['/community', '分享', '✣', route => route === '/social' || route.startsWith('/community')],
-  ['/contribute', '共建', '↗', route => route === '/contribute' || route.startsWith('/contribute/')],
+  ['/community', '社区', '✣', route => route === '/social' || route.startsWith('/community') || route.startsWith('/contribute')],
   ['/library', '游戏库', '▣', route => route === '/library'],
 ];
 

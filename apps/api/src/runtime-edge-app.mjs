@@ -95,7 +95,10 @@ export function createRuntimeEdgeApp({ repository, objectStore, runtimeDomain, l
       reply.header('Content-Range', `bytes ${selected.start}-${selected.end}/${asset.size}`);
     }
     if (asset.size === 0) return reply.send(Buffer.alloc(0));
-    return reply.send(fs.createReadStream(asset.path, { start: selected.start, end: selected.end }));
+    const stream = asset.open
+      ? await asset.open({ start: selected.start, end: selected.end })
+      : fs.createReadStream(asset.path, { start: selected.start, end: selected.end });
+    return reply.send(stream);
   };
   app.get('/', { exposeHeadRoute: true }, serve);
   app.get('/*', { exposeHeadRoute: true }, serve);

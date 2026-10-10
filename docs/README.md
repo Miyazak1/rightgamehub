@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [社区、分享与共建完整改造方案](./community-collaboration-experience-redesign.zh-CN.md) | **将顶级“分享/共建”合并为“社区”，完整定义动态、项目、活动、游戏组队、我的参与、视觉系统、数据/API、迁移阶段与验收标准** |
 | [用户分享板块底层设计](./community-sharing-foundation-design.zh-CN.md) | **首版已实现、本地验证通过，未上线：游戏/AI/计算机图文分享、点赞与私人收藏；评论关闭；版本审核、图片额度、隔离处理与发布边界** |
 | [69 G3.3 新手贡献任务](./69-g3-contribution-tasks.zh-CN.md) | **作者确认后公开任务、玩家领取与提交、作者验收、`good first issue` 预填映射和公开贡献履历** |
 | [68 G3.2 结构化玩家反馈](./68-g3-structured-player-feedback.zh-CN.md) | **玩家反馈表单、作者私人收件箱、仅追加状态记录，以及作者确认后的 GitHub Issue 预填页** |

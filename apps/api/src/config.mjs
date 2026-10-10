@@ -82,6 +82,20 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const storageWarnPercent = integer(env.STORAGE_WARN_PERCENT, 70, 'STORAGE_WARN_PERCENT', 1, 98);
   const storageBlockPercent = integer(env.STORAGE_BLOCK_PERCENT, 85, 'STORAGE_BLOCK_PERCENT', 2, 99);
   if (storageWarnPercent >= storageBlockPercent) throw new Error('STORAGE_WARN_PERCENT must be lower than STORAGE_BLOCK_PERCENT');
+  const objectStorageProvider = env.OBJECT_STORAGE_PROVIDER?.trim() || 'local';
+  if (!['local', 'aliyun-oss'].includes(objectStorageProvider)) throw new Error('OBJECT_STORAGE_PROVIDER must be local or aliyun-oss');
+  const ossRegion = env.OSS_REGION?.trim() || '';
+  const ossEndpoint = env.OSS_ENDPOINT?.trim() || '';
+  const ossBucket = env.OSS_BUCKET?.trim() || '';
+  const ossEcsRoleName = env.OSS_ECS_ROLE_NAME?.trim() || '';
+  if (objectStorageProvider === 'aliyun-oss') {
+    if (!/^oss-[a-z0-9-]+$/.test(ossRegion)) throw new Error('OSS_REGION must use the OSS region form, for example oss-ap-southeast-1');
+    let endpoint;
+    try { endpoint = new URL(ossEndpoint); } catch { throw new Error('OSS_ENDPOINT must be a valid HTTPS URL'); }
+    if (endpoint.protocol !== 'https:' || endpoint.pathname !== '/' || endpoint.search || endpoint.hash) throw new Error('OSS_ENDPOINT must be an HTTPS origin without a path, query, or fragment');
+    if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(ossBucket)) throw new Error('OSS_BUCKET is invalid');
+    if (!/^[A-Za-z0-9.@_-]{1,64}$/.test(ossEcsRoleName)) throw new Error('OSS_ECS_ROLE_NAME is invalid');
+  }
   const rulesManifestPath = env.RULES_MANIFEST_PATH?.trim() || null;
   const rulesAllowUnsigned = boolean(env.RULES_ALLOW_UNSIGNED, false, 'RULES_ALLOW_UNSIGNED');
   if (nodeEnv === 'production' && rulesAllowUnsigned) throw new Error('RULES_ALLOW_UNSIGNED cannot be enabled in production');
@@ -144,6 +158,11 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     storageWarnPercent,
     storageBlockPercent,
     storageMonitorIntervalSeconds: integer(env.STORAGE_MONITOR_INTERVAL_SECONDS, 60, 'STORAGE_MONITOR_INTERVAL_SECONDS', 30, 3600),
+    objectStorageProvider,
+    ossRegion: ossRegion || null,
+    ossEndpoint: ossEndpoint || null,
+    ossBucket: ossBucket || null,
+    ossEcsRoleName: ossEcsRoleName || null,
     runtimePort: integer(env.RUNTIME_PORT, 3092, 'RUNTIME_PORT', 1, 65535),
     runtimeDomain,
     runtimeScheme,

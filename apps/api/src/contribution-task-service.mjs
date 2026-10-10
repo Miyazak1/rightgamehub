@@ -32,6 +32,7 @@ const issueUrlMatches = (value, repositoryUrl) => {
 const iso = value => value ? new Date(value).toISOString() : null;
 const taskView = row => ({
   id: row.id, workId: row.work_id, workTitle: row.work_title, feedbackId: row.feedback_id,
+  project: row.project_id ? { id: row.project_id, title: row.project_title } : null,
   title: row.title, description: row.description, difficulty: row.difficulty, skills: row.skills ?? [], status: row.status, version: Number(row.version),
   repositoryUrl: row.repository_url, issueUrl: row.issue_url, submissionUrl: row.submission_url, submissionNote: row.submission_note,
   reviewReason: row.review_reason, claimExpiresAt: iso(row.claim_expires_at), workAvailable: available(row),
@@ -43,10 +44,11 @@ const taskView = row => ({
 });
 const taskSelect = `SELECT t.*,w.title AS work_title,w.state AS work_state,w.visibility AS work_visibility,w.repository_url AS current_repository_url,
  a.status AS author_status,a.profile_handle AS author_handle,a.display_name AS author_display_name,
- c.profile_handle AS claimant_handle,c.display_name AS claimant_display_name,r.label AS release_label,
+ c.profile_handle AS claimant_handle,c.display_name AS claimant_display_name,r.label AS release_label,p.title AS project_title,
  (r.serving_state='enabled' AND r.validation_state='ready' AND w.state='published' AND w.visibility='public') AS release_available
  FROM contribution_tasks t JOIN works w ON w.id=t.work_id JOIN users a ON a.id=t.author_user_id
- LEFT JOIN users c ON c.id=t.claimant_user_id LEFT JOIN releases r ON r.id=t.resolved_release_id`;
+ LEFT JOIN users c ON c.id=t.claimant_user_id LEFT JOIN releases r ON r.id=t.resolved_release_id
+ LEFT JOIN community_projects p ON p.id=t.project_id`;
 const available = row => row.work_state === 'published' && row.work_visibility === 'public' && row.author_status === 'active';
 const requireAvailable = row => { if (!available(row)) fail('WORK_NOT_PUBLIC',409,'作品或作者已停止公开服务，任务暂不能开放或提交。'); };
 const publicView = (row, viewerId) => {
@@ -106,8 +108,12 @@ export class PostgresContributionTaskRepository {
       if(!source) fail('FEEDBACK_NOT_FOUND',404,'反馈不存在，或不属于你的作品。');
       if(!['reviewed','issue_drafted','issue_linked'].includes(source.status)) fail('FEEDBACK_NOT_CONFIRMED',409,'请先将反馈标记为已查看，再创建贡献任务。');
       if(source.state!=='published'||source.visibility!=='public') fail('WORK_NOT_PUBLIC',409,'只有公开发布的作品可以创建贡献任务。');
+      if(input.projectId){
+        const project=(await client.query("SELECT id FROM community_projects WHERE id=$1 AND owner_id=$2 AND status IN ('draft','recruiting','active') AND (work_id IS NULL OR work_id=$3) FOR SHARE",[input.projectId,input.actor.userId,source.work_id])).rows[0];
+        if(!project)fail('PROJECT_INVALID',409,'所选项目不可用，或与任务作品不一致。');
+      }
       try {
-        await client.query(`INSERT INTO contribution_tasks(id,work_id,feedback_id,author_user_id,title,description,difficulty,skills,repository_url,issue_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,[input.taskId,source.work_id,input.feedbackId,input.actor.userId,input.title,input.description,input.difficulty,input.skills,source.repository_url,source.issue_url]);
+        await client.query(`INSERT INTO contribution_tasks(id,work_id,feedback_id,author_user_id,title,description,difficulty,skills,repository_url,issue_url,project_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[input.taskId,source.work_id,input.feedbackId,input.actor.userId,input.title,input.description,input.difficulty,input.skills,source.repository_url,source.issue_url,input.projectId]);
       } catch(error) { if(error.code==='23505') fail('CONTRIBUTION_TASK_EXISTS',409,'这条反馈已有任务，请在共建任务中编辑原草稿。'); throw error; }
       const row=await readTask(client,input.taskId);
       await appendEvent(client,input,row,'draft_created',{feedbackId:input.feedbackId});
@@ -118,13 +124,15 @@ export class PostgresContributionTaskRepository {
     await this.maintain();
     return (await this.pool.query(`${taskSelect} WHERE t.author_user_id=$1 ORDER BY t.created_at DESC,t.id DESC LIMIT $2 OFFSET $3`,[actor.userId,limit,offset])).rows.map(taskView);
   }
-  async listPublic(status,limit,viewerId=null,offset=0,mine=false) {
+  async listPublic(status,limit,viewerId=null,offset=0,mine=false,projectId=null,standalone=false) {
     await this.maintain();
     const allowed=status==='all'?(mine?['open','claimed','submitted','completed','closed']:['open','claimed','submitted','completed']):[status];
     const rows=(await this.pool.query(`${taskSelect} WHERE t.status=ANY($1::text[]) AND
       (CASE WHEN $4 THEN EXISTS(SELECT 1 FROM contribution_task_participants p WHERE p.task_id=t.id AND p.user_id=$3)
       ELSE w.state='published' AND w.visibility='public' AND a.status='active' END)
-      ORDER BY t.created_at DESC,t.id DESC LIMIT $2 OFFSET $5`,[allowed,limit,viewerId,mine,offset])).rows;
+      AND ($6::uuid IS NULL OR t.project_id=$6)
+      AND (NOT $7::boolean OR t.project_id IS NULL)
+      ORDER BY t.created_at DESC,t.id DESC LIMIT $2 OFFSET $5`,[allowed,limit,viewerId,mine,offset,projectId,standalone])).rows;
     return rows.map(row=>publicView(row,viewerId));
   }
   async get(actor,id) {
@@ -150,12 +158,16 @@ export class PostgresContributionTaskRepository {
       if(['publish','reopen','complete','request_changes','link_release'].includes(input.action)) requireAvailable(row);
       if(['publish','reopen'].includes(input.action)&&!githubRepository(row.current_repository_url)) fail('REPOSITORY_REQUIRED',409,'公开任务需要作品关联有效的 GitHub 仓库。');
       if(input.action==='link_issue'&&!issueUrlMatches(input.issueUrl,row.repository_url)) fail('ISSUE_URL_INVALID',400,'Issue 地址必须属于该作品关联的 GitHub 仓库。');
+      if(input.action==='edit'&&input.projectId){
+        const project=(await client.query("SELECT id FROM community_projects WHERE id=$1 AND owner_id=$2 AND status IN ('draft','recruiting','active') AND (work_id IS NULL OR work_id=$3) FOR SHARE",[input.projectId,input.actor.userId,row.work_id])).rows[0];
+        if(!project)fail('PROJECT_INVALID',409,'所选项目不可用，或与任务作品不一致。');
+      }
       if(input.releaseId){
         const release=await client.query(`SELECT r.id FROM releases r JOIN work_targets t ON t.work_id=r.work_id AND t.target_key=r.target_key AND t.current_release_id=r.id WHERE r.id=$1 AND r.work_id=$2 AND r.validation_state='ready' AND r.serving_state='enabled' AND t.state='published'`,[input.releaseId,row.work_id]);
         if(!release.rowCount) fail('RELEASE_INVALID',409,'请选择此作品当前已发布且可用的版本。');
       }
       const updates={
-        edit:()=>client.query('UPDATE contribution_tasks SET title=$2,description=$3,difficulty=$4,skills=$5 WHERE id=$1',[row.id,input.title,input.description,input.difficulty,input.skills]),
+        edit:()=>client.query('UPDATE contribution_tasks SET title=$2,description=$3,difficulty=$4,skills=$5,project_id=CASE WHEN $6::boolean THEN $7 ELSE project_id END WHERE id=$1',[row.id,input.title,input.description,input.difficulty,input.skills,input.projectProvided,input.projectId]),
         publish:()=>client.query("UPDATE contribution_tasks SET status='open',published_at=COALESCE(published_at,now()),repository_url=$2 WHERE id=$1",[row.id,row.current_repository_url]),
         reopen:()=>client.query(`UPDATE contribution_tasks SET status='open',${resetClaim},closed_at=NULL,review_reason='',published_at=COALESCE(published_at,now()),repository_url=$2 WHERE id=$1`,[row.id,row.current_repository_url]),
         close:()=>client.query(`UPDATE contribution_tasks SET status='closed',${resetClaim},closed_at=now(),review_reason=$2 WHERE id=$1`,[row.id,input.reason]),
@@ -230,6 +242,11 @@ export function createContributionTaskService({repository,ids=()=>crypto.randomU
   const clean=(value,max)=>String(value??'').trim().slice(0,max+1);
   const taskId=id=>{if(!uuidPattern.test(id)) fail('CONTRIBUTION_TASK_NOT_FOUND',404,'贡献任务不存在。');};
   const page=query=>({limit:Math.min(100,Math.max(1,Math.floor(Number(query.limit)||50))),offset:Math.max(0,Math.floor(Number(query.offset)||0))});
+  const projectValue=body=>{
+    if(body.projectId===undefined)return {projectProvided:false,projectId:null};
+    if(body.projectId!==null&&!uuidPattern.test(String(body.projectId)))fail('PROJECT_INVALID',400,'所选项目无效。');
+    return {projectProvided:true,projectId:body.projectId};
+  };
   const fields=body=>{
     const title=clean(body.title,160),description=clean(body.description,4000),skills=Array.isArray(body.skills)?[...new Set(body.skills.map(v=>clean(v,30)).filter(Boolean))]:[];
     if(title.length<5||title.length>160||description.length<20||description.length>4000||!difficulties.has(body.difficulty)||skills.length>8||skills.some(v=>v.length>30)) fail('CONTRIBUTION_TASK_INVALID',400,'请填写有效的任务标题、完成标准、难度和技能标签。');
@@ -237,9 +254,9 @@ export function createContributionTaskService({repository,ids=()=>crypto.randomU
   };
   const contributor=(actor,id,action,extra={})=>{requireUser(actor);taskId(id);return repository.contributorAction({actor,taskId:id,action,...extra,eventId:ids()});};
   return Object.freeze({
-    createFromFeedback(actor,id,body={}){requireCreator(actor);taskId(id);return repository.createFromFeedback({actor,feedbackId:id,...fields(body),taskId:ids(),eventId:ids()});},
+    createFromFeedback(actor,id,body={}){requireCreator(actor);taskId(id);return repository.createFromFeedback({actor,feedbackId:id,...fields(body),projectId:projectValue(body).projectId,taskId:ids(),eventId:ids()});},
     listForCreator(actor,query={}){requireCreator(actor);const p=page(query);return repository.listForCreator(actor,p.limit,p.offset);},
-    listPublic(actor,query={}){const status=query.status||'all',mine=query.mine===true||query.mine==='true';if(mine)requireUser(actor);if(!['all','open','claimed','submitted','completed',...(mine?['closed']:[])].includes(status))fail('STATUS_INVALID',400,'无效的任务状态。');const p=page(query);return repository.listPublic(status,p.limit,actor?.userId??null,p.offset,mine);},
+    listPublic(actor,query={}){const status=query.status||'all',mine=query.mine===true||query.mine==='true',projectId=query.projectId||null,standalone=query.standalone===true||query.standalone==='true';if(mine)requireUser(actor);if(!['all','open','claimed','submitted','completed',...(mine?['closed']:[])].includes(status))fail('STATUS_INVALID',400,'无效的任务状态。');if(projectId&&!uuidPattern.test(String(projectId)))fail('PROJECT_INVALID',400,'项目筛选无效。');if(projectId&&standalone)fail('PROJECT_FILTER_CONFLICT',400,'项目任务与独立任务筛选不能同时使用。');const p=page(query);return repository.listPublic(status,p.limit,actor?.userId??null,p.offset,mine,projectId,standalone);},
     get(actor,id){taskId(id);return repository.get(actor,id);},
     creatorAction(actor,id,body={}){
       requireCreator(actor);taskId(id);
@@ -250,7 +267,7 @@ export function createContributionTaskService({repository,ids=()=>crypto.randomU
       if(body.action==='link_issue'&&!issueUrl)fail('ISSUE_URL_REQUIRED',400,'请填写 GitHub Issue 地址。');
       const releaseId=['complete','link_release'].includes(body.action)?body.releaseId||null:null;
       if((releaseId&&!uuidPattern.test(releaseId))||(body.action==='link_release'&&!releaseId))fail('RELEASE_INVALID',400,'请选择已发布版本。');
-      return repository.creatorAction({actor,taskId:id,action:body.action,expectedVersion:body.expectedVersion,reason,issueUrl,releaseId,...(body.action==='edit'?fields(body):{}),eventId:ids()});
+      return repository.creatorAction({actor,taskId:id,action:body.action,expectedVersion:body.expectedVersion,reason,issueUrl,releaseId,...(body.action==='edit'?{...fields(body),...projectValue(body)}:{}),eventId:ids()});
     },
     claim(actor,id){requireUser(actor);taskId(id);return repository.claim({actor,taskId:id,eventId:ids()});},
     release:(actor,id)=>contributor(actor,id,'release'),
