@@ -1,5 +1,6 @@
 const publicWorkPath = /^\/w\/([^/?#]+)\/?$/u;
 const publicWorkHandoff = /^\/works\/([^/?#]+)\?public=1$/u;
+const internalWorkRoute = /^\/works\/([^/?#]+)$/u;
 
 export function readBrowserRoute(mode, currentLocation) {
   if (mode !== 'hash') return '/discover';
@@ -20,6 +21,12 @@ export function consumePublicWorkHandoff(currentLocation, browserHistory) {
 
 export function navigateBrowserRoute(mode, next, currentLocation, browserHistory, setPath) {
   if (mode !== 'hash') { setPath(next); return; }
+  const workMatch = String(next || '').match(internalWorkRoute);
+  if (workMatch) {
+    browserHistory.pushState(null, '', `/w/${workMatch[1]}`);
+    setPath(next);
+    return;
+  }
   if (publicWorkPath.test(String(currentLocation.pathname || ''))) {
     browserHistory.pushState(null, '', `/#${next}`);
     setPath(next);

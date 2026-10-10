@@ -168,15 +168,23 @@ test('stable public work handoff keeps the public URL visible and leaves it clea
   const history = {
     state: { test: true },
     replaceState: (_state, _title, url) => { calls.push(['replace', url]); location.pathname = url; location.hash = ''; },
-    pushState: (_state, _title, url) => { calls.push(['push', url]); location.pathname = '/'; location.hash = url.slice(1); },
+    pushState: (_state, _title, url) => {
+      calls.push(['push', url]);
+      const parsed = new URL(url, 'https://mooyu.fun');
+      location.pathname = parsed.pathname;
+      location.hash = parsed.hash;
+    },
   };
   assert.equal(readBrowserRoute('hash', location), '/works/work-123');
   assert.equal(consumePublicWorkHandoff(location, history), true);
   assert.equal(location.pathname, '/w/work-123');
   assert.equal(readBrowserRoute('hash', location), '/works/work-123');
   let route = '';
+  navigateBrowserRoute('hash', '/works/work-456', location, history, next => { route = next; });
+  assert.equal(route, '/works/work-456');
+  assert.equal(location.pathname, '/w/work-456');
   navigateBrowserRoute('hash', '/discover', location, history, next => { route = next; });
-  assert.deepEqual(calls, [['replace', '/w/work-123'], ['push', '/#/discover']]);
+  assert.deepEqual(calls, [['replace', '/w/work-123'], ['push', '/w/work-456'], ['push', '/#/discover']]);
   assert.equal(route, '/discover');
   assert.equal(location.pathname, '/');
 });
