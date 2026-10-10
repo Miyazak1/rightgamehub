@@ -12,6 +12,7 @@ export type ReleaseServingState = "disabled" | "enabled" | "revoked";
 export type SourceBuildState = "queued" | "preparing" | "building" | "packaging" | "validating" | "ready" | "failed" | "superseded";
 export type CreatorStudio = "bingo" | "puzzle" | "story" | "world";
 export type CreatorDraftStatus = "active" | "archived" | "published";
+export type ProjectClaimStatus = "publisher" | "unclaimed" | "pending" | "verified" | "rejected" | "cancelled" | "disputed" | "suspended" | "revoked";
 
 export type UIntString = `${number}`;
 export type UUID = string;

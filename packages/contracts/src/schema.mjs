@@ -19,6 +19,7 @@ export const enums = Object.freeze({
   SourceBuildState: ['queued', 'preparing', 'building', 'packaging', 'validating', 'ready', 'failed', 'superseded'],
   CreatorStudio: ['bingo', 'puzzle', 'story', 'world'],
   CreatorDraftStatus: ['active', 'archived', 'published'],
+  ProjectClaimStatus: ['publisher','unclaimed','pending','verified','rejected','cancelled','disputed','suspended','revoked'],
 });
 
 const id = { type: 'string', format: 'uuid' };
@@ -291,6 +292,7 @@ export const schemas = Object.freeze({
     title: { type: 'string', minLength: 1, maxLength: 120 },
     description: { type: 'string', maxLength: 4000 },
     kind: stringEnum(enums.WorkKind),
+    attributionKind:stringEnum(['publisher','community_catalog']),
     instructions: { type: 'string', maxLength: 4000 },
     estimatedMinutes: { type: 'integer', minimum: 1, maximum: 30 },
     tags: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 20 }, maxItems: 6, uniqueItems: true },
@@ -334,6 +336,23 @@ export const schemas = Object.freeze({
     saveCount: { type: 'integer', minimum: 0 },
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
   }),
+  PublicProjectClaim: object({
+    workId: workKey, ingestionMethod:stringEnum(['platform','zip_upload','github_import']), attributionKind:stringEnum(['publisher','community_catalog']), eligible: {type:'boolean'}, status: stringEnum(enums.ProjectClaimStatus),
+    relationship: nullable(stringEnum(['owner','maintainer'])), claimantDisplayName: nullable({type:'string',minLength:1,maxLength:120}),
+    claimantHandle: nullable({type:'string',pattern:'^[a-z][a-z0-9-]{2,31}$'}), verifiedAt: nullableDateTime,
+  }),
+  ProjectClaim: object({
+    id, workId:id, workTitle:{type:'string',minLength:1,maxLength:120}, claimantUserId:id,
+    claimantDisplayName:{type:'string',minLength:1,maxLength:120}, claimantHandle:nullable({type:'string',pattern:'^[a-z][a-z0-9-]{2,31}$'}),
+    relationship:stringEnum(['owner','maintainer']), status:stringEnum(enums.ProjectClaimStatus.filter(value=>!['publisher','unclaimed'].includes(value))),
+    evidenceType:stringEnum(['github','website','storefront','other']), evidenceUrl:nullable({type:'string',format:'uri'}), repositoryId:nullable(uintString), repositoryUrl:nullable({type:'string',format:'uri'}), applicantNote:{type:'string',maxLength:1000}, decisionNote:{type:'string',maxLength:2000},
+    submittedAt:dateTime, decidedAt:nullableDateTime, verifiedAt:nullableDateTime, suspendedAt:nullableDateTime, revokedAt:nullableDateTime,
+    updatedAt:dateTime, version:uintString,
+  }),
+  CreateProjectClaimRequest: object({
+    evidenceType:stringEnum(['github','website','storefront','other']), connectionId:id, repositoryId:{type:'string',pattern:'^[1-9][0-9]*$'}, evidenceUrl:{type:'string',format:'uri',maxLength:2048}, relationship:stringEnum(['owner','maintainer']), note:{type:'string',maxLength:1000},
+  },['evidenceType','relationship']),
+  ProjectClaimDecisionRequest: object({ action:stringEnum(['approve','reject','dispute','suspend','restore','revoke']), note:{type:'string',minLength:3,maxLength:2000} }),
   CreateCreatorDraftRequest: object({
     studio: stringEnum(enums.CreatorStudio), schemaVersion: { type: 'integer', minimum: 1, maximum: 1000 },
     title: { type: 'string', minLength: 1, maxLength: 120 }, content: { type: 'object', additionalProperties: true, maxProperties: 5000 },
@@ -386,6 +405,7 @@ export const schemas = Object.freeze({
   }),
   CreateGitHubDraftRequest: object({
     importId: id, title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, kind: stringEnum(enums.WorkKind),
+    attributionKind:stringEnum(['publisher','community_catalog']),
   }, ['importId','title']),
   WorkSource: object({
     workId: id, provider: { type: 'string', const: 'github' }, repositoryId: uintString, repositoryNodeId: { type: 'string' },
@@ -825,6 +845,12 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/works', operationId: 'listWorks', auth: 'anonymous', response: 'Work', responseArray: true, queryCatalog:true },
   { method:'get',path:'/v1/works/{workId}/leaderboard',operationId:'getWorkLeaderboard',auth:'optional',response:'WorkLeaderboard',pathWorkKey:true,queryWorkLeaderboard:true },
   { method: 'get', path: '/v1/works/{workId}', operationId: 'getWork', auth: 'anonymous', response: 'Work', pathWorkKey: true },
+  { method: 'get', path: '/v1/works/{workId}/claim', operationId: 'getPublicProjectClaim', auth: 'optional', response: 'PublicProjectClaim', pathWorkKey: true },
+  { method: 'post', path: '/v1/works/{workId}/claims', operationId: 'createProjectClaim', auth: 'bearer', request: 'CreateProjectClaimRequest', response: 'ProjectClaim', pathId: 'workId', successStatus: '201' },
+  { method: 'get', path: '/v1/me/project-claims', operationId: 'listMyProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
+  { method: 'post', path: '/v1/project-claims/{claimId}/cancel', operationId: 'cancelProjectClaim', auth: 'bearer', response: 'ProjectClaim', pathId: 'claimId' },
+  { method: 'get', path: '/v1/admin/project-claims', operationId: 'listAdminProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
+  { method: 'post', path: '/v1/admin/project-claims/{claimId}/decision', operationId: 'decideProjectClaim', auth: 'bearer', request: 'ProjectClaimDecisionRequest', response: 'ProjectClaim', pathId: 'claimId' },
   { method: 'get', path: '/v1/works/{workId}/launch', operationId: 'getWorkLaunch', auth: 'anonymous', response: 'LaunchDescriptor', pathWorkKey: true, queryReleaseId: true },
   { method: 'post', path: '/v1/works/{workId}/reports', operationId: 'createContentReport', auth: 'bearer', request: 'CreateContentReportRequest', response: 'ContentReport', pathWorkKey: true },
   { method: 'post', path: '/v1/works/{workId}/feedback', operationId: 'createCreatorFeedback', auth: 'bearer', request: 'CreateCreatorFeedbackRequest', response: 'CreatorFeedback', pathWorkKey: true },
@@ -921,6 +947,10 @@ export function createOpenApiDocument() {
     if (operation.idempotent) parameters.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 16, maxLength: 128 } });
     if (operation.ifMatch) parameters.push({ name: 'If-Match', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 200 } });
     if (operation.queryReleaseId) parameters.push({ name: 'releaseId', in: 'query', required: false, schema: id });
+    if (operation.queryProjectClaims) parameters.push(
+      {name:'status',in:'query',required:false,schema:{type:'string',enum:['all','pending','verified','rejected','cancelled','disputed','suspended','revoked']}},
+      {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:100}}
+    );
     if (operation.queryLibrary) parameters.push({name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:100}},{name:'recent',in:'query',required:false,schema:{type:'boolean'}});
     if (operation.queryCatalog) parameters.push(
       {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:50,default:20}},

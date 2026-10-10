@@ -188,9 +188,20 @@ button { cursor: pointer; }
 .profile-repository-grid small { color: var(--gh-secondary); font-size: 9px; }
 .detail-tags { margin: 0 0 17px; display: flex; flex-wrap: wrap; gap: 5px; }
 .detail-tags span { padding: 4px 6px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font: 700 9px ui-monospace, monospace; }
-.source-link { margin-top: 20px !important; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.source-link { margin-top: 20px !important; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.source-link > div:first-child { display:grid; gap:4px; }
 .source-link a { color: var(--gh-action); font-weight: 700; }
+.source-link > div:first-child > strong { color:var(--gh-primary); font-size:10px; }
 .source-link small { color: var(--gh-secondary); }
+.claim-state { display:grid; justify-items:end; gap:4px; text-align:right; font-size:9px; }
+.claim-state strong { color:var(--gh-secondary); font-size:9px; }
+.claim-state.is-verified strong { color:var(--gh-success); }
+.claim-state.is-suspended strong { color:var(--gh-danger); }
+.claim-state button { padding:0; border:0; background:none; color:var(--gh-action); font:inherit; font-weight:800; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.claim-dialog { width:min(520px,100%); }
+.claim-help { margin:0; color:var(--gh-secondary); font-size:10px; }
+.claim-empty { margin-top:16px; padding:16px; border:1px dashed var(--gh-border); background:var(--gh-raised); }
+.claim-empty p { color:var(--gh-secondary); line-height:1.6; }
 .open-source-fields { margin: 4px 0; padding: 14px; display: grid; gap: 12px; border: 1px dashed var(--gh-border); }
 .open-source-fields legend { padding: 0 6px; color: var(--gh-primary); font: 800 10px ui-monospace, monospace; }
 .open-source-fields > small { color: var(--gh-secondary); font-size: 10px; }

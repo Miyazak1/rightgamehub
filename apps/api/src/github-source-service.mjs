@@ -191,9 +191,9 @@ export class PostgresGitHubSourceRepository {
       }
       const publicEvidence = sourceImport.visibility === 'public' && sourceImport.license_status === 'recognized';
       const work = (await client.query(
-        `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,repository_url,license_spdx)
-         VALUES ($1,$2,$3,$4,'',$5,3,$6,$7,$8) RETURNING *`,
-        [input.workId, input.actor.userId, input.title, input.description, input.kind, ['github-import'], publicEvidence ? sourceImport.html_url : null, publicEvidence ? sourceImport.license_spdx : null],
+        `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,repository_url,license_spdx,ingestion_method,attribution_kind)
+         VALUES ($1,$2,$3,$4,'',$5,3,$6,$7,$8,'github_import',$9) RETURNING *`,
+        [input.workId, input.actor.userId, input.title, input.description, input.kind, ['github-import'], publicEvidence ? sourceImport.html_url : null, publicEvidence ? sourceImport.license_spdx : null, input.attributionKind],
       )).rows[0];
       const provenance = { provider: 'github', importedAt: new Date().toISOString(), repositoryId: String(sourceImport.repository_id), commitSha: sourceImport.commit_sha, treeSha: sourceImport.tree_sha, licenseStatus: sourceImport.license_status };
       const source = (await client.query(
@@ -367,7 +367,10 @@ export function createGitHubSourceService({ repository, githubClient, enabled, w
     async createDraft(actor, body, idempotencyKey) {
       assertEnabled(); assertWrite(actor);
       if (!/^[\x21-\x7e]{16,128}$/.test(idempotencyKey ?? '')) throw new GitHubSourceError('IDEMPOTENCY_KEY_REQUIRED', 400, 'A valid Idempotency-Key is required.');
-      return repository.createDraft({ actor, importId: body.importId, title: body.title, description: body.description ?? '', kind: body.kind ?? 'game', workId: ids(), idempotencyKey, requestHash: hashRequest(body) });
+      const attributionKind=body.attributionKind??(actor.profile?.role==='admin'?'community_catalog':'publisher');
+      if(!['publisher','community_catalog'].includes(attributionKind)||(attributionKind==='community_catalog'&&actor.profile?.role!=='admin'))throw new GitHubSourceError('ATTRIBUTION_INVALID',403,'Only administrators can create a claimable community catalog entry.');
+      const normalizedBody={...body,attributionKind};
+      return repository.createDraft({ actor, importId: body.importId, title: body.title, description: body.description ?? '', kind: body.kind ?? 'game', attributionKind, workId: ids(), idempotencyKey, requestHash: hashRequest(normalizedBody) });
     },
     async getWorkSource(actor, workId) { assertEnabled(); assertWrite(actor); return repository.getWorkSource(actor.userId, workId); },
     async handleWebhook(headers, rawBody) {

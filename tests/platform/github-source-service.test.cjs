@@ -42,7 +42,18 @@ test('source draft creation requires creator permission and an idempotency key',
   await service.createDraft(actor, { importId: crypto.randomUUID(), title: 'Desk Cat', kind: 'game' }, 'github-import-key-1234');
   assert.equal(input.actor.userId, actor.userId);
   assert.equal(input.kind, 'game');
+  assert.equal(input.attributionKind, 'publisher');
   assert.match(input.requestHash, /^[a-f0-9]{64}$/u);
+});
+
+test('only administrators can mark a GitHub import as a claimable catalog entry',async()=>{
+  const {createGitHubSourceService,GitHubSourceError}=await import(moduleUrl);
+  const received=[];
+  const service=createGitHubSourceService({repository:{createDraft:async input=>(received.push(input),{work:{id:input.workId}})},githubClient:{},enabled:true,webhookSecret:'w'.repeat(32)});
+  const request={importId:crypto.randomUUID(),title:'Catalog game',attributionKind:'community_catalog'};
+  await assert.rejects(service.createDraft(actor,request,'github-catalog-user'),error=>error instanceof GitHubSourceError&&error.code==='ATTRIBUTION_INVALID');
+  await service.createDraft({...actor,profile:{...actor.profile,role:'admin'}},request,'github-catalog-admin');
+  assert.equal(received[0].attributionKind,'community_catalog');
 });
 
 test('an already imported commit restores its existing draft without incrementing usage', async () => {

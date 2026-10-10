@@ -570,6 +570,25 @@ test('API client exposes authenticated GitHub source operations and idempotent d
   assert.match(requests.at(-1).url, /\/v1\/creator\/source-imports\/drafts$/);
 });
 
+test('API client and work detail expose the governed project claim loop', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests=[];
+  const client=createApiClient({getAccessToken:()=> 'claim-token',fetchImpl:async(url,init)=>{requests.push({url,init});return new Response(JSON.stringify({data:[]}),{status:200,headers:{'content-type':'application/json'}});}});
+  const workId='00000000-0000-4000-8000-000000000001',claimId='00000000-0000-4000-8000-000000000002',connectionId='00000000-0000-4000-8000-000000000003';
+  await client.getPublicProjectClaim(workId);
+  await client.createProjectClaim(workId,{evidenceType:'github',connectionId,repositoryId:'42',relationship:'owner'});
+  await client.listMyProjectClaims();
+  await client.cancelProjectClaim(claimId);
+  await client.listAdminProjectClaims();
+  await client.decideProjectClaim(claimId,{action:'approve',note:'GitHub repository verified'});
+  assert.deepEqual(requests.map(item=>item.init.method),['GET','POST','GET','POST','GET','POST']);
+  assert.equal(requests[0].init.headers.Authorization,undefined);
+  assert.ok(requests.slice(1).every(item=>item.init.headers.Authorization==='Bearer claim-token'));
+  assert.match(requests[5].url,/\/v1\/admin\/project-claims\/00000000-0000-4000-8000-000000000002\/decision$/u);
+  const source=await fs.readFile('packages/platform-client/src/App.jsx','utf8');
+  assert.match(source,/社区收录，尚未认领/);assert.match(source,/发布者直接上传/);assert.match(source,/我是作者\/维护者/);assert.match(source,/GAME CLAIM REVIEW/);assert.match(source,/GitHub 只是可选证据/);
+});
+
 test('API client exposes staged multiplayer rule submission and administrative review', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   const requests = [];

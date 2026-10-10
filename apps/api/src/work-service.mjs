@@ -47,7 +47,10 @@ export function createWorkService({ repository, ids = () => crypto.randomUUID(),
       if (!actor.profile.canPublish || !actor.scopes.includes('works:write')) throw new WorkError('PUBLISH_NOT_ENABLED', 403, 'Publishing is not enabled for this account.');
       if (!/^[\x21-\x7e]{16,128}$/.test(idempotencyKey ?? '')) throw new WorkError('IDEMPOTENCY_KEY_REQUIRED', 400, 'A valid Idempotency-Key is required.');
       validateDiscoveryMetadata(body);
-      const work = await repository.createIdempotent({ actor, idempotencyKey, requestHash: hashRequest(body), workId: ids(), body });
+      const attributionKind=body.attributionKind??(actor.profile?.role==='admin'?'community_catalog':'publisher');
+      if(!['publisher','community_catalog'].includes(attributionKind)||(attributionKind==='community_catalog'&&actor.profile?.role!=='admin'))throw new WorkError('ATTRIBUTION_INVALID',403,'Only administrators can create a claimable community catalog entry.');
+      const normalizedBody={...body,attributionKind};
+      const work = await repository.createIdempotent({ actor, idempotencyKey, requestHash: hashRequest(normalizedBody), workId: ids(), body:normalizedBody });
       return { work, etag: workEtag(work) };
     },
     async update(actor, workId, body, idempotencyKey, ifMatch) {

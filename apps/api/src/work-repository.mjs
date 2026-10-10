@@ -101,10 +101,10 @@ export class PostgresWorkRepository {
       const user = (await client.query('SELECT status,can_publish FROM users WHERE id=$1 FOR UPDATE', [input.actor.userId])).rows[0];
       if (!user || user.status !== 'active' || !user.can_publish) throw new WorkError('PUBLISH_NOT_ENABLED', 403, 'Publishing is not enabled for this account.');
       const row = (await client.query(
-        `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,agent_label,repository_url,license_spdx)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        `INSERT INTO works(id,owner_user_id,title,description,instructions,kind,estimated_minutes,tags,agent_label,repository_url,license_spdx,attribution_kind)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
         [input.workId, input.actor.userId, input.body.title, input.body.description, input.body.instructions ?? '', input.body.kind,
-          input.body.estimatedMinutes ?? 3, input.body.tags ?? [], input.body.agentLabel ?? null, input.body.repositoryUrl ?? null, input.body.licenseSpdx ?? null],
+          input.body.estimatedMinutes ?? 3, input.body.tags ?? [], input.body.agentLabel ?? null, input.body.repositoryUrl ?? null, input.body.licenseSpdx ?? null,input.body.attributionKind],
       )).rows[0];
       await client.query('UPDATE creator_usage SET work_count=work_count+1,updated_at=now() WHERE user_id=$1', [input.actor.userId]);
       const result = publicWork(row);

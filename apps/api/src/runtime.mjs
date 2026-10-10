@@ -78,6 +78,7 @@ import { createMultiplayerRuleBuildWorker } from './multiplayer-rule-build-worke
 import { createRuleBuildRunner } from './rule-build-runner.mjs';
 import { PostgresCreatorDraftRepository } from './creator-draft-repository.mjs';
 import { createCreatorDraftService } from './creator-draft-service.mjs';
+import { PostgresProjectClaimRepository, createProjectClaimService } from './project-claim-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -119,6 +120,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     enabled: config.githubSourceImportEnabled,
     webhookSecret: config.githubAppWebhookSecret,
   });
+  const projectClaimService = createProjectClaimService({ repository: new PostgresProjectClaimRepository(database.pool) });
   const quarantineStore = new LocalQuarantineStore(config.quarantineRoot);
   const storageLogger = {
     info: event => process.stdout.write(`${JSON.stringify({ service: 'storage-capacity', ...event })}\n`),
@@ -217,6 +219,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     workService,
     creatorDraftService,
     githubSourceService,
+    projectClaimService,
     sourceBuildService,
     uploadService,
     catalogService,
@@ -252,6 +255,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     workService,
     creatorDraftService,
     githubSourceService,
+    projectClaimService,
     sourceBuildService,
     sourceBuildWorker,
     multiplayerRuleBuildWorker,

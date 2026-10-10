@@ -33,6 +33,8 @@ import { GitHubSourceError } from './github-source-service.mjs';
 import { MultiplayerRuleSubmissionError } from './multiplayer-rule-submission-service.mjs';
 import { SourceBuildRepositoryError } from './source-build-repository.mjs';
 import { CreatorDraftError, CREATOR_STUDIOS } from './creator-draft-service.mjs';
+import { ProjectClaimError } from './project-claim-service.mjs';
+import { registerProjectClaimRoutes } from './project-claim-routes.mjs';
 
 const envelope = data => ({ data });
 const readLimitedBody = async (stream, limit) => {
@@ -69,6 +71,7 @@ export function createApp(dependencies) {
     creatorFeedbackService,
     contributionTaskService,
     creatorDraftService,
+    projectClaimService,
     storageCapacityService,
     realtimeTicketService,
     gameSessionService,
@@ -114,7 +117,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -192,6 +195,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (communityService) registerCommunityRoutes(app,{service:communityService,media:communityMediaService,requireAuth});
   if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
   if (config.cloudSaveEnabled === true && saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
@@ -862,7 +866,7 @@ export function createApp(dependencies) {
     app.get('/v1/creator/works', { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
     app.post('/v1/creator/works', {
       preHandler: requireAuth,
-      schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] }, ...workDiscoveryProperties } } },
+      schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] }, attributionKind:{type:'string',enum:['publisher','community_catalog']}, ...workDiscoveryProperties } } },
     }, async (request, reply) => {
       const result = await workService.create(request.actor, request.body, request.headers['idempotency-key']);
       reply.header('ETag', result.etag);
@@ -1010,6 +1014,7 @@ export function createApp(dependencies) {
       schema: { body: { type: 'object', additionalProperties: false, required: ['importId','title'], properties: {
         importId: { type: 'string', format: 'uuid' }, title: { type: 'string', minLength: 1, maxLength: 120 },
         description: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game','creative','tool'] },
+        attributionKind: { type: 'string', enum: ['publisher','community_catalog'] },
       } } },
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
