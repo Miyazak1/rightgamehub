@@ -1,0 +1,24 @@
+{
+  "name": "js13k-atomic-puzzle",
+  "version": "1.0.0",
+  "description": "An atomic orbital puzzle game for js13k competition",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8080 --directory src",
+    "start": "npm run dev",
+    "build": "node build/buildGolfed.js",
+    "size": "npm run build"
+  },
+  "keywords": [
+    "js13k",
+    "game",
+    "canvas",
+    "atomic",
+    "physics"
+  ],
+  "author": "Afton Gauntlett",
+  "license": "MIT",
+  "devDependencies": {
+    "terser": "^5.43.1"
+  }
+}

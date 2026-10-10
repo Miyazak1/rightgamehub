@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/aftongauntlett/js13k-demo",
+  "commit": "3d9fe2af2384b04404266b50805d8cd896a5dab8",
+  "license": "MIT",
+  "author": "Afton Gauntlett",
+  "sourceName": "Orbital Order (Aufbau)",
+  "adaptation": "GameHub responsive and touch compatibility layer"
+}

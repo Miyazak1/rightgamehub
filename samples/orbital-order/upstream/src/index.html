@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atomic Puzzle Game - js13k Demo</title>
+    <!-- Inline SVG favicon to avoid 404 -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3e%3ccircle cx='16' cy='16' r='12' fill='%23064e3b' stroke='%2369f' stroke-width='2'/%3e%3ccircle cx='16' cy='16' r='6' fill='%23fff' opacity='0.2'/%3e%3ccircle cx='22' cy='10' r='3' fill='%234a90e2'/%3e%3ccircle cx='10' cy='22' r='3' fill='%23ff6b35'/%3e%3c/svg%3e"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #020408;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: "Courier New", monospace;
+      }
+
+      #gameContainer {
+        position: relative;
+        display: inline-block;
+        width: 1000px;
+        height: 750px;
+        background: #020408;
+        border: 1px solid rgba(100, 150, 255, 0.2);
+      }
+
+      canvas {
+        border: 1px solid rgba(100, 150, 255, 0.2); /* Subtle blue glow */
+        cursor: none;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Fixed UI zones */
+      .ui-zone {
+        position: absolute;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      /* Top left - Title and timing */
+      #topLeft {
+        top: 15px;
+        left: 15px;
+        color: #96c8ff;
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.4;
+      }
+
+      /* Top right - Element symbol */
+      #topRight {
+        top: 15px;
+        right: 15px;
+        color: #96c8ff;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      /* Bottom left - Controls */
+      #bottomLeft {
+        bottom: 15px;
+        left: 15px;
+        color: rgba(150, 200, 255, 0.8);
+        font-size: 13px;
+        line-height: 1.3;
+      }
+
+      /* Bottom right - Level */
+      #bottomRight {
+        bottom: 15px;
+        right: 15px;
+        color: rgba(150, 200, 255, 0.8);
+        font-size: 13px;
+        text-align: right;
+      }
+
+      /* Responsive scaling for different screen sizes */
+      @media (max-width: 1100px) {
+        #gameContainer {
+          width: 90vw;
+          height: calc(90vw * 0.75);
+        }
+      }
+
+      @media (max-width: 900px) {
+        #gameContainer {
+          width: 95vw;
+          height: calc(95vw * 0.75);
+        }
+      }
+
+      @media (max-width: 700px) {
+        #gameContainer {
+          width: 98vw;
+          height: calc(98vw * 0.75);
+        }
+      }
+
+      /* Mobile warning overlay */
+      #mobile-warning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #mobile-warning .content {
+        background: rgba(20, 30, 50, 0.95);
+        border: 2px solid rgba(100, 150, 255, 0.8);
+        border-radius: 8px;
+        padding: 30px;
+        max-width: 400px;
+        color: #96c8ff;
+      }
+
+      #mobile-warning h2 {
+        color: #ff6b35;
+        margin-top: 0;
+        font-size: 24px;
+      }
+
+      #mobile-warning p {
+        line-height: 1.5;
+        margin: 15px 0;
+        font-size: 16px;
+      }
+
+      #mobile-warning .icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      /* Show warning only on very small screens */
+      @media (max-width: 600px), (max-height: 450px) {
+        #mobile-warning {
+          display: flex;
+        }
+
+        canvas,
+        #info {
+          display: none;
+        }
+      }
+
+      /* Additional styles for very small screens */
+      @media (max-width: 480px) {
+        #mobile-warning .content {
+          padding: 20px;
+          margin: 10px;
+        }
+
+        #mobile-warning h2 {
+          font-size: 20px;
+        }
+
+        #mobile-warning p {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Mobile/Small Screen Warning -->
+    <div id="mobile-warning">
+      <div class="content">
+        <div class="icon">🖥️</div>
+        <h2>Desktop Required</h2>
+        <p>
+          This atomic physics game is designed for desktop browsers with mouse
+          control.
+        </p>
+        <p><strong>Minimum screen size:</strong><br />850×650 pixels</p>
+        <p>
+          Please switch to a desktop computer or expand your browser window to
+          play.
+        </p>
+        <p
+          style="
+            font-size: 14px;
+            color: rgba(150, 200, 255, 0.7);
+            margin-top: 25px;
+          "
+        >
+          Part of the JS13K 2024 competition
+        </p>
+      </div>
+    </div>
+
+    <div id="gameContainer">
+      <canvas id="gameCanvas" width="1000" height="750"></canvas>
+
+      <!-- UI Zones -->
+      <div id="topLeft" class="ui-zone">
+        <div id="gameTitle">Orbital Order (Aufbau)</div>
+        <div id="gameSubtitle">
+          Guide electrons to matching colored orbitals
+        </div>
+        <div id="timingInfo"></div>
+      </div>
+
+      <div id="topRight" class="ui-zone">
+        <!-- Element card will be positioned here by the game -->
+      </div>
+
+      <div id="bottomLeft" class="ui-zone">
+        <div>Esc | Rules</div>
+        <div>M | Mute</div>
+      </div>
+
+      <div id="bottomRight" class="ui-zone">
+        <div id="levelInfo"></div>
+      </div>
+    </div>
+
+    <!-- Component Scripts -->
+    <script src="components/ElectronGolfed.js"></script>
+    <script src="components/TutorialGolfed.js"></script>
+
+    <!-- System Scripts -->
+    <script src="systems/OrbitalSystemGolfed.js"></script>
+    <script src="systems/AudioSystemGolfed.js"></script>
+
+    <!-- Main Game -->
+    <script src="GameGolfed.js"></script>
+
+    <!-- Game Initialization -->
+    <script>
+      // Only initialize game if screen is large enough
+      function isDesktopSize() {
+        return window.innerWidth >= 600 && window.innerHeight >= 450;
+      }
+
+      if (isDesktopSize()) {
+        window.game = new G();
+        window.tutorial = window.game.tutorial;
+      }
+
+      // Check on resize
+      window.addEventListener("resize", () => {
+        if (isDesktopSize() && !window.game) {
+          // Initialize game if resized to desktop size
+          window.game = new G();
+          window.tutorial = window.game.tutorial;
+        }
+      });
+    </script>
+  </body>
+</html>

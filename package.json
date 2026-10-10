@@ -37,7 +37,9 @@
     "web:build": "pnpm --filter @gamehub/web build",
     "test:client": "node --test tests/client/*.test.cjs",
     "build:adarkroom": "node scripts/build-adarkroom.mjs",
+    "build:orbital-order": "node scripts/build-orbital-order.mjs",
     "test:adarkroom": "node --test tests/client/adarkroom-save-adapter.test.cjs",
+    "test:orbital-order": "node --test tests/client/orbital-order-package.test.cjs",
     "start:adarkroom-acceptance": "npm run build:adarkroom && node scripts/start-adarkroom-acceptance.mjs",
     "start:adarkroom-installed-acceptance": "npm run build:adarkroom && npm run pack:vscode && node scripts/start-adarkroom-installed-acceptance.mjs",
     "verify:adarkroom-installed": "node scripts/verify-adarkroom-installed.mjs"
