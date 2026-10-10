@@ -15,7 +15,7 @@ COPY packages/platform-api-client/package.json packages/platform-api-client/pack
 COPY packages/host-contract/package.json packages/host-contract/package.json
 COPY packages/player-core/package.json packages/player-core/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
-RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin...
+RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin... --filter @gamehub/creator-tools...
 COPY apps/web apps/web
 COPY packages/platform-client packages/platform-client
 COPY packages/rules-sdk packages/rules-sdk
