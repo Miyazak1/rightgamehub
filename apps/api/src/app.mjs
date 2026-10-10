@@ -793,6 +793,7 @@ export function createApp(dependencies) {
       title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
       difficulty: { type: 'string', enum: ['starter','intermediate','advanced'] },
       skills: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 30 } },
+      projectId: { type: ['string','null'], format: 'uuid' },
     } };
     app.post('/v1/creator/feedback/:feedbackId/contribution-task', {
       preHandler: requireAuth,
@@ -818,7 +819,7 @@ export function createApp(dependencies) {
     app.get('/v1/contribution-tasks', {
       preHandler: identifyOptional,
       schema: { querystring: { type: 'object', additionalProperties: false, properties: {
-        status: { type: 'string', enum: ['all','open','claimed','submitted','completed','closed'] }, ...pageProperties, mine: { type: 'boolean' },
+        status: { type: 'string', enum: ['all','open','claimed','submitted','completed','closed'] }, ...pageProperties, mine: { type: 'boolean' }, projectId: { type: 'string', format: 'uuid' }, standalone: { type: 'boolean' },
       } } },
     }, async (request, reply) => { reply.header('Cache-Control', request.actor ? 'private, no-store' : 'public, max-age=30'); return envelope(await contributionTaskService.listPublic(request.actor, request.query)); });
     app.post('/v1/contribution-tasks/:taskId/claim', { preHandler: requireAuth, schema: { params: taskParams } }, async (request, reply) => {

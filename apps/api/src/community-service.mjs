@@ -4,8 +4,8 @@ import { fail } from './community-errors.mjs';
 import { CHANNELS, LIMITS, hash, uuid, normalizeContent, receiptKey, expectedVersion, cursorFor, readCursor } from './community-contract.mjs';
 
 const visible = "p.publication_state='published' AND p.moderation_state='clear' AND u.status='active' AND (r.visibility_policy='post' OR u.social_visibility='public') AND c.enabled AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.blocker_user_id=$1 AND b.blocked_user_id=p.author_id) OR (b.blocked_user_id=$1 AND b.blocker_user_id=p.author_id))";
-const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS profile_handle,a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked";
-const joins = " JOIN users u ON u.id=p.author_id JOIN community_channels c ON c.key=p.channel_key LEFT JOIN user_avatars a ON a.user_id=u.id LEFT JOIN community_post_stats s ON s.post_id=p.id ";
+const columns = "p.*,r.title,r.blocks,r.channel_key AS revision_channel,r.review_status,r.review_reason,r.id AS revision_id,u.display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS profile_handle,a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,COALESCE(s.like_count,0)::text AS like_count,EXISTS(SELECT 1 FROM community_post_likes l WHERE l.post_id=p.id AND l.user_id=$1) AS liked,EXISTS(SELECT 1 FROM community_post_bookmarks b WHERE b.post_id=p.id AND b.user_id=$1) AS bookmarked,cp.id AS project_id,cp.title AS project_title,cpp.relation_kind AS project_relation";
+const joins = " JOIN users u ON u.id=p.author_id JOIN community_channels c ON c.key=p.channel_key LEFT JOIN user_avatars a ON a.user_id=u.id LEFT JOIN community_post_stats s ON s.post_id=p.id LEFT JOIN community_project_posts cpp ON cpp.post_id=p.id LEFT JOIN community_projects cp ON cp.id=cpp.project_id ";
 const publishedRevision = ' JOIN community_post_revisions r ON r.id=p.published_revision_id ';
 const avatarView = row => row.avatar_kind === 'upload' ? {
   kind:'upload',presetKey:null,
@@ -19,12 +19,13 @@ const view = (row,manage=false) => ({
   publicationState:row.publication_state,moderationState:row.moderation_state,
   revisionId:row.revision_id,reviewStatus:row.review_status,reviewReason:manage?row.review_reason??null:null,
   version:String(row.version),likeCount:String(row.like_count),liked:row.liked,bookmarked:row.bookmarked,
+  project:row.project_id?{id:row.project_id,title:row.project_title,relationKind:row.project_relation}:null,
   publishedAt:row.first_published_at?new Date(row.first_published_at).toISOString():null,
   updatedAt:new Date(row.updated_at).toISOString(),
 });
 
 export class CommunityService {
-  constructor({pool,config,store=null,clock=()=>new Date()}) { Object.assign(this,{pool,config,store,clock}); }
+  constructor({pool,config,store=null,clock=()=>new Date(),projects=null}) { Object.assign(this,{pool,config,store,clock,projects}); }
   enabled() { if(!this.config.enabled) fail('COMMUNITY_DISABLED',503,'分享板块暂未开放。'); }
   async actor(client,actor,{posting=false,admin=false}={}) {
     if(!actor?.userId) fail('AUTH_REQUIRED',401,'请登录后继续。');
@@ -88,9 +89,11 @@ export class CommunityService {
     if(rows.length!==ids.length) fail('MEDIA_NOT_READY',409,'图片尚未完成处理，或不属于当前分享。');
   }
   async save(actor,id,input,version,key) {
-    const content=normalizeContent(input),expected=id?expectedVersion(version):null;
+    const projectProvided=Object.prototype.hasOwnProperty.call(input,'projectId'),projectId=input.projectId??null;
+    if(projectProvided&&projectId!==null&&!uuid(projectId))fail('PROJECT_INVALID',400,'所选项目无效。');
+    const content=normalizeContent({channel:input.channel,title:input.title,blocks:input.blocks}),expected=id?expectedVersion(version):null;
     if(!id&&content.blocks.some(b=>b.type==='image')) fail('MEDIA_NOT_READY',409,'请先保存草稿，再上传图片。');
-    return this.mutation(actor,id?'edit':'create',key,{id,content,expected},async client=>{
+    return this.mutation(actor,id?'edit':'create',key,{id,content,expected,projectProvided,projectId},async client=>{
       let post;
       if(id) post=await this.postLock(client,id,actor,expected);
       else {
@@ -99,6 +102,14 @@ export class CommunityService {
         id=crypto.randomUUID();
         post=(await client.query('INSERT INTO community_posts(id,author_id,channel_key) VALUES($1,$2,$3) RETURNING *',[id,actor.userId,content.channel])).rows[0];
         await client.query('INSERT INTO community_post_stats(post_id) VALUES($1)',[id]);
+      }
+      if(projectProvided){
+        if(projectId){
+          const project=(await client.query("SELECT p.id FROM community_projects p WHERE p.id=$1 AND p.visibility='public' AND p.status IN ('recruiting','active','completed') AND (p.owner_id=$2 OR EXISTS(SELECT 1 FROM community_project_members m WHERE m.project_id=p.id AND m.user_id=$2 AND m.membership_state='active')) FOR SHARE",[projectId,actor.userId])).rows[0];
+          if(!project)fail('PROJECT_INVALID',409,'只能关联你正在参与的公开项目。');
+          await client.query("INSERT INTO community_project_posts(project_id,post_id,relation_kind) VALUES($1,$2,'update') ON CONFLICT(post_id) DO UPDATE SET project_id=EXCLUDED.project_id,relation_kind='update'",[projectId,id]);
+          await client.query("INSERT INTO community_project_events(id,project_id,actor_id,action,details) VALUES($1,$2,$3,'post_linked',$4)",[crypto.randomUUID(),projectId,actor.userId,{postId:id}]);
+        }else await client.query('DELETE FROM community_project_posts WHERE post_id=$1',[id]);
       }
       const daily=Number((await client.query("SELECT count(*) FROM community_write_receipts WHERE actor_id=$1 AND operation IN ('create','edit') AND created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",[actor.userId])).rows[0].count);
       if(daily>=30) fail('RATE_LIMITED',429,'今天的编辑次数已达上限。');

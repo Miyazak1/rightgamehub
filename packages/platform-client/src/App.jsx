@@ -16,6 +16,7 @@ import CloudSaveStatus from './CloudSaveStatus.jsx';
 import SaveManager from './SaveManager.jsx';
 import CommunityPage from './CommunityPage.jsx';
 import { CommunityComingSoon, CommunityShell } from './CommunityShell.jsx';
+import CommunityProjects from './CommunityProjects.jsx';
 import DiscoverPage from './DiscoverPage.jsx';
 import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
@@ -1343,7 +1344,8 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;
-  else if (parts[0] === 'community' && parts[1] === 'projects') content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={parts[2]==='tasks'?parts[3]:null} embedded/></CommunityShell>;
+  else if (parts[0] === 'community' && parts[1] === 'projects' && parts[2] === 'tasks') content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={parts[3]} embedded/></CommunityShell>;
+  else if (parts[0] === 'community' && parts[1] === 'projects') content = <CommunityShell route={route} go={go}><CommunityProjects api={api} go={go} demo={demo} accountProfile={accountProfile} projectId={parts[2]||null}/></CommunityShell>;
   else if (parts[0] === 'community' && ['events','parties'].includes(parts[1])) content = <CommunityShell route={route} go={go}><CommunityComingSoon kind={parts[1]} go={go}/></CommunityShell>;
   else if (route === '/social' || parts[0] === 'community') content = <CommunityPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} route={route} accountProfile={accountProfile} AvatarView={AvatarView} demo={demo}/>;
   else if (route === '/contribute' || /^\/contribute\/[^/]+$/.test(route)) content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} taskId={route.split('/')[2]} embedded/></CommunityShell>;

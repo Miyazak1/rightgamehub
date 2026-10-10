@@ -17,6 +17,7 @@ import { createAuthService } from './auth-service.mjs';
 import { createGitHubOAuthClient } from './github-oauth-client.mjs';
 import { createApp } from './app.mjs';
 import { CommunityService } from './community-service.mjs';
+import { CommunityProjectService } from './community-project-service.mjs';
 import { CommunityMediaService } from './community-media-service.mjs';
 import { CommunityMediaStore } from './community-media-store.mjs';
 import { createCommunityImageRunner } from './community-image-runner.mjs';
@@ -147,7 +148,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const moderationService = createModerationService({ repository: new PostgresModerationRepository(database.pool) });
   const socialService = createSocialService({ repository: new PostgresSocialRepository(database.pool) });
   const communityStore=new CommunityMediaStore(config.community.mediaRoot);
-  const communityService=new CommunityService({pool:database.pool,config:config.community,store:communityStore});
+  const communityService=new CommunityService({pool:database.pool,config:config.community,store:communityStore,projects:new CommunityProjectService({pool:database.pool})});
   const communityMediaService=new CommunityMediaService({
     service:communityService,store:communityStore,
     runner:createCommunityImageRunner({root:config.community.processorRoot,mediaRoot:config.community.mediaRoot,mode:config.community.executionMode}),
