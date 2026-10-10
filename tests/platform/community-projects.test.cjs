@@ -48,6 +48,15 @@ test('community project migration keeps projects, applications and task links as
   assert.match(sql,/community project events are append-only/);
 });
 
+test('community project queries place viewer ownership inside the SELECT list',async()=>{
+  const {CommunityProjectService}=await import(moduleUrl('community-project-service.mjs'));
+  let query='';
+  const service=new CommunityProjectService({pool:{query:async sql=>{query=sql;return {rows:[]};}}});
+  assert.deepEqual(await service.list(undefined,{}),[]);
+  assert.match(query,/\(p\.owner_id=\$1\) AS is_owner,[\s\S]+FROM community_projects p/);
+  assert.doesNotMatch(query,/FROM community_projects[\s\S]+,\(p\.owner_id=\$1\) AS is_owner/);
+});
+
 test('community posts can carry a governed project update context',async()=>{
   const fs=require('node:fs/promises');
   const [service,routes]=await Promise.all([fs.readFile('apps/api/src/community-service.mjs','utf8'),fs.readFile('apps/api/src/community-routes.mjs','utf8')]);

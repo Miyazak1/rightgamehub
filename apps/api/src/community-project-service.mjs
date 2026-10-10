@@ -7,7 +7,8 @@ const publicStatuses=['recruiting','active','completed'];
 const transitions={draft:['recruiting','cancelled'],recruiting:['active','completed','cancelled'],active:['recruiting','completed','cancelled'],completed:['archived'],cancelled:['archived'],archived:[]};
 const iso=value=>value?new Date(value).toISOString():null;
 const clean=(value,max)=>String(value??'').trim().slice(0,max+1);
-const projectSelect=`SELECT p.*,u.display_name AS owner_display_name,u.profile_handle AS owner_handle,w.title AS work_title,
+const projectSelect=viewerParameter=>`SELECT p.*,u.display_name AS owner_display_name,u.profile_handle AS owner_handle,w.title AS work_title,
+ (p.owner_id=${viewerParameter}) AS is_owner,
  (SELECT count(*)::int FROM community_project_members m WHERE m.project_id=p.id AND m.membership_state='active') AS member_count,
  (SELECT count(*)::int FROM contribution_tasks t WHERE t.project_id=p.id AND t.status IN ('open','claimed','submitted')) AS open_task_count,
  (SELECT count(*)::int FROM contribution_tasks t WHERE t.project_id=p.id AND t.status='completed') AS completed_task_count
@@ -64,7 +65,7 @@ export class CommunityProjectService {
     const status=clean(query.status,20)||'all';
     if(status!=='all'&&!['draft','recruiting','active','completed','archived','cancelled'].includes(status))fail('PROJECT_STATUS_INVALID',400,'无效的项目状态。');
     const {limit,offset}=this.page(query),viewerId=actor?.userId??null;
-    const rows=(await this.pool.query(`${projectSelect},(p.owner_id=$1) AS is_owner WHERE (
+    const rows=(await this.pool.query(`${projectSelect('$1')} WHERE (
       ($2::boolean AND (p.owner_id=$1 OR EXISTS(SELECT 1 FROM community_project_members m WHERE m.project_id=p.id AND m.user_id=$1 AND m.membership_state='active') OR EXISTS(SELECT 1 FROM community_project_applications a WHERE a.project_id=p.id AND a.applicant_id=$1)))
       OR (NOT $2::boolean AND p.visibility='public' AND p.status=ANY($3::text[])))
       AND ($4='all' OR p.status=$4)
@@ -73,7 +74,7 @@ export class CommunityProjectService {
   }
   async get(actor,id){
     this.projectId(id);const viewerId=actor?.userId??null;
-    const row=(await this.pool.query(`${projectSelect},(p.owner_id=$2) AS is_owner WHERE p.id=$1 AND (p.visibility IN ('public','unlisted') OR p.owner_id=$2 OR EXISTS(SELECT 1 FROM community_project_members m WHERE m.project_id=p.id AND m.user_id=$2) OR EXISTS(SELECT 1 FROM community_project_applications a WHERE a.project_id=p.id AND a.applicant_id=$2))`,[id,viewerId])).rows[0];
+    const row=(await this.pool.query(`${projectSelect('$2')} WHERE p.id=$1 AND (p.visibility IN ('public','unlisted') OR p.owner_id=$2 OR EXISTS(SELECT 1 FROM community_project_members m WHERE m.project_id=p.id AND m.user_id=$2) OR EXISTS(SELECT 1 FROM community_project_applications a WHERE a.project_id=p.id AND a.applicant_id=$2))`,[id,viewerId])).rows[0];
     if(!row)fail('PROJECT_NOT_FOUND',404,'项目不存在或不可访问。');
     const project=(await this.hydrate([row],viewerId,{detail:true}))[0];
     const members=(await this.pool.query(`SELECT m.user_id,m.role_id,m.joined_at,u.display_name,u.profile_handle FROM community_project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=$1 AND m.membership_state='active' AND u.status='active' ORDER BY (m.user_id=$2) DESC,m.joined_at,m.user_id`,[id,row.owner_id])).rows.map(member=>({id:member.user_id,roleId:member.role_id,displayName:member.display_name,handle:member.profile_handle,joinedAt:iso(member.joined_at)}));
