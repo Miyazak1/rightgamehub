@@ -15,7 +15,8 @@ const create=async()=>{
   const projectClaimService={
     publicStatus:async id=>({workId:id,ingestionMethod:'zip_upload',attributionKind:'community_catalog',eligible:true,status:'unclaimed',relationship:null,claimantDisplayName:null,claimantHandle:null,verifiedAt:null}),
     submit:async(actor,id,body)=>(calls.push(['submit',actor,id,body]),{id:claimId,status:'pending'}),
-    listMine:async()=>[],cancel:async()=>({id:claimId,status:'cancelled'}),listAdmin:async()=>[],
+    listMine:async()=>[],cancel:async()=>({id:claimId,status:'cancelled'}),listAdmin:async()=>[],listAdminProvenance:async()=>[{workId,title:'Game'}],
+    updateProvenance:async(actor,id,body)=>(calls.push(['provenance',actor,id,body]),{workId:id,revision:'2'}),
     decide:async(actor,id,body)=>(calls.push(['decide',actor,id,body]),{id,status:body.action==='approve'?'verified':'rejected'}),
   };
   const app=createApp({config:{requestBodyLimit:65536,corsOrigins:[],cloudSaveEnabled:false},projectClaimService,authService:{authenticateBearer:async header=>header==='Bearer admin'?admin:user}});
@@ -32,6 +33,8 @@ test('project claim routes expose public status and authenticate mutations',asyn
   assert.equal(manual.statusCode,201);assert.equal(calls[1][3].evidenceType,'storefront');
   const decided=await app.inject({method:'POST',url:`/v1/admin/project-claims/${claimId}/decision`,headers:{authorization:'Bearer admin'},payload:{action:'approve',note:'GitHub repository verified'}});
   assert.equal(decided.statusCode,200);assert.equal(calls[2][1].userId,admin.userId);assert.equal(calls[2][3].action,'approve');
+  const provenance=await app.inject({method:'PATCH',url:`/v1/admin/works/${workId}/provenance`,headers:{authorization:'Bearer admin'},payload:{attributionKind:'community_catalog',repositoryUrl:'https://github.com/a/b',licenseSpdx:'MIT',expectedRevision:'1',note:'平台代为收录'}});
+  assert.equal(provenance.statusCode,200);assert.equal(calls[3][0],'provenance');assert.equal(calls[3][2],workId);
 });
 
 test('project claim route schemas reject unknown evidence fields',async t=>{

@@ -26,6 +26,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(projectClaims, /ADD COLUMN ingestion_method/);
   assert.match(projectClaims, /ADD COLUMN attribution_kind/);
   assert.match(projectClaims, /community_catalog/);
+  assert.match(projectClaims, /CREATE TABLE work_provenance_events/);
+  assert.match(projectClaims, /BEFORE UPDATE ON work_provenance_events/);
+  assert.match(projectClaims, /BEFORE DELETE ON work_provenance_events/);
   assert.match(projectClaims, /evidence_type text NOT NULL/);
   assert.match(projectClaims, /CREATE TABLE project_claim_events/);
   assert.match(projectClaims, /project_claims_one_authority_idx/);

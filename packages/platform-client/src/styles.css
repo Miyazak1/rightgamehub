@@ -830,6 +830,24 @@ button { cursor: pointer; }
 .source-operations details ol { display: grid; gap: 7px; padding: 0; list-style: none; }
 .source-operations details li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; border-bottom: 1px dashed var(--gh-border); padding: 7px 0; }
 .source-operations details time { color: var(--gh-secondary); font-size: 9px; }
+.provenance-operations { display:grid; gap:14px; padding:20px; border:2px solid var(--gh-border); background:var(--gh-raised); box-shadow:3px 3px 0 color-mix(in srgb,var(--gh-border) 42%,transparent); }
+.provenance-list { display:grid; gap:12px; }
+.provenance-card { padding:16px; border:1px solid var(--gh-border); background:var(--gh-panel); }
+.provenance-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.provenance-card header span { color:var(--gh-action); font:800 9px ui-monospace,"Cascadia Mono",monospace; letter-spacing:.06em; }
+.provenance-card h3 { margin:6px 0 3px; font-size:17px; }
+.provenance-card header small { color:var(--gh-secondary); font-size:9px; }
+.provenance-card header em { padding:5px 7px; border:1px solid var(--gh-border); color:var(--gh-secondary); font:normal 800 8px ui-monospace,"Cascadia Mono",monospace; white-space:nowrap; }
+.provenance-card header em.is-claimable { border-color:color-mix(in srgb,var(--gh-action) 55%,var(--gh-border)); color:var(--gh-action); }
+.provenance-fields { display:grid; grid-template-columns:1fr 1.4fr .7fr; gap:10px; margin-top:14px; }
+.provenance-fields label { display:grid; align-content:start; gap:6px; color:var(--gh-secondary); font-size:9px; }
+.provenance-fields select,.provenance-fields input,.provenance-fields textarea { width:100%; min-width:0; padding:9px 10px; border:1px solid var(--gh-border); border-radius:0; background:var(--gh-raised); color:var(--gh-primary); font:inherit; }
+.provenance-fields select,.provenance-fields input { height:38px; }
+.provenance-fields textarea { min-height:70px; resize:vertical; }
+.provenance-fields small { color:var(--gh-secondary); font-size:8px; line-height:1.45; }
+.provenance-note { grid-column:1/-1; }
+.provenance-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; }
+.provenance-actions a { color:var(--gh-action); font-size:9px; }
 /* Controlled GitHub source builds use a complete workflow surface instead of native form controls. */
 .source-build-page { max-width: 1120px; }
 .source-build-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 24px 0 22px; }
@@ -894,7 +912,7 @@ button { cursor: pointer; }
 @media (max-width: 800px) { .source-build-layout { grid-template-columns: 1fr; }.source-build-history { order: -1; }.source-build-history ol { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }.source-build-history li { padding: 11px; border: 1px solid var(--gh-border); }.source-build-history li::after { display: none; } }
 @media (max-width: 680px) { .github-repository-picker,.github-preview-facts,.github-draft-fields { grid-template-columns: 1fr; }.github-preview-heading { grid-template-columns: 44px minmax(0,1fr); }.github-preview-badges { grid-column: 2; justify-content: flex-start; }.github-draft-description { grid-column: auto; }.github-preview-actions,.github-existing-draft { align-items: stretch; flex-direction: column; }.github-preview-actions .button,.github-existing-draft .button { width: 100%; min-width: 0; }.github-license-help-actions { align-items: stretch; flex-direction: column; }.github-license-help-actions .button { width: 100%; }.github-connection-list article > button:first-child { grid-template-columns: 34px minmax(0,1fr); }.github-connection-mark { width: 34px; height: 34px; }.github-status { grid-column: 2; justify-self: start; }.creator-heading-actions { width: 100%; }.creator-heading-actions .button { flex: 1; }.source-build-heading { align-items: flex-start; flex-direction: column; }.source-build-policy { align-self: flex-start; }.source-build-facts,.source-build-fields { grid-template-columns: 1fr; }.source-build-card__heading { grid-template-columns: 40px minmax(0,1fr); }.source-build-access { grid-column: 2; justify-self: start; }.source-build-actions { align-items: stretch; flex-direction: column; }.source-build-actions .button { width: 100%; min-width: 0; } }
 @media (max-width: 460px) { .source-build-heading h1 { font-size: 26px; }.source-build-history ol { grid-template-columns: 1fr; }.source-build-card__heading,.source-build-facts,.source-build-fields { padding-left: 13px; padding-right: 13px; }.source-build-note { margin-left: 13px; margin-right: 13px; } }
-@media (max-width: 680px) { .source-operation-kpis { grid-template-columns: 1fr; }.source-operations details li { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .source-operation-kpis { grid-template-columns: 1fr; }.source-operations details li { grid-template-columns: 1fr; }.provenance-fields { grid-template-columns:1fr; }.provenance-note { grid-column:auto; }.provenance-card header,.provenance-actions { align-items:stretch; flex-direction:column; }.provenance-card header em { align-self:flex-start; }.provenance-actions .button { width:100%; } }
 .multiplayer-creator-gateway { display: grid; grid-template-columns: auto 1fr auto; gap: 13px; align-items: center; width: 100%; margin: 2px 0 18px; padding: 16px; border: 1px solid var(--gh-action); background: color-mix(in srgb,var(--gh-action) 7%,var(--gh-panel)); color: var(--gh-primary); text-align: left; cursor: pointer; }
 .multiplayer-creator-gateway > span { display: grid; place-items: center; width: 34px; height: 34px; background: var(--gh-action); color: var(--gh-action-text); font-weight: 900; }
 .multiplayer-creator-gateway div { display: grid; gap: 4px; }

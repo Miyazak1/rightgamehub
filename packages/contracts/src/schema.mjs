@@ -341,6 +341,16 @@ export const schemas = Object.freeze({
     relationship: nullable(stringEnum(['owner','maintainer'])), claimantDisplayName: nullable({type:'string',minLength:1,maxLength:120}),
     claimantHandle: nullable({type:'string',pattern:'^[a-z][a-z0-9-]{2,31}$'}), verifiedAt: nullableDateTime,
   }),
+  AdminWorkProvenance: object({
+    workId:id,title:{type:'string',minLength:1,maxLength:120},state:stringEnum(enums.WorkState),visibility:stringEnum(enums.Visibility),revision:uintString,
+    ownerDisplayName:{type:'string',minLength:1,maxLength:120},ingestionMethod:stringEnum(['zip_upload','github_import']),attributionKind:stringEnum(['publisher','community_catalog']),
+    repositoryUrl:nullable({type:'string',format:'uri'}),licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),hasImmutableGitHubSource:{type:'boolean'},
+    claimStatus:nullable(stringEnum(['pending','verified','disputed','suspended'])),claimEligible:{type:'boolean'},updatedAt:dateTime,
+  }),
+  UpdateAdminWorkProvenanceRequest: object({
+    attributionKind:stringEnum(['publisher','community_catalog']),repositoryUrl:nullable({type:'string',pattern:'^https://github\\.com/[^/\\s]+/[^/\\s]+/?$'}),
+    licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),expectedRevision:uintString,note:{type:'string',minLength:3,maxLength:1000},
+  }),
   ProjectClaim: object({
     id, workId:id, workTitle:{type:'string',minLength:1,maxLength:120}, claimantUserId:id,
     claimantDisplayName:{type:'string',minLength:1,maxLength:120}, claimantHandle:nullable({type:'string',pattern:'^[a-z][a-z0-9-]{2,31}$'}),
@@ -850,6 +860,8 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/me/project-claims', operationId: 'listMyProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
   { method: 'post', path: '/v1/project-claims/{claimId}/cancel', operationId: 'cancelProjectClaim', auth: 'bearer', response: 'ProjectClaim', pathId: 'claimId' },
   { method: 'get', path: '/v1/admin/project-claims', operationId: 'listAdminProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },
+  { method: 'get', path: '/v1/admin/work-provenance', operationId: 'listAdminWorkProvenance', auth: 'bearer', response: 'AdminWorkProvenance', responseArray: true, queryLimit: true },
+  { method: 'patch', path: '/v1/admin/works/{workId}/provenance', operationId: 'updateAdminWorkProvenance', auth: 'bearer', request: 'UpdateAdminWorkProvenanceRequest', response: 'AdminWorkProvenance', pathId: 'workId' },
   { method: 'post', path: '/v1/admin/project-claims/{claimId}/decision', operationId: 'decideProjectClaim', auth: 'bearer', request: 'ProjectClaimDecisionRequest', response: 'ProjectClaim', pathId: 'claimId' },
   { method: 'get', path: '/v1/works/{workId}/launch', operationId: 'getWorkLaunch', auth: 'anonymous', response: 'LaunchDescriptor', pathWorkKey: true, queryReleaseId: true },
   { method: 'post', path: '/v1/works/{workId}/reports', operationId: 'createContentReport', auth: 'bearer', request: 'CreateContentReportRequest', response: 'ContentReport', pathWorkKey: true },

@@ -12,6 +12,30 @@ WHERE EXISTS (SELECT 1 FROM work_sources s WHERE s.work_id=w.id);
 UPDATE works w SET attribution_kind='community_catalog'
 WHERE EXISTS (SELECT 1 FROM users u WHERE u.id=w.owner_user_id AND u.role='admin');
 
+CREATE TABLE work_provenance_events (
+  id uuid PRIMARY KEY,
+  work_id uuid NOT NULL REFERENCES works(id) ON DELETE RESTRICT,
+  actor_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  action text NOT NULL CHECK (action IN ('admin_updated')),
+  before_state jsonb NOT NULL,
+  after_state jsonb NOT NULL,
+  note text NOT NULL CHECK (char_length(note) BETWEEN 3 AND 1000),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX work_provenance_events_work_idx ON work_provenance_events(work_id,created_at DESC,id);
+
+CREATE FUNCTION reject_work_provenance_event_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'work provenance events are append-only';
+END;
+$$;
+
+CREATE TRIGGER work_provenance_events_no_update BEFORE UPDATE ON work_provenance_events
+  FOR EACH ROW EXECUTE FUNCTION reject_work_provenance_event_mutation();
+CREATE TRIGGER work_provenance_events_no_delete BEFORE DELETE ON work_provenance_events
+  FOR EACH ROW EXECUTE FUNCTION reject_work_provenance_event_mutation();
+
 CREATE TABLE project_claims (
   id uuid PRIMARY KEY,
   work_id uuid NOT NULL REFERENCES works(id) ON DELETE RESTRICT,

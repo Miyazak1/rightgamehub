@@ -277,6 +277,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     listMyProjectClaims: (status = 'all', limit = 50, options) => request(`/v1/me/project-claims?status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
     cancelProjectClaim: (claimId, options) => request(`/v1/project-claims/${encodeURIComponent(claimId)}/cancel`, { ...options, method: 'POST', auth: true }),
     listAdminProjectClaims: (status = 'pending', limit = 50, options) => request(`/v1/admin/project-claims?status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listAdminWorkProvenance: (limit = 50, options) => request(`/v1/admin/work-provenance?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    updateAdminWorkProvenance: (workId, body, options) => request(`/v1/admin/works/${encodeURIComponent(workId)}/provenance`, { ...options, method: 'PATCH', body, auth: true }),
     decideProjectClaim: (claimId, body, options) => request(`/v1/admin/project-claims/${encodeURIComponent(claimId)}/decision`, { ...options, method: 'POST', body, auth: true }),
     createCreatorFeedback: (workId, body, options) => request(`/v1/works/${encodeURIComponent(workId)}/feedback`, { ...options, method: 'POST', body, auth: true }),
     listCreatorFeedback: (status = 'all', options) => request(`/v1/creator/feedback?status=${encodeURIComponent(status)}`, { ...options, auth: true }),

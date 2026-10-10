@@ -580,13 +580,16 @@ test('API client and work detail expose the governed project claim loop', async 
   await client.listMyProjectClaims();
   await client.cancelProjectClaim(claimId);
   await client.listAdminProjectClaims();
+  await client.listAdminWorkProvenance();
+  await client.updateAdminWorkProvenance(workId,{attributionKind:'community_catalog',repositoryUrl:null,licenseSpdx:null,expectedRevision:'1',note:'平台代为收录'});
   await client.decideProjectClaim(claimId,{action:'approve',note:'GitHub repository verified'});
-  assert.deepEqual(requests.map(item=>item.init.method),['GET','POST','GET','POST','GET','POST']);
+  assert.deepEqual(requests.map(item=>item.init.method),['GET','POST','GET','POST','GET','GET','PATCH','POST']);
   assert.equal(requests[0].init.headers.Authorization,undefined);
   assert.ok(requests.slice(1).every(item=>item.init.headers.Authorization==='Bearer claim-token'));
-  assert.match(requests[5].url,/\/v1\/admin\/project-claims\/00000000-0000-4000-8000-000000000002\/decision$/u);
+  assert.match(requests[6].url,/\/v1\/admin\/works\/00000000-0000-4000-8000-000000000001\/provenance$/u);
+  assert.match(requests[7].url,/\/v1\/admin\/project-claims\/00000000-0000-4000-8000-000000000002\/decision$/u);
   const source=await fs.readFile('packages/platform-client/src/App.jsx','utf8');
-  assert.match(source,/社区收录，尚未认领/);assert.match(source,/发布者直接上传/);assert.match(source,/我是作者\/维护者/);assert.match(source,/GAME CLAIM REVIEW/);assert.match(source,/GitHub 只是可选证据/);
+  assert.match(source,/社区收录，尚未认领/);assert.match(source,/发布者直接上传/);assert.match(source,/我是作者\/维护者/);assert.match(source,/GAME CLAIM REVIEW/);assert.match(source,/GAME PROVENANCE/);assert.match(source,/GitHub 只是可选证据/);
 });
 
 test('API client exposes staged multiplayer rule submission and administrative review', async () => {

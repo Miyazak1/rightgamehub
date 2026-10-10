@@ -15456,6 +15456,211 @@
         }
       }
     },
+    "/v1/admin/work-provenance": {
+      "get": {
+        "operationId": "listAdminWorkProvenance",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminWorkProvenance"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/works/{workId}/provenance": {
+      "patch": {
+        "operationId": "updateAdminWorkProvenance",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminWorkProvenanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AdminWorkProvenance"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/project-claims/{claimId}/decision": {
       "post": {
         "operationId": "decideProjectClaim",
@@ -27351,6 +27556,177 @@
           "claimantDisplayName",
           "claimantHandle",
           "verifiedAt"
+        ]
+      },
+      "AdminWorkProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "withdrawn",
+              "suspended"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ]
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "ownerDisplayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "ingestionMethod": {
+            "type": "string",
+            "enum": [
+              "zip_upload",
+              "github_import"
+            ]
+          },
+          "attributionKind": {
+            "type": "string",
+            "enum": [
+              "publisher",
+              "community_catalog"
+            ]
+          },
+          "repositoryUrl": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "licenseSpdx": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasImmutableGitHubSource": {
+            "type": "boolean"
+          },
+          "claimStatus": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "verified",
+                  "disputed",
+                  "suspended"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "claimEligible": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "workId",
+          "title",
+          "state",
+          "visibility",
+          "revision",
+          "ownerDisplayName",
+          "ingestionMethod",
+          "attributionKind",
+          "repositoryUrl",
+          "licenseSpdx",
+          "hasImmutableGitHubSource",
+          "claimStatus",
+          "claimEligible",
+          "updatedAt"
+        ]
+      },
+      "UpdateAdminWorkProvenanceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attributionKind": {
+            "type": "string",
+            "enum": [
+              "publisher",
+              "community_catalog"
+            ]
+          },
+          "repositoryUrl": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://github\\.com/[^/\\s]+/[^/\\s]+/?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "licenseSpdx": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expectedRevision": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "attributionKind",
+          "repositoryUrl",
+          "licenseSpdx",
+          "expectedRevision",
+          "note"
         ]
       },
       "ProjectClaim": {
