@@ -7,13 +7,25 @@ test('analytics service accepts bounded privacy-preserving events', async () => 
   const service = createAnalyticsService({ repository: { insert: async rows => inserted.push(...rows) }, clock: () => now, ids: () => '11111111-1111-4111-8111-111111111111' });
   const result = await service.record(null, { events: [{
     type: 'page_view', anonymousId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333',
-    hostKind: 'browser', route: 'discover', occurredAt: now.toISOString(),
+    hostKind: 'browser', route: 'discover', attributionSource: 'share_copy', campaignKey: 'launch-2026', occurredAt: now.toISOString(),
   }] });
   assert.deepEqual(result, { accepted: 1 });
   assert.equal(inserted[0].userId, null);
   assert.equal(inserted[0].route, 'discover');
+  assert.equal(inserted[0].attributionSource, 'share_copy');
+  assert.equal(inserted[0].campaignKey, 'launch-2026');
   assert.equal('url' in inserted[0], false);
   assert.equal('ip' in inserted[0], false);
+});
+
+test('analytics service rejects arbitrary attribution and identifying campaign values', async () => {
+  const { createAnalyticsService } = await import('../../apps/api/src/analytics-service.mjs');
+  const now = new Date('2026-09-30T12:00:00.000Z');
+  const service = createAnalyticsService({ repository: { insert: async () => {} }, clock: () => now });
+  const event = { type: 'work_view', anonymousId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333', hostKind: 'browser', route: 'work', workId: 'gamehub-test', occurredAt: now.toISOString() };
+  await assert.rejects(() => service.record(null, { events: [{ ...event, attributionSource: 'social-user-123' }] }), error => error.code === 'ANALYTICS_INVALID');
+  await assert.rejects(() => service.record(null, { events: [{ ...event, attributionSource: '' }] }), error => error.code === 'ANALYTICS_INVALID');
+  await assert.rejects(() => service.record(null, { events: [{ ...event, campaignKey: 'email@example.com' }] }), error => error.code === 'ANALYTICS_INVALID');
 });
 
 test('analytics overview is admin-only and range-bound', async () => {
@@ -39,11 +51,14 @@ test('creator analytics requires publishing access and is scoped to the actor', 
 
 test('creator analytics repository returns aggregate rates and a complete daily series', async () => {
   const { PostgresAnalyticsRepository } = await import('../../apps/api/src/analytics-repository.mjs');
-  const pool = { query: async sql => sql.includes('WITH owned AS') ? { rows: [{ work_id: '00000000-0000-4000-8000-000000000111', title: '测试游戏', state: 'published', views: 12, starts: 5, engaged_sessions: 3, repeat_players: 2, saves: 4, builds: 2, successful_builds: 1 }] } : { rows: [{ day: '2026-09-30', views: 12, starts: 5, engaged_sessions: 3 }] } };
+  const pool = { query: async sql => sql.includes('WITH owned AS') ? { rows: [{ work_id: '00000000-0000-4000-8000-000000000111', title: '测试游戏', state: 'published', views: 12, starts: 5, engaged_sessions: 3, repeat_players: 2, saves: 4, builds: 2, successful_builds: 1, referred_views: 8, referred_starts: 4, referred_engaged_sessions: 2 }] } : sql.includes("COALESCE(a.attribution_source,'direct')") ? { rows: [{ source: 'share_copy', campaign_key: null, visitors: 7, views: 8, starts: 4, engaged_sessions: 2 }] } : { rows: [{ day: '2026-09-30', views: 12, starts: 5, engaged_sessions: 3 }] } };
   const result = await new PostgresAnalyticsRepository(pool).creatorOverview({ userId: 'creator', days: 7, since: new Date('2026-09-24T16:00:00Z'), now: new Date('2026-10-01T12:00:00Z') });
   assert.equal(result.daily.length, 7);
   assert.equal(result.works[0].title, '测试游戏');
   assert.equal(result.totals.engagementRate, 60);
   assert.equal(result.totals.repeatPlayers, 2);
   assert.equal(result.totals.buildSuccessRate, 50);
+  assert.equal(result.totals.referralConversionRate, 50);
+  assert.equal(result.channels[0].source, 'share_copy');
+  assert.equal(result.channels[0].conversionRate, 50);
 });

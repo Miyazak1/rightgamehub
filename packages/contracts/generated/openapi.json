@@ -33121,6 +33121,21 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "attributionSource": {
+                  "type": "string",
+                  "enum": [
+                    "share_copy",
+                    "share_system",
+                    "readme",
+                    "external"
+                  ]
+                },
+                "campaignKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
                 "durationMs": {
                   "type": "integer",
                   "minimum": 0,
@@ -33349,6 +33364,65 @@
               ]
             }
           },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "share_copy",
+                    "share_system",
+                    "readme",
+                    "external"
+                  ]
+                },
+                "campaignKey": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "visitors": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "views": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "starts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "engagedSessions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "conversionRate": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "required": [
+                "source",
+                "campaignKey",
+                "visitors",
+                "views",
+                "starts",
+                "engagedSessions",
+                "conversionRate"
+              ]
+            }
+          },
           "works": {
             "type": "array",
             "items": {
@@ -33414,6 +33488,7 @@
           "totals",
           "daily",
           "hosts",
+          "channels",
           "works",
           "measurement"
         ]
@@ -33481,11 +33556,27 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "referredViews": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "referredStarts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "referredEngagedSessions": {
+                "type": "integer",
+                "minimum": 0
+              },
               "engagementRate": {
                 "type": "integer",
                 "minimum": 0
               },
               "buildSuccessRate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "referralConversionRate": {
                 "type": "integer",
                 "minimum": 0
               }
@@ -33498,8 +33589,12 @@
               "saves",
               "builds",
               "successfulBuilds",
+              "referredViews",
+              "referredStarts",
+              "referredEngagedSessions",
               "engagementRate",
-              "buildSuccessRate"
+              "buildSuccessRate",
+              "referralConversionRate"
             ]
           },
           "daily": {
@@ -33582,6 +33677,18 @@
                 "successfulBuilds": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "referredViews": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "referredStarts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "referredEngagedSessions": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               },
               "required": [
@@ -33594,7 +33701,69 @@
                 "repeatPlayers",
                 "saves",
                 "builds",
-                "successfulBuilds"
+                "successfulBuilds",
+                "referredViews",
+                "referredStarts",
+                "referredEngagedSessions"
+              ]
+            }
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "share_copy",
+                    "share_system",
+                    "readme",
+                    "external"
+                  ]
+                },
+                "campaignKey": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "visitors": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "views": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "starts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "engagedSessions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "conversionRate": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "required": [
+                "source",
+                "campaignKey",
+                "visitors",
+                "views",
+                "starts",
+                "engagedSessions",
+                "conversionRate"
               ]
             }
           },
@@ -33613,13 +33782,17 @@
               },
               "engagementRate": {
                 "type": "string"
+              },
+              "attribution": {
+                "type": "string"
               }
             },
             "required": [
               "timeZone",
               "repeatPlayer",
               "saves",
-              "engagementRate"
+              "engagementRate",
+              "attribution"
             ]
           }
         },
@@ -33628,6 +33801,7 @@
           "totals",
           "daily",
           "works",
+          "channels",
           "measurement"
         ]
       },

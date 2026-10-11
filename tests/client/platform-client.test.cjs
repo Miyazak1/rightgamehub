@@ -195,6 +195,22 @@ test('stable public work handoff keeps the public URL visible and leaves it clea
   assert.equal(location.pathname, '/');
 });
 
+test('work sharing keeps bounded attribution through the public handoff and play session', async () => {
+  const { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } = await import('../../packages/platform-client/src/analytics-attribution.mjs');
+  const { readBrowserRoute, consumePublicWorkHandoff } = await import('../../packages/platform-client/src/public-work-route.mjs');
+  const shared = attributedWorkUrl('https://mooyu.fun/w/work-123', 'share_copy', 'launch-2026');
+  assert.equal(shared, 'https://mooyu.fun/w/work-123?gh_src=share_copy&gh_campaign=launch-2026');
+  assert.throws(() => attributedWorkUrl('https://mooyu.fun/w/work-123', 'user-email'));
+  const location = { pathname: '/', search: '', hash: '#/works/work-123?public=1&gh_src=share_copy&gh_campaign=launch-2026' };
+  const history = { state: null, replaceState: (_state, _title, value) => { const url = new URL(value, 'https://mooyu.fun'); location.pathname = url.pathname; location.search = url.search; location.hash = url.hash; } };
+  assert.equal(readBrowserRoute('hash', location), '/works/work-123');
+  assert.equal(consumePublicWorkHandoff(location, history), true);
+  assert.equal(`${location.pathname}${location.search}`, '/w/work-123?gh_src=share_copy&gh_campaign=launch-2026');
+  const values = new Map(); const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
+  assert.deepEqual(captureWorkAttribution('work-123', location, storage), { attributionSource: 'share_copy', campaignKey: 'launch-2026' });
+  assert.deepEqual(getWorkAttribution('work-123', storage), { attributionSource: 'share_copy', campaignKey: 'launch-2026' });
+});
+
 test('creator publishing stays direct while Agent toolkits remain optional', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));

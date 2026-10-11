@@ -9,17 +9,17 @@ export class PostgresAnalyticsRepository {
     const values = []; const rows = [];
     for (const event of events) {
       const offset = values.length;
-      values.push(event.id,event.userId,event.anonymousId,event.sessionId,event.type,event.route,event.workKey,event.releaseId,event.hostKind,event.durationMs,event.occurredAt,event.receivedAt);
-      rows.push(`(${Array.from({ length: 12 }, (_, index) => `$${offset + index + 1}`).join(',')})`);
+      values.push(event.id,event.userId,event.anonymousId,event.sessionId,event.type,event.route,event.workKey,event.releaseId,event.hostKind,event.durationMs,event.attributionSource,event.campaignKey,event.occurredAt,event.receivedAt);
+      rows.push(`(${Array.from({ length: 14 }, (_, index) => `$${offset + index + 1}`).join(',')})`);
     }
     await this.pool.query(
-      `INSERT INTO analytics_events(id,user_id,anonymous_id,session_id,event_type,route,work_key,release_id,host_kind,duration_ms,occurred_at,received_at)
+      `INSERT INTO analytics_events(id,user_id,anonymous_id,session_id,event_type,route,work_key,release_id,host_kind,duration_ms,attribution_source,campaign_key,occurred_at,received_at)
        VALUES ${rows.join(',')} ON CONFLICT (id) DO NOTHING`, values,
     );
   }
 
   async overview({ days, since, now }) {
-    const [totals, eventTotals, dailyEvents, dailyUsers, hosts, topWorks] = await Promise.all([
+    const [totals, eventTotals, dailyEvents, dailyUsers, hosts, channels, topWorks] = await Promise.all([
       this.pool.query(
         `SELECT
           (SELECT count(*) FROM users)::int AS total_users,
@@ -54,6 +54,15 @@ export class PostgresAnalyticsRepository {
       this.pool.query(`SELECT (created_at AT TIME ZONE 'Asia/Shanghai')::date AS day,count(*)::int AS new_users FROM users WHERE created_at >= $1 AND created_at < $2 GROUP BY day ORDER BY day`, [since, now]),
       this.pool.query(`SELECT host_kind,count(DISTINCT anonymous_id)::int AS visitors,count(*) FILTER (WHERE event_type='page_view')::int AS page_views FROM analytics_events WHERE occurred_at >= $1 AND occurred_at < $2 GROUP BY host_kind ORDER BY visitors DESC,page_views DESC`, [since, now]),
       this.pool.query(
+        `SELECT COALESCE(attribution_source,'direct') AS source,campaign_key,
+          count(DISTINCT anonymous_id)::int AS visitors,
+          count(*) FILTER (WHERE event_type='work_view')::int AS views,
+          count(*) FILTER (WHERE event_type='game_start')::int AS starts,
+          count(*) FILTER (WHERE event_type='game_end' AND duration_ms >= 30000)::int AS engaged_sessions
+         FROM analytics_events WHERE occurred_at >= $1 AND occurred_at < $2 AND work_key IS NOT NULL
+         GROUP BY source,campaign_key ORDER BY views DESC,starts DESC,source,campaign_key NULLS FIRST`, [since, now],
+      ),
+      this.pool.query(
         `WITH event_stats AS (
            SELECT work_key,count(*) FILTER (WHERE event_type='work_view')::int AS views,
              count(*) FILTER (WHERE event_type='game_start')::int AS starts,
@@ -81,13 +90,14 @@ export class PostgresAnalyticsRepository {
       },
       daily: [...daily.values()],
       hosts: hosts.rows.map(row => ({ hostKind: row.host_kind, visitors: number(row.visitors), pageViews: number(row.page_views) })),
+      channels: channels.rows.map(row => ({ source: row.source, campaignKey: row.campaign_key ?? null, visitors: number(row.visitors), views: number(row.views), starts: number(row.starts), engagedSessions: number(row.engaged_sessions), conversionRate: number(row.views) ? Math.min(100, Math.round(number(row.starts) / number(row.views) * 100)) : 0 })),
       works: topWorks.rows.map(row => ({ workId: row.work_key, title: row.title, views: number(row.views), starts: number(row.starts), downloads: number(row.downloads) })),
       measurement: { timeZone: 'Asia/Shanghai', siteDuration: 'foreground heartbeat estimate', browserDownloads: 'request only', managedDownloads: 'completion acknowledged by Agent' },
     };
   }
 
   async creatorOverview({ userId, days, since, now }) {
-    const [workStats, dailyEvents] = await Promise.all([
+    const [workStats, dailyEvents, channels] = await Promise.all([
       this.pool.query(
         `WITH owned AS (
            SELECT id,title,state FROM works WHERE owner_user_id=$1
@@ -95,7 +105,10 @@ export class PostgresAnalyticsRepository {
            SELECT a.work_key,
              count(*) FILTER (WHERE a.event_type='work_view')::int AS views,
              count(*) FILTER (WHERE a.event_type='game_start')::int AS starts,
-             count(*) FILTER (WHERE a.event_type='game_end' AND a.duration_ms >= 30000)::int AS engaged_sessions
+             count(*) FILTER (WHERE a.event_type='game_end' AND a.duration_ms >= 30000)::int AS engaged_sessions,
+             count(*) FILTER (WHERE a.event_type='work_view' AND a.attribution_source IS NOT NULL)::int AS referred_views,
+             count(*) FILTER (WHERE a.event_type='game_start' AND a.attribution_source IS NOT NULL)::int AS referred_starts,
+             count(*) FILTER (WHERE a.event_type='game_end' AND a.duration_ms >= 30000 AND a.attribution_source IS NOT NULL)::int AS referred_engaged_sessions
            FROM analytics_events a JOIN owned o ON o.id::text=a.work_key
            WHERE a.occurred_at >= $2 AND a.occurred_at < $3 GROUP BY a.work_key
          ), repeaters AS (
@@ -117,6 +130,8 @@ export class PostgresAnalyticsRepository {
          SELECT o.id::text AS work_id,o.title,o.state,
            COALESCE(e.views,0)::int AS views,COALESCE(e.starts,0)::int AS starts,
            COALESCE(e.engaged_sessions,0)::int AS engaged_sessions,COALESCE(r.repeat_players,0)::int AS repeat_players,
+           COALESCE(e.referred_views,0)::int AS referred_views,COALESCE(e.referred_starts,0)::int AS referred_starts,
+           COALESCE(e.referred_engaged_sessions,0)::int AS referred_engaged_sessions,
            COALESCE(s.saves,0)::int AS saves,COALESCE(b.builds,0)::int AS builds,
            COALESCE(b.successful_builds,0)::int AS successful_builds
          FROM owned o LEFT JOIN event_stats e ON e.work_key=o.id::text
@@ -133,6 +148,16 @@ export class PostgresAnalyticsRepository {
          WHERE w.owner_user_id=$1 AND a.occurred_at >= $2 AND a.occurred_at < $3
          GROUP BY day ORDER BY day`, [userId, since, now],
       ),
+      this.pool.query(
+        `SELECT COALESCE(a.attribution_source,'direct') AS source,a.campaign_key,
+          count(DISTINCT a.anonymous_id)::int AS visitors,
+          count(*) FILTER (WHERE a.event_type='work_view')::int AS views,
+          count(*) FILTER (WHERE a.event_type='game_start')::int AS starts,
+          count(*) FILTER (WHERE a.event_type='game_end' AND a.duration_ms >= 30000)::int AS engaged_sessions
+         FROM analytics_events a JOIN works w ON w.id::text=a.work_key
+         WHERE w.owner_user_id=$1 AND a.occurred_at >= $2 AND a.occurred_at < $3
+         GROUP BY source,a.campaign_key ORDER BY views DESC,starts DESC,source,a.campaign_key NULLS FIRST`, [userId, since, now],
+      ),
     ]);
     const daily = new Map();
     for (let index = 0; index < days; index += 1) {
@@ -144,16 +169,18 @@ export class PostgresAnalyticsRepository {
     const works = workStats.rows.map(row => ({
       workId: row.work_id, title: row.title, state: row.state, views: number(row.views), starts: number(row.starts), engagedSessions: number(row.engaged_sessions),
       repeatPlayers: number(row.repeat_players), saves: number(row.saves), builds: number(row.builds), successfulBuilds: number(row.successful_builds),
+      referredViews: number(row.referred_views), referredStarts: number(row.referred_starts), referredEngagedSessions: number(row.referred_engaged_sessions),
     }));
     const totals = works.reduce((sum, work) => {
-      for (const key of ['views','starts','engagedSessions','repeatPlayers','saves','builds','successfulBuilds']) sum[key] += work[key];
+      for (const key of ['views','starts','engagedSessions','repeatPlayers','saves','builds','successfulBuilds','referredViews','referredStarts','referredEngagedSessions']) sum[key] += work[key];
       return sum;
-    }, { views: 0, starts: 0, engagedSessions: 0, repeatPlayers: 0, saves: 0, builds: 0, successfulBuilds: 0 });
+    }, { views: 0, starts: 0, engagedSessions: 0, repeatPlayers: 0, saves: 0, builds: 0, successfulBuilds: 0, referredViews: 0, referredStarts: 0, referredEngagedSessions: 0 });
     return {
       range: { days, since: since.toISOString(), until: now.toISOString() },
-      totals: { ...totals, engagementRate: totals.starts ? Math.min(100, Math.round(totals.engagedSessions / totals.starts * 100)) : 0, buildSuccessRate: totals.builds ? Math.min(100, Math.round(totals.successfulBuilds / totals.builds * 100)) : 0 },
+      totals: { ...totals, engagementRate: totals.starts ? Math.min(100, Math.round(totals.engagedSessions / totals.starts * 100)) : 0, buildSuccessRate: totals.builds ? Math.min(100, Math.round(totals.successfulBuilds / totals.builds * 100)) : 0, referralConversionRate: totals.referredViews ? Math.min(100, Math.round(totals.referredStarts / totals.referredViews * 100)) : 0 },
       daily: [...daily.values()], works,
-      measurement: { timeZone: 'Asia/Shanghai', repeatPlayer: '同一匿名设备在周期内至少启动两次', saves: '当前仍收藏该作品的账号数', engagementRate: '停留至少 30 秒的结束会话 / 启动事件' },
+      channels: channels.rows.map(row => ({ source: row.source, campaignKey: row.campaign_key ?? null, visitors: number(row.visitors), views: number(row.views), starts: number(row.starts), engagedSessions: number(row.engaged_sessions), conversionRate: number(row.views) ? Math.min(100, Math.round(number(row.starts) / number(row.views) * 100)) : 0 })),
+      measurement: { timeZone: 'Asia/Shanghai', repeatPlayer: '同一匿名设备在周期内至少启动两次', saves: '当前仍收藏该作品的账号数', engagementRate: '停留至少 30 秒的结束会话 / 启动事件', attribution: '仅保存受控渠道类型和可选活动代号，不保存完整来源网址' },
     };
   }
 }

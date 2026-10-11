@@ -9,6 +9,8 @@ export class AnalyticsError extends Error {
 const EVENT_TYPES = new Set(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']);
 const HOST_KINDS = new Set(['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown']);
 const ROUTES = new Set(['discover','library','social','creator','admin','work','play','auth','settings','unknown']);
+const ATTRIBUTION_SOURCES = new Set(['share_copy','share_system','readme','external']);
+const CAMPAIGN_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
 const WORK_KEY = /^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F-]{36})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -39,9 +41,13 @@ export function createAnalyticsService({ repository, clock = () => new Date(), i
         if (releaseId && !UUID.test(releaseId)) invalid('版本标识无效。');
         const durationMs = event.durationMs == null ? null : Number(event.durationMs);
         if (durationMs != null && (!Number.isInteger(durationMs) || durationMs < 0 || durationMs > 600000)) invalid('时长数据无效。');
+        const attributionSource = event.attributionSource == null ? null : String(event.attributionSource);
+        if (attributionSource !== null && !ATTRIBUTION_SOURCES.has(attributionSource)) invalid('传播来源无效。');
+        const campaignKey = event.campaignKey == null ? null : String(event.campaignKey);
+        if (campaignKey !== null && (!attributionSource || !CAMPAIGN_KEY.test(campaignKey))) invalid('传播活动代号无效。');
         const suppliedAt = new Date(event.occurredAt);
         const occurredAt = Number.isFinite(suppliedAt.getTime()) && Math.abs(suppliedAt.getTime() - now.getTime()) <= 86_400_000 ? suppliedAt : now;
-        return { id: ids(), userId: actor?.userId ?? null, anonymousId: event.anonymousId, sessionId: event.sessionId, type: event.type, route, workKey, releaseId, hostKind, durationMs, occurredAt, receivedAt: now };
+        return { id: ids(), userId: actor?.userId ?? null, anonymousId: event.anonymousId, sessionId: event.sessionId, type: event.type, route, workKey, releaseId, hostKind, durationMs, attributionSource, campaignKey, occurredAt, receivedAt: now };
       });
       await repository.insert(events);
       return { accepted: events.length };
