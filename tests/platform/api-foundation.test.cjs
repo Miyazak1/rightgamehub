@@ -161,14 +161,17 @@ test('creator work routes accept discovery metadata from the creation form', asy
 test('creator analytics, public work pages and badges stay catalog-gated', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   const { AuthError } = await import(moduleUrl('auth-service.mjs'));
+  const sharp = require('../../apps/api/node_modules/sharp');
   const workId = '00000000-0000-4000-8000-000000000777';
   const actor = { userId: 'creator-user', scopes: ['works:read'], profile: { canPublish: true } };
   const calls = [];
+  const coverBody = await sharp({ create: { width: 960, height: 540, channels: 3, background: '#563d7c' } }).png().toBuffer();
   const app = createApp({
     config: { requestBodyLimit: 65536, gameShareSiteOrigin: 'https://games.example' }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
     authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
     analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async () => ({ accepted: 1 }) },
-    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover` }; } },
+    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover`, revision: '7' }; } },
+    workService: { getCover: async id => { calls.push(['cover', id]); return { mediaType: 'image/webp', body: coverBody }; } },
   });
   t.after(() => app.close());
   const denied = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30' });
@@ -183,6 +186,14 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.equal(badge.headers['x-content-type-options'], 'nosniff');
   assert.match(badge.body, /PLAY ON GAMEHUB/u);
   assert.deepEqual(calls[1], ['catalog', workId]);
+  const card = await app.inject({ method: 'GET', url: `/v1/works/${workId}/share-card.png?download=1` });
+  assert.equal(card.statusCode, 200);
+  assert.match(card.headers['content-type'], /^image\/png/u);
+  assert.match(card.headers['content-disposition'], /^attachment; filename="gamehub-/u);
+  assert.equal(card.headers['x-content-type-options'], 'nosniff');
+  const cardMetadata = await sharp(card.rawPayload).metadata();
+  assert.deepEqual({ width: cardMetadata.width, height: cardMetadata.height, format: cardMetadata.format }, { width: 1200, height: 630, format: 'png' });
+  assert.deepEqual(calls.slice(2, 4), [['catalog', workId], ['cover', workId]]);
   const page = await app.inject({ method: 'GET', url: `/w/${workId}` });
   assert.equal(page.statusCode, 200);
   assert.match(page.headers['content-type'], /^text\/html/u);
@@ -192,10 +203,11 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /<title>公开游戏 &lt;测试&gt; \| GameHub<\/title>/u);
   assert.match(page.body, /<link rel="canonical" href="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777">/u);
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
-  assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/cover"/u);
+  assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7"/u);
+  assert.match(page.body, /property="og:image:width" content="1200"/u);
   assert.match(page.body, /window\.location\.replace\("https:\/\/games\.example\/#\/works\/00000000-0000-4000-8000-000000000777\?public=1"\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);
-  assert.deepEqual(calls[2], ['catalog', workId]);
+  assert.deepEqual(calls[4], ['catalog', workId]);
 });
 
 test('production edge sends stable public work links to the metadata route before the SPA fallback', async () => {

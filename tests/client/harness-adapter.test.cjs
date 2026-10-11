@@ -252,7 +252,7 @@ test('Harness navigation remains inside the plugin surface', async () => {
   const app = await readFile('packages/platform-client/src/App.jsx', 'utf8');
   const entry = await readFile('extensions/harness/src/platform-client.jsx', 'utf8');
   assert.match(app, /function useRoute\(mode\)/);
-  assert.match(app, /mode === 'hash'/);
+  assert.match(app, /mode !== 'hash'/);
   assert.doesNotMatch(app, /history\.back\(\)/);
   assert.match(entry, /routing: 'memory'/);
   assert.match(entry, /https:\/\/mooyu\.fun/);

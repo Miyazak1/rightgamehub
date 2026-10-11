@@ -35,6 +35,7 @@ import { SourceBuildRepositoryError } from './source-build-repository.mjs';
 import { CreatorDraftError, CREATOR_STUDIOS } from './creator-draft-service.mjs';
 import { ProjectClaimError } from './project-claim-service.mjs';
 import { registerProjectClaimRoutes } from './project-claim-routes.mjs';
+import { renderWorkShareCard } from './work-share-card.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -47,9 +48,10 @@ const publicWorkPage = ({ work, siteOrigin, nonce }) => {
   const title = `${work.title} | GameHub`;
   const description = String(work.description || `在 GameHub 在线体验《${work.title}》。`).replace(/\s+/gu, ' ').trim().slice(0, 200);
   const creator = work.creatorDisplayName ? `作者：${work.creatorDisplayName}` : 'GameHub 社区作品';
-  const coverUrl = work.coverUrl ? new URL(work.coverUrl, `${siteOrigin}/`).href : null;
-  const imageMeta = coverUrl ? `<meta property="og:image" content="${escapeHtml(coverUrl)}"><meta name="twitter:image" content="${escapeHtml(coverUrl)}">` : '';
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${escapeHtml(canonicalUrl)}"><meta property="og:type" content="website"><meta property="og:site_name" content="GameHub"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonicalUrl)}">${imageMeta}<meta name="twitter:card" content="${coverUrl ? 'summary_large_image' : 'summary'}"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><style>html{color-scheme:light dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(520px,calc(100% - 48px));padding:32px;border:1px solid #d8d3e2;background:#fff;box-shadow:5px 5px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0 8px;font-size:28px}p{margin:0 0 20px;color:#625c6d;line-height:1.7}.creator{font-size:13px}a{display:inline-block;padding:10px 16px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}@media(prefers-color-scheme:dark){body{background:#111018;color:#f6f3ff}.card{border-color:#393445;background:#1b1822;box-shadow:5px 5px 0 #09080d}p{color:#b8b0c3}}</style></head><body><main class="card"><span class="label">GAMEHUB WORK</span><h1>${escapeHtml(work.title)}</h1><p>${escapeHtml(description)}</p><p class="creator">${escapeHtml(creator)}</p><a href="${escapeHtml(appUrl)}">打开作品</a></main><script nonce="${nonce}">window.location.replace(${JSON.stringify(appUrl).replace(/</gu, '\\u003c')});</script></body></html>`;
+  const shareCardVersion = encodeURIComponent(String(work.revision || '1'));
+  const shareCardUrl = `${siteOrigin}/v1/works/${encodedWorkId}/share-card.png?v=${shareCardVersion}`;
+  const imageMeta = `<meta property="og:image" content="${escapeHtml(shareCardUrl)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:image" content="${escapeHtml(shareCardUrl)}">`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${escapeHtml(canonicalUrl)}"><meta property="og:type" content="website"><meta property="og:site_name" content="GameHub"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonicalUrl)}">${imageMeta}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><style>html{color-scheme:light dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(520px,calc(100% - 48px));padding:32px;border:1px solid #d8d3e2;background:#fff;box-shadow:5px 5px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0 8px;font-size:28px}p{margin:0 0 20px;color:#625c6d;line-height:1.7}.creator{font-size:13px}a{display:inline-block;padding:10px 16px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}@media(prefers-color-scheme:dark){body{background:#111018;color:#f6f3ff}.card{border-color:#393445;background:#1b1822;box-shadow:5px 5px 0 #09080d}p{color:#b8b0c3}}</style></head><body><main class="card"><span class="label">GAMEHUB WORK</span><h1>${escapeHtml(work.title)}</h1><p>${escapeHtml(description)}</p><p class="creator">${escapeHtml(creator)}</p><a href="${escapeHtml(appUrl)}">打开作品</a></main><script nonce="${nonce}">window.location.replace(${JSON.stringify(appUrl).replace(/</gu, '\\u003c')});</script></body></html>`;
 };
 const readLimitedBody = async (stream, limit) => {
   const chunks = []; let total = 0;
@@ -428,6 +430,21 @@ export function createApp(dependencies) {
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.get(request.params.workId));
+    });
+    app.get('/v1/works/:workId/share-card.png', {
+      schema: {
+        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },
+        querystring: { type: 'object', additionalProperties: false, properties: { download: { type: 'string', enum: ['1'] }, v: { type: 'string', maxLength: 64, pattern: '^[A-Za-z0-9._-]+$' } } },
+      },
+    }, async (request, reply) => {
+      const work = await catalogService.get(request.params.workId);
+      const cover = work.coverUrl && workService?.getCover ? await workService.getCover(request.params.workId).catch(() => null) : null;
+      const body = await renderWorkShareCard(work, cover?.body);
+      const disposition = request.query.download === '1' ? 'attachment' : 'inline';
+      reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
+      reply.header('Content-Disposition', `${disposition}; filename="gamehub-${work.id}-share.png"`);
+      reply.header('X-Content-Type-Options', 'nosniff');
+      return reply.type('image/png').send(body);
     });
     app.get('/v1/works/:workId/badge.svg', {
       schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } } },

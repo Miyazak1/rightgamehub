@@ -125,6 +125,10 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     abandonCompetitionRun: (session,id,options) => request('/v1/competition/runs/'+encodeURIComponent(id)+'/abandon',{...options,auth:true,method:'POST',headers:{'X-GameHub-Session':session}}),
     listWorks: ({ limit = 20, kind, q, offset, openSource, remixable, claimable, runtime, source } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}${openSource ? '&openSource=true' : ''}${remixable ? '&remixable=true' : ''}${claimable ? '&claimable=true' : ''}${runtime ? `&runtime=${encodeURIComponent(runtime)}` : ''}${source ? `&source=${encodeURIComponent(source)}` : ''}`, options),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
+    workShareCardUrl: (id, { download = false, version } = {}) => {
+      const query = new URLSearchParams({ ...(version ? { v: String(version) } : {}), ...(download ? { download: '1' } : {}) });
+      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/share-card.png${query.size ? `?${query}` : ''}`;
+    },
     getWorkLeaderboard: (id, {date,puzzleId,limit=10,offset=0}={}, options) => request(`/v1/works/${encodeURIComponent(id)}/leaderboard?${new URLSearchParams({limit,offset,...(date?{date}:{}),...(puzzleId?{puzzleId}:{})})}`, {...options,auth:true}),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
