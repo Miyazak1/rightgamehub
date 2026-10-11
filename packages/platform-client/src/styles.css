@@ -432,6 +432,14 @@ button { cursor: pointer; }
 .badge-row { font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 10px; }
 .status-badge { padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--gh-success) 42%, var(--gh-border)); border-radius: 2px; }
 .detail-actions { flex-wrap: wrap; margin: 20px 0 12px; }
+.gamehub-action-icon { width: 16px; height: 16px; display: block; flex: 0 0 auto; color: currentColor; }
+.work-share-dialog { width: min(520px, calc(100% - 32px)); position: relative; padding: 26px; border: 2px solid var(--gh-border); border-radius: 3px; background: var(--gh-panel); box-shadow: 6px 6px 0 color-mix(in srgb, var(--gh-border) 58%, transparent); }
+.work-share-dialog h2 { margin: 8px 32px 8px 0; font: 700 22px ui-monospace, "Cascadia Mono", "Microsoft YaHei UI", sans-serif; }
+.work-share-dialog > p { margin: 0; color: var(--gh-secondary); font-size: 12px; line-height: 1.65; }
+.work-share-url { min-width: 0; margin: 18px 0 14px; padding: 11px 12px; display: flex; align-items: center; gap: 9px; border: 1px dashed var(--gh-border); background: var(--gh-raised); color: var(--gh-secondary); font: 10px ui-monospace, "Cascadia Mono", monospace; }
+.work-share-url span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.work-share-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.work-share-notice { margin-top: 12px !important; color: var(--gh-success) !important; }
 .friendly-note { padding-top: 9px; border-top: 1px dashed var(--gh-border); font-family: ui-monospace, "Cascadia Mono", monospace; }
 .detail-columns { margin-top: 10px; grid-template-columns: 1.15fr .85fr; gap: 10px; }
 .detail-columns .panel { padding: 19px; border-width: 2px; border-radius: 3px; box-shadow: 3px 3px 0 color-mix(in srgb, var(--gh-border) 42%, transparent); }

@@ -149,7 +149,7 @@ test('API client submits analytics and reads administrator and creator overviews
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
 });
 
-test('creator studio exposes private aggregate insights and README play badges', async () => {
+test('creator insights, README badges and work sharing use stable public links', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /CREATOR INSIGHTS/);
   assert.match(source, /api\.getCreatorAnalytics\(insights\.days\)/);
@@ -157,7 +157,9 @@ test('creator studio exposes private aggregate insights and README play badges',
   assert.match(source, /\/v1\/works\/\$\{work\.id\}\/badge\.svg/);
   assert.match(source, /const PUBLIC_GAMEHUB_URL = 'https:\/\/mooyu\.fun'/);
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{work\.id\}/);
-  assert.match(source, /复制分享链接/);
+  assert.match(source, /className="gamehub-action-icon gamehub-share-icon"/);
+  assert.match(source, /aria-label="分享作品"/);
+  assert.match(source, /复制作品链接/);
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{encodeURIComponent\(work\.id\)\}/);
 });
 
