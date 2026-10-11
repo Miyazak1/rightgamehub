@@ -27,3 +27,12 @@ test('only an administrator can create a claimable catalog entry',async()=>{
   await service.create({...baseActor,profile:{...baseActor.profile,role:'admin'}},body,'admin-catalog-key');
   assert.equal(received[0].body.attributionKind,'community_catalog');
 });
+
+test('remix source and explanation are an explicit pair',async()=>{
+  const {createWorkService,WorkError}=await import(moduleUrl);
+  const received=[];const repository={createIdempotent:async input=>(received.push(input),{id:input.workId,revision:1}),updateIdempotent:async input=>(received.push(input),{id:input.workId,revision:2})};
+  const service=createWorkService({repository});const source=crypto.randomUUID();
+  await assert.rejects(service.create(baseActor,{...body,remixSourceWorkId:source},'missing-remix-note'),error=>error instanceof WorkError&&error.code==='REMIX_SOURCE_INVALID');
+  await service.create(baseActor,{...body,remixSourceWorkId:source,remixNote:'保留核心玩法并重做了关卡与美术。'},'valid-remix-source');
+  assert.equal(received[0].body.remixSourceWorkId,source);assert.match(received[0].remixEventId,/^[0-9a-f-]{36}$/);
+});

@@ -1,12 +1,19 @@
 import { OPEN_SOURCE_LICENSES, REMIXABLE_LICENSES, isOpenSourceLicense, isRemixableLicense } from './catalog-policy.mjs';
 
 const targetView = row => ({ targetKey: row.target_key, state: row.target_state, currentReleaseId: row.current_release_id, revision: String(row.target_revision), packageType: row.package_type, releaseLabel: row.release_label, os: row.release_os, arch: row.release_arch, fileName: row.release_file_name ?? null, sizeBytes: row.release_size_bytes == null ? null : Number(row.release_size_bytes), sha256: row.release_sha256 ?? null });
+const remixSourceView = row => row.remix_source_work_id ? {
+  workId: row.remix_source_work_id, title: row.remix_source_title ?? null,
+  creatorDisplayName: row.remix_source_creator_display_name ?? null,
+  repositoryUrl: row.remix_source_repository_url ?? null, licenseSpdx: row.remix_source_license_spdx ?? null,
+  available: row.remix_source_state === 'published' && row.remix_source_visibility === 'public',
+} : null;
 const workView = rows => ({
   id: rows[0].id, ownerUserId: rows[0].owner_user_id, title: rows[0].title, description: rows[0].description,
   instructions: rows[0].instructions, kind: rows[0].kind, state: rows[0].state, visibility: rows[0].visibility,
   revision: String(rows[0].revision), firstPublishedAt: new Date(rows[0].first_published_at).toISOString(),
   estimatedMinutes: rows[0].estimated_minutes, tags: rows[0].tags ?? [], agentLabel: rows[0].agent_label,
   repositoryUrl: rows[0].repository_url, licenseSpdx: rows[0].license_spdx,
+  remixSource: remixSourceView(rows[0]), remixNote: rows[0].remix_note ?? null, remixCount: Number(rows[0].remix_count ?? 0),
   ingestionMethod: rows[0].ingestion_method, attributionKind: rows[0].attribution_kind,
   sourceCommitSha: rows.find(row=>row.source_commit_sha)?.source_commit_sha ?? null,
   openSource: Boolean(rows[0].repository_url && isOpenSourceLicense(rows[0].license_spdx)), remixable: Boolean(rows[0].repository_url && isRemixableLicense(rows[0].license_spdx)),
@@ -25,11 +32,17 @@ export class PostgresCatalogRepository {
     const result = await this.pool.query(
       `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
               sr.commit_sha AS source_commit_sha,c.status AS claim_status,
+              source.title AS remix_source_title,source.state AS remix_source_state,source.visibility AS remix_source_visibility,
+              source.repository_url AS remix_source_repository_url,source.license_spdx AS remix_source_license_spdx,
+              source_author.display_name AS remix_source_creator_display_name,COALESCE(remix_stats.remix_count,0) AS remix_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
               r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id
+         LEFT JOIN works source ON source.id=w.remix_source_work_id
+         LEFT JOIN users source_author ON source_author.id=source.owner_user_id
+         LEFT JOIN LATERAL (SELECT COUNT(*)::integer AS remix_count FROM works remix WHERE remix.remix_source_work_id=w.id AND remix.state='published' AND remix.visibility='public') remix_stats ON true
          LEFT JOIN LATERAL (SELECT status FROM project_claims WHERE work_id=w.id AND status IN ('pending','verified','disputed','suspended') ORDER BY submitted_at DESC LIMIT 1) c ON true
          LEFT JOIN LATERAL (SELECT COALESCE(SUM(play_count),0)::integer AS play_count,COUNT(*) FILTER (WHERE saved_at IS NOT NULL)::integer AS save_count FROM user_library WHERE work_key=w.id::text) e ON true
          JOIN releases r ON r.id=t.current_release_id AND r.work_id=t.work_id AND r.target_key=t.target_key
@@ -62,11 +75,17 @@ export class PostgresCatalogRepository {
     const rows = (await this.pool.query(
       `SELECT w.*,u.display_name AS creator_display_name,u.profile_handle AS creator_handle,COALESCE(e.play_count,0) AS play_count,COALESCE(e.save_count,0) AS save_count,
               sr.commit_sha AS source_commit_sha,c.status AS claim_status,
+              source.title AS remix_source_title,source.state AS remix_source_state,source.visibility AS remix_source_visibility,
+              source.repository_url AS remix_source_repository_url,source.license_spdx AS remix_source_license_spdx,
+              source_author.display_name AS remix_source_creator_display_name,COALESCE(remix_stats.remix_count,0) AS remix_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
               r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id
+         LEFT JOIN works source ON source.id=w.remix_source_work_id
+         LEFT JOIN users source_author ON source_author.id=source.owner_user_id
+         LEFT JOIN LATERAL (SELECT COUNT(*)::integer AS remix_count FROM works remix WHERE remix.remix_source_work_id=w.id AND remix.state='published' AND remix.visibility='public') remix_stats ON true
          LEFT JOIN LATERAL (SELECT status FROM project_claims WHERE work_id=w.id AND status IN ('pending','verified','disputed','suspended') ORDER BY submitted_at DESC LIMIT 1) c ON true
          LEFT JOIN LATERAL (SELECT COALESCE(SUM(play_count),0)::integer AS play_count,COUNT(*) FILTER (WHERE saved_at IS NOT NULL)::integer AS save_count FROM user_library WHERE work_key=w.id::text) e ON true
          JOIN releases r ON r.id=t.current_release_id AND r.work_id=t.work_id AND r.target_key=t.target_key
@@ -78,6 +97,23 @@ export class PostgresCatalogRepository {
         ORDER BY t.target_key`, [workId],
     )).rows;
     return rows.length ? workView(rows) : null;
+  }
+
+  async listRemixes(workId, limit = 12) {
+    const rows = (await this.pool.query(
+      `SELECT remix.id,remix.title,remix.description,remix.license_spdx,author.display_name AS creator_display_name,
+              remix.cover_object_key,remix.cover_sha256
+         FROM works remix JOIN users author ON author.id=remix.owner_user_id
+        WHERE remix.remix_source_work_id=$1 AND remix.state='published' AND remix.visibility='public'
+          AND EXISTS(SELECT 1 FROM work_targets target JOIN releases release ON release.id=target.current_release_id
+            WHERE target.work_id=remix.id AND target.state='published' AND release.validation_state='ready' AND release.serving_state='enabled')
+        ORDER BY remix.first_published_at DESC,remix.id LIMIT $2`, [workId, limit],
+    )).rows;
+    return rows.map(row => ({
+      id: row.id, title: row.title, description: row.description, creatorDisplayName: row.creator_display_name,
+      licenseSpdx: row.license_spdx,
+      coverUrl: row.cover_object_key ? `/v1/works/${row.id}/cover?v=${Buffer.from(row.cover_sha256).toString('hex').slice(0, 12)}` : null,
+    }));
   }
 
   async getDownload(workId, releaseId) {

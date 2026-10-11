@@ -16,6 +16,9 @@ const validateDiscoveryMetadata = body => {
   const hasRepository = Boolean(body?.repositoryUrl);
   const hasLicense = Boolean(body?.licenseSpdx);
   if (hasRepository !== hasLicense) throw new WorkError('SCHEMA_INVALID', 400, 'GitHub repository and SPDX license must be provided together.');
+  const hasRemixSource = Boolean(body?.remixSourceWorkId);
+  const hasRemixNote = Boolean(body?.remixNote);
+  if (hasRemixSource !== hasRemixNote) throw new WorkError('REMIX_SOURCE_INVALID', 400, '二创来源与改编说明必须同时填写或同时清空。');
 };
 
 export function createWorkService({ repository, ids = () => crypto.randomUUID(), coverProcessor = processCoverImage }) {
@@ -50,16 +53,17 @@ export function createWorkService({ repository, ids = () => crypto.randomUUID(),
       const attributionKind=body.attributionKind??(actor.profile?.role==='admin'?'community_catalog':'publisher');
       if(!['publisher','community_catalog'].includes(attributionKind)||(attributionKind==='community_catalog'&&actor.profile?.role!=='admin'))throw new WorkError('ATTRIBUTION_INVALID',403,'Only administrators can create a claimable community catalog entry.');
       const normalizedBody={...body,attributionKind};
-      const work = await repository.createIdempotent({ actor, idempotencyKey, requestHash: hashRequest(normalizedBody), workId: ids(), body:normalizedBody });
+      const work = await repository.createIdempotent({ actor, idempotencyKey, requestHash: hashRequest(normalizedBody), workId: ids(), remixEventId: ids(), body:normalizedBody });
       return { work, etag: workEtag(work) };
     },
     async update(actor, workId, body, idempotencyKey, ifMatch) {
       if (!actor.scopes.includes('works:write')) throw new WorkError('FORBIDDEN', 403, 'This device is not allowed to edit works.');
       if (!/^[\x21-\x7e]{16,128}$/.test(idempotencyKey ?? '')) throw new WorkError('IDEMPOTENCY_KEY_REQUIRED', 400, 'A valid Idempotency-Key is required.');
       if (!body || Object.keys(body).length === 0) throw new WorkError('SCHEMA_INVALID', 400, 'At least one field is required.');
+      validateDiscoveryMetadata(body);
       const match = new RegExp(`^"work-${workId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)"$`).exec(ifMatch ?? '');
       if (!match) throw new WorkError('PRECONDITION_REQUIRED', 428, 'A current Work ETag is required.');
-      const work = await repository.updateIdempotent({ actor, workId, expectedRevision: match[1], body, idempotencyKey, requestHash: hashRequest({ workId, body, ifMatch }) });
+      const work = await repository.updateIdempotent({ actor, workId, expectedRevision: match[1], body, remixEventId: ids(), idempotencyKey, requestHash: hashRequest({ workId, body, ifMatch }) });
       return { work, etag: workEtag(work) };
     },
     async withdraw(actor, workId, idempotencyKey, ifMatch) {

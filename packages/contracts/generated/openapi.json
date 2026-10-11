@@ -14976,6 +14976,100 @@
         }
       }
     },
+    "/v1/works/{workId}/remixes": {
+      "get": {
+        "operationId": "listWorkRemixes",
+        "tags": [
+          "works"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkRemixSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/works/{workId}/claim": {
       "get": {
         "operationId": "getPublicProjectClaim",
@@ -27393,6 +27487,29 @@
                 "type": "null"
               }
             ]
+          },
+          "remixSourceWorkId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remixNote": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -27467,6 +27584,29 @@
                 "type": "null"
               }
             ]
+          },
+          "remixSourceWorkId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remixNote": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": []
@@ -27514,6 +27654,129 @@
           "state",
           "currentReleaseId",
           "revision"
+        ]
+      },
+      "WorkRemixSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "creatorDisplayName": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repositoryUrl": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "licenseSpdx": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "workId",
+          "title",
+          "creatorDisplayName",
+          "repositoryUrl",
+          "licenseSpdx",
+          "available"
+        ]
+      },
+      "WorkRemixSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "creatorDisplayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "licenseSpdx": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverUrl": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^/v1/works/"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "creatorDisplayName",
+          "licenseSpdx",
+          "coverUrl"
         ]
       },
       "Work": {
@@ -27717,6 +27980,32 @@
             "minimum": 0
           },
           "saveCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "remixSource": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WorkRemixSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remixNote": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remixCount": {
             "type": "integer",
             "minimum": 0
           },

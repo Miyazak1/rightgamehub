@@ -435,6 +435,12 @@ export function createApp(dependencies) {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.get(request.params.workId));
     });
+    app.get('/v1/works/:workId/remixes', {
+      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'public, max-age=30');
+      return envelope(await catalogService.listRemixes(request.params.workId));
+    });
     app.get('/v1/works/:workId/share-card.png', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },

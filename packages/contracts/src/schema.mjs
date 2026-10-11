@@ -299,6 +299,8 @@ export const schemas = Object.freeze({
     agentLabel: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
     repositoryUrl: { oneOf: [{ type: 'string', pattern: '^https://github\\.com/[^/\\s]+/[^/\\s]+/?$' }, { type: 'null' }] },
     licenseSpdx: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
+    remixSourceWorkId: { oneOf: [id, { type: 'null' }] },
+    remixNote: { oneOf: [{ type: 'string', minLength: 10, maxLength: 1000 }, { type: 'null' }] },
   }, ['title', 'description', 'kind']),
   UpdateWorkRequest: object({
     title: { type: 'string', minLength: 1, maxLength: 120 },
@@ -309,12 +311,22 @@ export const schemas = Object.freeze({
     agentLabel: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
     repositoryUrl: { oneOf: [{ type: 'string', pattern: '^https://github\\.com/[^/\\s]+/[^/\\s]+/?$' }, { type: 'null' }] },
     licenseSpdx: { oneOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
+    remixSourceWorkId: { oneOf: [id, { type: 'null' }] },
+    remixNote: { oneOf: [{ type: 'string', minLength: 10, maxLength: 1000 }, { type: 'null' }] },
   }, []),
   WorkTarget: object({
     targetKey: stringEnum(enums.TargetKey),
     state: stringEnum(enums.WorkState),
     currentReleaseId: { oneOf: [id, { type: 'null' }] },
     revision: uintString,
+  }),
+  WorkRemixSource: object({
+    workId:id,title:nullable({type:'string',minLength:1,maxLength:120}),creatorDisplayName:nullable({type:'string',minLength:1,maxLength:120}),
+    repositoryUrl:nullable({type:'string',format:'uri'}),licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),available:{type:'boolean'},
+  }),
+  WorkRemixSummary: object({
+    id,title:{type:'string',minLength:1,maxLength:120},description:{type:'string',maxLength:4000},creatorDisplayName:{type:'string',minLength:1,maxLength:120},
+    licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),coverUrl:nullable({type:'string',pattern:'^/v1/works/'}),
   }),
   Work: object({
     id: workKey, ownerUserId: id,
@@ -339,8 +351,9 @@ export const schemas = Object.freeze({
     creatorHandle: { oneOf: [{ type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, { type: 'null' }] },
     playCount: { type: 'integer', minimum: 0 },
     saveCount: { type: 'integer', minimum: 0 },
+    remixSource:nullable({$ref:'#/components/schemas/WorkRemixSource'}),remixNote:nullable({type:'string',minLength:10,maxLength:1000}),remixCount:{type:'integer',minimum:0},
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
-  }),
+  }, ['id','ownerUserId','title','description','instructions','kind','state','visibility','revision','firstPublishedAt','coverUrl','estimatedMinutes','tags','agentLabel','repositoryUrl','licenseSpdx','ingestionMethod','attributionKind','sourceCommitSha','openSource','remixable','claimStatus','claimEligible','creatorDisplayName','creatorHandle','playCount','saveCount','targets']),
   PublicProjectClaim: object({
     workId: workKey, ingestionMethod:stringEnum(['platform','zip_upload','github_import']), attributionKind:stringEnum(['publisher','community_catalog']), eligible: {type:'boolean'}, status: stringEnum(enums.ProjectClaimStatus),
     relationship: nullable(stringEnum(['owner','maintainer'])), claimantDisplayName: nullable({type:'string',minLength:1,maxLength:120}),
@@ -874,6 +887,7 @@ export const operations = Object.freeze([
   { method: 'get', path: '/v1/works', operationId: 'listWorks', auth: 'anonymous', response: 'Work', responseArray: true, queryCatalog:true },
   { method:'get',path:'/v1/works/{workId}/leaderboard',operationId:'getWorkLeaderboard',auth:'optional',response:'WorkLeaderboard',pathWorkKey:true,queryWorkLeaderboard:true },
   { method: 'get', path: '/v1/works/{workId}', operationId: 'getWork', auth: 'anonymous', response: 'Work', pathWorkKey: true },
+  { method: 'get', path: '/v1/works/{workId}/remixes', operationId: 'listWorkRemixes', auth: 'anonymous', response: 'WorkRemixSummary', responseArray: true, pathWorkKey: true },
   { method: 'get', path: '/v1/works/{workId}/claim', operationId: 'getPublicProjectClaim', auth: 'optional', response: 'PublicProjectClaim', pathWorkKey: true },
   { method: 'post', path: '/v1/works/{workId}/claims', operationId: 'createProjectClaim', auth: 'bearer', request: 'CreateProjectClaimRequest', response: 'ProjectClaim', pathId: 'workId', successStatus: '201' },
   { method: 'get', path: '/v1/me/project-claims', operationId: 'listMyProjectClaims', auth: 'bearer', response: 'ProjectClaim', responseArray: true, queryProjectClaims: true },

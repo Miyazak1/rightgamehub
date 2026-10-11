@@ -25,6 +25,7 @@ test('discovery catalog searches beyond page one, filters before paging, and res
   for(let i=0;i<32;i++)ids.push(await work(i,{title:i===31?'冷门画板 100%_完成':'作品 '+i,kind:i===31?'tool':'game'}));
   await pool.query("UPDATE works SET repository_url='https://github.com/example/open-game',license_spdx='MIT',ingestion_method='github_import',attribution_kind='community_catalog' WHERE id=$1",[ids[0]]);
   await pool.query("UPDATE works SET repository_url='https://github.com/example/copyleft-game',license_spdx='GPL-3.0-only',ingestion_method='github_import' WHERE id=$1",[ids[1]]);
+  await pool.query("UPDATE works SET remix_source_work_id=$1,remix_note='保留数字玩法并重新设计了关卡表现。' WHERE id=$2",[ids[0],ids[2]]);
   const oi=await work(40,{id:'314fb01a-27da-4c28-947a-68b20176a6cf',title:'oi-remake-game'});
   await work(-5,{title:'不可见 私密',visibility:'private'});await work(-4,{title:'不可见 撤回',state:'withdrawn'});await work(-3,{title:'不可见 暂停版本',serving:'disabled'});
   const service=createCatalogService({repository:new PostgresCatalogRepository(pool),config:{}});
@@ -38,6 +39,8 @@ test('discovery catalog searches beyond page one, filters before paging, and res
   assert.deepEqual((await service.list({claimable:true})).map(work=>work.id),[ids[0]]);
   assert.deepEqual((await service.list({source:'platform'})).map(work=>work.id),['gamehub-guess-baike']);
   assert.equal((await service.get(ids[0])).claimStatus,'unclaimed');assert.equal((await service.get(ids[0])).remixable,true);
+  assert.equal((await service.get(ids[2])).remixSource.workId,ids[0]);assert.equal((await service.get(ids[0])).remixCount,1);
+  assert.deepEqual((await service.listRemixes(ids[0])).map(work=>work.id),[ids[2]]);
   assert.equal((await service.list({q:'%_'})).length,1);
   assert.equal((await service.list({q:'不可见'})).length,0);
   assert.equal((await service.list({q:'重开'}))[0].title,'OI 重开模拟器');
@@ -53,5 +56,6 @@ test('discovery catalog searches beyond page one, filters before paging, and res
   assert.equal((await engagement.list({userId:actor})).length,5);
   app=createApp({config:{requestBodyLimit:65536,corsOrigins:[]},catalogService:service});
   assert.equal((await app.inject({url:'/v1/works?q='+encodeURIComponent('冷门画板')+'&limit=1&offset=0'})).json().data[0].id,ids[31]);
+  assert.equal((await app.inject({url:`/v1/works/${ids[0]}/remixes`})).json().data[0].id,ids[2]);
   for(const query of ['offset=-1','limit=51','kind=nope','runtime=dos','source=crawler','q='+('x'.repeat(101))])assert.equal((await app.inject({url:'/v1/works?'+query})).statusCode,400);
 });

@@ -30,6 +30,12 @@ export function createCatalogService({ repository, config, artifactStore }) {
       if (!work) throw new CatalogError('NOT_FOUND', 404, 'Work not found.');
       return presentCatalogWork(work);
     },
+    async listRemixes(workId) {
+      if (workId === GUESS_BAIKE_WORK_ID) return [];
+      const work = await repository.get(workId);
+      if (!work) throw new CatalogError('NOT_FOUND', 404, 'Work not found.');
+      return repository.listRemixes(workId, 12);
+    },
     async download(workId, releaseId) {
       const release = await repository.getDownload(workId, releaseId);
       if (!release) throw new CatalogError('NOT_FOUND', 404, 'Downloadable Windows release not found.');

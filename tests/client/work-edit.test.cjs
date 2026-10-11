@@ -26,5 +26,7 @@ test('metadata form preserves custom values, pairs nullable links and never send
   assert.equal(form.estimatedMinutes, '7'); assert.equal(form.agentLabel, '自定义工具');
   const payload = workMetadataPayload({ ...form, kind: 'game', tags: '像素, 像素，休闲', repositoryUrl: '', licenseSpdx: '', agentLabel: '' });
   assert.equal('kind' in payload, false); assert.equal(payload.repositoryUrl, null); assert.equal(payload.licenseSpdx, null); assert.equal(payload.agentLabel, null); assert.deepEqual(payload.tags, ['像素','休闲']);
+  const source='7359a350-cc0a-4a09-875d-cec9b5b8f93f',remix=workMetadataPayload({...form,remixSourceWorkId:source,remixNote:'保留核心规则，并重新设计了关卡与视觉。'});assert.equal(remix.remixSourceWorkId,source);
+  assert.throws(()=>workMetadataPayload({...form,remixSourceWorkId:source,remixNote:''}),/二创来源/);
   for (const patch of [{ repositoryUrl: '' }, { estimatedMinutes: '31' }, { estimatedMinutes: '1.5' }, { title: ' ' }, { tags: '1,2,3,4,5,6,7' }]) assert.throws(() => workMetadataPayload({ ...form, ...patch }));
 });
