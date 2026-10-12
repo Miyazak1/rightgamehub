@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 62);
+  assert.equal(files.length, 63);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -16,6 +16,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const projectClaims = fs.readFileSync(path.join(migrationDir, '0060_project_claims.sql'), 'utf8');
   const analyticsAttribution = fs.readFileSync(path.join(migrationDir, '0061_analytics_attribution.sql'), 'utf8');
   const remixProvenance = fs.readFileSync(path.join(migrationDir, '0062_work_remix_provenance.sql'), 'utf8');
+  const developmentLog = fs.readFileSync(path.join(migrationDir, '0063_work_development_entries.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -45,6 +46,10 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(remixProvenance, /CREATE TABLE work_remix_events/);
   assert.match(remixProvenance, /BEFORE UPDATE ON work_remix_events/);
   assert.match(remixProvenance, /BEFORE DELETE ON work_remix_events/);
+  assert.match(developmentLog, /CREATE TABLE work_development_entries/);
+  assert.match(developmentLog, /CREATE TABLE work_development_entry_events/);
+  assert.match(developmentLog, /BEFORE UPDATE ON work_development_entry_events/);
+  assert.match(developmentLog, /BEFORE DELETE ON work_development_entry_events/);
   assert.match(creatorStudio, /octet_length\(content::text\) <= 1048576/);
   const gameShares = fs.readFileSync(path.join(migrationDir, '0055_game_share_links.sql'), 'utf8');
   assert.match(gameShares, /CREATE TABLE game_share_links/);
@@ -170,6 +175,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'source_revisions', 'build_jobs', 'release_provenance', 'multiplayer_rule_builds', 'multiplayer_rule_build_events',
     'creator_feedback', 'creator_feedback_events',
     'game_share_links', 'creator_drafts', 'creator_draft_revisions', 'creator_generation_jobs', 'project_claims', 'project_claim_events', 'work_remix_events',
+    'work_development_entries', 'work_development_entry_events',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

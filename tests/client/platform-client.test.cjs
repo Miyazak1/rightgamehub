@@ -112,6 +112,8 @@ test('API client exposes catalog data without inventing local works', async () =
   assert.match(requested,/openSource=true/);assert.match(requested,/remixable=true/);assert.match(requested,/claimable=true/);assert.match(requested,/runtime=web/);assert.match(requested,/source=github_import/);
   assert.deepEqual((await client.listWorkRemixes('work id')).data, []);
   assert.match(requested,/\/v1\/works\/work%20id\/remixes$/);
+  assert.deepEqual((await client.listWorkTimeline('work id')).data, []);
+  assert.match(requested,/\/v1\/works\/work%20id\/timeline$/);
   assert.equal(client.workShareCardUrl('work id'),'/v1/works/work%20id/share-card.png');
   assert.equal(client.workShareCardUrl('work id',{version:7,download:true}),'/v1/works/work%20id/share-card.png?v=7&download=1');
 });

@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 62);
+  assert.equal(migrations.length, 63);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -53,6 +53,7 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[59].version, '0060');
   assert.equal(migrations[60].version, '0061');
   assert.equal(migrations[61].version, '0062');
+  assert.equal(migrations[62].version, '0063');
   for (const migration of migrations) {
     assert.match(migration.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(migration.body, /^BEGIN;/i);
@@ -87,7 +88,7 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
   const pool = database.pool;
   try {
     const first = await applyMigrations(pool, migrationDir);
-    assert.equal(first.total, 60);
+    assert.equal(first.total, 63);
     const second = await applyMigrations(pool, migrationDir);
     assert.deepEqual(second.applied, []);
     assert.equal((await migrationStatus(pool, migrationDir)).ready, true);

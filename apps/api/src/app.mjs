@@ -36,6 +36,7 @@ import { CreatorDraftError, CREATOR_STUDIOS } from './creator-draft-service.mjs'
 import { ProjectClaimError } from './project-claim-service.mjs';
 import { registerProjectClaimRoutes } from './project-claim-routes.mjs';
 import { renderWorkShareCard } from './work-share-card.mjs';
+import { DevelopmentLogError } from './development-log-service.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -88,6 +89,7 @@ export function createApp(dependencies) {
     analyticsService,
     creatorFeedbackService,
     contributionTaskService,
+    developmentLogService,
     creatorDraftService,
     projectClaimService,
     storageCapacityService,
@@ -135,7 +137,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -905,6 +907,46 @@ export function createApp(dependencies) {
     });
     app.post('/v1/contribution-notifications/:taskId/read', { preHandler: requireAuth, schema: { params:taskParams } }, async (request,reply) => {
       reply.header('Cache-Control','no-store'); return envelope(await contributionTaskService.readNotification(request.actor,request.params.taskId));
+    });
+  }
+
+  if (developmentLogService) {
+    const developmentWorkParams = { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', format: 'uuid' } } };
+    const developmentPublicWorkParams = { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: { type: 'string', pattern: '^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F-]{36})$' } } };
+    const developmentEntryParams = { type: 'object', additionalProperties: false, required: ['entryId'], properties: { entryId: { type: 'string', format: 'uuid' } } };
+    const developmentFields = {
+      entryKind: { type: 'string', enum: ['update','release_notes','milestone'] },
+      title: { type: 'string', minLength: 5, maxLength: 120 },
+      body: { type: 'string', minLength: 20, maxLength: 4000 },
+      releaseId: { anyOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }] },
+    };
+    app.get('/v1/works/:workId/timeline', {
+      schema: { params: developmentPublicWorkParams, querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 } } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'public, max-age=30');
+      return envelope(await developmentLogService.listPublic(request.params.workId, request.query));
+    });
+    app.get('/v1/creator/works/:workId/development-entries', {
+      preHandler: requireAuth, schema: { params: developmentWorkParams },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await developmentLogService.listForCreator(request.actor, request.params.workId));
+    });
+    app.post('/v1/creator/works/:workId/development-entries', {
+      preHandler: requireAuth,
+      schema: { params: developmentWorkParams, body: { type: 'object', additionalProperties: false, required: ['entryKind','title','body'], properties: developmentFields } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store'); reply.status(201);
+      return envelope(await developmentLogService.createDraft(request.actor, request.params.workId, request.body));
+    });
+    app.patch('/v1/creator/development-entries/:entryId', {
+      preHandler: requireAuth,
+      schema: { params: developmentEntryParams, body: { type: 'object', additionalProperties: false, required: ['action','expectedVersion'], properties: {
+        action: { type: 'string', enum: ['edit','publish','withdraw'] }, expectedVersion: { type: 'integer', minimum: 1 }, ...developmentFields,
+      } } },
+    }, async (request, reply) => {
+      reply.header('Cache-Control', 'no-store');
+      return envelope(await developmentLogService.update(request.actor, request.params.entryId, request.body));
     });
   }
 

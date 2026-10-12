@@ -79,6 +79,7 @@ import { createRuleBuildRunner } from './rule-build-runner.mjs';
 import { PostgresCreatorDraftRepository } from './creator-draft-repository.mjs';
 import { createCreatorDraftService } from './creator-draft-service.mjs';
 import { PostgresProjectClaimRepository, createProjectClaimService } from './project-claim-service.mjs';
+import { PostgresDevelopmentLogRepository, createDevelopmentLogService } from './development-log-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -176,6 +177,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(database.pool) });
   const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(database.pool) });
   const contributionTaskService = createContributionTaskService({ repository: new PostgresContributionTaskRepository(database.pool) });
+  const developmentLogService = createDevelopmentLogService({ repository: new PostgresDevelopmentLogRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -234,6 +236,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     analyticsService,
     creatorFeedbackService,
     contributionTaskService,
+    developmentLogService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),

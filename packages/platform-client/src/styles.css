@@ -1806,3 +1806,48 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
     font-size: 27px;
   }
 }
+
+/* Public development timeline and the creator-side publishing workflow. */
+.work-development { margin-top: 24px; }
+.work-development .section-heading { margin-bottom: 12px; }
+.work-development__list { position: relative; display: grid; gap: 10px; margin: 0; padding: 0 0 0 26px; list-style: none; }
+.work-development__list::before { content: ''; position: absolute; top: 8px; bottom: 8px; left: 7px; width: 1px; background: var(--gh-border); }
+.work-development__list > li { position: relative; }
+.work-development__marker { position: absolute; top: 17px; left: -26px; z-index: 1; display: grid; width: 16px; height: 16px; place-items: center; border: 1px solid var(--gh-action); background: var(--gh-canvas); color: var(--gh-action); font: 800 10px/1 ui-monospace, monospace; }
+.work-development__list article { padding: 16px 18px; border: 1px solid var(--gh-border); background: var(--gh-panel); box-shadow: 3px 3px 0 color-mix(in srgb,var(--gh-border) 38%,transparent); }
+.work-development__list header,.work-development__list footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.work-development__list header span { color: var(--gh-action); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.work-development__list h3 { margin: 4px 0 0; font-size: 15px; line-height: 1.35; }
+.work-development__list time,.work-development__list footer,.work-development__list footer small { color: var(--gh-secondary); font-size: 10px; }
+.work-development__list article > p { margin: 11px 0 14px; color: var(--gh-secondary); font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+.work-development__list footer { align-items: center; justify-content: flex-start; flex-wrap: wrap; }
+.work-development__list footer .text-button { margin-left: auto; font-size: 11px; }
+
+.development-log-page { max-width: 960px; }
+.development-log-page > .section-heading { margin: 18px 0; }
+.development-log-form { display: grid; gap: 16px; padding: 22px; }
+.development-log-form__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.development-log-form__head h2 { margin: 0 0 5px; font-size: 19px; }
+.development-log-form__head p { margin: 0; color: var(--gh-secondary); font-size: 12px; line-height: 1.55; }
+.development-log-form .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.development-log-form > label { display: grid; gap: 7px; color: var(--gh-secondary); font-size: 11px; font-weight: 700; }
+.development-log-form textarea { min-height: 150px; resize: vertical; }
+.development-log-form textarea,.development-log-form input,.development-log-form select { width: 100%; padding: 11px 12px; border: 1px solid var(--gh-border); border-radius: 2px; background: var(--gh-raised); color: var(--gh-primary); font: inherit; }
+.development-log-form > .button { justify-self: start; }
+.development-log-message { margin: 12px 0 0; padding: 10px 12px; border-left: 2px solid var(--gh-action); background: var(--gh-panel); color: var(--gh-secondary); font-size: 12px; }
+.development-log-manager { margin-top: 26px; }
+.development-log-manager > .section-heading { margin-bottom: 12px; }
+.development-log-manager__list { display: grid; gap: 10px; }
+.development-log-card { padding: 18px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
+.development-log-card.is-published { border-left: 3px solid var(--gh-success); }
+.development-log-card.is-withdrawn { opacity: .72; }
+.development-log-card header,.development-log-card footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.development-log-card header span { color: var(--gh-action); font-size: 10px; font-weight: 800; }
+.development-log-card header h3 { margin: 4px 0 0; font-size: 15px; }
+.development-log-card header > strong { color: var(--gh-secondary); font-size: 10px; }
+.development-log-card > p { margin: 12px 0 16px; color: var(--gh-secondary); font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+.development-log-card footer { align-items: flex-end; }
+.development-log-card footer > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.development-log-card footer small,.development-log-card footer time { color: var(--gh-secondary); font-size: 10px; }
+.development-log-card footer button:not(.button) { border: 0; background: transparent; color: var(--gh-action); font: inherit; font-size: 11px; cursor: pointer; }
+@media(max-width:680px){.development-log-form .form-grid{grid-template-columns:1fr}.development-log-form__head,.development-log-card header,.development-log-card footer{display:grid}.work-development__list header{display:grid}.work-development__list footer .text-button{margin-left:0}.development-log-card footer{align-items:start}}
