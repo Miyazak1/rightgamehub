@@ -13,9 +13,23 @@ test('discovery campaigns stay inside discovery and provide admin curation',asyn
   assert.match(app,/DiscoveryCampaignPage/);
   assert.match(app,/DiscoveryCampaignAdmin/);
   assert.match(page,/发现页运营专题/);
+  assert.match(page,/套用运营模板/);
+  assert.match(page,/作者联动素材/);
+  assert.match(page,/gh_src','campaign'/);
+  assert.match(page,/下载专题分享图/);
   assert.match(page,/rememberWorkAttribution\(item\.work\.id,'campaign'/);
   assert.doesNotMatch(page,/community/i);
   assert.match(caddy,/handle \/discover\/c\/\*/);
+});
+
+test('campaign share cards and author kits reuse stable attributed links',async()=>{
+  const {createApiClient}=await import('../../packages/platform-api-client/src/index.mjs');
+  const client=createApiClient();
+  assert.equal(client.discoveryCampaignShareCardUrl('weekly game',{version:2,download:true}),'/v1/discovery/campaigns/weekly%20game/share-card.png?v=2&download=1');
+  const source=await fs.readFile('packages/platform-client/src/DiscoveryCampaigns.jsx','utf8');
+  assert.match(source,/new URL\(`\/w\/\$\{encodeURIComponent\(item\.work\.id\)\}`/);
+  assert.match(source,/gh_campaign/);
+  assert.match(source,/campaign\.publicUrl/);
 });
 
 test('stable campaign handoff keeps a clean discovery URL',async()=>{

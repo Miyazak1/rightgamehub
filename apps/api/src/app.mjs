@@ -218,7 +218,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
-  if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin:new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin});
+  if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin:new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin,getCover:workService?.getCover?id=>workService.getCover(id):null});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (communityService) registerCommunityRoutes(app,{service:communityService,media:communityMediaService,requireAuth});
   if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});

@@ -53,6 +53,9 @@ test('campaign routes expose public reading and protect admin mutations',async t
   t.after(()=>app.close());
   const list=await app.inject({url:'/v1/discovery/campaigns?limit=1'});assert.equal(list.statusCode,200);assert.equal(list.headers['cache-control'],'public, max-age=30');
   const page=await app.inject({url:'/discover/c/weekly-open-game-01'});assert.equal(page.statusCode,200);assert.match(page.body,/本周开放游戏推荐/);assert.match(page.headers['content-security-policy'],/nonce-/);
+  assert.match(page.body,/\/v1\/discovery\/campaigns\/weekly-open-game-01\/share-card\.png/);
+  const card=await app.inject({url:'/v1/discovery/campaigns/weekly-open-game-01/share-card.png?download=1'});assert.equal(card.statusCode,200);assert.match(card.headers['content-type'],/^image\/png/);assert.match(card.headers['content-disposition'],/^attachment/);
+  assert.equal(card.rawPayload.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(card.rawPayload.readUInt32BE(16),1200);assert.equal(card.rawPayload.readUInt32BE(20),630);
   const denied=await app.inject({url:'/v1/admin/discovery-campaigns'});assert.equal(denied.statusCode,401);
   const admin=await app.inject({url:'/v1/admin/discovery-campaigns',headers:{authorization:'Bearer token'}});assert.equal(admin.statusCode,200);assert.equal(calls.at(-1)[0],'admin');
 });

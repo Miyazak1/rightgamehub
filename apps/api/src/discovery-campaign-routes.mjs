@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {renderDiscoveryCampaignShareCard} from './discovery-campaign-share-card.mjs';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -20,14 +21,13 @@ const campaignFields = {
 const landingPage = ({ campaign, siteOrigin, nonce }) => {
   const canonical = `${siteOrigin}/discover/c/${encodeURIComponent(campaign.slug)}`;
   const target = `${siteOrigin}/#/discover/c/${encodeURIComponent(campaign.slug)}?public=1`;
-  const firstWork = campaign.items[0]?.work;
-  const image = firstWork ? `${siteOrigin}/v1/works/${encodeURIComponent(firstWork.id)}/share-card.png` : null;
-  const imageMeta = image ? `<meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:image" content="${escapeHtml(image)}">` : '';
+  const image = `${siteOrigin}/v1/discovery/campaigns/${encodeURIComponent(campaign.slug)}/share-card.png`;
+  const imageMeta = `<meta property="og:image" content="${escapeHtml(image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:image" content="${escapeHtml(image)}"><meta name="twitter:title" content="${escapeHtml(campaign.title)}"><meta name="twitter:description" content="${escapeHtml(campaign.summary)}">`;
   const handoff = `window.location.replace(${JSON.stringify(target).replace(/</gu, '\\u003c')});`;
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(campaign.title)} | GameHub</title><meta name="description" content="${escapeHtml(campaign.summary)}"><link rel="canonical" href="${escapeHtml(canonical)}"><meta property="og:type" content="website"><meta property="og:site_name" content="GameHub"><meta property="og:title" content="${escapeHtml(campaign.title)}"><meta property="og:description" content="${escapeHtml(campaign.summary)}"><meta property="og:url" content="${escapeHtml(canonical)}">${imageMeta}<meta name="twitter:card" content="summary_large_image"><style>body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(620px,calc(100% - 48px));padding:36px;border:1px solid #d8d3e2;background:#fff;box-shadow:6px 6px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0;font-size:32px}p{color:#625c6d;line-height:1.7}a{display:inline-block;margin-top:8px;padding:11px 18px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}</style></head><body><main class="card"><span class="label">${escapeHtml(campaign.eyebrow)}</span><h1>${escapeHtml(campaign.title)}</h1><p>${escapeHtml(campaign.summary)}</p><a href="${escapeHtml(target)}">查看专题</a></main><script nonce="${nonce}">${handoff}</script></body></html>`;
 };
 
-export function registerDiscoveryCampaignRoutes(app, { service, requireAuth, siteOrigin }) {
+export function registerDiscoveryCampaignRoutes(app, { service, requireAuth, siteOrigin, getCover }) {
   const envelope = data => ({ data });
   const slugParams = { type: 'object', additionalProperties: false, required: ['slug'], properties: { slug: campaignFields.slug } };
   const idParams = { type: 'object', additionalProperties: false, required: ['campaignId'], properties: { campaignId: { type: 'string', format: 'uuid' } } };
@@ -50,6 +50,19 @@ export function registerDiscoveryCampaignRoutes(app, { service, requireAuth, sit
   app.get('/v1/discovery/campaigns/:slug', { schema: { params: slugParams } }, async (request, reply) => {
     reply.header('Cache-Control', 'public, max-age=30');
     return envelope(await service.getPublic(request.params.slug));
+  });
+  app.get('/v1/discovery/campaigns/:slug/share-card.png', { schema: {
+    params: slugParams,
+    querystring: { type: 'object', additionalProperties: false, properties: { download: { type: 'string', enum: ['1'] }, v: { type: 'string', maxLength: 64, pattern: '^[A-Za-z0-9._-]+$' } } },
+  } }, async (request, reply) => {
+    const campaign=await service.getPublic(request.params.slug);
+    const bodies=await Promise.all(campaign.items.slice(0,3).map(async item=>item.work.coverUrl&&getCover?getCover(item.work.id).then(cover=>cover?.body??null).catch(()=>null):null));
+    const body=await renderDiscoveryCampaignShareCard(campaign,bodies);
+    const disposition=request.query.download==='1'?'attachment':'inline';
+    reply.header('Cache-Control','public, max-age=300, stale-while-revalidate=86400');
+    reply.header('Content-Disposition',`${disposition}; filename="gamehub-${campaign.slug}-share.png"`);
+    reply.header('X-Content-Type-Options','nosniff');
+    return reply.type('image/png').send(body);
   });
   app.get('/v1/admin/discovery-campaigns', { preHandler: requireAuth }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
