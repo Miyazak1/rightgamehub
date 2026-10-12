@@ -1464,12 +1464,12 @@ const agentInstallTargets = [
     prompt: '请检查当前 Windsurf 是否支持安装 VSIX；支持时在获得我的确认后安装 GameHub，否则打开 https://mooyu.fun。',
   },
   {
-    id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'building', state: '官方技能安装器 · MCP App 开发中',
-    summary: '官方安装器添加本地 GameHub marketplace，并注册后台更新；新版本在 Codex 重启后从插件缓存加载。原生 MCP App 上线后再启用内置交互。',
+    id: 'codex', name: 'Codex / ChatGPT', badge: 'Plugin + MCP App', tone: 'native', state: '远程界面 · 自动更新',
+    summary: '游戏和交互界面由 GameHub 服务器提供，可随平台部署即时更新；本地插件壳每 6 小时校验新版，并在 Codex 重启后激活。',
     command: '& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName codex',
     alternate: 'curl -fsSL https://mooyu.fun/install.sh | sh -s -- codex',
     update: '& "$env:LOCALAPPDATA\\GameHub\\agent-update.ps1" -HostName codex',
-    prompt: '请帮我安装 GameHub 的 Codex 插件。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并逐文件校验插件包、添加本地 GameHub marketplace，然后等待我确认；确认后执行适合当前系统的命令。完成后请引导我在 Plugins Directory 的 GameHub Plugins 来源中安装 gamehub。',
+    prompt: '请帮我安装 GameHub 的 Codex 插件。只使用官方安装器 https://mooyu.fun/install.ps1（Windows）或 https://mooyu.fun/install.sh（macOS/Linux），不要克隆源码仓库。先下载并检查脚本，说明它会从 mooyu.fun 下载并逐文件校验插件包、添加本地 GameHub marketplace，并连接只读的 https://mooyu.fun/mcp；游戏和界面仍由 GameHub 服务器运行。然后等待我确认；确认后执行适合当前系统的命令。完成后请引导我在 Plugins Directory 的 GameHub Plugins 来源中安装 gamehub。',
   },
   {
     id: 'claude', name: 'Claude Code', badge: 'Agent Plugin', tone: 'building', state: '官方技能安装器 · MCP 开发中',

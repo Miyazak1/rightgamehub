@@ -1,13 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Discover, create locally, validate and publish GameHub experiences from supported AI agents.",
   "author": {
     "name": "GameHub",
     "url": "https://mooyu.fun"
   },
-  "homepage": "https://mooyu.fun/#/install",
+  "homepage": "https://mooyu.fun/install",
   "license": "UNLICENSED",
   "keywords": [
     "games",

@@ -11,13 +11,23 @@
   }
   encode zstd gzip
 
-  @private_routes path /account* /creator* /admin* /play/* /challenge/* /s/* /install* /community/me* /community/bookmarks* /community/review*
+  @private_routes path /account* /creator* /admin* /play/* /challenge/* /s/* /install* /mcp-app* /community/me* /community/bookmarks* /community/review*
   header @private_routes X-Robots-Tag "noindex, nofollow"
 
   handle /health {
     reverse_proxy api:3090
   }
   handle /ready {
+    reverse_proxy api:3090
+  }
+
+  handle /mcp {
+    reverse_proxy api:3090
+  }
+
+  # MCP clients probe OAuth discovery even when a public server does not
+  # require authentication. Let the API return a real 404 instead of the SPA.
+  handle /.well-known/oauth-* {
     reverse_proxy api:3090
   }
 
@@ -43,6 +53,20 @@
 
   handle /discover/c/* {
     reverse_proxy api:3090
+  }
+
+  # Dedicated shell used only by the MCP Apps widget. Keep the main site
+  # protected from framing and allow only the known OpenAI sandbox surfaces.
+  handle /mcp-app {
+    root * /srv/gamehub
+    try_files /index.html
+    header {
+      Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src https://*.{$RUNTIME_DOMAIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web-sandbox.oaiusercontent.com https://chatgpt.com https://chat.openai.com vscode-webview: codex:"
+      Referrer-Policy "no-referrer"
+      X-Content-Type-Options "nosniff"
+      Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=()"
+    }
+    file_server
   }
 
   handle {

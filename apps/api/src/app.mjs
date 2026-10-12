@@ -43,6 +43,7 @@ import { registerPublicSeoRoutes, serializeJsonLd, workStructuredData } from './
 import { growthContentSlides, renderWorkXhsSlide } from './growth-content-renderer.mjs';
 import { AuthorOutreachError } from './author-outreach-service.mjs';
 import { registerAuthorOutreachRoutes } from './author-outreach-routes.mjs';
+import { registerGameHubMcpRoutes } from './gamehub-mcp-server.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -426,6 +427,7 @@ export function createApp(dependencies) {
     });
   }
   if (catalogService) {
+    registerGameHubMcpRoutes(app, { catalogService, siteOrigin });
     app.get('/w/:workId', {
       schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } } },
     }, async (request, reply) => {

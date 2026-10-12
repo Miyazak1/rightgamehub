@@ -280,7 +280,7 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   const toolkitCatalog = JSON.parse(await readFile('plugins/gamehub/toolkits/catalog.json', 'utf8'));
   const skill = await readFile('plugins/gamehub/skills/gamehub/SKILL.md', 'utf8');
   assert.equal(portable.name, 'gamehub');
-  assert.equal(portable.version, '0.2.0');
+  assert.equal(portable.version, '0.3.0');
   assert.equal(portable.version, claudeManifest.version);
   assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
   assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
@@ -321,8 +321,11 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(downloads, /createHash\('sha256'\)/);
   assert.match(downloads, /harnessPlugin/);
   assert.match(downloads, /agentPlugin/);
+  assert.match(downloads, /marketplace\.plugins\.map/);
+  assert.match(downloads, /all-marketplace-plugins/);
   assert.match(downloads, /gamehub-creator-tools-v1\.json/);
-  assert.match(downloads, /creator-toolkit\.mjs/);
+  assert.match(downloads, /const listFiles = async relativeRoot/);
+  assert.match(downloads, /pluginRoots\.map\(listFiles\)/);
   assert.match(downloads, /contentBase64/);
   assert.match(powershell, /Get-FileHash -Algorithm SHA256/);
   assert.match(powershell, /dsh plugin --profile web add/);
@@ -341,7 +344,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.43');
+  assert.equal(manifest.version, '0.3.44');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);

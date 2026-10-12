@@ -4,6 +4,7 @@ packages:
   - 'extensions/*'
 
 allowBuilds:
+  '@modelcontextprotocol/ext-apps': false
   esbuild: true
 
 autoInstallPeers: false

@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const root = new URL('../', import.meta.url);
@@ -24,20 +24,25 @@ await copyFile(harnessArtifact, new URL(harnessFilename, publicRoot));
 await copyFile(harnessArtifact, new URL('gamehub-dsh-plugin-latest.tgz', publicRoot));
 
 const portablePlugin = JSON.parse(await readFile(new URL('plugins/gamehub/plugin.json', root), 'utf8'));
-const pluginPaths = [
+const marketplacePaths = [
   '.agents/plugins/marketplace.json',
   '.claude-plugin/marketplace.json',
-  'plugins/gamehub/plugin.json',
-  'plugins/gamehub/.claude-plugin/plugin.json',
-  'plugins/gamehub/skills/gamehub/SKILL.md',
-  'plugins/gamehub/bin/creator-submit.mjs',
-  'plugins/gamehub/bin/creator-toolkit.mjs',
-  'plugins/gamehub/toolkits/catalog.json',
-  'plugins/gamehub/templates/creator-bingo/.gitignore',
-  'plugins/gamehub/templates/creator-bingo/README.md',
-  'plugins/gamehub/templates/creator-bingo/creator-manifest.json',
-  'plugins/gamehub/templates/creator-bingo/source/bingo.json',
 ];
+const marketplace = JSON.parse(await readFile(new URL(marketplacePaths[0], root), 'utf8'));
+const listFiles = async relativeRoot => {
+  const entries = await readdir(new URL(`${relativeRoot}/`, root), { withFileTypes: true });
+  const nested = await Promise.all(entries.map(entry => {
+    const relative = `${relativeRoot}/${entry.name}`;
+    return entry.isDirectory() ? listFiles(relative) : [relative];
+  }));
+  return nested.flat();
+};
+const pluginRoots = marketplace.plugins.map(item => {
+  const relative = String(item?.source?.path || '').replace(/^\.\//u, '').replace(/\/$/u, '');
+  if (!/^plugins\/[A-Za-z0-9._-]+$/u.test(relative)) throw new Error(`Unsafe marketplace plugin path: ${item?.source?.path}`);
+  return relative;
+});
+const pluginPaths = [...new Set([...marketplacePaths, ...(await Promise.all(pluginRoots.map(listFiles))).flat()])].sort();
 const pluginFiles = await Promise.all(pluginPaths.map(async path => {
   const content = await readFile(new URL(path, root));
   return { path, contentBase64: content.toString('base64'), sha256: sha256(content) };
@@ -100,6 +105,8 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     url: `https://mooyu.fun/downloads/${pluginFilename}`,
     sha256: sha256(pluginBundle),
     supportedHosts: ['codex', 'claude'],
+    updateScope: 'all-marketplace-plugins',
+    activation: 'on-host-restart',
   },
   creatorTools: {
     version: JSON.parse(creatorToolkitCatalog).version,
