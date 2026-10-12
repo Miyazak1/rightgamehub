@@ -205,7 +205,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
   assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7"/u);
   assert.match(page.body, /property="og:image:width" content="1200"/u);
-  assert.match(page.body, /new Set\(\['share_copy','share_system','readme','external'\]\)/u);
+  assert.match(page.body, /new Set\(\['share_copy','share_system','readme','external','campaign'\]\)/u);
   assert.match(page.body, /document\.referrer/u);
   assert.match(page.body, /window\.location\.replace\(target\.href\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);

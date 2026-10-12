@@ -124,6 +124,11 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     finishCompetitionRun: (session,id,body,options) => request('/v1/competition/runs/'+encodeURIComponent(id)+'/finish',{...options,auth:true,method:'POST',body,headers:{'X-GameHub-Session':session}}),
     abandonCompetitionRun: (session,id,options) => request('/v1/competition/runs/'+encodeURIComponent(id)+'/abandon',{...options,auth:true,method:'POST',headers:{'X-GameHub-Session':session}}),
     listWorks: ({ limit = 20, kind, q, offset, openSource, remixable, claimable, runtime, source } = {}, options) => request(`/v1/works?limit=${limit}${kind ? `&kind=${encodeURIComponent(kind)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${offset ? `&offset=${encodeURIComponent(offset)}` : ''}${openSource ? '&openSource=true' : ''}${remixable ? '&remixable=true' : ''}${claimable ? '&claimable=true' : ''}${runtime ? `&runtime=${encodeURIComponent(runtime)}` : ''}${source ? `&source=${encodeURIComponent(source)}` : ''}`, options),
+    listDiscoveryCampaigns: (limit = 3, options) => request(`/v1/discovery/campaigns?limit=${encodeURIComponent(limit)}`, options),
+    getDiscoveryCampaign: (slug, options) => request(`/v1/discovery/campaigns/${encodeURIComponent(slug)}`, options),
+    listAdminDiscoveryCampaigns: options => request('/v1/admin/discovery-campaigns', { ...options, auth: true }),
+    createDiscoveryCampaign: (body, options) => request('/v1/admin/discovery-campaigns', { ...options, method: 'POST', body, auth: true }),
+    updateDiscoveryCampaign: (campaignId, body, options) => request(`/v1/admin/discovery-campaigns/${encodeURIComponent(campaignId)}`, { ...options, method: 'PATCH', body, auth: true }),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     workShareCardUrl: (id, { download = false, version } = {}) => {
       const query = new URLSearchParams({ ...(version ? { v: String(version) } : {}), ...(download ? { download: '1' } : {}) });

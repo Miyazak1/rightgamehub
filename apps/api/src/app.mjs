@@ -37,6 +37,8 @@ import { ProjectClaimError } from './project-claim-service.mjs';
 import { registerProjectClaimRoutes } from './project-claim-routes.mjs';
 import { renderWorkShareCard } from './work-share-card.mjs';
 import { DevelopmentLogError } from './development-log-service.mjs';
+import { DiscoveryCampaignError } from './discovery-campaign-service.mjs';
+import { registerDiscoveryCampaignRoutes } from './discovery-campaign-routes.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -53,7 +55,7 @@ const publicWorkPage = ({ work, siteOrigin, nonce }) => {
   const shareCardUrl = `${siteOrigin}/v1/works/${encodedWorkId}/share-card.png?v=${shareCardVersion}`;
   const imageMeta = `<meta property="og:image" content="${escapeHtml(shareCardUrl)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:image" content="${escapeHtml(shareCardUrl)}">`;
   const safeAppUrl = JSON.stringify(appUrl).replace(/</gu, '\\u003c');
-  const handoff = `const allowed=new Set(['share_copy','share_system','readme','external']);const input=new URLSearchParams(location.search);let source=input.get('gh_src');if(!allowed.has(source)){source='';try{if(document.referrer&&new URL(document.referrer).origin!==location.origin)source='external';}catch{}}const campaign=/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(input.get('gh_campaign')||'')?input.get('gh_campaign'):'';const target=new URL(${safeAppUrl});if(source)target.hash+=\`&gh_src=\${encodeURIComponent(source)}\`;if(source&&campaign)target.hash+=\`&gh_campaign=\${encodeURIComponent(campaign)}\`;window.location.replace(target.href);`;
+  const handoff = `const allowed=new Set(['share_copy','share_system','readme','external','campaign']);const input=new URLSearchParams(location.search);let source=input.get('gh_src');if(!allowed.has(source)){source='';try{if(document.referrer&&new URL(document.referrer).origin!==location.origin)source='external';}catch{}}const campaign=/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(input.get('gh_campaign')||'')?input.get('gh_campaign'):'';const target=new URL(${safeAppUrl});if(source)target.hash+=\`&gh_src=\${encodeURIComponent(source)}\`;if(source&&campaign)target.hash+=\`&gh_campaign=\${encodeURIComponent(campaign)}\`;window.location.replace(target.href);`;
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${escapeHtml(canonicalUrl)}"><meta property="og:type" content="website"><meta property="og:site_name" content="GameHub"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonicalUrl)}">${imageMeta}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><style>html{color-scheme:light dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(520px,calc(100% - 48px));padding:32px;border:1px solid #d8d3e2;background:#fff;box-shadow:5px 5px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0 8px;font-size:28px}p{margin:0 0 20px;color:#625c6d;line-height:1.7}.creator{font-size:13px}a{display:inline-block;padding:10px 16px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}@media(prefers-color-scheme:dark){body{background:#111018;color:#f6f3ff}.card{border-color:#393445;background:#1b1822;box-shadow:5px 5px 0 #09080d}p{color:#b8b0c3}}</style></head><body><main class="card"><span class="label">GAMEHUB WORK</span><h1>${escapeHtml(work.title)}</h1><p>${escapeHtml(description)}</p><p class="creator">${escapeHtml(creator)}</p><a href="${escapeHtml(appUrl)}">打开作品</a></main><script nonce="${nonce}">${handoff}</script></body></html>`;
 };
 const readLimitedBody = async (stream, limit) => {
@@ -90,6 +92,7 @@ export function createApp(dependencies) {
     creatorFeedbackService,
     contributionTaskService,
     developmentLogService,
+    discoveryCampaignService,
     creatorDraftService,
     projectClaimService,
     storageCapacityService,
@@ -137,7 +140,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -215,6 +218,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin:new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (communityService) registerCommunityRoutes(app,{service:communityService,media:communityMediaService,requireAuth});
   if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
@@ -373,7 +377,7 @@ export function createApp(dependencies) {
         hostKind: { type: 'string', enum: ['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown'] },
         route: { type: 'string', enum: ['discover','library','social','creator','admin','work','play','auth','settings','unknown'] },
         workId: workKeySchema, releaseId: { type: 'string', format: 'uuid' },
-        attributionSource: { type: 'string', enum: ['share_copy','share_system','readme','external'] },
+        attributionSource: { type: 'string', enum: ['share_copy','share_system','readme','external','campaign'] },
         campaignKey: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
         durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: { type: 'string', format: 'date-time' },
       },

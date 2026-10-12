@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {demoWorks} from './demo.mjs';
+import {DiscoveryCampaignSpotlight} from './DiscoveryCampaigns.jsx';
 
 const PAGE_SIZE=24;
 // Deliberate launch picks. Test projects and play-count spikes never enter this list.
@@ -69,6 +70,7 @@ export default function DiscoverPage({api,demo,go,hostIdentity,accountProfile,Ar
   return <main className="page discovery-page">
     <header className="discovery-welcome"><div><span className="discovery-kicker">{hostIdentity.id==='browser'?'给自己一点休息时间':hostIdentity.label+' 里的休息站'}</span><h1>休息一下？</h1><p>玩一会儿，换个脑子。下一次灵感，也许就在这里。</p></div></header>
     <div className="discovery-search"><label htmlFor="discovery-search">找个想玩的</label><div><span aria-hidden="true">⌕</span><input id="discovery-search" type="search" maxLength={100} value={query} onChange={event=>setQuery(event.target.value)} placeholder="搜索游戏、玩法或作者"/>{query&&<button onClick={()=>setQuery('')} aria-label="清除搜索">×</button>}</div></div>
+    {!filtered&&<DiscoveryCampaignSpotlight api={api} demo={demo} go={go} Art={Art}/>}
     {!filtered&&recent.length>0&&<section className="discovery-recent" aria-labelledby="recent-title"><div className="discovery-section-heading"><h2 id="recent-title">最近玩过</h2><button onClick={()=>go('/library')}>游戏库 ↗</button></div><div>{recent.map(({work})=><button key={work.id} onClick={()=>go(action(work))} aria-label={'再次打开 '+work.title}><Art work={work}/><span><strong>{work.title}</strong><small>{playable(work)?'再玩一会儿':'查看启动方式'}</small></span><span aria-hidden="true">↗</span></button>)}</div></section>}
     {!filtered&&recommended.length>0&&<section className="discovery-picks" aria-labelledby="picks-title"><div className="discovery-section-heading"><div><span className="discovery-kicker">从这里开始</span><h2 id="picks-title">推荐游玩</h2></div></div><div className="discovery-picks__grid">{recommended.map(work=><GameCard key={work.id} work={work} go={go} Art={Art} recommended/>)}</div></section>}
     <section className="discovery-catalog" aria-labelledby="catalog-title" aria-busy={catalog.status==='loading'}><div className="discovery-section-heading"><div><span className="discovery-kicker">免费游玩 · 来源清楚 · 尊重作者</span><h2 id="catalog-title">{q?'搜索结果':'全部作品'}</h2></div><span>{catalog.status==='ready'?(catalog.more?'已显示 '+catalog.items.length+' 个':catalog.items.length+' 个作品'):''}</span></div>

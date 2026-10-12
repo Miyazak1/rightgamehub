@@ -27,6 +27,7 @@ import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
 import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
 import WorkEditPage from './WorkEditPage.jsx';
 import DevelopmentLogPage from './DevelopmentLogPage.jsx';
+import {DiscoveryCampaignAdmin,DiscoveryCampaignPage} from './DiscoveryCampaigns.jsx';
 import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
 import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
@@ -605,7 +606,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
 
 function CreatorInsights({ state, days, onDays }) {
   const analytics = state.data; const totals = analytics?.totals ?? {}; const daily = analytics?.daily ?? [];
-  const sourceLabels = { direct: '站内 / 直接访问', share_copy: '复制分享链接', share_system: '系统分享', readme: 'README 徽章', external: '其他外部访问' };
+  const sourceLabels = { direct: '站内 / 直接访问', share_copy: '复制分享链接', share_system: '系统分享', readme: 'README 徽章', campaign: '发现专题', external: '其他外部访问' };
   const maxStarts = Math.max(1, ...daily.map(item => item.starts || 0));
   const dateStep = Math.max(1, Math.ceil((daily.length - 1) / 5));
   const showDate = index => index === 0 || index === daily.length - 1 || (index % dateStep === 0 && index < daily.length - 1 - dateStep / 2);
@@ -1531,7 +1532,7 @@ function AdminStorage({ storage }) {
 
 function AdminAnalytics({ analytics, days, onDays }) {
   const totals = analytics?.totals ?? {}; const daily = analytics?.daily ?? [];
-  const sourceLabels = { direct: '站内 / 直接访问', share_copy: '复制分享链接', share_system: '系统分享', readme: 'README 徽章', external: '其他外部访问' };
+  const sourceLabels = { direct: '站内 / 直接访问', share_copy: '复制分享链接', share_system: '系统分享', readme: 'README 徽章', campaign: '发现专题', external: '其他外部访问' };
   const maxViews = Math.max(1, ...daily.map(item => item.pageViews || 0));
   const cards = [
     ['访问用户', compactNumber(totals.visitors), '匿名去重设备'], ['页面浏览', compactNumber(totals.pageViews), '页面类别访问'],
@@ -1645,6 +1646,8 @@ function AdminPage({ api, demo, go }) {
     <AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/>
     <AdminStorage storage={state.storage}/>
 
+    <DiscoveryCampaignAdmin api={api} demo={demo}/>
+
     <MultiplayerRuleReviewQueue api={api} demo={demo}/>
     {state.sourceOverview && <section className="source-operations"><div className="puzzle-ops__head"><div><span className="kicker">GITHUB SOURCE CONTROL</span><h2>GitHub 只读导入</h2><p>连接、授权仓库、近 24 小时导入与 Webhook 故障；此面板不提供源码执行能力。</p></div><span>{state.sourceOverview.activeConnections} 个活动连接</span></div><div className="source-operation-kpis"><article><span>授权仓库</span><strong>{state.sourceOverview.activeRepositories}</strong></article><article><span>24h 导入</span><strong>{state.sourceOverview.imports24h}</strong></article><article className={state.sourceOverview.failedWebhooks24h ? 'is-warning' : ''}><span>24h Webhook 失败</span><strong>{state.sourceOverview.failedWebhooks24h}</strong></article></div><details><summary>最近来源审计</summary>{state.sourceAudit.length ? <ol>{state.sourceAudit.slice(0,20).map(event => <li key={event.id}><strong>{event.action}</strong><code>{event.details?.commitSha?.slice(0,12) || event.connectionId || '—'}</code><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p>暂无来源事件。</p>}</details></section>}
     <AdminProvenanceManager items={state.provenance} api={api} demo={demo} onSaved={next=>setState(current=>({...current,provenance:current.provenance.map(item=>item.workId===next.workId?next:item)}))}/>
@@ -1679,6 +1682,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
   if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;
+  else if (parts[0] === 'discover' && parts[1] === 'c' && parts[2]) content = <DiscoveryCampaignPage slug={decodeRouteValue(parts[2])} api={api} go={go} Art={Art}/>;
   else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 's' && parts[1]) content = <GameSharePage key={parts[1]} code={parts[1]} api={api} renderPlayer={share=><PlayerPage workId={share.workId} releaseId={share.releaseId} initialShareCode={share.code} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={false} go={go}/>}/>;
   else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','share','room'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[2] === 'room' ? parts[3] : parts[3] === 'room' ? parts[4] : null} initialShareCode={parts[2] === 'share' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;

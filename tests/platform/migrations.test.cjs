@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 63);
+  assert.equal(files.length, 64);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -17,6 +17,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const analyticsAttribution = fs.readFileSync(path.join(migrationDir, '0061_analytics_attribution.sql'), 'utf8');
   const remixProvenance = fs.readFileSync(path.join(migrationDir, '0062_work_remix_provenance.sql'), 'utf8');
   const developmentLog = fs.readFileSync(path.join(migrationDir, '0063_work_development_entries.sql'), 'utf8');
+  const discoveryCampaigns = fs.readFileSync(path.join(migrationDir, '0064_discovery_campaigns.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -50,6 +51,12 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(developmentLog, /CREATE TABLE work_development_entry_events/);
   assert.match(developmentLog, /BEFORE UPDATE ON work_development_entry_events/);
   assert.match(developmentLog, /BEFORE DELETE ON work_development_entry_events/);
+  assert.match(discoveryCampaigns, /CREATE TABLE discovery_campaigns/);
+  assert.match(discoveryCampaigns, /CREATE TABLE discovery_campaign_items/);
+  assert.match(discoveryCampaigns, /CREATE TABLE discovery_campaign_events/);
+  assert.match(discoveryCampaigns, /BEFORE UPDATE ON discovery_campaign_events/);
+  assert.match(discoveryCampaigns, /BEFORE DELETE ON discovery_campaign_events/);
+  assert.match(discoveryCampaigns, /'campaign'/);
   assert.match(creatorStudio, /octet_length\(content::text\) <= 1048576/);
   const gameShares = fs.readFileSync(path.join(migrationDir, '0055_game_share_links.sql'), 'utf8');
   assert.match(gameShares, /CREATE TABLE game_share_links/);

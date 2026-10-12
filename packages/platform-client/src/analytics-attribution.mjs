@@ -1,4 +1,4 @@
-export const attributionSources = ['share_copy', 'share_system', 'readme', 'external'];
+export const attributionSources = ['share_copy', 'share_system', 'readme', 'external', 'campaign'];
 
 const sourceSet = new Set(attributionSources);
 const campaignPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
@@ -34,7 +34,12 @@ export function captureWorkAttribution(workId, currentLocation = globalThis.loca
   const attributionSource = params.get('gh_src');
   const campaignKey = params.get('gh_campaign');
   if (!sourceSet.has(attributionSource) || (campaignKey != null && !campaignPattern.test(campaignKey))) return getWorkAttribution(workId, storage);
-  const next = { attributionSource, ...(campaignKey ? { campaignKey } : {}) };
+  return rememberWorkAttribution(workId, attributionSource, campaignKey, storage);
+}
+
+export function rememberWorkAttribution(workId, attributionSource, campaignKey, storage = globalThis.sessionStorage) {
+  if (!sourceSet.has(attributionSource) || (campaignKey != null && !campaignPattern.test(String(campaignKey)))) return getWorkAttribution(workId, storage);
+  const next = { attributionSource, ...(campaignKey ? { campaignKey: String(campaignKey) } : {}) };
   try {
     const values = readStore(storage);
     const entries = Object.entries({ ...values, [workId]: next }).slice(-20);
