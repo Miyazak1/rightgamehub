@@ -61,6 +61,7 @@
     root * /srv/gamehub
     try_files /index.html
     header {
+      Cache-Control "no-store"
       Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src https://*.{$RUNTIME_DOMAIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web-sandbox.oaiusercontent.com https://*.web-sandbox.oaiusercontent.com https://chatgpt.com https://chat.openai.com vscode-webview: codex: codex-sandbox:"
       Referrer-Policy "no-referrer"
       X-Content-Type-Options "nosniff"

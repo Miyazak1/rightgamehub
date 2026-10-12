@@ -28,9 +28,9 @@ test('GameHub MCP exposes read-only catalog tools and a versioned hosted UI', as
   assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_game', 'open_gamehub', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
-  assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v4.html');
+  assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v5.html');
   assert.deepEqual(openGameHubTool._meta.ui.visibility, ['model', 'app']);
-  assert.equal(openGameHubTool._meta['openai/outputTemplate'], 'ui://gamehub/platform-v4.html');
+  assert.equal(openGameHubTool._meta['openai/outputTemplate'], 'ui://gamehub/platform-v5.html');
 
   const search = await client.callTool({ name: 'search_games', arguments: { query: 'orbit', limit: 4 } });
   assert.equal(search.structuredContent.games[0].playUrl, 'https://mooyu.fun/w/game-1');
@@ -39,10 +39,11 @@ test('GameHub MCP exposes read-only catalog tools and a versioned hosted UI', as
   assert.match(opened.structuredContent.view.url, /\/mcp-app\?gh_route=/u);
   assert.match(opened.structuredContent.view.url, /gh_host=mcp-app/u);
 
-  const resource = await client.readResource({ uri: 'ui://gamehub/platform-v4.html' });
+  const resource = await client.readResource({ uri: 'ui://gamehub/platform-v5.html' });
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resource.contents[0].text, /<iframe id="gamehub-frame"/u);
   assert.match(resource.contents[0].text, /ui\/request-display-mode/u);
+  assert.match(resource.contents[0].text, /gh_embed','platform-v5'/u);
   assert.ok(resource.contents[0].text.includes("new RegExp('^/works/([^/?#]+)/?$')"));
   assert.doesNotMatch(resource.contents[0].text, /route\.match\(\/\^\/works\//u);
   assert.match(resource.contents[0].text, /new URL\(work\?'\/w\/'\+work\[1\]:route,SITE_ORIGIN\)/u);
@@ -76,6 +77,7 @@ test('portable plugin connects the remote MCP server and ships through the commo
   assert.match(caddy, /handle \/\.well-known\/oauth-\*[\s\S]*reverse_proxy api:3090/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*frame-ancestors 'self' https:\/\/web-sandbox\.oaiusercontent\.com https:\/\/\*\.web-sandbox\.oaiusercontent\.com/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*codex-sandbox:/u);
+  assert.match(caddy, /handle \/mcp-app[\s\S]*Cache-Control "no-store"/u);
   assert.match(app, /游戏和交互界面由 GameHub 服务器提供/u);
   assert.match(app, /每 6 小时校验新版/u);
 });

@@ -1,4 +1,4 @@
-export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v4.html';
+export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v5.html';
 
 export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   const origin = new URL(siteOrigin).origin;
@@ -27,7 +27,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
     const external=document.getElementById('external');
     let rpcId=0;const pending=new Map();
     const safePath=path=>typeof path==='string'&&path.startsWith('/')&&!path.startsWith('//')?path:'/discover';
-    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');return url.href;};
+    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');url.searchParams.set('gh_embed','platform-v5');return url.href;};
     const externalUrl=path=>{const route=safePath(path);const work=route.match(new RegExp('^/works/([^/?#]+)/?$'));return new URL(work?'/w/'+work[1]:route,SITE_ORIGIN).href;};
     const show=view=>{const path=safePath(view?.path);const url=viewUrl(path);const outside=externalUrl(path);frame.src=url;external.href=outside;globalThis.openai?.setOpenInAppUrl?.({href:outside});};
     const update=result=>{const view=result?.structuredContent?.view||result?.view;if(view)show(view);};
@@ -36,7 +36,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
     window.addEventListener('message',event=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=='2.0')return;if(message.id!=null){const item=pending.get(message.id);if(!item)return;pending.delete(message.id);message.error?item.reject(message.error):item.resolve(message.result);return;}if(message.method==='ui/notifications/tool-result')update(message.params);},{passive:true});
     frame.addEventListener('error',()=>{fallback.style.display='block';});
     show(globalThis.openai?.toolOutput?.view||{path:'/discover'});
-    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.2'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted GameHub view.',error);}
+    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.3'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted GameHub view.',error);}
   </script>
 </body>
 </html>`;
