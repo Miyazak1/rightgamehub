@@ -33263,12 +33263,16 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 120
+          },
+          "avatar": {
+            "$ref": "#/components/schemas/AccountAvatar"
           }
         },
         "required": [
           "id",
           "handle",
-          "displayName"
+          "displayName",
+          "avatar"
         ]
       },
       "CreateContributionTaskRequest": {

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
+import { accountAvatarView, avatarColumns } from './account-avatar-view.mjs';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const difficulties = new Set(['starter', 'intermediate', 'advanced']);
@@ -37,17 +38,17 @@ const taskView = row => ({
   repositoryUrl: row.repository_url, issueUrl: row.issue_url, submissionUrl: row.submission_url, submissionNote: row.submission_note,
   reviewReason: row.review_reason, claimExpiresAt: iso(row.claim_expires_at), workAvailable: available(row),
   resolvedRelease: row.resolved_release_id ? { id: row.resolved_release_id, label: row.release_label, available: row.release_available === true } : null,
-  author: { id: row.author_user_id, handle: row.author_handle, displayName: row.author_display_name },
-  claimant: row.claimant_user_id ? { id: row.claimant_user_id, handle: row.claimant_handle, displayName: row.claimant_display_name } : null,
+  author: { id: row.author_user_id, handle: row.author_handle, displayName: row.author_display_name, avatar: accountAvatarView(row,row.author_user_id,'author') },
+  claimant: row.claimant_user_id ? { id: row.claimant_user_id, handle: row.claimant_handle, displayName: row.claimant_display_name, avatar: accountAvatarView(row,row.claimant_user_id,'claimant') } : null,
   publishedAt: iso(row.published_at), claimedAt: iso(row.claimed_at), submittedAt: iso(row.submitted_at), completedAt: iso(row.completed_at),
   createdAt: iso(row.created_at), updatedAt: iso(row.updated_at),
 });
 const taskSelect = `SELECT t.*,w.title AS work_title,w.state AS work_state,w.visibility AS work_visibility,w.repository_url AS current_repository_url,
- a.status AS author_status,a.profile_handle AS author_handle,a.display_name AS author_display_name,
- c.profile_handle AS claimant_handle,c.display_name AS claimant_display_name,r.label AS release_label,p.title AS project_title,
+ a.status AS author_status,a.profile_handle AS author_handle,a.display_name AS author_display_name,${avatarColumns('aa','author')},
+ c.profile_handle AS claimant_handle,c.display_name AS claimant_display_name,${avatarColumns('ca','claimant')},r.label AS release_label,p.title AS project_title,
  (r.serving_state='enabled' AND r.validation_state='ready' AND w.state='published' AND w.visibility='public') AS release_available
- FROM contribution_tasks t JOIN works w ON w.id=t.work_id JOIN users a ON a.id=t.author_user_id
- LEFT JOIN users c ON c.id=t.claimant_user_id LEFT JOIN releases r ON r.id=t.resolved_release_id
+ FROM contribution_tasks t JOIN works w ON w.id=t.work_id JOIN users a ON a.id=t.author_user_id LEFT JOIN user_avatars aa ON aa.user_id=a.id
+ LEFT JOIN users c ON c.id=t.claimant_user_id LEFT JOIN user_avatars ca ON ca.user_id=c.id LEFT JOIN releases r ON r.id=t.resolved_release_id
  LEFT JOIN community_projects p ON p.id=t.project_id`;
 const available = row => row.work_state === 'published' && row.work_visibility === 'public' && row.author_status === 'active';
 const requireAvailable = row => { if (!available(row)) fail('WORK_NOT_PUBLIC',409,'作品或作者已停止公开服务，任务暂不能开放或提交。'); };

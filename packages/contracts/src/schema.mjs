@@ -692,7 +692,7 @@ export const schemas = Object.freeze({
   UpdateCreatorFeedbackRequest: object({
     action: stringEnum(['review','archive','reopen','link_issue']), issueUrl: { type: 'string', minLength: 1, maxLength: 2048 },
   }, ['action']),
-  ContributionIdentity: object({ id, handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, displayName: { type: 'string', minLength: 1, maxLength: 120 } }),
+  ContributionIdentity: object({ id, handle: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, displayName: { type: 'string', minLength: 1, maxLength: 120 }, avatar: { $ref: '#/components/schemas/AccountAvatar' } }),
   CreateContributionTaskRequest: object({
     title: { type: 'string', minLength: 5, maxLength: 160 }, description: { type: 'string', minLength: 20, maxLength: 4000 },
     difficulty: stringEnum(['starter','intermediate','advanced']),

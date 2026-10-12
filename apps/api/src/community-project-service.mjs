@@ -1,18 +1,19 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 import { fail } from './community-errors.mjs';
+import { accountAvatarView, avatarColumns } from './account-avatar-view.mjs';
 
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const publicStatuses=['recruiting','active','completed'];
 const transitions={draft:['recruiting','cancelled'],recruiting:['active','completed','cancelled'],active:['recruiting','completed','cancelled'],completed:['archived'],cancelled:['archived'],archived:[]};
 const iso=value=>value?new Date(value).toISOString():null;
 const clean=(value,max)=>String(value??'').trim().slice(0,max+1);
-const projectSelect=viewerParameter=>`SELECT p.*,u.display_name AS owner_display_name,u.profile_handle AS owner_handle,w.title AS work_title,
+const projectSelect=viewerParameter=>`SELECT p.*,u.display_name AS owner_display_name,u.profile_handle AS owner_handle,w.title AS work_title,${avatarColumns('oa','owner')},
  (p.owner_id=${viewerParameter}) AS is_owner,
  (SELECT count(*)::int FROM community_project_members m WHERE m.project_id=p.id AND m.membership_state='active') AS member_count,
  (SELECT count(*)::int FROM contribution_tasks t WHERE t.project_id=p.id AND t.status IN ('open','claimed','submitted')) AS open_task_count,
  (SELECT count(*)::int FROM contribution_tasks t WHERE t.project_id=p.id AND t.status='completed') AS completed_task_count
- FROM community_projects p JOIN users u ON u.id=p.owner_id LEFT JOIN works w ON w.id=p.work_id`;
+ FROM community_projects p JOIN users u ON u.id=p.owner_id LEFT JOIN user_avatars oa ON oa.user_id=u.id LEFT JOIN works w ON w.id=p.work_id`;
 
 const roleInput=(role,index)=>{
   const name=clean(role?.name,40),description=clean(role?.description,500),capacity=Math.floor(Number(role?.capacity)||1);
@@ -27,7 +28,7 @@ const projectFields=body=>{
 };
 const projectView=(row,roles=[],membership=null,myApplication=null)=>({
   id:row.id,title:row.title,summary:row.summary,description:row.description,status:row.status,visibility:row.visibility,version:Number(row.version),
-  owner:{id:row.owner_id,displayName:row.owner_display_name,handle:row.owner_handle},
+  owner:{id:row.owner_id,displayName:row.owner_display_name,handle:row.owner_handle,avatar:accountAvatarView(row,row.owner_id,'owner')},
   work:row.work_id?{id:row.work_id,title:row.work_title}:null,
   roles,memberCount:Number(row.member_count||0),openTaskCount:Number(row.open_task_count||0),completedTaskCount:Number(row.completed_task_count||0),
   isOwner:row.is_owner===true,membership,myApplication,createdAt:iso(row.created_at),updatedAt:iso(row.updated_at),completedAt:iso(row.completed_at),
@@ -77,8 +78,8 @@ export class CommunityProjectService {
     const row=(await this.pool.query(`${projectSelect('$2')} WHERE p.id=$1 AND (p.visibility IN ('public','unlisted') OR p.owner_id=$2 OR EXISTS(SELECT 1 FROM community_project_members m WHERE m.project_id=p.id AND m.user_id=$2) OR EXISTS(SELECT 1 FROM community_project_applications a WHERE a.project_id=p.id AND a.applicant_id=$2))`,[id,viewerId])).rows[0];
     if(!row)fail('PROJECT_NOT_FOUND',404,'项目不存在或不可访问。');
     const project=(await this.hydrate([row],viewerId,{detail:true}))[0];
-    const members=(await this.pool.query(`SELECT m.user_id,m.role_id,m.joined_at,u.display_name,u.profile_handle FROM community_project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=$1 AND m.membership_state='active' AND u.status='active' ORDER BY (m.user_id=$2) DESC,m.joined_at,m.user_id`,[id,row.owner_id])).rows.map(member=>({id:member.user_id,roleId:member.role_id,displayName:member.display_name,handle:member.profile_handle,joinedAt:iso(member.joined_at)}));
-    const applications=row.owner_id===viewerId?(await this.pool.query(`SELECT a.*,u.display_name,u.profile_handle FROM community_project_applications a JOIN users u ON u.id=a.applicant_id WHERE a.project_id=$1 ORDER BY (a.state='pending') DESC,a.created_at DESC,a.id DESC LIMIT 100`,[id])).rows.map(application=>({id:application.id,roleId:application.role_id,applicant:{id:application.applicant_id,displayName:application.display_name,handle:application.profile_handle},message:application.message,state:application.state,version:Number(application.version),createdAt:iso(application.created_at),decidedAt:iso(application.decided_at)})):[];
+    const members=(await this.pool.query(`SELECT m.user_id,m.role_id,m.joined_at,u.display_name,u.profile_handle,${avatarColumns('ma','member')} FROM community_project_members m JOIN users u ON u.id=m.user_id LEFT JOIN user_avatars ma ON ma.user_id=u.id WHERE m.project_id=$1 AND m.membership_state='active' AND u.status='active' ORDER BY (m.user_id=$2) DESC,m.joined_at,m.user_id`,[id,row.owner_id])).rows.map(member=>({id:member.user_id,roleId:member.role_id,displayName:member.display_name,handle:member.profile_handle,avatar:accountAvatarView(member,member.user_id,'member'),joinedAt:iso(member.joined_at)}));
+    const applications=row.owner_id===viewerId?(await this.pool.query(`SELECT a.*,u.display_name,u.profile_handle,${avatarColumns('aa','applicant')} FROM community_project_applications a JOIN users u ON u.id=a.applicant_id LEFT JOIN user_avatars aa ON aa.user_id=u.id WHERE a.project_id=$1 ORDER BY (a.state='pending') DESC,a.created_at DESC,a.id DESC LIMIT 100`,[id])).rows.map(application=>({id:application.id,roleId:application.role_id,applicant:{id:application.applicant_id,displayName:application.display_name,handle:application.profile_handle,avatar:accountAvatarView(application,application.applicant_id,'applicant')},message:application.message,state:application.state,version:Number(application.version),createdAt:iso(application.created_at),decidedAt:iso(application.decided_at)})):[];
     return {...project,members,applications};
   }
   async create(actor,body={}){
