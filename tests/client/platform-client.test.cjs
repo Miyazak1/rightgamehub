@@ -774,7 +774,12 @@ test('community typography follows the navigation scale and styles form controls
 });
 
 test('community home spacing stays compact and a lone project uses the full row', async () => {
-  const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
+  const [styles,shell,home,feed] = await Promise.all([
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityShell.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityHome.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityPage.jsx', 'utf8'),
+  ]);
   assert.match(styles, /\.community-hub-hero\{min-height:124px;[^}]*padding:20px 24px;/);
   assert.match(styles, /\.community-hub-toolbar\{[^}]*margin:12px 0 20px;/);
   assert.match(styles, /\.community-card,\.community-editor,\.community-members \{ padding:20px;/);
@@ -783,6 +788,16 @@ test('community home spacing stays compact and a lone project uses the full row'
   assert.match(styles, /\.community-dashboard__section\{margin-top:24px\}/);
   assert.match(styles, /\.community-dashboard__heading\{margin-bottom:12px;[^}]*padding-bottom:8px/);
   assert.match(styles, /@container\(min-width:761px\)\{\.community-dashboard__projects>button:only-child\{grid-column:1\/-1;/);
+  assert.match(shell, /const overview=route==='\/community'/);
+  assert.match(shell, /\{overview&&<header className="community-hub-hero">/);
+  assert.match(home, /className="community-dashboard__pulse"/);
+  assert.match(home, /游客可以直接浏览/);
+  assert.match(feed, /community-blocks\$\{full\|\|preview\?'':' is-preview'\}/);
+  assert.match(feed, /type==='share'/);
+  assert.match(feed, /阅读全文/);
+  assert.match(styles, /Community experience upgrade: less ceremony/);
+  assert.match(styles, /\.community-blocks\.is-preview p \{[\s\S]*?-webkit-line-clamp: 4;/);
+  assert.match(styles, /\.community-dashboard__pulse \{[\s\S]*?grid-template-columns: repeat\(3,minmax\(0,1fr\)\);/);
 });
 
 test('player routes preserve share links and community room entry after integration', async () => {

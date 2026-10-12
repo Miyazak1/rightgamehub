@@ -12,6 +12,7 @@ const sections=[
 export function CommunityShell({route,go,children}) {
   const launch=useRef(null),trigger=useRef(null),menu=useRef(null);
   const [launchOpen,setLaunchOpen]=useState(false);
+  const overview=route==='/community';
   useEffect(()=>{setLaunchOpen(false);},[route]);
   useEffect(()=>{
     if(!launchOpen)return;
@@ -23,11 +24,11 @@ export function CommunityShell({route,go,children}) {
     return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',keyboard);};
   },[launchOpen]);
   const open=path=>{setLaunchOpen(false);go(path);};
-  return <main className="page community-hub-page">
-    <header className="community-hub-hero">
+  return <main className={`page community-hub-page${overview?' is-overview':''}`}>
+    {overview&&<header className="community-hub-hero">
       <div className="community-hub-hero__copy"><span className="kicker">GAMEHUB COMMUNITY</span><h1>社区<span aria-hidden="true">✦</span></h1><p>一起发现、一起做点东西，也一起玩。</p></div>
       <div className="community-hub-hero__scene" aria-hidden="true"><i/><i/><i/><span>＋</span></div>
-    </header>
+    </header>}
     <div className="community-hub-toolbar">
       <nav className="community-hub-nav" aria-label="社区导航">{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
       <div className="community-launch" ref={launch}>
