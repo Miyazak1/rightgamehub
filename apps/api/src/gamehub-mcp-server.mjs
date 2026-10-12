@@ -68,8 +68,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
-  registerAppResource(server, 'GameHub hosted library', GAMEHUB_MCP_UI_URI, {
-    description: 'The hosted GameHub interface. Games and interface content are served by GameHub rather than packaged in the plugin.',
+  registerAppResource(server, 'GameHub hosted platform', GAMEHUB_MCP_UI_URI, {
+    description: 'The complete hosted GameHub platform interface. Pages, games, and interface content are served by GameHub rather than packaged in the plugin.',
   }, async () => ({ contents: [{
     uri: GAMEHUB_MCP_UI_URI,
     mimeType: RESOURCE_MIME_TYPE,
@@ -79,13 +79,13 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
         prefersBorder: false,
         csp: { frameDomains: [origin], resourceDomains: [origin], connectDomains: [origin] },
       },
-      'openai/ui': { availableDisplayModes: ['inline', 'fullscreen'] },
+      'openai/ui': { availableDisplayModes: ['fullscreen'] },
     },
   }] }));
 
   registerAppTool(server, 'open_gamehub', {
     title: 'Open GameHub',
-    description: 'Open the hosted GameHub interface, optionally focused on one public game. Use this when the user wants to browse or play visually.',
+    description: 'Open the complete hosted GameHub interface, optionally focused on one public game. Use this when the user wants to browse, participate, create, or play visually.',
     inputSchema: { workId: z.string().min(1).max(100).optional() },
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },

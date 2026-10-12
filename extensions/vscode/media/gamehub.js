@@ -24339,7 +24339,7 @@ const PLATFORM_CSS=":root {\r\n  --gh-canvas: #0c0b11; --gh-panel: #15131d; --gh
     const colors = Object.fromEntries(Object.entries(input.colors ?? {}).filter(([, value]) => HEX.test(value)));
     return { mode, colors };
   }
-  function createBrowserHostAdapter({ window: browserWindow = globalThis.window } = {}) {
+  function createBrowserHostAdapter({ window: browserWindow = globalThis.window, host: host2 = "browser", surface = "embedded-browser" } = {}) {
     const listeners = /* @__PURE__ */ new Set();
     const saveCache = createIndexedDbSaveStore({ indexedDB: browserWindow?.indexedDB });
     const media = browserWindow?.matchMedia?.("(prefers-color-scheme: dark)");
@@ -24382,9 +24382,9 @@ const PLATFORM_CSS=":root {\r\n  --gh-canvas: #0c0b11; --gh-panel: #15131d; --gh
       async getCapabilities() {
         return {
           protocolVersion: 1,
-          host: "browser",
+          host: host2,
           hostVersion: "1",
-          surface: "embedded-browser",
+          surface,
           uiDevice: "browser",
           fileDevice: "browser-managed",
           runDevice: "none",
@@ -30281,6 +30281,11 @@ ${draft.draftBody}`);
     const value = new URLSearchParams(String(currentLocation?.search || "").replace(/^\?/u, "")).get("gh_route");
     return value?.startsWith("/") ? value : null;
   };
+  var isMcpAppLocation = (currentLocation) => {
+    if (String(currentLocation?.pathname || "") !== "/mcp-app") return false;
+    const params = new URLSearchParams(String(currentLocation?.search || "").replace(/^\?/u, ""));
+    return params.get("gh_host") === "mcp-app";
+  };
   var routeQuery = (value, currentLocation, includeOuter) => {
     const { pathname, search } = splitRoute(value);
     const params = new URLSearchParams(search);
@@ -30303,12 +30308,23 @@ ${draft.draftBody}`);
     const cleanPath = work ? `/w/${work[1]}` : pathname === "/" ? "/discover" : pathname.replace(/\/$/u, "") || "/discover";
     return `${cleanPath}${routeQuery(value, currentLocation, includeOuter)}`;
   }
+  function embeddedBrowserPathForRoute(value, currentLocation = {}) {
+    const path = `${internalRoute(value)}${routeQuery(value, {}, false)}`;
+    const params = new URLSearchParams();
+    params.set("gh_route", path);
+    params.set("gh_host", "mcp-app");
+    const outer = new URLSearchParams(String(currentLocation?.search || "").replace(/^\?/u, ""));
+    if (outer.has("demo")) params.set("demo", "");
+    return `/mcp-app?${params.toString()}`;
+  }
   function readBrowserRoute(mode, currentLocation) {
     if (mode === "memory") return "/discover";
+    if (mode === "embedded") return internalRoute(bootstrapRoute(currentLocation) || "/discover");
     const legacy = String(currentLocation.hash || "").slice(1);
     return internalRoute(legacy.startsWith("/") ? legacy : bootstrapRoute(currentLocation) || currentLocation.pathname || "/discover");
   }
   function consumePublicWorkHandoff(currentLocation, browserHistory) {
+    if (isMcpAppLocation(currentLocation)) return false;
     const legacy = String(currentLocation.hash || "").slice(1);
     const incoming = legacy.startsWith("/") ? legacy : bootstrapRoute(currentLocation);
     if (!incoming) return false;
@@ -30321,7 +30337,7 @@ ${draft.draftBody}`);
       setPath(route);
       return;
     }
-    browserHistory.pushState(null, "", browserPathForRoute(next, currentLocation));
+    browserHistory.pushState(null, "", mode === "embedded" ? embeddedBrowserPathForRoute(next, currentLocation) : browserPathForRoute(next, currentLocation));
     setPath(route);
   }
 
@@ -30598,6 +30614,7 @@ await gamehub.multiplayer.matches.command(matchId, { type: 'move', to: 'b3' });`
   };
   var hostIdentities = {
     browser: { id: "browser", label: "\u7F51\u9875\u7248", short: "WEB" },
+    "mcp-app": { id: "mcp-app", label: "MCP App", short: "MCP" },
     codex: { id: "codex", label: "Codex", short: "CX" },
     cursor: { id: "cursor", label: "Cursor", short: "CU" },
     harness: { id: "harness", label: "Harness", short: "DSH" },
@@ -31833,7 +31850,7 @@ ${item.details}` } : (await api2.createCreatorFeedbackIssueDraft(item.id)).data;
     babylon: "Babylon.js",
     unityWebgl: "Unity WebGL"
   };
-  function GitHubImportPage({ api: api2, demo: demo2, go, accountProfile }) {
+  function GitHubImportPage({ api: api2, demo: demo2, go, accountProfile, embedded = false }) {
     const [state, setState] = (0, import_react29.useState)({ status: "loading", connections: [], repositories: [], preview: null });
     const [selectedConnection, setSelectedConnection] = (0, import_react29.useState)("");
     const [selectedRepository, setSelectedRepository] = (0, import_react29.useState)("");
@@ -31864,7 +31881,7 @@ ${item.details}` } : (await api2.createCreatorFeedbackIssueDraft(item.id)).data;
       setBusy("complete");
       api2.completeGitHubSourceInstall({ state: stateToken, installationId }).then(() => {
         globalThis.sessionStorage?.removeItem("gamehub.github-app-state");
-        globalThis.history?.replaceState(null, "", "/creator/import");
+        go("/creator/import");
         return loadConnections();
       }).catch((caught) => {
         setState((current) => ({ ...current, status: caught.status === 401 ? "auth" : "error" }));
@@ -31881,12 +31898,17 @@ ${item.details}` } : (await api2.createCreatorFeedbackIssueDraft(item.id)).data;
     const install = async () => {
       setBusy("install");
       setError("");
+      const installWindow = embedded ? globalThis.open?.("about:blank", "gamehub-github-install", "popup,width=900,height=820") : null;
       try {
         const result = (await api2.startGitHubSourceInstall()).data;
         const stateToken = new URL(result.installUrl).searchParams.get("state");
         if (stateToken) globalThis.sessionStorage?.setItem("gamehub.github-app-state", stateToken);
-        globalThis.location.assign(result.installUrl);
+        if (installWindow) {
+          installWindow.location.replace(result.installUrl);
+          installWindow.opener = null;
+        } else globalThis.location.assign(result.installUrl);
       } catch (caught) {
+        installWindow?.close();
         setError(caught.message || "GitHub App \u5B89\u88C5\u672A\u542F\u52A8\u3002");
         setBusy("");
       }
@@ -33114,7 +33136,7 @@ GameHub \u731C\u767E\u79D1`);
       setAccountProfile(profile);
       setAccountStatus(profile ? "ready" : "anonymous");
     } });
-    else if (route.startsWith("/creator/import")) content = /* @__PURE__ */ import_react29.default.createElement(GitHubImportPage, { api: api2, demo: demo2, go, accountProfile });
+    else if (route.startsWith("/creator/import")) content = /* @__PURE__ */ import_react29.default.createElement(GitHubImportPage, { api: api2, demo: demo2, go, accountProfile, embedded: hostIdentity.id === "mcp-app" });
     else if (parts[0] === "creator" && parts[1] === "works" && parts[3] === "edit") content = /* @__PURE__ */ import_react29.default.createElement(WorkEditPage, { key: `${accountProfile?.id || "guest"}:${parts[2]}`, workId: decodeRouteValue(parts[2]), api: api2, demo: demo2, go, savedWork, onSaved: (work) => {
       setSavedWork(work);
       go("/creator");

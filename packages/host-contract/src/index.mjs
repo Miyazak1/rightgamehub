@@ -11,7 +11,7 @@ export function normalizeTheme(input = {}) {
   return { mode, colors };
 }
 
-export function createBrowserHostAdapter({ window: browserWindow = globalThis.window } = {}) {
+export function createBrowserHostAdapter({ window: browserWindow = globalThis.window, host = 'browser', surface = 'embedded-browser' } = {}) {
   const listeners = new Set();
   const saveCache=createIndexedDbSaveStore({indexedDB:browserWindow?.indexedDB});
   const media = browserWindow?.matchMedia?.('(prefers-color-scheme: dark)');
@@ -50,7 +50,7 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
     saveOrigin:browserWindow?.location?.origin,
     async getCapabilities() {
       return {
-        protocolVersion: 1, host: 'browser', hostVersion: '1', surface: 'embedded-browser',
+        protocolVersion: 1, host, hostVersion: '1', surface,
         uiDevice: 'browser', fileDevice: 'browser-managed', runDevice: 'none',
         canSelectFile: true, canManageDownloads: false, canRevealDownload: false,
         canPersistCredential: false, canPlayWeb: true, canLaunchDesktop: false,

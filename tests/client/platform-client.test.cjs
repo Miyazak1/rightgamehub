@@ -227,6 +227,35 @@ test('browser routing uses formal paths everywhere and upgrades legacy hash link
   assert.equal(`${location.pathname}${location.search}`, '/w/work-789?gh_src=share_copy');
 });
 
+test('MCP App routing keeps the hosted shell across navigation and refresh', async () => {
+  const { readBrowserRoute, consumePublicWorkHandoff, navigateBrowserRoute } = await import('../../packages/platform-client/src/public-work-route.mjs');
+  const location = { pathname: '/mcp-app', search: '?gh_route=%2Fcommunity&gh_host=mcp-app', hash: '' };
+  const calls = [];
+  const apply = value => { const url = new URL(value, 'https://mooyu.fun'); location.pathname = url.pathname; location.search = url.search; location.hash = url.hash; };
+  const history = {
+    state: null,
+    replaceState: (_state, _title, value) => { calls.push(['replace', value]); apply(value); },
+    pushState: (_state, _title, value) => { calls.push(['push', value]); apply(value); },
+  };
+  assert.equal(readBrowserRoute('embedded', location), '/community');
+  assert.equal(consumePublicWorkHandoff(location, history), false);
+  let route = '';
+  navigateBrowserRoute('embedded', '/works/work-321?gh_src=share_copy', location, history, next => { route = next; });
+  assert.equal(route, '/works/work-321');
+  assert.equal(location.pathname, '/mcp-app');
+  assert.equal(new URLSearchParams(location.search).get('gh_route'), '/works/work-321?gh_src=share_copy');
+  assert.equal(new URLSearchParams(location.search).get('gh_host'), 'mcp-app');
+  assert.equal(readBrowserRoute('embedded', location), '/works/work-321');
+  assert.deepEqual(calls.map(item => item[0]), ['push']);
+});
+
+test('web entry activates the complete platform client for the MCP App route', async () => {
+  const source = await fs.readFile('apps/web/src/main.jsx', 'utf8');
+  assert.match(source, /globalThis\.location\.pathname === '\/mcp-app'/u);
+  assert.match(source, /createBrowserHostAdapter\(\{ host: 'mcp-app', surface: 'mcp-app' \}\)/u);
+  assert.match(source, /routing=\{isMcpApp \? 'embedded' : 'history'\}/u);
+});
+
 test('work sharing keeps bounded attribution through the public handoff and play session', async () => {
   const { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } = await import('../../packages/platform-client/src/analytics-attribution.mjs');
   const { readBrowserRoute, consumePublicWorkHandoff } = await import('../../packages/platform-client/src/public-work-route.mjs');

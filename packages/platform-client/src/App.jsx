@@ -35,6 +35,8 @@ import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
 import { workLeaderboardPath } from './work-leaderboards.mjs';
 import { consumePublicWorkHandoff, navigateBrowserRoute, readBrowserRoute } from './public-work-route.mjs';
+
+export { createBrowserHostAdapter };
 import { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } from './analytics-attribution.mjs';
 const decodeRouteValue = value => { try { return decodeURIComponent(value||''); } catch { return value||''; } };
 
@@ -50,6 +52,7 @@ const icons = {
 
 const hostIdentities = {
   browser: { id: 'browser', label: '网页版', short: 'WEB' },
+  'mcp-app': { id: 'mcp-app', label: 'MCP App', short: 'MCP' },
   codex: { id: 'codex', label: 'Codex', short: 'CX' },
   cursor: { id: 'cursor', label: 'Cursor', short: 'CU' },
   harness: { id: 'harness', label: 'Harness', short: 'DSH' },
@@ -778,7 +781,7 @@ const githubStaticSignalLabels = {
   unityWebgl: 'Unity WebGL'
 };
 
-function GitHubImportPage({ api, demo, go, accountProfile }) {
+function GitHubImportPage({ api, demo, go, accountProfile, embedded = false }) {
   const [state, setState] = useState({ status: 'loading', connections: [], repositories: [], preview: null });
   const [selectedConnection, setSelectedConnection] = useState('');
   const [selectedRepository, setSelectedRepository] = useState('');
@@ -802,7 +805,7 @@ function GitHubImportPage({ api, demo, go, accountProfile }) {
     setBusy('complete');
     api.completeGitHubSourceInstall({ state: stateToken, installationId }).then(() => {
       globalThis.sessionStorage?.removeItem('gamehub.github-app-state');
-      globalThis.history?.replaceState(null, '', '/creator/import');
+      go('/creator/import');
       return loadConnections();
     }).catch(caught => {
       setState(current => ({ ...current, status: caught.status === 401 ? 'auth' : 'error' }));
@@ -816,12 +819,14 @@ function GitHubImportPage({ api, demo, go, accountProfile }) {
   }, [api, demo, selectedConnection]);
   const install = async () => {
     setBusy('install'); setError('');
+    const installWindow = embedded ? globalThis.open?.('about:blank', 'gamehub-github-install', 'popup,width=900,height=820') : null;
     try {
       const result = (await api.startGitHubSourceInstall()).data;
       const stateToken = new URL(result.installUrl).searchParams.get('state');
       if (stateToken) globalThis.sessionStorage?.setItem('gamehub.github-app-state', stateToken);
-      globalThis.location.assign(result.installUrl);
-    } catch (caught) { setError(caught.message || 'GitHub App 安装未启动。'); setBusy(''); }
+      if (installWindow) { installWindow.location.replace(result.installUrl); installWindow.opener = null; }
+      else globalThis.location.assign(result.installUrl);
+    } catch (caught) { installWindow?.close(); setError(caught.message || 'GitHub App 安装未启动。'); setBusy(''); }
   };
   const preview = async () => {
     if (!selectedConnection || !selectedRepository) return;
@@ -1695,7 +1700,7 @@ export default function App({ hostAdapter, apiClient, demo = new URLSearchParams
   else if (['/saves','/creator/save-health','/admin/saves'].includes(route)) content = <main className="page"><StatePanel title="当前仅使用本机存档" body="云存档暂未开放。进入支持平台存档的游戏后，可在“存档管理”中导出或恢复本机进度。" action="返回游戏库" onAction={() => go('/library')}/></main>;
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
-  else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go} accountProfile={accountProfile}/>;
+  else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go} accountProfile={accountProfile} embedded={hostIdentity.id === 'mcp-app'}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator'); }}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'development') content = <DevelopmentLogPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go}/>;
   else if (route === '/creator/tools') content = <CreatorToolsPage go={go}/>;

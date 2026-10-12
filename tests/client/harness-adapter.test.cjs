@@ -44,6 +44,15 @@ test('Browser adapter restores tab-session credentials after a GitHub redirect',
   assert.equal(await afterLogout.account.getRefreshToken(), null);
 });
 
+test('Browser adapter can identify an MCP App host without forking platform behavior', async () => {
+  const { createBrowserHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
+  const adapter = createBrowserHostAdapter({ window: fakeBrowserWindow(), host: 'mcp-app', surface: 'mcp-app' });
+  const capabilities = await adapter.getCapabilities();
+  assert.equal(capabilities.host, 'mcp-app');
+  assert.equal(capabilities.surface, 'mcp-app');
+  assert.equal(capabilities.canPlayWeb, true);
+});
+
 test('Harness adapter reports honest capabilities and keeps credentials in memory only', async () => {
   const { createHarnessHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
   const controller = new AbortController();
@@ -344,7 +353,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.44');
+  assert.equal(manifest.version, '0.3.45');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);

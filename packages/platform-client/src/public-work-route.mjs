@@ -25,6 +25,12 @@ const bootstrapRoute = currentLocation => {
   return value?.startsWith('/') ? value : null;
 };
 
+const isMcpAppLocation = currentLocation => {
+  if (String(currentLocation?.pathname || '') !== '/mcp-app') return false;
+  const params = new URLSearchParams(String(currentLocation?.search || '').replace(/^\?/u, ''));
+  return params.get('gh_host') === 'mcp-app';
+};
+
 const routeQuery = (value, currentLocation, includeOuter) => {
   const { pathname, search } = splitRoute(value);
   const params = new URLSearchParams(search);
@@ -49,13 +55,25 @@ export function browserPathForRoute(value, currentLocation = {}, includeOuter = 
   return `${cleanPath}${routeQuery(value, currentLocation, includeOuter)}`;
 }
 
+export function embeddedBrowserPathForRoute(value, currentLocation = {}) {
+  const path = `${internalRoute(value)}${routeQuery(value, {}, false)}`;
+  const params = new URLSearchParams();
+  params.set('gh_route', path);
+  params.set('gh_host', 'mcp-app');
+  const outer = new URLSearchParams(String(currentLocation?.search || '').replace(/^\?/u, ''));
+  if (outer.has('demo')) params.set('demo', '');
+  return `/mcp-app?${params.toString()}`;
+}
+
 export function readBrowserRoute(mode, currentLocation) {
   if (mode === 'memory') return '/discover';
+  if (mode === 'embedded') return internalRoute(bootstrapRoute(currentLocation) || '/discover');
   const legacy = String(currentLocation.hash || '').slice(1);
   return internalRoute(legacy.startsWith('/') ? legacy : bootstrapRoute(currentLocation) || currentLocation.pathname || '/discover');
 }
 
 export function consumePublicWorkHandoff(currentLocation, browserHistory) {
+  if (isMcpAppLocation(currentLocation)) return false;
   const legacy = String(currentLocation.hash || '').slice(1);
   const incoming = legacy.startsWith('/') ? legacy : bootstrapRoute(currentLocation);
   if (!incoming) return false;
@@ -66,6 +84,8 @@ export function consumePublicWorkHandoff(currentLocation, browserHistory) {
 export function navigateBrowserRoute(mode, next, currentLocation, browserHistory, setPath) {
   const route = internalRoute(next);
   if (mode === 'memory') { setPath(route); return; }
-  browserHistory.pushState(null, '', browserPathForRoute(next, currentLocation));
+  browserHistory.pushState(null, '', mode === 'embedded'
+    ? embeddedBrowserPathForRoute(next, currentLocation)
+    : browserPathForRoute(next, currentLocation));
   setPath(route);
 }
