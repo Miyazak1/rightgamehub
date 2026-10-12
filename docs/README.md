@@ -34,6 +34,8 @@
 | [O4.1 发现专题与增长归因](./o4-discovery-campaigns.zh-CN.md) | **在发现页编排每周开放游戏、一起完善和合集专题，并以稳定公开地址追踪专题带来的试玩转化** |
 | [O4.2 专题模板与作者联动传播包](./o4-author-campaign-kit.zh-CN.md) | **专题起稿模板、专属分享图与逐作品可归因联动文案；保留人工发布和真实数据决策边界** |
 | [O4.3 搜索可发现性基础](./o4-search-discoverability.zh-CN.md) | **动态站点地图、爬虫边界、公开作品与专题结构化数据，以及后台和运行页 noindex 隔离** |
+| [O4.4 小红书图文传播工作台](./o4-growth-content-studio.zh-CN.md) | **五张 3:4 传播图、真实资料文案、渠道归因、人工审核发布与自动化边界** |
+| [O4.5 GitHub 作者联络队列](./o4-author-outreach-queue.zh-CN.md) | **候选筛选、仓库去重、个性化邀请草稿、人工发送、联系状态和只追加审计** |
 | [社区、分享与共建完整改造方案](./community-collaboration-experience-redesign.zh-CN.md) | **将顶级“分享/共建”合并为“社区”，完整定义动态、项目、活动、游戏组队、我的参与、视觉系统、数据/API、迁移阶段与验收标准** |
 | [社区体验整体升级](./community-experience-upgrade-2026-10.zh-CN.md) | **压缩重复页头，以真实参与概览重构首页，为动态补齐摘要、阅读全文与直接分享，并统一响应式信息密度** |
 | [用户分享板块底层设计](./community-sharing-foundation-design.zh-CN.md) | **首版已实现、本地验证通过，未上线：游戏/AI/计算机图文分享、点赞与私人收藏；评论关闭；版本审核、图片额度、隔离处理与发布边界** |
@@ -59,7 +61,6 @@
 | [多人平台基础设施设计](./multiplayer-platform-infrastructure-design.md) | **通用房间、realtime、权威规则、持久化、治理、扩容与分阶段完成定义** |
 | [51 G0 存储容量门禁](./51-g0-storage-capacity-guard.zh-CN.md) | **70/85 容量阈值、活动上传预留、同盘合并、管理员可见性、残留清理、部署与故障处置** |
 | [50 G0 Web ZIP 隔离校验器](./50-g0-isolated-web-validator.zh-CN.md) | **独立无网络容器、原子信箱、生产 fail-closed、残留清理、状态指标、部署与验收** |
-| [O4.4 小红书图文传播工作台](./o4-growth-content-studio.zh-CN.md) | **五张 3:4 传播图、真实资料文案、渠道归因、人工审核发布与自动化边界** |
 | [49 GitHub 开源作品导入与共建路线](./49-github-open-source-import-roadmap.zh-CN.md) | **作者授权、GitHub App、来源证明、隔离 Builder、许可证治理、G0—G4 实施顺序与验收门槛** |
 | [45 P0.8 猜百科全自动供给](./45-p08-automated-baike-supply.zh-CN.md) | **自动发现、完整导言筛选、修订追溯、故障回退与未来 14 天无人值守排期** |
 | [44 P0.7 官方题库供给](./44-p07-content-pipeline.zh-CN.md) | **数据库题库、完整导言质量门槛、每日确定性选题、管理员启停与人工排期** |

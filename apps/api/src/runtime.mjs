@@ -81,6 +81,7 @@ import { createCreatorDraftService } from './creator-draft-service.mjs';
 import { PostgresProjectClaimRepository, createProjectClaimService } from './project-claim-service.mjs';
 import { PostgresDevelopmentLogRepository, createDevelopmentLogService } from './development-log-service.mjs';
 import { PostgresDiscoveryCampaignRepository, createDiscoveryCampaignService } from './discovery-campaign-service.mjs';
+import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -123,6 +124,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     webhookSecret: config.githubAppWebhookSecret,
   });
   const projectClaimService = createProjectClaimService({ repository: new PostgresProjectClaimRepository(database.pool) });
+  const authorOutreachService = createAuthorOutreachService({ repository: new PostgresAuthorOutreachRepository(database.pool),siteOrigin:config.gameShareSiteOrigin });
   const quarantineStore = new LocalQuarantineStore(config.quarantineRoot);
   const storageLogger = {
     info: event => process.stdout.write(`${JSON.stringify({ service: 'storage-capacity', ...event })}\n`),
@@ -226,6 +228,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     creatorDraftService,
     githubSourceService,
     projectClaimService,
+    authorOutreachService,
     sourceBuildService,
     uploadService,
     catalogService,
@@ -264,6 +267,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     creatorDraftService,
     githubSourceService,
     projectClaimService,
+    authorOutreachService,
     sourceBuildService,
     sourceBuildWorker,
     multiplayerRuleBuildWorker,

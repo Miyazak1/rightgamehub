@@ -29,6 +29,7 @@ import WorkEditPage from './WorkEditPage.jsx';
 import DevelopmentLogPage from './DevelopmentLogPage.jsx';
 import {DiscoveryCampaignAdmin,DiscoveryCampaignPage} from './DiscoveryCampaigns.jsx';
 import GrowthContentStudio from './GrowthContentStudio.jsx';
+import AuthorOutreachQueue from './AuthorOutreachQueue.jsx';
 import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
 import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
@@ -1648,6 +1649,8 @@ function AdminPage({ api, demo, go }) {
     <AdminStorage storage={state.storage}/>
 
     <GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/>
+
+    <AuthorOutreachQueue api={api} demo={demo}/>
 
     <DiscoveryCampaignAdmin api={api} demo={demo}/>
 

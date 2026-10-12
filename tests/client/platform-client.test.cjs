@@ -118,6 +118,8 @@ test('API client exposes catalog data without inventing local works', async () =
   assert.equal(client.workShareCardUrl('work id',{version:7,download:true}),'/v1/works/work%20id/share-card.png?v=7&download=1');
   assert.equal(client.workXhsPromoUrl('work id','cover',{version:7,download:true}),'/v1/works/work%20id/promo/xhs/cover.png?v=7&download=1');
   assert.equal(client.discoveryCampaignShareCardUrl('weekly-open-game',{version:2,download:true}),'/v1/discovery/campaigns/weekly-open-game/share-card.png?v=2&download=1');
+  await client.listAuthorOutreach('ready');
+  assert.match(requested,/\/v1\/admin\/author-outreach\?status=ready&limit=100$/u);
 });
 
 test('API client creates authenticated playable shares and opens them publicly', async () => {
