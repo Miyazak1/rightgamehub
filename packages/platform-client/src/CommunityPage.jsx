@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import { CommunityShell } from './CommunityShell.jsx';
 import CommunityIdentity from './CommunityIdentity.jsx';
+import {copyCommunityPostLink} from './community-share.mjs';
 const labels={game:'游戏',ai:'AI',computing:'计算机'};
 const statuses={draft:'草稿',pending:'待审核',approved:'已通过',rejected:'需修改',superseded:'待重新编辑'};
 const newKey=()=>crypto.randomUUID();
@@ -166,13 +167,13 @@ export default function CommunityPage({api,go,route,accountProfile,AvatarView,de
   }
   async function sendReport(event){event.preventDefault();setBusy(report.post.id);try{await api.communityReport(report.post.id,{category:report.category,details:report.details});setReport(null);setNotice('举报已提交。');}catch(caught){setError(failure(caught));}finally{setBusy('');}}
   async function share(post) {
-    const url=`${globalThis.location.origin}${globalThis.location.pathname}#/community/posts/${post.id}`;
-    try{
-      if(globalThis.navigator.share)await globalThis.navigator.share({title:post.title,text:'在 GameHub 社区看到一条值得分享的动态',url});
-      else if(globalThis.navigator.clipboard?.writeText)await globalThis.navigator.clipboard.writeText(url);
-      else globalThis.prompt?.('复制动态链接',url);
-      setShared(post.id);
-    }catch(caught){if(caught?.name!=='AbortError')setError('暂时无法分享，请稍后重试。');}
+    setError('');
+    const result=await copyCommunityPostLink({location:globalThis.location,clipboard:globalThis.navigator?.clipboard,prompt:globalThis.prompt},post.id);
+    if(result.copied){
+      setShared(post.id);setNotice('动态链接已复制。');
+      globalThis.setTimeout?.(()=>setShared(current=>current===post.id?'':current),1800);
+    }else if(result.method==='prompt')setNotice('浏览器未允许自动复制，请在弹窗中手动复制动态链接。');
+    else setError('浏览器暂时无法复制链接，请打开动态详情后复制地址栏链接。');
   }
   const content=<section className={`community-page${home?' is-home':''}${mode==='feed'?' is-feed':''}`}>
     {home&&<section className="community-home-intro" aria-labelledby="community-home-title"><div className="community-home-intro__copy"><span className="kicker">WHAT IS HAPPENING</span><h2 id="community-home-title">今天，和谁一起做点什么？</h2><p>从一个小任务开始参与作品，也可以看看社区刚刚分享的新发现。</p></div><div className="community-home-paths"><button type="button" className="is-project" onClick={()=>go('/community/projects')}><span aria-hidden="true">↗</span><strong>一起做</strong><small>领取开放任务，留下可信贡献</small><em>查看项目与任务 →</em></button><button type="button" className="is-feed" onClick={()=>go('/community/feed')}><span aria-hidden="true">✦</span><strong>看看动态</strong><small>游戏、AI 与计算机的新发现</small><em>进入动态 →</em></button></div><div className="community-home-future" aria-label="正在准备的社区能力"><span><i aria-hidden="true">◫</i><b>线上活动</b><small>试玩会与社区聚会</small></span><span><i aria-hidden="true">◉</i><b>游戏组队</b><small>围绕真实游戏找队友</small></span><em>设计已完成 · 分阶段开放</em></div></section>}
