@@ -195,9 +195,33 @@ test('stable public work handoff keeps the public URL visible and leaves it clea
   assert.equal(route, '/works/work-456');
   assert.equal(location.pathname, '/w/work-456');
   navigateBrowserRoute('hash', '/discover', location, history, next => { route = next; });
-  assert.deepEqual(calls, [['replace', '/w/work-123'], ['push', '/w/work-456'], ['push', '/#/discover']]);
+  assert.deepEqual(calls, [['replace', '/w/work-123'], ['push', '/w/work-456'], ['push', '/discover']]);
   assert.equal(route, '/discover');
-  assert.equal(location.pathname, '/');
+  assert.equal(location.pathname, '/discover');
+});
+
+test('browser routing uses formal paths everywhere and upgrades legacy hash links', async () => {
+  const { readBrowserRoute, consumePublicWorkHandoff, navigateBrowserRoute } = await import('../../packages/platform-client/src/public-work-route.mjs');
+  const location = { pathname: '/', search: '?state=github-state', hash: '#/creator/import' };
+  const calls = [];
+  const apply = value => { const url = new URL(value, 'https://mooyu.fun'); location.pathname = url.pathname; location.search = url.search; location.hash = url.hash; };
+  const history = {
+    state: null,
+    replaceState: (_state, _title, value) => { calls.push(['replace', value]); apply(value); },
+    pushState: (_state, _title, value) => { calls.push(['push', value]); apply(value); },
+  };
+  assert.equal(readBrowserRoute('history', location), '/creator/import');
+  assert.equal(consumePublicWorkHandoff(location, history), true);
+  assert.equal(`${location.pathname}${location.search}`, '/creator/import?state=github-state');
+  let route = '';
+  navigateBrowserRoute('history', '/community/posts/post-1', location, history, next => { route = next; });
+  assert.equal(route, '/community/posts/post-1');
+  assert.equal(location.pathname, '/community/posts/post-1');
+  assert.equal(location.hash, '');
+  apply('/?gh_route=%2Fworks%2Fwork-789&gh_src=share_copy');
+  assert.equal(readBrowserRoute('history', location), '/works/work-789');
+  assert.equal(consumePublicWorkHandoff(location, history), true);
+  assert.equal(`${location.pathname}${location.search}`, '/w/work-789?gh_src=share_copy');
 });
 
 test('work sharing keeps bounded attribution through the public handoff and play session', async () => {

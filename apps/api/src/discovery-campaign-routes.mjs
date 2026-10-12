@@ -20,7 +20,7 @@ const campaignFields = {
 
 const landingPage = ({ campaign, siteOrigin, nonce }) => {
   const canonical = `${siteOrigin}/discover/c/${encodeURIComponent(campaign.slug)}`;
-  const target = `${siteOrigin}/#/discover/c/${encodeURIComponent(campaign.slug)}?public=1`;
+  const target = `${siteOrigin}/?gh_route=${encodeURIComponent(`/discover/c/${campaign.slug}`)}`;
   const image = `${siteOrigin}/v1/discovery/campaigns/${encodeURIComponent(campaign.slug)}/share-card.png`;
   const imageMeta = `<meta property="og:image" content="${escapeHtml(image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:image" content="${escapeHtml(image)}"><meta name="twitter:title" content="${escapeHtml(campaign.title)}"><meta name="twitter:description" content="${escapeHtml(campaign.summary)}">`;
   const handoff = `window.location.replace(${JSON.stringify(target).replace(/</gu, '\\u003c')});`;

@@ -85,10 +85,10 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   await workspace.getByRole('link', { name: '上传发布' }).click(); await page.getByRole('heading', { name: '新建作品' }).waitFor();
   await workspace.getByRole('link', { name: 'AI 接入排行榜' }).click(); await page.getByRole('heading', { name: '让 AI 添加排行榜' }).waitFor();
   assert.equal(await workspace.getByRole('link', { name: 'AI 接入排行榜' }).getAttribute('aria-current'), 'page');
-  await page.goto(base + '/#/creator/works/' + workId + '/ai/multiplayer'); await page.getByLabel('选择作品', { exact: true }).waitFor();
+  await page.goto(base + '/creator/works/' + workId + '/ai/multiplayer'); await page.getByLabel('选择作品', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), workId);
   assert.equal(await workspace.getByRole('link', { name: 'AI 接入联机' }).getAttribute('aria-current'), 'page');
-  await page.goto(base + '/#/creator/multiplayer/docs'); await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
+  await page.goto(base + '/creator/multiplayer/docs'); await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
   await page.getByRole('button', { name: /返回 GameHub/ }).click(); await page.getByRole('heading', { name: '休息一下？' }).waitFor();
   await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /#\/library$/);
   await goAs('admin'); await avatar.click(); await menu.getByRole('menuitem', { name: '治理', exact: true }).click();

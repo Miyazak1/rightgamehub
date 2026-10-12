@@ -16,7 +16,7 @@ test('work editor browser: prefill, immutable kind, validation, real conflict, r
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await require(playwrightPath).chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(base+'/#/creator');
+  await page.goto(base+'/creator');
   await page.locator('.creator-entry').filter({has:page.getByRole('heading',{name:'纸飞机',exact:true})}).getByRole('button',{name:'编辑资料',exact:true}).click();
   await page.getByText('保存后，公开详情立即更新。',{exact:true}).waitFor();
   assert.equal(await page.getByLabel('作品名称',{exact:true}).inputValue(),'纸飞机');assert.equal(await page.getByLabel('预计时长（分钟）').inputValue(),'7');assert.equal(await page.getByLabel('使用的 Coding Agent').inputValue(),'我的 Agent');
@@ -39,6 +39,6 @@ test('work editor browser: prefill, immutable kind, validation, real conflict, r
   const row=page.locator('.creator-entry').filter({has:page.getByRole('heading',{name:'改好的纸飞机',exact:true})});await row.getByText('Web · 资料版本 2',{exact:true}).waitFor();
   const patches=requests.filter(req=>req.method==='PATCH');assert.equal(patches.length,3);assert.equal(patches[1].headers['idempotency-key'],patches[2].headers['idempotency-key']);assert.equal(patches[1].headers['if-match'],`"work-${workId}-1"`);
   const publicly=(await app.inject({url:'/v1/works/'+workId})).json().data;assert.equal(publicly.title,'改好的纸飞机');assert.equal(publicly.repositoryUrl,null);assert.equal(publicly.licenseSpdx,null);assert.equal(publicly.kind,'game');assert.equal(publicly.estimatedMinutes,12);assert.deepEqual(publicly.tags,['竞速','休闲']);assert.equal(publicly.targets[0].currentReleaseId,f.releaseId);
-  await page.goto(base+'/#/creator/works/'+f.draftId+'/edit');await page.getByRole('heading',{name:'编辑作品资料',exact:true}).waitFor();await page.getByText('只修改资料；保存不会发布作品或替换游戏包。',{exact:true}).waitFor();await page.getByRole('button',{name:'取消',exact:true}).click();
+  await page.goto(base+'/creator/works/'+f.draftId+'/edit');await page.getByRole('heading',{name:'编辑作品资料',exact:true}).waitFor();await page.getByText('只修改资料；保存不会发布作品或替换游戏包。',{exact:true}).waitFor();await page.getByRole('button',{name:'取消',exact:true}).click();
   assert.deepEqual(await f.protectedState(),before);assert.deepEqual(requests.filter(req=>!['GET','PATCH'].includes(req.method)&&!req.url.startsWith('/v1/analytics/')),[]);assert.deepEqual(errors,[]);
 });

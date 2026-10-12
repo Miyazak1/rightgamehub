@@ -31,7 +31,7 @@ export function createGameShareService({pool,gameSessionService,siteOrigin='http
         const code=crypto.randomBytes(24).toString('base64url');
         const row=(await tx.query("INSERT INTO game_share_links(code_hash,user_id,work_id,release_id,title,payload,work_generation,target_generation,release_generation,created_at,expires_at) SELECT $1,$2,w.id,r.id,$5,$6,w.game_session_generation,t.game_session_generation,r.game_session_generation,now(),now()+interval '30 days' FROM releases r JOIN works w ON w.id=r.work_id JOIN work_targets t ON t.work_id=r.work_id AND t.target_key=r.target_key WHERE w.id=$3 AND r.id=$4 RETURNING expires_at",[hash(code),scope.userId,scope.workId,scope.releaseId,safe.title,JSON.stringify(safe.payload)])).rows[0];
         await tx.query("INSERT INTO game_share_events(code_hash,user_id,work_id,release_id,action) VALUES($1,$2,$3,$4,'created')",[hash(code),scope.userId,scope.workId,scope.releaseId]);
-        return {code,url:siteOrigin+'/#/s/'+code,expiresAt:row.expires_at.toISOString()};
+        return {code,url:siteOrigin+'/s/'+code,expiresAt:row.expires_at.toISOString()};
       });
     },
     async get(code){

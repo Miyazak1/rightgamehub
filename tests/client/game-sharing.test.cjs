@@ -34,7 +34,7 @@ test('native export validates selected filename and current release immediately 
 });
 test('sharing handlers bind current to launch, refuse iframe-selected codes and keep sessions in parent',async()=>{
  const {createShareLinkHandlers,createFileExportHandlers}=await import('../../packages/platform-client/src/web-game-sharing-handlers.mjs');const descriptor={workId:'w',releaseId:'r'};let sessionCalls=0,apiCalls=0;
- const apiClient={createGameShare:async(token,input)=>{assert.equal(token,'parent-secret');apiCalls++;return {data:{code:'public',url:'https://mooyu.fun/#/s/public'}};},getGameShare:async code=>{assert.equal(code,'launch-code');return {data:{...descriptor,payload:{value:1}}};}};
+ const apiClient={createGameShare:async(token,input)=>{assert.equal(token,'parent-secret');apiCalls++;return {data:{code:'public',url:'https://mooyu.fun/s/public'}};},getGameShare:async code=>{assert.equal(code,'launch-code');return {data:{...descriptor,payload:{value:1}}};}};
  const h=createShareLinkHandlers({descriptor,apiClient,initialShareCode:'launch-code',getGameSession:async capability=>{assert.equal(capability,'shareLinks');sessionCalls++;return 'parent-secret';}}).handlers;
  assert.deepEqual((await h['shares.current']({})).payload,{value:1});assert.equal(sessionCalls,0);
  await assert.rejects(h['shares.current']({code:'other'}),{code:'BRIDGE_REQUEST_INVALID'});

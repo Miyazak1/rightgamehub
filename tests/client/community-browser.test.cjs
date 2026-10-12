@@ -51,7 +51,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   page=await browser.newPage({viewport:{width:1280,height:1000},deviceScaleFactor:1});
   page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const title='新发现：像素世界里的 AI '+Date.now();
-  await page.goto(base+'/#/community');
+  await page.goto(base+'/community');
   await page.getByRole('button',{name:'＋ 分享发现',exact:true}).click();
   await page.getByText('内容和修改审核通过后，将连同你的昵称公开。个人主页仍按原隐私设置展示。',{exact:false}).waitFor();
   await page.getByLabel('标题',{exact:true}).fill(title);

@@ -30,7 +30,7 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
   app.get('/',async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
-  await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port,route='/#/creator/works/'+workId+'/upload';
+  await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port,route='/creator/works/'+workId+'/upload';
   browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const timeline=page.getByRole('complementary',{name:'上传处理进度'}),ready=timeline.locator('[data-upload-step=succeeded]'),published=timeline.locator('[data-upload-step=published]');
@@ -76,7 +76,7 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
     await page.screenshot({path:path.join(out,'published-'+width+'.png'),fullPage:true});
   }
   // Switching works must not carry an earlier work's terminal result into the new upload form.
-  await page.goto(base+'/#/creator/works/different-work/upload');await page.getByRole('button',{name:'开始上传',exact:true}).waitFor();
+  await page.goto(base+'/creator/works/different-work/upload');await page.getByRole('button',{name:'开始上传',exact:true}).waitFor();
   assert.equal(await published.getAttribute('class'),'');assert.equal(await timeline.locator('li.is-done').count(),0);
   await page.goto(base+'/?demo=1&outcome=published'+route.slice(1));await isPublished();
   await page.goto(base+'/?demo=1&outcome=draft'+route.slice(1));await isDraft(/保留为草稿，尚未发布/);

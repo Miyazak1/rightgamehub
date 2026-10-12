@@ -7,7 +7,7 @@ const puzzles = puzzleBank.puzzles;
 
 const normalize = value => value.replace(/[\s·・—–\-_，。！？（）()]/g, '').toLowerCase();
 const secondsLabel = seconds => seconds < 60 ? `${seconds}秒` : `${Math.floor(seconds / 60)}分${String(seconds % 60).padStart(2, '0')}秒`;
-const GUESS_BAIKE_SHARE_URL = 'https://mooyu.fun/#/play/gamehub-guess-baike';
+const GUESS_BAIKE_SHARE_URL = 'https://mooyu.fun/play/gamehub-guess-baike';
 const fireworkPieces = Array.from({ length: 24 }, (_, index) => {
   const ray = index % 12;
   const angle = ray * Math.PI / 6;

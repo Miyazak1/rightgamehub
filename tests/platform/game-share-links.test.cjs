@@ -14,7 +14,7 @@ test('sharing uses real PostgreSQL sessions, quotas, immutable version identity,
  let first;
  await t.test('only server-derived context is accepted; public responses contain no identity credentials',async()=>{
    const bad=await f.app.inject({method:'POST',url:'/v1/game-shares',headers,payload:{...input,workId:f.draftId}});assert.equal(bad.statusCode,400);
-   const r=await f.app.inject({method:'POST',url:'/v1/game-shares',headers,payload:input});assert.equal(r.statusCode,201,r.body);first=r.json().data;assert.match(first.code,/^[A-Za-z0-9_-]{32}$/);assert.equal(first.url,'https://mooyu.fun/#/s/'+first.code);
+   const r=await f.app.inject({method:'POST',url:'/v1/game-shares',headers,payload:input});assert.equal(r.statusCode,201,r.body);first=r.json().data;assert.match(first.code,/^[A-Za-z0-9_-]{32}$/);assert.equal(first.url,'https://mooyu.fun/s/'+first.code);
    const read=await f.app.inject('/v1/game-shares/'+first.code);assert.equal(read.statusCode,200,read.body);assert.equal(read.headers['cache-control'],'no-store');assert.deepEqual(read.json().data.payload,input.payload);assert.equal(read.json().data.releaseId,f.releaseId);assert.doesNotMatch(read.body,/grantId|gameSessionId|userId|token_hash/);
    await assert.rejects(shares.get('bad'),{code:'SHARE_UNAVAILABLE'});await assert.rejects(shares.get('A'.repeat(32)),{code:'SHARE_UNAVAILABLE'});
    await assert.rejects(shares.create(actors.owner,session.gameSessionId,{...input,payload:{text:'x'.repeat(17000)}}),{code:'SHARE_PAYLOAD_INVALID'});

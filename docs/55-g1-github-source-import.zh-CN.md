@@ -50,7 +50,7 @@ GITHUB_SOURCE_IMPORT_ENABLED=true
 GITHUB_APP_ID=123456
 GITHUB_APP_CLIENT_ID=Iv1_optional_client_id
 GITHUB_APP_SLUG=gamehub-source-import
-GITHUB_APP_CALLBACK_URL=https://<平台域名>/#/creator/import
+GITHUB_APP_CALLBACK_URL=https://<平台域名>/creator/import
 GITHUB_APP_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----
 GITHUB_APP_WEBHOOK_SECRET=<至少 32 UTF-8 字节的随机值>
 ```

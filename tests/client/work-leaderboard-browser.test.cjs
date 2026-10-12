@@ -44,7 +44,7 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(base+'/#/works/gamehub-guess-baike');const board=page.locator('.work-leaderboard');
+  await page.goto(base+'/w/gamehub-guess-baike');const board=page.locator('.work-leaderboard');
   await board.getByText('登录后记录你的成绩',{exact:true}).waitFor();assert.equal(await board.locator('li').count(),10);
   const layout=await page.evaluate(()=>({board:document.querySelector('.work-leaderboard').getBoundingClientRect().top,about:document.querySelector('.detail-columns').getBoundingClientRect().bottom}));assert.ok(layout.board>=layout.about);
   await page.evaluate(()=>window.boardFixture.signIn('owner'));await board.getByText('第 61 名',{exact:true}).waitFor();
@@ -71,12 +71,12 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   for(const width of [390,360]){await page.setViewportSize({width,height:844});await page.evaluate(()=>scrollTo(0,0));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.join(shots,'narrow-'+width+'.png'),fullPage:true});}
   await page.setViewportSize({width:1365,height:1000});
   await page.evaluate(()=>window.boardFixture.signIn('someone-else'));await board.getByText('这道题还没有已保存的成绩',{exact:true}).waitFor();assert.equal(await board.getByText('第 61 名',{exact:true}).count(),0);
-  await page.goto(base+'/#/works/gamehub-guess-baike/leaderboard/'+today+'/empty');await board.getByText('这道题还没有公开成绩',{exact:true}).waitFor();
+  await page.goto(base+'/works/gamehub-guess-baike/leaderboard/'+today+'/empty');await board.getByText('这道题还没有公开成绩',{exact:true}).waitFor();
   const before=requests.filter(r=>r.url.includes('/leaderboards/')).length;
-  await page.goto(base+'/#/works/00000000-0000-4000-8000-000000000002');await page.getByRole('heading',{name:'未接入榜单的游戏',exact:true}).waitFor();assert.equal(await board.count(),0);assert.equal(requests.filter(r=>r.url.includes('/leaderboards/')).length,before);
-  await page.goto(base+'/#/games/guess-baike/community');await board.getByText('像素玩家 1',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'猜百科',exact:true}).count(),1);
-  await page.goto(base+'/#/community');await page.getByRole('navigation',{name:'分享导航'}).waitFor();assert.equal(await page.getByRole('button',{name:'猜百科排行 ↗',exact:true}).count(),0);
-  await page.goto(base+'/#/play/gamehub-guess-baike');await page.getByText('排行榜测试',{exact:true}).waitFor();
+  await page.goto(base+'/w/00000000-0000-4000-8000-000000000002');await page.getByRole('heading',{name:'未接入榜单的游戏',exact:true}).waitFor();assert.equal(await board.count(),0);assert.equal(requests.filter(r=>r.url.includes('/leaderboards/')).length,before);
+  await page.goto(base+'/games/guess-baike/community');await board.getByText('像素玩家 1',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'猜百科',exact:true}).count(),1);
+  await page.goto(base+'/community');await page.getByRole('navigation',{name:'分享导航'}).waitFor();assert.equal(await page.getByRole('button',{name:'猜百科排行 ↗',exact:true}).count(),0);
+  await page.goto(base+'/play/gamehub-guess-baike');await page.getByText('排行榜测试',{exact:true}).waitFor();
   await page.getByPlaceholder('输入中文、英文或数字，也可直接猜标题').fill('测试');await page.getByRole('button',{name:'揭开',exact:false}).click();
   const result=page.getByRole('dialog',{name:'挑战完成'});await result.getByRole('button',{name:'重试保存成绩',exact:true}).waitFor();
   await result.getByRole('button',{name:'重试保存成绩',exact:true}).click();await result.getByText('正在保存本局成绩…',{exact:true}).waitFor();assert.equal(await result.getByRole('button',{name:'查看本局排名',exact:true}).isDisabled(),true);

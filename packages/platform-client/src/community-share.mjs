@@ -1,7 +1,6 @@
 export function communityPostUrl(location,postId) {
   if(!location?.origin)throw new Error('page location unavailable');
-  const path=location.pathname||'/';
-  return `${location.origin}${path}#/community/posts/${encodeURIComponent(postId)}`;
+  return `${location.origin}/community/posts/${encodeURIComponent(postId)}`;
 }
 
 export async function copyCommunityPostLink({location,clipboard,prompt},postId) {

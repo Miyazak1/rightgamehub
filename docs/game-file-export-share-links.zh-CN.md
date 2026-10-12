@@ -55,7 +55,7 @@ data 必须为 ArrayBuffer。原生协议允许通过 MessagePort 转移该 Arra
 
 POST /v1/game-shares 同时要求账号 bearer 和可信父页保存的 X-GameHub-Session；只接受 production 会话且发布版本已获准 shareLinks。账号、作品、版本来自会话，不信任游戏参数。GET /v1/game-shares/:code 支持匿名，DELETE 要求创建者身份；详情和错误均 no-store。
 
-链接使用随机 192-bit code，数据库只保存其 SHA-256。URL 为 GAME_SHARE_SITE_ORIGIN/#/s/:code，Compose 从 APP_DOMAIN 注入站点来源，禁止使用请求 Host 或 iframe 提供的跳转地址。独立本地测试可配置 http://127.0.0.1:端口。路由解析指定 workId/releaseId 后按正式启动描述启动；shares.current 每次重新读取当前启动的 code，不接受任何参数或任意 code 查询。
+链接使用随机 192-bit code，数据库只保存其 SHA-256。URL 为 GAME_SHARE_SITE_ORIGIN/s/:code，Compose 从 APP_DOMAIN 注入站点来源，禁止使用请求 Host 或 iframe 提供的跳转地址。独立本地测试可配置 http://127.0.0.1:端口。路由解析指定 workId/releaseId 后按正式启动描述启动；shares.current 每次重新读取当前启动的 code，不接受任何参数或任意 code 查询。
 
 作品/目标撤下、私有、封禁，版本停用/退休、能力移除，分享创建者或作者被封禁，链接撤销或到期都会阻止读取。作品、目标和版本的 generation 与创建时绑定，撤下再发布也不会复活旧链接。新版本发布后，旧链接固定到仍可运行的旧版本，不会偷偷替换内容。
 

@@ -101,7 +101,7 @@ test('web game bridge creates and opens scoped playable share links', async t =>
     getProfile: async () => ({ data:{ id:'user-1',displayName:'Player',avatar:null } }),
     createGameSession: async () => ({ data:{ gameSessionId:'session-1',capabilities:['shareLinks'],expiresAt:'2099-10-09T00:30:00.000Z' } }),
     revokeGameSession: async () => ({ data:{ revoked:true } }),
-    createGameShare: async (_session,body) => ({ data:{ code,url:`https://mooyu.fun/#/s/${code}`,expiresAt:'2026-11-08T00:00:00.000Z',title:body.title } }),
+    createGameShare: async (_session,body) => ({ data:{ code,url:`https://mooyu.fun/s/${code}`,expiresAt:'2026-11-08T00:00:00.000Z',title:body.title } }),
     getGameShare: async () => ({ data:{ code,workId,releaseId,title:'动画 Bingo',payload,expiresAt:'2026-11-08T00:00:00.000Z' } }),
   };
   const bridge = createWebGameMultiplayerHost({ windowImpl:hostWindow,frame:{ contentWindow:gameWindow },launchId:crypto.randomUUID(),initialShareCode:code,descriptor:{ workId,releaseId,capabilities:{ shareLinks:true } },apiClient,MessageChannelImpl:MessageChannel });
@@ -110,7 +110,7 @@ test('web game bridge creates and opens scoped playable share links', async t =>
   t.after(() => client.close());
   assert.deepEqual(await client.connect(), ['identity','shareLinks']);
   const created = await client.shares.create('动画 Bingo',payload);
-  assert.equal(created.url,`https://mooyu.fun/#/s/${code}`);
+  assert.equal(created.url,`https://mooyu.fun/s/${code}`);
   assert.deepEqual((await client.shares.current()).payload,payload);
 });
 

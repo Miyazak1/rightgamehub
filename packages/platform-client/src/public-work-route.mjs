@@ -1,76 +1,71 @@
 const publicWorkPath = /^\/w\/([^/?#]+)\/?$/u;
-const internalWorkRoute = /^\/works\/([^/?#]+)$/u;
-const publicCampaignPath = /^\/discover\/c\/([a-z0-9][a-z0-9-]{2,62}[a-z0-9])\/?$/u;
-const internalCampaignRoute = /^\/discover\/c\/([a-z0-9][a-z0-9-]{2,62}[a-z0-9])$/u;
+const internalWorkRoute = /^\/works\/([^/?#]+)\/?$/u;
 const sourceSet = new Set(['share_copy', 'share_system', 'readme', 'external', 'campaign']);
 const campaignPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
 
-const handoff = value => {
-  const [path, query = ''] = String(value || '').split('?');
-  const match = path.match(internalWorkRoute);
-  if (!match) return null;
-  const params = new URLSearchParams(query);
-  if (params.get('public') !== '1') return null;
-  const source = params.get('gh_src'); const campaign = params.get('gh_campaign');
+const splitRoute = value => {
+  const raw = String(value || '').replace(/^#(?=\/)/u, '');
+  const queryAt = raw.indexOf('?');
+  const pathname = (queryAt < 0 ? raw : raw.slice(0, queryAt)) || '/discover';
   return {
-    workId: match[1],
-    source: sourceSet.has(source) ? source : null,
-    campaign: campaignPattern.test(campaign || '') ? campaign : null,
+    pathname: pathname.startsWith('/') ? pathname : `/${pathname}`,
+    search: queryAt < 0 ? '' : raw.slice(queryAt + 1),
   };
 };
 
-const campaignHandoff = value => {
-  const [path, query = ''] = String(value || '').split('?');
-  const match = path.match(internalCampaignRoute);
-  if (!match || new URLSearchParams(query).get('public') !== '1') return null;
-  return { slug: match[1] };
+const internalRoute = value => {
+  const { pathname } = splitRoute(value);
+  const publicWork = pathname.match(publicWorkPath);
+  if (publicWork) return `/works/${publicWork[1]}`;
+  return pathname === '/' ? '/discover' : pathname.replace(/\/$/u, '') || '/discover';
 };
 
+const bootstrapRoute = currentLocation => {
+  const value = new URLSearchParams(String(currentLocation?.search || '').replace(/^\?/u, '')).get('gh_route');
+  return value?.startsWith('/') ? value : null;
+};
+
+const routeQuery = (value, currentLocation, includeOuter) => {
+  const { pathname, search } = splitRoute(value);
+  const params = new URLSearchParams(search);
+  params.delete('public');
+  params.delete('gh_route');
+  const outer = new URLSearchParams(String(currentLocation?.search || '').replace(/^\?/u, ''));
+  if (includeOuter) {
+    for (const [key, item] of outer) if (key !== 'gh_route' && key !== 'public' && !params.has(key)) params.set(key, item);
+  } else if (outer.has('demo')) params.set('demo', '');
+  if (pathname.match(internalWorkRoute)) {
+    if (!sourceSet.has(params.get('gh_src'))) params.delete('gh_src');
+    if (!campaignPattern.test(params.get('gh_campaign') || '')) params.delete('gh_campaign');
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : '';
+};
+
+export function browserPathForRoute(value, currentLocation = {}, includeOuter = false) {
+  const { pathname } = splitRoute(value);
+  const work = pathname.match(internalWorkRoute);
+  const cleanPath = work ? `/w/${work[1]}` : pathname === '/' ? '/discover' : pathname.replace(/\/$/u, '') || '/discover';
+  return `${cleanPath}${routeQuery(value, currentLocation, includeOuter)}`;
+}
+
 export function readBrowserRoute(mode, currentLocation) {
-  if (mode !== 'hash') return '/discover';
-  const publicMatch = String(currentLocation.pathname || '').match(publicWorkPath);
-  if (publicMatch) return `/works/${publicMatch[1]}`;
-  const campaignMatch = String(currentLocation.pathname || '').match(publicCampaignPath);
-  if (campaignMatch) return `/discover/c/${campaignMatch[1]}`;
-  const hashRoute = String(currentLocation.hash || '').slice(1) || '/discover';
-  const incoming = handoff(hashRoute);
-  if (incoming) return `/works/${incoming.workId}`;
-  const incomingCampaign = campaignHandoff(hashRoute);
-  return incomingCampaign ? `/discover/c/${incomingCampaign.slug}` : hashRoute;
+  if (mode === 'memory') return '/discover';
+  const legacy = String(currentLocation.hash || '').slice(1);
+  return internalRoute(legacy.startsWith('/') ? legacy : bootstrapRoute(currentLocation) || currentLocation.pathname || '/discover');
 }
 
 export function consumePublicWorkHandoff(currentLocation, browserHistory) {
-  const hashRoute = String(currentLocation.hash || '').slice(1);
-  const incoming = handoff(hashRoute);
-  if (incoming) {
-    const params = new URLSearchParams({ ...(incoming.source ? { gh_src: incoming.source } : {}), ...(incoming.campaign ? { gh_campaign: incoming.campaign } : {}) });
-    browserHistory.replaceState(browserHistory.state ?? null, '', `/w/${incoming.workId}${params.size ? `?${params}` : ''}`);
-    return true;
-  }
-  const campaign = campaignHandoff(hashRoute);
-  if (!campaign) return false;
-  browserHistory.replaceState(browserHistory.state ?? null, '', `/discover/c/${campaign.slug}`);
+  const legacy = String(currentLocation.hash || '').slice(1);
+  const incoming = legacy.startsWith('/') ? legacy : bootstrapRoute(currentLocation);
+  if (!incoming) return false;
+  browserHistory.replaceState(browserHistory.state ?? null, '', browserPathForRoute(incoming, currentLocation, true));
   return true;
 }
 
 export function navigateBrowserRoute(mode, next, currentLocation, browserHistory, setPath) {
-  if (mode !== 'hash') { setPath(next); return; }
-  const workMatch = String(next || '').match(internalWorkRoute);
-  if (workMatch) {
-    browserHistory.pushState(null, '', `/w/${workMatch[1]}`);
-    setPath(next);
-    return;
-  }
-  const campaignMatch = String(next || '').match(internalCampaignRoute);
-  if (campaignMatch) {
-    browserHistory.pushState(null, '', `/discover/c/${campaignMatch[1]}`);
-    setPath(next);
-    return;
-  }
-  if (publicWorkPath.test(String(currentLocation.pathname || '')) || publicCampaignPath.test(String(currentLocation.pathname || ''))) {
-    browserHistory.pushState(null, '', `/#${next}`);
-    setPath(next);
-    return;
-  }
-  currentLocation.hash = next;
+  const route = internalRoute(next);
+  if (mode === 'memory') { setPath(route); return; }
+  browserHistory.pushState(null, '', browserPathForRoute(next, currentLocation));
+  setPath(route);
 }
