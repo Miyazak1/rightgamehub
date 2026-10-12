@@ -759,6 +759,7 @@ test('community navigation unifies sharing and contribution without breaking leg
   const narrowCommunityPage = styles.indexOf('.community-page:not(.is-home)');
   const wideCommunityFeed = styles.indexOf('.community-page.is-feed{width:100%;max-width:none;margin-inline:0}');
   assert.ok(narrowCommunityPage >= 0 && wideCommunityFeed > narrowCommunityPage);
+  assert.doesNotMatch(styles, /\.community-page\.is-feed:not\(\.is-home\)\s*\{[^}]*920px/);
 });
 
 test('community projects add a real project workflow and reuse contribution tasks', async () => {

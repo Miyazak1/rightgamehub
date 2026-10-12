@@ -1929,11 +1929,6 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   width: 36px;
   height: 36px;
 }
-.community-page.is-feed:not(.is-home) {
-  width: min(920px,100%);
-  max-width: 920px;
-  margin-inline: auto;
-}
 .community-feed {
   gap: 10px;
 }
