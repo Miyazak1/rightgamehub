@@ -69,6 +69,7 @@ test('community nickname surfaces use the shared avatar identity component', asy
     assert.match(sources[index], /CommunityIdentity/, `${files[index]} must render identities with avatars`);
   }
   assert.match(sources[0], /person=\{project\.owner\}/);
+  assert.doesNotMatch(sources[0], /person=\{project\.owner\}[^>]*showHandle/);
   assert.match(sources[0], /person=\{member\}/);
   assert.match(sources[0], /person=\{application\.applicant\}/);
   assert.match(sources[1], /person=\{event\.host\}/);
