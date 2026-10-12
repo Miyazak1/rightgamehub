@@ -11,7 +11,7 @@ test('author outreach discovers only repository candidates and writes truthful d
   let synced;
   const repository={
     candidates:async()=>[{work_id:'00000000-0000-4000-8000-000000000001',title:'轨道秩序',description:'解谜',repository_url:'https://github.com/Open-Team/Orbital.git',license_spdx:'MIT'}],
-    sync:async input=>{synced=input;return 1;},list:async()=>[{id:'saved'}],
+    sync:async input=>{synced=input;return{inserted:1,upgraded:0};},list:async()=>[{id:'saved'}],
     update:async input=>input,events:async()=>[],
   };
   let sequence=0;
@@ -21,6 +21,10 @@ test('author outreach discovers only repository candidates and writes truthful d
   assert.equal(result.inserted,1);
   assert.equal(synced.records[0].repositoryKey,'open-team/orbital');
   assert.equal(synced.records[0].repositoryUrl,'https://github.com/Open-Team/Orbital');
+  assert.equal(synced.records[0].draftTemplateVersion,2);
+  assert.match(synced.records[0].draftSubject,/^GameHub invitation \/ GameHub 认领邀请/u);
+  assert.ok(synced.records[0].draftBody.indexOf('Hello, Open-Team team,')<synced.records[0].draftBody.indexOf('\n中文\n'));
+  assert.match(synced.records[0].draftBody,/This is a one-time, human-reviewed invitation/u);
   assert.match(synced.records[0].draftBody,/MIT/u);
   assert.match(synced.records[0].draftBody,/平台代收录、等待作者认领/u);
   assert.match(synced.records[0].draftBody,/gh_campaign=author-outreach/u);
@@ -30,7 +34,7 @@ test('author outreach discovers only repository candidates and writes truthful d
 test('author outreach requires an actual contact record before marking sent',async()=>{
   const {createAuthorOutreachService}=await import(pathToFileURL(path.join(root,'apps/api/src/author-outreach-service.mjs')));
   let updated;
-  const repository={candidates:async()=>[],sync:async()=>0,list:async()=>[],events:async()=>[],update:async input=>{updated=input;return input;}};
+  const repository={candidates:async()=>[],sync:async()=>({inserted:0,upgraded:0}),list:async()=>[],events:async()=>[],update:async input=>{updated=input;return input;}};
   const service=createAuthorOutreachService({repository,ids:()=>crypto.randomUUID(),clock:()=>new Date('2026-10-12T08:00:00.000Z')});
   const actor={userId:'admin',profile:{role:'admin'}},id='00000000-0000-4000-8000-000000000065';
   const base={status:'contacted',draftSubject:'邀请作者认领作品',draftBody:'这是一份长度足够且需要人工确认后才会发送的作者联络正文，内容包含作品页面、原始仓库、许可证和退出方式，请在发送前逐项检查。',contactMethod:'github_issue',expectedVersion:'1'};
@@ -43,14 +47,31 @@ test('author outreach requires an actual contact record before marking sent',asy
 });
 
 test('outreach migration and query preserve eligibility, deduplication and append-only audit',async()=>{
-  const [migration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
+  const [migration,bilingualMigration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0066_author_outreach_bilingual_template.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
   assert.match(migration,/repository_key text NOT NULL UNIQUE/u);
   assert.match(migration,/author outreach events are append-only/u);
+  assert.match(bilingualMigration,/draft_template_version/u);
   assert.match(service,/w\.attribution_kind='community_catalog'/u);
   assert.match(service,/w\.state='published'/u);
   assert.match(service,/w\.license_spdx IS NOT NULL/u);
   assert.match(service,/c\.status IN \('pending','verified','disputed','suspended'\)/u);
+  assert.match(service,/status='review' AND version=1/u);
+  assert.match(service,/contact_reference IS NULL AND last_contacted_at IS NULL/u);
   assert.doesNotMatch(service,/api\.github\.com/u);
+});
+
+test('outreach sync upgrades only an untouched review draft and records the template event',async()=>{
+  const {PostgresAuthorOutreachRepository}=await import(pathToFileURL(path.join(root,'apps/api/src/author-outreach-service.mjs')));
+  const queries=[];
+  const client={query:async(sql,params)=>{queries.push({sql,params});if(sql==='BEGIN'||sql==='COMMIT')return{rowCount:0,rows:[]};if(sql.includes('INSERT INTO author_outreach_records'))return{rowCount:0,rows:[]};if(sql.includes('UPDATE author_outreach_records'))return{rowCount:1,rows:[{id:'00000000-0000-4000-8000-000000000065'}]};return{rowCount:1,rows:[]};},release:()=>{}};
+  const repository=new PostgresAuthorOutreachRepository({connect:async()=>client});
+  const result=await repository.sync({actorUserId:'00000000-0000-4000-8000-000000000001',records:[{id:'00000000-0000-4000-8000-000000000002',eventId:'00000000-0000-4000-8000-000000000003',workId:'00000000-0000-4000-8000-000000000004',repositoryKey:'example/game',repositoryUrl:'https://github.com/example/game',draftSubject:'GameHub invitation / GameHub 认领邀请：Game',draftBody:'English invitation first. This body is deliberately long enough.\n\n---\n\n中文\n\n中文邀请在后。',draftTemplateVersion:2}]});
+  assert.deepEqual(result,{inserted:0,upgraded:1});
+  const update=queries.find(query=>query.sql.includes('UPDATE author_outreach_records'));
+  assert.match(update.sql,/status='review' AND version=1/u);
+  assert.match(update.sql,/draft_template_version<\$6/u);
+  const event=queries.find(query=>query.sql.includes("'updated','review','review'"));
+  assert.equal(event.params[3].reason,'bilingual_template_upgrade');
 });
 
 test('author outreach HTTP routes are admin-authenticated, no-store and schema-bound',async t=>{
@@ -59,7 +80,7 @@ test('author outreach HTTP routes are admin-authenticated, no-store and schema-b
   const app=createApp({
     config:{requestBodyLimit:65536,corsOrigins:[],cloudSaveEnabled:false,nodeEnv:'test',gameShareSiteOrigin:'https://mooyu.fun'},database:{ping:async()=>true},migrations:{status:async()=>({ready:true})},
     authService:{authenticateBearer:async value=>{if(!value)throw new AuthError('AUTH_REQUIRED',401,'Authentication required.');return{userId:'admin',profile:{role:'admin'}};}},
-    authorOutreachService:{list:async()=>[{id:'one'}],sync:async()=>({inserted:0,totalCandidates:0,items:[]}),events:async()=>[],update:async(_actor,id,body)=>{updated={id,body};return{id,...body};}},
+    authorOutreachService:{list:async()=>[{id:'one'}],sync:async()=>({inserted:0,upgraded:0,totalCandidates:0,items:[]}),events:async()=>[],update:async(_actor,id,body)=>{updated={id,body};return{id,...body};}},
   });
   t.after(()=>app.close());
   const denied=await app.inject({method:'GET',url:'/v1/admin/author-outreach'});assert.equal(denied.statusCode,401);

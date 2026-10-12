@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 65);
+  assert.equal(files.length, 66);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -19,6 +19,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const developmentLog = fs.readFileSync(path.join(migrationDir, '0063_work_development_entries.sql'), 'utf8');
   const discoveryCampaigns = fs.readFileSync(path.join(migrationDir, '0064_discovery_campaigns.sql'), 'utf8');
   const authorOutreach = fs.readFileSync(path.join(migrationDir, '0065_author_outreach_queue.sql'), 'utf8');
+  const bilingualOutreach = fs.readFileSync(path.join(migrationDir, '0066_author_outreach_bilingual_template.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -63,6 +64,8 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(authorOutreach, /CREATE TABLE author_outreach_events/);
   assert.match(authorOutreach, /BEFORE UPDATE ON author_outreach_events/);
   assert.match(authorOutreach, /BEFORE DELETE ON author_outreach_events/);
+  assert.match(bilingualOutreach, /ADD COLUMN draft_template_version/);
+  assert.match(bilingualOutreach, /DEFAULT 1/);
   assert.match(creatorStudio, /octet_length\(content::text\) <= 1048576/);
   const gameShares = fs.readFileSync(path.join(migrationDir, '0055_game_share_links.sql'), 'utf8');
   assert.match(gameShares, /CREATE TABLE game_share_links/);

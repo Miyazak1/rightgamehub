@@ -17,6 +17,8 @@ test('admin outreach UI keeps sync, copy, external review and sent-state recordi
   assert.match(queue,/复制草稿/u);
   assert.match(queue,/在 GitHub 核对并发送/u);
   assert.match(queue,/记录已联系/u);
+  assert.match(queue,/草稿固定英文在前、中文在后/u);
+  assert.match(queue,/升级 \$\{result\.upgraded\} 份未编辑草稿为英中双语/u);
   assert.match(queue,/不自动创建 Issue，不自动重复催促/u);
   assert.doesNotMatch(queue,/fetch\(['"]https:\/\/api\.github\.com/u);
 });
