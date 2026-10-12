@@ -961,6 +961,8 @@ export function createApp(dependencies) {
       agentLabel: { anyOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
       repositoryUrl: { anyOf: [{ type: 'string', pattern: '^https://github\\.com/[^/\\s]+/[^/\\s]+/?$' }, { type: 'null' }] },
       licenseSpdx: { anyOf: [{ type: 'string', minLength: 1, maxLength: 40 }, { type: 'null' }] },
+      remixSourceWorkId: { anyOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }] },
+      remixNote: { anyOf: [{ type: 'string', minLength: 10, maxLength: 1000 }, { type: 'null' }] },
     };
     app.get('/v1/creator/works', { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
     app.post('/v1/creator/works', {

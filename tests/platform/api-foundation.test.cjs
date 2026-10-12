@@ -128,7 +128,7 @@ test('public profile reads are anonymous while profile edits require the current
 
 test('creator work routes accept discovery metadata from the creation form', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
-  let received;
+  let received, receivedUpdate;
   const app = createApp({
     config: { requestBodyLimit: 65536 },
     database: { ping: async () => true },
@@ -139,6 +139,10 @@ test('creator work routes accept discovery metadata from the creation form', asy
         received = body;
         return { work: { id: crypto.randomUUID(), ...body }, etag: '"work-test-1"' };
       },
+      update: async (_actor, workId, body) => {
+        receivedUpdate = body;
+        return { work: { id: workId, ...body }, etag: '"work-test-2"' };
+      },
     },
   });
   t.after(() => app.close());
@@ -146,7 +150,8 @@ test('creator work routes accept discovery metadata from the creation form', asy
   const payload = {
     title: '弹盒游戏', description: '弹盘游戏', instructions: '11', kind: 'game',
     estimatedMinutes: 3, tags: ['弹盘游戏'], agentLabel: null,
-    repositoryUrl: null, licenseSpdx: null,
+    repositoryUrl: 'https://github.com/gamehub-labs/bounce-box', licenseSpdx: 'MIT',
+    attributionKind: 'publisher', remixSourceWorkId: null, remixNote: null,
   };
   const response = await app.inject({
     method: 'POST', url: '/v1/creator/works',
@@ -156,6 +161,16 @@ test('creator work routes accept discovery metadata from the creation form', asy
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(received, payload);
+
+  const workId = crypto.randomUUID();
+  const updatePayload = { remixSourceWorkId: null, remixNote: null };
+  const updated = await app.inject({
+    method: 'PATCH', url: `/v1/creator/works/${workId}`,
+    headers: { authorization: 'Bearer test-token-value-that-is-long-enough', 'idempotency-key': 'creator-edit-test-key', 'if-match': `"work-${workId}-1"` },
+    payload: updatePayload,
+  });
+  assert.equal(updated.statusCode, 200);
+  assert.deepEqual(receivedUpdate, updatePayload);
 });
 
 test('creator analytics, public work pages and badges stay catalog-gated', async t => {
