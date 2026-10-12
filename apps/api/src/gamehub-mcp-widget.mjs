@@ -1,4 +1,4 @@
-export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v3.html';
+export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v4.html';
 
 export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   const origin = new URL(siteOrigin).origin;
@@ -36,7 +36,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
     window.addEventListener('message',event=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=='2.0')return;if(message.id!=null){const item=pending.get(message.id);if(!item)return;pending.delete(message.id);message.error?item.reject(message.error):item.resolve(message.result);return;}if(message.method==='ui/notifications/tool-result')update(message.params);},{passive:true});
     frame.addEventListener('error',()=>{fallback.style.display='block';});
     show(globalThis.openai?.toolOutput?.view||{path:'/discover'});
-    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.1'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted GameHub view.',error);}
+    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.2'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted GameHub view.',error);}
   </script>
 </body>
 </html>`;

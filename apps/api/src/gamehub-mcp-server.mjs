@@ -77,9 +77,18 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     _meta: {
       ui: {
         prefersBorder: false,
+        domain: origin,
         csp: { frameDomains: [origin], resourceDomains: [origin], connectDomains: [origin] },
       },
       'openai/ui': { availableDisplayModes: ['fullscreen'] },
+      'openai/widgetDescription': 'Browse and play the complete hosted GameHub platform.',
+      'openai/widgetPrefersBorder': false,
+      'openai/widgetDomain': origin,
+      'openai/widgetCSP': {
+        frame_domains: [origin],
+        resource_domains: [origin],
+        connect_domains: [origin],
+      },
     },
   }] }));
 
@@ -89,7 +98,12 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     inputSchema: { workId: z.string().min(1).max(100).optional() },
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    _meta: { ui: { resourceUri: GAMEHUB_MCP_UI_URI } },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening GameHub…',
+      'openai/toolInvocation/invoked': 'GameHub opened.',
+    },
   }, async ({ workId }) => {
     try {
       if (workId) await catalogService.get(workId);
