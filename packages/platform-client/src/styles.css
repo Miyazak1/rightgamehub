@@ -1826,24 +1826,28 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   z-index: 1;
 }
 .community-hub-hero__ascii {
-  width: 290px;
+  width: 380px;
   position: absolute;
   z-index: 0;
   top: 50%;
-  right: 4px;
+  right: -12px;
   overflow: hidden;
-  color: color-mix(in srgb,var(--gh-action) 76%,var(--gh-secondary));
-  opacity: .28;
+  opacity: .36;
   pointer-events: none;
-  transform: translateY(-50%);
-  -webkit-mask-image: linear-gradient(90deg,transparent 0,#000 32%,#000 100%);
-  mask-image: linear-gradient(90deg,transparent 0,#000 32%,#000 100%);
+  transform: translateY(-34%);
+  filter: saturate(.72) contrast(.92);
+  -webkit-mask-image: linear-gradient(90deg,transparent 0,#000 30%,#000 100%);
+  mask-image: linear-gradient(90deg,transparent 0,#000 30%,#000 100%);
 }
-.community-hub-hero__ascii pre {
+.community-hub-hero__ascii canvas {
+  display: block;
+  width: 100%;
+  height: auto;
   margin: 0;
-  white-space: pre;
-  font: 700 7px/5px ui-monospace,"Cascadia Mono",monospace;
-  letter-spacing: 0;
+}
+[data-theme='light'] .community-hub-hero__ascii {
+  opacity: .25;
+  filter: saturate(.62) contrast(.86);
 }
 .community-hub-hero__copy h1 {
   margin-block: 3px;

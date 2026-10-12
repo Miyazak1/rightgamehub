@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {mount} from 'ascii.rest';
-import * as radar from 'ascii.rest/pieces/radar';
+import * as earthrise from 'ascii.rest/pieces/earthrise';
 
 const sections=[
   ['/community','首页','⌂',route=>route==='/community'],
@@ -11,10 +11,10 @@ const sections=[
   ['/community/me','我的参与','◇',route=>route.startsWith('/community/me')||route==='/community/mine'||route==='/community/bookmarks'],
 ];
 
-function CommunityAsciiRadar() {
+function CommunityAsciiEarthrise() {
   const visual=useRef(null);
-  useEffect(()=>mount(visual.current,radar,{fps:8,range:24,unit:'GH'}),[]);
-  return <pre ref={visual}/>;
+  useEffect(()=>mount(visual.current,earthrise,{fps:8}),[]);
+  return <canvas ref={visual}/>;
 }
 
 export function CommunityShell({route,go,children}) {
@@ -35,7 +35,7 @@ export function CommunityShell({route,go,children}) {
   return <main className={`page community-hub-page${overview?' is-overview':''}`}>
     {overview&&<header className="community-hub-hero">
       <div className="community-hub-hero__copy"><span className="kicker">GAMEHUB COMMUNITY</span><h1>社区<span aria-hidden="true">✦</span></h1><p>一起发现、一起做点东西，也一起玩。</p></div>
-      <div className="community-hub-hero__ascii" aria-hidden="true"><CommunityAsciiRadar/></div>
+      <div className="community-hub-hero__ascii" aria-hidden="true"><CommunityAsciiEarthrise/></div>
     </header>}
     <div className="community-hub-toolbar">
       <nav className="community-hub-nav" aria-label="社区导航">{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
