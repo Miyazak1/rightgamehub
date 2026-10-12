@@ -11,10 +11,21 @@
   }
   encode zstd gzip
 
+  @private_routes path /account* /creator* /admin* /play/* /challenge/* /s/* /install* /community/me* /community/bookmarks* /community/review*
+  header @private_routes X-Robots-Tag "noindex, nofollow"
+
   handle /health {
     reverse_proxy api:3090
   }
   handle /ready {
+    reverse_proxy api:3090
+  }
+
+  handle /robots.txt {
+    reverse_proxy api:3090
+  }
+
+  handle /sitemap.xml {
     reverse_proxy api:3090
   }
 

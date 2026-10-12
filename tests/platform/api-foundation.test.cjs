@@ -185,7 +185,10 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
     config: { requestBodyLimit: 65536, gameShareSiteOrigin: 'https://games.example' }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
     authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
     analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async () => ({ accepted: 1 }) },
-    catalogService: { get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover`, revision: '7' }; } },
+    catalogService: {
+      get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', kind: 'game', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover`, revision: '7' }; },
+      list: async query => { calls.push(['catalog-list', query]); return [{ id: workId, title: '公开游戏', kind: 'game', updatedAt: '2026-10-12T08:00:00.000Z' }]; },
+    },
     workService: { getCover: async id => { calls.push(['cover', id]); return { mediaType: 'image/webp', body: coverBody }; } },
   });
   t.after(() => app.close());
@@ -220,11 +223,25 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
   assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7"/u);
   assert.match(page.body, /property="og:image:width" content="1200"/u);
+  assert.match(page.body, /name="robots" content="index,follow,max-image-preview:large"/u);
+  assert.match(page.body, /type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"VideoGame"/u);
+  assert.match(page.body, /公开游戏 \\u003c测试>/u);
   assert.match(page.body, /new Set\(\['share_copy','share_system','readme','external','campaign'\]\)/u);
   assert.match(page.body, /document\.referrer/u);
   assert.match(page.body, /window\.location\.replace\(target\.href\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);
   assert.deepEqual(calls[4], ['catalog', workId]);
+  const robots = await app.inject({ method: 'GET', url: '/robots.txt' });
+  assert.equal(robots.statusCode, 200);
+  assert.match(robots.headers['content-type'], /^text\/plain/u);
+  assert.match(robots.body, /Disallow: \/creator/u);
+  assert.match(robots.body, /Sitemap: https:\/\/games\.example\/sitemap\.xml/u);
+  const sitemap = await app.inject({ method: 'GET', url: '/sitemap.xml' });
+  assert.equal(sitemap.statusCode, 200);
+  assert.match(sitemap.headers['content-type'], /^application\/xml/u);
+  assert.match(sitemap.body, new RegExp(`<loc>https://games\\.example/w/${workId}</loc>`));
+  assert.match(sitemap.body, /<lastmod>2026-10-12T08:00:00\.000Z<\/lastmod>/u);
+  assert.deepEqual(calls.at(-1), ['catalog-list', { limit: 50, offset: 0 }]);
 });
 
 test('production edge sends stable public work links to the metadata route before the SPA fallback', async () => {
@@ -235,6 +252,10 @@ test('production edge sends stable public work links to the metadata route befor
   assert.notEqual(staticFallback, -1);
   assert.ok(publicWorkRoute < staticFallback);
   assert.match(caddy.slice(publicWorkRoute, staticFallback), /reverse_proxy api:3090/u);
+  assert.match(caddy, /handle \/robots\.txt \{\s*reverse_proxy api:3090/u);
+  assert.match(caddy, /handle \/sitemap\.xml \{\s*reverse_proxy api:3090/u);
+  assert.match(caddy, /@private_routes path [^\n]*\/creator\*[^\n]*\/play\/\*/u);
+  assert.match(caddy, /header @private_routes X-Robots-Tag "noindex, nofollow"/u);
 });
 
 test('GitHub source routes authenticate creators and preserve raw webhook bytes', async t => {
