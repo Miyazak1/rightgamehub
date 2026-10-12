@@ -40,6 +40,7 @@ import { DevelopmentLogError } from './development-log-service.mjs';
 import { DiscoveryCampaignError } from './discovery-campaign-service.mjs';
 import { registerDiscoveryCampaignRoutes } from './discovery-campaign-routes.mjs';
 import { registerPublicSeoRoutes, serializeJsonLd, workStructuredData } from './public-seo.mjs';
+import { growthContentSlides, renderWorkXhsSlide } from './growth-content-renderer.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -464,6 +465,21 @@ export function createApp(dependencies) {
       reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
       reply.header('Content-Disposition', `${disposition}; filename="gamehub-${work.id}-share.png"`);
       reply.header('X-Content-Type-Options', 'nosniff');
+      return reply.type('image/png').send(body);
+    });
+    app.get('/v1/works/:workId/promo/xhs/:slide.png', {
+      schema: {
+        params: { type: 'object', additionalProperties: false, required: ['workId','slide'], properties: { workId: workKeySchema, slide: { type: 'string', enum: growthContentSlides } } },
+        querystring: { type: 'object', additionalProperties: false, properties: { download: { type: 'string', enum: ['1'] }, v: { type: 'string', maxLength: 64, pattern: '^[A-Za-z0-9._-]+$' } } },
+      },
+    }, async (request, reply) => {
+      const work=await catalogService.get(request.params.workId);
+      const cover=workService?.getCover?await workService.getCover(work.id).catch(()=>null):null;
+      const body=await renderWorkXhsSlide(work,cover?.body??null,request.params.slide);
+      const disposition=request.query.download==='1'?'attachment':'inline';
+      reply.header('Cache-Control','public, max-age=300, stale-while-revalidate=86400');
+      reply.header('Content-Disposition',`${disposition}; filename="gamehub-${work.id}-xhs-${request.params.slide}.png"`);
+      reply.header('X-Content-Type-Options','nosniff');
       return reply.type('image/png').send(body);
     });
     app.get('/v1/works/:workId/badge.svg', {

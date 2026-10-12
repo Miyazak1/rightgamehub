@@ -231,6 +231,16 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /window\.location\.replace\(target\.href\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);
   assert.deepEqual(calls[4], ['catalog', workId]);
+  const promo = await app.inject({ method: 'GET', url: `/v1/works/${workId}/promo/xhs/cover.png?download=1` });
+  assert.equal(promo.statusCode, 200);
+  assert.match(promo.headers['content-type'], /^image\/png/u);
+  assert.match(promo.headers['content-disposition'], /xhs-cover\.png"$/u);
+  assert.equal(promo.headers['x-content-type-options'], 'nosniff');
+  const promoMetadata = await sharp(promo.rawPayload).metadata();
+  assert.deepEqual({ width: promoMetadata.width, height: promoMetadata.height, format: promoMetadata.format }, { width: 1080, height: 1440, format: 'png' });
+  assert.deepEqual(calls.slice(5, 7), [['catalog', workId], ['cover', workId]]);
+  const invalidPromo = await app.inject({ method: 'GET', url: `/v1/works/${workId}/promo/xhs/unknown.png` });
+  assert.equal(invalidPromo.statusCode, 400);
   const robots = await app.inject({ method: 'GET', url: '/robots.txt' });
   assert.equal(robots.statusCode, 200);
   assert.match(robots.headers['content-type'], /^text\/plain/u);

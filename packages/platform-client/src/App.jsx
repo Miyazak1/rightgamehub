@@ -28,6 +28,7 @@ import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
 import WorkEditPage from './WorkEditPage.jsx';
 import DevelopmentLogPage from './DevelopmentLogPage.jsx';
 import {DiscoveryCampaignAdmin,DiscoveryCampaignPage} from './DiscoveryCampaigns.jsx';
+import GrowthContentStudio from './GrowthContentStudio.jsx';
 import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
 import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
@@ -1645,6 +1646,8 @@ function AdminPage({ api, demo, go }) {
   return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>掌握平台增长、内容分发与治理状态。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.claims.length} 份认领申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
     <AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/>
     <AdminStorage storage={state.storage}/>
+
+    <GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/>
 
     <DiscoveryCampaignAdmin api={api} demo={demo}/>
 

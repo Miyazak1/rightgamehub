@@ -138,6 +138,10 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
       const query = new URLSearchParams({ ...(version ? { v: String(version) } : {}), ...(download ? { download: '1' } : {}) });
       return `${baseUrl}/v1/works/${encodeURIComponent(id)}/share-card.png${query.size ? `?${query}` : ''}`;
     },
+    workXhsPromoUrl: (id, slide, { download = false, version } = {}) => {
+      const query = new URLSearchParams({ ...(version ? { v: String(version) } : {}), ...(download ? { download: '1' } : {}) });
+      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/promo/xhs/${encodeURIComponent(slide)}.png${query.size ? `?${query}` : ''}`;
+    },
     getWorkLeaderboard: (id, {date,puzzleId,limit=10,offset=0}={}, options) => request(`/v1/works/${encodeURIComponent(id)}/leaderboard?${new URLSearchParams({limit,offset,...(date?{date}:{}),...(puzzleId?{puzzleId}:{})})}`, {...options,auth:true}),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ''}`, options),
     releaseDownloadUrl: (workId, releaseId) => `${baseUrl}/v1/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/download`,
