@@ -12,9 +12,10 @@
   "dependencies": {
     "@gamehub/host-contract": "workspace:*",
     "@gamehub/multiplayer-protocol": "workspace:*",
-    "@gamehub/web-game-sdk": "workspace:*",
     "@gamehub/platform-api-client": "workspace:*",
     "@gamehub/player-core": "workspace:*",
+    "@gamehub/web-game-sdk": "workspace:*",
+    "ascii.rest": "0.4.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   }

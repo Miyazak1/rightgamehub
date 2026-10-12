@@ -12,6 +12,17 @@
 
 No Space Kit model is loaded by the current prototype.
 
+## ascii.rest radar
+
+- Creator: bas3line
+- Source: https://github.com/bas3line/ascii
+- Piece: `radar`
+- License: MIT
+- Copyright: Copyright (c) 2026 bas3line
+- License URL: https://github.com/bas3line/ascii/blob/main/LICENSE
+- Usage: bundled locally through `ascii.rest` and rendered as the low-contrast animated signal layer in the community banner.
+- Accessibility: decorative only, hidden from assistive technology; the library pauses offscreen and respects reduced-motion preferences.
+
 ## Candidate UI asset pack
 
 - Name: Kenney UI Pack / Pixel UI packs
