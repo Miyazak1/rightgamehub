@@ -90,7 +90,8 @@ export const schemas = Object.freeze({
   EmailChallengeRequest: object({
     email: { type: 'string', format: 'email', maxLength: 320 },
     clientKind: stringEnum(['harness', 'vscode', 'cursor', 'browser']),
-  }),
+    locale: stringEnum(['zh-CN', 'en']),
+  }, ['email', 'clientKind']),
   EmailChallenge: object({ challengeId: id, expiresAt: dateTime, resendAfter: dateTime }),
   VerifyEmailRequest: object({
     challengeId: id,

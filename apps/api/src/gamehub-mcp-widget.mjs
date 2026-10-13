@@ -1,10 +1,10 @@
-export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v6.html';
+export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v7.html';
 
 export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   const origin = new URL(siteOrigin).origin;
   const encodedOrigin = JSON.stringify(origin).replace(/</gu, '\\u003c');
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -18,16 +18,19 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   </style>
 </head>
 <body>
-  <iframe id="gamehub-frame" title="墨鱼工坊游戏平台" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
-  <p class="fallback" id="fallback">当前宿主无法显示内置界面。<a id="external" target="_blank" rel="noreferrer">在墨鱼工坊打开</a></p>
+  <iframe id="gamehub-frame" title="MOOYU.FUN game platform" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+  <p class="fallback" id="fallback"><span id="fallback-text">This host cannot display the embedded interface.</span> <a id="external" target="_blank" rel="noreferrer">Open MOOYU.FUN</a></p>
   <script type="module">
     const SITE_ORIGIN=${encodedOrigin};
     const frame=document.getElementById('gamehub-frame');
     const fallback=document.getElementById('fallback');
     const external=document.getElementById('external');
+    const locale=(navigator.languages||[navigator.language]).some(value=>String(value||'').toLowerCase().startsWith('zh'))?'zh-CN':'en';
+    document.documentElement.lang=locale;
+    if(locale==='zh-CN'){frame.title='墨鱼工坊游戏平台';document.getElementById('fallback-text').textContent='当前宿主无法显示内置界面。';external.textContent='在墨鱼工坊打开';}
     let rpcId=0;const pending=new Map();
     const safePath=path=>typeof path==='string'&&path.startsWith('/')&&!path.startsWith('//')?path:'/discover';
-    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');url.searchParams.set('gh_embed','platform-v6');return url.href;};
+    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');url.searchParams.set('gh_embed','platform-v7');url.searchParams.set('lang',locale);return url.href;};
     const externalUrl=path=>{const route=safePath(path);const work=route.match(new RegExp('^/works/([^/?#]+)/?$'));return new URL(work?'/w/'+work[1]:route,SITE_ORIGIN).href;};
     const show=view=>{const path=safePath(view?.path);const url=viewUrl(path);const outside=externalUrl(path);frame.src=url;external.href=outside;globalThis.openai?.setOpenInAppUrl?.({href:outside});};
     const update=result=>{const view=result?.structuredContent?.view||result?.view;if(view)show(view);};

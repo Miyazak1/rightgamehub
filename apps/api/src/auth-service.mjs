@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { AvatarProcessingError, processAvatarImage } from './avatar-processor.mjs';
+import { normalizePublicLocale } from './public-locale.mjs';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 const CLIENTS = new Set(['harness', 'vscode', 'cursor', 'browser']);
@@ -185,7 +186,7 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
     throw new AuthError('AVATAR_INVALID', 400, '请选择有效的 PNG、JPEG、GIF 或 WebP 图片。');
   };
   return {
-    async requestChallenge({ email, clientKind }) {
+    async requestChallenge({ email, clientKind, locale }) {
       const emailNormalized = String(email ?? '').trim().toLowerCase();
       if (!EMAIL.test(emailNormalized) || emailNormalized.length > 320 || !CLIENTS.has(clientKind)) throw new AuthError('SCHEMA_INVALID', 400, 'Email or client kind is invalid.');
       if (loginEmailAllowlist.length && !loginEmailAllowlist.includes(emailNormalized)) throw new AuthError('INVITE_REQUIRED', 403, 'This email is not included in the current invitation list.');
@@ -196,7 +197,7 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       const resendAfter = new Date(now.getTime() + 60_000);
       const creation = await repository.createChallenge({ id: challengeId, emailNormalized, clientKind, codeHmac: codeHmac(challengeId, code), expiresAt, resendAfter, now });
       if (creation?.ok === false) throw new AuthError('RATE_LIMITED', 429, 'Please wait before requesting another verification code.');
-      await mailer.sendVerificationCode({ email: emailNormalized, code, expiresAt });
+      await mailer.sendVerificationCode({ email: emailNormalized, code, expiresAt, locale: normalizePublicLocale(locale) || 'zh-CN' });
       return { challengeId, expiresAt: expiresAt.toISOString(), resendAfter: resendAfter.toISOString() };
     },
     async verifyChallenge({ challengeId, code, deviceLabel }) {

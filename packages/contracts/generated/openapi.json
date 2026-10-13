@@ -26242,6 +26242,13 @@
               "cursor",
               "browser"
             ]
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "zh-CN",
+              "en"
+            ]
           }
         },
         "required": [

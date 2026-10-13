@@ -18,6 +18,25 @@ export const messages = {
     'brand.aria': '墨鱼工坊 MOOYU.FUN',
     'brand.primary': '墨鱼',
     'brand.accent': '工坊',
+    'campaign.weekly': '每周一个开放游戏',
+    'campaign.improve': '一起完善这个游戏',
+    'campaign.collection': '主题精选',
+    'campaign.viewWork': ({ title }) => `查看 ${title}`,
+    'campaign.openSource': '开放源码',
+    'campaign.free': '免费体验',
+    'campaign.communityWork': '墨鱼工坊社区作品',
+    'campaign.viewAndPlay': '查看并游玩',
+    'campaign.view': '查看作品',
+    'campaign.viewFeature': '查看专题 →',
+    'campaign.loading': '正在打开专题…',
+    'campaign.unavailable': '专题当前不可访问',
+    'campaign.unavailableLead': '它可能尚未开始、已经结束或被归档。',
+    'campaign.backDiscover': '返回发现',
+    'campaign.workCount': ({ count }) => `${count} 款作品`,
+    'campaign.ends': ({ date }) => `截至 ${date}`,
+    'campaign.share': '分享专题',
+    'campaign.download': '下载专题分享图',
+    'campaign.works': '专题作品',
     'navigation.main': '主导航',
     'navigation.mobile': '侧栏导航',
     'navigation.discover': '发现',
@@ -1610,6 +1629,25 @@ export const messages = {
     'brand.aria': 'MOOYU.FUN — Mooyu Workshop',
     'brand.primary': 'MOOYU',
     'brand.accent': '.FUN',
+    'campaign.weekly': 'Open game of the week',
+    'campaign.improve': 'Improve this game together',
+    'campaign.collection': 'Curated collection',
+    'campaign.viewWork': ({ title }) => `View ${title}`,
+    'campaign.openSource': 'Open source',
+    'campaign.free': 'Play for free',
+    'campaign.communityWork': 'MOOYU.FUN community work',
+    'campaign.viewAndPlay': 'View and play',
+    'campaign.view': 'View work',
+    'campaign.viewFeature': 'View feature →',
+    'campaign.loading': 'Opening the feature…',
+    'campaign.unavailable': 'This feature is unavailable',
+    'campaign.unavailableLead': 'It may not have started yet, or it may have ended or been archived.',
+    'campaign.backDiscover': 'Back to Discover',
+    'campaign.workCount': ({ count }) => `${count} ${count === 1 ? 'work' : 'works'}`,
+    'campaign.ends': ({ date }) => `Ends ${date}`,
+    'campaign.share': 'Share feature',
+    'campaign.download': 'Download share image',
+    'campaign.works': 'Featured works',
     'navigation.main': 'Main navigation',
     'navigation.mobile': 'Mobile navigation',
     'navigation.discover': 'Discover',
@@ -3196,7 +3234,9 @@ export function normalizeLocale(value) {
   return null;
 }
 
-export function resolveLocale({ stored, languages = [] } = {}) {
+export function resolveLocale({ explicit, stored, languages = [] } = {}) {
+  const requested = normalizeLocale(explicit);
+  if (requested) return requested;
   const saved = normalizeLocale(stored);
   if (saved) return saved;
   for (const language of languages || []) {

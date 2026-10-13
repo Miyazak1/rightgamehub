@@ -19,6 +19,7 @@ const UPDATE_CSS = `
 `;
 
 function HarnessUpdateNotice({ signal }) {
+  const english = /^en(?:-|$)/iu.test(window.navigator.language || '');
   const [status, setStatus] = useState(null);
   const [dismissed, setDismissed] = useState(() => window.localStorage.getItem('gamehub.harnessUpdate.dismissed') || '');
   useEffect(() => {
@@ -41,11 +42,16 @@ function HarnessUpdateNotice({ signal }) {
   const dismissalKey = `${status.phase}:${status.version || ''}`;
   if (dismissed === dismissalKey) return null;
   const busy = ['checking', 'downloading', 'verifying', 'installing'].includes(status.phase);
-  const labels = {
-    checking: '正在后台检查 GameHub 更新…', downloading: `正在后台下载 GameHub${status.percent == null ? '…' : ` · ${status.percent}%`}`,
-    verifying: '正在校验 GameHub 更新…', installing: '正在准备 GameHub 更新…',
-    ready: `GameHub ${status.version || '新版'} 已准备好；可以继续工作，方便时再重启 Harness。`,
-    failed: 'GameHub 更新暂未完成，后台稍后会自动重试。',
+  const labels = english ? {
+    checking: 'Checking for MOOYU.FUN updates in the background…', downloading: `Downloading MOOYU.FUN${status.percent == null ? '…' : ` · ${status.percent}%`}`,
+    verifying: 'Verifying the MOOYU.FUN update…', installing: 'Preparing the MOOYU.FUN update…',
+    ready: `MOOYU.FUN ${status.version || 'update'} is ready. Restart Harness when convenient.`,
+    failed: 'The MOOYU.FUN update is not ready yet. It will retry in the background.',
+  } : {
+    checking: '正在后台检查墨鱼工坊更新…', downloading: `正在后台下载墨鱼工坊${status.percent == null ? '…' : ` · ${status.percent}%`}`,
+    verifying: '正在校验墨鱼工坊更新…', installing: '正在准备墨鱼工坊更新…',
+    ready: `墨鱼工坊 ${status.version || '新版'} 已准备好；可以继续工作，方便时再重启 Harness。`,
+    failed: '墨鱼工坊更新暂未完成，后台稍后会自动重试。',
   };
   const dismiss = () => {
     window.localStorage.setItem('gamehub.harnessUpdate.dismissed', dismissalKey);
@@ -55,8 +61,8 @@ function HarnessUpdateNotice({ signal }) {
     className: `harness-update harness-update--${busy ? 'busy' : status.phase}`,
     role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true',
   }, React.createElement('span', { className: 'harness-update__dot', 'aria-hidden': 'true' }),
-  React.createElement('span', null, status.message || labels[status.phase] || 'GameHub 正在更新。'),
-  !busy && React.createElement('button', { type: 'button', onClick: dismiss, 'aria-label': '暂时隐藏更新提示' }, '稍后'));
+  React.createElement('span', null, status.message || labels[status.phase] || (english ? 'MOOYU.FUN is updating.' : '墨鱼工坊正在更新。')),
+  !busy && React.createElement('button', { type: 'button', onClick: dismiss, 'aria-label': english ? 'Dismiss update notice' : '暂时隐藏更新提示' }, english ? 'Later' : '稍后'));
 }
 
 function HarnessPlatform({ useTabInfo }) {
@@ -80,10 +86,11 @@ function HarnessPlatform({ useTabInfo }) {
 
 export const inject = ['slots', 'sidebarRightTabs'];
 export function apply(ctx) {
+  const english = /^en(?:-|$)/iu.test(window.navigator.language || '');
   ctx.effect(() => ctx.sidebarRightTabs.register({
     id: ID, kind: 'gamehub-platform', priority: 'extension', keepMounted: true,
-    title: () => 'GameHub',
-    guide: [{ id: 'gamehub-platform', order: 60, title: () => 'GameHub', description: () => '发现、发布与游玩 Agent 游戏' }],
+    title: () => 'MOOYU.FUN',
+    guide: [{ id: 'gamehub-platform', order: 60, title: () => 'MOOYU.FUN', description: () => english ? 'Discover, publish, and play Agent games' : '发现、发布与游玩 Agent 游戏' }],
   }), 'gamehub: register platform tab');
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
     { name: 'sidebar.right.pane.tab', key: ID }, HarnessPlatform,

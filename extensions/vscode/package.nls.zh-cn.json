@@ -1,0 +1,14 @@
+{
+  "extension.displayName": "墨鱼工坊 MOOYU.FUN",
+  "extension.description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
+  "command.open": "墨鱼工坊：打开游戏平台",
+  "command.openBrowser": "墨鱼工坊：在内置浏览器打开",
+  "command.checkUpdates": "墨鱼工坊：检查更新",
+  "viewContainer.title": "墨鱼工坊",
+  "view.name": "墨鱼工坊",
+  "configuration.title": "墨鱼工坊",
+  "configuration.apiUrl": "墨鱼工坊 API 地址。默认连接正式服务。",
+  "configuration.browserUrl": "无法使用侧栏时打开的墨鱼工坊页面。",
+  "configuration.runtimeDomain": "墨鱼工坊隔离 Web 游戏的受信任运行域名。",
+  "configuration.autoUpdate": "在后台检查、校验并安装墨鱼工坊稳定版更新；重启编辑器后生效。"
+}

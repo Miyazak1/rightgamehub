@@ -51,12 +51,13 @@ test('email challenge normalizes address, stores only HMAC and sends a six-digit
     mailer: { sendVerificationCode: async input => { sent = input; } },
     otpHmacKey: key, clock: () => fixedNow, ids: () => '00000000-0000-4000-8000-000000000001',
   });
-  const result = await service.requestChallenge({ email: ' Creator@Example.COM ', clientKind: 'cursor' });
+  const result = await service.requestChallenge({ email: ' Creator@Example.COM ', clientKind: 'cursor', locale: 'en-US' });
   assert.equal(stored.emailNormalized, 'creator@example.com');
   assert.equal(stored.clientKind, 'cursor');
   assert.ok(Buffer.isBuffer(stored.codeHmac));
   assert.doesNotMatch(stored.codeHmac.toString('hex'), new RegExp(sent.code));
   assert.match(sent.code, /^[0-9]{6}$/);
+  assert.equal(sent.locale, 'en');
   assert.equal(result.expiresAt, '2026-09-24T12:10:00.000Z');
 });
 

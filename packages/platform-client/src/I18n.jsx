@@ -6,7 +6,9 @@ const I18nContext = createContext(null);
 const browserLocale = () => {
   let stored = null;
   try { stored = globalThis.localStorage?.getItem(LOCALE_STORAGE_KEY); } catch {}
-  return resolveLocale({ stored, languages: globalThis.navigator?.languages ?? [globalThis.navigator?.language] });
+  let explicit = null;
+  try { explicit = new URLSearchParams(globalThis.location?.search || '').get('lang'); } catch {}
+  return resolveLocale({ explicit, stored, languages: globalThis.navigator?.languages ?? [globalThis.navigator?.language] });
 };
 
 export function I18nProvider({ children, initialLocale }) {

@@ -1,10 +1,10 @@
 {
   "name": "gamehub",
-  "displayName": "GameHub",
-  "version": "0.3.0",
-  "description": "Discover, create locally, validate and publish GameHub experiences from Claude Code.",
+  "displayName": "MOOYU.FUN / 墨鱼工坊",
+  "version": "0.3.1",
+  "description": "Discover, create locally, validate and publish MOOYU.FUN games from Claude Code.",
   "author": {
-    "name": "GameHub",
+    "name": "MOOYU.FUN",
     "url": "https://mooyu.fun"
   },
   "homepage": "https://mooyu.fun/install",

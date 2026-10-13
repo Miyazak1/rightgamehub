@@ -103,6 +103,16 @@ test('GitHub OAuth callback accepts the GitHub authorization issuer', async t =>
   const nonce = response.headers['content-security-policy'].match(/script-src 'nonce-([^']+)'/u)?.[1];
   assert.ok(nonce);
   assert.match(response.body, new RegExp(`<script nonce="${nonce}">`));
+
+  const englishResponse = await app.inject({
+    method: 'GET',
+    url: `/v1/auth/github/web/callback?code=oauth-code&state=${'e'.repeat(32)}`,
+    headers: { 'accept-language': 'en-US,en;q=0.9' },
+  });
+  assert.equal(englishResponse.statusCode, 200);
+  assert.match(englishResponse.body, /<html lang="en">/u);
+  assert.match(englishResponse.body, /Connected to MOOYU\.FUN/u);
+  assert.match(englishResponse.body, />Close page<\/button>/u);
 });
 
 test('public profile reads are anonymous while profile edits require the current account', async t => {
@@ -221,7 +231,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /<title>公开游戏 &lt;测试&gt; \| 墨鱼工坊 MOOYU\.FUN<\/title>/u);
   assert.match(page.body, /<link rel="canonical" href="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777">/u);
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
-  assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7"/u);
+  assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7&amp;lang=zh-CN"/u);
   assert.match(page.body, /property="og:image:width" content="1200"/u);
   assert.match(page.body, /name="robots" content="index,follow,max-image-preview:large"/u);
   assert.match(page.body, /type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"VideoGame"/u);
@@ -231,6 +241,14 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.match(page.body, /window\.location\.replace\(target\.href\)/u);
   assert.doesNotMatch(page.body, /作者 "甲"/u);
   assert.deepEqual(calls[4], ['catalog', workId]);
+  const englishPage = await app.inject({ method: 'GET', url: `/w/${workId}?lang=en` });
+  assert.equal(englishPage.statusCode, 200);
+  assert.match(englishPage.body, /<html lang="en">/u);
+  assert.match(englishPage.body, /property="og:locale" content="en_US"/u);
+  assert.match(englishPage.body, /property="og:url" content="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777\?lang=en"/u);
+  assert.match(englishPage.body, /share-card\.png\?v=7&amp;lang=en/u);
+  assert.match(englishPage.body, />Open work<\/a>/u);
+  assert.deepEqual(calls[5], ['catalog', workId]);
   const promo = await app.inject({ method: 'GET', url: `/v1/works/${workId}/promo/xhs/cover.png?download=1` });
   assert.equal(promo.statusCode, 200);
   assert.match(promo.headers['content-type'], /^image\/png/u);
@@ -238,7 +256,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.equal(promo.headers['x-content-type-options'], 'nosniff');
   const promoMetadata = await sharp(promo.rawPayload).metadata();
   assert.deepEqual({ width: promoMetadata.width, height: promoMetadata.height, format: promoMetadata.format }, { width: 1080, height: 1440, format: 'png' });
-  assert.deepEqual(calls.slice(5, 7), [['catalog', workId], ['cover', workId]]);
+  assert.deepEqual(calls.slice(6, 8), [['catalog', workId], ['cover', workId]]);
   const invalidPromo = await app.inject({ method: 'GET', url: `/v1/works/${workId}/promo/xhs/unknown.png` });
   assert.equal(invalidPromo.statusCode, 400);
   const robots = await app.inject({ method: 'GET', url: '/robots.txt' });

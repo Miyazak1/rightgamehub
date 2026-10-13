@@ -4,27 +4,27 @@ const xmlEscape = value => String(value ?? '').replace(/[<>&"']/gu, character =>
 
 export const serializeJsonLd = value => JSON.stringify(value).replace(/</gu, '\\u003c');
 
-export const workStructuredData = ({ work, siteOrigin, shareCardUrl }) => ({
+export const workStructuredData = ({ work, siteOrigin, shareCardUrl, locale = 'zh-CN' }) => ({
   '@context': 'https://schema.org',
   '@type': work.kind === 'game' ? 'VideoGame' : work.kind === 'tool' ? 'SoftwareApplication' : 'CreativeWork',
   name: work.title,
-  description: String(work.description || `在墨鱼工坊在线体验《${work.title}》。`).trim(),
+  description: String(work.description || (locale === 'en' ? `Play ${work.title} online for free on MOOYU.FUN.` : `在墨鱼工坊在线体验《${work.title}》。`)).trim(),
   url: `${siteOrigin}/w/${encodeURIComponent(work.id)}`,
   image: shareCardUrl,
   ...(work.creatorDisplayName ? { author: { '@type': 'Person', name: work.creatorDisplayName } } : {}),
   isAccessibleForFree: true,
-  inLanguage: 'zh-CN',
+  inLanguage: locale,
   publisher: { '@type': 'Organization', name: '墨鱼工坊 MOOYU.FUN', url: siteOrigin },
 });
 
-export const campaignStructuredData = ({ campaign, siteOrigin, image }) => ({
+export const campaignStructuredData = ({ campaign, siteOrigin, image, locale = 'zh-CN' }) => ({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: campaign.title,
   description: campaign.summary,
   url: `${siteOrigin}/discover/c/${encodeURIComponent(campaign.slug)}`,
   image,
-  inLanguage: 'zh-CN',
+  inLanguage: locale,
   publisher: { '@type': 'Organization', name: '墨鱼工坊 MOOYU.FUN', url: siteOrigin },
   mainEntity: {
     '@type': 'ItemList',

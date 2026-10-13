@@ -66,3 +66,22 @@ test('creator workspace uses shared translations while admin stays out of scope'
   for (const source of creatorPages) assert.match(source, /useI18n/);
   assert.match(plan, /管理员后台与社区审核管理明确保持中文/);
 });
+
+test('external hosts and installer assets expose English-localized entry points', async () => {
+  const [app, harness, packageJson, packageNls, packageNlsZh, packagingScript] = await Promise.all([
+    fs.readFile(path.resolve(__dirname, '../../packages/platform-client/src/App.jsx'), 'utf8'),
+    fs.readFile(path.resolve(__dirname, '../../extensions/harness/src/platform-client.jsx'), 'utf8'),
+    fs.readFile(path.resolve(__dirname, '../../extensions/vscode/package.json'), 'utf8'),
+    fs.readFile(path.resolve(__dirname, '../../extensions/vscode/package.nls.json'), 'utf8'),
+    fs.readFile(path.resolve(__dirname, '../../extensions/vscode/package.nls.zh-cn.json'), 'utf8'),
+    fs.readFile(path.resolve(__dirname, '../../scripts/package-vscode-extension.mjs'), 'utf8'),
+  ]);
+  assert.match(app, /agentInstallEnglish/);
+  assert.match(app, /installCopy/);
+  assert.match(harness, /Discover, publish, and play Agent games/);
+  const manifest = JSON.parse(packageJson);
+  assert.equal(manifest.displayName, '%extension.displayName%');
+  assert.deepEqual(Object.keys(JSON.parse(packageNls)).sort(), Object.keys(JSON.parse(packageNlsZh)).sort());
+  assert.match(packagingScript, /package\.nls\.json/);
+  assert.match(packagingScript, /package\.nls\.zh-cn\.json/);
+});

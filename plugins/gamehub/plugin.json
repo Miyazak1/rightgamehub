@@ -1,10 +1,10 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Discover, play, create locally, validate and publish MOOYU.FUN games from supported AI agents.",
   "author": {
-    "name": "墨鱼工坊 MOOYU.FUN",
+    "name": "MOOYU.FUN / 墨鱼工坊",
     "url": "https://mooyu.fun"
   },
   "homepage": "https://mooyu.fun/install",
@@ -19,9 +19,9 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "墨鱼工坊 MOOYU.FUN",
-        "shortDescription": "发现、游玩和创作轻量游戏",
-        "longDescription": "在支持的 Agent 中使用墨鱼工坊；宿主无法安全内置完整界面时，回退到官方网页。",
+        "displayName": "MOOYU.FUN / 墨鱼工坊",
+        "shortDescription": "Discover, play, and create lightweight games / 发现、游玩和创作轻量游戏",
+        "longDescription": "Use the complete hosted MOOYU.FUN interface in supported Agents, with a safe fallback to the official website when the host cannot embed it. 在支持的 Agent 中使用完整的墨鱼工坊界面；宿主无法安全内置时回退到官方网页。",
         "developerName": "MOOYU.FUN",
         "category": "Developer Tools",
         "capabilities": [
@@ -33,8 +33,8 @@
         ],
         "websiteURL": "https://mooyu.fun",
         "defaultPrompt": [
-          "打开墨鱼工坊，帮我选择一款适合现在玩的短游戏。",
-          "使用墨鱼工坊创作工具，在当前工作区制作一款游戏。"
+          "Open MOOYU.FUN and help me choose a short game to play now. / 打开墨鱼工坊，帮我选择一款适合现在玩的短游戏。",
+          "Use the MOOYU.FUN creator tools to make a game in the current workspace. / 使用墨鱼工坊创作工具，在当前工作区制作一款游戏。"
         ],
         "brandColor": "#8B5CF6"
       }

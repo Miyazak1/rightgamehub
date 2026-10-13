@@ -227,13 +227,13 @@ function WorkTimeline({items,go}) {
 }
 
 function WorkShareDialog({work,api,onClose}) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [notice,setNotice]=useState('');
   const url=`${PUBLIC_GAMEHUB_URL}/w/${encodeURIComponent(work.id)}`;
   const copyUrl=attributedWorkUrl(url,'share_copy');
   const systemUrl=attributedWorkUrl(url,'share_system');
-  const shareCardUrl=api?.workShareCardUrl?.(work.id,{version:work.revision})??`${PUBLIC_GAMEHUB_URL}/v1/works/${encodeURIComponent(work.id)}/share-card.png?v=${encodeURIComponent(work.revision||'1')}`;
-  const shareCardDownloadUrl=api?.workShareCardUrl?.(work.id,{version:work.revision,download:true})??`${shareCardUrl}&download=1`;
+  const shareCardUrl=api?.workShareCardUrl?.(work.id,{version:work.revision,locale})??`${PUBLIC_GAMEHUB_URL}/v1/works/${encodeURIComponent(work.id)}/share-card.png?v=${encodeURIComponent(work.revision||'1')}&lang=${encodeURIComponent(locale)}`;
+  const shareCardDownloadUrl=api?.workShareCardUrl?.(work.id,{version:work.revision,locale,download:true})??`${shareCardUrl}&download=1`;
   const copy=async()=>{
     try{
       if(!globalThis.navigator?.clipboard?.writeText)throw new Error('clipboard unavailable');
@@ -402,7 +402,7 @@ function PlayerPage({ workId, releaseId, initialShareCode, challengeCode, initia
 }
 
 function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, onProfileChange }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [phase, setPhase] = useState('loading');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -474,7 +474,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     try {
       if (phase === 'email') {
         if (demo) { setChallengeId('demo'); setPhase('code'); }
-        else { const capabilities = await host.getCapabilities(); const { data } = await api.createChallenge({ email, clientKind: resolveAuthClientKind(capabilities) }); setChallengeId(data.challengeId); setPhase('code'); }
+        else { const capabilities = await host.getCapabilities(); const { data } = await api.createChallenge({ email, clientKind: resolveAuthClientKind(capabilities), locale }); setChallengeId(data.challengeId); setPhase('code'); }
       } else {
         if (demo) await finishLogin({ accessToken: 'demo-session' });
         else { const { data } = await api.verifyChallenge({ challengeId, code, deviceLabel: `墨鱼工坊 · ${hostIdentity.label}` }); await finishLogin(data); }
@@ -1511,33 +1511,85 @@ const agentInstallTargets = [
   },
 ];
 
-function AgentInstallCard({ target, copied, onCopy, onOpen }) {
+const agentInstallEnglish = {
+  harness: {
+    badge: 'Native right panel', state: 'Official installer · Automatic updates',
+    summary: 'The full MOOYU.FUN client lives in the Harness right panel. After the first approved install, it checks for updates every six hours and activates them after Harness restarts.',
+    prompt: 'Install MOOYU.FUN into the DeepSeek Harness web profile. Use only the official installer at https://mooyu.fun/install.ps1 on Windows or https://mooyu.fun/install.sh on macOS/Linux; do not clone the source repository. First download and inspect the script, explain that it downloads and verifies a built plugin tarball from mooyu.fun and then calls dsh plugin --profile web add, and wait for my confirmation. After I confirm, run the command for this system, verify the result, and remind me to restart dsh web.',
+  },
+  vscode: {
+    badge: 'Native sidebar', state: 'Official installer · Automatic updates',
+    summary: 'Open MOOYU.FUN from the Activity Bar. Tokens stay in SecretStorage, and the extension silently downloads verified updates that activate after the editor restarts.',
+    prompt: 'Install the MOOYU.FUN VS Code extension. Use only the official installer at https://mooyu.fun/install.ps1 on Windows or https://mooyu.fun/install.sh on macOS/Linux; do not clone the source repository. First download and inspect the installer, explain that it downloads a VSIX from mooyu.fun, verifies its SHA-256 digest, and calls code --install-extension, then wait for my confirmation. After I confirm, install it with the command for this system, verify that the extension is enabled, and tell me how to open MOOYU.FUN from the Activity Bar.',
+  },
+  cursor: {
+    badge: 'Native sidebar', state: 'Official installer · Automatic updates',
+    summary: 'Uses the same extension as VS Code and detects Cursor automatically. Verified updates download silently and activate after the editor restarts.',
+    prompt: 'Install the MOOYU.FUN Cursor extension. Use only the official installer at https://mooyu.fun/install.ps1 on Windows or https://mooyu.fun/install.sh on macOS/Linux; do not clone the source repository. First download and inspect the installer, explain that it downloads a VSIX from mooyu.fun, verifies its SHA-256 digest, and calls cursor --install-extension, then wait for my confirmation. After I confirm, install it with the command for this system, verify that the extension is enabled, and tell me how to open the MOOYU.FUN sidebar.',
+  },
+  windsurf: {
+    badge: 'Embedded first', state: 'Compatibility testing',
+    summary: 'Tries the VS Code extension first. If the host webview or secret store is incompatible, it safely falls back to the browser.',
+    prompt: 'Check whether this Windsurf installation supports VSIX extensions. If it does, wait for my confirmation before installing MOOYU.FUN. Otherwise, open https://mooyu.fun.',
+  },
+  codex: {
+    badge: 'Plugin + MCP App', state: 'Hosted interface · Automatic updates',
+    summary: 'Games and the interactive interface are served by MOOYU.FUN and update with each platform deployment. The local plugin shell checks for updates every six hours and activates them after Codex restarts.',
+    prompt: 'Install the MOOYU.FUN Codex plugin. Use only the official installer at https://mooyu.fun/install.ps1 on Windows or https://mooyu.fun/install.sh on macOS/Linux; do not clone the source repository. First download and inspect the script. Explain that it downloads and verifies every file in the plugin bundle, adds the local MOOYU.FUN marketplace, and connects the read-only https://mooyu.fun/mcp endpoint while games and the interface continue to run on MOOYU.FUN servers. Then wait for my confirmation. After I confirm, run the command for this system and guide me to install gamehub from the “MOOYU.FUN Plugins” source in the Plugins Directory.',
+  },
+  claude: {
+    badge: 'Agent plugin', state: 'Official skill installer · MCP in development',
+    summary: 'The official installer downloads and verifies a portable skill, then installs it through the Claude Code marketplace. Updates are staged in the background and activate after a restart and plugin refresh.',
+    prompt: 'Install the MOOYU.FUN Claude Code plugin. Use only the official installer at https://mooyu.fun/install.ps1 on Windows or https://mooyu.fun/install.sh on macOS/Linux; do not clone the source repository. First download and inspect the script, explain that it downloads and verifies every file in the plugin bundle, adds a local marketplace, and calls claude plugin install gamehub@gamehub, then wait for my confirmation. After I confirm, run the command for this system and verify that the plugin is enabled.',
+  },
+  opencode: {
+    badge: 'MCP + browser', state: 'Planned',
+    summary: 'The Agent handles discovery, account actions, and launch commands while the visual play surface stays in the system browser.',
+    prompt: 'Check whether this Agent supports the MOOYU.FUN MCP server. If it does not, open https://mooyu.fun.',
+  },
+};
+
+const installCopy = {
+  'zh-CN': {
+    copied: '已复制', copyCommand: '复制命令', copy: '复制', mac: 'macOS / Linux', update: '更新命令', promptCopied: '提示词已复制', askAgent: '让 Agent 帮我安装', web: '先用网页版', copyPrompt: '复制下面的内容',
+    title: '添加到你的 Agent', lead: '能安全内置就留在 Agent 里；宿主没有稳定界面能力时，再打开浏览器。首次安装需你确认，之后后台下载校验过的稳定版，并在宿主重启后生效。', environment: '当前环境', webState: '使用网页版', principles: '接入原则', native: '原生优先', nativeNote: '右栏、侧栏或 MCP App', permission: '最小权限', permissionNote: '不读取项目与宿主凭据', available: '始终可用', availableNote: '不支持内置时回退网页', recommended: '为当前宿主推荐', choose: '选择你的 Agent', chooseLead: '安装入口会随着各宿主完成验证逐步开放。', before: '安装前会发生什么', security: ['插件安装或执行命令前，应由 Agent 向你请求确认。','墨鱼工坊登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。','所有尚未验证的宿主都明确标记，不会伪装成已经可用。','安装器只从 mooyu.fun 下载版本清单和制品，并逐个校验 SHA-256。','Cursor / VS Code 由扩展自身静默更新；其他 Agent 使用当前用户的计划任务或 cron，不需要每次手动执行命令。'],
+  },
+  en: {
+    copied: 'Copied', copyCommand: 'Copy command', copy: 'Copy', mac: 'macOS / Linux', update: 'Update command', promptCopied: 'Prompt copied', askAgent: 'Ask Agent to install', web: 'Use web version', copyPrompt: 'Copy the text below',
+    title: 'Add MOOYU.FUN to your Agent', lead: 'Stay inside the Agent when it can host the interface safely; otherwise open the browser. You approve the first installation, then verified stable updates download in the background and activate after the host restarts.', environment: 'Current environment', webState: 'Web version', principles: 'Integration principles', native: 'Native first', nativeNote: 'Right panel, sidebar, or MCP App', permission: 'Least privilege', permissionNote: 'No project files or host credentials', available: 'Always available', availableNote: 'Falls back to the web when embedding is unavailable', recommended: 'Recommended for this host', choose: 'Choose your Agent', chooseLead: 'Install options become available as each host integration completes verification.', before: 'What happens before installation', security: ['Your Agent should ask for confirmation before installing a plugin or running a command.','MOOYU.FUN login tokens only enter the host’s secure storage; game iframes cannot access them.','Unverified hosts are clearly marked and never presented as ready.','The installer downloads manifests and artifacts only from mooyu.fun and verifies every SHA-256 digest.','Cursor and VS Code update silently through the extension. Other Agents use the current user’s scheduled task or cron job, so commands do not need to be rerun manually.'],
+  },
+};
+
+function AgentInstallCard({ target, copied, onCopy, onOpen, labels }) {
   return <article className="agent-install-card">
     <div className="agent-install-card__head"><div><span className={`agent-install-card__badge is-${target.tone}`}>{target.badge}</span><h3>{target.name}</h3></div><small>{target.state}</small></div>
     <p>{target.summary}</p>
-    {target.command && <div className="agent-command"><code>{target.command}</code><button onClick={() => onCopy(target.command, `${target.id}-command`)}>{copied === `${target.id}-command` ? '已复制' : '复制命令'}</button></div>}
-    {target.alternate && <details><summary>macOS / Linux</summary><div className="agent-command"><code>{target.alternate}</code><button onClick={() => onCopy(target.alternate, `${target.id}-alternate`)}>{copied === `${target.id}-alternate` ? '已复制' : '复制'}</button></div></details>}
-    {target.update && <details><summary>更新命令</summary><div className="agent-command"><code>{target.update}</code><button onClick={() => onCopy(target.update, `${target.id}-update`)}>{copied === `${target.id}-update` ? '已复制' : '复制'}</button></div></details>}
-    <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? '提示词已复制' : (target.actionLabel ?? '让 Agent 帮我安装')}</button><button onClick={onOpen}>先用网页版</button></div>
+    {target.command && <div className="agent-command"><code>{target.command}</code><button onClick={() => onCopy(target.command, `${target.id}-command`)}>{copied === `${target.id}-command` ? labels.copied : labels.copyCommand}</button></div>}
+    {target.alternate && <details><summary>{labels.mac}</summary><div className="agent-command"><code>{target.alternate}</code><button onClick={() => onCopy(target.alternate, `${target.id}-alternate`)}>{copied === `${target.id}-alternate` ? labels.copied : labels.copy}</button></div></details>}
+    {target.update && <details><summary>{labels.update}</summary><div className="agent-command"><code>{target.update}</code><button onClick={() => onCopy(target.update, `${target.id}-update`)}>{copied === `${target.id}-update` ? labels.copied : labels.copy}</button></div></details>}
+    <div className="agent-install-card__actions"><button onClick={() => onCopy(target.prompt, `${target.id}-prompt`)}>{copied === `${target.id}-prompt` ? labels.promptCopied : (target.actionLabel ?? labels.askAgent)}</button><button onClick={onOpen}>{labels.web}</button></div>
   </article>;
 }
 
 function InstallPage({ go, hostIdentity }) {
+  const { locale } = useI18n();
+  const labels = installCopy[locale] || installCopy['zh-CN'];
+  const targets = agentInstallTargets.map(target => locale === 'en' ? { ...target, ...agentInstallEnglish[target.id] } : target);
   const [copied, setCopied] = useState('');
   const copy = async (value, key) => {
     try { await globalThis.navigator?.clipboard?.writeText(value); setCopied(key); globalThis.setTimeout?.(() => setCopied(current => current === key ? '' : current), 1800); }
-    catch { globalThis.prompt?.('复制下面的内容', value); }
+    catch { globalThis.prompt?.(labels.copyPrompt, value); }
   };
-  const detected = agentInstallTargets.find(item => item.id === hostIdentity.id);
+  const detected = targets.find(item => item.id === hostIdentity.id);
   return <main className="page install-page">
     <section className="install-hero">
-      <div><span className="kicker">MOOYU.FUN EVERYWHERE</span><h1>添加到你的 Agent</h1><p>能安全内置就留在 Agent 里；宿主没有稳定界面能力时，再打开浏览器。首次安装需你确认，之后后台下载校验过的稳定版，并在宿主重启后生效。</p></div>
-      <div className="install-detected"><span>当前环境</span><strong>{hostIdentity.label}</strong><small>{detected ? `${detected.badge} · ${detected.state}` : '使用网页版'}</small></div>
+      <div><span className="kicker">MOOYU.FUN EVERYWHERE</span><h1>{labels.title}</h1><p>{labels.lead}</p></div>
+      <div className="install-detected"><span>{labels.environment}</span><strong>{hostIdentity.label}</strong><small>{detected ? `${detected.badge} · ${detected.state}` : labels.webState}</small></div>
     </section>
-    <section className="install-principles" aria-label="接入原则"><div><b>01</b><strong>原生优先</strong><span>右栏、侧栏或 MCP App</span></div><div><b>02</b><strong>最小权限</strong><span>不读取项目与宿主凭据</span></div><div><b>03</b><strong>始终可用</strong><span>不支持内置时回退网页</span></div></section>
-    {detected && <section className="install-recommended"><span>为当前宿主推荐</span><AgentInstallCard target={detected} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/></section>}
-    <section className="install-catalog"><div className="section-heading"><div><h2>选择你的 Agent</h2><p>安装入口会随着各宿主完成验证逐步开放。</p></div></div><div className="agent-install-grid">{agentInstallTargets.filter(item => item.id !== detected?.id).map(target => <AgentInstallCard key={target.id} target={target} copied={copied} onCopy={copy} onOpen={() => go('/discover')}/>)}</div></section>
-    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>安装前会发生什么</h2></div><ul><li>插件安装或执行命令前，应由 Agent 向你请求确认。</li><li>墨鱼工坊登录令牌只进入宿主提供的安全存储；游戏 iframe 不可访问。</li><li>所有尚未验证的宿主都明确标记，不会伪装成已经可用。</li><li>安装器只从 mooyu.fun 下载版本清单和制品，并逐个校验 SHA-256。</li><li>Cursor / VS Code 由扩展自身静默更新；其他 Agent 使用当前用户的计划任务或 cron，不需要每次手动执行命令。</li></ul></section>
+    <section className="install-principles" aria-label={labels.principles}><div><b>01</b><strong>{labels.native}</strong><span>{labels.nativeNote}</span></div><div><b>02</b><strong>{labels.permission}</strong><span>{labels.permissionNote}</span></div><div><b>03</b><strong>{labels.available}</strong><span>{labels.availableNote}</span></div></section>
+    {detected && <section className="install-recommended"><span>{labels.recommended}</span><AgentInstallCard target={detected} copied={copied} onCopy={copy} onOpen={() => go('/discover')} labels={labels}/></section>}
+    <section className="install-catalog"><div className="section-heading"><div><h2>{labels.choose}</h2><p>{labels.chooseLead}</p></div></div><div className="agent-install-grid">{targets.filter(item => item.id !== detected?.id).map(target => <AgentInstallCard key={target.id} target={target} copied={copied} onCopy={copy} onOpen={() => go('/discover')} labels={labels}/>)}</div></section>
+    <section className="install-security"><div><span className="kicker">BEFORE YOU INSTALL</span><h2>{labels.before}</h2></div><ul>{labels.security.map(item=><li key={item}>{item}</li>)}</ul></section>
   </main>;
 }
 

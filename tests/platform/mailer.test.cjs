@@ -43,3 +43,16 @@ test('mailer refuses missing production configuration and delivery failures', as
     /MAIL_DELIVERY_FAILED:429/,
   );
 });
+
+test('mailer localizes verification messages from an explicit supported locale', async () => {
+  const { createConfiguredMailer } = await import(mailerUrl);
+  let body;
+  const mailer = createConfiguredMailer({
+    mailProvider: 'resend', resendApiKey: 're_test_secret', mailFrom: 'MOOYU.FUN <login@example.com>',
+  }, async (_url, options) => { body = JSON.parse(options.body); return { ok: true, status: 200 }; });
+  await mailer.sendVerificationCode({ email: 'player@example.com', code: '654321', expiresAt: new Date('2026-09-29T09:10:00.000Z'), locale: 'en' });
+  assert.match(body.subject, /Your MOOYU\.FUN verification code/u);
+  assert.match(body.text, /expires at/u);
+  assert.match(body.html, /lang="en"/u);
+  assert.doesNotMatch(body.text, /验证码/u);
+});

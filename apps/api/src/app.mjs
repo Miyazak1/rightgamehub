@@ -44,25 +44,28 @@ import { growthContentSlides, renderWorkXhsSlide } from './growth-content-render
 import { AuthorOutreachError } from './author-outreach-service.mjs';
 import { registerAuthorOutreachRoutes } from './author-outreach-routes.mjs';
 import { registerGameHubMcpRoutes } from './gamehub-mcp-server.mjs';
+import { publicLocaleQuerySchema, resolvePublicLocale } from './public-locale.mjs';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
-const publicWorkPage = ({ work, siteOrigin, nonce }) => {
+const publicWorkPage = ({ work, siteOrigin, nonce, locale = 'zh-CN' }) => {
+  const english = locale === 'en';
   const encodedWorkId = encodeURIComponent(work.id);
   const canonicalUrl = `${siteOrigin}/w/${encodedWorkId}`;
-  const appUrl = `${siteOrigin}/?gh_route=${encodeURIComponent(`/works/${encodedWorkId}`)}`;
-  const title = `${work.title} | 墨鱼工坊 MOOYU.FUN`;
-  const description = String(work.description || `在墨鱼工坊在线体验《${work.title}》。`).replace(/\s+/gu, ' ').trim().slice(0, 200);
-  const creator = work.creatorDisplayName ? `作者：${work.creatorDisplayName}` : '墨鱼工坊社区作品';
+  const appUrl = `${siteOrigin}/?gh_route=${encodeURIComponent(`/works/${encodedWorkId}`)}&lang=${encodeURIComponent(locale)}`;
+  const localizedUrl = `${canonicalUrl}?lang=${encodeURIComponent(locale)}`;
+  const title = `${work.title} | ${english ? 'MOOYU.FUN' : '墨鱼工坊 MOOYU.FUN'}`;
+  const description = String(work.description || (english ? `Play ${work.title} online for free on MOOYU.FUN.` : `在墨鱼工坊在线体验《${work.title}》。`)).replace(/\s+/gu, ' ').trim().slice(0, 200);
+  const creator = work.creatorDisplayName ? (english ? `By ${work.creatorDisplayName}` : `作者：${work.creatorDisplayName}`) : (english ? 'A MOOYU.FUN community work' : '墨鱼工坊社区作品');
   const shareCardVersion = encodeURIComponent(String(work.revision || '1'));
-  const shareCardUrl = `${siteOrigin}/v1/works/${encodedWorkId}/share-card.png?v=${shareCardVersion}`;
-  const jsonLd = serializeJsonLd(workStructuredData({ work, siteOrigin, shareCardUrl }));
+  const shareCardUrl = `${siteOrigin}/v1/works/${encodedWorkId}/share-card.png?v=${shareCardVersion}&lang=${encodeURIComponent(locale)}`;
+  const jsonLd = serializeJsonLd(workStructuredData({ work, siteOrigin, shareCardUrl, locale }));
   const imageMeta = `<meta property="og:image" content="${escapeHtml(shareCardUrl)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:image" content="${escapeHtml(shareCardUrl)}">`;
   const safeAppUrl = JSON.stringify(appUrl).replace(/</gu, '\\u003c');
   const handoff = `const allowed=new Set(['share_copy','share_system','readme','external','campaign']);const input=new URLSearchParams(location.search);let source=input.get('gh_src');if(!allowed.has(source)){source='';try{if(document.referrer&&new URL(document.referrer).origin!==location.origin)source='external';}catch{}}const campaign=/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(input.get('gh_campaign')||'')?input.get('gh_campaign'):'';const target=new URL(${safeAppUrl});if(source)target.searchParams.set('gh_src',source);if(source&&campaign)target.searchParams.set('gh_campaign',campaign);window.location.replace(target.href);`;
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="${escapeHtml(canonicalUrl)}"><meta property="og:type" content="website"><meta property="og:site_name" content="墨鱼工坊 MOOYU.FUN"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonicalUrl)}">${imageMeta}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><script nonce="${nonce}" type="application/ld+json">${jsonLd}</script><style>html{color-scheme:light dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(520px,calc(100% - 48px));padding:32px;border:1px solid #d8d3e2;background:#fff;box-shadow:5px 5px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0 8px;font-size:28px}p{margin:0 0 20px;color:#625c6d;line-height:1.7}.creator{font-size:13px}a{display:inline-block;padding:10px 16px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}@media(prefers-color-scheme:dark){body{background:#111018;color:#f6f3ff}.card{border-color:#393445;background:#1b1822;box-shadow:5px 5px 0 #09080d}p{color:#b8b0c3}}</style></head><body><main class="card"><span class="label">MOOYU.FUN WORK</span><h1>${escapeHtml(work.title)}</h1><p>${escapeHtml(description)}</p><p class="creator">${escapeHtml(creator)}</p><a href="${escapeHtml(appUrl)}">打开作品</a></main><script nonce="${nonce}">${handoff}</script></body></html>`;
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="${escapeHtml(canonicalUrl)}"><link rel="alternate" hreflang="zh-CN" href="${escapeHtml(`${canonicalUrl}?lang=zh-CN`)}"><link rel="alternate" hreflang="en" href="${escapeHtml(`${canonicalUrl}?lang=en`)}"><link rel="alternate" hreflang="x-default" href="${escapeHtml(canonicalUrl)}"><meta property="og:type" content="website"><meta property="og:locale" content="${english ? 'en_US' : 'zh_CN'}"><meta property="og:site_name" content="墨鱼工坊 MOOYU.FUN"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(localizedUrl)}">${imageMeta}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><script nonce="${nonce}" type="application/ld+json">${jsonLd}</script><style>html{color-scheme:light dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:#f7f6fb;color:#17131f;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}.card{width:min(520px,calc(100% - 48px));padding:32px;border:1px solid #d8d3e2;background:#fff;box-shadow:5px 5px 0 #ded9e8}.label{color:#7651f5;font:800 11px ui-monospace,monospace;letter-spacing:.14em}h1{margin:12px 0 8px;font-size:28px}p{margin:0 0 20px;color:#625c6d;line-height:1.7}.creator{font-size:13px}a{display:inline-block;padding:10px 16px;background:#8255f6;color:#fff;font-weight:800;text-decoration:none}@media(prefers-color-scheme:dark){body{background:#111018;color:#f6f3ff}.card{border-color:#393445;background:#1b1822;box-shadow:5px 5px 0 #09080d}p{color:#b8b0c3}}</style></head><body><main class="card"><span class="label">MOOYU.FUN WORK</span><h1>${escapeHtml(work.title)}</h1><p>${escapeHtml(description)}</p><p class="creator">${escapeHtml(creator)}</p><a href="${escapeHtml(appUrl)}">${english ? 'Open work' : '打开作品'}</a></main><script nonce="${nonce}">${handoff}</script></body></html>`;
 };
 const readLimitedBody = async (stream, limit) => {
   const chunks = []; let total = 0;
@@ -73,7 +76,20 @@ const readLimitedBody = async (stream, limit) => {
   }
   return Buffer.concat(chunks);
 };
-const githubCallbackPage = (success, nonce) => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${success ? 'GitHub 登录完成' : 'GitHub 登录未完成'}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${success ? '✓ 已连接墨鱼工坊' : '× 授权没有完成'}</b><p>${success ? '登录已完成，本页将自动关闭。' : '请关闭此页面，返回墨鱼工坊后重新尝试。'}</p><button id="close-page" type="button">关闭页面</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
+const githubCallbackPage = (success, nonce, locale = 'zh-CN') => {
+  const english = locale === 'en';
+  const title = success
+    ? (english ? 'GitHub sign-in complete' : 'GitHub 登录完成')
+    : (english ? 'GitHub sign-in incomplete' : 'GitHub 登录未完成');
+  const heading = success
+    ? (english ? '✓ Connected to MOOYU.FUN' : '✓ 已连接墨鱼工坊')
+    : (english ? '× Authorization was not completed' : '× 授权没有完成');
+  const detail = success
+    ? (english ? 'You are signed in. This page will close automatically.' : '登录已完成，本页将自动关闭。')
+    : (english ? 'Close this page, return to MOOYU.FUN, and try again.' : '请关闭此页面，返回墨鱼工坊后重新尝试。');
+  const closeLabel = english ? 'Close page' : '关闭页面';
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>html{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0b11;color:#f7f4ff;font-family:ui-monospace,monospace}.card{max-width:420px;margin:24px;padding:32px;border:2px solid ${success ? '#4fd49a' : '#ff6f87'};background:#15131d;box-shadow:7px 7px 0 #343040;text-align:center}b{display:block;margin-bottom:12px;font-size:20px}p{margin:0 0 18px;color:#aaa4b9;line-height:1.7}button{border:1px solid #6f66ff;background:#6f66ff;color:#fff;padding:9px 16px;font:inherit;cursor:pointer}</style></head><body><main class="card"><b>${heading}</b><p>${detail}</p><button id="close-page" type="button">${closeLabel}</button></main><script nonce="${nonce}">const closePage=()=>window.close();document.getElementById('close-page').addEventListener('click',closePage);${success ? 'setTimeout(closePage,700);' : ''}</script></body></html>`;
+};
 
 export function createApp(dependencies) {
   const {
@@ -166,7 +182,7 @@ export function createApp(dependencies) {
   });
 
   app.post('/v1/auth/email/challenges', {
-    schema: { body: { type: 'object', additionalProperties: false, required: ['email', 'clientKind'], properties: { email: { type: 'string', maxLength: 320 }, clientKind: { type: 'string', enum: ['harness', 'vscode', 'cursor', 'browser'] } } } },
+    schema: { body: { type: 'object', additionalProperties: false, required: ['email', 'clientKind'], properties: { email: { type: 'string', maxLength: 320 }, clientKind: { type: 'string', enum: ['harness', 'vscode', 'cursor', 'browser'] }, locale: publicLocaleQuerySchema } } },
   }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     return envelope(await authService.requestChallenge(request.body));
@@ -207,7 +223,8 @@ export function createApp(dependencies) {
     const scriptNonce = crypto.randomBytes(18).toString('base64url');
     reply.header('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; base-uri 'none'; form-action 'none'`);
     const result = await authService.completeGitHubWeb(request.query);
-    return reply.type('text/html; charset=utf-8').send(githubCallbackPage(result.status === 'complete', scriptNonce));
+    const locale = resolvePublicLocale({ acceptLanguage: request.headers['accept-language'] });
+    return reply.type('text/html; charset=utf-8').send(githubCallbackPage(result.status === 'complete', scriptNonce, locale));
   });
 
   app.post('/v1/auth/github/web/:challengeId/poll', {
@@ -429,16 +446,20 @@ export function createApp(dependencies) {
   if (catalogService) {
     registerGameHubMcpRoutes(app, { catalogService, siteOrigin });
     app.get('/w/:workId', {
-      schema: { params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } } },
+      schema: {
+        params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },
+        querystring: { type: 'object', additionalProperties: true, properties: { lang: publicLocaleQuerySchema } },
+      },
     }, async (request, reply) => {
       const work = await catalogService.get(request.params.workId);
       const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
+      const locale = resolvePublicLocale({ explicit: request.query.lang, acceptLanguage: request.headers['accept-language'] });
       const nonce = crypto.randomBytes(18).toString('base64');
       reply.header('Cache-Control', 'public, max-age=60');
       reply.header('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src 'self' https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       reply.header('Referrer-Policy', 'no-referrer');
       reply.header('X-Content-Type-Options', 'nosniff');
-      return reply.type('text/html; charset=utf-8').send(publicWorkPage({ work, siteOrigin, nonce }));
+      return reply.type('text/html; charset=utf-8').send(publicWorkPage({ work, siteOrigin, nonce, locale }));
     });
     app.get('/v1/works', {
       schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000},openSource:{type:'boolean'},remixable:{type:'boolean'},claimable:{type:'boolean'},runtime:{type:'string',enum:['web','windows']},source:{type:'string',enum:['platform','github_import','zip_upload','community_catalog']} } } },
@@ -461,12 +482,13 @@ export function createApp(dependencies) {
     app.get('/v1/works/:workId/share-card.png', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },
-        querystring: { type: 'object', additionalProperties: false, properties: { download: { type: 'string', enum: ['1'] }, v: { type: 'string', maxLength: 64, pattern: '^[A-Za-z0-9._-]+$' } } },
+        querystring: { type: 'object', additionalProperties: false, properties: { download: { type: 'string', enum: ['1'] }, v: { type: 'string', maxLength: 64, pattern: '^[A-Za-z0-9._-]+$' }, lang: publicLocaleQuerySchema } },
       },
     }, async (request, reply) => {
       const work = await catalogService.get(request.params.workId);
       const cover = work.coverUrl && workService?.getCover ? await workService.getCover(request.params.workId).catch(() => null) : null;
-      const body = await renderWorkShareCard(work, cover?.body);
+      const locale = resolvePublicLocale({ explicit: request.query.lang, acceptLanguage: request.headers['accept-language'] });
+      const body = await renderWorkShareCard(work, cover?.body, { locale });
       const disposition = request.query.download === '1' ? 'attachment' : 'inline';
       reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
       reply.header('Content-Disposition', `${disposition}; filename="gamehub-${work.id}-share.png"`);

@@ -1,0 +1,14 @@
+{
+  "extension.displayName": "MOOYU.FUN",
+  "extension.description": "Discover, play, and publish lightweight games from the VS Code or Cursor sidebar.",
+  "command.open": "MOOYU.FUN: Open game platform",
+  "command.openBrowser": "MOOYU.FUN: Open in embedded browser",
+  "command.checkUpdates": "MOOYU.FUN: Check for updates",
+  "viewContainer.title": "MOOYU.FUN",
+  "view.name": "MOOYU.FUN",
+  "configuration.title": "MOOYU.FUN",
+  "configuration.apiUrl": "MOOYU.FUN API URL. Connects to the production service by default.",
+  "configuration.browserUrl": "MOOYU.FUN page to open when the sidebar is unavailable.",
+  "configuration.runtimeDomain": "Trusted runtime domain for isolated MOOYU.FUN web games.",
+  "configuration.autoUpdate": "Download, verify, and install stable MOOYU.FUN updates in the background. Updates activate after the editor restarts."
+}

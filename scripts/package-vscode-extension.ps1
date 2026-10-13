@@ -65,6 +65,8 @@ try {
   Add-TextEntry '[Content_Types].xml' $contentTypes
   Add-TextEntry 'extension.vsixmanifest' $manifest
   Add-FileEntry 'extension/package.json' (Join-Path $extensionRoot 'package.json')
+  Add-FileEntry 'extension/package.nls.json' (Join-Path $extensionRoot 'package.nls.json')
+  Add-FileEntry 'extension/package.nls.zh-cn.json' (Join-Path $extensionRoot 'package.nls.zh-cn.json')
   Add-FileEntry 'extension/gamehub-extension.cjs' (Join-Path $extensionRoot 'gamehub-extension.cjs')
   Add-FileEntry 'extension/desktop-launcher.mjs' (Join-Path $projectRoot 'extensions\harness\src\desktop-launcher.mjs')
   foreach ($saveModule in @('store-contract.mjs', 'store-rpc.mjs', 'sqlite-store.mjs')) {

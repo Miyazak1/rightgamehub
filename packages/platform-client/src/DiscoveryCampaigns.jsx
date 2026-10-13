@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {rememberWorkAttribution} from './analytics-attribution.mjs';
+import {useI18n} from './I18n.jsx';
 
 const kinds={weekly_open_game:'每周一个开放游戏',improve_together:'一起完善这个游戏',collection:'主题精选'};
 const stateLabels={draft:'草稿',published:'已发布',archived:'已归档'};
@@ -14,25 +15,30 @@ const playable=work=>work.id==='gamehub-guess-baike'||work.targets?.some(target=
 function openWork(item,go){rememberWorkAttribution(item.work.id,'campaign',item.campaignKey);go('/works/'+item.work.id);}
 
 function CampaignWork({item,go,Art}){
-  return <article className="campaign-work"><button className="campaign-work__cover" onClick={()=>openWork(item,go)} aria-label={'查看 '+item.work.title}><Art work={item.work}/></button><div><span>{item.work.openSource?'开放源码':'免费体验'}</span><h3><button onClick={()=>openWork(item,go)}>{item.work.title}</button></h3><p>{item.pitch}</p><footer><small>{item.work.creatorDisplayName||'墨鱼工坊社区作品'}</small><button onClick={()=>openWork(item,go)}>{playable(item.work)?'查看并游玩':'查看作品'} →</button></footer></div></article>;
+  const {t}=useI18n();
+  return <article className="campaign-work"><button className="campaign-work__cover" onClick={()=>openWork(item,go)} aria-label={t('campaign.viewWork',{title:item.work.title})}><Art work={item.work}/></button><div><span>{item.work.openSource?t('campaign.openSource'):t('campaign.free')}</span><h3><button onClick={()=>openWork(item,go)}>{item.work.title}</button></h3><p>{item.pitch}</p><footer><small>{item.work.creatorDisplayName||t('campaign.communityWork')}</small><button onClick={()=>openWork(item,go)}>{playable(item.work)?t('campaign.viewAndPlay'):t('campaign.view')} →</button></footer></div></article>;
 }
 
 export function DiscoveryCampaignSpotlight({api,demo,go,Art}){
+  const {t}=useI18n();
   const [campaign,setCampaign]=useState(null);
   useEffect(()=>{let live=true;if(demo)return()=>{};api.listDiscoveryCampaigns(1).then(({data})=>{if(live)setCampaign(data[0]||null);}).catch(()=>{});return()=>{live=false;};},[api,demo]);
   if(!campaign)return null;
   const items=campaign.items.slice(0,3).map(item=>({...item,campaignKey:campaign.campaignKey}));
-  return <section className="discovery-campaign-spotlight" aria-labelledby="campaign-spotlight-title"><header><div><span className="discovery-kicker">{campaign.eyebrow}</span><h2 id="campaign-spotlight-title">{campaign.title}</h2><p>{campaign.summary}</p></div><button onClick={()=>go('/discover/c/'+campaign.slug)}>查看专题 →</button></header><div>{items.map(item=><CampaignWork key={item.workId} item={item} go={go} Art={Art}/>)}</div></section>;
+  return <section className="discovery-campaign-spotlight" aria-labelledby="campaign-spotlight-title"><header><div><span className="discovery-kicker">{campaign.eyebrow}</span><h2 id="campaign-spotlight-title">{campaign.title}</h2><p>{campaign.summary}</p></div><button onClick={()=>go('/discover/c/'+campaign.slug)}>{t('campaign.viewFeature')}</button></header><div>{items.map(item=><CampaignWork key={item.workId} item={item} go={go} Art={Art}/>)}</div></section>;
 }
 
 export function DiscoveryCampaignPage({slug,api,go,Art}){
+  const {t,date,locale}=useI18n();
   const [state,setState]=useState({status:'loading',campaign:null});
   useEffect(()=>{let live=true;setState({status:'loading',campaign:null});api.getDiscoveryCampaign(slug).then(({data})=>{if(live)setState({status:'ready',campaign:data});}).catch(()=>{if(live)setState({status:'error',campaign:null});});return()=>{live=false;};},[api,slug]);
-  if(state.status==='loading')return <main className="page campaign-page"><div className="discovery-state" role="status">正在打开专题…</div></main>;
-  if(state.status==='error')return <main className="page campaign-page"><div className="discovery-state"><h1>专题当前不可访问</h1><p>它可能尚未开始、已经结束或被归档。</p><button onClick={()=>go('/discover')}>返回发现</button></div></main>;
+  if(state.status==='loading')return <main className="page campaign-page"><div className="discovery-state" role="status">{t('campaign.loading')}</div></main>;
+  if(state.status==='error')return <main className="page campaign-page"><div className="discovery-state"><h1>{t('campaign.unavailable')}</h1><p>{t('campaign.unavailableLead')}</p><button onClick={()=>go('/discover')}>{t('campaign.backDiscover')}</button></div></main>;
   const campaign=state.campaign,items=campaign.items.map(item=>({...item,campaignKey:campaign.campaignKey}));
-  const share=async()=>{try{if(navigator.share)await navigator.share({title:campaign.title,text:campaign.summary,url:campaign.publicUrl});else await navigator.clipboard.writeText(campaign.publicUrl);}catch{}};
-  return <main className="page campaign-page"><button className="campaign-back" onClick={()=>go('/discover')}>← 返回发现</button><header className="campaign-hero"><div><span className="discovery-kicker">{campaign.eyebrow}</span><h1>{campaign.title}</h1><p>{campaign.summary}</p><div className="campaign-hero__meta"><span>{kinds[campaign.campaignKind]}</span><span>{campaign.items.length} 款作品</span>{campaign.endsAt&&<span>截至 {new Date(campaign.endsAt).toLocaleDateString('zh-CN')}</span>}</div></div><div className="campaign-hero__actions"><button onClick={share}>分享专题</button><a href={api.discoveryCampaignShareCardUrl(campaign.slug,{download:true,version:campaign.version})} download={`gamehub-${campaign.slug}-share.png`}>下载专题分享图</a></div></header><section className="campaign-work-grid" aria-label="专题作品">{items.map(item=><CampaignWork key={item.workId} item={item} go={go} Art={Art}/>)}</section></main>;
+  const publicUrl=new URL(campaign.publicUrl);publicUrl.searchParams.set('lang',locale);
+  const share=async()=>{try{if(navigator.share)await navigator.share({title:campaign.title,text:campaign.summary,url:publicUrl.href});else await navigator.clipboard.writeText(publicUrl.href);}catch{}};
+  const kindLabel={weekly_open_game:t('campaign.weekly'),improve_together:t('campaign.improve'),collection:t('campaign.collection')}[campaign.campaignKind];
+  return <main className="page campaign-page"><button className="campaign-back" onClick={()=>go('/discover')}>← {t('campaign.backDiscover')}</button><header className="campaign-hero"><div><span className="discovery-kicker">{campaign.eyebrow}</span><h1>{campaign.title}</h1><p>{campaign.summary}</p><div className="campaign-hero__meta"><span>{kindLabel}</span><span>{t('campaign.workCount',{count:campaign.items.length})}</span>{campaign.endsAt&&<span>{t('campaign.ends',{date:date(campaign.endsAt)})}</span>}</div></div><div className="campaign-hero__actions"><button onClick={share}>{t('campaign.share')}</button><a href={api.discoveryCampaignShareCardUrl(campaign.slug,{download:true,version:campaign.version,locale})} download={`mooyu-${campaign.slug}-share.png`}>{t('campaign.download')}</a></div></header><section className="campaign-work-grid" aria-label={t('campaign.works')}>{items.map(item=><CampaignWork key={item.workId} item={item} go={go} Art={Art}/>)}</section></main>;
 }
 
 const blank=()=>({slug:'',eyebrow:'OPEN GAMES',title:'',summary:'',campaignKind:'weekly_open_game',startsAt:'',endsAt:'',items:[]});
