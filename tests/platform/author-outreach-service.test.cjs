@@ -46,14 +46,30 @@ test('author outreach requires an actual contact record before marking sent',asy
   assert.equal(updated.now.toISOString(),'2026-10-12T08:00:00.000Z');
 });
 
+test('author outreach records opening separately and allows returning to ready',async()=>{
+  const {createAuthorOutreachService}=await import(pathToFileURL(path.join(root,'apps/api/src/author-outreach-service.mjs')));
+  const updates=[];
+  const repository={candidates:async()=>[],sync:async()=>({inserted:0,upgraded:0}),list:async()=>[],events:async()=>[],update:async input=>{updates.push(input);return input;}};
+  const service=createAuthorOutreachService({repository,ids:()=>crypto.randomUUID(),clock:()=>new Date('2026-10-13T08:00:00.000Z')});
+  const actor={userId:'admin',profile:{role:'admin'}},id='00000000-0000-4000-8000-000000000065';
+  const base={draftSubject:'邀请作者认领作品',draftBody:'这是一份长度足够且需要人工确认后才会发送的作者联络正文，内容包含作品页面、原始仓库、许可证和退出方式，请在发送前逐项检查。',contactMethod:'github_issue',contactReference:null,note:null,expectedVersion:'1'};
+  await service.update(actor,id,{...base,status:'opened'});
+  assert.equal(updates[0].status,'opened');
+  assert.equal(updates[0].contactReference,null);
+  await service.update(actor,id,{...base,status:'ready'});
+  assert.equal(updates[1].status,'ready');
+});
+
 test('outreach migration and query preserve eligibility, deduplication and append-only audit',async()=>{
-  const [migration,bilingualMigration,brandMigration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0066_author_outreach_bilingual_template.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0067_author_outreach_brand.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
+  const [migration,bilingualMigration,brandMigration,openedMigration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0066_author_outreach_bilingual_template.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0067_author_outreach_brand.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0068_author_outreach_opened_state.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
   assert.match(migration,/repository_key text NOT NULL UNIQUE/u);
   assert.match(migration,/author outreach events are append-only/u);
   assert.match(bilingualMigration,/draft_template_version/u);
   assert.match(brandMigration,/MOOYU\.FUN/u);
   assert.match(brandMigration,/墨鱼工坊/u);
   assert.match(brandMigration,/draft_template_version/u);
+  assert.match(openedMigration,/'opened'/u);
+  assert.match(openedMigration,/author_outreach_events_action_check/u);
   assert.match(service,/w\.attribution_kind='community_catalog'/u);
   assert.match(service,/w\.state='published'/u);
   assert.match(service,/w\.license_spdx IS NOT NULL/u);
@@ -88,7 +104,8 @@ test('author outreach HTTP routes are admin-authenticated, no-store and schema-b
   t.after(()=>app.close());
   const denied=await app.inject({method:'GET',url:'/v1/admin/author-outreach'});assert.equal(denied.statusCode,401);
   const listed=await app.inject({method:'GET',url:'/v1/admin/author-outreach?status=all&limit=100',headers:{authorization:'Bearer admin'}});assert.equal(listed.statusCode,200);assert.equal(listed.headers['cache-control'],'no-store');
-  const id='00000000-0000-4000-8000-000000000065',payload={status:'ready',draftSubject:'邀请作者核对作品',draftBody:'这是一份需要人工核对后发送、长度满足要求的作者联络正文，内容包含作品页面、原始仓库、许可证和退出方式，请在发送前逐项检查。',contactMethod:'github_issue',contactReference:null,note:null,expectedVersion:'1'};
+  const openedList=await app.inject({method:'GET',url:'/v1/admin/author-outreach?status=opened&limit=100',headers:{authorization:'Bearer admin'}});assert.equal(openedList.statusCode,200);
+  const id='00000000-0000-4000-8000-000000000065',payload={status:'opened',draftSubject:'邀请作者核对作品',draftBody:'这是一份需要人工核对后发送、长度满足要求的作者联络正文，内容包含作品页面、原始仓库、许可证和退出方式，请在发送前逐项检查。',contactMethod:'github_issue',contactReference:null,note:null,expectedVersion:'1'};
   const saved=await app.inject({method:'PATCH',url:`/v1/admin/author-outreach/${id}`,headers:{authorization:'Bearer admin'},payload});assert.equal(saved.statusCode,200);assert.equal(updated.id,id);
   const extra=await app.inject({method:'PATCH',url:`/v1/admin/author-outreach/${id}`,headers:{authorization:'Bearer admin'},payload:{...payload,unexpected:true}});assert.equal(extra.statusCode,400);
 });

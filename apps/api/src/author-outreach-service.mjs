@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 
-const statuses=new Set(['review','ready','contacted','replied','declined','paused']);
+const statuses=new Set(['review','ready','opened','contacted','replied','declined','paused']);
 const methods=new Set(['github_issue','github_discussion','email','other']);
 const transitions={
   review:new Set(['review','ready','paused']),
-  ready:new Set(['review','ready','contacted','paused']),
+  ready:new Set(['review','ready','opened','contacted','paused']),
+  opened:new Set(['ready','opened','contacted','paused']),
   contacted:new Set(['contacted','replied','declined','paused']),
   replied:new Set(['replied','paused']),
   declined:new Set(['declined','paused']),
@@ -97,7 +98,7 @@ export class PostgresAuthorOutreachRepository{
       const row=(await client.query(`UPDATE author_outreach_records SET status=$2,draft_subject=$3,draft_body=$4,
         contact_method=$5,contact_reference=$6,note=$7,last_contacted_at=$8,updated_by_user_id=$9,updated_at=$10,version=version+1
         WHERE id=$1 RETURNING *`,[input.id,input.status,input.draftSubject,input.draftBody,input.contactMethod,input.contactReference,input.note,contactedAt,input.actorUserId,input.now])).rows[0];
-      const action=input.status===current.status?'updated':input.status==='contacted'?'contacted':input.status==='replied'?'replied':input.status==='declined'?'declined':input.status==='paused'?'paused':'reopened';
+      const action=input.status===current.status?'updated':input.status==='opened'?'opened':input.status==='contacted'?'contacted':input.status==='replied'?'replied':input.status==='declined'?'declined':input.status==='paused'?'paused':'reopened';
       await client.query(`INSERT INTO author_outreach_events(id,outreach_id,actor_user_id,action,from_status,to_status,details)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[input.eventId,input.id,input.actorUserId,action,current.status,input.status,{contactMethod:input.contactMethod,contactReference:input.contactReference,note:input.note}]);
       await client.query('COMMIT');return view({...row,work_title:current.work_title,work_description:current.work_description,license_spdx:current.license_spdx,repository_owner:current.repository_owner});
