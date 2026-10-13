@@ -1684,6 +1684,15 @@ export function AdminClaimManager({claims,api,demo,onChanged}) {
   return <section className="admin-queue claim-review-queue"><div className="puzzle-ops__head"><div><span className="kicker">GAME CLAIM GOVERNANCE</span><h2>作者与维护者认领</h2><p>审核新申请，并持续处理已经确认的认领关系、争议、暂停和撤销。</p></div><span>{claims.length} 份记录</span></div><div className="claim-status-tabs" role="group" aria-label="认领状态筛选">{filters.map(([value,label])=><button type="button" aria-pressed={filter===value} onClick={()=>setFilter(value)} key={value}>{label} <span>{value==='all'?claims.length:claims.filter(claim=>claim.status===value).length}</span></button>)}</div>{error&&<p className="form-error" role="alert">{error}</p>}{message&&<p className="admin-notice" role="status">{message}</p>}{visible.length?visible.map(claim=>{const history=audit[claim.id];return <article className={`report-card claim-governance-card is-${claim.status}`} key={claim.id}><div className="report-card__head"><div><span>{claim.relationship==='owner'?'作者 / 权利人':'维护者'} · {claim.evidenceType}</span><h3>{claim.workTitle}</h3></div><em>{projectClaimStatusLabels[claim.status]||claim.status}</em></div><p><strong>{claim.claimantDisplayName}</strong>{claim.claimantHandle?`（@${claim.claimantHandle}）`:''}</p>{(claim.repositoryUrl||claim.evidenceUrl)&&<a href={claim.repositoryUrl||claim.evidenceUrl} target="_blank" rel="noreferrer">核对公开证明 ↗</a>}{claim.applicantNote&&<p>{claim.applicantNote}</p>}{claim.decisionNote&&<p className="claim-decision-note">最近决定：{claim.decisionNote}</p>}<details className="governance-audit" onToggle={event=>{if(event.currentTarget.open)loadAudit(claim);}}><summary>审核与权限历史</summary>{!history||history.status==='loading'?<p>正在读取审计记录…</p>:history.status==='error'?<p>审计记录暂时无法读取。</p>:history.items.length?<ol>{history.items.map(event=><li key={event.id}><div><strong>{projectClaimActionLabels[event.action]||event.action}</strong><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></div><p>{event.details?.note||event.actorDisplayName}</p></li>)}</ol>:<p>还没有审计事件。</p>}</details>{actions(claim).length>0&&<><label>审核或治理说明<textarea maxLength="2000" value={notes[claim.id]||''} onChange={event=>setNotes(current=>({...current,[claim.id]:event.target.value}))} placeholder="记录身份核验、争议依据或权限变更原因。"/></label><div className="dialog-actions">{actions(claim).map(([action,label])=>action==='revoke'?<button className="danger-button" type="button" disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{label}</button>:<Button kind={action==='approve'||action==='restore'?undefined:'secondary'} disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{busy===claim.id?'处理中…':label}</Button>)}</div></>}</article>;}):<div className="admin-empty"><span>✓</span><strong>这个状态没有认领记录</strong><p>可切换其他状态查看完整治理历史。</p></div>}</section>;
 }
 
+const adminPanelIds = new Set(['overview','growth','works','governance','official']);
+const readAdminPanel = () => {
+  const outer = new URLSearchParams(String(globalThis.location?.search || '').replace(/^\?/u,''));
+  const embeddedRoute = outer.get('gh_route');
+  const embedded = embeddedRoute ? new URLSearchParams(String(embeddedRoute).split('?')[1] || '') : null;
+  const value = outer.get('panel') || embedded?.get('panel') || 'overview';
+  return adminPanelIds.has(value) ? value : 'overview';
+};
+
 function AdminPage({ api, demo, go }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
   const demoPuzzles = [{ id: 'wikipedia-4723', title: '足球', aliases: ['协会足球','英式足球'], category: '体育', sourceKind: 'wikipedia-lead', sourceTitle: '足球', sourceUrl: 'https://zh.wikipedia.org/wiki/%E8%B6%B3%E7%90%83', sourceRevision: 94245396, sourceUpdatedAt: '2026-09-27T15:22:05Z', license: 'CC BY-SA 4.0', introHanCount: 364, content: '足球主要专指英式足球，官方名为协会足球，是一种世界流行的团体球类运动。', status: 'ready', qualityReason: null, scheduledDates: [today] }];
@@ -1695,24 +1704,58 @@ function AdminPage({ api, demo, go }) {
   const demoClaims=[{id:'00000000-0000-4000-8000-000000000020',workId:demoWorks[0].id,workTitle:demoWorks[0].title,claimantUserId:'00000000-0000-4000-8000-000000000021',claimantDisplayName:'开放游戏作者',claimantHandle:'open-game-author',relationship:'owner',status:'pending',evidenceType:'website',evidenceUrl:'https://example.com/open-game',repositoryId:null,repositoryUrl:null,applicantNote:'公开作者主页包含该游戏的发布记录。',decisionNote:'',submittedAt:new Date().toISOString(),decidedAt:null,verifiedAt:null,suspendedAt:null,revokedAt:null,updatedAt:new Date().toISOString(),version:'1'}];
   const demoProvenance = [{workId:demoWorks[0].id,title:demoWorks[0].title,state:'published',visibility:'public',revision:'3',ownerDisplayName:'墨鱼工坊运营',ingestionMethod:'zip_upload',attributionKind:'community_catalog',repositoryUrl:'https://github.com/gamehub/demo-game',licenseSpdx:'MIT',hasImmutableGitHubSource:false,claimStatus:null,claimEligible:true,updatedAt:new Date().toISOString()}];
   const [days, setDays] = useState(7);
-  const [state, setState] = useState({ status: 'loading', reports: [], audit: [], applications: [], claims: [], provenance: [], puzzles: [], automation: null, analytics: null, storage: null, sourceOverview: null, sourceAudit: [] });
+  const [panel, setPanel] = useState(readAdminPanel);
+  const [accessStatus, setAccessStatus] = useState('loading');
+  const [state, setState] = useState({ loaded: {}, loadingPanel: null, panelError: '', reports: [], audit: [], applications: [], claims: [], provenance: [], puzzles: [], automation: null, analytics: null, storage: null, sourceOverview: null, sourceAudit: [] });
   const [notes, setNotes] = useState({}); const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
-  const load = async () => {
-    setState(current => ({ ...current, status: 'loading' }));
+  const loadPanel = async (target = panel, force = false) => {
+    const loadKey = target === 'overview' ? `${target}:${days}` : target;
+    if (!force && state.loaded[loadKey]) return;
+    setState(current => ({ ...current, loadingPanel: target, panelError: '' }));
     try {
-      if (demo) return setState({ status: 'ready', reports: [], audit: [], applications: [], claims: demoClaims, provenance: demoProvenance, puzzles: demoPuzzles, automation: demoAutomation, analytics: demoAnalytics, storage: demoStorage, sourceOverview: demoSourceOverview, sourceAudit: demoSourceAudit });
-      const profile = (await api.getProfile()).data;
-      if (profile.role !== 'admin') return setState({ status: 'forbidden', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null });
-      const [reports, audit, applications, claims, provenance, puzzles, automation, analytics, storage, sourceOverview, sourceAudit] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending'), api.listAdminProjectClaims('all',100), api.listAdminWorkProvenance(100), api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus(), api.getAdminAnalytics(days), api.getAdminStorage(), api.getGitHubSourceAdminOverview(), api.listGitHubSourceAudit()]);
-      setState({ status: 'ready', reports: reports.data, audit: audit.data, applications: applications.data, claims: claims.data, provenance: provenance.data, puzzles: puzzles.data, automation: automation.data, analytics: analytics.data, storage: storage.data, sourceOverview: sourceOverview.data, sourceAudit: sourceAudit.data });
-    } catch (caught) { setState({ status: caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error', reports: [], audit: [], applications: [], puzzles: [], automation: null, analytics: null, storage: null }); }
+      let next = {};
+      if (demo) {
+        if (target === 'overview') next = { reports: [], applications: [], claims: demoClaims, automation: demoAutomation, analytics: demoAnalytics, storage: demoStorage, sourceOverview: demoSourceOverview };
+        if (target === 'works') next = { claims: demoClaims, provenance: demoProvenance, sourceOverview: demoSourceOverview, sourceAudit: demoSourceAudit };
+        if (target === 'governance') next = { reports: [], audit: [], applications: [] };
+        if (target === 'official') next = { puzzles: demoPuzzles, automation: demoAutomation };
+      } else if (target === 'overview') {
+        const [analytics, storage, reports, applications, claims, automation, sourceOverview] = await Promise.all([api.getAdminAnalytics(days), api.getAdminStorage(), api.listReports('open'), api.listCreatorApplications('pending'), api.listAdminProjectClaims('pending',100), api.getGuessBaikeAutomationStatus(), api.getGitHubSourceAdminOverview()]);
+        next = { analytics: analytics.data, storage: storage.data, reports: reports.data, applications: applications.data, claims: claims.data, automation: automation.data, sourceOverview: sourceOverview.data };
+      } else if (target === 'works') {
+        const [claims, provenance, sourceOverview, sourceAudit] = await Promise.all([api.listAdminProjectClaims('all',100), api.listAdminWorkProvenance(100), api.getGitHubSourceAdminOverview(), api.listGitHubSourceAudit()]);
+        next = { claims: claims.data, provenance: provenance.data, sourceOverview: sourceOverview.data, sourceAudit: sourceAudit.data };
+      } else if (target === 'governance') {
+        const [reports, audit, applications] = await Promise.all([api.listReports('open'), api.listModerationAudit(), api.listCreatorApplications('pending')]);
+        next = { reports: reports.data, audit: audit.data, applications: applications.data };
+      } else if (target === 'official') {
+        const [puzzles, automation] = await Promise.all([api.listAdminGuessBaikePuzzles(), api.getGuessBaikeAutomationStatus()]);
+        next = { puzzles: puzzles.data, automation: automation.data };
+      }
+      setState(current => ({ ...current, ...next, loaded: { ...current.loaded, [loadKey]: true }, loadingPanel: current.loadingPanel === target ? null : current.loadingPanel, panelError: '' }));
+    } catch (caught) {
+      if (caught.status === 401 || caught.status === 403) setAccessStatus('forbidden');
+      else setState(current => ({ ...current, loadingPanel: null, panelError: caught.message || '当前栏目暂时无法读取。' }));
+    }
   };
-  useEffect(() => { load(); }, [api, demo, days]);
+  useEffect(() => {
+    let live = true;
+    if (demo) { setAccessStatus('ready'); return () => { live = false; }; }
+    api.getProfile().then(({ data }) => { if (live) setAccessStatus(data.role === 'admin' ? 'ready' : 'forbidden'); }).catch(caught => { if (live) setAccessStatus(caught.status === 401 || caught.status === 403 ? 'forbidden' : 'error'); });
+    return () => { live = false; };
+  }, [api, demo]);
+  useEffect(() => {
+    const onNavigation = () => setPanel(readAdminPanel());
+    globalThis.addEventListener?.('popstate', onNavigation);
+    return () => globalThis.removeEventListener?.('popstate', onNavigation);
+  }, []);
+  useEffect(() => { if (accessStatus === 'ready') loadPanel(panel); }, [accessStatus, panel, days, api, demo]);
+  const selectPanel = target => { if (target === panel) return; setError(''); setNotice(''); setPanel(target); go(`/admin?panel=${target}`); };
   const decide = async (report, action) => {
     const note = (notes[report.id] || '').trim(); if (!note) return setError('请先填写处置说明。');
     if (action === 'suspend' && !globalThis.confirm?.(`暂停《${report.workTitle}》？当前公开版本将立即失效。`)) return;
     setBusy(report.id); setError('');
-    try { await api.decideReport(report.id, { action, note }); await load(); }
+    try { await api.decideReport(report.id, { action, note }); await loadPanel('governance', true); }
     catch (caught) { setError(caught.message || '处置未完成。'); }
     finally { setBusy(''); }
   };
@@ -1722,37 +1765,51 @@ function AdminPage({ api, demo, go }) {
     try {
       await api.decideCreatorApplication(application.id, { decision, note });
       setNotice(`${application.displayName} 的创作者申请已${decision === 'approve' ? '通过' : '拒绝'}。`);
-      await load();
+      await loadPanel('governance', true);
     } catch (caught) { setError(caught.message || '审核没有完成。'); }
     finally { setBusy(''); }
   };
   const togglePuzzle = async puzzle => {
     const status = puzzle.status === 'ready' ? 'disabled' : 'ready'; setBusy(`puzzle-${puzzle.id}`); setError(''); setNotice('');
-    try { if (!demo) await api.updateAdminGuessBaikePuzzle(puzzle.id, status); setNotice(`《${puzzle.title}》已${status === 'ready' ? '启用' : '停用'}。`); await load(); }
+    try { if (!demo) await api.updateAdminGuessBaikePuzzle(puzzle.id, status); setNotice(`《${puzzle.title}》已${status === 'ready' ? '启用' : '停用'}。`); await loadPanel('official', true); }
     catch (caught) { setError(caught.message || '题目状态没有更新。'); }
     finally { setBusy(''); }
   };
-  if (state.status === 'loading') return <main className="page admin-page"><LoadingCards/></main>;
-  if (state.status === 'forbidden') return <main className="page"><StatePanel title="仅管理员可访问" body="这个页面包含举报内容与处置记录。" action="返回发现" onAction={() => go('/discover')}/></main>;
-  if (state.status === 'error') return <main className="page"><StatePanel title="治理队列暂时不可用" body="没有执行任何处置，请稍后重试。" action="重新加载" onAction={load}/></main>;
-  return <main className="page admin-page"><div className="section-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>掌握平台增长、内容分发与治理状态。</p></div><span className="admin-count">{state.puzzles.filter(item => item.status === 'ready').length} 道可发布 · {state.applications.length} 份创作者申请 · {state.claims.length} 份认领申请 · {state.reports.length} 条举报</span></div>{error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
-    <AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/>
-    <AdminStorage storage={state.storage}/>
-
-    <GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/>
-
-    <AuthorOutreachQueue api={api} demo={demo}/>
-
-    <DiscoveryCampaignAdmin api={api} demo={demo}/>
-
-    <MultiplayerRuleReviewQueue api={api} demo={demo}/>
+  if (accessStatus === 'loading') return <main className="page admin-page"><LoadingCards/></main>;
+  if (accessStatus === 'forbidden') return <main className="page"><StatePanel title="仅管理员可访问" body="这个页面包含举报内容与处置记录。" action="返回发现" onAction={() => go('/discover')}/></main>;
+  if (accessStatus === 'error') return <main className="page"><StatePanel title="管理后台暂时不可用" body="没有执行任何处置，请稍后重试。" action="重新加载" onAction={() => globalThis.location?.reload?.()}/></main>;
+  const pendingClaims = state.claims.filter(item => item.status === 'pending').length;
+  const governanceCount = state.applications.length + state.reports.length;
+  const officialWarning = state.automation?.lastRun?.status === 'failed' || state.puzzles.some(item => item.status === 'disabled');
+  const overviewWarning = state.storage?.level && state.storage.level !== 'healthy' || Number(state.sourceOverview?.failedWebhooks24h || 0) > 0;
+  const panels = [
+    { id: 'overview', label: '概览', eyebrow: 'OVERVIEW', note: '数据与异常', badge: overviewWarning ? '!' : null },
+    { id: 'growth', label: '增长运营', eyebrow: 'GROWTH', note: '传播与专题' },
+    { id: 'works', label: '作品与来源', eyebrow: 'WORKS', note: '导入、来源、认领', badge: pendingClaims || null },
+    { id: 'governance', label: '内容与权限', eyebrow: 'GOVERNANCE', note: '审核与举报', badge: governanceCount || null },
+    { id: 'official', label: '官方内容', eyebrow: 'OFFICIAL', note: '题库与供给', badge: officialWarning ? '!' : null },
+  ];
+  const activePanel = panels.find(item => item.id === panel) || panels[0];
+  const panelLoaded = Object.keys(state.loaded).some(key => key === panel || key.startsWith(`${panel}:`));
+  const firstLoad = !panelLoaded && !state.panelError;
+  return <main className="page admin-page"><div className="section-heading admin-heading"><div><span className="kicker">OPERATIONS DESK</span><h1>平台运营</h1><p>掌握平台增长、内容分发与治理状态。</p></div><span className="admin-count">{governanceCount} 项内容待办 · {pendingClaims} 份认领待审</span></div>
+    <nav className="admin-navigation" aria-label="管理后台栏目">{panels.map(item => <button type="button" key={item.id} className={panel === item.id ? 'is-active' : ''} aria-current={panel === item.id ? 'page' : undefined} onClick={() => selectPanel(item.id)}><span>{item.eyebrow}</span><strong>{item.label}</strong><small>{item.note}</small>{item.badge && <em>{item.badge}</em>}</button>)}</nav>
+    <div className="admin-panel-heading"><div><span>{activePanel.eyebrow}</span><h2>{activePanel.label}</h2></div>{state.loadingPanel === panel && !firstLoad && <small role="status">正在刷新…</small>}</div>
+    {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}{state.panelError && <div className="admin-panel-error" role="alert"><span>{state.panelError}</span><button type="button" onClick={() => loadPanel(panel, true)}>重新加载</button></div>}
+    {firstLoad ? <LoadingCards/> : <>
+    {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
+    {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
+    {panel === 'works' && <>
     {state.sourceOverview && <section className="source-operations"><div className="puzzle-ops__head"><div><span className="kicker">GITHUB SOURCE CONTROL</span><h2>GitHub 只读导入</h2><p>连接、授权仓库、近 24 小时导入与 Webhook 故障；此面板不提供源码执行能力。</p></div><span>{state.sourceOverview.activeConnections} 个活动连接</span></div><div className="source-operation-kpis"><article><span>授权仓库</span><strong>{state.sourceOverview.activeRepositories}</strong></article><article><span>24h 导入</span><strong>{state.sourceOverview.imports24h}</strong></article><article className={state.sourceOverview.failedWebhooks24h ? 'is-warning' : ''}><span>24h Webhook 失败</span><strong>{state.sourceOverview.failedWebhooks24h}</strong></article></div><details><summary>最近来源审计</summary>{state.sourceAudit.length ? <ol>{state.sourceAudit.slice(0,20).map(event => <li key={event.id}><strong>{event.action}</strong><code>{event.details?.commitSha?.slice(0,12) || event.connectionId || '—'}</code><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p>暂无来源事件。</p>}</details></section>}
     <AdminProvenanceManager items={state.provenance} api={api} demo={demo} onSaved={next=>setState(current=>({...current,provenance:current.provenance.map(item=>item.workId===next.workId?next:item)}))}/>
-    <AdminClaimManager claims={state.claims} api={api} demo={demo} onChanged={load}/>
-    {state.automation && <section className={`automation-health automation-health--${state.automation.lastRun?.status || 'idle'}`}><div className="automation-health__pulse"/><div><span className="kicker">AUTONOMOUS SUPPLY</span><h2>{state.automation.running ? '正在自动补充题库' : state.automation.lastRun?.status === 'failed' ? '最近一次同步失败，库存仍可用' : '全自动内容流水线正常'}</h2><p>每 {Math.round(state.automation.intervalMinutes / 60)} 小时自动抓取、筛选、去重，并补齐未来 {state.automation.scheduleDays} 天。无需人工审核或排期。</p>{state.automation.lastRun?.errorMessage && <small>{state.automation.lastRun.errorCode} · {state.automation.lastRun.errorMessage}</small>}</div><dl><div><dt>可用题</dt><dd>{state.automation.readyCount}</dd></div><div><dt>已排期</dt><dd>{state.automation.scheduledCount}/{state.automation.scheduleDays}</dd></div><div><dt>上次通过</dt><dd>{state.automation.lastRun?.acceptedCount ?? '—'}</dd></div></dl></section>}
+    <AdminClaimManager claims={state.claims} api={api} demo={demo} onChanged={() => loadPanel('works', true)}/></>}
+    {panel === 'governance' && <><MultiplayerRuleReviewQueue api={api} demo={demo}/>
     <section className="admin-queue"><div className="puzzle-ops__head"><div><span className="kicker">CREATOR REVIEW</span><h2>创作者申请</h2><p>审核申请说明；通过后申请人的当前登录设备会立即获得创作与发布权限。</p></div><span>{state.applications.length} 份待审</span></div>{state.applications.length ? state.applications.map(application => <article className="report-card" key={application.id}><div className="report-card__head"><div><span>申请账号</span><h3>{application.displayName}</h3></div><time>{new Date(application.createdAt).toLocaleString('zh-CN')}</time></div><p>{application.statement}</p><label>审核说明<textarea maxLength="1000" value={notes[application.id] || ''} onChange={event => setNotes(current => ({ ...current, [application.id]: event.target.value }))} placeholder="说明通过条件或拒绝原因。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === application.id} onClick={() => decideCreator(application, 'reject')}>拒绝</Button><Button disabled={busy === application.id} onClick={() => decideCreator(application, 'approve')}>{busy === application.id ? '处理中…' : '通过申请'}</Button></div></article>) : <div className="admin-empty"><span>✓</span><strong>没有待审核申请</strong><p>新的创作者申请会显示在这里。</p></div>}</section>
+    <section className="admin-grid"><div className="admin-queue"><h2>待处理举报</h2>{state.reports.length ? state.reports.map(report => <article className="report-card" key={report.id}><div className="report-card__head"><div><span>{reportCategoryLabels[report.category]}</span><h3>{report.workTitle}</h3></div><time>{new Date(report.createdAt).toLocaleString('zh-CN')}</time></div><p>{report.details || '举报者没有补充说明。'}</p><label>处置说明<textarea maxLength="1000" value={notes[report.id] || ''} onChange={event => setNotes(current => ({ ...current, [report.id]: event.target.value }))} placeholder="记录判断依据；该内容会进入审计记录。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === report.id} onClick={() => decide(report, 'dismiss')}>驳回举报</Button><button className="danger-button" disabled={busy === report.id} onClick={() => decide(report, 'suspend')}>{busy === report.id ? '处理中…' : '暂停作品'}</button></div></article>) : <div className="admin-empty"><span>✓</span><strong>队列已清空</strong><p>目前没有待处理举报。</p></div>}</div><aside className="audit-panel"><span className="kicker">APPEND-ONLY AUDIT</span><h2>最近处置</h2>{state.audit.length ? <ol>{state.audit.map(event => <li key={event.id}><span className={`audit-action audit-action--${event.action}`}>{event.action === 'suspend' ? '暂停' : '驳回'}</span><strong>{event.workTitle}</strong><p>{event.reason}</p><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p className="audit-empty">还没有管理处置记录。</p>}<small>审计表由数据库触发器禁止更新和删除。</small></aside></section></>}
+    {panel === 'official' && <>
+    {state.automation && <section className={`automation-health automation-health--${state.automation.lastRun?.status || 'idle'}`}><div className="automation-health__pulse"/><div><span className="kicker">AUTONOMOUS SUPPLY</span><h2>{state.automation.running ? '正在自动补充题库' : state.automation.lastRun?.status === 'failed' ? '最近一次同步失败，库存仍可用' : '全自动内容流水线正常'}</h2><p>每 {Math.round(state.automation.intervalMinutes / 60)} 小时自动抓取、筛选、去重，并补齐未来 {state.automation.scheduleDays} 天。无需人工审核或排期。</p>{state.automation.lastRun?.errorMessage && <small>{state.automation.lastRun.errorCode} · {state.automation.lastRun.errorMessage}</small>}</div><dl><div><dt>可用题</dt><dd>{state.automation.readyCount}</dd></div><div><dt>已排期</dt><dd>{state.automation.scheduledCount}/{state.automation.scheduleDays}</dd></div><div><dt>上次通过</dt><dd>{state.automation.lastRun?.acceptedCount ?? '—'}</dd></div></dl></section>}
     <section className="puzzle-ops"><div className="puzzle-ops__head"><div><span className="kicker">OFFICIAL INVENTORY</span><h2>猜百科自动题库</h2><p>这里用于观察自动产出的结果。日常不需要操作；停用仅用于发现错误内容后的紧急止损。</p></div><span>{state.puzzles.length} 道题</span></div><div className="puzzle-ops__list">{state.puzzles.map(puzzle => <article className={`puzzle-op ${puzzle.status === 'disabled' ? 'is-disabled' : ''}`} key={puzzle.id}><div className="puzzle-op__top"><div><span className="puzzle-op__category">{puzzle.category}</span><h3>{puzzle.title}</h3><small>{puzzle.introHanCount} 汉字 · 修订 {puzzle.sourceRevision}</small></div><span className={`puzzle-status puzzle-status--${puzzle.status}`}>{puzzle.status === 'ready' ? '自动可用' : '已停用'}</span></div>{puzzle.qualityReason && <p className="puzzle-quality">质量检查：{puzzle.qualityReason}</p>}<details><summary>查看完整导言与来源</summary><p>{puzzle.content}</p><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">查看来源 · {puzzle.license}</a></details><div className="puzzle-op__emergency"><span>{puzzle.scheduledDates.length ? `未来排期 ${puzzle.scheduledDates.length} 天` : '自动轮换库存'}</span><button className="puzzle-toggle" disabled={busy === `puzzle-${puzzle.id}`} onClick={() => togglePuzzle(puzzle)}>{puzzle.status === 'ready' ? '紧急停用' : '纠正后恢复'}</button></div></article>)}</div></section>
-    <section className="admin-grid"><div className="admin-queue"><h2>待处理举报</h2>{state.reports.length ? state.reports.map(report => <article className="report-card" key={report.id}><div className="report-card__head"><div><span>{reportCategoryLabels[report.category]}</span><h3>{report.workTitle}</h3></div><time>{new Date(report.createdAt).toLocaleString('zh-CN')}</time></div><p>{report.details || '举报者没有补充说明。'}</p><label>处置说明<textarea maxLength="1000" value={notes[report.id] || ''} onChange={event => setNotes(current => ({ ...current, [report.id]: event.target.value }))} placeholder="记录判断依据；该内容会进入审计记录。"/></label><div className="dialog-actions"><Button kind="secondary" disabled={busy === report.id} onClick={() => decide(report, 'dismiss')}>驳回举报</Button><button className="danger-button" disabled={busy === report.id} onClick={() => decide(report, 'suspend')}>{busy === report.id ? '处理中…' : '暂停作品'}</button></div></article>) : <div className="admin-empty"><span>✓</span><strong>队列已清空</strong><p>目前没有待处理举报。</p></div>}</div><aside className="audit-panel"><span className="kicker">APPEND-ONLY AUDIT</span><h2>最近处置</h2>{state.audit.length ? <ol>{state.audit.map(event => <li key={event.id}><span className={`audit-action audit-action--${event.action}`}>{event.action === 'suspend' ? '暂停' : '驳回'}</span><strong>{event.workTitle}</strong><p>{event.reason}</p><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p className="audit-empty">还没有管理处置记录。</p>}<small>审计表由数据库触发器禁止更新和删除。</small></aside></section></main>;
+    </>}</>}</main>;
 }
 
 function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(location.search).has('demo'), routing = 'history' }) {

@@ -570,6 +570,32 @@ button { cursor: pointer; }
 
 .admin-page { max-width: 1180px; }
 .admin-count { padding: 7px 10px; border: 1px solid var(--gh-border); color: var(--gh-secondary); font-size: 11px; }
+.admin-heading { margin-bottom: 18px; }
+.admin-navigation { position: sticky; top: 58px; z-index: 14; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); margin: 0 0 24px; border: 1px solid var(--gh-border); background: color-mix(in srgb,var(--gh-surface) 94%,transparent); box-shadow: 4px 4px 0 color-mix(in srgb,var(--gh-border) 45%,transparent); backdrop-filter: blur(12px); }
+.admin-navigation button { position: relative; display: grid; gap: 3px; min-width: 0; padding: 12px 14px; border: 0; border-right: 1px solid var(--gh-border); background: transparent; color: var(--gh-primary); text-align: left; cursor: pointer; }
+.admin-navigation button:last-child { border-right: 0; }
+.admin-navigation button::after { position: absolute; right: 12px; bottom: 0; left: 12px; height: 3px; background: transparent; content: ""; }
+.admin-navigation button:hover { background: color-mix(in srgb,var(--gh-action) 5%,var(--gh-raised)); }
+.admin-navigation button.is-active { background: color-mix(in srgb,var(--gh-action) 9%,var(--gh-raised)); }
+.admin-navigation button.is-active::after { background: var(--gh-action); }
+.admin-navigation button > span { color: var(--gh-action); font: 800 8px ui-monospace,monospace; letter-spacing: .12em; }
+.admin-navigation button > strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-navigation button > small { overflow: hidden; color: var(--gh-secondary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-navigation button > em { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border: 1px solid var(--gh-action); border-radius: 10px; background: var(--gh-action); color: var(--gh-onAction); font: 800 9px ui-monospace,monospace; font-style: normal; }
+.admin-panel-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--gh-border); }
+.admin-panel-heading span { color: var(--gh-action); font: 800 9px ui-monospace,monospace; letter-spacing: .13em; }
+.admin-panel-heading h2 { margin: 4px 0 0; font-size: 22px; }
+.admin-panel-heading > small { color: var(--gh-secondary); }
+.admin-panel-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid #d8495f; background: color-mix(in srgb,#d8495f 7%,var(--gh-panel)); color: #d8495f; }
+.admin-panel-error button { padding: 6px 9px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.admin-overview-cards { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-bottom: 18px; }
+.admin-overview-cards button { display: grid; gap: 6px; min-width: 0; padding: 15px; border: 1px solid var(--gh-border); background: var(--gh-raised); color: var(--gh-primary); text-align: left; cursor: pointer; }
+.admin-overview-cards button:hover { border-color: var(--gh-action); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 color-mix(in srgb,var(--gh-action) 20%,var(--gh-border)); }
+.admin-overview-cards button.is-warning { border-color: #d8495f; }
+.admin-overview-cards span { color: var(--gh-secondary); font-size: 10px; }
+.admin-overview-cards strong { color: var(--gh-action); font: 800 24px ui-monospace,monospace; }
+.admin-overview-cards small { overflow: hidden; color: var(--gh-secondary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-page .source-operations,.admin-page .provenance-operations,.admin-page .claim-review-queue,.admin-page .campaign-admin,.admin-page .rule-review-queue { margin-bottom: 22px; }
 .admin-notice { margin: -8px 0 18px; padding: 10px 12px; border-left: 3px solid var(--gh-success); background: color-mix(in srgb, var(--gh-success) 8%, var(--gh-panel)); color: var(--gh-primary); font-size: 11px; }
 .automation-health { display: grid; grid-template-columns: 12px minmax(0,1fr) auto; gap: 16px; align-items: center; margin-bottom: 16px; padding: 17px 19px; border: 1px solid color-mix(in srgb, var(--gh-success) 55%, var(--gh-border)); background: color-mix(in srgb, var(--gh-success) 7%, var(--gh-panel)); box-shadow: 4px 4px 0 color-mix(in srgb, var(--gh-success) 15%, var(--gh-border)); }
 .automation-health__pulse { width: 10px; height: 10px; background: var(--gh-success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gh-success) 16%, transparent); animation: automation-pulse 2s steps(2,end) infinite; }
@@ -634,6 +660,8 @@ button { cursor: pointer; }
 .admin-empty strong { color: var(--gh-primary); }
 .admin-empty p, .audit-empty { margin-bottom: 0; font-size: 11px; }
 @media (max-width: 850px) { .admin-grid, .puzzle-ops__list { grid-template-columns: 1fr; } .report-card__head { display: block; } .automation-health { grid-template-columns: 12px 1fr; } .automation-health dl { grid-column: 2; } }
+@media (max-width: 850px) { .admin-navigation { top: 50px; display: flex; overflow-x: auto; scroll-snap-type: x proximity; }.admin-navigation button { flex: 0 0 150px; scroll-snap-align: start; }.admin-overview-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 560px) { .admin-heading { align-items: flex-start; }.admin-heading .admin-count { margin-top: 10px; }.admin-navigation { margin-right: -14px; margin-left: -14px; }.admin-panel-heading h2 { font-size: 19px; }.admin-overview-cards { grid-template-columns: 1fr 1fr; }.admin-overview-cards button { padding: 12px; } }
 @media (max-width: 560px) { .puzzle-ops { padding: 12px; } .puzzle-ops__head { display: block; } .puzzle-ops__head > span { display: inline-block; margin-top: 10px; } .puzzle-op__schedule { grid-template-columns: 1fr 1fr; } .puzzle-op__schedule label { grid-column: 1 / -1; } }
 
 .social-page { max-width: 1120px; }
