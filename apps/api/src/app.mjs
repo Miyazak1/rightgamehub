@@ -506,7 +506,7 @@ export function createApp(dependencies) {
       const body=await renderWorkXhsSlide(work,cover?.body??null,request.params.slide);
       const disposition=request.query.download==='1'?'attachment':'inline';
       reply.header('Cache-Control','public, max-age=300, stale-while-revalidate=86400');
-      reply.header('Content-Disposition',`${disposition}; filename="gamehub-${work.id}-xhs-${request.params.slide}.png"`);
+      reply.header('Content-Disposition',`${disposition}; filename="mooyu-${work.id}-xhs-${request.params.slide}.png"`);
       reply.header('X-Content-Type-Options','nosniff');
       return reply.type('image/png').send(body);
     });

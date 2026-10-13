@@ -30,7 +30,7 @@ export default function GrowthContentStudio({api,demo,demoWorks=[]}){
   if(state.status==='loading')return <section className="growth-studio"><p role="status">正在准备传播素材…</p></section>;
   if(state.status==='error')return <section className="growth-studio"><p role="alert">传播素材暂时无法读取，请稍后重试。</p></section>;
   if(!work)return <section className="growth-studio"><p>还没有可以制作传播素材的公开作品。</p></section>;
-  const version=work.revision||work.updatedAt||'1';
+  const version=`${work.revision||work.updatedAt||'1'}-poster-v2`;
   return <section className="growth-studio" aria-labelledby="growth-studio-title">
     <div className="puzzle-ops__head"><div><span className="kicker">GROWTH CONTENT STUDIO</span><h2 id="growth-studio-title">小红书五图传播包</h2><p>为公开作品生成一套 3:4 图文素材；下载后先人工检查，再发布到对应账号。</p></div><span>1080 × 1440</span></div>
     <div className="growth-studio__layout">
@@ -44,7 +44,7 @@ export default function GrowthContentStudio({api,demo,demoWorks=[]}){
       <div className="growth-studio__canvas">
         <div className="growth-studio__preview"><img src={api.workXhsPromoUrl(work.id,active,{version})} alt={`${work.title} · ${slides.find(([id])=>id===active)?.[2]}预览`}/></div>
         <nav className="growth-studio__slides" aria-label="传播图片分页">{slides.map(([id,index,name,purpose])=><button type="button" className={active===id?'is-active':''} aria-pressed={active===id} onClick={()=>setActive(id)} key={id}><span>{index}</span><strong>{name}</strong><small>{purpose}</small></button>)}</nav>
-        <div className="growth-studio__downloads"><a className="button button--primary" href={api.workXhsPromoUrl(work.id,active,{download:true,version})} download={`gamehub-${work.id}-xhs-${active}.png`}>下载当前图片</a>{slides.map(([id,index])=><a key={id} href={api.workXhsPromoUrl(work.id,id,{download:true,version})} download={`gamehub-${work.id}-xhs-${id}.png`} aria-label={`下载第 ${index} 张`}>{index}</a>)}</div>
+        <div className="growth-studio__downloads"><a className="button button--primary" href={api.workXhsPromoUrl(work.id,active,{download:true,version})} download={`mooyu-${work.id}-xhs-${active}.png`}>下载当前图片</a>{slides.map(([id,index])=><a key={id} href={api.workXhsPromoUrl(work.id,id,{download:true,version})} download={`mooyu-${work.id}-xhs-${id}.png`} aria-label={`下载第 ${index} 张`}>{index}</a>)}</div>
       </div>
     </div>
   </section>;
