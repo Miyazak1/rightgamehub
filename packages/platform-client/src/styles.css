@@ -33,9 +33,10 @@ button { cursor: pointer; }
 .nav-item { min-width: 72px; padding: 0 15px; position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; background: transparent; color: var(--gh-secondary); font-weight: 600; font-size: 13px; }
 .nav-item > span { font-size: 15px; }.nav-item:hover, .nav-item.is-active { color: var(--gh-primary); }.nav-item.is-active::after { content: ''; position: absolute; bottom: 0; left: 18px; right: 18px; height: 2px; border-radius: 2px 2px 0 0; background: var(--gh-action); box-shadow: 0 0 12px var(--gh-glow); }
 .header__tools { justify-self: end; display: flex; align-items: center; gap: 8px; }
-.host-chip, .icon-button, .avatar { height: 32px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
+.host-chip, .icon-button, .avatar, .language-switch { height: 32px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
 .icon-button:disabled { display: none; }
 .host-chip { padding: 0 9px 0 6px; display: flex; align-items: center; gap: 7px; border-radius: 8px; color: var(--gh-secondary); font-size: 11px; font-weight: 650; cursor: default; }.host-mark { min-width: 22px; height: 20px; padding: 0 4px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--gh-action) 54%, var(--gh-border)); background: color-mix(in srgb, var(--gh-action) 13%, var(--gh-panel)); color: var(--gh-primary); font-size: 8px; letter-spacing: .02em; }.icon-button { width: 32px; border-radius: 8px; }.avatar { width: 32px; border-radius: 8px; color: var(--gh-primary); font-size: 11px; font-weight: 750; background: var(--gh-panel); }
+.language-switch { min-width: 42px; padding: 0 7px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--gh-primary); font: 700 10px/1 ui-monospace, "Cascadia Mono", monospace; cursor: pointer; }.language-switch span { color: var(--gh-action); font-size: 11px; }.language-switch:hover, .language-switch:focus-visible { border-color: var(--gh-action); background: color-mix(in srgb, var(--gh-action) 8%, var(--gh-panel)); }
 .page { width: min(1080px, calc(100% - 40px)); margin: 0 auto; padding: 30px 0 64px; }
 .hero { min-height: 420px; display: grid; grid-template-columns: 1.12fr .88fr; align-items: center; border-bottom: 1px solid color-mix(in srgb, var(--gh-border) 62%, transparent); }
 .hero__copy { padding: 34px 0 48px; }.kicker, .eyebrow { color: var(--gh-action); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }.hero h1 { max-width: 700px; margin: 17px 0 20px; font: 700 clamp(38px, 5.1vw, 67px)/1.04 'Space Grotesk', sans-serif; letter-spacing: -.045em; }.hero h1 em { color: var(--gh-action); font-style: normal; text-shadow: 0 0 34px color-mix(in srgb, var(--gh-glow) 22%, transparent); }.hero__copy > p { max-width: 540px; margin: 0; color: var(--gh-secondary); font-size: 16px; line-height: 1.7; }.hero__actions { margin-top: 30px; display: flex; gap: 10px; }
@@ -141,7 +142,7 @@ button { cursor: pointer; }
 .logo, .nav-item, .host-chip, .button, .filter-row button, .resume-card__meta, .break-modes, .quiet-work-row__copy small { font-family: ui-monospace, "Cascadia Mono", "Segoe UI", monospace; }
 .logo__mark { border-radius: 2px; box-shadow: 2px 2px 0 color-mix(in srgb, var(--gh-border) 74%, transparent); }
 .logo__mark svg { filter: drop-shadow(1px 1px 0 color-mix(in srgb, var(--gh-action) 25%, transparent)); }
-.host-chip, .host-mark, .icon-button, .avatar, .quiet-account { border-radius: 2px; }
+.host-chip, .host-mark, .icon-button, .avatar, .language-switch, .quiet-account { border-radius: 2px; }
 .nav-item.is-active::after { height: 3px; border-radius: 0; box-shadow: none; }
 .button { border-radius: 2px; border-color: var(--gh-border); }
 .button--primary { border-color: color-mix(in srgb, var(--gh-action) 70%, var(--gh-border)); box-shadow: 3px 3px 0 color-mix(in srgb, var(--gh-action) 24%, var(--gh-border)); }

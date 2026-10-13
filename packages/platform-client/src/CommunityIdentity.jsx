@@ -1,5 +1,6 @@
 import React from 'react';
 import avatarAtlas from './assets/avatar-atlas-pixel-v1.png';
+import {useI18n} from './I18n.jsx';
 
 function DefaultAvatar({ person, api }) {
   const avatar = person.avatar;
@@ -9,6 +10,7 @@ function DefaultAvatar({ person, api }) {
 }
 
 export default function CommunityIdentity({ person, AvatarView, api, go, suffix = '', showHandle = false, className = '' }) {
+  const {t}=useI18n();
   if (!person) return null;
   const content = <>
     {AvatarView ? <AvatarView avatar={person.avatar} api={api} alt=""/> : <DefaultAvatar person={person} api={api}/>}
@@ -17,6 +19,6 @@ export default function CommunityIdentity({ person, AvatarView, api, go, suffix 
   </>;
   const classes = `community-identity${className ? ` ${className}` : ''}`;
   return person.handle && go
-    ? <button type="button" className={classes} onClick={() => go(`/u/${person.handle}`)} aria-label={`查看 ${person.displayName} 的主页`}>{content}</button>
+    ? <button type="button" className={classes} onClick={() => go(`/u/${person.handle}`)} aria-label={t('community.viewProfile',{name:person.displayName})}>{content}</button>
     : <span className={classes}>{content}</span>;
 }

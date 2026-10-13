@@ -1,14 +1,15 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {mount} from 'ascii.rest';
 import * as earthrise from 'ascii.rest/pieces/earthrise';
+import {useI18n} from './I18n.jsx';
 
 const sections=[
-  ['/community','首页','⌂',route=>route==='/community'],
-  ['/community/feed','动态','✦',route=>route.startsWith('/community/feed')||/^\/community\/(game|ai|computing|posts|author)(\/|$)/.test(route)||route==='/social'],
-  ['/community/projects','一起做','↗',route=>route.startsWith('/community/projects')||route.startsWith('/contribute')],
-  ['/community/events','活动','◫',route=>route.startsWith('/community/events')],
-  ['/community/parties','游戏组队','◉',route=>route.startsWith('/community/parties')],
-  ['/community/me','我的参与','◇',route=>route.startsWith('/community/me')||route==='/community/mine'||route==='/community/bookmarks'],
+  ['/community','community.nav.home','⌂',route=>route==='/community'],
+  ['/community/feed','community.nav.feed','✦',route=>route.startsWith('/community/feed')||/^\/community\/(game|ai|computing|posts|author)(\/|$)/.test(route)||route==='/social'],
+  ['/community/projects','community.nav.projects','↗',route=>route.startsWith('/community/projects')||route.startsWith('/contribute')],
+  ['/community/events','community.nav.events','◫',route=>route.startsWith('/community/events')],
+  ['/community/parties','community.nav.parties','◉',route=>route.startsWith('/community/parties')],
+  ['/community/me','community.nav.mine','◇',route=>route.startsWith('/community/me')||route==='/community/mine'||route==='/community/bookmarks'],
 ];
 
 function CommunityAsciiEarthrise() {
@@ -18,6 +19,7 @@ function CommunityAsciiEarthrise() {
 }
 
 export function CommunityShell({route,go,children}) {
+  const {t}=useI18n();
   const launch=useRef(null),trigger=useRef(null),menu=useRef(null);
   const [launchOpen,setLaunchOpen]=useState(false);
   const overview=route==='/community';
@@ -34,19 +36,19 @@ export function CommunityShell({route,go,children}) {
   const open=path=>{setLaunchOpen(false);go(path);};
   return <main className={`page community-hub-page${overview?' is-overview':''}`}>
     {overview&&<header className="community-hub-hero">
-      <div className="community-hub-hero__copy"><span className="kicker">MOOYU.FUN COMMUNITY</span><h1>社区<span aria-hidden="true">✦</span></h1><p>一起发现、一起做点东西，也一起玩。</p></div>
+      <div className="community-hub-hero__copy"><span className="kicker">MOOYU.FUN COMMUNITY</span><h1>{t('community.title')}<span aria-hidden="true">✦</span></h1><p>{t('community.heroLead')}</p></div>
       <div className="community-hub-hero__ascii" aria-hidden="true"><CommunityAsciiEarthrise/></div>
     </header>}
     <div className="community-hub-toolbar">
-      <nav className="community-hub-nav" aria-label="社区导航">{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
+      <nav className="community-hub-nav" aria-label={t('community.navigation')}>{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><span aria-hidden="true">{icon}</span>{t(label)}</button>)}</nav>
       <div className="community-launch" ref={launch}>
-        <button ref={trigger} type="button" className="community-launch__trigger" aria-haspopup="menu" aria-expanded={launchOpen} aria-controls="community-launch-menu" onClick={()=>setLaunchOpen(value=>!value)}>＋ 发起</button>
-        {launchOpen&&<><button type="button" className="community-launch__backdrop" aria-label="关闭发起菜单" onClick={()=>setLaunchOpen(false)}/><div id="community-launch-menu" className="community-launch__menu" role="menu" aria-label="发起社区内容" ref={menu}>
-          <header className="community-launch__menu-head"><div><strong>发起新的内容</strong><small>选择一种社区参与方式</small></div><button type="button" aria-label="关闭发起菜单" onClick={()=>{setLaunchOpen(false);trigger.current?.focus();}}>×</button></header>
-          <button role="menuitem" type="button" onClick={()=>open('/community/feed/new')}><span>✦</span><strong>发布动态</strong><small>分享游戏、AI 或计算机新发现</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/projects/new')}><span>↗</span><strong>发起项目</strong><small>设定目标、角色与招募计划</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/events/new')}><span>◫</span><strong>组织活动</strong><small>试玩会、聚会、讨论或项目会议</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/parties/new')}><span>◉</span><strong>发起游戏组队</strong><small>选择游戏、人数和开局时间</small></button>
+        <button ref={trigger} type="button" className="community-launch__trigger" aria-haspopup="menu" aria-expanded={launchOpen} aria-controls="community-launch-menu" onClick={()=>setLaunchOpen(value=>!value)}>{t('community.launch')}</button>
+        {launchOpen&&<><button type="button" className="community-launch__backdrop" aria-label={t('community.launchClose')} onClick={()=>setLaunchOpen(false)}/><div id="community-launch-menu" className="community-launch__menu" role="menu" aria-label={t('community.launchMenu')} ref={menu}>
+          <header className="community-launch__menu-head"><div><strong>{t('community.launchTitle')}</strong><small>{t('community.launchLead')}</small></div><button type="button" aria-label={t('community.launchClose')} onClick={()=>{setLaunchOpen(false);trigger.current?.focus();}}>×</button></header>
+          <button role="menuitem" type="button" onClick={()=>open('/community/feed/new')}><span>✦</span><strong>{t('community.launchPost')}</strong><small>{t('community.launchPostLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/projects/new')}><span>↗</span><strong>{t('community.launchProject')}</strong><small>{t('community.launchProjectLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/events/new')}><span>◫</span><strong>{t('community.launchEvent')}</strong><small>{t('community.launchEventLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/parties/new')}><span>◉</span><strong>{t('community.launchParty')}</strong><small>{t('community.launchPartyLead')}</small></button>
         </div></>}
       </div>
     </div>

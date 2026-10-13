@@ -205,7 +205,7 @@ test('official Harness bundle registers platform and local-lab entries without b
 });
 
 test('shared client scopes theme writes and responds to its sidebar container', async () => {
-  const app = await readFile('packages/platform-client/src/App.jsx', 'utf8') + await readFile('packages/platform-client/src/DiscoverPage.jsx', 'utf8');
+  const app = await readFile('packages/platform-client/src/App.jsx', 'utf8') + await readFile('packages/platform-client/src/DiscoverPage.jsx', 'utf8') + await readFile('packages/platform-client/src/i18n.mjs', 'utf8');
   const css = await readFile('packages/platform-client/src/styles.css', 'utf8');
   assert.match(app, /applyThemeTokens\(themeRoot\.current, theme\)/);
   assert.doesNotMatch(app, /applyThemeTokens\(document\.documentElement/);

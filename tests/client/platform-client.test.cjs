@@ -3,11 +3,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 
 test('Windows releases download directly outside managed Agent hosts', async () => {
-  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  const [source, messages] = await Promise.all([
+    fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8'),
+  ]);
   assert.match(source, /const managedWindows = Boolean\(host\?\.desktop\?\.prepareRelease && host\?\.desktop\?\.launchRelease\)/);
-  assert.match(source, /<DownloadLink href=\{windowsDownloadUrl\} fileName=\{windows\.fileName\} onClick=.*?>下载 Windows 版<\/DownloadLink>/);
+  assert.match(source, /<DownloadLink href=\{windowsDownloadUrl\} fileName=\{windows\.fileName\} onClick=.*?>\{t\('detail\.downloadWindows'\)\}<\/DownloadLink>/);
   assert.match(source, /api\.releaseDownloadUrl\(work\.id, windows\.currentReleaseId\)/);
-  assert.match(source, /由浏览器下载 Windows 游戏文件/);
+  assert.match(messages, /'detail\.browserNote': '由浏览器下载 Windows 游戏文件/);
   assert.doesNotMatch(source, /需要 GameHub Agent/);
 });
 
@@ -78,16 +81,17 @@ test('player mounts an opaque-origin sandbox without host storage access', async
 });
 
 test('platform player shell exposes honest lifecycle controls and recoverable stage states', async () => {
-  const [source, styles] = await Promise.all([
+  const [source, styles, messages] = await Promise.all([
     fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
     fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+    fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8'),
   ]);
   assert.match(source, /className="player-bar__identity"/);
-  assert.match(source, /进入全屏/);
-  assert.match(source, /游戏已最小化/);
-  assert.match(source, /游戏已停止/);
-  assert.match(source, /重新启动游戏/);
-  assert.match(source, /停止会结束当前游戏会话/);
+  assert.match(source, /player\.enterFullscreen/);
+  assert.match(source, /player\.minimizedTitle/);
+  assert.match(source, /player\.stoppedTitle/);
+  assert.match(source, /player\.restartGame/);
+  assert.match(messages, /停止会结束当前游戏会话/);
   assert.match(source, /className="player-frame-host" ref=\{mount\}/);
   assert.doesNotMatch(source, /隐藏或显示游戏/);
   assert.match(styles, /\.player-stage \{[^}]*border-radius: 2px/);
@@ -160,17 +164,22 @@ test('API client submits analytics and reads administrator and creator overviews
 });
 
 test('creator insights, README badges and work sharing use stable public links', async () => {
-  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  const [source, messages] = await Promise.all([
+    fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8'),
+  ]);
   assert.match(source, /CREATOR INSIGHTS/);
   assert.match(source, /api\.getCreatorAnalytics\(insights\.days\)/);
-  assert.match(source, /复制 README 徽章/);
+  assert.match(source, /creator\.work\.badgeCopied/);
+  assert.match(messages, /'creator\.copyBadge': '复制 README 徽章'/);
   assert.match(source, /\/v1\/works\/\$\{work\.id\}\/badge\.svg/);
   assert.match(source, /const PUBLIC_GAMEHUB_URL = 'https:\/\/mooyu\.fun'/);
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{work\.id\}/);
   assert.match(source, /className="gamehub-action-icon gamehub-share-icon"/);
-  assert.match(source, /aria-label="分享作品"/);
-  assert.match(source, /复制作品链接/);
-  assert.match(source, /下载分享图/);
+  assert.match(source, /aria-label=\{t\('detail\.shareAria'\)\}/);
+  assert.match(source, /t\('share\.copy'\)/);
+  assert.match(source, /t\('share\.download'\)/);
+  assert.match(messages, /'share\.copy': '复制作品链接'/);
   assert.match(source, /api\?\.workShareCardUrl/);
   assert.match(source, /PUBLIC_GAMEHUB_URL}\/w\/\$\{encodeURIComponent\(work\.id\)\}/);
 });
@@ -283,17 +292,18 @@ test('work sharing keeps bounded attribution through the public handoff and play
 });
 
 test('creator publishing stays direct while Agent toolkits remain optional', async () => {
-  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  const [source, messages] = await Promise.all([fs.readFile('packages/platform-client/src/App.jsx', 'utf8'), fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8')]);
   for (const key of ['bingo','bitsy','puzzlescript','twine','pixel-assets']) assert.match(source, new RegExp(`key: '${key}'`));
   assert.match(source, /OPTIONAL CREATOR TOOLS/);
-  assert.match(source, /不是发布流程，也不是上传作品的前置条件/);
-  assert.match(source, /不使用它们也不会影响创建、上传或发布/);
-  assert.match(source, /复制这条 Agent 任务/);
-  assert.match(source, /<dt>执行位置<\/dt><dd>用户本地<\/dd>/);
-  assert.match(source, /工具与发布相互独立/);
-  assert.match(source, /不会替你创建作品、改变上传入口/);
-  assert.match(source, /onClick=\{\(\) => go\('\/creator\/tools'\)\}>创作工具/);
-  assert.match(source, /onClick=\{\(\) => go\('\/creator\/works\/new'\)\}>新建作品/);
+  assert.match(messages, /不是发布流程，也不是上传作品的前置条件/);
+  assert.match(messages, /不使用它们也不会影响创建、上传或发布/);
+  assert.match(messages, /复制这条 Agent 任务/);
+  assert.match(messages, /'执行位置'/);
+  assert.match(messages, /'用户本地'/);
+  assert.match(messages, /工具与发布相互独立/);
+  assert.match(messages, /不会替你创建作品、改变上传入口/);
+  assert.match(source, /onClick=\{\(\) => go\('\/creator\/tools'\)\}>\{t\('creator\.tools'\)\}/);
+  assert.match(source, /onClick=\{\(\) => go\('\/creator\/works\/new'\)\}>\{t\('creator\.newWork'\)\}/);
   assert.match(source, /route === '\/creator\/tools'\) content = <CreatorToolsPage/);
   assert.match(source, /route === '\/creator\/works\/new'\) content = <NewWorkPage/);
   assert.doesNotMatch(source, /className="ai-studio-gateway"/);
@@ -303,8 +313,8 @@ test('creator publishing stays direct while Agent toolkits remain optional', asy
   assert.doesNotMatch(source, /content = <StudioDraftPage/);
   assert.match(source, /content = <RetiredStudioPage go=\{go\}\/>/);
   assert.match(source, /content = <CreatorDraftReviewPage/);
-  assert.match(source, /这里不提供内容编辑/);
-  assert.match(source, /建立作品资料后，下一步直接上传可运行的 Web ZIP/);
+  assert.match(messages, /这里不提供内容编辑/);
+  assert.match(source, /t\('creator\.new\.lead'\)/);
 });
 
 test('API client creates an authenticated realtime connection ticket', async () => {
@@ -641,25 +651,25 @@ test('API client starts and polls GitHub web authorization without bearer creden
 });
 
 test('GitHub source import UI stays read-only and hands drafts to the controlled build flow', async () => {
-  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
+  const [source, messages] = await Promise.all([fs.readFile('packages/platform-client/src/App.jsx', 'utf8'), fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8')]);
   assert.match(source, /function GitHubImportPage/);
-  assert.match(source, /只读取你授权仓库的元数据、README、许可证和固定提交信息，不执行仓库代码/);
-  assert.match(source, /导入不会自动执行或发布仓库代码/);
-  assert.match(source, /私有仓库地址不会出现在公开作品资料中/);
-  assert.match(source, /未检测到许可证/);
-  assert.match(source, /已找到 index\.html/);
-  assert.match(source, /确认你有权为这个仓库选择或修改许可证/);
-  assert.match(source, /不是仓库权利人？请联系原作者补充许可证/);
-  assert.match(source, /重新检测/);
-  assert.match(source, /创建私有草稿并继续/);
-  assert.match(source, /继续已有草稿/);
+  assert.match(messages, /只读取你授权仓库的元数据、README、许可证和固定提交信息，不执行仓库代码/);
+  assert.match(messages, /导入不会自动执行或发布仓库代码/);
+  assert.match(messages, /私有仓库地址不会出现在公开作品资料中/);
+  assert.match(messages, /未检测到许可证/);
+  assert.match(messages, /已找到 index\.html/);
+  assert.match(messages, /确认你有权为这个仓库选择或修改许可证/);
+  assert.match(messages, /不是仓库权利人？请联系原作者补充许可证/);
+  assert.match(messages, /重新检测/);
+  assert.match(messages, /创建私有草稿并继续/);
+  assert.match(messages, /继续已有草稿/);
   assert.match(source, /state\.preview\.workId/);
-  assert.match(source, /继续构建/);
+  assert.match(source, /creator\.work\.continueBuild/);
   assert.match(source, /sourceProvider === 'github'/);
   assert.match(source, /createGitHubImportedDraft/);
   assert.match(source, /go\(`\/creator\/works\/\$\{result\.work\.id\}\/builds`\)/);
   assert.match(source, /function SourceBuildPage/);
-  assert.match(source, /不会运行 package\.json、脚本或自定义命令/);
+  assert.match(source, /creator\.build\.whatBody/);
 });
 
 test('API client exposes idempotent source builds, status polling and explicit publish', async () => {
@@ -748,8 +758,8 @@ test('API client exposes staged multiplayer rule submission and administrative r
 test('multiplayer rule UI states that approval is not execution, signing or deployment', async () => {
   const submission = await fs.readFile('packages/platform-client/src/MultiplayerRuleSubmissionPage.jsx','utf8');
   const review = await fs.readFile('packages/platform-client/src/MultiplayerRuleReviewQueue.jsx','utf8');
-  assert.match(submission,/平台审核、受控构建、摘要确认和离线签名完成前，不会在 API 或 Realtime 中执行/);
-  assert.match(submission,/提交不等于上线/);
+  assert.match(submission,/creator\.ruleSubmit\.lead/);
+  assert.match(submission,/creator\.ruleSubmit\.notLive/);
   assert.match(review,/“批准构建”不会自动签名、部署或注册模式/);
   assert.match(review,/approve_for_build/);
 });
@@ -783,14 +793,14 @@ test('community navigation unifies sharing and contribution without breaking leg
     fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
   ]);
 
-  assert.match(navigation, /\['\/community', '社区'/);
+  assert.match(navigation, /\['\/community', 'navigation\.community'/);
   assert.doesNotMatch(navigation, /\['\/contribute', '共建'/);
-  assert.match(shell, /'首页'.*'动态'.*'一起做'.*'活动'.*'游戏组队'.*'我的参与'/s);
+  assert.match(shell, /'community\.nav\.home'.*'community\.nav\.feed'.*'community\.nav\.projects'.*'community\.nav\.events'.*'community\.nav\.parties'.*'community\.nav\.mine'/s);
   assert.match(app, /parts\[0\] === 'community' && parts\[1\] === 'projects'/);
   assert.match(app, /route === '\/contribute'.*<CommunityShell/s);
   assert.match(contribution, /\/community\/projects\/tasks\/\$\{item\.id\}/);
   assert.match(community, /<CommunityShell route=\{route\} go=\{go\}>/);
-  assert.match(community, /今天，和谁一起做点什么/);
+  assert.match(community, /t\('community\.homeQuestion'\)/);
   assert.match(shell, /className="community-hub-toolbar"/);
   assert.match(shell, /aria-haspopup="menu"/);
   assert.match(shell, /event\.key==='Escape'/);
@@ -814,15 +824,15 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(client, /communityProjectCreate/);
   assert.match(client, /communityProjectApply/);
   assert.match(client, /communityProjectDecide/);
-  assert.match(projects, /申请加入/);
-  assert.match(projects, /待处理申请/);
+  assert.match(projects, /community\.applyJoin/);
+  assert.match(projects, /community\.pendingApplications/);
   assert.match(projects, /<ContributionCenterPage[^>]*projectId=\{project\.id\}/);
-  assert.match(contribution, /来自项目：\{item\.project\.title\}/);
+  assert.match(contribution, /community\.fromProject/);
   assert.match(app, /<CommunityProjects/);
   assert.match(app, /startCreating=\{parts\[2\]==='new'\}/);
   assert.match(projects, /startCreating=false/);
   assert.match(projects, /if\(startCreating\).*setCreating\(true\).*go\('\/account'\)/);
-  assert.match(projects, /发布项目更新/);
+  assert.match(projects, /community\.publishProjectUpdate/);
 });
 
 test('community typography follows the navigation scale and styles form controls', async () => {
@@ -858,10 +868,10 @@ test('community home spacing stays compact and a lone project uses the full row'
   assert.match(shell, /const overview=route==='\/community'/);
   assert.match(shell, /\{overview&&<header className="community-hub-hero">/);
   assert.match(home, /className="community-dashboard__pulse"/);
-  assert.match(home, /游客可以直接浏览/);
+  assert.match(home, /t\('community\.guestBrowse'\)/);
   assert.match(feed, /community-blocks\$\{full\|\|preview\?'':' is-preview'\}/);
   assert.match(feed, /type==='share'/);
-  assert.match(feed, /阅读全文/);
+  assert.match(feed, /t\('community\.readFull'\)/);
   assert.match(styles, /Community experience upgrade: less ceremony/);
   assert.match(styles, /\.community-blocks\.is-preview p \{[\s\S]*?-webkit-line-clamp: 4;/);
   assert.match(styles, /\.community-dashboard__pulse \{[\s\S]*?grid-template-columns: repeat\(3,minmax\(0,1fr\)\);/);

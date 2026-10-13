@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { demoWorks } from './demo.mjs';
 import { creatorAiTaskKinds, initialAiTaskForm, createCreatorAiTask, currentPublishedReleases, formatCreatorAiTask } from './creator-ai-task.mjs';
+import { useI18n } from './I18n.jsx';
 
 function TaskEditor({ kind, work, releases, demo, go }) {
+  const {t}=useI18n();
   const [form, setForm] = useState(() => initialAiTaskForm(kind));
   const [output, setOutput] = useState(null);
   const [error, setError] = useState('');
@@ -18,8 +20,8 @@ function TaskEditor({ kind, work, releases, demo, go }) {
   const copy = async (value, ref) => {
     try {
       if (!globalThis.navigator?.clipboard?.writeText) throw new Error('Clipboard unavailable');
-      await globalThis.navigator.clipboard.writeText(value); setCopyStatus('已复制，可粘贴到正在编写这个游戏的 AI 会话。');
-    } catch { ref.current?.focus(); ref.current?.select(); setCopyStatus('无法自动复制，已选中文本，请按 Ctrl+C（Mac 使用 ⌘C）。'); }
+      await globalThis.navigator.clipboard.writeText(value); setCopyStatus(t('creator.ai.copied'));
+    } catch { ref.current?.focus(); ref.current?.select(); setCopyStatus(t('creator.ai.copyFallback')); }
   };
   const download = () => {
     const url = URL.createObjectURL(new Blob([output.json + '\n'], { type: 'application/json' }));
@@ -27,31 +29,32 @@ function TaskEditor({ kind, work, releases, demo, go }) {
     document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return <>
-    <section className="creator-ai-context" aria-label="作品上下文"><div><span>当前作品</span><strong>{work.title}</strong><p>{work.description || '尚未填写作品简介'}</p></div><div><span>当前发布版本</span>{published.length ? published.map(release => <strong key={release.id}>{release.targetKey} · {release.label || '已发布版本（见任务包 ID）'}</strong>) : <strong>尚无公开发布版本</strong>}<small>自动带入作品资料；AI 仍需检查你本地的游戏源码。</small></div></section>
+    <section className="creator-ai-context" aria-label={t('creator.ai.contextAria')}><div><span>{t('creator.ai.currentWork')}</span><strong>{work.title}</strong><p>{work.description || t('creator.ai.noDescription')}</p></div><div><span>{t('creator.ai.currentRelease')}</span>{published.length ? published.map(release => <strong key={release.id}>{release.targetKey} · {release.label || t('creator.ai.publishedRelease')}</strong>) : <strong>{t('creator.ai.noPublishedRelease')}</strong>}<small>{t('creator.ai.contextHint')}</small></div></section>
     <div className="creator-ai-layout">
       <form className="panel creator-ai-form" onSubmit={generate}>
-        <span className="kicker">01 · 描述需求</span><h2>{kind === 'multiplayer' ? '希望玩家怎样一起玩？' : '想让玩家比什么？'}</h2>
+        <span className="kicker">01 · {t('creator.ai.describe')}</span><h2>{t(kind === 'multiplayer' ? 'creator.ai.multiplayerQuestion' : 'creator.ai.leaderboardQuestion')}</h2>
         {kind === 'multiplayer' ? <>
-          <label>每局玩家人数<select aria-label="每局玩家人数" name="players" value={form.players} onChange={update}>{Array.from({ length: 7 }, (_, i) => i + 2).map(n => <option key={n} value={n}>{n} 人</option>)}</select></label>
-          <label>联机玩法<textarea name="gameplay" required minLength="10" maxLength="1200" value={form.gameplay} onChange={update} placeholder="例如：两个人轮流移动棋子，先到终点获胜；希望能邀请朋友加入。"/></label>
-          <label>哪些信息只允许自己看到？<textarea name="privateInformation" maxLength="600" value={form.privateInformation} onChange={update} placeholder="可选，例如自己的手牌；没有秘密信息可填写“全部公开”。"/></label>
-          <p className="creator-ai-note">AI 会先判断现有联机能力是否适合玩法。新规则仍需平台审核后才能上线。</p>
+          <label>{t('creator.ai.players')}<select aria-label={t('creator.ai.players')} name="players" value={form.players} onChange={update}>{Array.from({ length: 7 }, (_, i) => i + 2).map(n => <option key={n} value={n}>{t('creator.ai.playerCount',{count:n})}</option>)}</select></label>
+          <label>{t('creator.ai.gameplay')}<textarea name="gameplay" required minLength="10" maxLength="1200" value={form.gameplay} onChange={update} placeholder={t('creator.ai.gameplayPlaceholder')}/></label>
+          <label>{t('creator.ai.privateInfo')}<textarea name="privateInformation" maxLength="600" value={form.privateInformation} onChange={update} placeholder={t('creator.ai.privateInfoPlaceholder')}/></label>
+          <p className="creator-ai-note">{t('creator.ai.multiplayerNote')}</p>
         </> : <>
-          <label>排名指标<input name="metric" required maxLength="40" value={form.metric} onChange={update} placeholder="例如：得分、通关用时、步数"/></label>
-          <div className="creator-ai-fields"><label>怎样排在前面<select aria-label="怎样排在前面" name="direction" value={form.direction} onChange={update}><option value="desc">越大越好</option><option value="asc">越小越好</option></select></label><label>榜单周期<select aria-label="榜单周期" name="period" value={form.period} onChange={update}><option value="all-time">总榜</option><option value="daily">每日榜（北京时间）</option></select></label></div>
-          <label>什么时候计分，怎么算？<textarea name="scoring" required minLength="10" maxLength="1200" value={form.scoring} onChange={update} placeholder="例如：成功通关后记录总用时，暂停时间不计入；用时相同先提交者在前。"/></label>
-          <p className="creator-ai-note">首阶段接入休闲榜，由游戏提交成绩。AI 会检查现有规则，避免新旧成绩混排。</p>
+          <label>{t('creator.ai.metric')}<input name="metric" required maxLength="40" value={form.metric} onChange={update} placeholder={t('creator.ai.metricPlaceholder')}/></label>
+          <div className="creator-ai-fields"><label>{t('creator.ai.direction')}<select aria-label={t('creator.ai.direction')} name="direction" value={form.direction} onChange={update}><option value="desc">{t('creator.ai.desc')}</option><option value="asc">{t('creator.ai.asc')}</option></select></label><label>{t('creator.ai.period')}<select aria-label={t('creator.ai.period')} name="period" value={form.period} onChange={update}><option value="all-time">{t('creator.ai.allTime')}</option><option value="daily">{t('creator.ai.daily')}</option></select></label></div>
+          <label>{t('creator.ai.scoring')}<textarea name="scoring" required minLength="10" maxLength="1200" value={form.scoring} onChange={update} placeholder={t('creator.ai.scoringPlaceholder')}/></label>
+          <p className="creator-ai-note">{t('creator.ai.leaderboardNote')}</p>
         </>}
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="button button--primary" type="submit">生成 AI 任务</button>
+        <button className="button button--primary" type="submit">{t('creator.ai.generate')}</button>
       </form>
-      <aside className="panel creator-ai-handoff"><span className="kicker">02 · 交给你的 AI</span><h2>在游戏项目中继续</h2><ol><li>生成任务后，复制到正在编写这个游戏的 AI 会话。</li><li>让 AI 检查代码、修改、测试，并生成可上传的游戏包。</li><li>检查改动和测试结果，确认后再上传、发布。</li></ol><p>此页面只生成说明，不会调用 AI、修改项目或开始上传。</p><button className="text-button" type="button" onClick={() => go(creatorAiTaskKinds[kind].technicalRoute)}>高级：技术文档与官方模板 →</button></aside>
+      <aside className="panel creator-ai-handoff"><span className="kicker">02 · {t('creator.ai.handoff')}</span><h2>{t('creator.ai.continueProject')}</h2><ol><li>{t('creator.ai.step1')}</li><li>{t('creator.ai.step2')}</li><li>{t('creator.ai.step3')}</li></ol><p>{t('creator.ai.noAutomaticAction')}</p><button className="text-button" type="button" onClick={() => go(creatorAiTaskKinds[kind].technicalRoute)}>{t('creator.ai.advanced')}</button></aside>
     </div>
-    {output && <section className="panel creator-ai-output" aria-label="生成的 AI 任务"><div className="creator-ai-output-head"><div><span className="kicker">任务已准备好</span><h2>复制到 AI 会话</h2></div><button className="button button--primary" type="button" onClick={() => copy(output.prompt, promptRef)}>复制中文任务说明</button></div><textarea ref={promptRef} aria-label="中文 AI 任务说明" readOnly value={output.prompt}/><p role="status">{copyStatus || '包含当前作品、发布版本、接入要求、测试与打包步骤。上传和发布分别需要你确认。'}</p><details><summary>给 AI 或工具使用的 JSON 任务包</summary><div className="creator-ai-output-actions"><button className="button button--secondary" type="button" onClick={() => copy(output.json, jsonRef)}>复制 JSON</button><button className="button button--secondary" type="button" onClick={download}>下载 JSON 任务包</button></div><textarea ref={jsonRef} aria-label="JSON 任务包" readOnly value={output.json}/></details></section>}
+    {output && <section className="panel creator-ai-output" aria-label={t('creator.ai.outputAria')}><div className="creator-ai-output-head"><div><span className="kicker">{t('creator.ai.ready')}</span><h2>{t('creator.ai.copyToSession')}</h2></div><button className="button button--primary" type="button" onClick={() => copy(output.prompt, promptRef)}>{t('creator.ai.copyPrompt')}</button></div><textarea ref={promptRef} aria-label={t('creator.ai.promptAria')} readOnly value={output.prompt}/><p role="status">{copyStatus || t('creator.ai.outputHint')}</p><details><summary>{t('creator.ai.jsonSummary')}</summary><div className="creator-ai-output-actions"><button className="button button--secondary" type="button" onClick={() => copy(output.json, jsonRef)}>{t('creator.ai.copyJson')}</button><button className="button button--secondary" type="button" onClick={download}>{t('creator.ai.downloadJson')}</button></div><textarea ref={jsonRef} aria-label={t('creator.ai.jsonAria')} readOnly value={output.json}/></details></section>}
   </>;
 }
 
 export default function CreatorAiTaskPage({ api, demo = false, go, kind, initialWorkId = '' }) {
+  const {t}=useI18n();
   const [list, setList] = useState({ status: 'loading', works: [] });
   const [selectedId, setSelectedId] = useState(initialWorkId);
   const [context, setContext] = useState({ workId: '', status: 'loading', releases: [] });
@@ -75,11 +78,11 @@ export default function CreatorAiTaskPage({ api, demo = false, go, kind, initial
     }).catch(caught => { if (active) setContext({ workId: work.id, status: caught.status === 401 ? 'auth' : 'error', releases: [] }); });
     return () => { active = false; };
   }, [api, demo, work, retry]);
-  return <main className="page creator-ai-page"><button className="back-link" onClick={() => go('/creator')}>← 返回创作中心</button><header className="creator-ai-heading"><span className="kicker">CREATOR STUDIO · AI</span><h1>{info.title}</h1><p>{info.description}</p>{demo && <small>演示模式：任务包仅包含示例作品，不代表你的项目。</small>}</header>
-    {list.status === 'loading' ? <p role="status">正在读取你的作品…</p> : list.status === 'auth' ? <section className="panel creator-ai-empty"><h2>登录后选择你的作品</h2><p>任务说明会带入当前账号的作品和版本信息。</p><button className="button button--primary" onClick={() => go('/account')}>前往登录</button></section> : list.status === 'forbidden' ? <section className="panel creator-ai-empty"><h2>需要创作者权限</h2><button className="button button--primary" onClick={() => go('/creator')}>返回创作中心申请</button></section> : list.status === 'error' ? <section className="panel creator-ai-empty"><p role="alert">作品暂时无法读取。</p><button className="button button--secondary" onClick={() => setReload(value => value + 1)}>重试读取作品</button></section> : !list.works.length ? <section className="panel creator-ai-empty"><h2>先创建一个作品</h2><p>有了作品资料，就能为它生成准确的接入任务。</p><button className="button button--primary" onClick={() => go('/creator/works/new')}>新建作品</button><button className="text-button" onClick={() => go('/creator/import')}>从 GitHub 导入</button></section> : <>
-      <label className="creator-ai-work-select">选择作品<select aria-label="选择作品" value={selectedId} onChange={event => { setSelectedId(event.target.value); setContext({ workId: '', status: 'loading', releases: [] }); }}><option value="">请选择要改造的作品</option>{list.works.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
-      {selectedId && !work ? <p role="alert">当前账号无法访问此作品，请重新选择。</p> : work && (context.workId !== work.id || context.status === 'loading') ? <p role="status">正在读取当前作品的版本…</p> : work && context.status === 'auth' ? <p role="alert">登录已失效。<button className="text-button" onClick={() => go('/account')}>重新登录</button></p> : work && context.status === 'error' ? <p role="alert">版本信息暂时无法读取。<button className="text-button" onClick={() => setRetry(value => value + 1)}>重试读取版本</button></p> : work ? <TaskEditor key={`${kind}:${work.id}:${work.revision}`} kind={kind} work={work} releases={context.releases} demo={demo} go={go}/> : <p className="creator-ai-note">选好作品后，填写玩法或计分需求即可生成任务。</p>}
+  return <main className="page creator-ai-page"><button className="back-link" onClick={() => go('/creator')}>← {t('creator.backCenter')}</button><header className="creator-ai-heading"><span className="kicker">CREATOR STUDIO · AI</span><h1>{t(`creator.ai.${kind}.title`)}</h1><p>{t(`creator.ai.${kind}.description`)}</p>{demo && <small>{t('creator.ai.demo')}</small>}</header>
+    {list.status === 'loading' ? <p role="status">{t('creator.ai.loadingWorks')}</p> : list.status === 'auth' ? <section className="panel creator-ai-empty"><h2>{t('creator.ai.signInTitle')}</h2><p>{t('creator.ai.signInBody')}</p><button className="button button--primary" onClick={() => go('/account')}>{t('creator.signInAction')}</button></section> : list.status === 'forbidden' ? <section className="panel creator-ai-empty"><h2>{t('creator.ai.permission')}</h2><button className="button button--primary" onClick={() => go('/creator')}>{t('creator.ai.apply')}</button></section> : list.status === 'error' ? <section className="panel creator-ai-empty"><p role="alert">{t('creator.ai.worksFailed')}</p><button className="button button--secondary" onClick={() => setReload(value => value + 1)}>{t('creator.ai.retryWorks')}</button></section> : !list.works.length ? <section className="panel creator-ai-empty"><h2>{t('creator.ai.createFirst')}</h2><p>{t('creator.ai.createFirstBody')}</p><button className="button button--primary" onClick={() => go('/creator/works/new')}>{t('creator.newWork')}</button><button className="text-button" onClick={() => go('/creator/import')}>{t('creator.importGithub')}</button></section> : <>
+      <label className="creator-ai-work-select">{t('creator.ai.selectWork')}<select aria-label={t('creator.ai.selectWork')} value={selectedId} onChange={event => { setSelectedId(event.target.value); setContext({ workId: '', status: 'loading', releases: [] }); }}><option value="">{t('creator.ai.chooseWork')}</option>{list.works.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
+      {selectedId && !work ? <p role="alert">{t('creator.ai.inaccessible')}</p> : work && (context.workId !== work.id || context.status === 'loading') ? <p role="status">{t('creator.ai.loadingReleases')}</p> : work && context.status === 'auth' ? <p role="alert">{t('creator.ai.authExpired')}<button className="text-button" onClick={() => go('/account')}>{t('creator.ai.signInAgain')}</button></p> : work && context.status === 'error' ? <p role="alert">{t('creator.ai.releasesFailed')}<button className="text-button" onClick={() => setRetry(value => value + 1)}>{t('creator.ai.retryReleases')}</button></p> : work ? <TaskEditor key={`${kind}:${work.id}:${work.revision}`} kind={kind} work={work} releases={context.releases} demo={demo} go={go}/> : <p className="creator-ai-note">{t('creator.ai.chooseHint')}</p>}
     </>}
-    <footer className="creator-ai-footer"><button className="text-button" onClick={() => go(info.technicalRoute)}>技术文档与官方模板 ↗</button></footer>
+    <footer className="creator-ai-footer"><button className="text-button" onClick={() => go(info.technicalRoute)}>{t('creator.ai.technicalDocs')}</button></footer>
   </main>;
 }
