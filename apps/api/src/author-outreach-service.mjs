@@ -78,7 +78,7 @@ export class PostgresAuthorOutreachRepository{
               AND draft_template_version<$6 AND contact_reference IS NULL AND last_contacted_at IS NULL
             RETURNING id`,[record.workId,record.repositoryKey,record.repositoryUrl,record.draftSubject,record.draftBody,record.draftTemplateVersion,actorUserId]);
           if(upgradedRecord.rowCount){upgraded++;await client.query(`INSERT INTO author_outreach_events(id,outreach_id,actor_user_id,action,from_status,to_status,details)
-            VALUES($1,$2,$3,'updated','review','review',$4)`,[record.eventId,upgradedRecord.rows[0].id,actorUserId,{reason:'bilingual_template_upgrade',draftTemplateVersion:record.draftTemplateVersion}]);}
+            VALUES($1,$2,$3,'updated','review','review',$4)`,[record.eventId,upgradedRecord.rows[0].id,actorUserId,{reason:'brand_template_upgrade',draftTemplateVersion:record.draftTemplateVersion}]);}
         }
       }
       await client.query('COMMIT');return{inserted,upgraded};
@@ -114,7 +114,7 @@ export function createAuthorOutreachService({repository,siteOrigin='https://mooy
     const title=clean(candidate.title,70);
     const subject=`MOOYU.FUN invitation / 墨鱼工坊认领邀请：${title}`.slice(0,120);
     const body=`Hello, ${repo.owner} team,\n\nWe are MOOYU.FUN, an open game and creator community where players can directly experience independent games and open projects. Based on the ${candidate.license_spdx} license and the public repository information, we created a playable community catalog page for “${title}”:\n${workUrl}\n\nOriginal repository:\n${repo.url}\n\nThe page is clearly labeled as “listed by the platform, awaiting author claim” and is not presented as an official release. You are welcome to review it. If you choose to claim it on MOOYU.FUN, you can maintain its description, releases, and availability. If you would prefer the work not to be displayed, simply reply and we will prioritize your request.\n\nThis is a one-time, human-reviewed invitation for this specific project. It will not be sent again automatically. Thank you for creating and sharing your work.\n\n---\n\n中文\n\n你好，${repo.owner} 团队：\n\n我们是墨鱼工坊（MOOYU.FUN），一个让玩家直接体验独立游戏和开放作品的游戏与创作社区。我们依据 ${candidate.license_spdx} 许可证和公开仓库信息，为《${title}》建立了一个可直接试玩的社区收录页面：\n${workUrl}\n\n原仓库：\n${repo.url}\n\n当前页面明确标记为“平台代收录、等待作者认领”，不会冒充官方版本。你可以先核对页面；如果愿意，可以在墨鱼工坊认领后维护介绍、版本与下架状态。如果你不希望该作品继续展示，也可以直接回复，我们会优先处理。\n\n这是一封针对该作品的一次性人工邀请，不会自动重复发送。谢谢你创造并开放这个项目。`;
-    return {id:ids(),eventId:ids(),workId:candidate.work_id,repositoryKey:repo.key,repositoryUrl:repo.url,draftSubject:subject,draftBody:body,draftTemplateVersion:2};
+    return {id:ids(),eventId:ids(),workId:candidate.work_id,repositoryKey:repo.key,repositoryUrl:repo.url,draftSubject:subject,draftBody:body,draftTemplateVersion:3};
   };
   return Object.freeze({
     async sync(actor){requireAdmin(actor);const candidates=await repository.candidates();const records=candidates.map(draft).filter(Boolean);const result=await repository.sync({actorUserId:actor.userId,records});return{inserted:result.inserted,upgraded:result.upgraded,totalCandidates:records.length,items:await repository.list(null,100)};},

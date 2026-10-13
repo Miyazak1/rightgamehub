@@ -21,7 +21,7 @@ test('author outreach discovers only repository candidates and writes truthful d
   assert.equal(result.inserted,1);
   assert.equal(synced.records[0].repositoryKey,'open-team/orbital');
   assert.equal(synced.records[0].repositoryUrl,'https://github.com/Open-Team/Orbital');
-  assert.equal(synced.records[0].draftTemplateVersion,2);
+  assert.equal(synced.records[0].draftTemplateVersion,3);
   assert.match(synced.records[0].draftSubject,/^MOOYU\.FUN invitation \/ 墨鱼工坊认领邀请/u);
   assert.ok(synced.records[0].draftBody.indexOf('Hello, Open-Team team,')<synced.records[0].draftBody.indexOf('\n中文\n'));
   assert.match(synced.records[0].draftBody,/This is a one-time, human-reviewed invitation/u);
@@ -47,10 +47,13 @@ test('author outreach requires an actual contact record before marking sent',asy
 });
 
 test('outreach migration and query preserve eligibility, deduplication and append-only audit',async()=>{
-  const [migration,bilingualMigration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0066_author_outreach_bilingual_template.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
+  const [migration,bilingualMigration,brandMigration,service]=await Promise.all([fs.readFile(path.join(root,'apps/api/migrations/0065_author_outreach_queue.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0066_author_outreach_bilingual_template.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/migrations/0067_author_outreach_brand.sql'),'utf8'),fs.readFile(path.join(root,'apps/api/src/author-outreach-service.mjs'),'utf8')]);
   assert.match(migration,/repository_key text NOT NULL UNIQUE/u);
   assert.match(migration,/author outreach events are append-only/u);
   assert.match(bilingualMigration,/draft_template_version/u);
+  assert.match(brandMigration,/MOOYU\.FUN/u);
+  assert.match(brandMigration,/墨鱼工坊/u);
+  assert.match(brandMigration,/draft_template_version/u);
   assert.match(service,/w\.attribution_kind='community_catalog'/u);
   assert.match(service,/w\.state='published'/u);
   assert.match(service,/w\.license_spdx IS NOT NULL/u);
@@ -65,13 +68,13 @@ test('outreach sync upgrades only an untouched review draft and records the temp
   const queries=[];
   const client={query:async(sql,params)=>{queries.push({sql,params});if(sql==='BEGIN'||sql==='COMMIT')return{rowCount:0,rows:[]};if(sql.includes('INSERT INTO author_outreach_records'))return{rowCount:0,rows:[]};if(sql.includes('UPDATE author_outreach_records'))return{rowCount:1,rows:[{id:'00000000-0000-4000-8000-000000000065'}]};return{rowCount:1,rows:[]};},release:()=>{}};
   const repository=new PostgresAuthorOutreachRepository({connect:async()=>client});
-  const result=await repository.sync({actorUserId:'00000000-0000-4000-8000-000000000001',records:[{id:'00000000-0000-4000-8000-000000000002',eventId:'00000000-0000-4000-8000-000000000003',workId:'00000000-0000-4000-8000-000000000004',repositoryKey:'example/game',repositoryUrl:'https://github.com/example/game',draftSubject:'GameHub invitation / GameHub 认领邀请：Game',draftBody:'English invitation first. This body is deliberately long enough.\n\n---\n\n中文\n\n中文邀请在后。',draftTemplateVersion:2}]});
+  const result=await repository.sync({actorUserId:'00000000-0000-4000-8000-000000000001',records:[{id:'00000000-0000-4000-8000-000000000002',eventId:'00000000-0000-4000-8000-000000000003',workId:'00000000-0000-4000-8000-000000000004',repositoryKey:'example/game',repositoryUrl:'https://github.com/example/game',draftSubject:'MOOYU.FUN invitation / 墨鱼工坊认领邀请：Game',draftBody:'English invitation first. This body is deliberately long enough.\n\n---\n\n中文\n\n中文邀请在后。',draftTemplateVersion:3}]});
   assert.deepEqual(result,{inserted:0,upgraded:1});
   const update=queries.find(query=>query.sql.includes('UPDATE author_outreach_records'));
   assert.match(update.sql,/status='review' AND version=1/u);
   assert.match(update.sql,/draft_template_version<\$6/u);
   const event=queries.find(query=>query.sql.includes("'updated','review','review'"));
-  assert.equal(event.params[3].reason,'bilingual_template_upgrade');
+  assert.equal(event.params[3].reason,'brand_template_upgrade');
 });
 
 test('author outreach HTTP routes are admin-authenticated, no-store and schema-bound',async t=>{
