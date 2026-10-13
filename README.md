@@ -1,6 +1,10 @@
-# Agent 游戏平台可行性验证
+# 墨鱼工坊（MOOYU.FUN）
 
-本项目已经具备单机邀请内测部署基线；仍不是可直接开放匿名投稿的公测生产平台。
+打开就玩，也一起创造。
+
+墨鱼工坊是面向玩家与创作者的轻量游戏和互动作品平台，正式域名为 <https://mooyu.fun>。本项目已经具备单机邀请内测部署基线；仍不是可直接开放匿名投稿的公测生产平台。
+
+公共界面统一使用“墨鱼工坊 / MOOYU.FUN”；为了保持现有客户端、插件和部署兼容，代码中的 `gamehub` 标识、API 请求头和本地数据目录暂不更名。完整约定见 [品牌命名与迁移规范](docs/70-mooyu-workshop-brand-migration.zh-CN.md)。
 
 
 ## 添加到 Agent
@@ -11,7 +15,7 @@
 | --- | --- | --- |
 | DeepSeek Harness | 原生右栏（`mooyu.fun` 官方安装器） | Windows 安装脚本使用 `-HostName harness`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- harness` |
 | VS Code / Cursor | 原生侧栏（`mooyu.fun` 官方安装器） | Windows：`& ([scriptblock]::Create((irm https://mooyu.fun/install.ps1))) -HostName cursor`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- cursor`（将 `cursor` 换成 `code` 即安装 VS Code） |
-| Codex / ChatGPT | `mooyu.fun` 官方技能安装器；MCP App 开发中 | Windows 安装脚本使用 `-HostName codex`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- codex`，随后在 Plugins Directory 安装 `gamehub` |
+| Codex / ChatGPT | `mooyu.fun` 官方技能安装器；MCP App 开发中 | Windows 安装脚本使用 `-HostName codex`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- codex`，随后在 Plugins Directory 的“墨鱼工坊插件”来源中安装 `gamehub` |
 | Claude Code | `mooyu.fun` 官方技能安装器；MCP 开发中 | Windows 安装脚本使用 `-HostName claude`；macOS/Linux：`curl -fsSL https://mooyu.fun/install.sh \| sh -s -- claude` |
 | Windsurf / OpenCode / 其他 Agent | 检测到兼容原生能力时内置，否则浏览器 | <https://mooyu.fun> |
 
@@ -54,7 +58,7 @@ M1.9 已完成真实服务闭环：共享客户端通过显式 CORS 连接本机
 - [普通 EXE 平台启动入口](./start-gamehub-desktop-test.bat)：独立端口 3085，上传后点击“下载到本机”，再点“启动（独立窗口）”；下载不会自动运行，退出游戏由用户在其窗口操作。
 - [上传适配包的独立验收入口](./start-gamehub-package-test.bat)：端口 3084，生成自有 ZIP 与 0.0.11 插件；在大厅上传 [gamehub-owned-sidebar-1.0.0.zip](./artifacts/gamehub-owned-sidebar-1.0.0.zip)，准备运行缓存后手动开始。不会自动打开浏览器或启动游戏。
 - [离屏样本启动文件](./start-gamehub-offscreen-test.bat)：独立 3083 profile，需本地已核验运行时；不自动打开页面或启动游戏。进入右栏后手动点击“开始离屏运行样本”。
-- 本机双击 `start-gamehub-m0.bat` 启动独立测试配置，访问输出地址后在右栏选择“GameHub”或历史“本机试验场”。无需配置模型 Key。
+- 本机双击 `start-gamehub-m0.bat` 启动独立测试配置，访问输出地址后在右栏选择“墨鱼工坊”或历史“本机试验场”。无需配置模型 Key。
 - 启动器使用 Harness 本地的 `node_modules/.bin/pnpm`，无需全局安装 pnpm；已验证移除 Codex 工具路径后仍能通过 BAT 启动。
 - 修改后执行 `npm run pack:harness`，测试包生成到 `artifacts`；详细边界见实测记录。
 

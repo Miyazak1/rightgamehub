@@ -2,9 +2,9 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
   "version": "0.3.0",
-  "description": "Discover, create locally, validate and publish GameHub experiences from supported AI agents.",
+  "description": "Discover, play, create locally, validate and publish MOOYU.FUN games from supported AI agents.",
   "author": {
-    "name": "GameHub",
+    "name": "墨鱼工坊 MOOYU.FUN",
     "url": "https://mooyu.fun"
   },
   "homepage": "https://mooyu.fun/install",
@@ -19,22 +19,22 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "GameHub",
-        "shortDescription": "Discover and launch lightweight Agent games",
-        "longDescription": "Use GameHub from supported Agent surfaces, with a safe browser fallback when the host cannot embed the full experience.",
-        "developerName": "GameHub",
+        "displayName": "墨鱼工坊 MOOYU.FUN",
+        "shortDescription": "发现、游玩和创作轻量游戏",
+        "longDescription": "在支持的 Agent 中使用墨鱼工坊；宿主无法安全内置完整界面时，回退到官方网页。",
+        "developerName": "MOOYU.FUN",
         "category": "Developer Tools",
         "capabilities": [
           "Discover games",
-          "Open GameHub",
+          "Open MOOYU.FUN",
           "Create games locally",
           "Validate local web projects",
           "Publish games"
         ],
         "websiteURL": "https://mooyu.fun",
         "defaultPrompt": [
-          "Open GameHub and help me choose a short game.",
-          "Use a GameHub creator toolkit to make a game in this workspace."
+          "打开墨鱼工坊，帮我选择一款适合现在玩的短游戏。",
+          "使用墨鱼工坊创作工具，在当前工作区制作一款游戏。"
         ],
         "brandColor": "#8B5CF6"
       }

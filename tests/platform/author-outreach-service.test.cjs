@@ -22,7 +22,7 @@ test('author outreach discovers only repository candidates and writes truthful d
   assert.equal(synced.records[0].repositoryKey,'open-team/orbital');
   assert.equal(synced.records[0].repositoryUrl,'https://github.com/Open-Team/Orbital');
   assert.equal(synced.records[0].draftTemplateVersion,2);
-  assert.match(synced.records[0].draftSubject,/^GameHub invitation \/ GameHub 认领邀请/u);
+  assert.match(synced.records[0].draftSubject,/^MOOYU\.FUN invitation \/ 墨鱼工坊认领邀请/u);
   assert.ok(synced.records[0].draftBody.indexOf('Hello, Open-Team team,')<synced.records[0].draftBody.indexOf('\n中文\n'));
   assert.match(synced.records[0].draftBody,/This is a one-time, human-reviewed invitation/u);
   assert.match(synced.records[0].draftBody,/MIT/u);

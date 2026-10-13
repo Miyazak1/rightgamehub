@@ -8,13 +8,13 @@ export const workStructuredData = ({ work, siteOrigin, shareCardUrl }) => ({
   '@context': 'https://schema.org',
   '@type': work.kind === 'game' ? 'VideoGame' : work.kind === 'tool' ? 'SoftwareApplication' : 'CreativeWork',
   name: work.title,
-  description: String(work.description || `在 GameHub 在线体验《${work.title}》。`).trim(),
+  description: String(work.description || `在墨鱼工坊在线体验《${work.title}》。`).trim(),
   url: `${siteOrigin}/w/${encodeURIComponent(work.id)}`,
   image: shareCardUrl,
   ...(work.creatorDisplayName ? { author: { '@type': 'Person', name: work.creatorDisplayName } } : {}),
   isAccessibleForFree: true,
   inLanguage: 'zh-CN',
-  publisher: { '@type': 'Organization', name: 'GameHub', url: siteOrigin },
+  publisher: { '@type': 'Organization', name: '墨鱼工坊 MOOYU.FUN', url: siteOrigin },
 });
 
 export const campaignStructuredData = ({ campaign, siteOrigin, image }) => ({
@@ -25,7 +25,7 @@ export const campaignStructuredData = ({ campaign, siteOrigin, image }) => ({
   url: `${siteOrigin}/discover/c/${encodeURIComponent(campaign.slug)}`,
   image,
   inLanguage: 'zh-CN',
-  publisher: { '@type': 'Organization', name: 'GameHub', url: siteOrigin },
+  publisher: { '@type': 'Organization', name: '墨鱼工坊 MOOYU.FUN', url: siteOrigin },
   mainEntity: {
     '@type': 'ItemList',
     itemListElement: (campaign.items ?? []).map((item, index) => ({

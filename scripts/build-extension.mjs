@@ -26,6 +26,6 @@ await build({
   banner: { js: `const PLATFORM_CSS=${JSON.stringify(css)};` },
   logLevel: 'silent',
 });
-console.log('Built the shared GameHub client for VS Code/Cursor WebviewView.');
+console.log('Built the shared MOOYU.FUN client for VS Code/Cursor WebviewView.');
 
 await build({entryPoints:[fileURLToPath(new URL('src/file-export.mjs',extensionRoot))],outfile:fileURLToPath(new URL('file-export.cjs',out)),bundle:true,format:'cjs',platform:'node',target:['node20'],logLevel:'silent'});

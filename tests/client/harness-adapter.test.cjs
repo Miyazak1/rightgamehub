@@ -198,7 +198,7 @@ test('official Harness bundle registers platform and local-lab entries without b
   assert.match(bundle, /gamehub-platform/);
   assert.match(bundle, /gamehub-local-lab/);
   assert.match(bundle, /GAMEHUB LOCAL LAB/);
-  assert.match(bundle, /GAMEHUB ACCOUNT/);
+  assert.match(bundle, /MOOYU\.FUN ACCOUNT/);
   assert.match(bundle, /require\("react"\)/);
   assert.doesNotMatch(bundle, /react-dom/);
   assert.doesNotThrow(() => new vm.Script(bundle));
@@ -297,16 +297,16 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
   assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
   assert.equal(claudeManifest.name, 'gamehub');
-  assert.equal(claudeMarketplace.owner.name, 'GameHub');
+  assert.equal(claudeMarketplace.owner.name, '墨鱼工坊 MOOYU.FUN');
   assert.equal(claudeMarketplace.plugins[0].source, './plugins/gamehub');
   assert.match(publisher, /credentials\.gamehub\.local/);
-  assert.match(publisher, /GitHub Agent Publisher|GameHub Agent Publisher/);
+  assert.match(publisher, /deviceLabel: "\\u58A8\\u9C7C\\u5DE5\\u574A Agent Publisher"/);
   assert.doesNotMatch(publisher, /GAMEHUB_(?:ACCESS|REFRESH)_TOKEN/);
   assert.match(skill, /creator-submit\.mjs/);
   assert.match(skill, /creator-toolkit\.mjs list/);
   assert.match(skill, /Creator Doctor/);
   assert.match(skill, /Never ask the user to paste a token/);
-  assert.match(toolkitCli, /GameHub creator toolkit catalog is missing/);
+  assert.match(toolkitCli, /\\u58A8\\u9C7C\\u5DE5\\u574A\\u521B\\u4F5C\\u5DE5\\u5177\\u76EE\\u5F55\\u7F3A\\u5931/);
   assert.equal(toolkitCatalog.execution.workspace, 'user-local');
   assert.equal(toolkitCatalog.execution.remoteExecution, false);
   assert.equal(toolkitCatalog.execution.modelProvider, 'user-agent');

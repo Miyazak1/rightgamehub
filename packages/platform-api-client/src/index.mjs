@@ -102,7 +102,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
       if (error instanceof ApiError || error?.code === 'BRIDGE_ACCOUNT_CHANGED' || error?.code === 'BRIDGE_CLOSED') throw error;
       if (signal?.aborted) throw new ApiError({ code: 'REQUEST_CANCELLED', message: '请求已取消。', retryable: false });
       if (error?.name === 'AbortError' || timeout.signal.aborted) throw new ApiError({ code: 'REQUEST_TIMEOUT', message: '连接超时，请检查网络后重试。' });
-      throw new ApiError({ message: '暂时无法连接 GameHub，请稍后重试。' });
+      throw new ApiError({ message: '暂时无法连接墨鱼工坊，请稍后重试。' });
     } finally { clearTimeout(timer); if (!hasCombinedSignal) signal?.removeEventListener('abort', cancel); }
   }
   async function authenticatedDownload(path, options = {}) {

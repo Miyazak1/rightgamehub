@@ -279,7 +279,7 @@ export function createContributionTaskService({repository,ids=()=>crypto.randomU
     readNotification(actor,id){requireUser(actor);taskId(id);return repository.readNotification(actor,id);},
     async issueDraft(actor,id){
       requireCreator(actor);taskId(id);const task=await repository.recordIssueDraft({actor,taskId:id,eventId:ids()}),info=githubRepository(task.repositoryUrl);
-      const body=['## 新手贡献任务','',task.description,'',`- 难度：${task.difficulty}`,`- 技能：${task.skills.length?task.skills.join('、'):'不限'}`,`- GameHub 作品：${task.workTitle}`,'','---','由作品作者从 GameHub 贡献任务中确认后生成；请在 GitHub 提交前再次检查内容。'].join('\n'),title=`[Good first issue] ${task.title}`;
+      const body=['## 新手贡献任务','',task.description,'',`- 难度：${task.difficulty}`,`- 技能：${task.skills.length?task.skills.join('、'):'不限'}`,`- 墨鱼工坊作品：${task.workTitle}`,'','---','由作品作者从墨鱼工坊贡献任务中确认后生成；请在 GitHub 提交前再次检查内容。'].join('\n'),title=`[Good first issue] ${task.title}`;
       return {taskId:task.id,title,body,repositoryUrl:info?.url??null,createUrl:info?`${info.url}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent('good first issue')}`:null};
     },
   });

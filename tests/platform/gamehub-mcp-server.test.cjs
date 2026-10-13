@@ -80,7 +80,7 @@ test('portable plugin connects the remote MCP server and ships through the commo
   assert.match(caddy, /handle \/mcp-app[\s\S]*frame-ancestors 'self' https:\/\/web-sandbox\.oaiusercontent\.com https:\/\/\*\.web-sandbox\.oaiusercontent\.com/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*codex-sandbox:/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*Cache-Control "no-store"/u);
-  assert.match(app, /游戏和交互界面由 GameHub 服务器提供/u);
+  assert.match(app, /游戏和交互界面由墨鱼工坊服务器提供/u);
   assert.match(app, /每 6 小时校验新版/u);
 });
 

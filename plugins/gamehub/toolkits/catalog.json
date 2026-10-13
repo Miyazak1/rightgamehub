@@ -20,7 +20,7 @@
       "sourceFormat": "gamehub.bingo-v1",
       "output": "private-platform-draft",
       "template": "templates/creator-bingo",
-      "agentPrompt": "在当前用户工作区创建或更新一个 GameHub Bingo 创作包。使用官方 creator-bingo 模板，只修改 creator-manifest.json 和 source/bingo.json；本地校验通过后等待用户明确要求再提交。"
+      "agentPrompt": "在当前用户工作区创建或更新一个墨鱼工坊 Bingo 创作包。使用官方 creator-bingo 模板，只修改 creator-manifest.json 和 source/bingo.json；本地校验通过后等待用户明确要求再提交。"
     },
     {
       "key": "bitsy",

@@ -48,7 +48,7 @@ async function verifiedArtifact(item) {
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: quiet ? 'ignore' : 'inherit', shell: false });
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`${command} rejected the GameHub update.`);
+  if (result.status !== 0) throw new Error(`${command} rejected the MOOYU.FUN update.`);
 }
 async function installPortable(item) {
   const { bytes } = await verifiedArtifact(item);
@@ -74,16 +74,16 @@ if (updater) {
   const currentBytes = await readFile(currentPath);
   if (hash(currentBytes) !== String(updater.sha256).toLowerCase()) {
     const response = await fetch(updater.url, { cache: 'no-store' });
-    if (!response.ok) throw new Error('Unable to refresh the GameHub updater.');
+    if (!response.ok) throw new Error('Unable to refresh the MOOYU.FUN updater.');
     const nextBytes = Buffer.from(await response.arrayBuffer());
-    if (hash(nextBytes) !== String(updater.sha256).toLowerCase()) throw new Error('GameHub updater self-update verification failed.');
+    if (hash(nextBytes) !== String(updater.sha256).toLowerCase()) throw new Error('MOOYU.FUN updater self-update verification failed.');
     const nextPath = currentPath + '.next';
     await writeFile(nextPath, nextBytes, { mode: 0o700 });
     await rename(nextPath, currentPath);
-    log('GameHub updater refreshed; the new updater will be used on the next check.');
+    log('MOOYU.FUN updater refreshed; the new updater will be used on the next check.');
   }
 }
-if (manifest.channel !== 'stable') throw new Error('GameHub updater only accepts the stable channel.');
+if (manifest.channel !== 'stable') throw new Error('MOOYU.FUN updater only accepts the stable channel.');
 let item;
 if (host === 'cursor' || host === 'code') item = manifest.editorExtension;
 else if (host === 'harness') item = manifest.harnessPlugin;
@@ -109,10 +109,10 @@ if (host === 'cursor' || host === 'code') {
   await installPortable(item);
   await writeState('installing', { percent: 100 });
   if (host === 'codex') run('codex', ['plugin', 'marketplace', 'upgrade', 'gamehub']);
-  else log(`GameHub ${item.version} is staged for Claude Code. Restart Claude Code and refresh the GameHub marketplace.`);
+  else log(`MOOYU.FUN ${item.version} is staged for Claude Code. Restart Claude Code and refresh the MOOYU.FUN marketplace.`);
 }
 await writeState('ready', { percent: 100, restartRequired: true });
-log(`GameHub ${item.version} is installed or staged for ${host}. Restart the host to activate it.`);
+log(`MOOYU.FUN ${item.version} is installed or staged for ${host}. Restart the host to activate it.`);
 } catch (error) {
   await writeState('failed', { message: '更新暂未完成，后台稍后会自动重试。' }).catch(() => {});
   throw error;

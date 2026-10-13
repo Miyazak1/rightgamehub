@@ -98,7 +98,7 @@ test('GitHub OAuth callback accepts the GitHub authorization issuer', async t =>
 
   assert.equal(response.statusCode, 200);
   assert.equal(callbackQuery.iss, issuer);
-  assert.match(response.body, /已连接 GameHub/);
+  assert.match(response.body, /已连接墨鱼工坊/);
   assert.match(response.body, /setTimeout\(closePage,700\)/);
   const nonce = response.headers['content-security-policy'].match(/script-src 'nonce-([^']+)'/u)?.[1];
   assert.ok(nonce);
@@ -202,7 +202,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.equal(badge.statusCode, 200);
   assert.match(badge.headers['content-type'], /^image\/svg\+xml/u);
   assert.equal(badge.headers['x-content-type-options'], 'nosniff');
-  assert.match(badge.body, /PLAY ON GAMEHUB/u);
+  assert.match(badge.body, /PLAY ON MOOYU\.FUN/u);
   assert.deepEqual(calls[1], ['catalog', workId]);
   const card = await app.inject({ method: 'GET', url: `/v1/works/${workId}/share-card.png?download=1` });
   assert.equal(card.statusCode, 200);
@@ -218,7 +218,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.equal(page.headers['x-content-type-options'], 'nosniff');
   assert.equal(page.headers['referrer-policy'], 'no-referrer');
   assert.match(page.headers['content-security-policy'], /script-src 'nonce-/u);
-  assert.match(page.body, /<title>公开游戏 &lt;测试&gt; \| GameHub<\/title>/u);
+  assert.match(page.body, /<title>公开游戏 &lt;测试&gt; \| 墨鱼工坊 MOOYU\.FUN<\/title>/u);
   assert.match(page.body, /<link rel="canonical" href="https:\/\/games\.example\/w\/00000000-0000-4000-8000-000000000777">/u);
   assert.match(page.body, /property="og:description" content="一起玩 &amp; 分享"/u);
   assert.match(page.body, /property="og:image" content="https:\/\/games\.example\/v1\/works\/00000000-0000-4000-8000-000000000777\/share-card\.png\?v=7"/u);

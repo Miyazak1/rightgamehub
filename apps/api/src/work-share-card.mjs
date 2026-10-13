@@ -10,7 +10,7 @@ const escapeXml = value => String(value ?? '').replace(/[&<>"']/gu, character =>
 
 const units = character => /[\u0000-\u00ff]/u.test(character) ? 1 : 2;
 const titleLines = value => {
-  const characters = Array.from(String(value || 'GameHub 作品').replace(/\s+/gu, ' ').trim());
+  const characters = Array.from(String(value || '墨鱼工坊作品').replace(/\s+/gu, ' ').trim());
   const lines = ['']; let lineUnits = 0;
   for (const character of characters) {
     const size = units(character);
@@ -31,7 +31,7 @@ const overlaySvg = work => {
   const lines = titleLines(work.title);
   const titleSize = lines.length > 1 ? 54 : 64;
   const firstY = lines.length > 1 ? 430 : 468;
-  const creator = work.creatorDisplayName || (work.id === 'gamehub-guess-baike' ? 'GameHub' : '社区作者');
+  const creator = work.creatorDisplayName || (work.id === 'gamehub-guess-baike' ? '墨鱼工坊' : '社区作者');
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
     <defs>
       <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#100c19" stop-opacity=".08"/><stop offset=".5" stop-color="#100c19" stop-opacity=".22"/><stop offset="1" stop-color="#100c19" stop-opacity=".98"/></linearGradient>
@@ -40,7 +40,7 @@ const overlaySvg = work => {
     <rect width="1200" height="630" fill="url(#shade)"/>
     <rect width="1200" height="630" fill="url(#grid)"/>
     <path fill="#8b5cf6" d="M58 48h18v18h18v18h18v18H94v18H76v-18H58V84H40V66h18z"/>
-    <text x="132" y="83" fill="#fff" font-family="${FONT_STACK}" font-size="26" font-weight="800" letter-spacing="2">GAME<tspan fill="#b89cff">HUB</tspan></text>
+    <text x="132" y="83" fill="#fff" font-family="${FONT_STACK}" font-size="26" font-weight="800" letter-spacing="2">墨鱼<tspan fill="#b89cff">工坊</tspan></text>
     <rect x="938" y="47" width="204" height="42" fill="#15111f" fill-opacity=".76" stroke="#b89cff" stroke-width="2"/>
     <text x="1040" y="75" text-anchor="middle" fill="#f7f4ff" font-family="${FONT_STACK}" font-size="17" font-weight="700" letter-spacing="2">免费在线游玩</text>
     <text x="58" y="${firstY}" fill="#fff" font-family="${FONT_STACK}" font-size="${titleSize}" font-weight="800">${escapeXml(lines[0])}</text>

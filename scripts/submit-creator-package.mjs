@@ -14,11 +14,11 @@ const baseUrl = new URL(valueAfter('--base-url') ?? process.env.GAMEHUB_API_BASE
 const siteUrl = new URL(valueAfter('--site-url') ?? baseUrl);
 
 if (args.some(value => /token|secret|key/iu.test(value))) {
-  throw new Error('提交命令不接受 token、secret 或 key 参数；请先在 GameHub Agent 宿主中登录。');
+  throw new Error('提交命令不接受 token、secret 或 key 参数；请先在墨鱼工坊 Agent 宿主中登录。');
 }
 
 const credentials = await createGcmCredentialStore();
-if (!credentials.available) throw new Error('系统凭据库不可用。请在支持 GameHub 安全凭据桥的 Agent 宿主中登录后重试。');
+if (!credentials.available) throw new Error('系统凭据库不可用。请在支持墨鱼工坊安全凭据桥的 Agent 宿主中登录后重试。');
 
 const apiClient = createApiClient({
   baseUrl,
@@ -28,8 +28,8 @@ const apiClient = createApiClient({
 });
 let existing = await credentials.get();
 if (!existing) {
-  const challenge = (await apiClient.startGitHubDevice({ clientKind:'harness',deviceLabel:'GameHub Agent Publisher' })).data;
-  process.stderr.write(`需要登录 GameHub。请打开 ${challenge.verificationUri} 并输入代码 ${challenge.userCode}\n`);
+  const challenge = (await apiClient.startGitHubDevice({ clientKind:'harness',deviceLabel:'墨鱼工坊 Agent Publisher' })).data;
+  process.stderr.write(`需要登录墨鱼工坊。请打开 ${challenge.verificationUri} 并输入代码 ${challenge.userCode}\n`);
   const expiresAt = Date.parse(challenge.expiresAt);
   let retryAfter = Math.max(1,Number(challenge.intervalSeconds) || 5);
   while (!existing && Date.now() < expiresAt) {

@@ -26,9 +26,9 @@ button { cursor: pointer; }
 .brand-button { padding: 0; border: 0; background: none; justify-self: start; }
 .logo { display: flex; align-items: center; gap: 9px; font-family: inherit; font-size: 14px; font-weight: 720; letter-spacing: .03em; }
 .logo > span:last-child > span { color: var(--gh-action); }
-.logo__mark { width: 28px; height: 28px; position: relative; display: inline-block; border: 1px solid color-mix(in srgb, var(--gh-action) 36%, var(--gh-border)); border-radius: 8px; background: color-mix(in srgb, var(--gh-action) 9%, var(--gh-panel)); }
-.logo__mark i { position: absolute; display: block; background: var(--gh-action); border-radius: 2px; }
-.logo__mark i:nth-child(1) { width: 4px; height: 13px; left: 8px; top: 9px; }.logo__mark i:nth-child(2) { width: 13px; height: 4px; left: 8px; top: 9px; }.logo__mark i:nth-child(3) { width: 5px; height: 5px; right: 7px; bottom: 7px; border-radius: 50%; box-shadow: -5px -5px 0 color-mix(in srgb, var(--gh-action) 70%, white); }
+.logo__mark { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--gh-action) 36%, var(--gh-border)); border-radius: 8px; background: color-mix(in srgb, var(--gh-action) 9%, var(--gh-panel)); }
+.logo__mark svg { width: 23px; height: 23px; display: block; }
+.mooyu-mark__body { fill: var(--gh-action); }.mooyu-mark__eye { fill: var(--gh-panel); }.mooyu-mark__pupil { fill: var(--gh-primary); }
 .desktop-nav { display: flex; align-items: stretch; height: 56px; gap: 2px; }
 .nav-item { min-width: 72px; padding: 0 15px; position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; background: transparent; color: var(--gh-secondary); font-weight: 600; font-size: 13px; }
 .nav-item > span { font-size: 15px; }.nav-item:hover, .nav-item.is-active { color: var(--gh-primary); }.nav-item.is-active::after { content: ''; position: absolute; bottom: 0; left: 18px; right: 18px; height: 2px; border-radius: 2px 2px 0 0; background: var(--gh-action); box-shadow: 0 0 12px var(--gh-glow); }
@@ -140,7 +140,7 @@ button { cursor: pointer; }
 .header { border-bottom-width: 2px; }
 .logo, .nav-item, .host-chip, .button, .filter-row button, .resume-card__meta, .break-modes, .quiet-work-row__copy small { font-family: ui-monospace, "Cascadia Mono", "Segoe UI", monospace; }
 .logo__mark { border-radius: 2px; box-shadow: 2px 2px 0 color-mix(in srgb, var(--gh-border) 74%, transparent); }
-.logo__mark i { border-radius: 0; }
+.logo__mark svg { filter: drop-shadow(1px 1px 0 color-mix(in srgb, var(--gh-action) 25%, transparent)); }
 .host-chip, .host-mark, .icon-button, .avatar, .quiet-account { border-radius: 2px; }
 .nav-item.is-active::after { height: 3px; border-radius: 0; box-shadow: none; }
 .button { border-radius: 2px; border-color: var(--gh-border); }

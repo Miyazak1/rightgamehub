@@ -34,7 +34,7 @@ export function CommunityShell({route,go,children}) {
   const open=path=>{setLaunchOpen(false);go(path);};
   return <main className={`page community-hub-page${overview?' is-overview':''}`}>
     {overview&&<header className="community-hub-hero">
-      <div className="community-hub-hero__copy"><span className="kicker">GAMEHUB COMMUNITY</span><h1>社区<span aria-hidden="true">✦</span></h1><p>一起发现、一起做点东西，也一起玩。</p></div>
+      <div className="community-hub-hero__copy"><span className="kicker">MOOYU.FUN COMMUNITY</span><h1>社区<span aria-hidden="true">✦</span></h1><p>一起发现、一起做点东西，也一起玩。</p></div>
       <div className="community-hub-hero__ascii" aria-hidden="true"><CommunityAsciiEarthrise/></div>
     </header>}
     <div className="community-hub-toolbar">

@@ -21,4 +21,4 @@ const templateRoot = new URL('templates/creator-bingo/',pluginRoot);
 await mkdir(new URL('source/',templateRoot),{ recursive:true });
 for (const file of ['creator-manifest.json','README.md','.gitignore']) await copyFile(new URL(`templates/creator-bingo/${file}`,root),new URL(file,templateRoot));
 await copyFile(new URL('templates/creator-bingo/source/bingo.json',root),new URL('source/bingo.json',templateRoot));
-console.log('Built the portable GameHub creator publisher, local toolkit Doctor, and Bingo template.');
+console.log('Built the portable MOOYU.FUN creator publisher, local toolkit Doctor, and Bingo template.');

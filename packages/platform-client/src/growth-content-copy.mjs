@@ -7,7 +7,7 @@ const dateKey=date=>{
 const topicTags=work=>[...(work.tags??[]).map(compact),work.kind==='game'?'网页游戏':'互动作品',work.openSource?'开源游戏':'免费游戏'].filter(Boolean).slice(0,5);
 
 export function buildXhsDraft(work,{origin='https://mooyu.fun',now=new Date()}={}){
-  const title=compact(work.title||'GameHub 作品');
+  const title=compact(work.title||'墨鱼工坊作品');
   const campaignKey=`xhs-${dateKey(now)}-${String(work.id).slice(0,8)}`;
   const url=new URL(`/w/${encodeURIComponent(work.id)}`,origin);
   url.searchParams.set('gh_src','campaign');
@@ -20,7 +20,7 @@ export function buildXhsDraft(work,{origin='https://mooyu.fun',now=new Date()}={
   return {
     title:`这个${work.openSource?'开源':'免费'}小游戏，打开浏览器就能玩｜${title}`.slice(0,60),
     body:[
-      `最近在 GameHub 发现《${title}》。`,
+      `最近在墨鱼工坊发现《${title}》。`,
       compact(work.description)||'一款可以直接在线体验的轻量作品。',
       '',
       `✦ ${minutes}`,

@@ -46,7 +46,7 @@ function Get-VerifiedFile($Item, [string]$Destination) {
     Invoke-WebRequest -UseBasicParsing -Uri $Item.url -OutFile $partial
     Write-UpdateState 'verifying' 100
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $partial).Hash.ToLowerInvariant()
-    if ($actual -ne $Item.sha256.ToLowerInvariant()) { throw "GameHub update verification failed for $($Item.filename)." }
+    if ($actual -ne $Item.sha256.ToLowerInvariant()) { throw "墨鱼工坊更新校验失败：$($Item.filename)。" }
     Move-Item -LiteralPath $partial -Destination $Destination -Force
   } finally {
     if (Test-Path -LiteralPath $partial) { Remove-Item -LiteralPath $partial -Force }
@@ -81,15 +81,15 @@ if ($manifest.updater -and $manifest.updater.windows) {
     try {
       Invoke-WebRequest -UseBasicParsing -Uri $updater.url -OutFile $nextScript
       $nextHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $nextScript).Hash.ToLowerInvariant()
-      if ($nextHash -ne $updater.sha256.ToLowerInvariant()) { throw 'GameHub updater self-update verification failed.' }
+      if ($nextHash -ne $updater.sha256.ToLowerInvariant()) { throw '墨鱼工坊更新器自更新校验失败。' }
       Move-Item -LiteralPath $nextScript -Destination $currentScript -Force
-      Write-UpdateMessage 'GameHub updater refreshed; the new updater will be used on the next check.'
+      Write-UpdateMessage '墨鱼工坊更新器已刷新，将在下次检查时使用。'
     } finally {
       if (Test-Path -LiteralPath $nextScript) { Remove-Item -LiteralPath $nextScript -Force }
     }
   }
 }
-if ($manifest.channel -ne 'stable') { throw 'GameHub updater only accepts the stable channel.' }
+if ($manifest.channel -ne 'stable') { throw '墨鱼工坊更新器仅接受 stable 通道。' }
 if ($HostName -in @('cursor', 'code')) {
   # Editor extensions update inside Cursor/VS Code so users can see progress and receive a restart prompt.
   Unregister-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Confirm:$false -ErrorAction SilentlyContinue
@@ -102,7 +102,7 @@ if ($HostName -in @('cursor', 'code')) {
   $artifact = Join-Path $stateRoot $item.filename
   Get-VerifiedFile $item $artifact
   & $HostName --install-extension $artifact --force
-  if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the staged GameHub update." }
+  if ($LASTEXITCODE -ne 0) { throw "$HostName 未能安装已暂存的墨鱼工坊更新。" }
 } elseif ($HostName -eq 'harness') {
   $item = $manifest.harnessPlugin
   $script:updateVersion = [string]$item.version
@@ -117,7 +117,7 @@ if ($HostName -in @('cursor', 'code')) {
   Get-VerifiedFile $item $artifact
   Write-UpdateState 'installing' 100
   & dsh plugin --profile web add $artifact
-  if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness rejected the staged GameHub update.' }
+  if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness 未能安装已暂存的墨鱼工坊更新。' }
 } else {
   $item = $manifest.agentPlugin
   if ($previous.version -eq $item.version -and $previous.sha256 -eq $item.sha256) { exit 0 }
@@ -125,13 +125,13 @@ if ($HostName -in @('cursor', 'code')) {
   if (-not (Get-Command $HostName -ErrorAction SilentlyContinue)) { throw "$HostName CLI is not available." }
   if ($HostName -eq 'codex') {
     & codex plugin marketplace upgrade gamehub
-    if ($LASTEXITCODE -ne 0) { throw 'Codex could not refresh the GameHub marketplace.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Codex 无法刷新墨鱼工坊 marketplace。' }
   } else {
     # Claude Code reloads marketplace content on its native plugin refresh path.
     # We stage the verified files here and leave activation to the host.
-    Write-UpdateMessage "GameHub $($item.version) is staged for Claude Code. Restart Claude Code and refresh the GameHub marketplace."
+    Write-UpdateMessage "墨鱼工坊 $($item.version) 已为 Claude Code 暂存。请重启 Claude Code 并刷新墨鱼工坊 marketplace。"
   }
 }
 
 @{ host = $HostName; channel = 'stable'; phase = 'ready'; version = $item.version; sha256 = $item.sha256; percent = 100; message = $null; updatedAt = [DateTime]::UtcNow.ToString('o'); stagedAt = [DateTime]::UtcNow.ToString('o'); restartRequired = $true } | ConvertTo-Json | Set-Content -LiteralPath $stateFile -Encoding UTF8
-Write-UpdateMessage "GameHub $($item.version) is installed or staged for $HostName. Restart the host to activate it."
+Write-UpdateMessage "墨鱼工坊 $($item.version) 已为 $HostName 安装或暂存。请重启宿主以激活更新。"

@@ -1,6 +1,6 @@
-# GameHub for VS Code / Cursor
+# 墨鱼工坊 for VS Code / Cursor
 
-这是 GameHub 共享客户端的编辑器宿主。VS Code 与 Cursor 使用同一份 VSIX；运行时会根据 `vscode.env.appName` 显示真实宿主，并跟随编辑器主题。
+这是墨鱼工坊共享客户端的编辑器宿主。VS Code 与 Cursor 使用同一份 VSIX；运行时会根据 `vscode.env.appName` 显示真实宿主，并跟随编辑器主题。
 
 ## 安装
 
@@ -11,14 +11,14 @@ code --install-extension gamehub-agent-<版本>.vsix
 cursor --install-extension gamehub-agent-<版本>.vsix
 ```
 
-重载编辑器后，点击 Activity Bar 的 GameHub 图标。扩展默认连接 `https://mooyu.fun`；私有部署可在编辑器设置中调整 `gamehub.apiUrl` 和 `gamehub.browserUrl`。
+重载编辑器后，点击 Activity Bar 的墨鱼工坊图标。扩展默认连接 `https://mooyu.fun`；私有部署可在编辑器设置中调整 `gamehub.apiUrl` 和 `gamehub.browserUrl`。
 
 ## 当前能力
 
 - 共享大厅、猜百科、账号、创作中心与管理界面；
 - VS Code/Cursor 主题色和高对比度跟随；
 - access/refresh token 通过 SecretStorage 保存；
-- 用户主动执行“GameHub: 提交当前创作包”时，读取工作区内的 `creator-manifest.json` 和声明的结构化源码，本地校验后提交为私有草稿；
+- 用户主动执行“墨鱼工坊: 提交当前创作包”时，读取工作区内的 `creator-manifest.json` 和声明的结构化源码，本地校验后提交为私有草稿；
 - Web 作品在隔离运行页游玩；
 - 除上述显式提交操作外不读取工作区文件；不运行 Shell，也不向游戏 frame 暴露编辑器 API。
 

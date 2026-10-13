@@ -288,7 +288,7 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
         unavailableReasons: {
           ...(!desktopEnabled ? {
             canManageDownloads: bootstrap.remoteName ? '远程编辑器窗口不能管理本机游戏下载。' : 'Windows 本机启动能力不可用。',
-            canLaunchDesktop: bootstrap.remoteName ? '请在本机 Cursor 或 VS Code 窗口中打开 GameHub。' : 'Windows 本机启动能力不可用。',
+            canLaunchDesktop: bootstrap.remoteName ? '请在本机 Cursor 或 VS Code 窗口中打开墨鱼工坊。' : 'Windows 本机启动能力不可用。',
           } : {}),
           canPlayNativeInPanel: '原生程序将在独立窗口运行。',
         },

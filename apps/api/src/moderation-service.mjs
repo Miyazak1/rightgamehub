@@ -102,7 +102,7 @@ export function createModerationService({ repository }) {
   return {
     async report(actor, workId, body) {
       requireUser(actor);
-      if (!uuidPattern.test(workId)) throw new ModerationError('REPORT_UNAVAILABLE', 409, '官方内置作品请通过反馈渠道联系 GameHub。');
+      if (!uuidPattern.test(workId)) throw new ModerationError('REPORT_UNAVAILABLE', 409, '官方内置作品请通过反馈渠道联系墨鱼工坊。');
       if (!categories.has(body.category)) throw new ModerationError('CATEGORY_INVALID', 400, '请选择有效的举报类型。');
       const details = String(body.details ?? '').trim();
       if (details.length > 1000) throw new ModerationError('DETAILS_TOO_LONG', 400, '补充说明不能超过 1000 个字符。');

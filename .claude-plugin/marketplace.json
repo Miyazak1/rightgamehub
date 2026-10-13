@@ -1,15 +1,15 @@
 {
   "name": "gamehub",
-  "description": "Install GameHub skills and integrations for Claude Code.",
+  "description": "Install MOOYU.FUN skills and integrations for Claude Code.",
   "owner": {
-    "name": "GameHub",
+    "name": "墨鱼工坊 MOOYU.FUN",
     "url": "https://mooyu.fun"
   },
   "plugins": [
     {
       "name": "gamehub",
       "source": "./plugins/gamehub",
-      "description": "Discover, create locally, validate and publish GameHub experiences with a safe browser fallback."
+      "description": "Discover, create locally, validate and publish MOOYU.FUN games with a safe browser fallback."
     }
   ]
 }

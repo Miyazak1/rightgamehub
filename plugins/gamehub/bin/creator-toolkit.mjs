@@ -111,7 +111,7 @@ async function loadCatalog() {
     } catch {
     }
   }
-  throw new Error("GameHub creator toolkit catalog is missing. Reinstall or update the GameHub Agent plugin.");
+  throw new Error("\u58A8\u9C7C\u5DE5\u574A\u521B\u4F5C\u5DE5\u5177\u76EE\u5F55\u7F3A\u5931\uFF0C\u8BF7\u91CD\u65B0\u5B89\u88C5\u6216\u66F4\u65B0\u58A8\u9C7C\u5DE5\u574A Agent \u63D2\u4EF6\u3002");
 }
 var catalog = await loadCatalog();
 var [command = "list", keyOrPath, ...flags] = process.argv.slice(2);
@@ -135,7 +135,7 @@ if (command === "list") {
   if (asJson) process.stdout.write(`${JSON.stringify(catalog, null, 2)}
 `);
   else {
-    console.log(`GameHub Agent \u521B\u4F5C\u5DE5\u5177 \xB7 ${catalog.version}`);
+    console.log(`\u58A8\u9C7C\u5DE5\u574A Agent \u521B\u4F5C\u5DE5\u5177 \xB7 ${catalog.version}`);
     for (const toolkit of catalog.toolkits) console.log(`- ${toolkit.key.padEnd(14)} ${toolkit.name} \xB7 ${toolkit.status} \xB7 ${toolkit.bestFor.join(" / ")}`);
     console.log("\n\u4F7F\u7528 show <key> \u67E5\u770B\u4EA4\u7ED9 Agent \u7684\u672C\u5730\u5236\u4F5C\u4EFB\u52A1\u3002");
   }

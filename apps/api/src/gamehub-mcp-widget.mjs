@@ -8,7 +8,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>GameHub</title>
+  <title>墨鱼工坊 · MOOYU.FUN</title>
   <style>
     :root{color-scheme:light dark;font-family:Inter,system-ui,-apple-system,"Segoe UI","Microsoft YaHei UI",sans-serif}
     *{box-sizing:border-box}html,body,#gamehub-frame{width:100%;height:100%;min-height:520px;margin:0}
@@ -18,8 +18,8 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   </style>
 </head>
 <body>
-  <iframe id="gamehub-frame" title="GameHub 游戏平台" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
-  <p class="fallback" id="fallback">当前宿主无法显示内置界面。<a id="external" target="_blank" rel="noreferrer">在 GameHub 打开</a></p>
+  <iframe id="gamehub-frame" title="墨鱼工坊游戏平台" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+  <p class="fallback" id="fallback">当前宿主无法显示内置界面。<a id="external" target="_blank" rel="noreferrer">在墨鱼工坊打开</a></p>
   <script type="module">
     const SITE_ORIGIN=${encodedOrigin};
     const frame=document.getElementById('gamehub-frame');
@@ -36,7 +36,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
     window.addEventListener('message',event=>{const message=event.data;if(event.source===frame.contentWindow&&message?.type==='gamehub/navigation.openExternal'){try{const url=new URL(message.href);if(url.protocol!=='https:'||!['github.com','www.github.com'].includes(url.hostname))return;if(globalThis.openai?.openExternal)globalThis.openai.openExternal({href:url.href});else window.open(url.href,'_blank','noopener,noreferrer');}catch{}return;}if(event.source!==window.parent)return;if(!message||message.jsonrpc!=='2.0')return;if(message.id!=null){const item=pending.get(message.id);if(!item)return;pending.delete(message.id);message.error?item.reject(message.error):item.resolve(message.result);return;}if(message.method==='ui/notifications/tool-result')update(message.params);},{passive:true});
     frame.addEventListener('error',()=>{fallback.style.display='block';});
     show(globalThis.openai?.toolOutput?.view||{path:'/discover'});
-    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.4'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted GameHub view.',error);}
+    try{await request('ui/initialize',{appInfo:{name:'gamehub-platform',version:'2.0.4'},appCapabilities:{},protocolVersion:'2026-01-26'});notify('ui/notifications/initialized',{});await request('ui/request-display-mode',{mode:'fullscreen'}).catch(()=>{});}catch(error){console.warn('MCP Apps bridge unavailable; using the hosted MOOYU.FUN view.',error);}
   </script>
 </body>
 </html>`;

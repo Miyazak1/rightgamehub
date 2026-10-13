@@ -188,7 +188,7 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
       if (error instanceof ApiError || error?.code === "BRIDGE_ACCOUNT_CHANGED" || error?.code === "BRIDGE_CLOSED") throw error;
       if (signal?.aborted) throw new ApiError({ code: "REQUEST_CANCELLED", message: "\u8BF7\u6C42\u5DF2\u53D6\u6D88\u3002", retryable: false });
       if (error?.name === "AbortError" || timeout.signal.aborted) throw new ApiError({ code: "REQUEST_TIMEOUT", message: "\u8FDE\u63A5\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5\u3002" });
-      throw new ApiError({ message: "\u6682\u65F6\u65E0\u6CD5\u8FDE\u63A5 GameHub\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" });
+      throw new ApiError({ message: "\u6682\u65F6\u65E0\u6CD5\u8FDE\u63A5\u58A8\u9C7C\u5DE5\u574A\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" });
     } finally {
       clearTimeout(timer);
       if (!hasCombinedSignal) signal?.removeEventListener("abort", cancel);
@@ -804,10 +804,10 @@ async function main() {
   const baseUrl = new URL(valueAfter("--base-url") ?? process.env.GAMEHUB_API_BASE_URL ?? "https://mooyu.fun").origin;
   const siteUrl = new URL(valueAfter("--site-url") ?? baseUrl);
   if (args.some((value) => /token|secret|key/iu.test(value))) {
-    throw new Error("\u63D0\u4EA4\u547D\u4EE4\u4E0D\u63A5\u53D7 token\u3001secret \u6216 key \u53C2\u6570\uFF1B\u8BF7\u5148\u5728 GameHub Agent \u5BBF\u4E3B\u4E2D\u767B\u5F55\u3002");
+    throw new Error("\u63D0\u4EA4\u547D\u4EE4\u4E0D\u63A5\u53D7 token\u3001secret \u6216 key \u53C2\u6570\uFF1B\u8BF7\u5148\u5728\u58A8\u9C7C\u5DE5\u574A Agent \u5BBF\u4E3B\u4E2D\u767B\u5F55\u3002");
   }
   const credentials = await createGcmCredentialStore();
-  if (!credentials.available) throw new Error("\u7CFB\u7EDF\u51ED\u636E\u5E93\u4E0D\u53EF\u7528\u3002\u8BF7\u5728\u652F\u6301 GameHub \u5B89\u5168\u51ED\u636E\u6865\u7684 Agent \u5BBF\u4E3B\u4E2D\u767B\u5F55\u540E\u91CD\u8BD5\u3002");
+  if (!credentials.available) throw new Error("\u7CFB\u7EDF\u51ED\u636E\u5E93\u4E0D\u53EF\u7528\u3002\u8BF7\u5728\u652F\u6301\u58A8\u9C7C\u5DE5\u574A\u5B89\u5168\u51ED\u636E\u6865\u7684 Agent \u5BBF\u4E3B\u4E2D\u767B\u5F55\u540E\u91CD\u8BD5\u3002");
   const apiClient = createApiClient({
     baseUrl,
     getAccessToken: async () => (await credentials.get())?.accessToken ?? null,
@@ -816,8 +816,8 @@ async function main() {
   });
   let existing = await credentials.get();
   if (!existing) {
-    const challenge = (await apiClient.startGitHubDevice({ clientKind: "harness", deviceLabel: "GameHub Agent Publisher" })).data;
-    process.stderr.write(`\u9700\u8981\u767B\u5F55 GameHub\u3002\u8BF7\u6253\u5F00 ${challenge.verificationUri} \u5E76\u8F93\u5165\u4EE3\u7801 ${challenge.userCode}
+    const challenge = (await apiClient.startGitHubDevice({ clientKind: "harness", deviceLabel: "\u58A8\u9C7C\u5DE5\u574A Agent Publisher" })).data;
+    process.stderr.write(`\u9700\u8981\u767B\u5F55\u58A8\u9C7C\u5DE5\u574A\u3002\u8BF7\u6253\u5F00 ${challenge.verificationUri} \u5E76\u8F93\u5165\u4EE3\u7801 ${challenge.userCode}
 `);
     const expiresAt = Date.parse(challenge.expiresAt);
     let retryAfter = Math.max(1, Number(challenge.intervalSeconds) || 5);

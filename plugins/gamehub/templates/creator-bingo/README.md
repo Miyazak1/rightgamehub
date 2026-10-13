@@ -10,13 +10,13 @@ npm run creator:validate -- ./templates/creator-bingo
 
 通过后，Agent 将 manifest 和结构化源码提交到平台草稿 API；平台负责再次校验、固定编译、隔离预览和发布。
 
-已登录 GameHub 的 VS Code / Cursor 中，可打开命令面板执行：
+已登录墨鱼工坊的 VS Code / Cursor 中，可打开命令面板执行：
 
 ```text
-GameHub: 提交当前创作包
+墨鱼工坊：提交当前创作包
 ```
 
-使用 GameHub Harness 系统凭据桥时，也可以在平台仓库中运行：
+使用墨鱼工坊 Harness 系统凭据桥时，也可以在平台仓库中运行：
 
 ```bash
 npm run creator:submit -- ./templates/creator-bingo

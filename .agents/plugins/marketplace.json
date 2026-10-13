@@ -1,7 +1,7 @@
 {
   "name": "gamehub",
   "interface": {
-    "displayName": "GameHub Plugins"
+    "displayName": "墨鱼工坊插件"
   },
   "plugins": [
     {

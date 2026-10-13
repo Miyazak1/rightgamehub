@@ -10,7 +10,7 @@ export const guessBaikeWork = Object.freeze({
   firstPublishedAt: '2026-09-28T00:00:00.000Z',
   coverUrl: null,
   estimatedMinutes: 5, tags: ['推理', '每日一题'], agentLabel: null,
-  repositoryUrl: null, licenseSpdx: null, creatorDisplayName: 'GameHub', creatorHandle: null, playCount: 0, saveCount: 0,
+  repositoryUrl: null, licenseSpdx: null, creatorDisplayName: '墨鱼工坊', creatorHandle: null, playCount: 0, saveCount: 0,
   ingestionMethod: 'platform', attributionKind: 'publisher', sourceCommitSha: null, openSource: false, remixable: false, claimStatus: 'publisher', claimEligible: false,
   targets: [{ targetKey: 'web', state: 'published', currentReleaseId: null, revision: '1' }],
 });

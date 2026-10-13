@@ -11,9 +11,9 @@ export function createConfiguredMailer(config, fetchImpl = globalThis.fetch) {
         body: JSON.stringify({
           from: config.mailFrom,
           to: [email],
-          subject: `${code} · GameHub 登录验证码`,
-          text: `你的 GameHub 登录验证码是 ${code}。验证码将在 ${expiresAt.toISOString()} 前失效。若不是你本人操作，请忽略此邮件。`,
-          html: `<div style="font-family:ui-monospace,monospace;max-width:520px;margin:auto;padding:28px;border:2px solid #6d36d8"><p>GameHub 登录验证码</p><div style="font-size:32px;font-weight:800;letter-spacing:8px">${code}</div><p style="color:#625f6d">10 分钟内有效。若不是你本人操作，请忽略此邮件。</p></div>`,
+          subject: `${code} · 墨鱼工坊登录验证码`,
+          text: `你的墨鱼工坊登录验证码是 ${code}。验证码将在 ${expiresAt.toISOString()} 前失效。若不是你本人操作，请忽略此邮件。`,
+          html: `<div style="font-family:ui-monospace,monospace;max-width:520px;margin:auto;padding:28px;border:2px solid #6d36d8"><p>墨鱼工坊 · MOOYU.FUN 登录验证码</p><div style="font-size:32px;font-weight:800;letter-spacing:8px">${code}</div><p style="color:#625f6d">10 分钟内有效。若不是你本人操作，请忽略此邮件。</p></div>`,
         }),
       });
       if (!response.ok) throw new Error(`MAIL_DELIVERY_FAILED:${response.status}`);

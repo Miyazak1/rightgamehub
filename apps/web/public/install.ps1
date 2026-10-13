@@ -21,16 +21,16 @@ function Enable-GameHubUpdates {
     $partial = "$updaterPath.part"
     Invoke-WebRequest -UseBasicParsing -Uri $manifest.updater.windows.url -OutFile $partial
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $partial).Hash.ToLowerInvariant()
-    if ($actual -ne $manifest.updater.windows.sha256.ToLowerInvariant()) { throw 'GameHub updater SHA-256 verification failed.' }
+    if ($actual -ne $manifest.updater.windows.sha256.ToLowerInvariant()) { throw '墨鱼工坊更新器 SHA-256 校验失败。' }
     Move-Item -LiteralPath $partial -Destination $updaterPath -Force
     $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
     $arguments = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$updaterPath`" -HostName $HostName -Quiet"
     $action = New-ScheduledTaskAction -Execute $powershell -Argument $arguments
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(15) -RepetitionInterval (New-TimeSpan -Hours $manifest.updatePolicy.checkIntervalHours)
-    Register-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Action $action -Trigger $trigger -Description 'Downloads verified stable GameHub updates; the Agent activates them after restart.' -Force | Out-Null
-    Write-Host "Automatic GameHub updates enabled for $HostName. Updates activate after the Agent restarts."
+    Register-ScheduledTask -TaskName "GameHub Agent Update ($HostName)" -Action $action -Trigger $trigger -Description '下载经过校验的墨鱼工坊稳定版更新；Agent 重启后生效。' -Force | Out-Null
+    Write-Host "已为 $HostName 启用墨鱼工坊自动更新；Agent 重启后生效。"
   } catch {
-    Write-Warning "GameHub was installed, but automatic update scheduling was unavailable: $($_.Exception.Message)"
+    Write-Warning "墨鱼工坊已安装，但无法创建自动更新任务：$($_.Exception.Message)"
   } finally {
     if ($partial -and (Test-Path -LiteralPath $partial)) { Remove-Item -LiteralPath $partial -Force }
   }
@@ -43,11 +43,11 @@ if ($HostName -in @('cursor', 'code')) {
   try {
     Invoke-WebRequest -UseBasicParsing -Uri $extension.url -OutFile $tempFile
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tempFile).Hash.ToLowerInvariant()
-    if ($actual -ne $extension.sha256.ToLowerInvariant()) { throw 'GameHub VSIX SHA-256 verification failed.' }
+    if ($actual -ne $extension.sha256.ToLowerInvariant()) { throw '墨鱼工坊 VSIX 的 SHA-256 校验失败。' }
     & $HostName --install-extension $tempFile --force
-    if ($LASTEXITCODE -ne 0) { throw "$HostName rejected the GameHub VSIX." }
-    Write-Host "GameHub $($extension.version) installed for $HostName. Future updates download silently inside the extension and activate after the editor restarts."
-    Write-Host "Reload the editor and open GameHub from the Activity Bar."
+    if ($LASTEXITCODE -ne 0) { throw "$HostName 未能安装墨鱼工坊 VSIX。" }
+    Write-Host "墨鱼工坊 $($extension.version) 已安装到 $HostName；后续更新会在扩展内静默下载，并在编辑器重启后生效。"
+    Write-Host "请重载编辑器，然后从 Activity Bar 打开墨鱼工坊。"
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
   }
@@ -61,10 +61,10 @@ if ($HostName -eq 'harness') {
   try {
     Invoke-WebRequest -UseBasicParsing -Uri $item.url -OutFile $tempFile
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $tempFile).Hash.ToLowerInvariant()
-    if ($actual -ne $item.sha256.ToLowerInvariant()) { throw 'GameHub Harness package SHA-256 verification failed.' }
+    if ($actual -ne $item.sha256.ToLowerInvariant()) { throw '墨鱼工坊 Harness 包的 SHA-256 校验失败。' }
     & dsh plugin --profile web add $tempFile
-    if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness rejected the GameHub package.' }
-    Write-Host 'GameHub installed for the Harness web profile. Restart dsh web.'
+    if ($LASTEXITCODE -ne 0) { throw 'DeepSeek Harness 未能安装墨鱼工坊包。' }
+    Write-Host '墨鱼工坊已安装到 Harness web profile。请重启 dsh web。'
     Enable-GameHubUpdates
   } finally {
     if (Test-Path -LiteralPath $tempFile) { Remove-Item -LiteralPath $tempFile -Force }
@@ -79,7 +79,7 @@ $marketplaceRoot = Join-Path $env:LOCALAPPDATA 'GameHub\agent-marketplace'
 try {
   Invoke-WebRequest -UseBasicParsing -Uri $plugin.url -OutFile $bundleFile
   $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $bundleFile).Hash.ToLowerInvariant()
-  if ($actual -ne $plugin.sha256.ToLowerInvariant()) { throw 'GameHub plugin bundle SHA-256 verification failed.' }
+  if ($actual -ne $plugin.sha256.ToLowerInvariant()) { throw '墨鱼工坊插件包的 SHA-256 校验失败。' }
   $bundle = Get-Content -LiteralPath $bundleFile -Raw -Encoding UTF8 | ConvertFrom-Json
   foreach ($file in $bundle.files) {
     if ($file.path -match '(^|/)\.\.(/|$)' -or [System.IO.Path]::IsPathRooted($file.path)) { throw "Unsafe plugin path: $($file.path)" }
@@ -98,13 +98,13 @@ if (-not (Get-Command $HostName -ErrorAction SilentlyContinue)) { throw "$HostNa
 $marketplaceOutput = & $HostName plugin marketplace add $marketplaceRoot 2>&1 | Out-String
 if ($LASTEXITCODE -ne 0) {
   $knownMarketplaces = & $HostName plugin marketplace list 2>&1 | Out-String
-  if ($knownMarketplaces -notmatch 'gamehub') { throw "$HostName could not add the GameHub marketplace: $marketplaceOutput" }
+  if ($knownMarketplaces -notmatch 'gamehub') { throw "$HostName 无法添加墨鱼工坊 marketplace：$marketplaceOutput" }
 }
 if ($HostName -eq 'claude') {
   & claude plugin install gamehub@gamehub
-  if ($LASTEXITCODE -ne 0) { throw 'Claude Code could not install the GameHub plugin.' }
-  Write-Host 'GameHub installed for Claude Code. Start a new session or reload plugins.'
+  if ($LASTEXITCODE -ne 0) { throw 'Claude Code 无法安装墨鱼工坊插件。' }
+  Write-Host '墨鱼工坊已安装到 Claude Code。请新建会话或重新加载插件。'
 } else {
-  Write-Host 'GameHub marketplace added to Codex. Open the Plugins Directory, select GameHub Plugins, and install gamehub.'
+  Write-Host '墨鱼工坊 marketplace 已添加到 Codex。请打开 Plugins Directory，在“墨鱼工坊插件”来源中安装 gamehub。'
 }
 Enable-GameHubUpdates

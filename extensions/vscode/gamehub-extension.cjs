@@ -19,7 +19,7 @@ const allowedUrl = (value, label) => {
 };
 const runtimeDomain = value => {
   const domain = String(value || '').trim().toLowerCase();
-  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain)) throw new Error('GameHub 运行域名无效。');
+  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain)) throw new Error('墨鱼工坊运行域名无效。');
   return domain;
 };
 const themeMode = () => {
@@ -66,7 +66,7 @@ const compareVersions = (left, right) => {
 };
 const trustedUpdateUrl = value => {
   const url = new URL(String(value));
-  if (url.protocol !== 'https:' || url.hostname !== 'mooyu.fun' || url.username || url.password) throw new Error('GameHub 更新地址不受信任。');
+  if (url.protocol !== 'https:' || url.hostname !== 'mooyu.fun' || url.username || url.password) throw new Error('墨鱼工坊更新地址不受信任。');
   return url;
 };
 const runHidden = (command, args, { env = process.env, timeoutMs = 120000 } = {}) => new Promise((resolve, reject) => {
@@ -77,11 +77,11 @@ const runHidden = (command, args, { env = process.env, timeoutMs = 120000 } = {}
     settled = true; clearTimeout(timer);
     if (error) reject(error); else resolve({ stdout,stderr });
   };
-  const timer = setTimeout(() => { child.kill(); finish(new Error('GameHub 更新安装超时。')); }, timeoutMs);
+  const timer = setTimeout(() => { child.kill(); finish(new Error('墨鱼工坊更新安装超时。')); }, timeoutMs);
   child.stdout?.on('data', chunk => { if (stdout.length < 8192) stdout += chunk.toString('utf8'); });
   child.stderr?.on('data', chunk => { if (stderr.length < 8192) stderr += chunk.toString('utf8'); });
   child.once('error', finish);
-  child.once('close', code => finish(code === 0 ? null : new Error(`GameHub 后台更新进程失败（${code}）：${stderr.trim() || stdout.trim() || '未知错误'}`)));
+  child.once('close', code => finish(code === 0 ? null : new Error(`墨鱼工坊后台更新进程失败（${code}）：${stderr.trim() || stdout.trim() || '未知错误'}`)));
 });
 const requestWithNode = (url, headers) => new Promise((resolve, reject) => {
   const transport = url.protocol === 'https:' ? https : http;
@@ -96,7 +96,7 @@ const requestWithNode = (url, headers) => new Promise((resolve, reject) => {
     };
     resolve({ status: response.statusCode || 0, headers: { get: header }, body: Readable.toWeb(response) });
   });
-  request.once('timeout', () => request.destroy(new Error('GameHub 下载连接超时。')));
+  request.once('timeout', () => request.destroy(new Error('墨鱼工坊下载连接超时。')));
   request.once('error', reject);
 });
 const requestWithSystemCurl = (url, headers, expectedLength) => new Promise((resolve, reject) => {
@@ -116,12 +116,12 @@ const requestWithSystemCurl = (url, headers, expectedLength) => new Promise((res
   });
   child.once('close', code => {
     if (code === 0) stream.end();
-    else stream.destroy(new Error(`GameHub 系统下载失败（curl ${code}）：${stderr.trim() || '未知错误'}`));
+    else stream.destroy(new Error(`墨鱼工坊系统下载失败（curl ${code}）：${stderr.trim() || '未知错误'}`));
   });
 });
 const requestStream = async (value, headers = {}, expectedLength = 0) => {
   const url = new URL(String(value));
-  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('GameHub 下载协议不受支持。');
+  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('墨鱼工坊下载协议不受支持。');
   try { return await requestWithNode(url, headers); }
   catch (error) {
     const code = String(error.code || ''); const message = String(error.message || error);
@@ -132,27 +132,27 @@ const requestStream = async (value, headers = {}, expectedLength = 0) => {
 const readUpdateResponse = async (response, onProgress) => {
   if (response.status !== 200) {
     await response.body?.cancel().catch(() => {});
-    throw new Error(`GameHub 更新下载失败（${response.status}）。`);
+    throw new Error(`墨鱼工坊更新下载失败（${response.status}）。`);
   }
   const declared = Number(response.headers.get('content-length') || 0);
-  if (declared > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
+  if (declared > MAX_UPDATE_BYTES) throw new Error('墨鱼工坊更新包超过大小限制。');
   const reader = response.body?.getReader(); const chunks = []; let received = 0;
-  if (!reader) throw new Error('GameHub 更新响应不可读取。');
+  if (!reader) throw new Error('墨鱼工坊更新响应不可读取。');
   try {
     while (true) {
       const { value: chunk, done } = await reader.read();
       if (done) break;
       received += chunk.byteLength;
-      if (received > MAX_UPDATE_BYTES || (declared && received > declared)) throw new Error('GameHub 更新包超过声明大小。');
+      if (received > MAX_UPDATE_BYTES || (declared && received > declared)) throw new Error('墨鱼工坊更新包超过声明大小。');
       chunks.push(Buffer.from(chunk));
       onProgress?.({ received, total: declared, percent: declared ? Math.min(100, Math.floor(received * 100 / declared)) : null });
     }
   } finally { reader.releaseLock(); }
-  if (declared && received !== declared) throw new Error('GameHub 更新下载不完整。');
+  if (declared && received !== declared) throw new Error('墨鱼工坊更新下载不完整。');
   return Buffer.concat(chunks, received);
 };
 const downloadUpdateBytesWithPowerShell = async url => {
-  if (process.platform !== 'win32') throw new Error('GameHub 系统下载不可用。');
+  if (process.platform !== 'win32') throw new Error('墨鱼工坊系统下载不可用。');
   const target = path.join(os.tmpdir(), `gamehub-update-${randomUUID()}.part`);
   const script = "$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';Invoke-WebRequest -UseBasicParsing -Uri $env:GAMEHUB_UPDATE_URL -OutFile $env:GAMEHUB_UPDATE_TARGET";
   const encoded = Buffer.from(script, 'utf16le').toString('base64');
@@ -162,7 +162,7 @@ const downloadUpdateBytesWithPowerShell = async url => {
       timeoutMs: 30 * 60 * 1000,
     });
     const details = await stat(target);
-    if (details.size > MAX_UPDATE_BYTES) throw new Error('GameHub 更新包超过大小限制。');
+    if (details.size > MAX_UPDATE_BYTES) throw new Error('墨鱼工坊更新包超过大小限制。');
     return readFile(target);
   } finally { await unlink(target).catch(() => {}); }
 };
@@ -196,10 +196,10 @@ const editorCliInvocation = async () => {
   };
 };
 const installEditorVsix = async (context, item, target, output) => {
-  output.appendLine(`GameHub ${item.version} 已校验，正在通过隐藏的编辑器安装进程安装。`);
+  output.appendLine(`墨鱼工坊 ${item.version} 已校验，正在通过隐藏的编辑器安装进程安装。`);
   const cli = await editorCliInvocation();
   await runHidden(cli.command, [...cli.args,'--install-extension',target.fsPath,'--force'], { env: cli.env,timeoutMs: 5 * 60 * 1000 });
-  if (!await extensionInstallPresent(context, item)) throw new Error(`Cursor 未确认 GameHub ${item.version} 已安装；更新将在稍后重试。`);
+  if (!await extensionInstallPresent(context, item)) throw new Error(`Cursor 未确认墨鱼工坊 ${item.version} 已安装；更新将在稍后重试。`);
 };
 async function checkForEditorUpdate(context, output, { force = false, userInitiated = false } = {}) {
   const config = vscode.workspace.getConfiguration('gamehub');
@@ -210,7 +210,7 @@ async function checkForEditorUpdate(context, output, { force = false, userInitia
   try {
     if (userInitiated) await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
-      title: 'GameHub 更新',
+      title: '墨鱼工坊更新',
       cancellable: false,
     }, async progress => {
       progress.report({ message: '正在检查服务器版本…' });
@@ -219,12 +219,12 @@ async function checkForEditorUpdate(context, output, { force = false, userInitia
     else await performEditorUpdate(context, output);
   } catch (error) {
     await context.globalState.update('gamehub.update.nextCheckAt', Date.now() + UPDATE_RETRY_MS);
-    const message = `GameHub 自动更新检查失败：${String(error.message || error)}`;
+    const message = `墨鱼工坊自动更新检查失败：${String(error.message || error)}`;
     output.appendLine(message);
-    if (userInitiated) await vscode.window.showErrorMessage(`${message} 可在“输出 → GameHub”查看详情。`);
+    if (userInitiated) await vscode.window.showErrorMessage(`${message} 可在“输出 → 墨鱼工坊”查看详情。`);
     else if (!context.globalState.get('gamehub.update.failureNotified', false)) {
       await context.globalState.update('gamehub.update.failureNotified', true);
-      const choice = await vscode.window.showWarningMessage('GameHub 自动更新检查失败，可点击侧栏右上角的 ↻ 重试。', '打开日志');
+      const choice = await vscode.window.showWarningMessage('墨鱼工坊自动更新检查失败，可点击侧栏右上角的 ↻ 重试。', '打开日志');
       if (choice === '打开日志') output.show(true);
     }
   }
@@ -232,11 +232,11 @@ async function checkForEditorUpdate(context, output, { force = false, userInitia
 async function performEditorUpdate(context, output, progress, userInitiated = false) {
     const manifest = JSON.parse((await downloadUpdateBytes(UPDATE_MANIFEST_URL)).toString('utf8'));
     const item = manifest.editorExtension;
-    if (manifest.channel !== 'stable' || !item?.supportedHosts?.includes(hostId())) throw new Error('GameHub 稳定版更新清单无效。');
+    if (manifest.channel !== 'stable' || !item?.supportedHosts?.includes(hostId())) throw new Error('墨鱼工坊稳定版更新清单无效。');
     const currentVersion = String(context.extension?.packageJSON?.version || '0.0.0');
     if (compareVersions(item.version, currentVersion) <= 0) {
       await context.globalState.update('gamehub.update.stagedVersion', undefined);
-      if (userInitiated) await vscode.window.showInformationMessage(`GameHub 已是最新版本（${currentVersion}）。`);
+      if (userInitiated) await vscode.window.showInformationMessage(`墨鱼工坊 已是最新版本（${currentVersion}）。`);
       return;
     }
     const install = async updateProgress => {
@@ -261,7 +261,7 @@ async function performEditorUpdate(context, output, progress, userInitiated = fa
         });
         updateProgress.report({ message: '正在校验更新…' });
         const actual = createHash('sha256').update(bytes).digest('hex');
-        if (actual !== String(item.sha256).toLowerCase()) throw new Error('GameHub VSIX SHA-256 校验失败。');
+        if (actual !== String(item.sha256).toLowerCase()) throw new Error('墨鱼工坊 VSIX SHA-256 校验失败。');
         await vscode.workspace.fs.writeFile(target, bytes);
       }
       updateProgress.report({ message: '正在后台安装，完成后可重启…' });
@@ -270,14 +270,14 @@ async function performEditorUpdate(context, output, progress, userInitiated = fa
     if (progress) await install(progress);
     else await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
-      title: `GameHub ${item.version} 更新`,
+      title: `墨鱼工坊 ${item.version} 更新`,
       cancellable: false,
     }, install);
     await context.globalState.update('gamehub.update.stagedVersion', item.version);
     await context.globalState.update('gamehub.update.failureNotified', false);
-    output.appendLine(`GameHub ${item.version} 已确认安装，等待重启生效。`);
+    output.appendLine(`墨鱼工坊 ${item.version} 已确认安装，等待重启生效。`);
     const choice = await vscode.window.showInformationMessage(
-      `GameHub ${item.version} 已更新完成，重启 ${hostId() === 'cursor' ? 'Cursor' : 'VS Code'} 后生效。`,
+      `墨鱼工坊 ${item.version} 已更新完成，重启 ${hostId() === 'cursor' ? 'Cursor' : 'VS Code'} 后生效。`,
       '立即重启', '稍后'
     );
     if (choice === '立即重启') await vscode.commands.executeCommand('workbench.action.reloadWindow');
@@ -291,19 +291,19 @@ const runEditorUpdateCheck = (context, output, options) => {
 
 async function activate(context) {
   let currentView;
-  const updateOutput = vscode.window.createOutputChannel('GameHub');
+  const updateOutput = vscode.window.createOutputChannel('墨鱼工坊');
   let desktopLauncher = null;
   try {
     const moduleUri = vscode.Uri.joinPath(context.extensionUri, 'desktop-launcher.mjs');
     const { createDesktopLauncher } = await import(pathToFileURL(moduleUri.fsPath).href);
     desktopLauncher = createDesktopLauncher({ root: vscode.Uri.joinPath(context.globalStorageUri, 'desktop-games').fsPath, enabled: process.platform === 'win32' });
-  } catch (error) { updateOutput.appendLine(`GameHub 本机启动组件不可用：${String(error.message || error)}`); }
+  } catch (error) { updateOutput.appendLine(`墨鱼工坊本机启动组件不可用：${String(error.message || error)}`); }
   let saveStore=null,runSaveStoreRequest;
   try {
     const {createSqliteSaveStore}=await import(pathToFileURL(path.join(context.extensionPath,'save-cache','sqlite-store.mjs')).href);
     ({runSaveStoreRequest}=await import(pathToFileURL(path.join(context.extensionPath,'save-cache','store-rpc.mjs')).href));
     saveStore=await createSqliteSaveStore({root:path.join(context.globalStorageUri.fsPath,'game-saves')});
-  } catch(error) { updateOutput.appendLine('GameHub 本机存档不可用：'+String(error.message||error)); }
+  } catch(error) { updateOutput.appendLine('墨鱼工坊本机存档不可用：'+String(error.message||error)); }
   const config = () => vscode.workspace.getConfiguration('gamehub');
   const openBrowser = async () => {
     const url = allowedUrl(config().get('browserUrl', 'http://127.0.0.1:3081/'), '浏览器地址');
@@ -337,8 +337,8 @@ async function activate(context) {
     let tokens = null;
     try { tokens = JSON.parse(await context.secrets.get(TOKEN_KEY) || 'null'); } catch {}
     if (!validTokens(tokens)) {
-      const action = await vscode.window.showWarningMessage('请先在 GameHub 侧栏登录，再提交创作包。', '打开 GameHub');
-      if (action === '打开 GameHub') await vscode.commands.executeCommand('gamehub.open');
+      const action = await vscode.window.showWarningMessage('请先在墨鱼工坊侧栏登录，再提交创作包。', '打开墨鱼工坊');
+      if (action === '打开墨鱼工坊') await vscode.commands.executeCommand('gamehub.open');
       return;
     }
     const apiUrl = allowedUrl(config().get('apiUrl', 'http://127.0.0.1:3090'), 'API 地址');
@@ -346,7 +346,7 @@ async function activate(context) {
     const creatorModuleUri = vscode.Uri.joinPath(context.extensionUri, 'creator-package.mjs');
     const apiModuleUri = vscode.Uri.joinPath(context.extensionUri, 'platform-api-client.mjs');
     try {
-      const submitted = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification,title: 'GameHub：正在校验并提交创作包…',cancellable: false }, async () => {
+      const submitted = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification,title: '墨鱼工坊：正在校验并提交创作包…',cancellable: false }, async () => {
         const [{ submitCreatorPackage },{ createApiClient }] = await Promise.all([
           import(pathToFileURL(creatorModuleUri.fsPath).href),
           import(pathToFileURL(apiModuleUri.fsPath).href),
@@ -386,7 +386,7 @@ async function activate(context) {
       const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'gamehub.js'));
       const nonce = randomBytes(18).toString('base64');
       const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
-      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>GameHub</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
+      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource}; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>墨鱼工坊</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
       const exportRequests=new Map();
       const subscription = view.webview.onDidReceiveMessage(async message => {
         if (!message || message.type !== 'gamehub:request' || !Number.isSafeInteger(message.id)) return;
@@ -394,7 +394,7 @@ async function activate(context) {
           let result = null;
           if (message.operation === 'credentials.get') result = await context.secrets.get(TOKEN_KEY).then(value => value ? JSON.parse(value) : null);
           else if (message.operation === 'credentials.set') {
-            if (!validTokens(message.payload?.tokens)) throw new Error('拒绝保存无效的 GameHub 凭据。');
+            if (!validTokens(message.payload?.tokens)) throw new Error('拒绝保存无效的墨鱼工坊凭据。');
             await context.secrets.store(TOKEN_KEY, JSON.stringify(message.payload.tokens));
           } else if (message.operation === 'credentials.clear') await context.secrets.delete(TOKEN_KEY);
           else if (message.operation.startsWith('saveCache.')) {

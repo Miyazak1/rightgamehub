@@ -29,7 +29,7 @@ const commonDefs = `<defs>
   <pattern id="paper-grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0v32" fill="none" stroke="#8b5cf6" stroke-opacity=".065"/></pattern>
   <linearGradient id="cover-fade" x1="0" y1="0" x2="0" y2="1"><stop offset=".18" stop-color="#17111f" stop-opacity="0"/><stop offset="1" stop-color="#17111f" stop-opacity=".92"/></linearGradient>
 </defs>`;
-const paper = ({ page, dark = false, label = 'GAMEHUB PLAY NOTE' }) => `<rect width="1080" height="1440" fill="${dark ? '#17111f' : '#f8f6fc'}"/><rect width="1080" height="1440" fill="url(#paper-grid)"/>
+const paper = ({ page, dark = false, label = 'MOOYU.FUN PLAY NOTE' }) => `<rect width="1080" height="1440" fill="${dark ? '#17111f' : '#f8f6fc'}"/><rect width="1080" height="1440" fill="url(#paper-grid)"/>
   <path fill="#8b5cf6" d="M72 66h14v14h14v14h14v14h-14v14H86v-14H72V94H58V80h14z"/>
   <text x="136" y="101" fill="${dark ? '#fff' : '#17131f'}" font-family="${MONO}" font-size="25" font-weight="800" letter-spacing="2">GAME<tspan fill="#8b5cf6">HUB</tspan></text>
   <text x="72" y="151" fill="#8b5cf6" font-family="${MONO}" font-size="16" font-weight="800" letter-spacing="3">${label}</text>
@@ -44,7 +44,7 @@ const coverImage = async (body, width, height) => {
   } catch { return null; }
 };
 
-const title = work => wrap(work.title || 'GameHub 作品', 20, 2);
+const title = work => wrap(work.title || '墨鱼工坊作品', 20, 2);
 const description = work => clean(work.description || `一款可以直接在线体验的${work.kind === 'game' ? '游戏' : '互动作品'}。`);
 const tags = work => (work.tags ?? []).map(clean).filter(Boolean).slice(0, 3);
 const steps = work => {
@@ -53,7 +53,7 @@ const steps = work => {
   return [...candidates, ...fallbacks].slice(0, 3).map(item => wrap(item, 27, 2));
 };
 const sourceFacts = work => [
-  ['发布者', work.creatorDisplayName || 'GameHub 社区作者'],
+  ['发布者', work.creatorDisplayName || '墨鱼工坊社区作者'],
   ['源代码', work.repositoryUrl ? '已提供公开仓库' : '当前版本未关联公开仓库'],
   ['许可证', work.licenseSpdx || '以作品详情页标注为准'],
   ['游玩方式', work.targets?.some(target => target.targetKey === 'web') || work.id === 'gamehub-guess-baike' ? '浏览器直接游玩' : '查看作品支持的平台'],
@@ -85,7 +85,7 @@ const playSvg = work => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" he
 const sourceSvg = work => `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440">${commonDefs}${paper({ page: 4 })}
   <text x="72" y="246" fill="#17131f" font-family="${FONT}" font-size="60" font-weight="800">作品从哪里来</text><text x="72" y="300" fill="#6c6478" font-family="${FONT}" font-size="24">免费游玩，也应该保留作者、仓库与许可证。</text>
   ${sourceFacts(work).map(([label,value],index)=>{const top=382+index*192;const lines=wrap(value,30,2);return `<text x="72" y="${top}" fill="#8b5cf6" font-family="${MONO}" font-size="18" font-weight="800" letter-spacing="2">${escapeXml(label.toUpperCase())}</text>${textBlock(lines,{x:72,y:top+64,size:34,color:'#17131f',weight:750,lineHeight:1.4})}<line x1="72" y1="${top+138}" x2="1008" y2="${top+138}" stroke="#d8d2e2" stroke-dasharray="8 8"/>`;}).join('')}
-  <rect x="72" y="1206" width="936" height="92" fill="#eee9fb"/><text x="104" y="1262" fill="#563ab2" font-family="${FONT}" font-size="22" font-weight="700">详细来源、认领状态和开源信息，以 GameHub 作品页为准。</text>${footer(false)}</svg>`;
+  <rect x="72" y="1206" width="936" height="92" fill="#eee9fb"/><text x="104" y="1262" fill="#563ab2" font-family="${FONT}" font-size="22" font-weight="700">详细来源、认领状态和开源信息，以墨鱼工坊作品页为准。</text>${footer(false)}</svg>`;
 
 const ctaSvg = work => {
   const lines=title(work);

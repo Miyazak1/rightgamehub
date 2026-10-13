@@ -190,10 +190,10 @@ export function createCreatorFeedbackService({ repository, ids = () => crypto.ra
       const feedback = await repository.issueDrafted({ actor, feedbackId, eventId: ids() });
       const categoryLabels = { bug: '问题', idea: '建议', compatibility: '兼容性', other: '反馈' };
       const title = `[玩家${categoryLabels[feedback.category]}] ${feedback.summary}`;
-      const body = [`## 玩家反馈`, '', `- 类型：${categoryLabels[feedback.category]}`, `- GameHub 作品：${feedback.workTitle}`, '', '### 详细说明', feedback.details];
+      const body = [`## 玩家反馈`, '', `- 类型：${categoryLabels[feedback.category]}`, `- 墨鱼工坊作品：${feedback.workTitle}`, '', '### 详细说明', feedback.details];
       if (feedback.reproductionSteps) body.push('', '### 复现步骤', feedback.reproductionSteps);
       if (feedback.environment) body.push('', '### 运行环境', feedback.environment);
-      body.push('', '---', '由作品作者从 GameHub 反馈收件箱确认后生成；提交前请检查并移除不应公开的信息。');
+      body.push('', '---', '由作品作者从墨鱼工坊反馈收件箱确认后生成；提交前请检查并移除不应公开的信息。');
       const repositoryInfo = githubRepository(feedback.repositoryUrl);
       const issueBody = body.join('\n');
       return {

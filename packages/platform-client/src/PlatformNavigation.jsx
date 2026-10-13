@@ -59,7 +59,7 @@ const workspaceLinks = [
 
 export function CreatorWorkspace({ route, go, profile, children }) {
   return <div className="creator-workspace">
-    <div className="creator-workspace__head"><div><span className="kicker">CREATOR WORKSPACE</span><strong>{profile?.canPublish ? '创作者工作台' : '创作者申请'}</strong></div><button className="button button--secondary" onClick={() => go('/discover')}>← 返回 GameHub</button></div>
+    <div className="creator-workspace__head"><div><span className="kicker">CREATOR WORKSPACE</span><strong>{profile?.canPublish ? '创作者工作台' : '创作者申请'}</strong></div><button className="button button--secondary" onClick={() => go('/discover')}>← 返回墨鱼工坊</button></div>
     {profile?.canPublish && <nav className="creator-workspace__nav" aria-label="创作中心导航">{workspaceLinks.map(([path, label, matches]) => <a href={'#' + path} key={path} aria-current={matches(route) ? 'page' : undefined} onClick={event => { event.preventDefault(); go(path); }}>{label}</a>)}</nav>}
     {children}
   </div>;

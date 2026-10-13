@@ -189,7 +189,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
 
   const share = async () => {
     const grid = Array.from(puzzle.title).filter(char => normalizeGuessCharacter(char) !== null).map(char => guessed.has(normalizeGuessCharacter(char)) ? '🟪' : '⬛').join('');
-    const text = `猜百科 · 今日挑战\n${grid}\n${guessAttempts} 次猜测 · ${guessed.size} 个字符 · ${resultTimeLabel} · ${hints} 提示\nGameHub 官方出品\n${GUESS_BAIKE_SHARE_URL}`;
+    const text = `猜百科 · 今日挑战\n${grid}\n${guessAttempts} 次猜测 · ${guessed.size} 个字符 · ${resultTimeLabel} · ${hints} 提示\n墨鱼工坊出品\n${GUESS_BAIKE_SHARE_URL}`;
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }
     catch { setFeedback({ kind: 'repeat', text: '暂时无法复制，请手动截图分享。' }); }
   };
@@ -197,7 +197,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   return <section className={`guess-baike ${phase === 'won' ? 'is-won' : ''}`}>
     <div className="guess-pixel-noise" aria-hidden="true"/>
     <header className="guess-header">
-      <div className="guess-brand"><span className="guess-brand__seal" aria-hidden="true">百</span><div><strong>猜百科</strong><small>GAMEHUB ORIGINAL 001</small></div></div>
+      <div className="guess-brand"><span className="guess-brand__seal" aria-hidden="true">百</span><div><strong>猜百科</strong><small>MOOYU.FUN ORIGINAL 001</small></div></div>
       <div className="guess-meta"><span><b>{guessed.size}</b>个</span><span><b>{progress}%</b>揭开</span><span><b>{resultTimeLabel}</b></span></div>
     </header>
 

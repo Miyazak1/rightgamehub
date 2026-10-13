@@ -1,6 +1,6 @@
 {
   "name": "gamehub-agent",
-  "displayName": "GameHub for AI Coding",
+  "displayName": "墨鱼工坊 MOOYU.FUN",
   "description": "在 VS Code 或 Cursor 侧栏中发现、游玩和发布轻量游戏。",
   "version": "0.3.45",
   "publisher": "gamehub-local",
@@ -21,16 +21,16 @@
     "commands": [
       {
         "command": "gamehub.open",
-        "title": "GameHub: 打开游戏平台"
+        "title": "墨鱼工坊：打开游戏平台"
       },
       {
         "command": "gamehub.openBrowser",
-        "title": "GameHub: 在内置浏览器打开",
+        "title": "墨鱼工坊：在内置浏览器打开",
         "icon": "$(globe)"
       },
       {
         "command": "gamehub.checkForUpdates",
-        "title": "GameHub: 检查更新",
+        "title": "墨鱼工坊：检查更新",
         "icon": "$(sync)"
       }
     ],
@@ -38,7 +38,7 @@
       "activitybar": [
         {
           "id": "gamehub",
-          "title": "GameHub",
+          "title": "墨鱼工坊",
           "icon": "media/arcade.svg"
         }
       ]
@@ -48,7 +48,7 @@
         {
           "type": "webview",
           "id": "gamehub.platform",
-          "name": "GameHub"
+          "name": "墨鱼工坊"
         }
       ]
     },
@@ -67,31 +67,31 @@
       ]
     },
     "configuration": {
-      "title": "GameHub",
+      "title": "墨鱼工坊",
       "properties": {
         "gamehub.apiUrl": {
           "type": "string",
           "default": "https://mooyu.fun",
           "scope": "application",
-          "description": "GameHub API 地址。默认连接正式服务。"
+          "description": "墨鱼工坊 API 地址。默认连接正式服务。"
         },
         "gamehub.browserUrl": {
           "type": "string",
           "default": "https://mooyu.fun/",
           "scope": "application",
-          "description": "无法使用侧栏时打开的 GameHub 页面。"
+          "description": "无法使用侧栏时打开的墨鱼工坊页面。"
         },
         "gamehub.runtimeDomain": {
           "type": "string",
           "default": "runtime.mooyu.fun",
           "scope": "application",
-          "description": "GameHub 隔离 Web 游戏的受信任运行域名。"
+          "description": "墨鱼工坊隔离 Web 游戏的受信任运行域名。"
         },
         "gamehub.autoUpdate": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "在后台检查、校验并安装 GameHub 稳定版更新；重启编辑器后生效。"
+          "description": "在后台检查、校验并安装墨鱼工坊稳定版更新；重启编辑器后生效。"
         }
       }
     }

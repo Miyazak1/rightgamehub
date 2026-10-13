@@ -23,7 +23,7 @@ const overlaySvg=campaign=>{
   const title=wrap(campaign.title,20,2);
   const summary=wrap(campaign.summary,42,2);
   const creators=[...new Set(campaign.items.map(item=>item.work?.creatorDisplayName).filter(Boolean))].slice(0,2);
-  const creatorLine=creators.length?`作者联动 · ${creators.join(' / ')}`:'GameHub 开放游戏专题';
+  const creatorLine=creators.length?`作者联动 · ${creators.join(' / ')}`:'墨鱼工坊开放游戏专题';
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
     <defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0v24" fill="none" stroke="#b89cff" stroke-opacity=".09"/></pattern><linearGradient id="fade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#17111f"/><stop offset=".58" stop-color="#21172f"/><stop offset="1" stop-color="#21172f" stop-opacity=".24"/></linearGradient></defs>
     <rect width="1200" height="630" fill="#17111f"/><rect width="1200" height="630" fill="url(#grid)"/><rect width="1200" height="630" fill="url(#fade)"/>

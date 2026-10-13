@@ -10,7 +10,7 @@ async function loadCatalog() {
   for (const candidate of candidates) {
     try { return JSON.parse(await fs.readFile(candidate, 'utf8')); } catch {}
   }
-  throw new Error('GameHub creator toolkit catalog is missing. Reinstall or update the GameHub Agent plugin.');
+  throw new Error('墨鱼工坊创作工具目录缺失，请重新安装或更新墨鱼工坊 Agent 插件。');
 }
 
 const catalog = await loadCatalog();
@@ -31,7 +31,7 @@ function printToolkit(toolkit) {
 if (command === 'list') {
   if (asJson) process.stdout.write(`${JSON.stringify(catalog, null, 2)}\n`);
   else {
-    console.log(`GameHub Agent 创作工具 · ${catalog.version}`);
+    console.log(`墨鱼工坊 Agent 创作工具 · ${catalog.version}`);
     for (const toolkit of catalog.toolkits) console.log(`- ${toolkit.key.padEnd(14)} ${toolkit.name} · ${toolkit.status} · ${toolkit.bestFor.join(' / ')}`);
     console.log('\n使用 show <key> 查看交给 Agent 的本地制作任务。');
   }
