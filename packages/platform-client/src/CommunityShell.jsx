@@ -2,14 +2,15 @@ import React,{useEffect,useRef,useState} from 'react';
 import {mount} from 'ascii.rest';
 import * as earthrise from 'ascii.rest/pieces/earthrise';
 import {useI18n} from './I18n.jsx';
+import CommunityIcon from './CommunityIcon.jsx';
 
 const sections=[
-  ['/community','community.nav.home','⌂',route=>route==='/community'],
-  ['/community/feed','community.nav.feed','✦',route=>route.startsWith('/community/feed')||/^\/community\/(game|ai|computing|posts|author)(\/|$)/.test(route)||route==='/social'],
-  ['/community/projects','community.nav.projects','↗',route=>route.startsWith('/community/projects')||route.startsWith('/contribute')],
-  ['/community/events','community.nav.events','◫',route=>route.startsWith('/community/events')],
-  ['/community/parties','community.nav.parties','◉',route=>route.startsWith('/community/parties')],
-  ['/community/me','community.nav.mine','◇',route=>route.startsWith('/community/me')||route==='/community/mine'||route==='/community/bookmarks'],
+  ['/community','community.nav.home','home',route=>route==='/community'],
+  ['/community/feed','community.nav.feed','feed',route=>route.startsWith('/community/feed')||/^\/community\/(game|ai|computing|posts|author)(\/|$)/.test(route)||route==='/social'],
+  ['/community/projects','community.nav.projects','projects',route=>route.startsWith('/community/projects')||route.startsWith('/contribute')],
+  ['/community/events','community.nav.events','events',route=>route.startsWith('/community/events')],
+  ['/community/parties','community.nav.parties','parties',route=>route.startsWith('/community/parties')],
+  ['/community/me','community.nav.mine','mine',route=>route.startsWith('/community/me')||route==='/community/mine'||route==='/community/bookmarks'],
 ];
 
 function CommunityAsciiEarthrise() {
@@ -40,15 +41,15 @@ export function CommunityShell({route,go,children}) {
       <div className="community-hub-hero__ascii" aria-hidden="true"><CommunityAsciiEarthrise/></div>
     </header>}
     <div className="community-hub-toolbar">
-      <nav className="community-hub-nav" aria-label={t('community.navigation')}>{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><span aria-hidden="true">{icon}</span>{t(label)}</button>)}</nav>
+      <nav className="community-hub-nav" aria-label={t('community.navigation')}>{sections.map(([path,label,icon,matches])=><button key={path} type="button" className={matches(route)?'is-active':''} aria-current={matches(route)?'page':undefined} onClick={()=>go(path)}><CommunityIcon name={icon}/>{t(label)}</button>)}</nav>
       <div className="community-launch" ref={launch}>
-        <button ref={trigger} type="button" className="community-launch__trigger" aria-haspopup="menu" aria-expanded={launchOpen} aria-controls="community-launch-menu" onClick={()=>setLaunchOpen(value=>!value)}>{t('community.launch')}</button>
+        <button ref={trigger} type="button" className="community-launch__trigger" aria-haspopup="menu" aria-expanded={launchOpen} aria-controls="community-launch-menu" onClick={()=>setLaunchOpen(value=>!value)}><CommunityIcon name="plus"/><span>{t('community.launch')}</span></button>
         {launchOpen&&<><button type="button" className="community-launch__backdrop" aria-label={t('community.launchClose')} onClick={()=>setLaunchOpen(false)}/><div id="community-launch-menu" className="community-launch__menu" role="menu" aria-label={t('community.launchMenu')} ref={menu}>
-          <header className="community-launch__menu-head"><div><strong>{t('community.launchTitle')}</strong><small>{t('community.launchLead')}</small></div><button type="button" aria-label={t('community.launchClose')} onClick={()=>{setLaunchOpen(false);trigger.current?.focus();}}>×</button></header>
-          <button role="menuitem" type="button" onClick={()=>open('/community/feed/new')}><span>✦</span><strong>{t('community.launchPost')}</strong><small>{t('community.launchPostLead')}</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/projects/new')}><span>↗</span><strong>{t('community.launchProject')}</strong><small>{t('community.launchProjectLead')}</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/events/new')}><span>◫</span><strong>{t('community.launchEvent')}</strong><small>{t('community.launchEventLead')}</small></button>
-          <button role="menuitem" type="button" onClick={()=>open('/community/parties/new')}><span>◉</span><strong>{t('community.launchParty')}</strong><small>{t('community.launchPartyLead')}</small></button>
+          <header className="community-launch__menu-head"><div><strong>{t('community.launchTitle')}</strong><small>{t('community.launchLead')}</small></div><button type="button" aria-label={t('community.launchClose')} onClick={()=>{setLaunchOpen(false);trigger.current?.focus();}}><CommunityIcon name="close"/></button></header>
+          <button role="menuitem" type="button" onClick={()=>open('/community/feed/new')}><span><CommunityIcon name="edit"/></span><strong>{t('community.launchPost')}</strong><small>{t('community.launchPostLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/projects/new')}><span><CommunityIcon name="projects"/></span><strong>{t('community.launchProject')}</strong><small>{t('community.launchProjectLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/events/new')}><span><CommunityIcon name="events"/></span><strong>{t('community.launchEvent')}</strong><small>{t('community.launchEventLead')}</small></button>
+          <button role="menuitem" type="button" onClick={()=>open('/community/parties/new')}><span><CommunityIcon name="parties"/></span><strong>{t('community.launchParty')}</strong><small>{t('community.launchPartyLead')}</small></button>
         </div></>}
       </div>
     </div>

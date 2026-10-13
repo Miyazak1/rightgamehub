@@ -838,12 +838,12 @@ test('community projects add a real project workflow and reuse contribution task
   assert.match(projects, /community\.publishProjectUpdate/);
 });
 
-test('community typography follows the navigation scale and styles form controls', async () => {
+test('community typography follows the navigation scale and styles readable form controls', async () => {
   const styles = await fs.readFile('packages/platform-client/src/styles.css', 'utf8');
   const baselineStart = styles.indexOf('/* Community typography hierarchy');
   assert.ok(baselineStart >= 0);
   const baseline = styles.slice(baselineStart);
-  assert.match(baseline, /\.community-hub-page \{[^}]*--community-control-font:[^}]*Cascadia Mono[^}]*font-size: 14px;/s);
+  assert.match(baseline, /\.community-hub-page \{[^}]*--community-ui-font:[^}]*Microsoft YaHei UI[^}]*--community-mono-font:[^}]*Cascadia Mono[^}]*--community-control-font: var\(--community-ui-font\);[^}]*font-family: var\(--community-ui-font\);[^}]*font-size: 14px;/s);
   assert.match(baseline, /\.community-hub-page \.button \{[^}]*min-height: 40px;[^}]*font-size: 12px;/s);
   assert.match(baseline, /\.community-hub-page input:not\([^}]*\),[\s\S]*?\.community-hub-page select \{[^}]*height: 42px;[^}]*min-height: 42px;/);
   assert.match(baseline, /\.community-hub-page input,[\s\S]*?\.community-hub-page textarea \{[^}]*font-family: var\(--community-control-font\);[^}]*font-size: 14px;/);
@@ -851,6 +851,32 @@ test('community typography follows the navigation scale and styles form controls
   assert.match(baseline, /\.community-hub-page :is\([^}]*\) label \{[^}]*font-size: 12px;/s);
   assert.match(baseline, /\.community-hub-page \.community-project-detail__body > div > p,[\s\S]*?font-size: 14px;/);
   assert.match(baseline, /@container \(max-width: 600px\) \{[\s\S]*?\.community-hub-page \.community-hub-nav button \{[^}]*font-size: 12px;/);
+});
+
+test('community visual calibration keeps the hierarchy compact and uses one SVG icon language', async () => {
+  const [styles,shell,home,icon] = await Promise.all([
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityShell.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityHome.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/CommunityIcon.jsx', 'utf8'),
+  ]);
+  const calibrationStart=styles.indexOf('/* Community visual calibration');
+  assert.ok(calibrationStart>=0);
+  const calibration=styles.slice(calibrationStart,styles.indexOf('/* Public development timeline',calibrationStart));
+  assert.match(calibration,/--community-title-size: 28px;/);
+  assert.match(calibration,/--community-display-size: 25px;/);
+  assert.match(calibration,/--community-section-size: 19px;/);
+  assert.match(calibration,/--community-card-title-size: 16px;/);
+  assert.match(calibration,/--community-body-size: 14px;/);
+  assert.match(calibration,/--community-meta-size: 12px;/);
+  assert.match(calibration,/\.community-hub-hero \{[^}]*border-width: 1px;[^}]*box-shadow: none;/s);
+  assert.match(calibration,/\.community-dashboard__projects > button \{[^}]*border-left-width: 1px;[^}]*box-shadow: none;/s);
+  assert.match(calibration,/\.community-card h2 \{[^}]*font-size: 17px;/s);
+  assert.match(calibration,/\.community-launch__trigger::before \{[^}]*content: none !important;/s);
+  assert.match(shell,/import CommunityIcon from '\.\/CommunityIcon\.jsx'/);
+  assert.match(shell,/<CommunityIcon name=\{icon\}\/>/);
+  assert.match(home,/<CommunityIcon name="arrowUpRight"\/>/);
+  assert.match(icon,/<svg[^>]*viewBox="0 0 24 24"[^>]*strokeWidth="1\.8"/);
 });
 
 test('community home spacing stays compact and a lone project uses the full row', async () => {
