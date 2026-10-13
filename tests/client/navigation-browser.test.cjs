@@ -77,17 +77,18 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   await goAs('player', '/admin'); await page.getByRole('heading', { name: '仅管理员可访问' }).waitFor();
   assert.equal((await page.request.get(base + '/v1/admin/reports')).status(), 403);
   await goAs('creator'); await avatar.click(); await menu.getByRole('menuitem', { name: '创作中心', exact: true }).click();
-  await page.getByRole('heading', { name: '我的作品', exact: true }).waitFor();
+  await page.getByRole('heading', { name: '创作概览', exact: true }).waitFor();
   const workspace = page.getByRole('navigation', { name: '创作中心导航' });
-  assert.deepEqual(await workspace.getByRole('link').allTextContents(), ['我的作品','上传发布','GitHub 导入','AI 接入联机','AI 接入排行榜']);
+  const workspaceText = await workspace.getByRole('link').allTextContents(); assert.equal(workspaceText.length,4);
+  for (const label of ['创作概览','我的作品','发布作品','能力接入']) assert.ok(workspaceText.some(text => text.includes(label)),label);
   assert.equal(await page.getByRole('navigation', { name: /主导航|侧栏导航/ }).count(), 0);
   await page.getByRole('heading', { name: '作者数据', exact: true }).waitFor(); await page.getByRole('heading', { name: '玩家反馈' }).waitFor();
-  await workspace.getByRole('link', { name: '上传发布' }).click(); await page.getByRole('heading', { name: '新建作品' }).waitFor();
-  await workspace.getByRole('link', { name: 'AI 接入排行榜' }).click(); await page.getByRole('heading', { name: '让 AI 添加排行榜' }).waitFor();
-  assert.equal(await workspace.getByRole('link', { name: 'AI 接入排行榜' }).getAttribute('aria-current'), 'page');
+  await workspace.getByRole('link', { name: /发布作品/ }).click(); await page.getByRole('heading', { name: '新建作品' }).waitFor();
+  await workspace.getByRole('link', { name: /能力接入/ }).click(); await page.getByRole('navigation', { name: '当前创作栏目' }).getByRole('link', { name: 'AI 接入排行榜' }).click(); await page.getByRole('heading', { name: '让 AI 添加排行榜' }).waitFor();
+  assert.equal(await workspace.getByRole('link', { name: /能力接入/ }).getAttribute('aria-current'), 'page');
   await page.goto(base + '/creator/works/' + workId + '/ai/multiplayer'); await page.getByLabel('选择作品', { exact: true }).waitFor();
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), workId);
-  assert.equal(await workspace.getByRole('link', { name: 'AI 接入联机' }).getAttribute('aria-current'), 'page');
+  assert.equal(await workspace.getByRole('link', { name: /能力接入/ }).getAttribute('aria-current'), 'page');
   await page.goto(base + '/creator/multiplayer/docs'); await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
   await page.getByRole('button', { name: /返回 GameHub/ }).click(); await page.getByRole('heading', { name: '休息一下？' }).waitFor();
   await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /#\/library$/);
@@ -105,7 +106,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
     if (width === 360 || width === 1365) await page.screenshot({ path: path.join(out, 'account-' + width + '.png') });
     await page.keyboard.press('Escape');
   }
-  await goAs('creator', '/creator'); await page.getByRole('heading', { name: '我的作品', exact: true }).waitFor();
+  await goAs('creator', '/creator'); await page.getByRole('heading', { name: '创作概览', exact: true }).waitFor();
   for (const width of [320,360,768,1365]) {
     await page.setViewportSize({ width, height: 900 }); await noOverflow();
     for (const link of await workspace.getByRole('link').all()) { const box = await link.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width + 1); }
@@ -116,8 +117,9 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   await page.setViewportSize({ width: 360, height: 900 });
   await page.goto(base + '/?routing=memory'); await avatar.click();
   await menu.getByRole('menuitem', { name: '创作中心', exact: true }).click();
-  await page.getByRole('heading', { name: '我的作品', exact: true }).waitFor();
-  await workspace.getByRole('link', { name: 'AI 接入排行榜' }).click();
+  await page.getByRole('heading', { name: '创作概览', exact: true }).waitFor();
+  await workspace.getByRole('link', { name: /能力接入/ }).click();
+  await page.getByRole('navigation', { name: '当前创作栏目' }).getByRole('link', { name: 'AI 接入排行榜' }).click();
   await page.getByRole('heading', { name: '让 AI 添加排行榜', exact: true }).waitFor();
   assert.equal(new URL(page.url()).hash, '');
   await page.getByRole('button', { name: /返回 GameHub/ }).click();

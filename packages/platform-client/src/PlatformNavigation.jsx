@@ -52,19 +52,30 @@ export function AccountMenu({ route, go, profile, status, avatar }) {
   </div>;
 }
 
-const workspaceLinks = [
-  ['/creator', 'creator.nav.works', route => route === '/creator' || /^\/creator\/works\/[^/]+\/(edit|builds)$/.test(route)],
-  ['/creator/works/new', 'creator.nav.upload', route => route === '/creator/works/new' || /^\/creator\/works\/[^/]+\/upload$/.test(route)],
-  ['/creator/import', 'creator.nav.import', route => route.startsWith('/creator/import')],
-  ['/creator/multiplayer', 'creator.nav.multiplayer', route => route.startsWith('/creator/multiplayer') || route.endsWith('/ai/multiplayer')],
-  ['/creator/leaderboards', 'creator.nav.leaderboards', route => route.startsWith('/creator/leaderboards') || route.endsWith('/ai/leaderboards')],
+const workspaceGroups = [
+  { id: 'overview',path: '/creator',label: 'creator.nav.overview',note: 'creator.nav.overviewNote',eyebrow: 'OVERVIEW',matches: route => route === '/creator' },
+  { id: 'works',path: '/creator/works',label: 'creator.nav.works',note: 'creator.nav.worksNote',eyebrow: 'WORKS',matches: route => route === '/creator/works' || route.startsWith('/creator/drafts/') || /^\/creator\/works\/[^/]+\/(edit|development)$/.test(route) },
+  { id: 'publish',path: '/creator/works/new',label: 'creator.nav.publish',note: 'creator.nav.publishNote',eyebrow: 'PUBLISH',matches: route => route === '/creator/works/new' || route === '/creator/works/manual/new' || route === '/creator/tools' || route.startsWith('/creator/import') || route.startsWith('/creator/studio/') || /^\/creator\/works\/[^/]+\/(upload|builds)$/.test(route) },
+  { id: 'capabilities',path: '/creator/multiplayer',label: 'creator.nav.capabilities',note: 'creator.nav.capabilitiesNote',eyebrow: 'CAPABILITIES',matches: route => route.startsWith('/creator/multiplayer') || route.startsWith('/creator/leaderboards') || /\/ai\/(multiplayer|leaderboards)$/.test(route) },
 ];
+
+const workspaceSecondary = {
+  publish: [['/creator/works/new','creator.nav.upload'],['/creator/import','creator.nav.import'],['/creator/tools','creator.nav.localTools']],
+  capabilities: [['/creator/multiplayer','creator.nav.multiplayer'],['/creator/leaderboards','creator.nav.leaderboards']],
+};
+const matchesWorkspaceSecondary = (route,path) => path === '/creator/works/new'
+  ? route === path || route === '/creator/works/manual/new' || /^\/creator\/works\/[^/]+\/(upload|builds)$/.test(route)
+  : path === '/creator/tools'
+    ? route === path || route.startsWith('/creator/studio/')
+    : route === path || route.startsWith(`${path}/`);
 
 export function CreatorWorkspace({ route, go, profile, children }) {
   const {t}=useI18n();
+  const activeGroup = workspaceGroups.find(group => group.matches(route)) || workspaceGroups[0];
+  const secondary = workspaceSecondary[activeGroup.id] || [];
   return <div className="creator-workspace">
     <div className="creator-workspace__head"><div><span className="kicker">CREATOR WORKSPACE</span><strong>{t(profile?.canPublish?'creator.workspace':'creator.application')}</strong></div><button className="button button--secondary" onClick={() => go('/discover')}>← {t('creator.backPlatform')}</button></div>
-    {profile?.canPublish && <nav className="creator-workspace__nav" aria-label={t('creator.navigation')}>{workspaceLinks.map(([path, label, matches]) => <a href={path} key={path} aria-current={matches(route) ? 'page' : undefined} onClick={event => { event.preventDefault(); go(path); }}>{t(label)}</a>)}</nav>}
+    {profile?.canPublish && <><nav className="creator-workspace__nav" aria-label={t('creator.navigation')}>{workspaceGroups.map(group => <a href={group.path} key={group.id} aria-current={group.id === activeGroup.id ? 'page' : undefined} onClick={event => { event.preventDefault(); go(group.path); }}><span>{group.eyebrow}</span><strong>{t(group.label)}</strong><small>{t(group.note)}</small></a>)}</nav>{secondary.length > 0 && <nav className="creator-workspace__subnav" aria-label={t('creator.subnavigation')}>{secondary.map(([path,label]) => { const active = matchesWorkspaceSecondary(route,path); return <a href={path} key={path} aria-current={active ? 'page' : undefined} onClick={event => { event.preventDefault(); go(path); }}>{t(label)}</a>; })}</nav>}</>}
     {children}
   </div>;
 }

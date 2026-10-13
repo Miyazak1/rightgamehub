@@ -713,7 +713,7 @@ export function MyProjectClaims({state,api,demo,go,onReload}) {
   return <section className="creator-claims"><div className="creator-feedback__head"><div><span className="kicker">MY GAME CLAIMS</span><h2>{t('creator.claims.title')}</h2><p>{t('creator.claims.lead')}</p></div><button type="button" className="text-button" onClick={onReload}>{t('creator.refresh')}</button></div>{message&&<p className="creator-feedback__message" role="status">{message}</p>}{state.status==='loading'?<p className="creator-feedback__empty">{t('creator.claims.loading')}</p>:state.status==='error'?<p className="creator-feedback__empty is-error">{t('creator.claims.loadFailed')}</p>:!state.items.length?<p className="creator-feedback__empty">{t('creator.claims.empty')}</p>:<div className="creator-claims__list">{state.items.map(claim=><article key={claim.id} className={`creator-claim is-${claim.status}`}><header><div><span>{t(claim.relationship==='owner'?'creator.claims.owner':'creator.claims.maintainer')} · {claim.evidenceType}</span><h3>{claim.workTitle}</h3></div><strong>{projectClaimStatusLabels[claim.status]?t(projectClaimStatusLabels[claim.status]):claim.status}</strong></header><p>{claim.decisionNote||claim.applicantNote||t('creator.claims.noReviewNote')}</p><footer><time>{t('creator.claims.updated',{value:date(claim.updatedAt,{dateStyle:'short',timeStyle:'short'})})}</time><div><button type="button" onClick={()=>go(`/works/${claim.workId}`)}>{t('creator.claims.viewGame')}</button>{claim.status==='pending'&&<button type="button" disabled={busy===claim.id} onClick={()=>cancel(claim)}>{t(busy===claim.id?'creator.claims.cancelling':'creator.claims.cancel')}</button>}</div></footer></article>)}</div>}</section>;
 }
 
-function CreatorPage({ api, demo, go, savedWork }) {
+function CreatorPage({ api, demo, go, savedWork, route = '/creator' }) {
   const {t}=useI18n();
   const [state, setState] = useState({ status: 'loading', works: [], drafts: [] });
   const [insights, setInsights] = useState({ status: 'loading', days: 30, data: null });
@@ -783,6 +783,7 @@ function CreatorPage({ api, demo, go, savedWork }) {
   if (state.status === 'error') return <main className="page"><StatePanel title={t('creator.loadFailedTitle')} body={t('creator.loadFailedBody')} action={t('creator.reconnect')} onAction={load} /></main>;
   const published = state.works.filter(work => work.state === 'published').length;
   const withdrawn = state.works.filter(work => work.state === 'withdrawn').length;
+  const overview = route !== '/creator/works';
   const replaceWork = next => setState(current => ({ ...current, works: current.works.map(work => work.id === next.id ? { ...work, ...next, targets: next.targets?.length ? next.targets : work.targets } : work) }));
   const copyBadge = async work => {
     const target = attributedWorkUrl(`${PUBLIC_GAMEHUB_URL}/w/${work.id}`,'readme');
@@ -790,7 +791,22 @@ function CreatorPage({ api, demo, go, savedWork }) {
     try { if (!globalThis.navigator?.clipboard?.writeText) throw new Error('clipboard unavailable'); await globalThis.navigator.clipboard.writeText(markdown); setCopiedWorkId(work.id); globalThis.setTimeout?.(() => setCopiedWorkId(current => current === work.id ? '' : current), 1800); }
     catch { globalThis.prompt?.(t('creator.copyBadge'), markdown); }
   };
-  return <main className="page creator-page">{savedWork && <p className="work-edit-success" role="status">{t('creator.savedWork',{title:savedWork.title})}</p>}<div className="section-heading"><div><span className="kicker">CREATOR & PUBLISHING</span><h1>{t('creator.worksTitle')}</h1><p>{t('creator.worksLead')}</p></div><div className="creator-heading-actions"><Button kind="secondary" onClick={() => go('/creator/tools')}>{t('creator.tools')}</Button><Button kind="secondary" onClick={() => go('/creator/import')}>{t('creator.importGithub')}</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>{t('creator.newWork')}</Button></div></div><button className="multiplayer-creator-gateway" onClick={() => go('/creator/multiplayer')}><span>⇄</span><div><strong>{t('creator.aiMultiplayerTitle')}</strong><small>{t('creator.aiMultiplayerLead')}</small></div><em>{t('creator.startIntegration')}</em></button><button className="multiplayer-creator-gateway" onClick={() => go('/creator/leaderboards')}><span>↗</span><div><strong>{t('creator.aiLeaderboardTitle')}</strong><small>{t('creator.aiLeaderboardLead')}</small></div><em>{t('creator.startIntegration')}</em></button><div className="creator-summary"><div><span>{t('creator.summaryDrafts')}</span><strong>{state.drafts.length}</strong></div><div><span>{t('creator.summaryAll')}</span><strong>{state.works.length}</strong></div><div><span>{t('creator.summaryPublished')}</span><strong>{published}</strong></div><div><span>{t('creator.summaryWithdrawn')}</span><strong>{withdrawn}</strong></div></div><CreatorDraftShelf drafts={state.drafts} go={go}/><MyProjectClaims state={claims} api={api} demo={demo} go={go} onReload={loadClaims}/><CreatorInsights state={insights} days={insights.days} onDays={days => setInsights(current => ({ ...current, days }))}/><CreatorFeedbackInbox state={feedback} api={api} demo={demo} go={go} onReload={loadFeedback}/><ContributionTaskStarter feedback={feedback} api={api} demo={demo} onCreated={async () => { setTaskRefresh(value => value + 1); await loadFeedback(); }}/><CreatorContributionTasks api={api} demo={demo} go={go} AvatarView={AvatarView} refreshToken={taskRefresh} onChanged={loadFeedback}/>{state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} onCopyBadge={copyBadge} copied={copiedWorkId === work.id} key={work.id}/>)}</section> : <StatePanel title={t('creator.noWorksTitle')} body={t('creator.noWorksBody')} action={t('creator.newWork')} onAction={() => go('/creator/works/new')} />}<aside className="creator-tip"><span>{icons.spark}</span><div><strong>{t('creator.publishTip')}</strong><p>{t('creator.publishTipBody')}</p></div></aside></main>;
+  return <main className="page creator-page">
+    {savedWork && <p className="work-edit-success" role="status">{t('creator.savedWork',{title:savedWork.title})}</p>}
+    <div className="section-heading"><div><span className="kicker">{overview ? 'CREATOR OVERVIEW' : 'WORK LIBRARY'}</span><h1>{t(overview ? 'creator.overviewTitle' : 'creator.worksTitle')}</h1><p>{t(overview ? 'creator.overviewLead' : 'creator.worksLead')}</p></div><div className="creator-heading-actions">{overview ? <><Button kind="secondary" onClick={() => go('/creator/works')}>{t('creator.manageWorks')}</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>{t('creator.newWork')}</Button></> : <><Button kind="secondary" onClick={() => go('/creator/tools')}>{t('creator.tools')}</Button><Button kind="secondary" onClick={() => go('/creator/import')}>{t('creator.importGithub')}</Button><Button icon="＋" onClick={() => go('/creator/works/new')}>{t('creator.newWork')}</Button></>}</div></div>
+    {overview ? <>
+      <div className="creator-summary"><div><span>{t('creator.summaryDrafts')}</span><strong>{state.drafts.length}</strong></div><div><span>{t('creator.summaryAll')}</span><strong>{state.works.length}</strong></div><div><span>{t('creator.summaryPublished')}</span><strong>{published}</strong></div><div><span>{t('creator.summaryWithdrawn')}</span><strong>{withdrawn}</strong></div></div>
+      <CreatorInsights state={insights} days={insights.days} onDays={days => setInsights(current => ({ ...current, days }))}/>
+      <CreatorFeedbackInbox state={feedback} api={api} demo={demo} go={go} onReload={loadFeedback}/>
+      <ContributionTaskStarter feedback={feedback} api={api} demo={demo} onCreated={async () => { setTaskRefresh(value => value + 1); await loadFeedback(); }}/>
+      <CreatorContributionTasks api={api} demo={demo} go={go} AvatarView={AvatarView} refreshToken={taskRefresh} onChanged={loadFeedback}/>
+    </> : <>
+      <CreatorDraftShelf drafts={state.drafts} go={go}/>
+      <MyProjectClaims state={claims} api={api} demo={demo} go={go} onReload={loadClaims}/>
+      {state.works.length ? <section className="creator-list">{state.works.map(work => <CreatorRow work={work} api={api} demo={demo} go={go} onChanged={replaceWork} onCopyBadge={copyBadge} copied={copiedWorkId === work.id} key={work.id}/>)}</section> : <StatePanel title={t('creator.noWorksTitle')} body={t('creator.noWorksBody')} action={t('creator.newWork')} onAction={() => go('/creator/works/new')} />}
+      <aside className="creator-tip"><span>{icons.spark}</span><div><strong>{t('creator.publishTip')}</strong><p>{t('creator.publishTipBody')}</p></div></aside>
+    </>}
+  </main>;
 }
 
 const githubVisibilityLabels = { public: 'creator.github.visibility.public', private: 'creator.github.visibility.private', internal: 'creator.github.visibility.internal' };
@@ -1845,7 +1861,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
   else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go} accountProfile={accountProfile} embedded={hostIdentity.id === 'mcp-app'}/>;
-  else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator'); }}/>;
+  else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator/works'); }}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'development') content = <DevelopmentLogPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go}/>;
   else if (route === '/creator/tools') content = <CreatorToolsPage go={go}/>;
   else if (route === '/creator/works/new') content = <NewWorkPage api={api} demo={demo} go={go} accountProfile={accountProfile}/>;
@@ -1860,7 +1876,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (route === '/creator/leaderboards') content = <CreatorAiTaskPage key={`${accountProfile?.id || 'guest'}:leaderboards`} api={api} demo={demo} go={go} kind="leaderboards"/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'builds') content = <SourceBuildPage workId={parts[2]} api={api} demo={demo} go={go}/>;
-  else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go} savedWork={savedWork}/>;
+  else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go} savedWork={savedWork} route={route}/>;
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;

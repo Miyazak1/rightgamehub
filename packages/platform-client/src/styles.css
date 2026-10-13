@@ -575,8 +575,12 @@ button { cursor: pointer; }
 .admin-navigation button { position: relative; display: grid; gap: 3px; min-width: 0; padding: 12px 14px; border: 0; border-right: 1px solid var(--gh-border); background: transparent; color: var(--gh-primary); text-align: left; cursor: pointer; }
 .admin-navigation button:last-child { border-right: 0; }
 .admin-navigation button::after { position: absolute; right: 12px; bottom: 0; left: 12px; height: 3px; background: transparent; content: ""; }
-.admin-navigation button:hover { background: color-mix(in srgb,var(--gh-action) 5%,var(--gh-raised)); }
-.admin-navigation button.is-active { background: color-mix(in srgb,var(--gh-action) 9%,var(--gh-raised)); }
+.admin-navigation button:not(.is-active) { background: #211e29; color: #f7f4ff; }
+.admin-navigation button:not(.is-active):hover { background: #2b2637; }
+.admin-navigation button:not(.is-active) > span { color: #bd9cff; }
+.admin-navigation button:not(.is-active) > small { color: #c3bdcf; }
+.admin-navigation button.is-active { background: color-mix(in srgb,var(--gh-action) 9%,#f8f6fc); color: #17151f; }
+.admin-navigation button.is-active > small { color: #625f6d; }
 .admin-navigation button.is-active::after { background: var(--gh-action); }
 .admin-navigation button > span { color: var(--gh-action); font: 800 8px ui-monospace,monospace; letter-spacing: .12em; }
 .admin-navigation button > strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1493,7 +1497,7 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
 .header-agent-cta { min-height: 34px; padding: 0 12px; border: 1px solid var(--gh-action); border-radius: 2px; color: var(--gh-action); background: color-mix(in srgb,var(--gh-action) 7%,var(--gh-panel)); font: 700 12px ui-monospace,"Segoe UI",monospace; white-space: nowrap; }
 .header-agent-cta:hover,.header-agent-cta[aria-current] { background: color-mix(in srgb,var(--gh-action) 16%,var(--gh-panel)); }
 .header__workspace-label { color: var(--gh-secondary); font-size: 12px; border-left: 1px solid var(--gh-border); padding-left: 16px; }
-.header button:focus-visible,.creator-workspace__nav a:focus-visible,.creator-workspace__head button:focus-visible,.mobile-nav button:focus-visible { outline: 3px solid var(--gh-focus); outline-offset: 3px; }
+.header button:focus-visible,.creator-workspace__nav a:focus-visible,.creator-workspace__subnav a:focus-visible,.creator-workspace__head button:focus-visible,.mobile-nav button:focus-visible { outline: 3px solid var(--gh-focus); outline-offset: 3px; }
 .account-menu { position: relative; flex: 0 0 auto; }
 .account-menu > .avatar { display: grid; place-items: center; }
 .account-menu__panel { position: absolute; z-index: 30; right: 0; top: calc(100% + 12px); width: min(248px,calc(100vw - 24px)); max-height: calc(100dvh - 84px); overflow-y: auto; padding: 8px; border: 1px solid var(--gh-border); background: var(--gh-panel); box-shadow: 4px 4px 0 color-mix(in srgb,var(--gh-border) 65%,transparent); }
@@ -1503,15 +1507,28 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
 .account-menu [role=menuitem] { display: block; width: 100%; min-height: 44px; border: 0; border-radius: 0; padding: 10px 12px; text-align: left; background: transparent; color: var(--gh-primary); font: 13px "Segoe UI","Microsoft YaHei",sans-serif; }
 .account-menu [role=menuitem]:hover,.account-menu [role=menuitem]:focus { background: var(--gh-raised); }
 .creator-workspace { padding-bottom: 24px; }
-.creator-workspace__head,.creator-workspace__nav { width: min(1080px,calc(100% - 40px)); margin-inline: auto; }
+.creator-workspace__head,.creator-workspace__nav,.creator-workspace__subnav { width: min(1080px,calc(100% - 40px)); margin-inline: auto; }
 .creator-workspace__head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 24px 0 18px; }
 .creator-workspace__head > div { min-width: 0; display: grid; gap: 8px; }
 .creator-workspace__head strong { font-size: 20px; }
 .creator-workspace__head .button { flex-shrink: 0; }
-.creator-workspace__nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border: 1px solid var(--gh-border); background: var(--gh-panel); }
-.creator-workspace__nav a { display: flex; align-items: center; justify-content: center; min-height: 42px; padding: 8px 16px; color: var(--gh-secondary); font: 600 12px ui-monospace,"Segoe UI",monospace; text-decoration: none; }
-.creator-workspace__nav a:hover { background: var(--gh-raised); color: var(--gh-primary); }
-.creator-workspace__nav a[aria-current] { color: var(--gh-primary); background: color-mix(in srgb,var(--gh-action) 12%,var(--gh-panel)); box-shadow: inset 0 -2px var(--gh-action); }
+.creator-workspace__nav { position: sticky; top: 56px; z-index: 14; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--gh-border); background: var(--gh-panel); box-shadow: 4px 4px 0 color-mix(in srgb,var(--gh-border) 42%,transparent); }
+.creator-workspace__nav a { position: relative; display: grid; gap: 3px; min-width: 0; min-height: 64px; padding: 11px 14px; border-right: 1px solid var(--gh-border); background: #211e29; color: #f7f4ff; font: 600 12px ui-monospace,"Segoe UI",monospace; text-align: left; text-decoration: none; }
+.creator-workspace__nav a:last-child { border-right: 0; }
+.creator-workspace__nav a::after { position: absolute; right: 12px; bottom: 0; left: 12px; height: 3px; background: transparent; content: ""; }
+.creator-workspace__nav a > span { color: #bd9cff; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
+.creator-workspace__nav a > strong,.creator-workspace__nav a > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.creator-workspace__nav a > strong { font-size: 13px; }
+.creator-workspace__nav a > small { color: #c3bdcf; font-size: 9px; font-weight: 400; }
+.creator-workspace__nav a:hover { background: #2b2637; }
+.creator-workspace__nav a[aria-current] { background: color-mix(in srgb,var(--gh-action) 9%,#f8f6fc); color: #17151f; }
+.creator-workspace__nav a[aria-current]::after { background: var(--gh-action); }
+.creator-workspace__nav a[aria-current] > span { color: var(--gh-action); }
+.creator-workspace__nav a[aria-current] > small { color: #625f6d; }
+.creator-workspace__subnav { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; }
+.creator-workspace__subnav a { flex: 0 0 auto; min-height: 34px; padding: 8px 11px; border: 1px solid var(--gh-border); background: var(--gh-panel); color: var(--gh-secondary); font: 700 10px ui-monospace,"Segoe UI",monospace; text-decoration: none; }
+.creator-workspace__subnav a:hover,.creator-workspace__subnav a[aria-current] { border-color: var(--gh-action); color: var(--gh-primary); }
+.creator-workspace__subnav a[aria-current] { background: color-mix(in srgb,var(--gh-action) 10%,var(--gh-panel)); box-shadow: inset 0 -2px var(--gh-action); }
 @container (max-width: 1000px) {
   .desktop-nav { display: none; }
   .header { padding-inline: 12px; gap: 10px; }
@@ -1523,8 +1540,9 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   .app > .page { padding-bottom: 96px; }
 }
 @container (max-width: 767px) {
-  .creator-workspace__head,.creator-workspace__nav { width: min(620px,calc(100% - 24px)); }
-  .creator-workspace__nav a { flex: 1 1 28%; padding-inline: 8px; }
+  .creator-workspace__head,.creator-workspace__nav,.creator-workspace__subnav { width: min(620px,calc(100% - 24px)); }
+  .creator-workspace__nav { display: flex; overflow-x: auto; scroll-snap-type: x proximity; }
+  .creator-workspace__nav a { flex: 0 0 150px; padding-inline: 11px; scroll-snap-align: start; }
 }
 @container (max-width: 479px) {
   .header__workspace-label { display: none; }
@@ -1533,7 +1551,7 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
   .creator-workspace__head strong { font-size: 17px; }
   .creator-workspace__head .kicker { font-size: 8px; letter-spacing: .06em; }
   .creator-workspace__head .button { padding-inline: 9px; font-size: 11px; }
-  .creator-workspace__nav a { flex-basis: 40%; }
+  .creator-workspace__nav { width: calc(100% - 20px); }
 }
 
 .upload-timeline__result { margin: 10px 0 0; font-size: 12px; font-weight: 700; }
