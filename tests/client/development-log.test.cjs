@@ -9,7 +9,8 @@ test('creator development logs publish into a public work timeline without expos
     fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
     fs.readFile('packages/platform-client/src/i18n.mjs', 'utf8'),
   ]);
-  assert.match(app, /开发与贡献记录/);
+  assert.match(app, /timeline\.title/);
+  assert.match(messages, /'timeline\.title': '开发与贡献记录'/);
   assert.match(app, /api\.listWorkTimeline\(workId\)/);
   assert.match(app, /go\(`\/creator\/works\/\$\{work\.id\}\/development`\)/);
   assert.match(messages, /玩家原始反馈保持私有/);

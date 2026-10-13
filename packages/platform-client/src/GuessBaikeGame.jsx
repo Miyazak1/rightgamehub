@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import puzzleBank from './guess-baike-puzzles.json';
 import { countGuessOccurrences, isGuessTitleSolved, isVisibleGuessPunctuation, normalizeGuessCharacter, uniqueGuessCharacters } from './guess-baike-policy.mjs';
 import { workLeaderboardPath } from './work-leaderboards.mjs';
+import { useI18n } from './I18n.jsx';
 
 const puzzles = puzzleBank.puzzles;
 
 const normalize = value => value.replace(/[\s·・—–\-_，。！？（）()]/g, '').toLowerCase();
-const secondsLabel = seconds => seconds < 60 ? `${seconds}秒` : `${Math.floor(seconds / 60)}分${String(seconds % 60).padStart(2, '0')}秒`;
+const secondsLabel = (seconds,t) => seconds < 60 ? t('guess.time.seconds',{seconds}) : t('guess.time.minutes',{minutes:Math.floor(seconds / 60),seconds:String(seconds % 60).padStart(2, '0')});
 const GUESS_BAIKE_SHARE_URL = 'https://mooyu.fun/play/gamehub-guess-baike';
 const fireworkPieces = Array.from({ length: 24 }, (_, index) => {
   const ray = index % 12;
@@ -43,6 +44,7 @@ const localDaily = () => {
 };
 
 export default function GuessBaikeGame({ api, demo = false, challengeCode = null, go }) {
+  const {t}=useI18n();
   const [daily, setDaily] = useState(localDaily);
   const [dailyStatus,setDailyStatus] = useState(api&&!demo?'loading':'ready');
   const [scoreSaveStatus,setScoreSaveStatus] = useState('idle'),[saveRetry,setSaveRetry] = useState(0);
@@ -72,7 +74,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
   const revealed = allChars.filter(char => guessed.has(char)).length;
   const progress = phase === 'won' ? 100 : Math.round(revealed / allChars.length * 100);
   const guessAttempts = history.filter(item => !item.hint).length;
-  const resultTimeLabel = phase === 'won' && !Number.isSafeInteger(completedElapsed) ? '历史成绩' : secondsLabel(elapsed);
+  const resultTimeLabel = phase === 'won' && !Number.isSafeInteger(completedElapsed) ? t('guess.historicalScore') : secondsLabel(elapsed,t);
 
   useEffect(() => {
     const saved = loadGame(storageKey);
@@ -103,10 +105,10 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
 
   useEffect(() => {
     if (restoredKey!==storageKey || phase !== 'playing' || !isGuessTitleSolved(puzzle.title, guessed)) return;
-    setFeedback({ kind: 'win', text: '标题已完整揭开！百科档案已解密。' });
+    setFeedback({ kind: 'win', text: t('guess.feedback.revealed') });
     setCompletedElapsed(current => current ?? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
     setPhase('won');
-  }, [puzzle.title, guessed, phase, startedAt, restoredKey, storageKey]);
+  }, [puzzle.title, guessed, phase, startedAt, restoredKey, storageKey, t]);
 
   useEffect(() => {
     if (phase !== 'won') { setShowResult(false); return undefined; }
@@ -157,19 +159,19 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
       setGuessed(current => new Set([...current, ...answerChars]));
       pulseReveal(answerChars);
       setHistory(current => [{ value: raw, hits: answerChars.length, answer: true }, ...current]);
-      setFeedback({ kind: 'win', text: '标题命中！百科档案已解密。' });
+      setFeedback({ kind: 'win', text: t('guess.feedback.answer') });
       setCompletedElapsed(current => current ?? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
       setPhase('won'); setInput('');
       return;
     }
     const chars = uniqueGuessCharacters(raw);
-    if (!chars.length) { setFeedback({ kind: 'miss', text: '请输入 1～10 个中文、英文字母或数字。' }); return; }
+    if (!chars.length) { setFeedback({ kind: 'miss', text: t('guess.feedback.invalid') }); return; }
     const fresh = chars.filter(char => !guessed.has(char));
-    if (!fresh.length) { setFeedback({ kind: 'repeat', text: '这些字已经猜过，不会重复计次。' }); setInput(''); return; }
+    if (!fresh.length) { setFeedback({ kind: 'repeat', text: t('guess.feedback.repeat') }); setInput(''); return; }
     const next = new Set([...guessed, ...fresh]);
     const hits = countGuessOccurrences(allText, fresh);
     setGuessed(next); setHistory(current => [{ value: fresh.join(''), hits }, ...current]);
-    setFeedback({ kind: hits ? 'hit' : 'miss', text: hits ? `命中 ${hits} 处，揭开 ${fresh.length} 个新字。` : '没有出现，但排除也是线索。' });
+    setFeedback({ kind: hits ? 'hit' : 'miss', text: hits ? t('guess.feedback.hit',{hits,count:fresh.length}) : t('guess.feedback.miss') });
     if (hits) pulseReveal(fresh);
     setInput('');
   };
@@ -184,28 +186,28 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
     setGuessed(current => new Set([...current, char]));
     setHints(value => value + 1); pulseReveal([char]);
     setHistory(current => [{ value: char, hits: counts.find(item => item[0] === char)[1], hint: true }, ...current]);
-    setFeedback({ kind: 'hint', text: `系统为你揭开了“${char}”。` });
+    setFeedback({ kind: 'hint', text: t('guess.feedback.hint',{char}) });
   };
 
   const share = async () => {
     const grid = Array.from(puzzle.title).filter(char => normalizeGuessCharacter(char) !== null).map(char => guessed.has(normalizeGuessCharacter(char)) ? '🟪' : '⬛').join('');
-    const text = `猜百科 · 今日挑战\n${grid}\n${guessAttempts} 次猜测 · ${guessed.size} 个字符 · ${resultTimeLabel} · ${hints} 提示\n墨鱼工坊出品\n${GUESS_BAIKE_SHARE_URL}`;
+    const text = t('guess.shareText',{grid,attempts:guessAttempts,characters:guessed.size,time:resultTimeLabel,hints,url:GUESS_BAIKE_SHARE_URL});
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }
-    catch { setFeedback({ kind: 'repeat', text: '暂时无法复制，请手动截图分享。' }); }
+    catch { setFeedback({ kind: 'repeat', text: t('guess.feedback.copyFailed') }); }
   };
 
   return <section className={`guess-baike ${phase === 'won' ? 'is-won' : ''}`}>
     <div className="guess-pixel-noise" aria-hidden="true"/>
     <header className="guess-header">
-      <div className="guess-brand"><span className="guess-brand__seal" aria-hidden="true">百</span><div><strong>猜百科</strong><small>MOOYU.FUN ORIGINAL 001</small></div></div>
-      <div className="guess-meta"><span><b>{guessed.size}</b>个</span><span><b>{progress}%</b>揭开</span><span><b>{resultTimeLabel}</b></span></div>
+      <div className="guess-brand"><span className="guess-brand__seal" aria-hidden="true">百</span><div><strong>{t('guess.name')}</strong><small>MOOYU.FUN ORIGINAL 001</small></div></div>
+      <div className="guess-meta"><span>{t('guess.meta.characters',{count:guessed.size})}</span><span>{t('guess.meta.progress',{progress})}</span><span><b>{resultTimeLabel}</b></span></div>
     </header>
 
     <div className="guess-layout">
       <main className="guess-main">
         <div className="guess-level-row"><span>{challengeCode ? `CHALLENGE / ${daily.date.slice(5).replace('-', '/')}` : `DAILY / ${daily.date.slice(5).replace('-', '/')}`}</span><span className="guess-category">{puzzle.category}</span></div>
-        {challengeCode && <div className="guess-challenge-banner"><b>VS</b><span>玩家挑战已锁定 · 完成后自动结算</span></div>}
-        <section className="guess-title" aria-label="待猜的百科标题">
+        {challengeCode && <div className="guess-challenge-banner"><b>VS</b><span>{t('guess.challengeLocked')}</span></div>}
+        <section className="guess-title" aria-label={t('guess.targetAria')}>
           <small>TARGET TITLE</small>
           <h1><MaskedText text={puzzle.title} guessed={guessed} recent={recent} solved={phase === 'won'} title/></h1>
           {phase === 'won' && <div className="guess-title__fireworks" aria-hidden="true">{fireworkPieces.map((style, index) => <i style={style} key={index}/>)}</div>}
@@ -214,24 +216,24 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
         <section className="guess-document">
           <div className="guess-document__top"><span>WIKI EXCERPT</span><div className="guess-progress"><i style={{ width: `${progress}%` }}/></div><span>{phase === 'won' ? allChars.length : revealed}/{allChars.length}</span></div>
           <article><MaskedText text={puzzle.content} guessed={guessed} recent={recent} solved={phase === 'won'}/></article>
-          <footer>正文采用中文维基百科完整导言 · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>{phase !== 'won' && <a href={puzzle.sourceUrl} target="_blank" rel="noreferrer" title="会剧透答案">来源（剧透）↗</a>}</footer>
+          <footer>{t('guess.sourceLead')} · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>{phase !== 'won' && <a href={puzzle.sourceUrl} target="_blank" rel="noreferrer" title={t('guess.spoilerTitle')}>{t('guess.sourceSpoiler')} ↗</a>}</footer>
         </section>
 
         <form className={`guess-input-bar ${feedback ? `is-${feedback.kind}` : ''}`} onSubmit={submit}>
-          <div className="guess-input-wrap"><span aria-hidden="true">&gt;_</span><input ref={inputRef} value={input} maxLength={10} disabled={phase !== 'playing'} onChange={event => setInput(event.target.value)} placeholder="输入中文、英文或数字，也可直接猜标题" autoComplete="off"/></div>
-          <button type="submit" disabled={!input.trim() || phase !== 'playing'}>揭开 <span>↵</span></button>
+          <div className="guess-input-wrap"><span aria-hidden="true">&gt;_</span><input ref={inputRef} value={input} maxLength={10} disabled={phase !== 'playing'} onChange={event => setInput(event.target.value)} placeholder={t('guess.inputPlaceholder')} autoComplete="off"/></div>
+          <button type="submit" disabled={!input.trim() || phase !== 'playing'}>{t('guess.reveal')} <span>↵</span></button>
         </form>
-        <div className="guess-feedback" aria-live="polite">{feedback ? <><i/>{feedback.text}</> : phase === 'won' ? '今日档案已经解密。' : '中文、英文字母和数字都可以猜；英文不区分大小写。'}{phase === 'won' && !showResult && <button className="guess-result-reopen" onClick={() => setShowResult(true)}>查看本局成绩</button>}</div>
+        <div className="guess-feedback" aria-live="polite">{feedback ? <><i/>{feedback.text}</> : phase === 'won' ? t('guess.decoded') : t('guess.instructions')}{phase === 'won' && !showResult && <button className="guess-result-reopen" onClick={() => setShowResult(true)}>{t('guess.viewResult')}</button>}</div>
       </main>
 
       <aside className="guess-sidebar">
-        <section className="guess-side-card guess-help-card"><div><span>ASSIST</span><b>{2 - hints}/2</b></div><h2>卡住了？</h2><p>揭开正文中的一个高价值字，会记录在成绩里。</p><button onClick={useHint} disabled={phase !== 'playing' || hints >= 2}><span aria-hidden="true">✦</span>{hints >= 2 ? '提示已用完' : '给我一点灵感'}</button></section>
-        <section className="guess-side-card guess-history"><div><span>GUESS LOG</span><b>{history.length}</b></div>{history.length ? <ol>{history.slice(0, 9).map((item, index) => <li className={item.answer ? 'is-answer' : item.hits ? 'is-hit' : 'is-miss'} key={`${item.value}-${index}`}><span>{item.hint ? '✦ ' : ''}{item.value}</span><em>{item.answer ? '命中标题' : item.hits ? `+${item.hits} 处` : '未出现'}</em></li>)}</ol> : <p>每个新字符只计一次。<br/>英文不区分大小写。</p>}</section>
+        <section className="guess-side-card guess-help-card"><div><span>ASSIST</span><b>{2 - hints}/2</b></div><h2>{t('guess.helpTitle')}</h2><p>{t('guess.helpLead')}</p><button onClick={useHint} disabled={phase !== 'playing' || hints >= 2}><span aria-hidden="true">✦</span>{t(hints >= 2 ? 'guess.hintsUsed' : 'guess.giveHint')}</button></section>
+        <section className="guess-side-card guess-history"><div><span>GUESS LOG</span><b>{history.length}</b></div>{history.length ? <ol>{history.slice(0, 9).map((item, index) => <li className={item.answer ? 'is-answer' : item.hits ? 'is-hit' : 'is-miss'} key={`${item.value}-${index}`}><span>{item.hint ? '✦ ' : ''}{item.value}</span><em>{item.answer ? t('guess.log.answer') : item.hits ? t('guess.log.hits',{hits:item.hits}) : t('guess.log.miss')}</em></li>)}</ol> : <p>{t('guess.log.empty')}<br/>{t('guess.log.caseInsensitive')}</p>}</section>
       </aside>
     </div>
 
-    {showResult && <div className="guess-result" role="dialog" aria-modal="true" aria-label="挑战完成" onClick={event => { if (event.target === event.currentTarget) setShowResult(false); }}>
-      <div className="guess-result__panel"><span className="guess-result__badge">档案已解密</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? (challengeResult.outcome === 'win' ? '挑战胜出！' : challengeResult.outcome === 'loss' ? '差一点点' : '势均力敌') : puzzle.title}</h2><p>{guessAttempts} 次猜测 · {guessed.size} 个猜字 · {resultTimeLabel} · {hints} 次提示</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? '结算暂时未完成，稍后可从挑战记录继续。' : challengeResult ? <><span>我：{challengeResult.participant.hints} 提示 · {challengeResult.participant.guessedCount} 字 · {challengeResult.participant.elapsedSeconds} 秒</span><span>对手：{challengeResult.creator.hints} 提示 · {challengeResult.creator.guessedCount} 字 · {challengeResult.creator.elapsedSeconds} 秒</span></> : '正在结算挑战…'}</div>}<div className="guess-result__save" role="status">{({idle:'准备保存成绩…',loading:'正在确认本局题目…',saving:'正在保存本局成绩…',saved:'成绩已保存，可查看本局排名。',auth:'本局进度已保存在本机；登录后才会记录到排行榜。',error:'本局成绩尚未保存到排行榜，请重试。',offline:'当前使用本机题目，本局成绩未上传。',historical:'这份历史记录缺少计时数据，不重复上传成绩。',demo:'演示成绩不会上传。'})[scoreSaveStatus]}{scoreSaveStatus==='error'&&<button onClick={()=>setSaveRetry(value=>value+1)}>重试保存成绩</button>}{scoreSaveStatus==='auth'&&go&&<button onClick={()=>go('/account')}>前往登录</button>}</div><div className="guess-result__actions">{go&&<button className="is-primary" disabled={['idle','loading','saving'].includes(scoreSaveStatus)} onClick={()=>go(workLeaderboardPath('gamehub-guess-baike',daily.date,puzzle.id))}>查看本局排名</button>}<button onClick={share}>{copied ? '已复制成绩 ✓' : '复制像素成绩'}</button><button onClick={() => setShowResult(false)}>查看全文</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">阅读中文维基百科原文 ↗</a></div>
+    {showResult && <div className="guess-result" role="dialog" aria-modal="true" aria-label={t('guess.resultAria')} onClick={event => { if (event.target === event.currentTarget) setShowResult(false); }}>
+      <div className="guess-result__panel"><span className="guess-result__badge">{t('guess.resultBadge')}</span><small>{challengeCode ? 'CHALLENGE COMPLETE' : 'ANSWER FOUND'}</small><h2>{challengeResult && !challengeResult.error ? t(challengeResult.outcome === 'win' ? 'guess.outcome.win' : challengeResult.outcome === 'loss' ? 'guess.outcome.loss' : 'guess.outcome.draw') : puzzle.title}</h2><p>{t('guess.resultSummary',{attempts:guessAttempts,characters:guessed.size,time:resultTimeLabel,hints})}</p>{challengeCode && <div className="guess-duel-result">{challengeResult?.error ? t('guess.settlementFailed') : challengeResult ? <><span>{t('guess.duelYou',{hints:challengeResult.participant.hints,characters:challengeResult.participant.guessedCount,seconds:challengeResult.participant.elapsedSeconds})}</span><span>{t('guess.duelOpponent',{hints:challengeResult.creator.hints,characters:challengeResult.creator.guessedCount,seconds:challengeResult.creator.elapsedSeconds})}</span></> : t('guess.settling')}</div>}<div className="guess-result__save" role="status">{t(`guess.save.${scoreSaveStatus}`)}{scoreSaveStatus==='error'&&<button onClick={()=>setSaveRetry(value=>value+1)}>{t('guess.retrySave')}</button>}{scoreSaveStatus==='auth'&&go&&<button onClick={()=>go('/account')}>{t('guess.signIn')}</button>}</div><div className="guess-result__actions">{go&&<button className="is-primary" disabled={['idle','loading','saving'].includes(scoreSaveStatus)} onClick={()=>go(workLeaderboardPath('gamehub-guess-baike',daily.date,puzzle.id))}>{t('guess.viewRank')}</button>}<button onClick={share}>{t(copied ? 'guess.copied' : 'guess.copyScore')}</button><button onClick={() => setShowResult(false)}>{t('guess.viewArticle')}</button></div><a href={puzzle.sourceUrl} target="_blank" rel="noreferrer">{t('guess.readOriginal')} ↗</a></div>
     </div>}
   </section>;
 }

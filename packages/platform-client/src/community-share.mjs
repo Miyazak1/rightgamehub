@@ -3,7 +3,7 @@ export function communityPostUrl(location,postId) {
   return `${location.origin}/community/posts/${encodeURIComponent(postId)}`;
 }
 
-export async function copyCommunityPostLink({location,clipboard,prompt},postId) {
+export async function copyCommunityPostLink({location,clipboard,prompt,promptLabel='复制动态链接'},postId) {
   const url=communityPostUrl(location,postId);
   if(clipboard?.writeText){
     try{
@@ -12,7 +12,7 @@ export async function copyCommunityPostLink({location,clipboard,prompt},postId) 
     }catch{}
   }
   if(typeof prompt==='function'){
-    prompt('复制动态链接',url);
+    prompt(promptLabel,url);
     return {url,copied:false,method:'prompt'};
   }
   return {url,copied:false,method:'unavailable'};

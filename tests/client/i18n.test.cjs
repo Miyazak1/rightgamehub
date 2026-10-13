@@ -50,6 +50,23 @@ test('community public surfaces consume the shared locale context', async () => 
   assert.match(contributions, /community\.contributionTitle/);
 });
 
+test('player profile, social, save, and built-in game surfaces use shared translations', async () => {
+  const [app, saves, cloudStatus, guess, leaderboard, share] = await Promise.all([
+    'App.jsx', 'SaveManager.jsx', 'CloudSaveStatus.jsx', 'GuessBaikeGame.jsx',
+    'WorkLeaderboard.jsx', 'GameSharePage.jsx',
+  ].map(file => fs.readFile(path.resolve(__dirname, `../../packages/platform-client/src/${file}`), 'utf8')));
+  for (const source of [app, saves, cloudStatus, guess, leaderboard, share]) assert.match(source, /useI18n/);
+  assert.match(app, /profile\.settingsTitle/);
+  assert.match(app, /social\.todayBoard/);
+  assert.match(app, /challenge\.accept/);
+  assert.match(app, /creator\.studio\.structureTitle/);
+  assert.match(saves, /saveManager\.restoreTitle/);
+  assert.match(cloudStatus, /cloudSave\.state\.confirmed/);
+  assert.match(guess, /guess\.resultSummary/);
+  assert.match(leaderboard, /leaderboard\.dailyLead/);
+  assert.match(share, /gameShare\.unavailable/);
+});
+
 test('creator workspace uses shared translations while admin stays out of scope', async () => {
   const [navigation, app, plan, ...creatorPages] = await Promise.all([
     fs.readFile(path.resolve(__dirname, '../../packages/platform-client/src/PlatformNavigation.jsx'), 'utf8'),

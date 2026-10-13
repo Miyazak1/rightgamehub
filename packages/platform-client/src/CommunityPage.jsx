@@ -175,7 +175,7 @@ export default function CommunityPage({api,go,route,accountProfile,AvatarView,de
   async function sendReport(event){event.preventDefault();setBusy(report.post.id);try{await api.communityReport(report.post.id,{category:report.category,details:report.details});setReport(null);setNotice(t('community.reportSubmitted'));}catch(caught){setError(failure(caught,t));}finally{setBusy('');}}
   async function share(post) {
     setError('');
-    const result=await copyCommunityPostLink({location:globalThis.location,clipboard:globalThis.navigator?.clipboard,prompt:globalThis.prompt},post.id);
+    const result=await copyCommunityPostLink({location:globalThis.location,clipboard:globalThis.navigator?.clipboard,prompt:globalThis.prompt,promptLabel:t('community.copyPostLink')},post.id);
     if(result.copied){
       setShared(post.id);setNotice(t('community.linkCopied'));
       globalThis.setTimeout?.(()=>setShared(current=>current===post.id?'':current),1800);

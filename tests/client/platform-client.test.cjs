@@ -474,11 +474,12 @@ test('API client keeps player feedback and author-controlled GitHub issue drafti
 });
 
 test('player feedback form explains minimum lengths instead of silently disabling submit', async () => {
-  const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
-  assert.match(source, /一句话标题至少需要 5 个字，还差/);
-  assert.match(source, /详细说明至少需要 10 个字，还差/);
-  assert.match(source, /\{summaryLength\}\/160 · 至少 5 个字/);
-  assert.match(source, /\{detailsLength\}\/2000 · 至少 10 个字/);
+  const [source,messages] = await Promise.all([fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),fs.readFile('packages/platform-client/src/i18n.mjs','utf8')]);
+  assert.match(source, /feedback\.error\.summary/);
+  assert.match(source, /feedback\.error\.details/);
+  assert.match(source, /feedback\.minimum/);
+  assert.match(messages, /一句话标题至少需要 5 个字，还差/);
+  assert.match(messages, /The details need at least 10 characters/);
   assert.match(source, /type="submit" disabled=\{state === 'sending'\}/);
   assert.doesNotMatch(source, /disabled=\{state === 'sending' \|\| form\.summary\.trim\(\)\.length/);
 });
@@ -728,8 +729,9 @@ test('API client and work detail expose the governed project claim loop', async 
   assert.match(requests[7].url,/\/v1\/admin\/works\/00000000-0000-4000-8000-000000000001\/provenance-events$/u);
   assert.match(requests[8].url,/\/v1\/admin\/works\/00000000-0000-4000-8000-000000000001\/provenance$/u);
   assert.match(requests[9].url,/\/v1\/admin\/project-claims\/00000000-0000-4000-8000-000000000002\/decision$/u);
-  const source=await fs.readFile('packages/platform-client/src/App.jsx','utf8');
-  assert.match(source,/社区收录，尚未认领/);assert.match(source,/发布者直接上传/);assert.match(source,/我是作者\/维护者/);assert.match(source,/MY GAME CLAIMS/);assert.match(source,/GAME CLAIM GOVERNANCE/);assert.match(source,/GAME PROVENANCE/);assert.match(source,/审核与权限历史/);assert.match(source,/来源修正历史/);assert.match(source,/GitHub 只是可选证据/);
+  const [source,messages]=await Promise.all([fs.readFile('packages/platform-client/src/App.jsx','utf8'),fs.readFile('packages/platform-client/src/i18n.mjs','utf8')]);
+  assert.match(source,/provenance\.status\.unclaimed/);assert.match(source,/provenance\.publisher\.upload/);assert.match(source,/provenance\.claimAction/);assert.match(source,/MY GAME CLAIMS/);assert.match(source,/GAME CLAIM GOVERNANCE/);assert.match(source,/GAME PROVENANCE/);assert.match(source,/审核与权限历史/);assert.match(source,/来源修正历史/);assert.match(source,/claim\.lead/);
+  assert.match(messages,/社区收录，尚未认领/);assert.match(messages,/I am the author or maintainer/);assert.match(messages,/GitHub is optional evidence/);
 });
 
 test('API client exposes staged multiplayer rule submission and administrative review', async () => {
