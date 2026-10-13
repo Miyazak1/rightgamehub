@@ -880,6 +880,26 @@ test('community home spacing stays compact and a lone project uses the full row'
   assert.match(styles, /\.community-dashboard__pulse \{[\s\S]*?grid-template-columns: repeat\(3,minmax\(0,1fr\)\);/);
 });
 
+test('community home makes projects visibly actionable and keeps the feed as the main browsing flow', async () => {
+  const [home,styles] = await Promise.all([
+    fs.readFile('packages/platform-client/src/CommunityHome.jsx', 'utf8'),
+    fs.readFile('packages/platform-client/src/styles.css', 'utf8'),
+  ]);
+  const projects=home.indexOf('className="community-dashboard__section is-projects"');
+  const feed=home.indexOf('className="community-dashboard__section is-feed"');
+  const happening=home.indexOf('className="community-dashboard__section is-happening"');
+  assert.ok(projects>=0&&feed>projects&&happening>feed);
+  assert.match(home,/aria-label=\{t\('community\.openProjectAria'/u);
+  assert.match(home,/community-dashboard__project-action/u);
+  assert.match(home,/community\.openProjectAction/u);
+  assert.match(home,/community-dashboard__quiet/u);
+  assert.match(home,/community\.noHappeningCompact/u);
+  assert.match(styles,/\.community-dashboard__projects > button \{[\s\S]*?cursor: pointer;/u);
+  assert.match(styles,/\.community-dashboard__projects > button:hover,[\s\S]*?transform: translateY\(-2px\);/u);
+  assert.match(styles,/\.community-dashboard__quiet \{[\s\S]*?min-height: 64px;/u);
+  assert.match(styles,/\.community-dashboard__section\.is-feed \.community-card \{[\s\S]*?box-shadow: none;/u);
+});
+
 test('player routes preserve share links and community room entry after integration', async () => {
   const source = await fs.readFile('packages/platform-client/src/App.jsx', 'utf8');
   assert.match(source, /releaseId=\{\['challenge','share','room'\]\.includes\(parts\[2\]\)/);
