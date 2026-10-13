@@ -252,8 +252,18 @@ test('MCP App routing keeps the hosted shell across navigation and refresh', asy
 test('web entry activates the complete platform client for the MCP App route', async () => {
   const source = await fs.readFile('apps/web/src/main.jsx', 'utf8');
   assert.match(source, /globalThis\.location\.pathname === '\/mcp-app'/u);
-  assert.match(source, /createBrowserHostAdapter\(\{ host: 'mcp-app', surface: 'mcp-app' \}\)/u);
+  assert.match(source, /createBrowserHostAdapter\(\{ host: 'mcp-app', surface: 'mcp-app', openExternal: openMcpExternal \}\)/u);
+  assert.match(source, /gamehub\/navigation\.openExternal/u);
   assert.match(source, /routing=\{isMcpApp \? 'embedded' : 'history'\}/u);
+});
+
+test('MCP App authentication uses the supported browser client kind', async () => {
+  const { resolveAuthClientKind } = await import('../../packages/platform-client/src/auth-client-kind.mjs');
+  assert.equal(resolveAuthClientKind({ host: 'mcp-app' }), 'browser');
+  assert.equal(resolveAuthClientKind({ host: 'codex' }), 'browser');
+  assert.equal(resolveAuthClientKind({ host: 'cursor' }), 'cursor');
+  assert.equal(resolveAuthClientKind({ host: 'vscode' }), 'vscode');
+  assert.equal(resolveAuthClientKind({ host: 'harness' }), 'harness');
 });
 
 test('work sharing keeps bounded attribution through the public handoff and play session', async () => {

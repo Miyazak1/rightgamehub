@@ -35,6 +35,7 @@ import WorkMetadataFields from './WorkMetadataFields.jsx';
 import { workMetadataForm, workMetadataPayload } from './work-metadata.mjs';
 import { workLeaderboardPath } from './work-leaderboards.mjs';
 import { consumePublicWorkHandoff, navigateBrowserRoute, readBrowserRoute } from './public-work-route.mjs';
+import { resolveAuthClientKind } from './auth-client-kind.mjs';
 
 export { createBrowserHostAdapter };
 import { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } from './analytics-attribution.mjs';
@@ -460,7 +461,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     try {
       if (phase === 'email') {
         if (demo) { setChallengeId('demo'); setPhase('code'); }
-        else { const capabilities = await host.getCapabilities(); const { data } = await api.createChallenge({ email, clientKind: capabilities.host }); setChallengeId(data.challengeId); setPhase('code'); }
+        else { const capabilities = await host.getCapabilities(); const { data } = await api.createChallenge({ email, clientKind: resolveAuthClientKind(capabilities) }); setChallengeId(data.challengeId); setPhase('code'); }
       } else {
         if (demo) await finishLogin({ accessToken: 'demo-session' });
         else { const { data } = await api.verifyChallenge({ challengeId, code, deviceLabel: `GameHub · ${hostIdentity.label}` }); await finishLogin(data); }
@@ -475,7 +476,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     try {
       const data = demo
         ? { challengeId: 'demo-github-web', authorizeUrl: null, intervalSeconds: 1 }
-        : (await api.startGitHubWeb({ clientKind: (await host.getCapabilities()).host, deviceLabel: `GameHub · ${hostIdentity.label}` })).data;
+        : (await api.startGitHubWeb({ clientKind: resolveAuthClientKind(await host.getCapabilities()), deviceLabel: `GameHub · ${hostIdentity.label}` })).data;
       setGithubChallenge(data); setPhase('github-web');
       if (data.authorizeUrl && host.navigation?.openExternal) { authWindow?.close(); await host.navigation.openExternal(data.authorizeUrl); }
       else if (authWindow && data.authorizeUrl) { authWindow.location.replace(data.authorizeUrl); authWindow.opener = null; }
@@ -490,7 +491,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     try {
       const data = demo
         ? { challengeId: 'demo-github-device', userCode: 'GAME-HUB', verificationUri: 'https://github.com/login/device', intervalSeconds: 5 }
-        : (await api.startGitHubDevice({ clientKind: (await host.getCapabilities()).host, deviceLabel: `GameHub · ${hostIdentity.label}` })).data;
+        : (await api.startGitHubDevice({ clientKind: resolveAuthClientKind(await host.getCapabilities()), deviceLabel: `GameHub · ${hostIdentity.label}` })).data;
       setGithubChallenge(data); setPhase('github-device');
     } catch (caught) { setError(caught.message || 'GitHub 设备登录暂时不可用。'); }
     finally { setBusy(false); }

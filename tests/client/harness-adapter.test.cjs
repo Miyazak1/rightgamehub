@@ -46,11 +46,14 @@ test('Browser adapter restores tab-session credentials after a GitHub redirect',
 
 test('Browser adapter can identify an MCP App host without forking platform behavior', async () => {
   const { createBrowserHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
-  const adapter = createBrowserHostAdapter({ window: fakeBrowserWindow(), host: 'mcp-app', surface: 'mcp-app' });
+  const opened = [];
+  const adapter = createBrowserHostAdapter({ window: fakeBrowserWindow(), host: 'mcp-app', surface: 'mcp-app', openExternal: async url => { opened.push(url); } });
   const capabilities = await adapter.getCapabilities();
   assert.equal(capabilities.host, 'mcp-app');
   assert.equal(capabilities.surface, 'mcp-app');
   assert.equal(capabilities.canPlayWeb, true);
+  await adapter.navigation.openExternal('https://github.com/login/oauth/authorize');
+  assert.deepEqual(opened, ['https://github.com/login/oauth/authorize']);
 });
 
 test('Harness adapter reports honest capabilities and keeps credentials in memory only', async () => {
