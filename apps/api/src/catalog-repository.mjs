@@ -21,6 +21,7 @@ const workView = rows => ({
   claimEligible: rows[0].attribution_kind === 'community_catalog' && !rows[0].claim_status,
   creatorDisplayName: rows[0].creator_display_name ?? null, creatorHandle: rows[0].creator_handle ?? null,
   playCount: Number(rows[0].play_count ?? 0), saveCount: Number(rows[0].save_count ?? 0),
+  courseware: rows.find(row => row.release_manifest?.courseware)?.release_manifest.courseware ?? null,
   coverUrl: rows[0].cover_object_key ? `/v1/works/${rows[0].id}/cover?v=${Buffer.from(rows[0].cover_sha256).toString('hex').slice(0, 12)}` : null,
   targets: rows.map(targetView),
 });
@@ -36,7 +37,7 @@ export class PostgresCatalogRepository {
               source.repository_url AS remix_source_repository_url,source.license_spdx AS remix_source_license_spdx,
               source_author.display_name AS remix_source_creator_display_name,COALESCE(remix_stats.remix_count,0) AS remix_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
-              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
+              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,r.manifest AS release_manifest,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id
@@ -79,7 +80,7 @@ export class PostgresCatalogRepository {
               source.repository_url AS remix_source_repository_url,source.license_spdx AS remix_source_license_spdx,
               source_author.display_name AS remix_source_creator_display_name,COALESCE(remix_stats.remix_count,0) AS remix_count,
               t.target_key,t.state AS target_state,t.current_release_id,t.revision AS target_revision,
-              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,
+              r.package_type,r.label AS release_label,r.os AS release_os,r.arch AS release_arch,r.manifest AS release_manifest,
               r.artifact_sha256 AS release_sha256,ru.file_name AS release_file_name,ru.actual_bytes AS release_size_bytes
          FROM works w JOIN work_targets t ON t.work_id=w.id
          JOIN users u ON u.id=w.owner_user_id

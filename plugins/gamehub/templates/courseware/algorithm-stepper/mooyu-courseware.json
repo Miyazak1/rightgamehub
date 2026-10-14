@@ -1,0 +1,17 @@
+{
+  "format": "mooyu.courseware",
+  "schemaVersion": 1,
+  "id": "insertion-sort-stepper",
+  "title": { "zh-CN": "插入排序分步器", "en": "Insertion Sort Stepper" },
+  "summary": { "zh-CN": "逐步观察有序区如何扩张。", "en": "Step through how the sorted prefix grows." },
+  "defaultLocale": "zh-CN",
+  "locales": ["zh-CN", "en"],
+  "subjects": ["computer-science", "algorithms"],
+  "audience": { "stages": ["upper-secondary", "higher-education"], "minimumAge": 14 },
+  "course": "courseware/course.json",
+  "evidence": "evidence/sources.json",
+  "tests": "tests/journeys.json",
+  "build": { "profile": "mooyu-static-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"] },
+  "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
+}

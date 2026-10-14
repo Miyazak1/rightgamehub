@@ -290,9 +290,10 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   const publisher = await readFile('plugins/gamehub/bin/creator-submit.mjs', 'utf8');
   const toolkitCli = await readFile('plugins/gamehub/bin/creator-toolkit.mjs', 'utf8');
   const toolkitCatalog = JSON.parse(await readFile('plugins/gamehub/toolkits/catalog.json', 'utf8'));
+  const hostSupport = JSON.parse(await readFile('plugins/gamehub/host-support.json', 'utf8'));
   const skill = await readFile('plugins/gamehub/skills/gamehub/SKILL.md', 'utf8');
   assert.equal(portable.name, 'gamehub');
-  assert.equal(portable.version, '0.3.1');
+  assert.equal(portable.version, '0.4.0');
   assert.equal(portable.version, claudeManifest.version);
   assert.equal(codexMarketplace.plugins[0].source.path, './plugins/gamehub');
   assert.equal(codexMarketplace.plugins[0].policy.authentication, 'ON_INSTALL');
@@ -310,7 +311,11 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
   assert.equal(toolkitCatalog.execution.workspace, 'user-local');
   assert.equal(toolkitCatalog.execution.remoteExecution, false);
   assert.equal(toolkitCatalog.execution.modelProvider, 'user-agent');
-  assert.deepEqual(toolkitCatalog.toolkits.map(item => item.key), ['bingo','bitsy','puzzlescript','twine','pixel-assets']);
+  assert.deepEqual(toolkitCatalog.toolkits.map(item => item.key), ['interactive-courseware','bingo','bitsy','puzzlescript','twine','pixel-assets']);
+  assert.equal(hostSupport.hosts.codex.localWorkspace, true);
+  assert.equal(hostSupport.hosts.vscode.interface, 'native-editor-commands');
+  assert.equal(hostSupport.hosts.harness.status, 'limited');
+  assert.equal(hostSupport.hosts.harness.localWorkspace, false);
 });
 
 
@@ -356,7 +361,7 @@ test('official editor installers use verified mooyu.fun artifacts without source
 test('Cursor self-update installs the verified VSIX before reporting restart readiness', async () => {
   const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
   const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
-  assert.equal(manifest.version, '0.3.46');
+  assert.equal(manifest.version, '0.4.0');
   assert.match(extension, /path\.join\(path\.dirname\(process\.execPath\), 'resources', 'app', 'out', 'cli\.js'\)/);
   assert.match(extension, /ELECTRON_RUN_AS_NODE: '1'/);
   assert.match(extension, /runHidden\(cli\.command, \[\.\.\.cli\.args,'--install-extension',target\.fsPath,'--force'\]/);
@@ -367,6 +372,35 @@ test('Cursor self-update installs the verified VSIX before reporting restart rea
   assert.match(extension, /跳过重复下载/);
   assert.match(extension, /downloadUpdateBytesWithPowerShell/);
   assert.doesNotMatch(extension, /workbench\.extensions\.installExtension/);
+});
+
+test('VS Code and Cursor expose the local interactive courseware lifecycle without silent dependency installation', async () => {
+  const extension = await readFile('extensions/vscode/gamehub-extension.cjs', 'utf8');
+  const manifest = JSON.parse(await readFile('extensions/vscode/package.json', 'utf8'));
+  const packer = await readFile('scripts/package-vscode-extension.mjs', 'utf8');
+  const commandIds = manifest.contributes.commands.map(item => item.command);
+  for (const command of [
+    'gamehub.coursewareInit',
+    'gamehub.coursewareInspect',
+    'gamehub.coursewareDoctor',
+    'gamehub.coursewarePreview',
+    'gamehub.coursewareTest',
+    'gamehub.coursewareBuild',
+    'gamehub.coursewarePackage',
+  ]) {
+    assert.ok(commandIds.includes(command), `missing ${command}`);
+    assert.ok(extension.includes(`registerCoursewareCommand('${command}',`), `unregistered ${command}`);
+  }
+  assert.equal(manifest.contributes.configuration.properties['gamehub.coursewarePlaywrightModule'].default, '');
+  assert.ok(manifest.gamehub.permissions.includes('read:user-selected-courseware-project'));
+  assert.match(extension, /权限增加不会通过后台自动更新静默激活/);
+  assert.match(extension, /gamehub\.update\.pendingPermissions/);
+  assert.match(extension, /不会静默安装/);
+  assert.match(extension, /createCoursewarePreviewServer/);
+  assert.match(extension, /void coursewarePreview\?\.close\(\)/);
+  assert.match(packer, /extension\/bin\/courseware-bridge\.mjs/);
+  assert.match(packer, /contracts\/courseware/);
+  assert.match(packer, /templates\/courseware/);
 });
 
 test('Cursor webview CSP permits only the configured API and its realtime socket', async () => {

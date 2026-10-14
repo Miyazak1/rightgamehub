@@ -9,6 +9,7 @@ const { PassThrough, Readable } = require('node:stream');
 const { readFile, readdir, stat, unlink } = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 
 const TOKEN_KEY = 'gamehub.session.v1';
 const allowedUrl = (value, label) => {
@@ -239,6 +240,22 @@ async function performEditorUpdate(context, output, progress, userInitiated = fa
       if (userInitiated) await vscode.window.showInformationMessage(`墨鱼工坊 已是最新版本（${currentVersion}）。`);
       return;
     }
+    const currentPermissions = new Set(Array.isArray(context.extension?.packageJSON?.gamehub?.permissions) ? context.extension.packageJSON.gamehub.permissions : []);
+    const nextPermissions = Array.isArray(item.permissions) ? item.permissions.filter(value => typeof value === 'string') : [];
+    const addedPermissions = nextPermissions.filter(value => !currentPermissions.has(value));
+    if (addedPermissions.length) {
+      const approval = await vscode.window.showWarningMessage(
+        `墨鱼工坊 ${item.version} 需要新增权限：${addedPermissions.join('、')}。在你确认前不会下载或安装。`,
+        { modal: true, detail: '权限增加不会通过后台自动更新静默激活。' },
+        '确认并更新',
+      );
+      if (approval !== '确认并更新') {
+        output.appendLine(`墨鱼工坊 ${item.version} 因新增权限等待用户确认：${addedPermissions.join(', ')}`);
+        await context.globalState.update('gamehub.update.pendingPermissions', { version:item.version,permissions:addedPermissions });
+        return;
+      }
+      await context.globalState.update('gamehub.update.pendingPermissions', undefined);
+    }
     const install = async updateProgress => {
       await vscode.workspace.fs.createDirectory(context.globalStorageUri);
       const target = vscode.Uri.joinPath(context.globalStorageUri, item.filename);
@@ -292,6 +309,8 @@ const runEditorUpdateCheck = (context, output, options) => {
 async function activate(context) {
   let currentView;
   const updateOutput = vscode.window.createOutputChannel('墨鱼工坊');
+  const coursewareOutput = vscode.window.createOutputChannel('墨鱼工坊课件');
+  let coursewarePreview = null;
   let desktopLauncher = null;
   try {
     const moduleUri = vscode.Uri.joinPath(context.extensionUri, 'desktop-launcher.mjs');
@@ -305,6 +324,70 @@ async function activate(context) {
     saveStore=await createSqliteSaveStore({root:path.join(context.globalStorageUri.fsPath,'game-saves')});
   } catch(error) { updateOutput.appendLine('墨鱼工坊本机存档不可用：'+String(error.message||error)); }
   const config = () => vscode.workspace.getConfiguration('gamehub');
+  const loadCoursewareTools = () => import(pathToFileURL(path.join(context.extensionPath,'bin','courseware-bridge.mjs')).href);
+  const hasCoursewareManifest = async root => {
+    try { return (await stat(path.join(root,'mooyu-courseware.json'))).isFile(); } catch { return false; }
+  };
+  const chooseCoursewareRoot = async () => {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const activeFolder = vscode.window.activeTextEditor ? vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) : null;
+    if (activeFolder && await hasCoursewareManifest(activeFolder.uri.fsPath)) return activeFolder.uri.fsPath;
+    const candidates = [];
+    for (const folder of folders) if (await hasCoursewareManifest(folder.uri.fsPath)) candidates.push(folder);
+    if (candidates.length === 1) return candidates[0].uri.fsPath;
+    if (candidates.length > 1) {
+      const selected = await vscode.window.showQuickPick(candidates.map(folder => ({ label:folder.name,description:folder.uri.fsPath,folder })),{ placeHolder:'选择交互课件目录' });
+      return selected?.folder.uri.fsPath ?? null;
+    }
+    const selected = await vscode.window.showOpenDialog({ canSelectFiles:false,canSelectFolders:true,canSelectMany:false,openLabel:'选择包含 mooyu-courseware.json 的目录' });
+    return selected?.[0]?.fsPath ?? null;
+  };
+  const showCoursewareReport = (title,value) => {
+    const report = value.report ?? value; const findings = Array.isArray(report.findings) ? report.findings : [];
+    const panel = vscode.window.createWebviewPanel('gamehub.coursewareReport',title,vscode.ViewColumn.Beside,{ enableScripts:false });
+    const rows = findings.map(item => `<tr><td><b class="${escapeHtml(item.severity)}">${escapeHtml(item.severity)}</b></td><td><code>${escapeHtml(item.code)}</code></td><td>${escapeHtml(item.message)}${item.path ? `<small>${escapeHtml(item.path)}${escapeHtml(item.pointer || '')}</small>` : ''}</td></tr>`).join('');
+    const counts = value.counts ? `<div class="metrics"><span>${value.counts.objectives} 目标</span><span>${value.counts.scenes} 场景</span><span>${value.counts.checkpoints} 检查点</span><span>${value.counts.sources} 来源</span><span>${value.counts.journeys} 路径</span></div>` : '';
+    panel.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:13px/1.6 var(--vscode-font-family);color:var(--vscode-foreground);padding:22px}h1{font-size:22px}.status{padding:12px;border-left:4px solid ${report.ok ? 'var(--vscode-testing-iconPassed)' : 'var(--vscode-testing-iconFailed)'};background:var(--vscode-editor-inactiveSelectionBackground)}.metrics{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.metrics span{border:1px solid var(--vscode-panel-border);padding:5px 8px}table{width:100%;border-collapse:collapse;margin-top:18px}td{padding:9px;border-top:1px solid var(--vscode-panel-border);vertical-align:top}td:first-child{width:70px}td:nth-child(2){width:220px}.error{color:var(--vscode-testing-iconFailed)}.warning{color:var(--vscode-editorWarning-foreground)}.info{color:var(--vscode-testing-iconPassed)}small{display:block;color:var(--vscode-descriptionForeground);margin-top:3px}code{font-family:var(--vscode-editor-font-family)}</style></head><body><h1>${escapeHtml(title)}</h1><p class="status"><strong>${report.ok ? 'PASS' : 'FAIL'}</strong>${report.summary ? ` · ${report.summary.errors} error · ${report.summary.warnings} warning · ${report.summary.info} info` : ''}</p>${counts}<p><code>${escapeHtml(value.projectDigest || report.projectDigest || '')}</code></p>${rows ? `<table><tbody>${rows}</tbody></table>` : '<p>没有发现问题。</p>'}</body></html>`;
+  };
+  const createCoursewareFromTemplate = async () => {
+    const selectedTemplate = await vscode.window.showQuickPick([
+      { label:'概念探索',description:'参数驱动的可视化解释',key:'concept-explorer' },
+      { label:'因果模拟',description:'控制变量实验',key:'causal-simulation' },
+      { label:'算法步进',description:'可暂停、可追踪的步骤演示',key:'algorithm-stepper' },
+    ],{ placeHolder:'选择最接近的课件模板' });
+    if (!selectedTemplate) return;
+    const parent = await vscode.window.showOpenDialog({ canSelectFiles:false,canSelectFolders:true,canSelectMany:false,openLabel:'选择新课件的父目录' });
+    if (!parent?.[0]) return;
+    const name = await vscode.window.showInputBox({ title:'新课件目录名',prompt:'只创建新目录，不会覆盖现有内容。',validateInput:value => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value) ? null : '使用 1—64 位字母、数字、点、下划线或连字符。' });
+    if (!name) return;
+    const tools = await loadCoursewareTools(); const target = path.join(parent[0].fsPath,name); const templateRoot = path.join(context.extensionPath,'templates','courseware',selectedTemplate.key);
+    const result = await tools.initializeCoursewareProject({ templateRoot,targetRoot:target }); coursewareOutput.appendLine(`Created ${result.id}: ${result.target}`);
+    const action = await vscode.window.showInformationMessage(`已创建交互课件“${result.id}”。`,'打开目录');
+    if (action === '打开目录') await vscode.commands.executeCommand('vscode.openFolder',vscode.Uri.file(target),{ forceNewWindow:false });
+  };
+  const runCoursewareInspect = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const tools = await loadCoursewareTools(); const result = await tools.describeCoursewareProject(root); showCoursewareReport('墨鱼工坊课件概览',result);
+  };
+  const runCoursewareDoctor = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const tools = await loadCoursewareTools(); const report = await tools.inspectCoursewareProject(root); showCoursewareReport('墨鱼工坊课件检查',report); if (!report.ok) await vscode.window.showErrorMessage(`课件检查未通过：${report.summary.errors} 个错误。`);
+  };
+  const runCoursewarePreview = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const tools = await loadCoursewareTools(); if (coursewarePreview) await coursewarePreview.close(); coursewarePreview = await tools.createCoursewarePreviewServer(root,{ port:0 });
+    coursewareOutput.appendLine(`Preview: ${coursewarePreview.url}`); const commands = await vscode.commands.getCommands(true);
+    if (commands.includes('simpleBrowser.show')) await vscode.commands.executeCommand('simpleBrowser.show',coursewarePreview.url); else await vscode.env.openExternal(vscode.Uri.parse(coursewarePreview.url));
+  };
+  const runCoursewareTest = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const browserModule = String(config().get('coursewarePlaywrightModule','')).trim();
+    if (!browserModule) { const action=await vscode.window.showWarningMessage('真实学习路径测试需要现有 Playwright。墨鱼工坊不会静默安装。','打开设置'); if(action==='打开设置')await vscode.commands.executeCommand('workbench.action.openSettings','gamehub.coursewarePlaywrightModule'); return; }
+    const tools = await loadCoursewareTools(); const result = await vscode.window.withProgress({ location:vscode.ProgressLocation.Notification,title:'墨鱼工坊：正在执行课件学习路径…',cancellable:false },() => tools.testCoursewareProject(root,{ browserModule }));
+    showCoursewareReport('墨鱼工坊课件学习路径',{ ...result,summary:{ errors:0,warnings:0,info:result.journeys.length },findings:result.journeys.map(item => ({ severity:'info',code:'JOURNEY_PASS',message:`${item.id}：${item.steps} steps` })) });
+  };
+  const runCoursewareBuild = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const tools = await loadCoursewareTools(); const result = await tools.buildCoursewareProject(root); coursewareOutput.appendLine(`Build ${result.projectDigest}: ${result.output}`); await vscode.window.showInformationMessage(`课件构建完成：${result.files.length} 个文件。`);
+  };
+  const runCoursewarePackage = async () => {
+    const root = await chooseCoursewareRoot(); if (!root) return; const tools = await loadCoursewareTools(); const result = await tools.packageCoursewareProject(root); coursewareOutput.appendLine(`Package ${result.artifactSha256}: ${result.path}`); const action=await vscode.window.showInformationMessage(`课件包已生成：${result.artifactBytes} 字节。`,'在文件管理器中显示'); if(action==='在文件管理器中显示')await vscode.commands.executeCommand('revealFileInOS',vscode.Uri.file(result.path));
+  };
   const openBrowser = async () => {
     const url = allowedUrl(config().get('browserUrl', 'http://127.0.0.1:3081/'), '浏览器地址');
     const commands = await vscode.commands.getCommands(true);
@@ -439,10 +522,26 @@ async function activate(context) {
   }));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.openBrowser', () => openBrowser().catch(error => vscode.window.showErrorMessage(String(error.message || error)))));
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.submitCreatorPackage', submitCreatorPackageFromWorkspace));
+  const registerCoursewareCommand = (command, handler) => {
+    context.subscriptions.push(vscode.commands.registerCommand(command, () => Promise.resolve()
+      .then(handler)
+      .catch(error => {
+        coursewareOutput.appendLine(`${command}: ${String(error?.stack || error?.message || error)}`);
+        coursewareOutput.show(true);
+        return vscode.window.showErrorMessage(String(error?.message || error));
+      })));
+  };
+  registerCoursewareCommand('gamehub.coursewareInit', createCoursewareFromTemplate);
+  registerCoursewareCommand('gamehub.coursewareInspect', runCoursewareInspect);
+  registerCoursewareCommand('gamehub.coursewareDoctor', runCoursewareDoctor);
+  registerCoursewareCommand('gamehub.coursewarePreview', runCoursewarePreview);
+  registerCoursewareCommand('gamehub.coursewareTest', runCoursewareTest);
+  registerCoursewareCommand('gamehub.coursewareBuild', runCoursewareBuild);
+  registerCoursewareCommand('gamehub.coursewarePackage', runCoursewarePackage);
   context.subscriptions.push(vscode.commands.registerCommand('gamehub.checkForUpdates', () => runEditorUpdateCheck(context, updateOutput, { force: true, userInitiated: true })));
   const updateTimer = setTimeout(() => void runEditorUpdateCheck(context, updateOutput, { force: true }), 15000);
   const updateInterval = setInterval(() => void runEditorUpdateCheck(context, updateOutput), UPDATE_INTERVAL_MS);
-  context.subscriptions.push(updateOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void desktopLauncher?.close(); void saveStore?.close(); } });
+  context.subscriptions.push(updateOutput, coursewareOutput, { dispose() { clearTimeout(updateTimer); clearInterval(updateInterval); currentView = undefined; void coursewarePreview?.close(); void desktopLauncher?.close(); void saveStore?.close(); } });
 }
 
 module.exports = { activate };

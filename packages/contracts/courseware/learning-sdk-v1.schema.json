@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/learning-sdk-v1.schema.json",
+  "title": "MOOYU Learning SDK Message v1",
+  "oneOf": [
+    { "$ref": "#/$defs/ready" }, { "$ref": "#/$defs/event" }, { "$ref": "#/$defs/progress" }, { "$ref": "#/$defs/assessment" }, { "$ref": "#/$defs/hostCommand" }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+    "base": {
+      "type": "object", "required": ["protocol", "direction", "type", "timestamp"],
+      "properties": {
+        "protocol": { "const": "mooyu.learning.v1" }, "direction": { "enum": ["courseware-to-host", "host-to-courseware"] },
+        "type": { "type": "string" }, "timestamp": { "type": "string", "format": "date-time" }, "requestId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "ready": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false, "required": ["protocol", "direction", "type", "timestamp", "payload"], "properties": {
+          "protocol": {}, "direction": { "const": "courseware-to-host" }, "type": { "const": "ready" }, "timestamp": {}, "requestId": {},
+          "payload": { "type": "object", "additionalProperties": false, "required": ["sdkVersion", "sceneId"], "properties": { "sdkVersion": { "const": 1 }, "sceneId": { "$ref": "#/$defs/id" } } }
+        } }
+      ]
+    },
+    "event": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false, "required": ["protocol", "direction", "type", "timestamp", "payload"], "properties": {
+          "protocol": {}, "direction": { "const": "courseware-to-host" }, "type": { "const": "learning.event" }, "timestamp": {}, "requestId": {},
+          "payload": { "type": "object", "additionalProperties": false, "required": ["name", "sceneId"], "properties": { "name": { "enum": ["scene.entered", "interaction.changed", "hint.opened", "checkpoint.attempted", "scene.completed"] }, "sceneId": { "$ref": "#/$defs/id" }, "checkpointId": { "$ref": "#/$defs/id" }, "data": { "type": "object" } } }
+        } }
+      ]
+    },
+    "progress": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false, "required": ["protocol", "direction", "type", "timestamp", "payload"], "properties": {
+          "protocol": {}, "direction": { "const": "courseware-to-host" }, "type": { "const": "learning.progress" }, "timestamp": {}, "requestId": {},
+          "payload": { "type": "object", "additionalProperties": false, "required": ["completedSceneIds", "completedCheckpointIds"], "properties": { "completedSceneIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }, "completedCheckpointIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } } } }
+        } }
+      ]
+    },
+    "assessment": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false, "required": ["protocol", "direction", "type", "timestamp", "payload"], "properties": {
+          "protocol": {}, "direction": { "const": "courseware-to-host" }, "type": { "const": "assessment.result" }, "timestamp": {}, "requestId": {},
+          "payload": { "type": "object", "additionalProperties": false, "required": ["checkpointId", "correct", "attempt"], "properties": { "checkpointId": { "$ref": "#/$defs/id" }, "correct": { "type": "boolean" }, "attempt": { "type": "integer", "minimum": 1 }, "score": { "type": "number", "minimum": 0, "maximum": 1 } } }
+        } }
+      ]
+    },
+    "hostCommand": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "additionalProperties": false, "required": ["protocol", "direction", "type", "timestamp", "payload"], "properties": {
+          "protocol": {}, "direction": { "const": "host-to-courseware" }, "type": { "const": "host.command" }, "timestamp": {}, "requestId": {},
+          "payload": { "type": "object", "additionalProperties": false, "required": ["name"], "properties": { "name": { "enum": ["locale.set", "progress.restore", "scene.open", "pause", "resume"] }, "value": {} } }
+        } }
+      ]
+    }
+  }
+}

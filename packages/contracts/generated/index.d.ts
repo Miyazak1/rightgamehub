@@ -1,6 +1,6 @@
 // Generated from src/schema.mjs. Do not edit by hand.
 
-export type WorkKind = "game" | "creative" | "tool";
+export type WorkKind = "game" | "creative" | "tool" | "courseware";
 export type WorkState = "draft" | "published" | "withdrawn" | "suspended";
 export type Visibility = "private" | "public";
 export type TargetKey = "web" | "windows-x64" | "windows-x86" | "windows-arm64";

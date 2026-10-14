@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [74 Agent 原生互动课件插件平台完整设计](./74-agent-native-interactive-courseware-platform.zh-CN.md) | **外部 Agent 本地创作、统一课件规范、插件/Skill/MCP/CLI 分工、官方组件、验证门禁、发布运行、自动更新与分阶段验收** |
 | [73 中英文国际化实施规范](./73-internationalization-plan.zh-CN.md) | **语言决策、文案目录、用户内容边界、I1—I4 实施顺序与双语验收要求** |
 | [GameHub 开放游戏计划](./open-game-program-growth-strategy.zh-CN.md) | **以开放游戏提供免费游玩、保护作者权益，并通过作品传播、结构化反馈和真实贡献形成平台增长闭环** |
 | [首批开放游戏上线验收台账](./open-game-launch-audit.zh-CN.md) | **逐款核对首批 14 款作品的运行入口、仓库、许可证、发布关系、固定版本、人工试玩与推广放行状态** |

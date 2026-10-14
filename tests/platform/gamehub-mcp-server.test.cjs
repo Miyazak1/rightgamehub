@@ -71,7 +71,7 @@ test('portable plugin connects the remote MCP server and ships through the commo
     fs.readFile(path.join(root, 'deploy/Caddyfile'), 'utf8'),
     fs.readFile(path.join(root, 'packages/platform-client/src/App.jsx'), 'utf8'),
   ]);
-  assert.equal(plugin.version, '0.3.0');
+  assert.equal(plugin.version, '0.4.0');
   assert.deepEqual(mcp.mcpServers.gamehub, { type: 'streamable-http', url: 'https://mooyu.fun/mcp' });
   assert.match(build, /marketplace\.plugins\.map/u);
   assert.match(build, /Promise\.all\(pluginRoots\.map\(listFiles\)\)/u);

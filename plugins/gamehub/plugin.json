@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gamehub",
-  "version": "0.3.1",
-  "description": "Discover, play, create locally, validate and publish MOOYU.FUN games from supported AI agents.",
+  "version": "0.4.0",
+  "description": "Discover, play, create locally, validate and publish MOOYU.FUN games and interactive courseware from supported AI agents.",
   "author": {
     "name": "MOOYU.FUN / 墨鱼工坊",
     "url": "https://mooyu.fun"
@@ -28,13 +28,15 @@
           "Discover games",
           "Open MOOYU.FUN",
           "Create games locally",
+          "Create interactive courseware locally",
           "Validate local web projects",
           "Publish games"
         ],
         "websiteURL": "https://mooyu.fun",
         "defaultPrompt": [
           "Open MOOYU.FUN and help me choose a short game to play now. / 打开墨鱼工坊，帮我选择一款适合现在玩的短游戏。",
-          "Use the MOOYU.FUN creator tools to make a game in the current workspace. / 使用墨鱼工坊创作工具，在当前工作区制作一款游戏。"
+          "Use the MOOYU.FUN creator tools to make a game in the current workspace. / 使用墨鱼工坊创作工具，在当前工作区制作一款游戏。",
+          "Use the MOOYU.FUN courseware contract to create an interactive lesson in the current workspace. / 使用墨鱼工坊课件契约，在当前工作区制作交互课件。"
         ],
         "brandColor": "#8B5CF6"
       }

@@ -1,8 +1,8 @@
 {
   "name": "gamehub",
   "displayName": "MOOYU.FUN / 墨鱼工坊",
-  "version": "0.3.1",
-  "description": "Discover, create locally, validate and publish MOOYU.FUN games from Claude Code.",
+  "version": "0.4.0",
+  "description": "Discover, create locally, validate and publish MOOYU.FUN games and interactive courseware from Claude Code.",
   "author": {
     "name": "MOOYU.FUN",
     "url": "https://mooyu.fun"
@@ -12,7 +12,8 @@
   "keywords": [
     "games",
     "agent",
-    "gamehub"
+    "gamehub",
+    "courseware"
   ],
   "defaultEnabled": true
 }

@@ -10,6 +10,7 @@ const updaterContent = await readFile(new URL('apps/web/public/agent-update.ps1'
 const portableUpdaterContent = await readFile(new URL('apps/web/public/agent-update.mjs', root));
 
 const extensionPackage = JSON.parse(await readFile(new URL('extensions/vscode/package.json', root), 'utf8'));
+const hostSupport = JSON.parse(await readFile(new URL('plugins/gamehub/host-support.json', root), 'utf8'));
 const filename = `${extensionPackage.name}-${extensionPackage.version}.vsix`;
 const artifact = new URL(`artifacts/${filename}`, root);
 const extensionContent = await readFile(artifact);
@@ -91,6 +92,8 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     url: `https://mooyu.fun/downloads/${filename}`,
     sha256: sha256(extensionContent),
     supportedHosts: ['cursor', 'code'],
+    permissionSetVersion: extensionPackage.gamehub.permissionSetVersion,
+    permissions: extensionPackage.gamehub.permissions,
   },
   harnessPlugin: {
     version: harnessPackage.version,
@@ -107,6 +110,8 @@ await writeFile(new URL('manifest.json', publicRoot), JSON.stringify({
     supportedHosts: ['codex', 'claude'],
     updateScope: 'all-marketplace-plugins',
     activation: 'on-host-restart',
+    permissionSetVersion: hostSupport.schemaVersion,
+    permissions: hostSupport.permissions,
   },
   creatorTools: {
     version: JSON.parse(creatorToolkitCatalog).version,

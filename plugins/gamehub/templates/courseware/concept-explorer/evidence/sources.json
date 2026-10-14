@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    { "id": "openstax-algebra", "type": "book", "title": "College Algebra 2e", "publisher": "OpenStax", "url": "https://openstax.org/details/books/college-algebra-2e", "license": "CC-BY-4.0", "locator": "Section 5.1" }
+  ],
+  "claims": [
+    { "id": "quadratic-coefficient-claim", "text": { "zh-CN": "在 y=ax² 中，a 的符号决定开口方向，|a| 越大图像越窄。", "en": "For y=ax², the sign of a determines opening direction and larger |a| makes the graph narrower." }, "sourceIds": ["openstax-algebra"], "locators": ["Section 5.1"], "verification": "primary-source" }
+  ]
+}

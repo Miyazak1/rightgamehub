@@ -19,7 +19,15 @@ cursor --install-extension gamehub-agent-<版本>.vsix
 - VS Code/Cursor 主题色和高对比度跟随；
 - access/refresh token 通过 SecretStorage 保存；
 - 用户主动执行“墨鱼工坊: 提交当前创作包”时，读取工作区内的 `creator-manifest.json` 和声明的结构化源码，本地校验后提交为私有草稿；
+- 在命令面板执行“墨鱼工坊课件”命令，可从三种参考模板创建课件，并完成概览、Doctor、loopback 预览、构建和确定性 ZIP 打包；
+- “执行真实学习路径”只调用用户已经配置的 Playwright 模块。扩展不会静默下载浏览器、安装依赖或运行第三方安装脚本；
 - Web 作品在隔离运行页游玩；
 - 除上述显式提交操作外不读取工作区文件；不运行 Shell，也不向游戏 frame 暴露编辑器 API。
+
+## 交互课件工作流
+
+打开命令面板并搜索“墨鱼工坊课件”。新建课件后，依次运行“检查当前课件”“启动本地预览”“构建当前课件”和“打包当前课件”。Doctor 未通过时，构建与打包会停止，不会生成可发布产物。
+
+真实学习路径测试是可选能力。在已经自行安装 Playwright 的环境中，将 `gamehub.coursewarePlaywrightModule` 设置为可导入的 Playwright 模块路径，再执行“执行真实学习路径”。未配置时扩展只给出明确提示，不会改变本机依赖。
 
 当前 VSIX 不接管下载目录，也不在 Webview 中启动 EXE；界面必须按 HostAdapter 的能力说明显示这些限制。

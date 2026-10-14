@@ -18,6 +18,10 @@ npx @deepseek-ai/dsh plugin --profile web remove gamehub-dsh-plugin
 
 安装、更新或卸载后都需要重启对应的 Harness profile。
 
+## 交互课件能力边界
+
+当前 Harness 右栏只承载墨鱼工坊托管界面，没有安全的“用户选择本地工作区”或本地命令 API，因此不直接创建、检查或构建本地课件。需要制作课件时，由 Harness 中具备用户授权工作区能力的 Agent 调用同一便携 `creator-toolkit.mjs`；若当前 Agent 没有该能力，则回退到 Codex、Claude Code、VS Code 或 Cursor。插件内的 `lib/courseware-host-support.json` 是机器可读的真实支持矩阵，不能把 `limited` 显示成已完成兼容。
+
 
 0.0.51 增加本地内容治理闭环：登录用户可举报公开作品，管理员可驳回举报或立即暂停作品，所有处置进入数据库级禁止更新与删除的审计记录。
 

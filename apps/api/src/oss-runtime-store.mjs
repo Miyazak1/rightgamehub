@@ -44,7 +44,7 @@ export class OssRuntimeStore {
         uploaded.push(objectKey);
         manifestAssets[relative] = { size: actual.size, sha256: actual.sha256, mime: expected.mime };
       }
-      const manifest = { policyVersion: report.policyVersion, entry: report.entry, approvedCapabilities: report.approvedCapabilities, totalBytes: report.totalBytes, fileCount: report.fileCount, assets: manifestAssets };
+      const manifest = { policyVersion: report.policyVersion, entry: report.entry, approvedCapabilities: report.approvedCapabilities, ...(report.competition?{competition:report.competition}:{}), ...(report.courseware?{courseware:report.courseware}:{}), totalBytes: report.totalBytes, fileCount: report.fileCount, assets: manifestAssets };
       const manifestBytes = Buffer.from(`${stableJson(manifest)}\n`);
       const manifestSha256 = crypto.createHash('sha256').update(manifestBytes).digest('hex');
       const manifestKey = `${prefix}/asset-manifest.json`;

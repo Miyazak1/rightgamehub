@@ -3,6 +3,7 @@ import { useI18n } from './I18n.jsx';
 
 const playerLinks = [
   ['/discover', 'navigation.discover', '✦', route => route === '/discover' || route.startsWith('/works/')],
+  ['/learn', 'navigation.learning', '◈', route => route === '/learn'],
   ['/community', 'navigation.community', '✣', route => route === '/social' || route.startsWith('/community') || route.startsWith('/contribute')],
   ['/library', 'navigation.library', '▣', route => route === '/library'],
 ];

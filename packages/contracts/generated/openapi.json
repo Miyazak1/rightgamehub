@@ -14617,7 +14617,8 @@
               "enum": [
                 "game",
                 "creative",
-                "tool"
+                "tool",
+                "courseware"
               ]
             }
           },
@@ -22192,6 +22193,130 @@
         }
       }
     },
+    "/v1/creator/works/{workId}/releases/{releaseId}/publish": {
+      "post": {
+        "operationId": "publishWorkRelease",
+        "tags": [
+          "creator"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PublishedRelease"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/creator/works/{workId}/withdraw": {
       "post": {
         "operationId": "withdrawWork",
@@ -28313,7 +28438,8 @@
             "enum": [
               "game",
               "creative",
-              "tool"
+              "tool",
+              "courseware"
             ]
           },
           "attributionKind": {
@@ -28668,6 +28794,180 @@
           "coverUrl"
         ]
       },
+      "CoursewareSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "mooyu.courseware"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+          },
+          "title": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          },
+          "defaultLocale": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 16
+          },
+          "locales": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 16
+            }
+          },
+          "subjects": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "audience": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "stages": {
+                "type": "array",
+                "maxItems": 12,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                }
+              },
+              "minimumAge": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "stages"
+            ]
+          },
+          "licenses": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "code",
+              "content"
+            ]
+          },
+          "runtime": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "static-web"
+              },
+              "learningSdk": {
+                "type": "integer",
+                "const": 1
+              },
+              "capabilities": {
+                "type": "array",
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                }
+              }
+            },
+            "required": [
+              "kind",
+              "learningSdk",
+              "capabilities"
+            ]
+          },
+          "projectDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "validatorVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "warnings": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "info": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "errors",
+              "warnings",
+              "info"
+            ]
+          }
+        },
+        "required": [
+          "format",
+          "schemaVersion",
+          "id",
+          "title",
+          "defaultLocale",
+          "locales",
+          "subjects",
+          "audience",
+          "licenses",
+          "runtime",
+          "projectDigest",
+          "validatorVersion",
+          "summary"
+        ]
+      },
       "Work": {
         "type": "object",
         "additionalProperties": false,
@@ -28698,7 +28998,8 @@
             "enum": [
               "game",
               "creative",
-              "tool"
+              "tool",
+              "courseware"
             ]
           },
           "state": {
@@ -28871,6 +29172,16 @@
           "saveCount": {
             "type": "integer",
             "minimum": 0
+          },
+          "courseware": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CoursewareSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "remixSource": {
             "oneOf": [
@@ -30193,7 +30504,8 @@
             "enum": [
               "game",
               "creative",
-              "tool"
+              "tool",
+              "courseware"
             ]
           },
           "attributionKind": {
@@ -30691,6 +31003,33 @@
           "createdAt"
         ]
       },
+      "PublishedRelease": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "work": {
+            "$ref": "#/components/schemas/Work"
+          },
+          "releaseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetKey": {
+            "type": "string",
+            "enum": [
+              "web",
+              "windows-x64",
+              "windows-x86",
+              "windows-arm64"
+            ]
+          }
+        },
+        "required": [
+          "work",
+          "releaseId",
+          "targetKey"
+        ]
+      },
       "CreateUploadRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -30815,6 +31154,17 @@
               }
             ]
           },
+          "releaseId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -30844,6 +31194,7 @@
           "publicationOutcome",
           "declaredBytes",
           "actualBytes",
+          "releaseId",
           "createdAt",
           "expiresAt",
           "errorCode"

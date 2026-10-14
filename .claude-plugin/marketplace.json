@@ -9,7 +9,7 @@
     {
       "name": "gamehub",
       "source": "./plugins/gamehub",
-      "description": "Discover, create locally, validate and publish MOOYU.FUN games with a safe browser fallback."
+      "description": "Discover, create locally, validate and publish MOOYU.FUN games and interactive courseware with a safe browser fallback."
     }
   ]
 }

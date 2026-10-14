@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "interactive-courseware",
+  "contract": "mooyu.courseware-v1",
+  "updatedAt": "2026-10-14",
+  "permissions": [
+    "read-selected-courseware-project",
+    "write-selected-courseware-project",
+    "bind-loopback-preview",
+    "write-managed-build-artifacts"
+  ],
+  "hosts": {
+    "codex": {
+      "status": "implemented",
+      "interface": "portable-agent-cli",
+      "localWorkspace": true,
+      "resultPanel": "agent-output",
+      "browserJourney": "existing-playwright-only"
+    },
+    "claude": {
+      "status": "implemented-unverified",
+      "interface": "portable-agent-cli",
+      "localWorkspace": true,
+      "resultPanel": "agent-output",
+      "browserJourney": "existing-playwright-only"
+    },
+    "vscode": {
+      "status": "implemented-unverified",
+      "interface": "native-editor-commands",
+      "localWorkspace": true,
+      "resultPanel": "script-disabled-webview",
+      "browserJourney": "configured-playwright-module-only"
+    },
+    "cursor": {
+      "status": "implemented-unverified",
+      "interface": "native-editor-commands",
+      "localWorkspace": true,
+      "resultPanel": "script-disabled-webview",
+      "browserJourney": "configured-playwright-module-only"
+    },
+    "harness": {
+      "status": "limited",
+      "interface": "hosted-ui-with-agent-cli-fallback",
+      "localWorkspace": false,
+      "resultPanel": "hosted-ui",
+      "browserJourney": "unavailable",
+      "reason": "The current Harness adapter does not expose a safe user-selected workspace or local command API to the right sidebar."
+    }
+  }
+}

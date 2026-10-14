@@ -108,6 +108,31 @@ test('API client maps server errors and sends idempotency and bearer headers', a
   assert.ok(request.init.headers['Idempotency-Key'].length >= 16);
 });
 
+test('API client publishes one selected Release with concurrency and idempotency guards', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  let request;
+  const client = createApiClient({ getAccessToken:()=> 'account-token',fetchImpl:async(url,init) => {
+    request={ url:String(url),init };
+    return new Response(JSON.stringify({ data:{ work:{ id:'work id',revision:8 },releaseId:'release id',targetKey:'web' } }),{ status:200,headers:{ 'content-type':'application/json' } });
+  } });
+  await client.publishWorkRelease('work id','release id',7,{ headers:{ 'Idempotency-Key':'explicit-publish-0001' } });
+  assert.match(request.url,/\/v1\/creator\/works\/work%20id\/releases\/release%20id\/publish$/u);
+  assert.equal(request.init.method,'POST'); assert.equal(request.init.headers.Authorization,'Bearer account-token');
+  assert.equal(request.init.headers['If-Match'],'"work-work id-7"'); assert.equal(request.init.headers['Idempotency-Key'],'explicit-publish-0001');
+});
+
+test('creator release history separates validation from an explicit public publish action', async () => {
+  const [source,messages] = await Promise.all([
+    fs.readFile('packages/platform-client/src/App.jsx','utf8'),
+    fs.readFile('packages/platform-client/src/i18n.mjs','utf8'),
+  ]);
+  assert.match(source,/item\.validationState === 'ready' && item\.servingState === 'disabled'/u);
+  assert.match(source,/api\.publishWorkRelease\(work\.id,release\.id,work\.revision\)/u);
+  assert.match(source,/publishReleaseConfirm/u);
+  assert.match(messages,/'creator\.work\.releaseReady': '已验证 · 未公开'/u);
+  assert.match(messages,/'creator\.work\.releaseReady': 'Validated · private'/u);
+});
+
 test('API client exposes catalog data without inventing local works', async () => {
   const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
   let requested='';

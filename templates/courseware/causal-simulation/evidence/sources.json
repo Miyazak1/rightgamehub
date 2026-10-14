@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    { "id": "openstax-physics", "type": "book", "title": "Physics", "publisher": "OpenStax", "url": "https://openstax.org/details/books/physics", "license": "CC-BY-4.0", "locator": "Section 4.3" }
+  ],
+  "claims": [
+    { "id": "newton-second-law-claim", "text": { "zh-CN": "物体加速度与净力成正比、与质量成反比。", "en": "Acceleration is proportional to net force and inversely proportional to mass." }, "sourceIds": ["openstax-physics"], "locators": ["Section 4.3"], "verification": "primary-source" }
+  ]
+}

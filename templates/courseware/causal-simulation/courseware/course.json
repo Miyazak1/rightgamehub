@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "objectives": [
+    { "id": "relate-force-mass-acceleration", "text": { "zh-CN": "用 F=ma 预测力或质量变化对加速度的影响。", "en": "Use F=ma to predict how force or mass changes acceleration." } }
+  ],
+  "prerequisites": [{ "zh-CN": "理解速度变化的含义。", "en": "Understands change in velocity." }],
+  "misconceptions": [
+    { "id": "mass-increases-acceleration", "text": { "zh-CN": "误以为相同力下质量越大加速度越大。", "en": "Assuming more mass means more acceleration under the same force." }, "objectiveIds": ["relate-force-mass-acceleration"] }
+  ],
+  "scenes": [
+    {
+      "id": "run-force-trials", "type": "simulate", "title": { "zh-CN": "控制变量实验", "en": "Controlled trials" },
+      "objectiveIds": ["relate-force-mass-acceleration"], "evidenceIds": ["newton-second-law-claim"],
+      "component": { "type": "force-cart-simulation", "config": { "forceRange": [1, 10], "massRange": [1, 5] } },
+      "fallback": { "zh-CN": "若动画不可用，请使用 a=F/m 计算表格中的加速度。", "en": "If animation is unavailable, calculate table values with a=F/m." }
+    }
+  ],
+  "checkpoints": [
+    { "id": "predict-double-mass", "sceneId": "run-force-trials", "objectiveIds": ["relate-force-mass-acceleration"], "kind": "multiple-choice", "prompt": { "zh-CN": "力不变、质量加倍时，加速度怎样变化？", "en": "At constant force, what happens when mass doubles?" }, "answer": "halves" }
+  ],
+  "completion": { "objectiveIds": ["relate-force-mass-acceleration"], "checkpointIds": ["predict-double-mass"] }
+}

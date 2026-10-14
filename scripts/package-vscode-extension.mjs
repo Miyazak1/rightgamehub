@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
@@ -44,6 +44,20 @@ const manifest = `<?xml version="1.0" encoding="utf-8"?>
 </PackageManifest>
 `;
 
+const treeInputs = async (sourceUrl,packagePrefix) => {
+  const visit = async (directoryUrl,relative='') => {
+    const nested = [];
+    for (const entry of await readdir(directoryUrl,{ withFileTypes:true })) {
+      const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+      const childUrl = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`,directoryUrl);
+      if (entry.isDirectory()) nested.push(...await visit(childUrl,childRelative));
+      else if (entry.isFile()) nested.push([`extension/${packagePrefix}/${childRelative}`,await readFile(childUrl)]);
+    }
+    return nested;
+  };
+  return visit(sourceUrl);
+};
+
 const inputs = [
   ['[Content_Types].xml', Buffer.from(contentTypes)],
   ['extension.vsixmanifest', Buffer.from(manifest)],
@@ -51,6 +65,11 @@ const inputs = [
   ['extension/package.nls.json', await readFile(new URL('package.nls.json', extensionRoot))],
   ['extension/package.nls.zh-cn.json', await readFile(new URL('package.nls.zh-cn.json', extensionRoot))],
   ['extension/gamehub-extension.cjs', await readFile(new URL('gamehub-extension.cjs', extensionRoot))],
+  ['extension/bin/courseware-bridge.mjs', await readFile(new URL('bin/courseware-bridge.mjs', extensionRoot))],
+  ['extension/toolkits/catalog.json', await readFile(new URL('plugins/gamehub/toolkits/catalog.json', root))],
+  ['extension/host-support.json', await readFile(new URL('plugins/gamehub/host-support.json', root))],
+  ...await treeInputs(new URL('packages/contracts/courseware/',root),'contracts/courseware'),
+  ...await treeInputs(new URL('templates/courseware/',root),'templates/courseware'),
   ['extension/desktop-launcher.mjs', await readFile(new URL('extensions/harness/src/desktop-launcher.mjs', root))],
   ...await Promise.all(['store-contract.mjs','store-rpc.mjs','sqlite-store.mjs'].map(async name=>['extension/save-cache/'+name,await readFile(new URL('packages/save-cache/src/'+name,root))])),
   ['extension/media/file-export.cjs', await readFile(new URL('media/file-export.cjs', extensionRoot))],

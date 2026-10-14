@@ -1,4 +1,4 @@
-export const workKindLabels = { game: '游戏', creative: '互动作品', tool: '创意工具' };
+export const workKindLabels = { game: '游戏', creative: '互动作品', tool: '创意工具', courseware: '交互课件' };
 export const workMetadataForm = work => ({ title: work.title ?? '', description: work.description ?? '', instructions: work.instructions ?? '', estimatedMinutes: String(work.estimatedMinutes ?? 3), tags: (work.tags || []).join('，'), agentLabel: work.agentLabel ?? '', repositoryUrl: work.repositoryUrl ?? '', licenseSpdx: work.licenseSpdx ?? '', remixSourceWorkId: work.remixSource?.workId ?? '', remixNote: work.remixNote ?? '' });
 export function workMetadataPayload(form, { t } = {}) {
   const message = (key, fallback) => typeof t === 'function' ? t(key) : fallback;

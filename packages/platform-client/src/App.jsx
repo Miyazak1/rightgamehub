@@ -22,6 +22,7 @@ import CommunityParties from './CommunityParties.jsx';
 import CommunityHome from './CommunityHome.jsx';
 import CommunityParticipation from './CommunityParticipation.jsx';
 import DiscoverPage from './DiscoverPage.jsx';
+import LearningPage from './LearningPage.jsx';
 import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
 import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
@@ -77,7 +78,7 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
+  return ({ discover: 'discover', learn: 'learning', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
@@ -182,12 +183,12 @@ function WorkCard({ work, go, featured = false }) {
   const { t, number } = useI18n();
   return <article className={`work-card ${featured ? 'work-card--featured' : ''}`}>
     <button className="card-open" onClick={() => go(`/works/${work.id}`)} aria-label={t('discover.view',{title:work.title})}><Art work={work} large={featured} /></button>
-    <div className="work-card__body"><div><span className="eyebrow">{work.tag ?? t(work.kind === 'game' ? 'discover.game' : 'discover.creative')}</span><h3>{work.title}</h3>{work.creatorHandle && <button className="creator-profile-link" onClick={() => go(`/u/${work.creatorHandle}`)}>by {work.creatorDisplayName ?? t('common.communityAuthor')}</button>}</div><p>{work.description}</p><div className="card-meta"><span>{icons.globe} {workPlatformLabel(work,t)}</span><span>{icons.play} {work.plays ?? (work.playCount?t('detail.plays',{count:Number(work.playCount),formatted:number(work.playCount)}):t('common.newWork'))}</span></div></div>
+    <div className="work-card__body"><div><span className="eyebrow">{work.tag ?? t(work.kind === 'game' ? 'discover.game' : work.kind === 'courseware' ? 'discover.courseware' : 'discover.creative')}</span><h3>{work.title}</h3>{work.creatorHandle && <button className="creator-profile-link" onClick={() => go(`/u/${work.creatorHandle}`)}>by {work.creatorDisplayName ?? t('common.communityAuthor')}</button>}</div><p>{work.description}</p><div className="card-meta"><span>{icons.globe} {workPlatformLabel(work,t)}</span><span>{icons.play} {work.plays ?? (work.playCount?t('detail.plays',{count:Number(work.playCount),formatted:number(work.playCount)}):t('common.newWork'))}</span></div></div>
     <button className="round-play" onClick={() => go(workActionPath(work))} aria-label={t(workHasWebRelease(work)?'discover.startAria':'discover.windowsAria',{title:work.title})}>{icons.play}</button>
   </article>;
 }
 
-const workTag = (work,t) => work.tags?.[0] ?? work.tag ?? t(work.kind === 'game' ? 'discover.game' : work.kind === 'tool' ? 'discover.tool' : 'discover.creative');
+const workTag = (work,t) => work.tags?.[0] ?? work.tag ?? t(work.kind === 'game' ? 'discover.game' : work.kind === 'tool' ? 'discover.tool' : work.kind === 'courseware' ? 'discover.courseware' : 'discover.creative');
 function QuietWorkRow({ work, go }) {
   const { t } = useI18n();
   return <article className="quiet-work-row">
@@ -1145,6 +1146,7 @@ function CreatorRow({ work, api, demo, go, onChanged, onCopyBadge, copied }) {
   const {t,date}=useI18n();
   const [history, setHistory] = useState({ open: false, loading: false, items: [], error: '' });
   const [withdrawing, setWithdrawing] = useState(false);
+  const [publishing, setPublishing] = useState('');
   const [actionError, setActionError] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
   const [coverBusy, setCoverBusy] = useState(false);
@@ -1171,6 +1173,16 @@ function CreatorRow({ work, api, demo, go, onChanged, onCopyBadge, copied }) {
       setActionError(error.message || t('creator.work.withdrawFailed'));
     } finally { setWithdrawing(false); }
   };
+  const publishRelease = async release => {
+    if (!globalThis.confirm?.(t('creator.work.publishReleaseConfirm',{label:release.label,title:work.title}))) return;
+    setPublishing(release.id); setActionError('');
+    try {
+      const result = demo ? { work:{...work,state:'published',visibility:'public',revision:String(Number(work.revision)+1)},releaseId:release.id } : (await api.publishWorkRelease(work.id,release.id,work.revision)).data;
+      onChanged(result.work);
+      setHistory(current => ({ ...current,items:current.items.map(item => ({...item,servingState:item.id===result.releaseId?'enabled':item.servingState==='revoked'?'revoked':'disabled'})) }));
+    } catch (error) { setActionError(error.message || t('creator.work.publishReleaseFailed')); }
+    finally { setPublishing(''); }
+  };
   const uploadCover = async event => {
     const file = event.target.files?.[0]; event.target.value = '';
     if (!file) return;
@@ -1181,7 +1193,7 @@ function CreatorRow({ work, api, demo, go, onChanged, onCopyBadge, copied }) {
     catch (error) { URL.revokeObjectURL(preview); setCoverPreview(''); setActionError(error.message || t('creator.work.coverFailed')); }
     finally { setCoverBusy(false); }
   };
-  return <div className="creator-entry"><article><Art work={{ ...work, coverUrl: coverPreview || work.coverUrl }}/><div className="creator-row__main"><h3>{work.title}</h3><p>{t('creator.work.meta',{revision:work.revision,source:work.sourceProvider === 'github' ? t('creator.work.githubImport') : ''})}</p></div><span className={`status-pill ${statusKey === 'published' ? 'is-success' : ''} ${statusKey === 'withdrawn' ? 'is-muted' : ''}`}>{status}</span><div className="creator-row-actions"><button className="text-button" onClick={() => go(`/creator/works/${work.id}/edit`)}>{t('creator.work.edit')}</button><button className="text-button" onClick={() => go(`/creator/works/${work.id}/development`)}>{t('creator.work.log')}</button><label className="cover-upload"><input type="file" accept="image/png,image/jpeg,image/webp" disabled={coverBusy} onChange={uploadCover}/>{t(coverBusy ? 'creator.work.coverProcessing' : work.coverUrl ? 'creator.work.coverReplace' : 'creator.work.coverUpload')}</label><button className="text-button" onClick={toggleHistory}>{t(history.open ? 'creator.work.hideHistory' : 'creator.work.history')}</button>{work.state === 'published' && <button className="text-button badge-copy" type="button" onClick={() => onCopyBadge(work)}>{t(copied ? 'creator.work.badgeCopied' : 'creator.copyBadge')}</button>}{work.sourceProvider === 'github' && <Button kind="secondary" onClick={() => go(`/creator/works/${work.id}/builds`)}>{t('creator.work.continueBuild')}</Button>}<Button kind="secondary" onClick={() => go(`/creator/works/${work.id}/upload`)}>{t('creator.work.uploadNew')}</Button>{work.state === 'published' && <button className="danger-button" disabled={withdrawing} onClick={withdraw}>{t(withdrawing ? 'creator.work.withdrawing' : 'creator.work.withdraw')}</button>}</div></article><div className="creator-entry-ai"><span>{t('creator.work.extendAi')}</span><button className="text-button" onClick={() => go(`/creator/works/${work.id}/ai/multiplayer`)}>{t('creator.work.addMultiplayer')}</button><button className="text-button" onClick={() => go(`/creator/works/${work.id}/ai/leaderboards`)}>{t('creator.work.addLeaderboard')}</button></div>{actionError && <p className="creator-action-error form-error" role="alert">{actionError}</p>}{history.open && <section className="release-history" aria-live="polite">{history.loading ? <p>{t('creator.work.loadingReleases')}</p> : history.error ? <p className="form-error">{history.error}</p> : history.items.length ? <ol>{history.items.map(item => <li key={item.id}><div><strong>{item.label}</strong><small>{item.targetKey} · {item.packageType === 'web_zip' ? 'Web ZIP' : item.packageType}</small></div><span className={item.servingState === 'enabled' ? 'release-live' : ''}>{t(item.servingState === 'enabled' ? 'creator.work.releasePublic' : item.validationState === 'ready' ? 'creator.work.releaseDisabled' : 'creator.work.releaseProcessing')}</span><time>{date(item.createdAt,{dateStyle:'short',timeStyle:'short'})}</time></li>)}</ol> : <p>{t('creator.work.noReleases')}</p>}</section>}</div>;
+  return <div className="creator-entry"><article><Art work={{ ...work, coverUrl: coverPreview || work.coverUrl }}/><div className="creator-row__main"><h3>{work.title}</h3><p>{t('creator.work.meta',{revision:work.revision,source:work.sourceProvider === 'github' ? t('creator.work.githubImport') : ''})}</p></div><span className={`status-pill ${statusKey === 'published' ? 'is-success' : ''} ${statusKey === 'withdrawn' ? 'is-muted' : ''}`}>{status}</span><div className="creator-row-actions"><button className="text-button" onClick={() => go(`/creator/works/${work.id}/edit`)}>{t('creator.work.edit')}</button><button className="text-button" onClick={() => go(`/creator/works/${work.id}/development`)}>{t('creator.work.log')}</button><label className="cover-upload"><input type="file" accept="image/png,image/jpeg,image/webp" disabled={coverBusy} onChange={uploadCover}/>{t(coverBusy ? 'creator.work.coverProcessing' : work.coverUrl ? 'creator.work.coverReplace' : 'creator.work.coverUpload')}</label><button className="text-button" onClick={toggleHistory}>{t(history.open ? 'creator.work.hideHistory' : 'creator.work.history')}</button>{work.state === 'published' && <button className="text-button badge-copy" type="button" onClick={() => onCopyBadge(work)}>{t(copied ? 'creator.work.badgeCopied' : 'creator.copyBadge')}</button>}{work.sourceProvider === 'github' && <Button kind="secondary" onClick={() => go(`/creator/works/${work.id}/builds`)}>{t('creator.work.continueBuild')}</Button>}<Button kind="secondary" onClick={() => go(`/creator/works/${work.id}/upload`)}>{t('creator.work.uploadNew')}</Button>{work.state === 'published' && <button className="danger-button" disabled={withdrawing} onClick={withdraw}>{t(withdrawing ? 'creator.work.withdrawing' : 'creator.work.withdraw')}</button>}</div></article><div className="creator-entry-ai"><span>{t('creator.work.extendAi')}</span><button className="text-button" onClick={() => go(`/creator/works/${work.id}/ai/multiplayer`)}>{t('creator.work.addMultiplayer')}</button><button className="text-button" onClick={() => go(`/creator/works/${work.id}/ai/leaderboards`)}>{t('creator.work.addLeaderboard')}</button></div>{actionError && <p className="creator-action-error form-error" role="alert">{actionError}</p>}{history.open && <section className="release-history" aria-live="polite">{history.loading ? <p>{t('creator.work.loadingReleases')}</p> : history.error ? <p className="form-error">{history.error}</p> : history.items.length ? <ol>{history.items.map(item => <li key={item.id}><div><strong>{item.label}</strong><small>{item.targetKey} · {item.packageType === 'web_zip' ? 'Web ZIP' : item.packageType}</small></div><span className={item.servingState === 'enabled' ? 'release-live' : item.validationState === 'ready' ? 'release-ready' : ''}>{t(item.servingState === 'enabled' ? 'creator.work.releasePublic' : item.validationState === 'ready' ? 'creator.work.releaseReady' : 'creator.work.releaseProcessing')}</span>{item.validationState === 'ready' && item.servingState === 'disabled' && <button className="release-publish" type="button" disabled={Boolean(publishing)} onClick={() => publishRelease(item)}>{t(publishing===item.id?'creator.work.publishingRelease':'creator.work.publishRelease')}</button>}<time>{date(item.createdAt,{dateStyle:'short',timeStyle:'short'})}</time></li>)}</ol> : <p>{t('creator.work.noReleases')}</p>}</section>}</div>;
 }
 
 function DemoUploadPage({ workId, go }) {
@@ -1879,6 +1891,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go} savedWork={savedWork} route={route}/>;
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
+  else if (route === '/learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;

@@ -95,7 +95,7 @@ export class PostgresValidationRepository {
         else outcome = 'published';
       }
       const servingState = outcome === 'published' ? 'enabled' : 'disabled';
-      const manifestSummary = { policyVersion: published.manifest.policyVersion, entry: published.manifest.entry, fileCount: published.manifest.fileCount, totalBytes: published.manifest.totalBytes, ...(published.manifest.native ? { native: published.manifest.native } : {}) };
+      const manifestSummary = { policyVersion: published.manifest.policyVersion, entry: published.manifest.entry, fileCount: published.manifest.fileCount, totalBytes: published.manifest.totalBytes, ...(published.manifest.native ? { native: published.manifest.native } : {}), ...(published.manifest.courseware ? { courseware:published.manifest.courseware } : {}) };
       const native = published.manifest.native ?? null;
       await client.query(
         `INSERT INTO releases(id,work_id,target_key,label,package_type,os,arch,entry_path,validation_state,serving_state,manifest,approved_capabilities,artifact_sha256,asset_prefix,asset_manifest_sha256,asset_count,expanded_bytes,upload_job_id)

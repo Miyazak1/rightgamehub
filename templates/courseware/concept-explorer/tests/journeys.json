@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "journeys": [
+    { "id": "negative-a-completion", "title": "改变 a 并回答方向", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "set", "target": "a", "value": -2 },
+      { "action": "answer", "target": "predict-opening", "value": "down" }, { "action": "assert", "target": "assessment.correct", "expect": true },
+      { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true }
+  ]
+}

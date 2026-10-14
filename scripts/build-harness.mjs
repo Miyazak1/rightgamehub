@@ -29,6 +29,7 @@ await mkdir(new URL('lib/', pluginRoot), { recursive: true });
 await mkdir(new URL('artifacts/', root), { recursive: true });
 await writeFile(new URL('lib/client.js', pluginRoot), bundle);
 await copyFile(new URL('src/index.js', pluginRoot), new URL('lib/index.js', pluginRoot));
+await copyFile(new URL('plugins/gamehub/host-support.json', root), new URL('lib/courseware-host-support.json', pluginRoot));
 await copyFile(new URL('src/transfer-service.mjs', pluginRoot), new URL('lib/transfer-service.mjs', pluginRoot));
 for (const name of ['web-policy.mjs', 'zip-worker.mjs', 'prepare-web-game.mjs', 'game-runtime.mjs', 'native-probe-adapter.mjs', 'offscreen-adapter.mjs', 'offscreen-player.html', 'offscreen-package.mjs', 'offscreen-install.mjs', 'offscreen-approved.json', 'desktop-launcher.mjs', 'credential-store.mjs']) await copyFile(new URL(`src/${name}`, pluginRoot), new URL(`lib/${name}`, pluginRoot));
 await mkdir(new URL('lib/save-cache/',pluginRoot),{recursive:true});

@@ -4,11 +4,19 @@
   "command.open": "墨鱼工坊：打开游戏平台",
   "command.openBrowser": "墨鱼工坊：在内置浏览器打开",
   "command.checkUpdates": "墨鱼工坊：检查更新",
+  "command.coursewareInit": "墨鱼工坊：创建交互课件",
+  "command.coursewareInspect": "墨鱼工坊：查看交互课件",
+  "command.coursewareDoctor": "墨鱼工坊：校验交互课件",
+  "command.coursewarePreview": "墨鱼工坊：预览交互课件",
+  "command.coursewareTest": "墨鱼工坊：测试课件学习路径",
+  "command.coursewareBuild": "墨鱼工坊：构建交互课件",
+  "command.coursewarePackage": "墨鱼工坊：打包交互课件",
   "viewContainer.title": "墨鱼工坊",
   "view.name": "墨鱼工坊",
   "configuration.title": "墨鱼工坊",
   "configuration.apiUrl": "墨鱼工坊 API 地址。默认连接正式服务。",
   "configuration.browserUrl": "无法使用侧栏时打开的墨鱼工坊页面。",
   "configuration.runtimeDomain": "墨鱼工坊隔离 Web 游戏的受信任运行域名。",
-  "configuration.autoUpdate": "在后台检查、校验并安装墨鱼工坊稳定版更新；重启编辑器后生效。"
+  "configuration.autoUpdate": "在后台检查、校验并安装墨鱼工坊稳定版更新；重启编辑器后生效。",
+  "configuration.coursewarePlaywrightModule": "用于课件学习路径测试的现有 Playwright 模块路径或包名。墨鱼工坊不会静默安装它。"
 }

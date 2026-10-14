@@ -29,3 +29,5 @@ await build({
 console.log('Built the shared MOOYU.FUN client for VS Code/Cursor WebviewView.');
 
 await build({entryPoints:[fileURLToPath(new URL('src/file-export.mjs',extensionRoot))],outfile:fileURLToPath(new URL('file-export.cjs',out)),bundle:true,format:'cjs',platform:'node',target:['node20'],logLevel:'silent'});
+await mkdir(new URL('bin/',extensionRoot),{ recursive:true });
+await build({entryPoints:[fileURLToPath(new URL('src/courseware-bridge.mjs',extensionRoot))],outfile:fileURLToPath(new URL('bin/courseware-bridge.mjs',extensionRoot)),bundle:true,format:'esm',platform:'node',target:['node20'],logLevel:'silent'});

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "objectives": [
+    { "id": "trace-insertion-sort", "text": { "zh-CN": "追踪插入排序每一步并识别有序区。", "en": "Trace insertion sort and identify its sorted prefix." } }
+  ],
+  "prerequisites": [{ "zh-CN": "理解数组下标和大小比较。", "en": "Understands array indices and comparisons." }],
+  "misconceptions": [
+    { "id": "whole-array-sorted-each-step", "text": { "zh-CN": "误以为每一步都会让整个数组有序。", "en": "Assuming every step sorts the entire array." }, "objectiveIds": ["trace-insertion-sort"] }
+  ],
+  "scenes": [
+    {
+      "id": "step-through-sort", "type": "practice", "title": { "zh-CN": "逐步插入", "en": "Insert step by step" },
+      "objectiveIds": ["trace-insertion-sort"], "evidenceIds": ["insertion-sort-invariant"],
+      "component": { "type": "array-algorithm-stepper", "config": { "initial": [5, 2, 4, 1, 3] } },
+      "fallback": { "zh-CN": "若动画不可用，请在纸上标出每轮结束后的有序前缀。", "en": "If animation is unavailable, mark the sorted prefix after each pass on paper." }
+    }
+  ],
+  "checkpoints": [
+    { "id": "identify-prefix", "sceneId": "step-through-sort", "objectiveIds": ["trace-insertion-sort"], "kind": "multiple-choice", "prompt": { "zh-CN": "处理第三个元素后，哪个前缀保证有序？", "en": "After processing the third item, which prefix is guaranteed sorted?" }, "answer": "first-three" }
+  ],
+  "completion": { "objectiveIds": ["trace-insertion-sort"], "checkpointIds": ["identify-prefix"] }
+}

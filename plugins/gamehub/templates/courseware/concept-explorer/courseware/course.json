@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "objectives": [
+    { "id": "shape-from-a", "text": { "zh-CN": "解释系数 a 的符号和绝对值如何改变抛物线。", "en": "Explain how the sign and magnitude of a change a parabola." } }
+  ],
+  "prerequisites": [{ "zh-CN": "能读懂直角坐标系。", "en": "Can read a Cartesian coordinate plane." }],
+  "misconceptions": [
+    { "id": "larger-a-wider", "text": { "zh-CN": "误以为 |a| 越大图像越宽。", "en": "Assuming a larger |a| makes the graph wider." }, "objectiveIds": ["shape-from-a"] }
+  ],
+  "scenes": [
+    {
+      "id": "explore-a", "type": "explore", "title": { "zh-CN": "拖动 a", "en": "Move a" },
+      "objectiveIds": ["shape-from-a"], "evidenceIds": ["quadratic-coefficient-claim"],
+      "component": { "type": "quadratic-plot", "config": { "minimum": -3, "maximum": 3, "step": 0.1 } },
+      "fallback": { "zh-CN": "若动画不可用，请比较 a=-2、-1、1、2 时的函数值表。", "en": "If animation is unavailable, compare value tables for a=-2, -1, 1, and 2." }
+    }
+  ],
+  "checkpoints": [
+    { "id": "predict-opening", "sceneId": "explore-a", "objectiveIds": ["shape-from-a"], "kind": "multiple-choice", "prompt": { "zh-CN": "当 a<0 时，抛物线朝哪个方向开口？", "en": "When a<0, which way does the parabola open?" }, "answer": "down" }
+  ],
+  "completion": { "objectiveIds": ["shape-from-a"], "checkpointIds": ["predict-opening"] }
+}

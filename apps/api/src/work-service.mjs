@@ -31,6 +31,14 @@ export function createWorkService({ repository, ids = () => crypto.randomUUID(),
       if (!actor.scopes.includes('works:read')) throw new WorkError('FORBIDDEN', 403, 'This device is not allowed to read works.');
       return repository.listReleases(actor.userId, workId);
     },
+    async publishRelease(actor, workId, releaseId, idempotencyKey, ifMatch) {
+      if (!actor.profile.canPublish || !actor.scopes.includes('works:write')) throw new WorkError('PUBLISH_NOT_ENABLED',403,'Publishing is not enabled for this account.');
+      if (!/^[\x21-\x7e]{16,128}$/.test(idempotencyKey ?? '')) throw new WorkError('IDEMPOTENCY_KEY_REQUIRED',400,'A valid Idempotency-Key is required.');
+      const match = new RegExp(`^"work-${workId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)"$`).exec(ifMatch ?? '');
+      if (!match) throw new WorkError('PRECONDITION_REQUIRED',428,'A current Work ETag is required.');
+      const result = await repository.publishReleaseIdempotent({ actor,workId,releaseId,expectedRevision:match[1],idempotencyKey,requestHash:hashRequest({ workId,releaseId,ifMatch }) });
+      return { ...result,etag:workEtag(result.work) };
+    },
     async uploadCover(actor, workId, body) {
       if (!actor.scopes.includes('works:write')) throw new WorkError('FORBIDDEN', 403, 'This device is not allowed to edit works.');
       if (!Buffer.isBuffer(body) || body.length < 16 || body.length > 5 * 1024 * 1024) throw new WorkError('COVER_INVALID', 400, '封面文件无效或超过 5 MB。');

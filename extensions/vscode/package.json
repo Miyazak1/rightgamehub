@@ -2,7 +2,7 @@
   "name": "gamehub-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.3.46",
+  "version": "0.4.0",
   "publisher": "gamehub-local",
   "private": true,
   "engines": {
@@ -12,9 +12,26 @@
     "ui"
   ],
   "main": "./gamehub-extension.cjs",
+  "gamehub": {
+    "permissionSetVersion": 1,
+    "permissions": [
+      "network:mooyu.fun",
+      "secret-storage:account-session",
+      "read:user-selected-courseware-project",
+      "write:user-selected-courseware-project",
+      "listen:loopback-courseware-preview"
+    ]
+  },
   "activationEvents": [
     "onCommand:gamehub.open",
     "onCommand:gamehub.checkForUpdates",
+    "onCommand:gamehub.coursewareInit",
+    "onCommand:gamehub.coursewareInspect",
+    "onCommand:gamehub.coursewareDoctor",
+    "onCommand:gamehub.coursewarePreview",
+    "onCommand:gamehub.coursewareTest",
+    "onCommand:gamehub.coursewareBuild",
+    "onCommand:gamehub.coursewarePackage",
     "onView:gamehub.platform"
   ],
   "contributes": {
@@ -32,6 +49,34 @@
         "command": "gamehub.checkForUpdates",
         "title": "%command.checkUpdates%",
         "icon": "$(sync)"
+      },
+      {
+        "command": "gamehub.coursewareInit",
+        "title": "%command.coursewareInit%"
+      },
+      {
+        "command": "gamehub.coursewareInspect",
+        "title": "%command.coursewareInspect%"
+      },
+      {
+        "command": "gamehub.coursewareDoctor",
+        "title": "%command.coursewareDoctor%"
+      },
+      {
+        "command": "gamehub.coursewarePreview",
+        "title": "%command.coursewarePreview%"
+      },
+      {
+        "command": "gamehub.coursewareTest",
+        "title": "%command.coursewareTest%"
+      },
+      {
+        "command": "gamehub.coursewareBuild",
+        "title": "%command.coursewareBuild%"
+      },
+      {
+        "command": "gamehub.coursewarePackage",
+        "title": "%command.coursewarePackage%"
       }
     ],
     "viewsContainers": {
@@ -92,6 +137,12 @@
           "default": true,
           "scope": "application",
           "description": "%configuration.autoUpdate%"
+        },
+        "gamehub.coursewarePlaywrightModule": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "%configuration.coursewarePlaywrightModule%"
         }
       }
     }

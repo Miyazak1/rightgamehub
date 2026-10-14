@@ -6,6 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import { crc32 } from 'node:zlib';
 import path from 'node:path';
 import {normalizeCompetition} from '../../../packages/contracts/src/competition.mjs';
+import { inspectCoursewareProject } from '../../../packages/creator-tools/src/index.mjs';
 import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
@@ -36,6 +37,34 @@ async function readPlatformManifest(output, assets) {
   if (!assets[entry] || !/^text\/html/.test(assets[entry].mime)) throw invalid('MANIFEST_INVALID', 'The declared entry must be an HTML file in the package.');
   if(capabilities.includes('competition')!==(value.competition!==undefined))throw invalid('MANIFEST_COMPETITION_INVALID','Declare both the competition capability and its board definitions.');
   return { entry, approvedCapabilities: [...capabilities].sort(), ...(value.competition?{competition:normalizeCompetition(value.competition)}:{}) };
+}
+
+async function readCoursewareManifest(output, assets, entry) {
+  if (!assets['mooyu-courseware.json']) return null;
+  const report = await inspectCoursewareProject(output);
+  if (!report.ok) {
+    const first = report.findings.find(item => item.severity === 'error');
+    throw invalid(first?.code ?? 'COURSEWARE_VALIDATION_FAILED', first?.message ?? 'Interactive courseware validation failed.');
+  }
+  let manifest;
+  try { manifest = JSON.parse(await readFile(containedPath(output, 'mooyu-courseware.json'), 'utf8')); }
+  catch { throw invalid('COURSEWARE_MANIFEST_INVALID', 'mooyu-courseware.json is not valid JSON.'); }
+  if (manifest.build?.entry !== entry) throw invalid('COURSEWARE_ENTRY_MISMATCH', 'The validated runtime entry differs from mooyu-courseware.json.');
+  return {
+    format: manifest.format,
+    schemaVersion: manifest.schemaVersion,
+    id: manifest.id,
+    title: manifest.title,
+    defaultLocale: manifest.defaultLocale,
+    locales: manifest.locales,
+    subjects: manifest.subjects,
+    audience: manifest.audience,
+    licenses: manifest.licenses,
+    runtime: manifest.runtime,
+    projectDigest: report.projectDigest,
+    validatorVersion: report.validatorVersion,
+    summary: report.summary,
+  };
 }
 
 export async function validateWebZip(input, output, totalLimit = WEB_LIMITS.totalBytes) {
@@ -99,6 +128,7 @@ export async function validateWebZip(input, output, totalLimit = WEB_LIMITS.tota
       assets[name] = { size, sha256: hash.digest('hex'), mime };
     }
     const platform = await readPlatformManifest(output, assets);
-    return { policyVersion: WEB_POLICY_VERSION, ...platform, totalBytes, fileCount: Object.keys(assets).length, assets };
+    const courseware = await readCoursewareManifest(output, assets, platform.entry);
+    return { policyVersion: WEB_POLICY_VERSION, ...platform, ...(courseware ? { courseware } : {}), totalBytes, fileCount: Object.keys(assets).length, assets };
   } finally { zip.close(); }
 }

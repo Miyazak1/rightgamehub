@@ -4,11 +4,19 @@
   "command.open": "MOOYU.FUN: Open game platform",
   "command.openBrowser": "MOOYU.FUN: Open in embedded browser",
   "command.checkUpdates": "MOOYU.FUN: Check for updates",
+  "command.coursewareInit": "MOOYU.FUN: Create interactive courseware",
+  "command.coursewareInspect": "MOOYU.FUN: Inspect interactive courseware",
+  "command.coursewareDoctor": "MOOYU.FUN: Validate interactive courseware",
+  "command.coursewarePreview": "MOOYU.FUN: Preview interactive courseware",
+  "command.coursewareTest": "MOOYU.FUN: Test courseware journeys",
+  "command.coursewareBuild": "MOOYU.FUN: Build interactive courseware",
+  "command.coursewarePackage": "MOOYU.FUN: Package interactive courseware",
   "viewContainer.title": "MOOYU.FUN",
   "view.name": "MOOYU.FUN",
   "configuration.title": "MOOYU.FUN",
   "configuration.apiUrl": "MOOYU.FUN API URL. Connects to the production service by default.",
   "configuration.browserUrl": "MOOYU.FUN page to open when the sidebar is unavailable.",
   "configuration.runtimeDomain": "Trusted runtime domain for isolated MOOYU.FUN web games.",
-  "configuration.autoUpdate": "Download, verify, and install stable MOOYU.FUN updates in the background. Updates activate after the editor restarts."
+  "configuration.autoUpdate": "Download, verify, and install stable MOOYU.FUN updates in the background. Updates activate after the editor restarts.",
+  "configuration.coursewarePlaywrightModule": "Optional path or package name for an existing Playwright installation used by courseware journey tests. MOOYU.FUN never installs it silently."
 }

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/manifest-v1.schema.json",
+  "title": "MOOYU Courseware Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "id", "title", "defaultLocale", "locales", "subjects", "audience", "course", "evidence", "tests", "build", "runtime", "licenses"],
+  "properties": {
+    "format": { "const": "mooyu.courseware" },
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "$ref": "#/$defs/localizedText" },
+    "summary": { "$ref": "#/$defs/localizedText" },
+    "defaultLocale": { "$ref": "#/$defs/locale" },
+    "locales": { "type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": { "$ref": "#/$defs/locale" } },
+    "subjects": { "type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "audience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stages"],
+      "properties": {
+        "stages": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["primary", "lower-secondary", "upper-secondary", "higher-education", "professional", "lifelong"] } },
+        "minimumAge": { "type": "integer", "minimum": 3, "maximum": 120 },
+        "maximumAge": { "type": "integer", "minimum": 3, "maximum": 120 }
+      }
+    },
+    "course": { "$ref": "#/$defs/localPath" },
+    "evidence": { "$ref": "#/$defs/localPath" },
+    "tests": { "$ref": "#/$defs/localPath" },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "entry"],
+      "properties": {
+        "profile": { "const": "mooyu-static-v1" },
+        "entry": { "const": "dist/index.html" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "learningSdk", "capabilities"],
+      "properties": {
+        "kind": { "enum": ["static-web", "static-wasm"] },
+        "learningSdk": { "const": 1 },
+        "capabilities": { "type": "array", "uniqueItems": true, "items": { "enum": ["fullscreen", "pointerLock", "localSave", "fileExport", "shareLinks", "learningProgress", "learningEvents", "assessmentResult"] } }
+      }
+    },
+    "licenses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "content"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "content": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$", "maxLength": 24 },
+    "localPath": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+    "localizedText": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 12,
+      "propertyNames": { "$ref": "#/$defs/locale" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 500 }
+    }
+  }
+}

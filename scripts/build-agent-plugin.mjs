@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, cp, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -21,4 +21,6 @@ const templateRoot = new URL('templates/creator-bingo/',pluginRoot);
 await mkdir(new URL('source/',templateRoot),{ recursive:true });
 for (const file of ['creator-manifest.json','README.md','.gitignore']) await copyFile(new URL(`templates/creator-bingo/${file}`,root),new URL(file,templateRoot));
 await copyFile(new URL('templates/creator-bingo/source/bingo.json',root),new URL('source/bingo.json',templateRoot));
-console.log('Built the portable MOOYU.FUN creator publisher, local toolkit Doctor, and Bingo template.');
+await cp(new URL('templates/courseware/',root),new URL('templates/courseware/',pluginRoot),{ recursive:true,force:true });
+await cp(new URL('packages/contracts/courseware/',root),new URL('contracts/courseware/',pluginRoot),{ recursive:true,force:true });
+console.log('Built the portable MOOYU.FUN creator publisher, local toolkit Doctor, Bingo template, and interactive courseware contracts.');

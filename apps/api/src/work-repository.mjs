@@ -120,6 +120,43 @@ export class PostgresWorkRepository {
     return rows.map(releaseView);
   }
 
+  async publishReleaseIdempotent(input) {
+    return withTransaction(this.pool, async client => {
+      const replay = await replayOrConflict(client, input, 'release.publish');
+      if (replay) return replay;
+      const row = (await client.query(
+        `SELECT w.*,r.id AS selected_release_id,r.target_key AS selected_target_key,r.validation_state AS selected_validation_state,
+                r.serving_state AS selected_serving_state
+           FROM works w JOIN releases r ON r.work_id=w.id
+          WHERE w.id=$1 AND r.id=$2 AND w.owner_user_id=$3 FOR UPDATE OF w,r`,
+        [input.workId,input.releaseId,input.actor.userId],
+      )).rows[0];
+      if (!row) throw new WorkError('NOT_FOUND',404,'Validated release not found.');
+      if (String(row.revision) !== String(input.expectedRevision)) throw new WorkError('REVISION_CONFLICT',412,'The work changed; reload before publishing.');
+      if (row.state === 'suspended') throw new WorkError('STATE_CONFLICT',409,'A suspended work cannot be published.');
+      if (row.selected_validation_state !== 'ready' || row.selected_serving_state !== 'disabled') throw new WorkError('RELEASE_NOT_READY',409,'Only a validated private release can be published.');
+      await client.query('SELECT id FROM work_targets WHERE work_id=$1 AND target_key=$2 FOR UPDATE',[input.workId,row.selected_target_key]);
+      await client.query(
+        "UPDATE releases SET serving_state=CASE WHEN id=$3 THEN 'enabled' ELSE 'disabled' END WHERE work_id=$1 AND target_key=$2 AND serving_state<>'revoked'",
+        [input.workId,row.selected_target_key,input.releaseId],
+      );
+      await client.query(
+        "UPDATE work_targets SET current_release_id=$3,state='published',publish_generation=publish_generation+1,revision=revision+1,updated_at=now() WHERE work_id=$1 AND target_key=$2",
+        [input.workId,row.selected_target_key,input.releaseId],
+      );
+      await client.query("UPDATE works SET state='published',visibility='public',first_published_at=COALESCE(first_published_at,now()),revision=revision+1,updated_at=now() WHERE id=$1",[input.workId]);
+      await client.query("UPDATE upload_jobs SET publication_outcome='published',updated_at=now() WHERE release_id=$1 AND publication_outcome='draft'",[input.releaseId]);
+      const work = publicWork(await hydratedWork(client,input.workId));
+      const result = { work,releaseId:input.releaseId,targetKey:row.selected_target_key };
+      await client.query(
+        `INSERT INTO idempotency_keys(actor_id,operation,key,request_hash,result_status,result_json,expires_at)
+         VALUES ($1,'release.publish',$2,$3,200,$4,now()+interval '24 hours')`,
+        [input.actor.userId,input.idempotencyKey,input.requestHash,result],
+      );
+      return result;
+    });
+  }
+
   async setCover(input) {
     if (!this.coverStore) throw new WorkError('COVER_STORE_UNAVAILABLE', 503, 'Cover storage is unavailable.');
     const objectKey = await this.coverStore.put({ workId: input.workId, body: input.body, sha256: input.sha256 });

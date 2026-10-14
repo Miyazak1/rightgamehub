@@ -7,6 +7,7 @@ const view = row => ({
   id: row.id, workId: row.work_id, targetKey: row.target_key, packageType: row.package_type,
   state: row.state, publicationOutcome: row.publication_outcome, declaredBytes: String(row.declared_bytes),
   actualBytes: row.actual_bytes == null ? null : String(row.actual_bytes),
+  releaseId: row.release_id ?? null,
   createdAt: new Date(row.created_at).toISOString(), expiresAt: new Date(row.expires_at).toISOString(), errorCode: row.error_code,
 });
 

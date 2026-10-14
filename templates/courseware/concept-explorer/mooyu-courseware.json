@@ -1,0 +1,17 @@
+{
+  "format": "mooyu.courseware",
+  "schemaVersion": 1,
+  "id": "quadratic-shape-explorer",
+  "title": { "zh-CN": "二次函数形状探索", "en": "Quadratic Shape Explorer" },
+  "summary": { "zh-CN": "拖动参数，观察抛物线如何变化。", "en": "Move parameters and observe how a parabola changes." },
+  "defaultLocale": "zh-CN",
+  "locales": ["zh-CN", "en"],
+  "subjects": ["mathematics", "algebra"],
+  "audience": { "stages": ["lower-secondary", "upper-secondary"], "minimumAge": 12 },
+  "course": "courseware/course.json",
+  "evidence": "evidence/sources.json",
+  "tests": "tests/journeys.json",
+  "build": { "profile": "mooyu-static-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"] },
+  "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
+}

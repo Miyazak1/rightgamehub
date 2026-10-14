@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "gamehub.agent-creator-toolkit-catalog",
-  "version": "2026.10.10",
+  "version": "2026.10.14",
   "serviceUrl": "https://mooyu.fun/downloads/gamehub-creator-tools-v1.json",
   "execution": {
     "modelProvider": "user-agent",
@@ -11,6 +11,17 @@
     "publishRequiresExplicitUserAction": true
   },
   "toolkits": [
+    {
+      "key": "interactive-courseware",
+      "name": "交互动画课件",
+      "status": "ready",
+      "role": "agent-native-learning-package",
+      "bestFor": ["概念可视化", "因果模拟", "算法分步演示"],
+      "sourceFormat": "mooyu.courseware-v1",
+      "output": "verified-courseware-package",
+      "template": "templates/courseware",
+      "agentPrompt": "在用户选择的本地工作区创建墨鱼工坊交互课件包。先用 init 复制最接近的官方模板，使用 mooyu.courseware v1 契约明确学习目标、误区、证据声明、交互场景、检查点和至少一条完整验收路径；依次执行 inspect、doctor、preview、test、build、package。test 必须使用用户已有或明确授权安装的 Playwright，不能静默下载浏览器或依赖。制作环境是用户自己的 Agent，不向墨鱼工坊上传模型密钥、提示词或无关文件；只有用户明确要求时才提交。"
+    },
     {
       "key": "bingo",
       "name": "Bingo 表格",

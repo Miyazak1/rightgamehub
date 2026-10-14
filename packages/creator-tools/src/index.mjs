@@ -3,6 +3,21 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 import { validateRulesAdapter, RULES_BUNDLE_MAX_BYTES } from '@gamehub/rules-sdk';
+import { inspectCoursewareProject as inspectCoursewareContractProject } from './courseware.mjs';
+import {
+  CoursewareToolkitError,
+  buildCoursewareProject as buildCoursewareProjectBase,
+  coursewareSubmissionStatus as coursewareSubmissionStatusBase,
+  createCoursewarePreviewHandler,
+  createCoursewarePreviewServer as createCoursewarePreviewServerBase,
+  describeCoursewareProject as describeCoursewareProjectBase,
+  initializeCoursewareProject,
+  loadCoursewareInventory,
+  packageCoursewareProject as packageCoursewareProjectBase,
+  publishCoursewareSubmission as publishCoursewareSubmissionBase,
+  submitCoursewareProject as submitCoursewareProjectBase,
+  testCoursewareProject as testCoursewareProjectBase,
+} from './courseware-toolkit.mjs';
 
 export const CREATOR_DOCTOR_REPORT_VERSION = 1;
 export const MULTIPLAYER_TEMPLATE_VERSION = '0.1.0';
@@ -169,6 +184,23 @@ export async function inspectStaticWebProject(root) {
   return result(projectRoot,findings);
 }
 
+export async function inspectCoursewareProject(root) {
+  const contract = await inspectCoursewareContractProject(root);
+  const runtime = await inspectStaticWebProject(path.join(path.resolve(root), 'dist'));
+  const findings = [...contract.findings, ...runtime.findings.map(value => ({ ...value, path:value.path ? `dist/${value.path}` : 'dist' }))];
+  const summary = { errors:findings.filter(value => value.severity === 'error').length,warnings:findings.filter(value => value.severity === 'warning').length,info:findings.filter(value => value.severity === 'info').length };
+  return { ...contract,ok:summary.errors === 0,summary,findings };
+}
+
+export const describeCoursewareProject = root => describeCoursewareProjectBase(root,inspectCoursewareProject);
+export const buildCoursewareProject = (root,options={}) => buildCoursewareProjectBase(root,{ ...options,inspect:inspectCoursewareProject });
+export const packageCoursewareProject = (root,options={}) => packageCoursewareProjectBase(root,{ ...options,inspect:inspectCoursewareProject });
+export const createCoursewarePreviewServer = (root,options={}) => createCoursewarePreviewServerBase(root,{ ...options,inspect:inspectCoursewareProject });
+export const testCoursewareProject = (root,options={}) => testCoursewareProjectBase(root,{ ...options,inspect:inspectCoursewareProject });
+export const submitCoursewareProject = (root,options={}) => submitCoursewareProjectBase(root,{ ...options,inspect:inspectCoursewareProject });
+export const coursewareSubmissionStatus = (root,options={}) => coursewareSubmissionStatusBase(root,options);
+export const publishCoursewareSubmission = (root,options={}) => publishCoursewareSubmissionBase(root,options);
+
 export {
   CREATOR_PACKAGE_FORMAT,
   CREATOR_PACKAGE_VERSION,
@@ -179,3 +211,12 @@ export {
   loadCreatorPackage,
   submitCreatorPackage,
 } from './creator-package.mjs';
+
+export { CoursewareToolkitError,createCoursewarePreviewHandler,initializeCoursewareProject,loadCoursewareInventory };
+
+export {
+  COURSEWARE_FORMAT,
+  COURSEWARE_SCHEMA_VERSION,
+  COURSEWARE_DOCTOR_REPORT_VERSION,
+  COURSEWARE_VALIDATOR_VERSION,
+} from './courseware.mjs';

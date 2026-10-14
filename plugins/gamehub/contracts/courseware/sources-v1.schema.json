@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/sources-v1.schema.json",
+  "title": "MOOYU Courseware Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "sources", "claims"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sources": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/source" } },
+    "claims": { "type": "array", "minItems": 1, "maxItems": 500, "items": { "$ref": "#/$defs/claim" } },
+    "assets": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/asset" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+    "localizedText": { "type": "object", "minProperties": 1, "maxProperties": 12, "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "type": { "enum": ["book", "paper", "standard", "documentation", "dataset", "web"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 500 }, "authors": { "type": "array", "maxItems": 30, "items": { "type": "string", "minLength": 1, "maxLength": 120 } },
+        "publisher": { "type": "string", "maxLength": 200 }, "url": { "type": "string", "format": "uri", "maxLength": 2048 },
+        "publishedAt": { "type": "string", "format": "date" }, "accessedAt": { "type": "string", "format": "date" },
+        "license": { "type": "string", "maxLength": 120 }, "locator": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "claim": {
+      "type": "object", "additionalProperties": false, "required": ["id", "text", "sourceIds", "verification"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "text": { "$ref": "#/$defs/localizedText" },
+        "sourceIds": { "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "locators": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 240 } },
+        "verification": { "enum": ["primary-source", "cross-checked", "reviewed", "author-asserted"] }
+      }
+    },
+    "asset": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sourceIds", "license"],
+      "properties": { "path": { "type": "string", "minLength": 1, "maxLength": 255 }, "sourceIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }, "license": { "type": "string", "minLength": 1, "maxLength": 120 } }
+    }
+  }
+}

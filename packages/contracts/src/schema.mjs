@@ -7,7 +7,7 @@ const object = (properties, required = Object.keys(properties)) => ({
 });
 
 export const enums = Object.freeze({
-  WorkKind: ['game', 'creative', 'tool'],
+  WorkKind: ['game', 'creative', 'tool', 'courseware'],
   WorkState: ['draft', 'published', 'withdrawn', 'suspended'],
   Visibility: ['private', 'public'],
   TargetKey: ['web', 'windows-x64', 'windows-x86', 'windows-arm64'],
@@ -329,6 +329,19 @@ export const schemas = Object.freeze({
     id,title:{type:'string',minLength:1,maxLength:120},description:{type:'string',maxLength:4000},creatorDisplayName:{type:'string',minLength:1,maxLength:120},
     licenseSpdx:nullable({type:'string',minLength:1,maxLength:40}),coverUrl:nullable({type:'string',pattern:'^/v1/works/'}),
   }),
+  CoursewareSummary: object({
+    format: { type: 'string', const: 'mooyu.courseware' }, schemaVersion: { type: 'integer', const: 1 },
+    id: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{2,63}$' },
+    title: { type: 'object', minProperties: 1, additionalProperties: { type: 'string', minLength: 1, maxLength: 160 } },
+    defaultLocale: { type: 'string', minLength: 2, maxLength: 16 },
+    locales: { type: 'array', minItems: 1, maxItems: 8, uniqueItems: true, items: { type: 'string', minLength: 2, maxLength: 16 } },
+    subjects: { type: 'array', minItems: 1, maxItems: 12, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 80 } },
+    audience: object({ stages: { type: 'array', maxItems: 12, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 80 } }, minimumAge: { type: 'integer', minimum: 3, maximum: 100 } }, ['stages']),
+    licenses: object({ code: { type: 'string', minLength: 1, maxLength: 40 }, content: { type: 'string', minLength: 1, maxLength: 40 } }),
+    runtime: object({ kind: { type: 'string', const: 'static-web' }, learningSdk: { type: 'integer', const: 1 }, capabilities: { type: 'array', maxItems: 16, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 80 } } }),
+    projectDigest: sha256, validatorVersion: { type: 'string', minLength: 1, maxLength: 40 },
+    summary: object({ errors: { type: 'integer', minimum: 0 }, warnings: { type: 'integer', minimum: 0 }, info: { type: 'integer', minimum: 0 } }),
+  }),
   Work: object({
     id: workKey, ownerUserId: id,
     title: { type: 'string', minLength: 1, maxLength: 120 },
@@ -352,6 +365,7 @@ export const schemas = Object.freeze({
     creatorHandle: { oneOf: [{ type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' }, { type: 'null' }] },
     playCount: { type: 'integer', minimum: 0 },
     saveCount: { type: 'integer', minimum: 0 },
+    courseware: nullable({ $ref: '#/components/schemas/CoursewareSummary' }),
     remixSource:nullable({$ref:'#/components/schemas/WorkRemixSource'}),remixNote:nullable({type:'string',minLength:10,maxLength:1000}),remixCount:{type:'integer',minimum:0},
     targets: { type: 'array', items: { $ref: '#/components/schemas/WorkTarget' }, maxItems: 8 },
   }, ['id','ownerUserId','title','description','instructions','kind','state','visibility','revision','firstPublishedAt','coverUrl','estimatedMinutes','tags','agentLabel','repositoryUrl','licenseSpdx','ingestionMethod','attributionKind','sourceCommitSha','openSource','remixable','claimStatus','claimEligible','creatorDisplayName','creatorHandle','playCount','saveCount','targets']),
@@ -483,6 +497,7 @@ export const schemas = Object.freeze({
     servingState: stringEnum(enums.ReleaseServingState),
     createdAt: dateTime,
   }),
+  PublishedRelease: object({ work: { $ref:'#/components/schemas/Work' },releaseId:id,targetKey:stringEnum(enums.TargetKey) }),
   CreateUploadRequest: object({
     fileName: { type: 'string', minLength: 1, maxLength: 255 },
     declaredBytes: uintString, sha256,
@@ -495,6 +510,7 @@ export const schemas = Object.freeze({
     state: stringEnum(enums.UploadState), publicationOutcome: stringEnum(enums.PublicationOutcome),
     declaredBytes: uintString,
     actualBytes: { oneOf: [uintString, { type: 'null' }] },
+    releaseId: nullable(id),
     createdAt: dateTime, expiresAt: dateTime,
     errorCode: { oneOf: [{ type: 'string', maxLength: 80 }, { type: 'null' }] },
   }),
@@ -1010,6 +1026,7 @@ export const operations = Object.freeze([
   { method: 'patch', path: '/v1/creator/works/{workId}', operationId: 'updateWork', auth: 'bearer', request: 'UpdateWorkRequest', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },
   { method: 'put', path: '/v1/creator/works/{workId}/cover', operationId: 'uploadWorkCover', auth: 'bearer', response: 'Work', pathId: 'workId', coverBody: true },
   { method: 'get', path: '/v1/creator/works/{workId}/releases', operationId: 'listWorkReleases', auth: 'bearer', response: 'ReleaseSummary', responseArray: true, pathId: 'workId' },
+  { method: 'post', path: '/v1/creator/works/{workId}/releases/{releaseId}/publish', operationId: 'publishWorkRelease', auth: 'bearer', response: 'PublishedRelease', pathId: 'workId',pathReleaseId:true,idempotent:true,ifMatch:true },
   { method: 'post', path: '/v1/creator/works/{workId}/withdraw', operationId: 'withdrawWork', auth: 'bearer', response: 'Work', pathId: 'workId', idempotent: true, ifMatch: true },
   { method: 'post', path: '/v1/creator/works/{workId}/uploads', operationId: 'createUpload', auth: 'bearer', request: 'CreateUploadRequest', response: 'UploadJob', pathId: 'workId', idempotent: true },
   { method: 'post', path: '/v1/creator/uploads/{uploadId}/grant', operationId: 'createUploadGrant', auth: 'bearer', response: 'UploadGrant', pathId: 'uploadId' },
@@ -1048,6 +1065,7 @@ export function createOpenApiDocument() {
     if (operation.pathWorkKey) parameters.push({ name: 'workId', in: 'path', required: true, schema: workKey });
     if (operation.pathRoomId) parameters.push({ name: 'roomId', in: 'path', required: true, schema: id });
     if (operation.pathBuildId) parameters.push({ name: 'buildId', in: 'path', required: true, schema: id });
+    if (operation.pathReleaseId) parameters.push({ name: 'releaseId', in: 'path', required: true, schema: id });
     if (operation.pathJobId) parameters.push({ name: 'jobId', in: 'path', required: true, schema: id });
     if (operation.pathToken) parameters.push({ name: 'token', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{32}$' } });
     if (operation.gameSession) parameters.push({ name: 'X-GameHub-Session', in: 'header', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' } });
@@ -1063,7 +1081,7 @@ export function createOpenApiDocument() {
       {name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:50,default:20}},
       {name:'offset',in:'query',required:false,schema:{type:'integer',minimum:0,maximum:100000,default:0}},
       {name:'q',in:'query',required:false,schema:{type:'string',maxLength:100}},
-      {name:'kind',in:'query',required:false,schema:{type:'string',enum:['game','creative','tool']}},
+      {name:'kind',in:'query',required:false,schema:{type:'string',enum:['game','creative','tool','courseware']}},
       {name:'openSource',in:'query',required:false,schema:{type:'boolean'}},
       {name:'remixable',in:'query',required:false,schema:{type:'boolean'}},
       {name:'claimable',in:'query',required:false,schema:{type:'boolean'}},

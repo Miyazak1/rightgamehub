@@ -7,7 +7,7 @@ import { validateAssetPath, mimeFor, WEB_LIMITS } from './web-package-policy.mjs
 import { validateWindowsExecutable } from './windows-exe-validator.mjs';
 import { runLocalWebValidator } from './web-validation-runner.mjs';
 
-const permanentError = code => /^(ARCHIVE_INTEGRITY_CHANGED|UPLOAD_TOO_LARGE|ZIP_|MANIFEST_|CAPABILITY_|ENTRY_|PACKAGE_INVALID|VALIDATOR_REPORT_INVALID|EXE_)/.test(code ?? '');
+const permanentError = code => /^(ARCHIVE_INTEGRITY_CHANGED|UPLOAD_TOO_LARGE|ZIP_|MANIFEST_|CAPABILITY_|ENTRY_|PACKAGE_INVALID|VALIDATOR_REPORT_INVALID|COURSEWARE_|EXE_)/.test(code ?? '');
 const sha256File = input => new Promise((resolve, reject) => {
   const hash = crypto.createHash('sha256');
   let bytes = 0;
@@ -31,6 +31,12 @@ function validateReport(report) {
   if (total !== report.totalBytes || !report.assets[report.entry] || !Array.isArray(report.approvedCapabilities)) throw Object.assign(new Error('Validator report totals or entry are invalid.'), { code: 'VALIDATOR_REPORT_INVALID' });
   if(report.approvedCapabilities.includes('competition')!==(report.competition!==undefined))throw Object.assign(new Error('Competition policy missing from validator report.'),{code:'VALIDATOR_REPORT_INVALID'});
   if(report.competition)report.competition=normalizeCompetition(report.competition);
+  if (report.courseware) {
+    const courseware = report.courseware;
+    if (courseware.format !== 'mooyu.courseware' || courseware.schemaVersion !== 1 || typeof courseware.id !== 'string'
+      || !/^[a-f0-9]{64}$/u.test(courseware.projectDigest ?? '') || typeof courseware.validatorVersion !== 'string'
+      || courseware.summary?.errors !== 0) throw Object.assign(new Error('Courseware validator report is invalid.'), { code:'VALIDATOR_REPORT_INVALID' });
+  }
   return report;
 }
 

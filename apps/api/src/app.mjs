@@ -462,7 +462,7 @@ export function createApp(dependencies) {
       return reply.type('text/html; charset=utf-8').send(publicWorkPage({ work, siteOrigin, nonce, locale }));
     });
     app.get('/v1/works', {
-      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000},openSource:{type:'boolean'},remixable:{type:'boolean'},claimable:{type:'boolean'},runtime:{type:'string',enum:['web','windows']},source:{type:'string',enum:['platform','github_import','zip_upload','community_catalog']} } } },
+      schema: { querystring: { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, kind: { type: 'string', enum: ['game', 'creative', 'tool', 'courseware'] },q:{type:'string',maxLength:100},offset:{type:'integer',minimum:0,maximum:100000},openSource:{type:'boolean'},remixable:{type:'boolean'},claimable:{type:'boolean'},runtime:{type:'string',enum:['web','windows']},source:{type:'string',enum:['platform','github_import','zip_upload','community_catalog']} } } },
     }, async (request, reply) => {
       reply.header('Cache-Control', 'public, max-age=30');
       return envelope(await catalogService.list(request.query));
@@ -1015,7 +1015,7 @@ export function createApp(dependencies) {
     app.get('/v1/creator/works', { preHandler: requireAuth }, async request => envelope(await workService.list(request.actor)));
     app.post('/v1/creator/works', {
       preHandler: requireAuth,
-      schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool'] }, attributionKind:{type:'string',enum:['publisher','community_catalog']}, ...workDiscoveryProperties } } },
+      schema: { body: { type: 'object', additionalProperties: false, required: ['title', 'description', 'kind'], properties: { title: { type: 'string', minLength: 1, maxLength: 120 }, description: { type: 'string', maxLength: 4000 }, instructions: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game', 'creative', 'tool', 'courseware'] }, attributionKind:{type:'string',enum:['publisher','community_catalog']}, ...workDiscoveryProperties } } },
     }, async (request, reply) => {
       const result = await workService.create(request.actor, request.body, request.headers['idempotency-key']);
       reply.header('ETag', result.etag);
@@ -1038,6 +1038,14 @@ export function createApp(dependencies) {
     }, async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
       return envelope(await workService.listReleases(request.actor, request.params.workId));
+    });
+    app.post('/v1/creator/works/:workId/releases/:releaseId/publish', {
+      preHandler: requireAuth,
+      schema: { params: { type:'object',additionalProperties:false,required:['workId','releaseId'],properties:{ workId:{type:'string',format:'uuid'},releaseId:{type:'string',format:'uuid'} } } },
+    }, async (request,reply) => {
+      const result = await workService.publishRelease(request.actor,request.params.workId,request.params.releaseId,request.headers['idempotency-key'],request.headers['if-match']);
+      reply.header('Cache-Control','no-store'); reply.header('ETag',result.etag);
+      return envelope({ work:result.work,releaseId:result.releaseId,targetKey:result.targetKey });
     });
     app.put('/v1/creator/works/:workId/cover', {
       preHandler: requireAuth,
@@ -1162,7 +1170,7 @@ export function createApp(dependencies) {
       preHandler: requireAuth,
       schema: { body: { type: 'object', additionalProperties: false, required: ['importId','title'], properties: {
         importId: { type: 'string', format: 'uuid' }, title: { type: 'string', minLength: 1, maxLength: 120 },
-        description: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game','creative','tool'] },
+        description: { type: 'string', maxLength: 4000 }, kind: { type: 'string', enum: ['game','creative','tool','courseware'] },
         attributionKind: { type: 'string', enum: ['publisher','community_catalog'] },
       } } },
     }, async (request, reply) => {

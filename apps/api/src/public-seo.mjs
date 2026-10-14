@@ -6,7 +6,7 @@ export const serializeJsonLd = value => JSON.stringify(value).replace(/</gu, '\\
 
 export const workStructuredData = ({ work, siteOrigin, shareCardUrl, locale = 'zh-CN' }) => ({
   '@context': 'https://schema.org',
-  '@type': work.kind === 'game' ? 'VideoGame' : work.kind === 'tool' ? 'SoftwareApplication' : 'CreativeWork',
+  '@type': work.kind === 'game' ? 'VideoGame' : work.kind === 'tool' ? 'SoftwareApplication' : work.kind === 'courseware' ? 'Course' : 'CreativeWork',
   name: work.title,
   description: String(work.description || (locale === 'en' ? `Play ${work.title} online for free on MOOYU.FUN.` : `在墨鱼工坊在线体验《${work.title}》。`)).trim(),
   url: `${siteOrigin}/w/${encodeURIComponent(work.id)}`,

@@ -358,6 +358,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     updateWork: (workId, revision, body, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}`, { ...options, method: 'PATCH', body, auth: true, idempotent: true, headers: { 'Idempotency-Key': randomKey(), ...(options?.headers ?? {}), 'If-Match': `"work-${workId}-${revision}"` } }),
     uploadWorkCover: (workId, file, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/cover`, { ...options, method: 'PUT', rawBody: file, headers: { 'Content-Type': file.type, ...(options?.headers ?? {}) }, auth: true }),
     listWorkReleases: (workId, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/releases`, { ...options, auth: true }),
+    publishWorkRelease: (workId, releaseId, revision, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/releases/${encodeURIComponent(releaseId)}/publish`, { ...options,method:'POST',auth:true,idempotent:true,headers:{ 'If-Match':`"work-${workId}-${revision}"`,...(options?.headers??{}) } }),
     withdrawWork: (workId, revision, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/withdraw`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"work-${workId}-${revision}"`, ...(options?.headers ?? {}) } }),
     createUpload: (workId, body, options) => request(`/v1/creator/works/${encodeURIComponent(workId)}/uploads`, { ...options, method: 'POST', body, auth: true, idempotent: true }),
     createUploadGrant: (uploadId, options) => request(`/v1/creator/uploads/${encodeURIComponent(uploadId)}/grant`, { ...options, method: 'POST', auth: true }),
@@ -383,6 +384,12 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         xhr.onloadend = () => signal?.removeEventListener('abort', abort);
         xhr.send(file);
       });
+    },
+    async uploadContentBytes(uploadId, bytes, grantToken, options = {}) {
+      const response = await fetchImpl(`${baseUrl}/v1/creator/uploads/${encodeURIComponent(uploadId)}/content`, { method:'PUT',signal:options.signal,headers:{ Authorization:`Upload ${grantToken}`,'Content-Type':'application/octet-stream' },body:bytes });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new ApiError({ status:response.status,...(payload.error??{}),message:payload.error?.message??`上传失败 (${response.status})` });
+      return { data:payload.data };
     },
     completeUpload: (uploadId, options) => request(`/v1/creator/uploads/${encodeURIComponent(uploadId)}/complete`, { ...options, method: 'POST', auth: true, idempotent: true }),
     getUpload: (id, options) => request(`/v1/creator/uploads/${encodeURIComponent(id)}`, { ...options, auth: true }),

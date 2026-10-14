@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "journeys": [
+    { "id": "double-mass-completion", "title": "比较相同力下的质量", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "run-force-trials" }, { "action": "set", "target": "force", "value": 8 },
+      { "action": "set", "target": "mass", "value": 4 }, { "action": "answer", "target": "predict-double-mass", "value": "halves" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true }
+  ]
+}

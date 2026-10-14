@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    { "id": "open-data-structures", "type": "book", "title": "Open Data Structures", "publisher": "AU Press", "url": "https://opendatastructures.org/", "license": "CC-BY-2.5", "locator": "Sorting Algorithms" }
+  ],
+  "claims": [
+    { "id": "insertion-sort-invariant", "text": { "zh-CN": "插入排序第 i 轮结束后，前 i+1 个元素构成有序前缀。", "en": "After iteration i, the first i+1 elements form a sorted prefix." }, "sourceIds": ["open-data-structures"], "locators": ["Sorting Algorithms"], "verification": "primary-source" }
+  ]
+}
