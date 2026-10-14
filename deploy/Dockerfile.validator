@@ -16,8 +16,10 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --chown=node:node packages/contracts/src/competition.mjs ./packages/contracts/src/competition.mjs
+COPY --chown=node:node packages/creator-tools/src/courseware.mjs ./packages/creator-tools/src/courseware.mjs
 COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --chown=node:node apps/api/src/web-package-policy.mjs apps/api/src/web-zip-validator.mjs apps/api/src/web-zip-validator-cli.mjs apps/api/src/web-validation-runner.mjs apps/api/src/web-validator-service.mjs ./apps/api/src/
+RUN node -e "import('./apps/api/src/web-zip-validator.mjs')"
 RUN mkdir -p /data/quarantine /data/validator && chown -R node:node /data
 USER node
 CMD ["node", "apps/api/src/web-validator-service.mjs"]

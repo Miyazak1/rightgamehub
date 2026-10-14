@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import { crc32 } from 'node:zlib';
 import path from 'node:path';
 import {normalizeCompetition} from '../../../packages/contracts/src/competition.mjs';
-import { inspectCoursewareProject } from '../../../packages/creator-tools/src/index.mjs';
+import { inspectCoursewareProject } from '../../../packages/creator-tools/src/courseware.mjs';
 import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
