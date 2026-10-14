@@ -329,8 +329,10 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(rootPackage.scripts['pack:vscode'], /package-vscode-extension\.mjs/);
   assert.match(dockerfile, /prepare-agent-downloads\.mjs/);
   assert.match(dockerfile, /COPY packages\/creator-tools packages\/creator-tools/);
+  assert.match(dockerfile, /COPY packages\/contracts\/courseware packages\/contracts\/courseware/);
   assert.match(dockerfile, /pnpm install --frozen-lockfile[^\n]*--filter @gamehub\/creator-tools\.\.\./);
   assert.match(dockerfile, /COPY templates\/creator-bingo templates\/creator-bingo/);
+  assert.match(dockerfile, /COPY templates\/courseware templates\/courseware/);
   assert.match(dockerfile, /COPY scripts\/build-agent-plugin\.mjs scripts\/build-agent-plugin\.mjs/);
   assert.match(dockerfile, /COPY scripts\/creator-toolkit-cli\.mjs scripts\/creator-toolkit-cli\.mjs/);
   assert.match(dockerfile, /node scripts\/build-agent-plugin\.mjs && node scripts\/prepare-agent-downloads\.mjs/);

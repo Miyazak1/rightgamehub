@@ -26,12 +26,14 @@ COPY packages/host-contract packages/host-contract
 COPY packages/save-cache packages/save-cache
 COPY packages/player-core packages/player-core
 COPY packages/creator-tools packages/creator-tools
+COPY packages/contracts/courseware packages/contracts/courseware
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
 COPY plugins plugins
 COPY poc/m0 poc/m0
 COPY templates/multiplayer-turn-based templates/multiplayer-turn-based
 COPY templates/competition-score templates/competition-score
+COPY templates/courseware templates/courseware
 COPY docs/competition-creator-guide.zh-CN.md docs/competition-creator-guide.zh-CN.md
 COPY apps/api/src/zip-buffer-writer.mjs apps/api/src/zip-buffer-writer.mjs
 COPY scripts/build-competition-template.mjs scripts/build-competition-template.mjs
