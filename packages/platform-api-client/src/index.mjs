@@ -48,17 +48,21 @@ const saveConditions=input=>({
 
 const randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {}, timeoutMs = 15000, xhrFactory = () => new XMLHttpRequest() } = {}) {
+export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {}, withRefreshLock = callback => callback(), timeoutMs = 15000, xhrFactory = () => new XMLHttpRequest() } = {}) {
   let refreshPromise = null;
-  const refreshSession = signal => {
+  const refreshSession = (signal, expiredToken) => {
     if (!refreshPromise) {
-      refreshPromise = (async () => {
+      refreshPromise = withRefreshLock(async () => {
+        const currentToken = await getAccessToken();
+        if (currentToken && currentToken !== expiredToken) return true;
         const refreshToken = await getRefreshToken();
         if (!refreshToken) return false;
         const refreshed = await request('/v1/auth/refresh', { method: 'POST', body: { refreshToken }, signal, allowRefresh: false });
+        // A logout or account switch while refresh was in flight must win.
+        if (await getRefreshToken() !== refreshToken) return Boolean(await getAccessToken());
         await setTokens(refreshed.data);
         return true;
-      })().finally(() => { refreshPromise = null; });
+      }, signal).finally(() => { refreshPromise = null; });
     }
     return refreshPromise;
   };
@@ -89,7 +93,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         if (token && currentToken && token !== currentToken) {
           return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
         }
-        if (await refreshSession(signal)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
+        if (await refreshSession(signal, token)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
       }
       if (response.ok && responseBytesLimit !== undefined) {
         const bytes = await readBoundedResponse(response, responseBytesLimit, combined);

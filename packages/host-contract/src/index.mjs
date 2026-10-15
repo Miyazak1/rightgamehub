@@ -1,3 +1,4 @@
+import { createBrowserAccount } from './browser-account.mjs';
 import {createBrowserFileExporter} from './file-export.mjs';
 import {validateFileExport} from '../../web-game-sdk/src/sharing-protocol.mjs';
 import {createIndexedDbSaveStore} from '../../save-cache/src/indexeddb-store.mjs';
@@ -17,26 +18,7 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
   const media = browserWindow?.matchMedia?.('(prefers-color-scheme: dark)');
   let override = 'system';
   let accent = '#8b5cf6';
-  const credentialKey = 'gamehub.browser.credentials.v1';
-  const readCredentials = () => {
-    try {
-      const raw = browserWindow?.sessionStorage?.getItem(credentialKey);
-      if (!raw) return null;
-      const value = JSON.parse(raw);
-      if (!value || typeof value !== 'object' || typeof value.accessToken !== 'string' || typeof value.refreshToken !== 'string') {
-        browserWindow.sessionStorage.removeItem(credentialKey);
-        return null;
-      }
-      return { ...value };
-    } catch { return null; }
-  };
-  const writeCredentials = value => {
-    try {
-      if (value) browserWindow?.sessionStorage?.setItem(credentialKey, JSON.stringify(value));
-      else browserWindow?.sessionStorage?.removeItem(credentialKey);
-    } catch {}
-  };
-  let credentials = readCredentials();
+  const account = createBrowserAccount(browserWindow);
   const current = () => normalizeTheme({
     mode: override === 'system' ? (media?.matches ? 'dark' : 'light') : override,
     colors: { accent },
@@ -56,7 +38,7 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
         canPersistCredential: false, canPlayWeb: true, canLaunchDesktop: false,
         canPlayNativeInPanel: false,
         unavailableReasons: {
-          canPersistCredential: '浏览器仅在当前标签页会话中保留登录，关闭标签页后需重新登录。',
+          canPersistCredential: '浏览器仅在打开的同源标签页间共享登录；关闭全部标签页后需重新登录。',
           canLaunchDesktop: '桌面游戏需在受信任的宿主中启动。',
         },
       };
@@ -68,13 +50,8 @@ export function createBrowserHostAdapter({ window: browserWindow = globalThis.wi
       setAccent(value) { if (HEX.test(value)) { accent = value; emit(); } },
       dispose() { media?.removeEventListener?.('change', mediaChanged); listeners.clear(); },
     },
-    account: {
-      async getAccessToken() { return credentials?.accessToken ?? null; },
-      async getRefreshToken() { return credentials?.refreshToken ?? null; },
-      async getTokens() { return credentials ? { ...credentials } : null; },
-      async setTokens(tokens) { credentials = tokens ? { ...tokens } : null; writeCredentials(credentials); },
-      async clearTokens() { credentials = null; writeCredentials(null); },
-    },
+    account,
+    dispose() { account.dispose(); media?.removeEventListener?.('change', mediaChanged); listeners.clear(); },
     ...(typeof openExternal === 'function' ? { navigation: { openExternal } } : {}),
   };
 }

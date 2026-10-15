@@ -1848,6 +1848,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     getAccessToken: () => host.account?.getAccessToken?.(),
     getRefreshToken: () => host.account?.getRefreshToken?.(),
     setTokens: tokens => host.account?.setTokens?.(tokens),
+    withRefreshLock: (callback, signal) => host.account?.withRefreshLock ? host.account.withRefreshLock(callback, signal) : callback(),
   }), [apiClient, host]);
   const [savedWork, setSavedWork] = useState(null);
   const [accountStatus, setAccountStatus] = useState(demo ? 'ready' : 'loading');
@@ -1855,7 +1856,23 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) { setHostIdentity(resolveHostIdentity(capabilities)); setHostReady(true); } }).catch(() => { if (live) setHostReady(true); }); return () => { live = false; }; }, [host]);
   useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host]);
   useEffect(() => { setSavedWork(null); }, [accountProfile?.id]);
-  useEffect(() => { if (demo) return undefined; let live = true; setAccountProfile(null); setAccountStatus('loading'); api.getProfile().then(({ data }) => { if (live) { setAccountProfile(data); setAccountStatus('ready'); } }).catch(() => { if (live) setAccountStatus('anonymous'); }); return () => { live = false; }; }, [api, demo]);
+  useEffect(() => {
+    if (demo) return undefined;
+    let live = true, generation = 0;
+    const load = () => {
+      const current = ++generation;
+      setAccountStatus('loading');
+      api.getProfile().then(({ data }) => {
+        if (live && current === generation) { setAccountProfile(data); setAccountStatus('ready'); }
+      }).catch(() => { if (live && current === generation) { setAccountProfile(null); setAccountStatus('anonymous'); } });
+    };
+    load();
+    const off = host.account?.onTokensChanged?.(tokens => {
+      if (tokens) load();
+      else { generation++; setAccountProfile(null); setAccountStatus('anonymous'); }
+    });
+    return () => { live = false; off?.(); };
+  }, [api, demo, host]);
   useEffect(() => { if (hostReady) emitAnalytics(api, hostIdentity.id, { type: 'page_view', route: routeCategory(route) }, demo); }, [api, hostIdentity.id, hostReady, route, demo]);
   useEffect(() => {
     if (demo || !hostReady) return undefined;
@@ -1870,7 +1887,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 's' && parts[1]) content = <GameSharePage key={parts[1]} code={parts[1]} api={api} renderPlayer={share=><PlayerPage workId={share.workId} releaseId={share.releaseId} initialShareCode={share.code} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={false} go={go}/>}/>;
   else if (parts[0] === 'play' && parts[1]) content = <PlayerPage workId={parts[1]} releaseId={['challenge','share','room'].includes(parts[2]) ? null : parts[2]} challengeCode={parts[2] === 'challenge' ? parts[3] : null} initialRoomId={parts[2] === 'room' ? parts[3] : parts[3] === 'room' ? parts[4] : null} initialShareCode={parts[2] === 'share' ? parts[3] : null} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go}/>;
   else if (['/saves','/creator/save-health','/admin/saves'].includes(route)) content = <main className="page"><StatePanel title={t('saves.localOnly')} body={t('saves.localOnlyLead')} action={t('saves.backLibrary')} onAction={() => go('/library')}/></main>;
-  else if (route === '/account') content = <AccountPage api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
+  else if (route === '/account') content = <AccountPage key={accountProfile?.id || 'guest'} api={api} host={host} demo={demo} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} onProfileChange={profile => { setAccountProfile(profile); setAccountStatus(profile ? 'ready' : 'anonymous'); }}/>;
 
   else if (route.startsWith('/creator/import')) content = <GitHubImportPage api={api} demo={demo} go={go} accountProfile={accountProfile} embedded={hostIdentity.id === 'mcp-app'}/>;
   else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit') content = <WorkEditPage key={`${accountProfile?.id || 'guest'}:${parts[2]}`} workId={decodeRouteValue(parts[2])} api={api} demo={demo} go={go} savedWork={savedWork} onSaved={work => { setSavedWork(work); go('/creator/works'); }}/>;
