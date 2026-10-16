@@ -6,7 +6,7 @@
   "kind": "embed",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:d33bd4cc60ab8df4463f9d3750c4e4b2eeef597b72772e753e65bbea55aaf56a",
+  "integrity": "sha256:abcc645b6b83bc1f198c6484112123bd4efb094c03b06853b20a2bf055941b4f",
   "hotSwap": "session",
   "stateSchemaVersion": 1,
   "capabilities": [

@@ -19,7 +19,9 @@ const lessons={
 const digest=bytes=>`sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const writeModule=async(base,name,definition,dependencies=[])=>{
   const directory=path.join(base,'modules',name); await fs.mkdir(directory,{recursive:true});
-  const bytes=await fs.readFile(path.join(root,definition.source)); await fs.writeFile(path.join(directory,'index.mjs'),bytes);
+  const source=await fs.readFile(path.join(root,definition.source),'utf8');
+  const bytes=Buffer.from(source.replace(/\r\n?/gu,'\n'),'utf8');
+  await fs.writeFile(path.join(directory,'index.mjs'),bytes);
   const manifest={ format:'mooyu.courseware-module',schemaVersion:1,id:definition.id,version:'1.0.0',kind:definition.kind??'domain',apiVersion:1,entry:'./index.mjs',integrity:digest(bytes),hotSwap:definition.hotSwap??'paused',stateSchemaVersion:1,capabilities:definition.capabilities??[definition.capability],commands:definition.commands,dependencies };
   await fs.writeFile(path.join(directory,'module.json'),`${JSON.stringify(manifest,null,2)}\n`);
 };

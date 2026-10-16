@@ -6,7 +6,7 @@
   "kind": "domain",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:e99615e0178431f2f7acbdae20c94a181aaeff1c959111be9803d5c7ac6ce5ad",
+  "integrity": "sha256:86495ec52ca7444dc15c91b6c68e738e571d603cf4ff42993ef367bf55aa526a",
   "hotSwap": "paused",
   "stateSchemaVersion": 1,
   "capabilities": [

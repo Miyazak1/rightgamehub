@@ -6,7 +6,7 @@
   "kind": "journey",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:00d240a88c91f51cbf60ee27d4d96bf4cd92059376ec500ac54c989e6608f01e",
+  "integrity": "sha256:3fc95bd8115b5bbc28f75c94feac0aa4a2570b0bfb32debbfaae3e7399d23bc2",
   "hotSwap": "paused",
   "stateSchemaVersion": 1,
   "capabilities": [

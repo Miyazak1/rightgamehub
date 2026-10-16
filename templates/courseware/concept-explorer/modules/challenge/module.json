@@ -6,7 +6,7 @@
   "kind": "challenge",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:0647cb30d496111d987b799314831c07a3d7fbfe68bc2cf501c7fd59b6ee6501",
+  "integrity": "sha256:1149c2811e51c8157a302c163ea32e3feba3c154406fbcfec5255f016d552a75",
   "hotSwap": "paused",
   "stateSchemaVersion": 1,
   "capabilities": [

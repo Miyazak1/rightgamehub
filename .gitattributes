@@ -3,3 +3,8 @@ rules/**/*.cjs -text
 
 # Deployment scripts run in POSIX containers and servers.
 *.sh text eol=lf
+
+# Courseware module integrity is byte-exact across Windows authoring and Linux builds.
+packages/courseware-domain-packs/** text eol=lf
+templates/courseware/** text eol=lf
+plugins/gamehub/templates/courseware/** text eol=lf

@@ -6,7 +6,7 @@
   "kind": "instrument",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:1ba46b13503c204bafd1a0fbe31dadd089555f62bea2145575d7b0ed261e4e99",
+  "integrity": "sha256:25a803eea332d570b148edb8e3f49cb736df3d3b753018bb1aaa9867359facee",
   "hotSwap": "live",
   "stateSchemaVersion": 1,
   "capabilities": [

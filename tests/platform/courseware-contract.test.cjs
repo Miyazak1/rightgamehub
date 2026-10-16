@@ -53,6 +53,13 @@ test('all three reference courseware packages pass the L0 Doctor', async () => {
     assert.equal(manifest.runtime.profile, 'structured-courseware');
     assert.equal(manifest.runtime.moduleLock, 'dist/mooyu-modules.lock.json');
     assert.equal(new Set(manifest.runtime.rootModules).size, 6);
+    for (const moduleName of ['domain', 'measurement', 'workbench', 'challenge', 'journey', 'embed']) {
+      const moduleRoot = path.join(templateRoot, 'modules', moduleName);
+      const entry = await fs.readFile(path.join(moduleRoot, 'index.mjs'));
+      const moduleManifest = JSON.parse(await fs.readFile(path.join(moduleRoot, 'module.json'), 'utf8'));
+      assert.equal(entry.includes(13), false, `${name}/${moduleName} must use LF bytes on every host`);
+      assert.equal(moduleManifest.integrity, `sha256:${crypto.createHash('sha256').update(entry).digest('hex')}`);
+    }
   }
 });
 
