@@ -1,0 +1,18 @@
+{
+  "name": "@mooyu/courseware-domain-packs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./math/quadratic": "./src/math/quadratic.mjs",
+    "./physics/newton-cart": "./src/physics/newton-cart.mjs",
+    "./chemistry/equilibrium": "./src/chemistry/equilibrium.mjs",
+    "./instrument/measurement": "./src/instrument/measurement.mjs",
+    "./component/workbench": "./src/component/workbench.mjs",
+    "./challenge/quadratic-target": "./src/challenge/quadratic-target.mjs",
+    "./challenge/supply-cart": "./src/challenge/supply-cart.mjs",
+    "./challenge/safe-no2-batch": "./src/challenge/safe-no2-batch.mjs",
+    "./journey/progress": "./src/journey/progress.mjs",
+    "./embed/bridge": "./src/embed/bridge.mjs"
+  }
+}

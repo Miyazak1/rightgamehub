@@ -18,5 +18,14 @@ M1 的 HTTP、状态枚举与 OpenAPI 单一来源。
 - `journeys-v1.schema.json`：可由 Agent/浏览器执行的学习验收路径。
 - `learning-sdk-v1.schema.json`：课件与可信宿主之间的最小学习事件协议。
 - `doctor-report-v1.schema.json`：稳定、可存档的本地 Doctor 报告。
+- `knowledge-map-v1.schema.json`：课程权威来源、学科、知识节点、关系、Learning Cluster、教材映射和审校状态。
+- `textbook-baseline-v1.schema.json`：平台首套教材基线、权威目录、出版社版本、册次、ISBN 与来源链接；允许后续并列添加地区采用版本。
+- `knowledge-map-fragment-v1.schema.json`：按学科拆分的大规模知识地图片段；主目录编译校验时合并，不以一个巨型 JSON 维护全部节点。
+- `courseware-coverage-v1.schema.json`：把可运行课件包显式绑定到学科知识簇，并分别记录 Doctor、双语、键盘、减弱动效、外站容器和真实浏览器旅程证据；原型不会被误报为 C4。
+- `experience-v1.schema.json`：让教材实验、F2/F3 自由沙盒与科学状态驱动的场景挑战按课件需要组合；声明自由沙盒或挑战时仍执行严格能力门禁，不强制每个课件伪造全部模式。
+- `module-manifest-v1.schema.json`：结构化课件模块的类型、接口版本、能力、命令、依赖、状态版本、完整性与可控热插拔等级。
+- `module-lock-v1.schema.json`：固定 Builder 产出的发布模块图；锁定根模块、解析后的本地入口、模块清单摘要与依赖闭包。
+- `embed-protocol-v1.schema.json`：冻结外站嵌入握手、脱敏学习事件和基础宿主命令。
+- `embed-protocol-v2.schema.json`：以新协议版本增加有界状态快照、恢复和体验模式控制，不改变 v1 信封。
 
 契约默认严格拒绝未知字段。实现校验器位于 `packages/creator-tools/src/courseware.mjs`，参考包位于 `templates/courseware/`。

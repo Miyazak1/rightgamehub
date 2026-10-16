@@ -599,6 +599,18 @@ async function testCoursewareProject(root, { inspect, browserModule = process.en
         });
       });
       await page.goto(preview.url, { waitUntil: "load" });
+      await page.evaluate((locale) => window.postMessage({
+        protocol: "mooyu.learning.v1",
+        direction: "host-to-courseware",
+        type: "host.command",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        payload: { name: "locale.set", value: { locale } }
+      }, location.origin), journey.locale);
+      try {
+        await page.waitForFunction((locale) => document.documentElement.lang === locale, journey.locale);
+      } catch {
+        throw new CoursewareToolkitError("COURSEWARE_LOCALE_NOT_APPLIED", `${journey.id} \u672A\u5E94\u7528 Journey \u58F0\u660E\u7684\u8BED\u8A00 ${journey.locale}\u3002`);
+      }
       for (const step of journey.steps) {
         if (step.action === "enter") await page.locator(`[data-mooyu-scene="${step.target}"]`).waitFor();
         else if (step.action === "set") await page.locator(`[data-mooyu-target="${step.target}"],#${step.target}`).first().evaluate((element, value) => {

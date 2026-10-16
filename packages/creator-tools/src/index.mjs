@@ -220,3 +220,11 @@ export {
   COURSEWARE_DOCTOR_REPORT_VERSION,
   COURSEWARE_VALIDATOR_VERSION,
 } from './courseware.mjs';
+
+export {
+  KNOWLEDGE_MAP_FORMAT,
+  KNOWLEDGE_MAP_SCHEMA_VERSION,
+  KNOWLEDGE_MAP_VALIDATOR_VERSION,
+  inspectKnowledgeMap,
+  validateKnowledgeMap,
+} from './knowledge-map.mjs';

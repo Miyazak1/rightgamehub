@@ -1,0 +1,30 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "instrument.measurement",
+  "version": "1.0.0",
+  "kind": "instrument",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:1ba46b13503c204bafd1a0fbe31dadd089555f62bea2145575d7b0ed261e4e99",
+  "hotSwap": "live",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "instrument.measurement"
+  ],
+  "commands": [
+    "instrument.channel.set",
+    "measurement.record",
+    "comparison.select",
+    "measurement.clear"
+  ],
+  "dependencies": [
+    {
+      "id": "physics.newton-cart",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.motion"
+      ]
+    }
+  ]
+}

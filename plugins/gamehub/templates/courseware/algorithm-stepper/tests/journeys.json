@@ -1,9 +1,16 @@
 {
   "schemaVersion": 1,
   "journeys": [
-    { "id": "trace-completion", "title": "完成一次插入排序", "locale": "zh-CN", "steps": [
-      { "action": "enter", "target": "step-through-sort" }, { "action": "click", "target": "next-step" },
-      { "action": "click", "target": "next-step" }, { "action": "answer", "target": "identify-prefix", "value": "first-three" },
+    { "id": "equilibrium-control-zh", "title": "完成压强与催化剂预测", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "control-equilibrium" }, { "action": "click", "target": "compress-volume" },
+      { "action": "answer", "target": "predict-compression", "value": "left" }, { "action": "assert", "target": "assessment.correct", "expect": true },
+      { "action": "click", "target": "toggle-catalyst" }, { "action": "answer", "target": "predict-catalyst", "value": "unchanged" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true },
+    { "id": "equilibrium-control-en", "title": "Complete pressure and catalyst predictions", "locale": "en", "steps": [
+      { "action": "enter", "target": "control-equilibrium" }, { "action": "click", "target": "compress-volume" },
+      { "action": "answer", "target": "predict-compression", "value": "left" }, { "action": "assert", "target": "assessment.correct", "expect": true },
+      { "action": "click", "target": "toggle-catalyst" }, { "action": "answer", "target": "predict-catalyst", "value": "unchanged" },
       { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
     ], "expectsCompletion": true }
   ]

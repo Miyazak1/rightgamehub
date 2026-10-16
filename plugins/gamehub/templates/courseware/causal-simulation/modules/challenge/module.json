@@ -1,0 +1,28 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "challenge.supply-cart",
+  "version": "1.0.0",
+  "kind": "challenge",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:9952254085a8b16e8821bd290559149a6160061a6db3ca98eead72c3d0ba8ec2",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "challenge.evaluate"
+  ],
+  "commands": [
+    "challenge.attempt",
+    "challenge.reset"
+  ],
+  "dependencies": [
+    {
+      "id": "physics.newton-cart",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.motion"
+      ]
+    }
+  ]
+}

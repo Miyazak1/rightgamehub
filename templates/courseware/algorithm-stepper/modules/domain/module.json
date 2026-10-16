@@ -1,0 +1,26 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "chemistry.equilibrium",
+  "version": "1.0.0",
+  "kind": "domain",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:6963bbedbf3ad59ef6c2ce7a25497801b89716a5c9c2b0f680418c9f2dea2796",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "domain.equilibrium"
+  ],
+  "commands": [
+    "volume.set",
+    "temperature.set",
+    "catalyst.toggle",
+    "feed.set",
+    "simulation.run",
+    "simulation.pause",
+    "simulation.step",
+    "simulation.reset"
+  ],
+  "dependencies": []
+}

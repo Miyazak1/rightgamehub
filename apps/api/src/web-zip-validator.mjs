@@ -7,6 +7,7 @@ import { crc32 } from 'node:zlib';
 import path from 'node:path';
 import {normalizeCompetition} from '../../../packages/contracts/src/competition.mjs';
 import { inspectCoursewareProject } from '../../../packages/creator-tools/src/courseware.mjs';
+import { verifyCoursewareModuleLock } from '../../../packages/creator-tools/src/courseware-modules.mjs';
 import yauzl from 'yauzl';
 import { WEB_LIMITS, WEB_POLICY_VERSION, containedPath, mimeFor, validateAssetPath } from './web-package-policy.mjs';
 
@@ -50,6 +51,10 @@ async function readCoursewareManifest(output, assets, entry) {
   try { manifest = JSON.parse(await readFile(containedPath(output, 'mooyu-courseware.json'), 'utf8')); }
   catch { throw invalid('COURSEWARE_MANIFEST_INVALID', 'mooyu-courseware.json is not valid JSON.'); }
   if (manifest.build?.entry !== entry) throw invalid('COURSEWARE_ENTRY_MISMATCH', 'The validated runtime entry differs from mooyu-courseware.json.');
+  if (manifest.build?.profile === 'mooyu-structured-v1') {
+    try { await verifyCoursewareModuleLock(output, manifest, null, { required:true }); }
+    catch (error) { throw invalid(error.code ?? 'COURSEWARE_MODULE_LOCK_INVALID', error.message); }
+  }
   return {
     format: manifest.format,
     schemaVersion: manifest.schemaVersion,

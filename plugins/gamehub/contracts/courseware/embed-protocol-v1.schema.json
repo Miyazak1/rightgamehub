@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/embed-protocol-v1.schema.json",
+  "title": "MOOYU Courseware Embed Protocol v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "version", "type", "id", "name", "payload"],
+  "properties": {
+    "protocol": { "const": "mooyu.courseware.embed.v1" },
+    "version": { "const": 1 },
+    "type": { "enum": ["connect", "connected", "event", "command", "response", "error"] },
+    "id": { "$ref": "#/$defs/uuid" },
+    "name": {
+      "enum": [
+        "host.connect", "courseware.connected", "courseware.ready", "courseware.started", "scene.entered",
+        "checkpoint.attempted", "objective.completed", "courseware.completed", "courseware.resized", "courseware.error",
+        "host.setLocale", "host.setTheme", "host.setMotion", "host.pause", "host.resume", "host.restoreProgress", "host.exportProgress",
+        "EMBED_MESSAGE_INVALID", "EMBED_ORIGIN_DENIED", "EMBED_RELEASE_UNAVAILABLE", "EMBED_RATE_LIMITED", "EMBED_COMMAND_UNSUPPORTED", "EMBED_PROGRESS_INVALID"
+      ]
+    },
+    "payload": { "type": "object" }
+  },
+  "allOf": [
+    { "if": { "properties": { "name": { "const": "host.connect" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "connect" }, "payload": { "$ref": "#/$defs/connectPayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.connected" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "connected" }, "payload": { "$ref": "#/$defs/connectedPayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.ready" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/readyPayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.started" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/startedPayload" } } } },
+    { "if": { "properties": { "name": { "const": "scene.entered" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/scenePayload" } } } },
+    { "if": { "properties": { "name": { "const": "checkpoint.attempted" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/checkpointPayload" } } } },
+    { "if": { "properties": { "name": { "const": "objective.completed" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/objectivePayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.completed" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/completedPayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.resized" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/resizedPayload" } } } },
+    { "if": { "properties": { "name": { "const": "courseware.error" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "event" }, "payload": { "$ref": "#/$defs/coursewareErrorPayload" } } } },
+    { "if": { "properties": { "name": { "const": "host.setLocale" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "command" }, "payload": { "$ref": "#/$defs/localePayload" } } } },
+    { "if": { "properties": { "name": { "const": "host.setTheme" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "command" }, "payload": { "$ref": "#/$defs/themePayload" } } } },
+    { "if": { "properties": { "name": { "const": "host.setMotion" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "command" }, "payload": { "$ref": "#/$defs/motionPayload" } } } },
+    { "if": { "properties": { "name": { "enum": ["host.pause", "host.resume"] } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "command" }, "payload": { "$ref": "#/$defs/emptyPayload" } } } },
+    { "if": { "properties": { "name": { "const": "host.restoreProgress" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "command" }, "payload": { "$ref": "#/$defs/progress" } } } },
+    { "if": { "properties": { "name": { "const": "host.exportProgress" } }, "required": ["name"] }, "then": { "properties": { "type": { "enum": ["command", "response"] } } } },
+    { "if": { "properties": { "name": { "const": "host.exportProgress" }, "type": { "const": "command" } }, "required": ["name", "type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/emptyPayload" } } } },
+    { "if": { "properties": { "name": { "const": "host.exportProgress" }, "type": { "const": "response" } }, "required": ["name", "type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/progress" } } } },
+    { "if": { "properties": { "name": { "pattern": "^EMBED_" } }, "required": ["name"] }, "then": { "properties": { "type": { "const": "error" }, "payload": { "$ref": "#/$defs/errorPayload" } } } }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+    "emptyPayload": { "type": "object", "additionalProperties": false, "maxProperties": 0 },
+    "connectPayload": { "type": "object", "additionalProperties": false, "required": ["nonce"], "properties": { "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" } } },
+    "connectedPayload": { "type": "object", "additionalProperties": false, "required": ["connectionId", "nonce"], "properties": { "connectionId": { "$ref": "#/$defs/uuid" }, "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" } } },
+    "readyPayload": { "type": "object", "additionalProperties": false, "required": ["workId", "releaseId", "locale", "capabilities"], "properties": { "workId": { "$ref": "#/$defs/uuid" }, "releaseId": { "$ref": "#/$defs/uuid" }, "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$" }, "capabilities": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "enum": ["learningProgress", "learningEvents", "assessmentResult", "fullscreen", "fileExport"] } } } },
+    "startedPayload": { "type": "object", "additionalProperties": false, "required": ["startedAt"], "properties": { "startedAt": { "type": "string", "format": "date-time" } } },
+    "scenePayload": { "type": "object", "additionalProperties": false, "required": ["sceneId"], "properties": { "sceneId": { "$ref": "#/$defs/id" } } },
+    "checkpointPayload": { "type": "object", "additionalProperties": false, "required": ["checkpointId", "attempt", "outcome"], "properties": { "checkpointId": { "$ref": "#/$defs/id" }, "attempt": { "type": "integer", "minimum": 1, "maximum": 10000 }, "outcome": { "enum": ["correct", "incorrect", "skipped"] } } },
+    "objectivePayload": { "type": "object", "additionalProperties": false, "required": ["objectiveId", "completedAt"], "properties": { "objectiveId": { "$ref": "#/$defs/id" }, "completedAt": { "type": "string", "format": "date-time" } } },
+    "completedPayload": { "type": "object", "additionalProperties": false, "required": ["objectiveIds", "checkpointSummary", "durationBucket"], "properties": { "objectiveIds": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }, "checkpointSummary": { "type": "object", "additionalProperties": false, "required": ["attempted", "correct"], "properties": { "attempted": { "type": "integer", "minimum": 0 }, "correct": { "type": "integer", "minimum": 0 } } }, "durationBucket": { "enum": ["under-1m", "1-5m", "5-15m", "15-30m", "over-30m", "unknown"] } } },
+    "resizedPayload": { "type": "object", "additionalProperties": false, "required": ["height", "aspectRatio"], "properties": { "height": { "type": "integer", "minimum": 200, "maximum": 10000 }, "aspectRatio": { "type": "string", "pattern": "^[1-9][0-9]{0,3}/[1-9][0-9]{0,3}$" } } },
+    "coursewareErrorPayload": { "type": "object", "additionalProperties": false, "required": ["code", "recoverable"], "properties": { "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" }, "recoverable": { "type": "boolean" } } },
+    "localePayload": { "type": "object", "additionalProperties": false, "required": ["locale"], "properties": { "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$" } } },
+    "themePayload": { "type": "object", "additionalProperties": false, "required": ["theme"], "properties": { "theme": { "enum": ["light", "dark", "system"] } } },
+    "motionPayload": { "type": "object", "additionalProperties": false, "required": ["motion"], "properties": { "motion": { "enum": ["full", "reduced", "system"] } } },
+    "progress": { "type": "object", "additionalProperties": false, "required": ["schemaVersion", "workId", "releaseId", "completedSceneIds", "completedCheckpointIds", "completedObjectiveIds"], "properties": { "schemaVersion": { "const": 1 }, "workId": { "$ref": "#/$defs/uuid" }, "releaseId": { "$ref": "#/$defs/uuid" }, "completedSceneIds": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }, "completedCheckpointIds": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }, "completedObjectiveIds": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } } } },
+    "errorPayload": { "type": "object", "additionalProperties": false, "required": ["recoverable"], "properties": { "recoverable": { "type": "boolean" } } }
+  }
+}

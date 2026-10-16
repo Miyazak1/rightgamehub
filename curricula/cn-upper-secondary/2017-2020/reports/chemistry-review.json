@@ -1,0 +1,2535 @@
+{
+  "format": "mooyu.curriculum-review-report",
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-15T07:59:26.004Z",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "subject": {
+    "id": "chemistry",
+    "title": {
+      "zh-CN": "化学",
+      "en": "Chemistry"
+    },
+    "catalogStatus": "atomic-draft"
+  },
+  "coverage": {
+    "nodes": 130,
+    "relations": 71,
+    "clusters": 27,
+    "textbookMappings": 68,
+    "textbookMappingTargetNodes": 68,
+    "textbookMappedTargetNodes": 68,
+    "sourceCheckedNodes": 130,
+    "subjectCheckedNodes": 0,
+    "nodesByType": {
+      "concept": 12,
+      "experiment": 18,
+      "method": 8,
+      "model": 14,
+      "module": 34,
+      "practice": 30,
+      "principle": 13,
+      "subject-root": 1
+    },
+    "nodesByPriority": {
+      "high": 65,
+      "low": 35,
+      "medium": 30
+    }
+  },
+  "gaps": [
+    {
+      "code": "SUBJECT_REVIEW_PENDING",
+      "severity": "blocking",
+      "count": 130,
+      "message": "节点尚未通过学科专家审校，不能进入 K2 完成态。"
+    },
+    {
+      "code": "COURSEWARE_DEPTH_UNMEASURED",
+      "severity": "non-blocking",
+      "count": 27,
+      "message": "知识簇尚未绑定发布课件的 C0-C5 深度证据。"
+    },
+    {
+      "code": "ELECTIVE_COMPOSITION_FLEXIBLE",
+      "severity": "scope-note",
+      "count": 0,
+      "message": "化学选修允许系列内、跨系列或综合项目组合，本报告只覆盖国家课标建议基线。"
+    }
+  ],
+  "reviewQueue": [
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.basic.detection",
+      "title": "物质检测与定量测定",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第62页：物质检测参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.basic.separation",
+      "title": "物质分离与提纯",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第62页：分离与提纯参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.principles.computational",
+      "title": "分子结构计算、建模与谱图模拟",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第63页：软件与实物模型参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.principles.core",
+      "title": "核心概念与基本原理的实验研究",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第63页：核心原理参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.production.reconstruction",
+      "title": "化工原理、流程复原与物料衡算",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第63页：真实化工过程复原与模拟"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.stse.environment",
+      "title": "资源、能源与环境综合实验",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第63页：资源能源环境参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.engineering.catalyst-membrane-modeling",
+      "title": "催化剂工程、膜分离与化工数据建模",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第70页：工程前沿参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.engineering.process-intensification",
+      "title": "传递、分离、反应与过程强化",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第70页：化学工程研究问题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.interdisciplinary.environment-energy",
+      "title": "环境过程、污染修复与能源化学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第70页：环境与能源参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.interdisciplinary.materials",
+      "title": "材料、超分子与纳米化学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第69-70页：材料与纳米参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.research.measurement-dynamics",
+      "title": "化学测量、成像、界面与动态过程",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第69页：测量成像与动态学参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.research.synthesis-catalysis",
+      "title": "精准绿色合成、功能分子与催化前沿",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第69页：合成与催化参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.life.environment",
+      "title": "生活环境、能源与化学品使用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第66页：化学与环境保护"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.life.health",
+      "title": "营养、食品添加剂、药物与健康决策",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第66页：化学与健康"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.stse.assessment",
+      "title": "化工与材料企业的系统评估",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第67-68页：参观类参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.stse.investigation",
+      "title": "社会热点调查、实验验证与改进建议",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第67页：调查类参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.technology.production",
+      "title": "化学与工农业生产",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第67页：工农业生产"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.technology.resources",
+      "title": "自然资源开发、综合利用与再生",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第66-67页：资源开发利用"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.acid-base-titration",
+      "title": "强酸与强碱的中和滴定",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.carbohydrate-properties",
+      "title": "糖类的性质",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.chemical-to-electrical-energy",
+      "title": "化学能转化成电能",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.coordination-compound",
+      "title": "简单配合物的制备",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.crude-salt-purification",
+      "title": "用化学沉淀法去除粗盐中的杂质离子",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.electroplating",
+      "title": "简单的电镀实验",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.equilibrium-shift",
+      "title": "探究影响化学平衡移动的因素",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.ethanol-acetic-acid",
+      "title": "乙醇、乙酸的主要性质",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.ethyl-acetate",
+      "title": "乙酸乙酯的制备与性质",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.fuel-cell",
+      "title": "制作简单的燃料电池",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.functional-group-tests",
+      "title": "有机化合物中常见官能团的检验",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验8"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.iron-compounds",
+      "title": "铁及其化合物的性质",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.organic-ball-stick",
+      "title": "搭建球棍模型认识有机化合物分子结构的特点",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验8"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.periodic-trends",
+      "title": "同周期、同主族元素性质的递变",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.reaction-rate-factors",
+      "title": "化学反应速率的影响因素",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.salt-hydrolysis",
+      "title": "盐类水解的应用",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：选择性必修实验5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.solution-concentration",
+      "title": "配制一定物质的量浓度的溶液",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.experiment.sulfur-transformations",
+      "title": "不同价态含硫物质的转化",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第113页：必修实验3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic.ionic-reactions",
+      "title": "电解质、电离与离子反应",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第23页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic.redox",
+      "title": "氧化还原反应与电子转移",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第23页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.organic.properties-reactions",
+      "title": "典型有机物性质与主要反应类型",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第30页：4.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.organic.structure",
+      "title": "典型有机物结构、官能团与同分异构",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第29-30页：4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.inquiry-cycle",
+      "title": "提出问题、实验设计、证据解释与交流评价",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第20页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.lab-methods",
+      "title": "检验、分离、提纯与溶液配制",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第20-21页：1.3、1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.society.environment-rules",
+      "title": "环境污染防治、化学安全与法规",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第33-35页：5.4-5.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.society.green-chemistry",
+      "title": "可持续发展、清洁生产与绿色化学",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第31-32页：5.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.bonds",
+      "title": "离子键、共价键与分子空间结构",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第27页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.energy-cells",
+      "title": "化学反应中的能量变化与原电池",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第28-29页：3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.rate-equilibrium",
+      "title": "化学反应速率、可逆反应与限度",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第27-28页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.ionization-ph",
+      "title": "弱电解质电离平衡、水的电离与 pH",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第41-42页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.precipitation",
+      "title": "沉淀溶解平衡及沉淀转化",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第42页：3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.energy.electrochemistry",
+      "title": "原电池、电解池与金属腐蚀",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第36页：1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.energy.enthalpy-hess",
+      "title": "反应热、焓变与盖斯定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第36页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "title": "反应方向、平衡常数与浓度商",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第38-39页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism",
+      "title": "反应速率、反应历程与活化能",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第39页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.biomolecules",
+      "title": "糖类、氨基酸、蛋白质与核酸",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第59页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.derivatives",
+      "title": "烃的衍生物及其转化关系",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第56页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.functional-groups",
+      "title": "官能团、分类命名与官能团转化",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第53-54页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.polymer-structure",
+      "title": "聚合物结构、单体、加聚与缩聚",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第58-59页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.structure-analysis",
+      "title": "有机分子结构、同分异构与仪器分析",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第53-54页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.synthesis",
+      "title": "有机反应类型与合成路线设计",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第56页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.configuration-periodicity",
+      "title": "电子排布规律与元素性质周期性",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第45页：1.2-1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.covalent-geometry",
+      "title": "共价键特征、分子空间结构、极性与手性",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第47-48页：2.2-2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.design-value",
+      "title": "结构—性质关系与新物质设计",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第51页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.electron-state",
+      "title": "电子运动状态、能级、原子轨道与电子云",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第44-45页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.measurement-methods",
+      "title": "原子光谱、分子光谱与 X 射线衍射",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第51页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.particle-interactions",
+      "title": "离子键、共价键、配位键、金属键与分子间作用力",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 9，第47页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.basic.preparation",
+      "title": "物质制备与条件优化",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第62页：物质制备参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.basic.properties",
+      "title": "物质性质与反应规律实验",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第62页：性质与反应规律参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.principles.frontier",
+      "title": "当代化学成果的简化实验探究",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第63页：当代研究成果参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.production.optimization",
+      "title": "生产条件、效率与绿色过程优化",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第63页：化工生产参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.stse.health",
+      "title": "食品、天然产物、药物与日化综合实验",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第63-64页：生命健康参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.stse.materials",
+      "title": "材料性能、开发与应用实验",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第63页：材料参考活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.interdisciplinary.chemical-biology",
+      "title": "化学生物学、药物发现与生命调控",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第70页：化学生物学参考选题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.life.materials",
+      "title": "生活材料的组成、性能与选择",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第66页：生活中的材料"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.technology.materials",
+      "title": "材料制造、应用与发展方向",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第67页：材料制造与应用"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic.classification",
+      "title": "物质分类、价态与胶体",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第22-23页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic.metals",
+      "title": "钠、铁及其重要化合物",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第23-24页：2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic.nonmetals",
+      "title": "氯、氮、硫及其重要化合物",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第24-25页：2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.organic.macromolecules",
+      "title": "有机合成、高分子与生命中的有机物",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第30-31页：4.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.amount-of-substance",
+      "title": "物质的量及相关物理量",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第19页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.discipline-methods",
+      "title": "化学研究对象、尺度与认识方法",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第19页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.lab-safety",
+      "title": "实验安全、废物处理与应急处置",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第20-21页：1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.society.materials-health",
+      "title": "材料、药物与健康",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第32页：5.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.society.resources-energy",
+      "title": "资源综合利用、化工生产与能源",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第32-33页：5.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.atomic-periodic",
+      "title": "原子结构、元素周期律与元素周期表",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第26-27页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.applications",
+      "title": "离子平衡与 pH 调控的应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第42页：3.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.electrolyte-behavior",
+      "title": "电解质水溶液的组成、性质与反应",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第41页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.hydrolysis",
+      "title": "盐类水解及其影响因素",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第42页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.energy.system-internal-energy",
+      "title": "体系、内能与能量守恒",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第36页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.control",
+      "title": "化学反应速率与平衡的综合调控",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第39页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.bonds-reactivity",
+      "title": "有机化学键、基团影响与反应性",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第54页：1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.hydrocarbons",
+      "title": "烷烃、烯烃、炔烃与芳香烃",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第56页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.safe-use",
+      "title": "有机化合物的安全与绿色使用",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第56页：2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic.synthetic-polymers",
+      "title": "塑料、合成橡胶、合成纤维与新型高分子材料",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第59页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.crystals",
+      "title": "晶体结构、晶胞与聚集状态",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第48页：2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure.exploration-scales",
+      "title": "物质结构探索史与多尺度认识",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 9，第51页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry",
+      "title": "普通高中化学",
+      "type": "subject-root",
+      "curriculumLevels": [
+        "required",
+        "selective-required",
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9：普通高中化学课程标准"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental",
+      "title": "选修系列1：实验化学",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第62-65页（印刷页54-57）：选修系列1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.basic",
+      "title": "基础实验",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第62页：系列1主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.principles",
+      "title": "化学原理探究",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第63页：系列1主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.production",
+      "title": "化工生产过程模拟实验",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第63页：系列1主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.experimental.stse",
+      "title": "STSE 综合实验",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第63-64页：系列1主题4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers",
+      "title": "选修系列3：发展中的化学科学",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第69-71页（印刷页61-63）：选修系列3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.engineering",
+      "title": "化学工程研究进展",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第70页：系列3主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.interdisciplinary",
+      "title": "作为交叉学科的化学",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第69-70页：系列3主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.frontiers.research",
+      "title": "化学科学研究进展",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第69页：系列3主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society",
+      "title": "选修系列2：化学与社会",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第65-69页（印刷页57-61）：选修系列2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.life",
+      "title": "化学与生活",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第65-66页：系列2主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.stse",
+      "title": "STSE 综合实践",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第67-68页：系列2主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.elective.society.technology",
+      "title": "化学与技术",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第66-67页：系列2主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required",
+      "title": "化学必修课程",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第19-35页：必修课程五个主题"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required-experiments",
+      "title": "学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required",
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第113页（印刷页105）：学生必做实验索引"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required-experiments.required",
+      "title": "必修课程学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第113页（印刷页105）：必修实验1-9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required-experiments.selective-required",
+      "title": "选择性必修课程学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第113页（印刷页105）：选择性必修实验1-9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.inorganic",
+      "title": "常见的无机物及其应用",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第22-26页：主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.organic",
+      "title": "简单的有机化合物及其应用",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第29-31页：主题4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.science-inquiry",
+      "title": "化学科学与实验探究",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第19-22页：主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.society",
+      "title": "化学与社会发展",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第31-35页：主题5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.required.structure-reaction",
+      "title": "物质结构基础与化学反应规律",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第26-29页：主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic-foundations",
+      "title": "选择性必修：有机化学基础",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第53-61页（印刷页45-53）：模块3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic-foundations.composition",
+      "title": "有机化合物的组成与结构",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第53-56页：模块3主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic-foundations.macromolecules",
+      "title": "生物大分子及合成高分子",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第58-61页：模块3主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.organic-foundations.reactions",
+      "title": "烃及其衍生物的性质与应用",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第56-58页：模块3主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.reaction-principles",
+      "title": "选择性必修：化学反应原理",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第35-44页（印刷页27-36）：模块1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.reaction-principles.aqueous",
+      "title": "水溶液中的离子反应与平衡",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第41-44页（印刷页33-36）：模块1主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.reaction-principles.energy",
+      "title": "化学反应与能量",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第36-38页（印刷页28-30）：模块1主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.reaction-principles.equilibrium-rate",
+      "title": "化学反应的方向、限度和速率",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第38-41页（印刷页30-33）：模块1主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure-properties",
+      "title": "选择性必修：物质结构与性质",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第44-53页（印刷页36-45）：模块2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure-properties.atomic",
+      "title": "原子结构与元素的性质",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第44-47页：模块2主题1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure-properties.interactions",
+      "title": "微粒间的相互作用与物质的性质",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第47-50页：模块2主题2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.structure-properties.methods",
+      "title": "研究物质结构的方法与价值",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 9，第51-53页：模块2主题3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    }
+  ]
+}

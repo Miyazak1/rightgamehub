@@ -1,0 +1,22 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "component.workbench",
+  "version": "1.0.0",
+  "kind": "component",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:48b36d399a4d6dab16689f2d6c5287699767873f6656cccf67084f099cf42563",
+  "hotSwap": "live",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "component.workbench"
+  ],
+  "commands": [
+    "experience.set",
+    "panel.set",
+    "locale.set",
+    "motion.set"
+  ],
+  "dependencies": []
+}

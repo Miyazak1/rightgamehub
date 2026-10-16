@@ -1,0 +1,25 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "physics.newton-cart",
+  "version": "1.0.0",
+  "kind": "domain",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:5ca1369203c31946db85140e26cdbd8757e421289183de34d74bb840de9f8744",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "domain.motion"
+  ],
+  "commands": [
+    "force.set",
+    "mass.set",
+    "simulation.run",
+    "simulation.pause",
+    "simulation.reset",
+    "simulation.step",
+    "measurement.record"
+  ],
+  "dependencies": []
+}

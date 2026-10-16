@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
+COPY packages/courseware-runtime/package.json packages/courseware-runtime/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json
 COPY packages/rules-sdk/package.json packages/rules-sdk/package.json
@@ -17,6 +18,8 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --chown=node:node packages/contracts/src/competition.mjs ./packages/contracts/src/competition.mjs
 COPY --chown=node:node packages/creator-tools/src/courseware.mjs ./packages/creator-tools/src/courseware.mjs
+COPY --chown=node:node packages/creator-tools/src/courseware-modules.mjs ./packages/creator-tools/src/courseware-modules.mjs
+COPY --chown=node:node packages/courseware-runtime/src ./packages/courseware-runtime/src
 COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --chown=node:node apps/api/src/web-package-policy.mjs apps/api/src/web-zip-validator.mjs apps/api/src/web-zip-validator-cli.mjs apps/api/src/web-validation-runner.mjs apps/api/src/web-validator-service.mjs ./apps/api/src/
 RUN node -e "import('./apps/api/src/web-zip-validator.mjs')"

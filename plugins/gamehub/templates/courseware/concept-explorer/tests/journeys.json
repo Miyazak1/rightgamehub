@@ -5,6 +5,11 @@
       { "action": "enter", "target": "explore-a" }, { "action": "set", "target": "a", "value": -2 },
       { "action": "answer", "target": "predict-opening", "value": "down" }, { "action": "assert", "target": "assessment.correct", "expect": true },
       { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true },
+    { "id": "negative-a-completion-en", "title": "Change a and answer the opening direction", "locale": "en", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "set", "target": "a", "value": -2 },
+      { "action": "answer", "target": "predict-opening", "value": "down" }, { "action": "assert", "target": "assessment.correct", "expect": true },
+      { "action": "complete", "target": "course" }
     ], "expectsCompletion": true }
   ]
 }

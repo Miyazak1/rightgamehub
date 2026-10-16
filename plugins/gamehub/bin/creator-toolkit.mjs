@@ -1,11 +1,11 @@
 // scripts/creator-toolkit-cli.mjs
-import fs4 from "node:fs/promises";
-import path4 from "node:path";
-import { fileURLToPath } from "node:url";
+import fs5 from "node:fs/promises";
+import path5 from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // packages/creator-tools/src/index.mjs
-import fs3 from "node:fs/promises";
-import path3 from "node:path";
+import fs4 from "node:fs/promises";
+import path4 from "node:path";
 
 // packages/rules-sdk/src/index.mjs
 var RULES_MANIFEST_PROTOCOL = "gamehub.rules-manifest.v1";
@@ -21,14 +21,295 @@ var emptyReleaseDescription = Object.freeze({
 });
 
 // packages/creator-tools/src/courseware.mjs
+import crypto2 from "node:crypto";
+import fs2 from "node:fs/promises";
+import path2 from "node:path";
+
+// packages/creator-tools/src/courseware-modules.mjs
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// packages/courseware-runtime/src/module-contract.mjs
+var COURSEWARE_MODULE_FORMAT = "mooyu.courseware-module";
+var COURSEWARE_MODULE_SCHEMA_VERSION = 1;
+var COURSEWARE_MODULE_API_VERSION = 1;
+var COURSEWARE_MODULE_KINDS = Object.freeze([
+  "domain",
+  "scenario",
+  "construction",
+  "challenge",
+  "component",
+  "instrument",
+  "journey",
+  "embed"
+]);
+var COURSEWARE_HOT_SWAP_MODES = Object.freeze(["live", "paused", "session"]);
+var idPattern = /^[a-z][a-z0-9._-]{0,127}$/u;
+var semverPattern = /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$/u;
+var integrityPattern = /^sha256:[a-f0-9]{64}$/u;
+var allowedRootFields = /* @__PURE__ */ new Set([
+  "format",
+  "schemaVersion",
+  "id",
+  "version",
+  "kind",
+  "apiVersion",
+  "entry",
+  "integrity",
+  "hotSwap",
+  "stateSchemaVersion",
+  "capabilities",
+  "commands",
+  "dependencies"
+]);
+var allowedDependencyFields = /* @__PURE__ */ new Set(["id", "apiVersion", "capabilities", "optional"]);
+var hotSwapByKind = Object.freeze({
+  domain: /* @__PURE__ */ new Set(["paused", "session"]),
+  scenario: /* @__PURE__ */ new Set(["paused", "session"]),
+  construction: /* @__PURE__ */ new Set(["paused", "session"]),
+  challenge: /* @__PURE__ */ new Set(["paused", "session"]),
+  component: /* @__PURE__ */ new Set(["live", "paused", "session"]),
+  instrument: /* @__PURE__ */ new Set(["live", "paused", "session"]),
+  journey: /* @__PURE__ */ new Set(["paused", "session"]),
+  embed: /* @__PURE__ */ new Set(["session"])
+});
+function fail(code, message, details = {}) {
+  throw Object.assign(new Error(message), { code, ...details });
+}
+function exactFields(value, allowed, pointer) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", `${pointer} must be an object.`, { pointer });
+  for (const key of Object.keys(value)) if (!allowed.has(key)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", `${pointer} contains unknown field ${key}.`, { pointer: `${pointer}/${key}` });
+}
+function ids(value, pointer, { allowEmpty = true } = {}) {
+  if (!Array.isArray(value) || !allowEmpty && value.length === 0 || value.length > 128 || new Set(value).size !== value.length || value.some((item2) => !idPattern.test(item2))) {
+    fail("COURSEWARE_MODULE_MANIFEST_INVALID", `${pointer} must be a bounded list of unique stable identifiers.`, { pointer });
+  }
+  return [...value];
+}
+function safeEntry(value) {
+  return typeof value === "string" && /^\.\/[a-zA-Z0-9._/-]+\.mjs$/u.test(value) && !value.split("/").some((part) => part === ".." || part === "");
+}
+function validateCoursewareModuleManifest(value) {
+  exactFields(value, allowedRootFields, "/");
+  for (const field of ["format", "schemaVersion", "id", "version", "kind", "apiVersion", "entry", "integrity", "hotSwap", "stateSchemaVersion", "capabilities", "commands", "dependencies"]) {
+    if (!(field in value)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", `Module manifest is missing ${field}.`, { pointer: `/${field}` });
+  }
+  if (value.format !== COURSEWARE_MODULE_FORMAT || value.schemaVersion !== COURSEWARE_MODULE_SCHEMA_VERSION) fail("COURSEWARE_MODULE_FORMAT_UNSUPPORTED", "Unsupported courseware module format.", { pointer: "/format" });
+  if (!idPattern.test(value.id)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Module id is invalid.", { pointer: "/id" });
+  if (!semverPattern.test(value.version)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Module version must be semantic versioning.", { pointer: "/version" });
+  if (!COURSEWARE_MODULE_KINDS.includes(value.kind)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Module kind is invalid.", { pointer: "/kind" });
+  if (!Number.isInteger(value.apiVersion) || value.apiVersion < 1) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "apiVersion must be a positive integer.", { pointer: "/apiVersion" });
+  if (!safeEntry(value.entry)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "entry must be a safe local .mjs path.", { pointer: "/entry" });
+  if (!integrityPattern.test(value.integrity)) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "integrity must be a SHA-256 release digest.", { pointer: "/integrity" });
+  if (!hotSwapByKind[value.kind].has(value.hotSwap)) fail("COURSEWARE_MODULE_HOT_SWAP_INVALID", `${value.kind} modules cannot use ${value.hotSwap} hot swap.`, { pointer: "/hotSwap" });
+  if (!Number.isInteger(value.stateSchemaVersion) || value.stateSchemaVersion < 1) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "stateSchemaVersion must be a positive integer.", { pointer: "/stateSchemaVersion" });
+  const capabilities = ids(value.capabilities, "/capabilities");
+  const commands = ids(value.commands, "/commands");
+  if (!Array.isArray(value.dependencies) || value.dependencies.length > 64) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "dependencies must be a bounded array.", { pointer: "/dependencies" });
+  const dependencies = value.dependencies.map((dependency, index) => {
+    const pointer = `/dependencies/${index}`;
+    exactFields(dependency, allowedDependencyFields, pointer);
+    if (!idPattern.test(dependency.id) || dependency.id === value.id) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Dependency id is invalid.", { pointer: `${pointer}/id` });
+    if (!Number.isInteger(dependency.apiVersion) || dependency.apiVersion < 1) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Dependency apiVersion must be a positive integer.", { pointer: `${pointer}/apiVersion` });
+    if (dependency.optional !== void 0 && typeof dependency.optional !== "boolean") fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Dependency optional must be boolean.", { pointer: `${pointer}/optional` });
+    return Object.freeze({ id: dependency.id, apiVersion: dependency.apiVersion, capabilities: Object.freeze(ids(dependency.capabilities ?? [], `${pointer}/capabilities`)), optional: dependency.optional === true });
+  });
+  if (new Set(dependencies.map((item2) => item2.id)).size !== dependencies.length) fail("COURSEWARE_MODULE_MANIFEST_INVALID", "Dependency ids must be unique.", { pointer: "/dependencies" });
+  return Object.freeze({
+    format: value.format,
+    schemaVersion: value.schemaVersion,
+    id: value.id,
+    version: value.version,
+    kind: value.kind,
+    apiVersion: value.apiVersion,
+    entry: value.entry,
+    integrity: value.integrity,
+    hotSwap: value.hotSwap,
+    stateSchemaVersion: value.stateSchemaVersion,
+    capabilities: Object.freeze(capabilities),
+    commands: Object.freeze(commands),
+    dependencies: Object.freeze(dependencies)
+  });
+}
+
+// packages/courseware-runtime/src/module-lock.mjs
+var COURSEWARE_MODULE_LOCK_FORMAT = "mooyu.courseware-module-lock";
+var COURSEWARE_MODULE_LOCK_SCHEMA_VERSION = 1;
+var pathPattern = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*\\)[A-Za-z0-9][A-Za-z0-9._/-]*$/u;
+var integrityPattern2 = /^sha256:[a-f0-9]{64}$/u;
+var idPattern2 = /^[a-z][a-z0-9._-]{0,127}$/u;
+var allowedRootFields2 = /* @__PURE__ */ new Set(["format", "schemaVersion", "runtimeApiVersion", "roots", "modules"]);
+var allowedRecordFields = /* @__PURE__ */ new Set(["manifest", "entry", "manifestIntegrity", "module"]);
+function fail2(code, message, details = {}) {
+  throw Object.assign(new Error(message), { code, ...details });
+}
+function exactObject(value, allowed, pointer) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail2("COURSEWARE_MODULE_LOCK_INVALID", `${pointer} must be an object.`, { pointer });
+  for (const key of Object.keys(value)) if (!allowed.has(key)) fail2("COURSEWARE_MODULE_LOCK_INVALID", `${pointer} contains unknown field ${key}.`, { pointer: `${pointer}/${key}` });
+}
+function safePath(value, pointer, extension) {
+  if (typeof value !== "string" || value.length > 255 || !pathPattern.test(value) || extension && !value.endsWith(extension)) {
+    fail2("COURSEWARE_MODULE_LOCK_INVALID", `${pointer} must be a safe package-relative ${extension ?? ""} path.`, { pointer });
+  }
+  return value;
+}
+function validateCoursewareModuleLock(value) {
+  exactObject(value, allowedRootFields2, "/");
+  for (const field of ["format", "schemaVersion", "runtimeApiVersion", "roots", "modules"]) {
+    if (!(field in value)) fail2("COURSEWARE_MODULE_LOCK_INVALID", `Module lock is missing ${field}.`, { pointer: `/${field}` });
+  }
+  if (value.format !== COURSEWARE_MODULE_LOCK_FORMAT || value.schemaVersion !== COURSEWARE_MODULE_LOCK_SCHEMA_VERSION) {
+    fail2("COURSEWARE_MODULE_LOCK_UNSUPPORTED", "Unsupported courseware module lock format.", { pointer: "/format" });
+  }
+  if (value.runtimeApiVersion !== COURSEWARE_MODULE_API_VERSION) fail2("COURSEWARE_MODULE_LOCK_UNSUPPORTED", "Module lock runtime API version is unsupported.", { pointer: "/runtimeApiVersion" });
+  if (!Array.isArray(value.roots) || value.roots.length === 0 || value.roots.length > 64 || new Set(value.roots).size !== value.roots.length || value.roots.some((id) => !idPattern2.test(id))) {
+    fail2("COURSEWARE_MODULE_LOCK_INVALID", "roots must be a bounded list of unique module ids.", { pointer: "/roots" });
+  }
+  if (!Array.isArray(value.modules) || value.modules.length === 0 || value.modules.length > 256) fail2("COURSEWARE_MODULE_LOCK_INVALID", "modules must be a bounded non-empty array.", { pointer: "/modules" });
+  const modules = value.modules.map((record, index) => {
+    const pointer = `/modules/${index}`;
+    exactObject(record, allowedRecordFields, pointer);
+    for (const field of ["manifest", "entry", "manifestIntegrity", "module"]) if (!(field in record)) fail2("COURSEWARE_MODULE_LOCK_INVALID", `Module record is missing ${field}.`, { pointer: `${pointer}/${field}` });
+    const manifest = safePath(record.manifest, `${pointer}/manifest`, ".json");
+    const entry = safePath(record.entry, `${pointer}/entry`, ".mjs");
+    if (!integrityPattern2.test(record.manifestIntegrity)) fail2("COURSEWARE_MODULE_LOCK_INVALID", "manifestIntegrity must be a SHA-256 digest.", { pointer: `${pointer}/manifestIntegrity` });
+    const module = validateCoursewareModuleManifest(record.module);
+    return Object.freeze({ manifest, entry, manifestIntegrity: record.manifestIntegrity, module });
+  });
+  const ids2 = modules.map((record) => record.module.id);
+  if (new Set(ids2).size !== ids2.length) fail2("COURSEWARE_MODULE_LOCK_INVALID", "Module ids must be unique.", { pointer: "/modules" });
+  if (value.roots.some((id) => !ids2.includes(id))) fail2("COURSEWARE_MODULE_LOCK_INVALID", "Every root must identify a locked module.", { pointer: "/roots" });
+  const byId = new Map(modules.map((record) => [record.module.id, record.module]));
+  for (const record of modules) for (const dependency of record.module.dependencies) {
+    const target = byId.get(dependency.id);
+    if (!target) {
+      if (!dependency.optional) fail2("COURSEWARE_MODULE_DEPENDENCY_MISSING", `Locked module ${record.module.id} requires ${dependency.id}.`, { moduleId: record.module.id, dependencyId: dependency.id });
+      continue;
+    }
+    if (target.apiVersion !== dependency.apiVersion || dependency.capabilities.some((capability) => !target.capabilities.includes(capability))) {
+      fail2("COURSEWARE_MODULE_DEPENDENCY_INCOMPATIBLE", `Locked module ${record.module.id} has an incompatible dependency on ${dependency.id}.`, { moduleId: record.module.id, dependencyId: dependency.id });
+    }
+  }
+  const visiting = /* @__PURE__ */ new Set();
+  const visited = /* @__PURE__ */ new Set();
+  const visit = (id) => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) fail2("COURSEWARE_MODULE_DEPENDENCY_CYCLE", `Locked module dependency cycle contains ${id}.`, { moduleId: id });
+    visiting.add(id);
+    for (const dependency of byId.get(id).dependencies) if (byId.has(dependency.id)) visit(dependency.id);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  ids2.forEach(visit);
+  return Object.freeze({
+    format: value.format,
+    schemaVersion: value.schemaVersion,
+    runtimeApiVersion: value.runtimeApiVersion,
+    roots: Object.freeze([...value.roots]),
+    modules: Object.freeze(modules)
+  });
+}
+
+// packages/creator-tools/src/courseware-modules.mjs
+var safeRelativePath = (value) => typeof value === "string" && value.length > 0 && value.length <= 255 && !path.isAbsolute(value) && !value.includes("\\") && value.split("/").every((part) => part && part !== "." && part !== "..");
+var sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+var runtimeSourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../courseware-runtime/src");
+function fail3(code, message, details = {}) {
+  throw Object.assign(new Error(message), { code, ...details });
+}
+function resolveEntryPath(manifestPath, entry) {
+  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(manifestPath), entry));
+  if (!safeRelativePath(resolved) || !resolved.endsWith(".mjs")) fail3("COURSEWARE_MODULE_ENTRY_INVALID", `\u6A21\u5757\u5165\u53E3 ${entry} \u4E0D\u80FD\u79BB\u5F00\u6A21\u5757\u76EE\u5F55\u3002`, { path: manifestPath, pointer: "/entry" });
+  const directory = `${path.posix.dirname(manifestPath)}/`;
+  if (!resolved.startsWith(directory)) fail3("COURSEWARE_MODULE_ENTRY_INVALID", `\u6A21\u5757\u5165\u53E3 ${entry} \u4E0D\u80FD\u79BB\u5F00\u6A21\u5757\u76EE\u5F55\u3002`, { path: manifestPath, pointer: "/entry" });
+  return resolved;
+}
+async function ordinaryFile(root, relative) {
+  if (!safeRelativePath(relative)) fail3("COURSEWARE_MODULE_PATH_INVALID", `\u4E0D\u5B89\u5168\u7684\u6A21\u5757\u8DEF\u5F84\uFF1A${relative}`, { path: relative });
+  const absolute = path.join(root, ...relative.split("/"));
+  const stat = await fs.lstat(absolute).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
+  if (!stat?.isFile() || stat.isSymbolicLink()) fail3("COURSEWARE_MODULE_FILE_MISSING", `\u6A21\u5757\u6587\u4EF6 ${relative} \u4E0D\u5B58\u5728\u6216\u4E0D\u662F\u666E\u901A\u6587\u4EF6\u3002`, { path: relative });
+  const bytes = await fs.readFile(absolute);
+  return { relative, absolute, bytes, size: bytes.length, sha256: sha256(bytes) };
+}
+async function resolveCoursewareModuleGraph(projectRoot, manifest) {
+  if (manifest?.build?.profile !== "mooyu-structured-v1") return null;
+  const runtime = manifest.runtime ?? {};
+  if (!Array.isArray(runtime.modules) || !runtime.modules.length || !Array.isArray(runtime.rootModules) || !runtime.rootModules.length) {
+    fail3("COURSEWARE_MODULE_GRAPH_INVALID", "\u7ED3\u6784\u5316\u8BFE\u4EF6\u5FC5\u987B\u58F0\u660E runtime.modules \u4E0E runtime.rootModules\u3002", { path: "mooyu-courseware.json", pointer: "/runtime" });
+  }
+  const records = [];
+  for (const manifestPath of runtime.modules) {
+    const manifestFile = await ordinaryFile(projectRoot, manifestPath);
+    let module;
+    try {
+      module = validateCoursewareModuleManifest(JSON.parse(manifestFile.bytes.toString("utf8")));
+    } catch (error) {
+      fail3(error.code ?? "COURSEWARE_MODULE_MANIFEST_INVALID", `${manifestPath}: ${error.message}`, { path: manifestPath, pointer: error.pointer ?? "/" });
+    }
+    const entryPath = resolveEntryPath(manifestPath, module.entry);
+    const entryFile = await ordinaryFile(projectRoot, entryPath);
+    if (module.integrity !== `sha256:${entryFile.sha256}`) fail3("COURSEWARE_MODULE_INTEGRITY_MISMATCH", `\u6A21\u5757 ${module.id} \u7684\u5165\u53E3\u54C8\u5E0C\u4E0E\u6E05\u5355\u4E0D\u4E00\u81F4\u3002`, { moduleId: module.id, path: entryPath, pointer: "/integrity" });
+    const source = entryFile.bytes.toString("utf8");
+    if (/(?:^|\n)\s*import\s*(?:["'{*]|[$\w]+\s*(?:,|\s+from))|(?:^|\n)\s*export\s+[^;\n]*\sfrom\s*["']|\bimport\s*\(/u.test(source)) fail3("COURSEWARE_MODULE_BUNDLE_REQUIRED", `\u6A21\u5757 ${module.id} \u5FC5\u987B\u7531\u56FA\u5B9A Builder \u4EA7\u51FA\u65E0\u5916\u90E8 import \u7684\u5355\u6587\u4EF6 ESM\u3002`, { moduleId: module.id, path: entryPath });
+    records.push({ manifestPath, manifestFile, entryPath, entryFile, module });
+  }
+  records.sort((left, right) => left.module.id.localeCompare(right.module.id, "en"));
+  if (new Set(records.map((record) => record.manifestPath)).size !== records.length) fail3("COURSEWARE_MODULE_GRAPH_INVALID", "runtime.modules \u4E0D\u80FD\u5305\u542B\u91CD\u590D\u8DEF\u5F84\u3002", { path: "mooyu-courseware.json", pointer: "/runtime/modules" });
+  const lock = validateCoursewareModuleLock({
+    format: "mooyu.courseware-module-lock",
+    schemaVersion: 1,
+    runtimeApiVersion: 1,
+    roots: [...runtime.rootModules],
+    modules: records.map((record) => ({
+      manifest: record.manifestPath,
+      entry: record.entryPath,
+      manifestIntegrity: `sha256:${record.manifestFile.sha256}`,
+      module: record.module
+    }))
+  });
+  const lockBytes = Buffer.from(`${JSON.stringify(lock, null, 2)}
+`);
+  return { lock, lockBytes, lockSha256: sha256(lockBytes), records };
+}
+var coursewareModuleFiles = (graph) => graph ? graph.records.flatMap((record) => [record.manifestFile, record.entryFile]) : [];
+async function coursewareRuntimeFiles(manifest) {
+  if (manifest?.build?.profile !== "mooyu-structured-v1") return [];
+  const records = [];
+  for (const name of ["index.mjs", "browser-loader.mjs", "module-contract.mjs", "module-lock.mjs", "runtime.mjs"]) {
+    const absolute = path.join(runtimeSourceRoot, name);
+    const bytes = await fs.readFile(absolute);
+    records.push({ relative: `dist/_mooyu/runtime/${name}`, absolute, bytes, size: bytes.length, sha256: sha256(bytes), generated: true });
+  }
+  const bootstrap = Buffer.from(`import { CoursewareModuleRegistry, CoursewareRuntime, loadCoursewareModuleRelease } from './runtime/index.mjs';
+try {
+  const registry = new CoursewareModuleRegistry();
+  const releaseBaseUrl = new URL('../../../', import.meta.url);
+  const release = await loadCoursewareModuleRelease({ registry, releaseBaseUrl, lockUrl: '${manifest.runtime.moduleLock}' });
+  const runtime = new CoursewareRuntime({ registry, locale: document.documentElement.lang || '${manifest.defaultLocale}' });
+  runtime.activate(release.roots);
+  globalThis.mooyuCoursewareRuntime = runtime;
+  document.documentElement.dataset.mooyuRuntime = 'ready';
+  globalThis.dispatchEvent(new CustomEvent('mooyu:runtime-ready', { detail: { runtime, release } }));
+} catch (error) {
+  document.documentElement.dataset.mooyuRuntime = 'error';
+  document.documentElement.dataset.mooyuRuntimeError = error?.code ?? 'COURSEWARE_RUNTIME_BOOT_FAILED';
+  globalThis.dispatchEvent(new CustomEvent('mooyu:runtime-error', { detail: { code: error?.code ?? 'COURSEWARE_RUNTIME_BOOT_FAILED', message: error?.message ?? String(error) } }));
+  console.error('[MOOYU courseware runtime]', error);
+}
+`);
+  records.push({ relative: "dist/_mooyu/bootstrap.mjs", absolute: null, bytes: bootstrap, size: bootstrap.length, sha256: sha256(bootstrap), generated: true });
+  return records;
+}
+
+// packages/creator-tools/src/courseware.mjs
 var COURSEWARE_FORMAT = "mooyu.courseware";
 var COURSEWARE_SCHEMA_VERSION = 1;
 var COURSEWARE_DOCTOR_REPORT_VERSION = 1;
-var COURSEWARE_VALIDATOR_VERSION = "0.1.0";
-var idPattern = /^[a-z][a-z0-9._-]{0,63}$/u;
+var COURSEWARE_VALIDATOR_VERSION = "0.2.0";
+var idPattern3 = /^[a-z][a-z0-9._-]{0,63}$/u;
 var localePattern = /^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$/u;
 var audienceStages = /* @__PURE__ */ new Set(["primary", "lower-secondary", "upper-secondary", "higher-education", "professional", "lifelong"]);
 var runtimeCapabilities = /* @__PURE__ */ new Set(["fullscreen", "pointerLock", "localSave", "fileExport", "shareLinks", "learningProgress", "learningEvents", "assessmentResult"]);
@@ -37,11 +318,16 @@ var checkpointKinds = /* @__PURE__ */ new Set(["observation", "prediction", "mul
 var sourceTypes = /* @__PURE__ */ new Set(["book", "paper", "standard", "documentation", "dataset", "web"]);
 var verificationKinds = /* @__PURE__ */ new Set(["primary-source", "cross-checked", "reviewed", "author-asserted"]);
 var journeyActions = /* @__PURE__ */ new Set(["enter", "set", "click", "answer", "assert", "complete"]);
+var experienceModeKinds = /* @__PURE__ */ new Set(["textbook-lab", "free-sandbox", "scenario-challenge"]);
+var freedomLevels = /* @__PURE__ */ new Set(["F0", "F1", "F2", "F3"]);
+var experienceCommands = /* @__PURE__ */ new Set(["object.add", "object.remove", "object.place", "object.connect", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"]);
+var instrumentKinds = /* @__PURE__ */ new Set(["probe", "trace", "vector", "graph", "table", "comparison", "annotation", "replay"]);
+var sandboxMinimumCommands = ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.reset", "measurement.record", "snapshot.save"];
 var ignoredDirectories = /* @__PURE__ */ new Set([".git", ".gamehub", ".mooyu", "node_modules"]);
 var finding = (severity, code, message, details = {}) => ({ severity, code, message, ...details });
 var isObject = (value) => Boolean(value) && !Array.isArray(value) && typeof value === "object";
 var isTextMap = (value) => isObject(value) && Object.keys(value).length > 0 && Object.entries(value).every(([locale, text]) => localePattern.test(locale) && typeof text === "string" && text.trim().length > 0);
-var safeRelativePath = (value) => typeof value === "string" && value.length > 0 && value.length <= 255 && !path.isAbsolute(value) && !value.includes("\\") && value.split("/").every((part) => part && part !== "." && part !== "..");
+var safeRelativePath2 = (value) => typeof value === "string" && value.length > 0 && value.length <= 255 && !path2.isAbsolute(value) && !value.includes("\\") && value.split("/").every((part) => part && part !== "." && part !== "..");
 function rejectUnknown(value, allowed, findings, file, pointer = "") {
   if (!isObject(value)) return;
   for (const key of Object.keys(value)) if (!allowed.includes(key)) {
@@ -59,10 +345,10 @@ function requireFields(value, required, findings, file, pointer = "") {
   return true;
 }
 function requireId(value, findings, file, pointer) {
-  if (!idPattern.test(value ?? "")) findings.push(finding("error", "COURSEWARE_ID_INVALID", `${file}${pointer} \u5FC5\u987B\u662F\u7A33\u5B9A\u7684\u5C0F\u5199\u6807\u8BC6\u7B26\u3002`, { path: file, pointer }));
+  if (!idPattern3.test(value ?? "")) findings.push(finding("error", "COURSEWARE_ID_INVALID", `${file}${pointer} \u5FC5\u987B\u662F\u7A33\u5B9A\u7684\u5C0F\u5199\u6807\u8BC6\u7B26\u3002`, { path: file, pointer }));
 }
 function requireIdList(value, findings, file, pointer, { allowEmpty = false } = {}) {
-  if (!Array.isArray(value) || !allowEmpty && value.length === 0 || value.some((id) => !idPattern.test(id)) || new Set(value).size !== value.length) {
+  if (!Array.isArray(value) || !allowEmpty && value.length === 0 || value.some((id) => !idPattern3.test(id)) || new Set(value).size !== value.length) {
     findings.push(finding("error", "COURSEWARE_ID_LIST_INVALID", `${file}${pointer} \u5FC5\u987B\u662F${allowEmpty ? "" : "\u975E\u7A7A"}\u3001\u65E0\u91CD\u590D\u7684\u7A33\u5B9A\u6807\u8BC6\u7B26\u6570\u7EC4\u3002`, { path: file, pointer }));
     return [];
   }
@@ -72,33 +358,33 @@ function requireTextMap(value, findings, file, pointer) {
   if (!isTextMap(value)) findings.push(finding("error", "COURSEWARE_LOCALIZED_TEXT_INVALID", `${file}${pointer} \u5FC5\u987B\u662F\u975E\u7A7A\u7684\u8BED\u8A00\u5230\u6587\u5B57\u6620\u5C04\u3002`, { path: file, pointer }));
 }
 async function readJson(projectRoot, relative, findings, code = "COURSEWARE_JSON_INVALID") {
-  if (!safeRelativePath(relative)) {
+  if (!safeRelativePath2(relative)) {
     findings.push(finding("error", "COURSEWARE_PATH_INVALID", `\u8BFE\u7A0B\u5305\u8DEF\u5F84 ${String(relative)} \u4E0D\u5B89\u5168\u3002`, { path: "mooyu-courseware.json", pointer: "/" }));
     return null;
   }
   try {
-    const absolute = path.join(projectRoot, ...relative.split("/"));
-    const stat = await fs.lstat(absolute);
+    const absolute = path2.join(projectRoot, ...relative.split("/"));
+    const stat = await fs2.lstat(absolute);
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("\u4E0D\u662F\u666E\u901A\u6587\u4EF6");
-    return JSON.parse(await fs.readFile(absolute, "utf8"));
+    return JSON.parse(await fs2.readFile(absolute, "utf8"));
   } catch (error) {
     findings.push(finding("error", code, `${relative} \u65E0\u6CD5\u8BFB\u53D6\u4E3A\u666E\u901A JSON \u6587\u4EF6\uFF1A${error.message}`, { path: relative, pointer: "/" }));
     return null;
   }
 }
 async function projectDigest(projectRoot) {
-  const hash = crypto.createHash("sha256");
+  const hash = crypto2.createHash("sha256");
   const walk = async (directory, prefix = "") => {
-    const entries = await fs.readdir(directory, { withFileTypes: true });
+    const entries = await fs2.readdir(directory, { withFileTypes: true });
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name, "en"))) {
       if (entry.isSymbolicLink()) continue;
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
-        if (!ignoredDirectories.has(entry.name)) await walk(path.join(directory, entry.name), relative);
+        if (!ignoredDirectories.has(entry.name)) await walk(path2.join(directory, entry.name), relative);
       } else if (entry.isFile()) {
         hash.update(relative.replaceAll("\\", "/"));
         hash.update("\0");
-        hash.update(await fs.readFile(path.join(directory, entry.name)));
+        hash.update(await fs2.readFile(path2.join(directory, entry.name)));
         hash.update("\0");
       }
     }
@@ -111,22 +397,31 @@ async function projectDigest(projectRoot) {
   return hash.digest("hex");
 }
 async function publishableProjectDigest(projectRoot, manifest) {
-  const fixed = ["mooyu-courseware.json", manifest?.course, manifest?.evidence, manifest?.tests];
-  if (fixed.some((relative) => !safeRelativePath(relative))) return projectDigest(projectRoot);
+  const fixed = ["mooyu-courseware.json", manifest?.course, manifest?.experience, manifest?.evidence, manifest?.tests].filter(Boolean);
+  if (fixed.some((relative) => !safeRelativePath2(relative))) return projectDigest(projectRoot);
   const records = [];
-  const add = async (relative) => records.push({ relative, bytes: await fs.readFile(path.join(projectRoot, ...relative.split("/"))) });
+  const add = async (relative) => records.push({ relative, bytes: await fs2.readFile(path2.join(projectRoot, ...relative.split("/"))) });
   try {
     for (const relative of fixed) await add(relative);
+    const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+    if (moduleGraph) {
+      for (const record of moduleGraph.records) {
+        records.push({ relative: record.manifestFile.relative, bytes: record.manifestFile.bytes });
+        records.push({ relative: record.entryFile.relative, bytes: record.entryFile.bytes });
+      }
+      records.push({ relative: manifest.runtime.moduleLock, bytes: moduleGraph.lockBytes });
+      for (const record of await coursewareRuntimeFiles(manifest)) records.push({ relative: record.relative, bytes: record.bytes });
+    }
     const walk = async (directory, prefix = "dist") => {
-      for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      for (const entry of await fs2.readdir(directory, { withFileTypes: true })) {
         const relative = `${prefix}/${entry.name}`;
         if (entry.isSymbolicLink()) continue;
-        if (entry.isDirectory()) await walk(path.join(directory, entry.name), relative);
-        else if (entry.isFile()) await add(relative);
+        if (entry.isDirectory()) await walk(path2.join(directory, entry.name), relative);
+        else if (entry.isFile() && relative !== manifest?.runtime?.moduleLock && !relative.startsWith("dist/_mooyu/")) await add(relative);
       }
     };
-    await walk(path.join(projectRoot, "dist"));
-    const hash = crypto.createHash("sha256");
+    await walk(path2.join(projectRoot, "dist"));
+    const hash = crypto2.createHash("sha256");
     for (const record of [...new Map(records.map((record2) => [record2.relative, record2])).values()].sort((left, right) => left.relative.localeCompare(right.relative, "en"))) {
       hash.update(record.relative);
       hash.update("\0");
@@ -140,7 +435,7 @@ async function publishableProjectDigest(projectRoot, manifest) {
 }
 function validateManifest(manifest, findings) {
   const file = "mooyu-courseware.json";
-  const allowed = ["format", "schemaVersion", "id", "title", "summary", "defaultLocale", "locales", "subjects", "audience", "course", "evidence", "tests", "build", "runtime", "licenses"];
+  const allowed = ["format", "schemaVersion", "id", "title", "summary", "defaultLocale", "locales", "subjects", "audience", "course", "experience", "evidence", "tests", "build", "runtime", "licenses"];
   const required = ["format", "schemaVersion", "id", "title", "defaultLocale", "locales", "subjects", "audience", "course", "evidence", "tests", "build", "runtime", "licenses"];
   if (!requireFields(manifest, required, findings, file)) return;
   rejectUnknown(manifest, allowed, findings, file);
@@ -152,11 +447,17 @@ function validateManifest(manifest, findings) {
   requireIdList(manifest.subjects, findings, file, "/subjects");
   if (!isObject(manifest.audience) || !Array.isArray(manifest.audience.stages) || !manifest.audience.stages.length || new Set(manifest.audience.stages).size !== manifest.audience.stages.length || manifest.audience.stages.some((stage) => !audienceStages.has(stage))) findings.push(finding("error", "COURSEWARE_AUDIENCE_INVALID", "audience.stages \u5FC5\u987B\u662F\u65E0\u91CD\u590D\u7684\u53D7\u652F\u6301\u5B66\u4E60\u9636\u6BB5\u3002", { path: file, pointer: "/audience" }));
   else rejectUnknown(manifest.audience, ["stages", "minimumAge", "maximumAge"], findings, file, "/audience");
-  for (const key of ["course", "evidence", "tests"]) if (!safeRelativePath(manifest[key])) findings.push(finding("error", "COURSEWARE_PATH_INVALID", `${key} \u5FC5\u987B\u662F\u5305\u5185\u5B89\u5168\u76F8\u5BF9\u8DEF\u5F84\u3002`, { path: file, pointer: `/${key}` }));
-  if (!isObject(manifest.build) || manifest.build.profile !== "mooyu-static-v1" || manifest.build.entry !== "dist/index.html") findings.push(finding("error", "COURSEWARE_BUILD_PROFILE_INVALID", "build \u5FC5\u987B\u4F7F\u7528 mooyu-static-v1 \u548C dist/index.html\u3002", { path: file, pointer: "/build" }));
+  for (const key of ["course", "evidence", "tests"]) if (!safeRelativePath2(manifest[key])) findings.push(finding("error", "COURSEWARE_PATH_INVALID", `${key} \u5FC5\u987B\u662F\u5305\u5185\u5B89\u5168\u76F8\u5BF9\u8DEF\u5F84\u3002`, { path: file, pointer: `/${key}` }));
+  if (manifest.experience !== void 0 && !safeRelativePath2(manifest.experience)) findings.push(finding("error", "COURSEWARE_PATH_INVALID", "experience \u5FC5\u987B\u662F\u5305\u5185\u5B89\u5168\u76F8\u5BF9\u8DEF\u5F84\u3002", { path: file, pointer: "/experience" }));
+  if (!isObject(manifest.build) || !["mooyu-static-v1", "mooyu-structured-v1"].includes(manifest.build.profile) || manifest.build.entry !== "dist/index.html") findings.push(finding("error", "COURSEWARE_BUILD_PROFILE_INVALID", "build \u5FC5\u987B\u4F7F\u7528\u53D7\u652F\u6301\u7684\u56FA\u5B9A\u6784\u5EFA\u914D\u7F6E\u548C dist/index.html\u3002", { path: file, pointer: "/build" }));
   else rejectUnknown(manifest.build, ["profile", "entry"], findings, file, "/build");
   if (!isObject(manifest.runtime) || manifest.runtime.learningSdk !== 1 || !["static-web", "static-wasm"].includes(manifest.runtime.kind) || !Array.isArray(manifest.runtime.capabilities) || new Set(manifest.runtime.capabilities).size !== manifest.runtime.capabilities.length || manifest.runtime.capabilities.some((capability) => !runtimeCapabilities.has(capability))) findings.push(finding("error", "COURSEWARE_RUNTIME_INVALID", "runtime \u5FC5\u987B\u58F0\u660E\u9759\u6001\u8FD0\u884C\u7C7B\u578B\u3001Learning SDK v1 \u4E0E\u65E0\u91CD\u590D\u7684\u5DF2\u77E5\u80FD\u529B\u6570\u7EC4\u3002", { path: file, pointer: "/runtime" }));
-  else rejectUnknown(manifest.runtime, ["kind", "learningSdk", "capabilities"], findings, file, "/runtime");
+  else {
+    rejectUnknown(manifest.runtime, ["kind", "learningSdk", "capabilities", "profile", "modules", "rootModules", "moduleLock"], findings, file, "/runtime");
+    const structured = manifest.build?.profile === "mooyu-structured-v1";
+    if (structured && (manifest.runtime.profile !== "structured-courseware" || !Array.isArray(manifest.runtime.modules) || manifest.runtime.modules.length === 0 || new Set(manifest.runtime.modules).size !== manifest.runtime.modules.length || manifest.runtime.modules.some((modulePath) => !safeRelativePath2(modulePath) || !modulePath.endsWith(".json")) || !Array.isArray(manifest.runtime.rootModules) || manifest.runtime.rootModules.length === 0 || new Set(manifest.runtime.rootModules).size !== manifest.runtime.rootModules.length || manifest.runtime.rootModules.some((id) => !idPattern3.test(id)) || manifest.runtime.moduleLock !== "dist/mooyu-modules.lock.json")) findings.push(finding("error", "COURSEWARE_MODULE_GRAPH_INVALID", "\u7ED3\u6784\u5316\u8BFE\u4EF6\u5FC5\u987B\u58F0\u660E\u6A21\u5757\u6E05\u5355\u3001\u6839\u6A21\u5757\u4E0E\u56FA\u5B9A\u6A21\u5757\u9501\u8DEF\u5F84\u3002", { path: file, pointer: "/runtime" }));
+    if (!structured && manifest.runtime.profile !== void 0 && manifest.runtime.profile !== "legacy-web") findings.push(finding("error", "COURSEWARE_RUNTIME_PROFILE_INVALID", "\u9759\u6001\u8BFE\u4EF6\u53EA\u80FD\u58F0\u660E legacy-web \u8FD0\u884C\u914D\u7F6E\u3002", { path: file, pointer: "/runtime/profile" }));
+  }
   if (!isObject(manifest.licenses) || typeof manifest.licenses.code !== "string" || typeof manifest.licenses.content !== "string") findings.push(finding("error", "COURSEWARE_LICENSE_INVALID", "licenses \u5FC5\u987B\u58F0\u660E code \u4E0E content\u3002", { path: file, pointer: "/licenses" }));
   else rejectUnknown(manifest.licenses, ["code", "content"], findings, file, "/licenses");
 }
@@ -173,10 +474,10 @@ function validateCourse(course, findings, file) {
       sets[name] = /* @__PURE__ */ new Set();
       continue;
     }
-    const ids = values.map((value) => value?.id);
-    sets[name] = new Set(ids);
-    ids.forEach((id, index) => requireId(id, findings, file, `/${name}/${index}/id`));
-    if (sets[name].size !== ids.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", `${name} \u4E2D\u5B58\u5728\u91CD\u590D ID\u3002`, { path: file, pointer: `/${name}` }));
+    const ids2 = values.map((value) => value?.id);
+    sets[name] = new Set(ids2);
+    ids2.forEach((id, index) => requireId(id, findings, file, `/${name}/${index}/id`));
+    if (sets[name].size !== ids2.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", `${name} \u4E2D\u5B58\u5728\u91CD\u590D ID\u3002`, { path: file, pointer: `/${name}` }));
   }
   for (const [index, objective] of (course.objectives ?? []).entries()) {
     rejectUnknown(objective, ["id", "text"], findings, file, `/objectives/${index}`);
@@ -198,7 +499,7 @@ function validateCourse(course, findings, file) {
     const objectiveIds = requireIdList(scene?.objectiveIds, findings, file, `/scenes/${index}/objectiveIds`);
     for (const id of objectiveIds) if (!sets.objectives.has(id)) findings.push(finding("error", "COURSEWARE_OBJECTIVE_REFERENCE_INVALID", `\u573A\u666F ${scene?.id} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u76EE\u6807 ${id}\u3002`, { path: file, pointer: `/scenes/${index}/objectiveIds` }));
     requireIdList(scene?.evidenceIds, findings, file, `/scenes/${index}/evidenceIds`, { allowEmpty: true });
-    if (!isObject(scene?.component) || !idPattern.test(scene.component.type ?? "") || scene.component.config !== void 0 && !isObject(scene.component.config)) findings.push(finding("error", "COURSEWARE_COMPONENT_INVALID", `\u573A\u666F ${scene?.id ?? index} \u7F3A\u5C11\u7A33\u5B9A\u7EC4\u4EF6\u7C7B\u578B\u6216 config \u4E0D\u662F\u5BF9\u8C61\u3002`, { path: file, pointer: `/scenes/${index}/component` }));
+    if (!isObject(scene?.component) || !idPattern3.test(scene.component.type ?? "") || scene.component.config !== void 0 && !isObject(scene.component.config)) findings.push(finding("error", "COURSEWARE_COMPONENT_INVALID", `\u573A\u666F ${scene?.id ?? index} \u7F3A\u5C11\u7A33\u5B9A\u7EC4\u4EF6\u7C7B\u578B\u6216 config \u4E0D\u662F\u5BF9\u8C61\u3002`, { path: file, pointer: `/scenes/${index}/component` }));
     else rejectUnknown(scene.component, ["type", "config"], findings, file, `/scenes/${index}/component`);
   }
   for (const [index, checkpoint] of (course.checkpoints ?? []).entries()) {
@@ -244,7 +545,7 @@ function validateEvidence(evidence, findings, file, course, courseFile) {
   }
   for (const [index, asset] of (evidence.assets ?? []).entries()) {
     rejectUnknown(asset, ["path", "sourceIds", "license"], findings, file, `/assets/${index}`);
-    if (!safeRelativePath(asset?.path) || typeof asset?.license !== "string" || !asset.license.trim()) findings.push(finding("error", "COURSEWARE_ASSET_INVALID", `\u7D20\u6750 ${index} \u7F3A\u5C11\u5B89\u5168\u8DEF\u5F84\u6216\u8BB8\u53EF\u8BC1\u3002`, { path: file, pointer: `/assets/${index}` }));
+    if (!safeRelativePath2(asset?.path) || typeof asset?.license !== "string" || !asset.license.trim()) findings.push(finding("error", "COURSEWARE_ASSET_INVALID", `\u7D20\u6750 ${index} \u7F3A\u5C11\u5B89\u5168\u8DEF\u5F84\u6216\u8BB8\u53EF\u8BC1\u3002`, { path: file, pointer: `/assets/${index}` }));
     for (const id of requireIdList(asset?.sourceIds, findings, file, `/assets/${index}/sourceIds`)) if (!sourceIds.has(id)) findings.push(finding("error", "COURSEWARE_SOURCE_REFERENCE_INVALID", `\u7D20\u6750 ${asset?.path ?? index} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u6765\u6E90 ${id}\u3002`, { path: file, pointer: `/assets/${index}/sourceIds` }));
   }
   for (const [index, scene] of (course?.scenes ?? []).entries()) for (const id of scene.evidenceIds ?? []) if (!claimIds.has(id)) findings.push(finding("error", "COURSEWARE_EVIDENCE_REFERENCE_INVALID", `\u573A\u666F ${scene.id} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u8BC1\u636E\u58F0\u660E ${id}\u3002`, { path: courseFile, pointer: `/scenes/${index}/evidenceIds` }));
@@ -257,8 +558,8 @@ function validateJourneys(journeys, findings, file, courseSets) {
     findings.push(finding("error", "COURSEWARE_JOURNEY_EMPTY", "\u81F3\u5C11\u9700\u8981\u4E00\u6761\u5B66\u4E60\u8DEF\u5F84\u3002", { path: file, pointer: "/journeys" }));
     return;
   }
-  const ids = journeys.journeys.map((journey) => journey?.id);
-  if (new Set(ids).size !== ids.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", "\u5B66\u4E60\u8DEF\u5F84\u5B58\u5728\u91CD\u590D ID\u3002", { path: file, pointer: "/journeys" }));
+  const ids2 = journeys.journeys.map((journey) => journey?.id);
+  if (new Set(ids2).size !== ids2.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", "\u5B66\u4E60\u8DEF\u5F84\u5B58\u5728\u91CD\u590D ID\u3002", { path: file, pointer: "/journeys" }));
   for (const [index, journey] of journeys.journeys.entries()) {
     rejectUnknown(journey, ["id", "title", "locale", "steps", "expectsCompletion"], findings, file, `/journeys/${index}`);
     requireId(journey?.id, findings, file, `/journeys/${index}/id`);
@@ -266,44 +567,129 @@ function validateJourneys(journeys, findings, file, courseSets) {
     if (!Array.isArray(journey?.steps) || !journey.steps.length) findings.push(finding("error", "COURSEWARE_JOURNEY_STEPS_EMPTY", `\u5B66\u4E60\u8DEF\u5F84 ${journey?.id} \u6CA1\u6709\u6B65\u9AA4\u3002`, { path: file, pointer: `/journeys/${index}/steps` }));
     for (const [stepIndex, step] of (journey?.steps ?? []).entries()) {
       rejectUnknown(step, ["action", "target", "value", "expect"], findings, file, `/journeys/${index}/steps/${stepIndex}`);
-      if (!journeyActions.has(step?.action) || !idPattern.test(step?.target ?? "")) findings.push(finding("error", "COURSEWARE_JOURNEY_STEP_INVALID", `\u5B66\u4E60\u8DEF\u5F84 ${journey?.id} \u5305\u542B\u65E0\u6548\u6B65\u9AA4\u3002`, { path: file, pointer: `/journeys/${index}/steps/${stepIndex}` }));
+      if (!journeyActions.has(step?.action) || !idPattern3.test(step?.target ?? "")) findings.push(finding("error", "COURSEWARE_JOURNEY_STEP_INVALID", `\u5B66\u4E60\u8DEF\u5F84 ${journey?.id} \u5305\u542B\u65E0\u6548\u6B65\u9AA4\u3002`, { path: file, pointer: `/journeys/${index}/steps/${stepIndex}` }));
       if (step?.action === "enter" && !courseSets?.sceneIds.has(step.target)) findings.push(finding("error", "COURSEWARE_JOURNEY_SCENE_INVALID", `\u5B66\u4E60\u8DEF\u5F84 ${journey?.id} \u8FDB\u5165\u4E86\u4E0D\u5B58\u5728\u7684\u573A\u666F ${step.target}\u3002`, { path: file, pointer: `/journeys/${index}/steps/${stepIndex}/target` }));
     }
   }
   if (!journeys.journeys.some((journey) => journey.expectsCompletion === true && journey.steps?.some((step) => step.action === "complete"))) findings.push(finding("error", "COURSEWARE_COMPLETION_JOURNEY_MISSING", "\u81F3\u5C11\u9700\u8981\u4E00\u6761\u53EF\u5B8C\u6210\u8BFE\u7A0B\u7684\u9A8C\u6536\u8DEF\u5F84\u3002", { path: file, pointer: "/journeys" }));
 }
+function validateExperience(experience, findings, file, courseSets) {
+  const rootFields = ["format", "schemaVersion", "engine", "defaultMode", "modes", "instruments"];
+  if (!requireFields(experience, ["format", "schemaVersion", "engine", "defaultMode", "modes"], findings, file)) return;
+  rejectUnknown(experience, rootFields, findings, file);
+  if (experience.format !== "mooyu.courseware-experience" || experience.schemaVersion !== 1) findings.push(finding("error", "COURSEWARE_EXPERIENCE_FORMAT_INVALID", "experience \u5FC5\u987B\u4F7F\u7528 mooyu.courseware-experience schemaVersion 1\u3002", { path: file, pointer: "/format" }));
+  const engine = experience.engine;
+  const engineFields = ["id", "version", "deterministic", "snapshot", "stateVariables"];
+  if (requireFields(engine, engineFields, findings, file, "/engine")) {
+    rejectUnknown(engine, engineFields, findings, file, "/engine");
+    requireId(engine.id, findings, file, "/engine/id");
+    if (!Number.isInteger(engine.version) || engine.version < 1 || engine.deterministic !== true || engine.snapshot !== true) findings.push(finding("error", "COURSEWARE_EXPERIENCE_ENGINE_INVALID", "\u5B9E\u9A8C\u5F15\u64CE\u5FC5\u987B\u6709\u6B63\u6574\u6570\u7248\u672C\uFF0C\u5E76\u652F\u6301\u786E\u5B9A\u6027\u91CD\u653E\u548C\u72B6\u6001\u5FEB\u7167\u3002", { path: file, pointer: "/engine" }));
+    requireIdList(engine.stateVariables, findings, file, "/engine/stateVariables");
+  }
+  const instruments = Array.isArray(experience.instruments) ? experience.instruments : [];
+  if (experience.instruments !== void 0 && !Array.isArray(experience.instruments)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_INSTRUMENTS_INVALID", "experience.instruments \u5FC5\u987B\u662F\u6570\u7EC4\u3002", { path: file, pointer: "/instruments" }));
+  const instrumentIds = new Set(instruments.map((value) => value?.id));
+  if (instrumentIds.size !== instruments.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", "experience \u4E2D\u5B58\u5728\u91CD\u590D\u5DE5\u5177 ID\u3002", { path: file, pointer: "/instruments" }));
+  for (const [index, instrument] of instruments.entries()) {
+    const pointer = `/instruments/${index}`;
+    if (!requireFields(instrument, ["id", "kind", "title"], findings, file, pointer)) continue;
+    rejectUnknown(instrument, ["id", "kind", "title"], findings, file, pointer);
+    requireId(instrument.id, findings, file, `${pointer}/id`);
+    requireTextMap(instrument.title, findings, file, `${pointer}/title`);
+    if (!instrumentKinds.has(instrument.kind)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_INSTRUMENT_INVALID", `\u5DE5\u5177 ${instrument.id ?? index} \u7684 kind \u4E0D\u53D7\u652F\u6301\u3002`, { path: file, pointer: `${pointer}/kind` }));
+  }
+  const modes = Array.isArray(experience.modes) ? experience.modes : [];
+  if (!modes.length) findings.push(finding("error", "COURSEWARE_EXPERIENCE_MODES_EMPTY", "experience \u81F3\u5C11\u9700\u8981\u4E00\u79CD\u771F\u5B9E\u53EF\u7528\u7684\u4F53\u9A8C\u6A21\u5F0F\u3002", { path: file, pointer: "/modes" }));
+  const modeIds = new Set(modes.map((value) => value?.id));
+  if (modeIds.size !== modes.length) findings.push(finding("error", "COURSEWARE_ID_DUPLICATE", "experience \u4E2D\u5B58\u5728\u91CD\u590D\u6A21\u5F0F ID\u3002", { path: file, pointer: "/modes" }));
+  if (!modeIds.has(experience.defaultMode)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_DEFAULT_MODE_INVALID", "defaultMode \u5FC5\u987B\u5F15\u7528\u5DF2\u58F0\u660E\u7684\u6A21\u5F0F\u3002", { path: file, pointer: "/defaultMode" }));
+  for (const [index, mode] of modes.entries()) {
+    const pointer = `/modes/${index}`;
+    const fields = ["id", "kind", "title", "sceneIds", "freedomLevel", "allowedCommands", "instrumentIds", "curiosityHook"];
+    if (!requireFields(mode, fields, findings, file, pointer)) continue;
+    rejectUnknown(mode, [...fields, "challenge"], findings, file, pointer);
+    requireId(mode.id, findings, file, `${pointer}/id`);
+    requireTextMap(mode.title, findings, file, `${pointer}/title`);
+    requireTextMap(mode.curiosityHook, findings, file, `${pointer}/curiosityHook`);
+    if (!experienceModeKinds.has(mode.kind)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_MODE_KIND_INVALID", `\u6A21\u5F0F ${mode.id ?? index} \u7684 kind \u4E0D\u53D7\u652F\u6301\u3002`, { path: file, pointer: `${pointer}/kind` }));
+    if (!freedomLevels.has(mode.freedomLevel)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_FREEDOM_INVALID", `\u6A21\u5F0F ${mode.id ?? index} \u7684 freedomLevel \u65E0\u6548\u3002`, { path: file, pointer: `${pointer}/freedomLevel` }));
+    for (const sceneId of requireIdList(mode.sceneIds, findings, file, `${pointer}/sceneIds`)) if (!courseSets?.sceneIds.has(sceneId)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_SCENE_INVALID", `\u6A21\u5F0F ${mode.id} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u573A\u666F ${sceneId}\u3002`, { path: file, pointer: `${pointer}/sceneIds` }));
+    const commands = requireIdList(mode.allowedCommands, findings, file, `${pointer}/allowedCommands`, { allowEmpty: true });
+    for (const command2 of commands) if (!experienceCommands.has(command2)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_COMMAND_INVALID", `\u6A21\u5F0F ${mode.id} \u58F0\u660E\u4E86\u672A\u77E5\u547D\u4EE4 ${command2}\u3002`, { path: file, pointer: `${pointer}/allowedCommands` }));
+    for (const instrumentId of requireIdList(mode.instrumentIds, findings, file, `${pointer}/instrumentIds`, { allowEmpty: true })) if (!instrumentIds.has(instrumentId)) findings.push(finding("error", "COURSEWARE_EXPERIENCE_INSTRUMENT_REFERENCE_INVALID", `\u6A21\u5F0F ${mode.id} \u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u5DE5\u5177 ${instrumentId}\u3002`, { path: file, pointer: `${pointer}/instrumentIds` }));
+    if (mode.kind === "free-sandbox") {
+      const missing = sandboxMinimumCommands.filter((command2) => !commands.includes(command2));
+      if (!["F2", "F3"].includes(mode.freedomLevel) || missing.length) findings.push(finding("error", "COURSEWARE_SANDBOX_FREEDOM_INSUFFICIENT", `\u81EA\u7531\u5B9E\u9A8C\u5FC5\u987B\u8FBE\u5230 F2/F3\uFF0C\u5E76\u652F\u6301\u81EA\u7531\u589E\u5220\u3001\u653E\u7F6E\u3001\u914D\u7F6E\u3001\u8FD0\u884C\u3001\u590D\u4F4D\u3001\u8BB0\u5F55\u548C\u5FEB\u7167\uFF1B\u7F3A\u5C11\uFF1A${missing.join("\u3001") || "\u65E0"}\u3002`, { path: file, pointer }));
+    }
+    if (mode.kind !== "scenario-challenge") {
+      if (mode.challenge !== void 0) findings.push(finding("error", "COURSEWARE_CHALLENGE_UNEXPECTED", `\u975E\u573A\u666F\u6311\u6218\u6A21\u5F0F ${mode.id} \u4E0D\u5E94\u58F0\u660E challenge\u3002`, { path: file, pointer: `${pointer}/challenge` }));
+      continue;
+    }
+    const challenge = mode.challenge;
+    const challengeFields = ["id", "title", "goal", "success", "attemptPolicy"];
+    if (!requireFields(challenge, challengeFields, findings, file, `${pointer}/challenge`)) continue;
+    rejectUnknown(challenge, challengeFields, findings, file, `${pointer}/challenge`);
+    requireId(challenge.id, findings, file, `${pointer}/challenge/id`);
+    requireTextMap(challenge.title, findings, file, `${pointer}/challenge/title`);
+    requireTextMap(challenge.goal, findings, file, `${pointer}/challenge/goal`);
+    if (!Array.isArray(challenge.success) || !challenge.success.length) findings.push(finding("error", "COURSEWARE_CHALLENGE_RULES_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u7F3A\u5C11\u6210\u529F\u6761\u4EF6\u3002`, { path: file, pointer: `${pointer}/challenge/success` }));
+    for (const [conditionIndex, condition] of (challenge.success ?? []).entries()) {
+      const conditionPointer = `${pointer}/challenge/success/${conditionIndex}`;
+      if (!isObject(condition) || !idPattern3.test(condition.metric ?? "") || !["eq", "gte", "lte", "between"].includes(condition.operator)) {
+        findings.push(finding("error", "COURSEWARE_CHALLENGE_RULES_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u5305\u542B\u65E0\u6548\u6210\u529F\u6761\u4EF6\u3002`, { path: file, pointer: conditionPointer }));
+        continue;
+      }
+      rejectUnknown(condition, condition.operator === "between" ? ["metric", "operator", "values"] : ["metric", "operator", "value"], findings, file, conditionPointer);
+      if (condition.operator === "between" ? !Array.isArray(condition.values) || condition.values.length !== 2 || condition.values.some((value) => typeof value !== "number") || condition.values[0] > condition.values[1] : typeof condition.value !== "number") findings.push(finding("error", "COURSEWARE_CHALLENGE_RULES_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u7684\u6210\u529F\u9608\u503C\u65E0\u6548\u3002`, { path: file, pointer: conditionPointer }));
+    }
+    const attempt = challenge.attemptPolicy;
+    if (!isObject(attempt) || !Number.isInteger(attempt.maxAttempts) || attempt.maxAttempts < 1 || attempt.maxAttempts > 100 || !["instant", "after-feedback"].includes(attempt.retry)) findings.push(finding("error", "COURSEWARE_CHALLENGE_ATTEMPT_POLICY_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u7684\u5C1D\u8BD5\u89C4\u5219\u65E0\u6548\u3002`, { path: file, pointer: `${pointer}/challenge/attemptPolicy` }));
+    else rejectUnknown(attempt, ["maxAttempts", "retry"], findings, file, `${pointer}/challenge/attemptPolicy`);
+  }
+}
 async function inspectCoursewareProject(root) {
-  const projectRoot = path.resolve(root);
+  const projectRoot = path2.resolve(root);
   const findings = [];
   const manifest = await readJson(projectRoot, "mooyu-courseware.json", findings, "COURSEWARE_MANIFEST_INVALID");
   if (manifest) validateManifest(manifest, findings);
-  const coursePath = safeRelativePath(manifest?.course) ? manifest.course : "courseware/course.json";
-  const evidencePath = safeRelativePath(manifest?.evidence) ? manifest.evidence : "evidence/sources.json";
-  const testsPath = safeRelativePath(manifest?.tests) ? manifest.tests : "tests/journeys.json";
+  const coursePath = safeRelativePath2(manifest?.course) ? manifest.course : "courseware/course.json";
+  const evidencePath = safeRelativePath2(manifest?.evidence) ? manifest.evidence : "evidence/sources.json";
+  const testsPath = safeRelativePath2(manifest?.tests) ? manifest.tests : "tests/journeys.json";
   const course = manifest ? await readJson(projectRoot, coursePath, findings) : null;
   const courseSets = course ? validateCourse(course, findings, coursePath) : null;
+  const experiencePath = safeRelativePath2(manifest?.experience) ? manifest.experience : null;
+  const experience = experiencePath ? await readJson(projectRoot, experiencePath, findings) : null;
+  if (experience) validateExperience(experience, findings, experiencePath, courseSets);
   const evidence = manifest ? await readJson(projectRoot, evidencePath, findings) : null;
   if (evidence) validateEvidence(evidence, findings, evidencePath, course, coursePath);
   const journeys = manifest ? await readJson(projectRoot, testsPath, findings) : null;
   if (journeys) validateJourneys(journeys, findings, testsPath, courseSets);
+  if (manifest?.build?.profile === "mooyu-structured-v1" && !findings.some((value) => value.severity === "error" && value.path === "mooyu-courseware.json")) {
+    try {
+      const graph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+      findings.push(finding("info", "COURSEWARE_MODULE_GRAPH_READY", `${graph.records.length} \u4E2A\u6A21\u5757\u7684\u4F9D\u8D56\u3001API \u7248\u672C\u4E0E\u5165\u53E3\u5B8C\u6574\u6027\u5DF2\u901A\u8FC7\u68C0\u67E5\u3002`, { path: "mooyu-courseware.json", pointer: "/runtime/modules" }));
+    } catch (error) {
+      findings.push(finding("error", error.code ?? "COURSEWARE_MODULE_GRAPH_INVALID", error.message, { path: error.path ?? "mooyu-courseware.json", pointer: error.pointer ?? "/runtime/modules" }));
+    }
+  }
   const entry = manifest?.build?.entry ?? "dist/index.html";
-  if (safeRelativePath(entry)) try {
-    const stat = await fs.lstat(path.join(projectRoot, ...entry.split("/")));
+  if (safeRelativePath2(entry)) try {
+    const stat = await fs2.lstat(path2.join(projectRoot, ...entry.split("/")));
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 16) throw new Error("\u4E0D\u662F\u6709\u6548\u666E\u901A\u6587\u4EF6");
   } catch (error) {
     findings.push(finding("error", "COURSEWARE_ENTRY_MISSING", `\u6784\u5EFA\u5165\u53E3 ${entry} \u4E0D\u53EF\u7528\uFF1A${error.message}`, { path: "mooyu-courseware.json", pointer: "/build/entry" }));
   }
-  if (!findings.some((value) => value.severity === "error")) findings.push(finding("info", "COURSEWARE_CONTRACT_READY", "\u8BFE\u7A0B\u7ED3\u6784\u3001\u8BC1\u636E\u94FE\u3001\u5B66\u4E60\u8DEF\u5F84\u548C\u6784\u5EFA\u5165\u53E3\u901A\u8FC7 L0 \u5951\u7EA6\u68C0\u67E5\u3002"));
+  if (!findings.some((value) => value.severity === "error")) findings.push(finding("info", "COURSEWARE_CONTRACT_READY", `\u8BFE\u7A0B\u7ED3\u6784\u3001\u8BC1\u636E\u94FE\u3001\u5B66\u4E60\u8DEF\u5F84${experience ? "\u3001\u4F53\u9A8C\u6A21\u5F0F" : ""}\u548C\u6784\u5EFA\u5165\u53E3\u901A\u8FC7 L0 \u5951\u7EA6\u68C0\u67E5\u3002`));
   findings.push(finding("warning", "COURSEWARE_DOCTOR_LIMIT", "L0 Doctor \u9A8C\u8BC1\u7ED3\u6784\u4E0E\u5F15\u7528\u5B8C\u6574\u6027\uFF0C\u4E0D\u66FF\u4EE3\u5B66\u79D1\u4E13\u5BB6\u5BA1\u6821\u3001\u65E0\u969C\u788D\u5BA1\u8BA1\u6216\u6D4F\u89C8\u5668\u65C5\u7A0B\u6267\u884C\u3002"));
   const summary = { errors: findings.filter((value) => value.severity === "error").length, warnings: findings.filter((value) => value.severity === "warning").length, info: findings.filter((value) => value.severity === "info").length };
   return { reportVersion: COURSEWARE_DOCTOR_REPORT_VERSION, validatorVersion: COURSEWARE_VALIDATOR_VERSION, projectDigest: await publishableProjectDigest(projectRoot, manifest), root: projectRoot, ok: summary.errors === 0, summary, findings };
 }
 
 // packages/creator-tools/src/courseware-toolkit.mjs
-import crypto2 from "node:crypto";
-import fs2 from "node:fs/promises";
+import crypto3 from "node:crypto";
+import fs3 from "node:fs/promises";
 import http from "node:http";
-import path2 from "node:path";
+import path3 from "node:path";
 import { createRequire } from "node:module";
 import { crc32, deflateRawSync } from "node:zlib";
 var require2 = createRequire(import.meta.url);
@@ -332,40 +718,47 @@ var CoursewareToolkitError = class extends Error {
     this.details = details;
   }
 };
-var sha256 = (value) => crypto2.createHash("sha256").update(value).digest("hex");
-var safeRelativePath2 = (value) => typeof value === "string" && value.length > 0 && value.length <= 255 && !path2.isAbsolute(value) && !value.includes("\\") && value.split("/").every((part) => part && part !== "." && part !== "..");
-var readJson2 = async (file) => JSON.parse(await fs2.readFile(file, "utf8"));
+var sha2562 = (value) => crypto3.createHash("sha256").update(value).digest("hex");
+var safeRelativePath3 = (value) => typeof value === "string" && value.length > 0 && value.length <= 255 && !path3.isAbsolute(value) && !value.includes("\\") && value.split("/").every((part) => part && part !== "." && part !== "..");
+var readJson2 = async (file) => JSON.parse(await fs3.readFile(file, "utf8"));
 async function assertNoSymlinkAncestors(target) {
-  const resolved = path2.resolve(target);
-  const parsed = path2.parse(resolved);
+  const resolved = path3.resolve(target);
+  const parsed = path3.parse(resolved);
   let current = parsed.root;
-  for (const part of resolved.slice(parsed.root.length).split(path2.sep).filter(Boolean)) {
-    current = path2.join(current, part);
-    const stat = await fs2.lstat(current).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
+  for (const part of resolved.slice(parsed.root.length).split(path3.sep).filter(Boolean)) {
+    current = path3.join(current, part);
+    const stat = await fs3.lstat(current).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
     if (stat?.isSymbolicLink()) throw new CoursewareToolkitError("COURSEWARE_OUTPUT_SYMLINK_FORBIDDEN", `\u8F93\u51FA\u8DEF\u5F84\u4E0D\u80FD\u7ECF\u8FC7\u7B26\u53F7\u94FE\u63A5\uFF1A${current}`);
     if (!stat) break;
   }
 }
 async function fileRecord(root, relative) {
-  if (!safeRelativePath2(relative)) throw new CoursewareToolkitError("COURSEWARE_PATH_INVALID", `\u4E0D\u5B89\u5168\u7684\u8BFE\u7A0B\u5305\u8DEF\u5F84\uFF1A${relative}`);
-  const absolute = path2.join(root, ...relative.split("/"));
-  const stat = await fs2.lstat(absolute);
+  if (!safeRelativePath3(relative)) throw new CoursewareToolkitError("COURSEWARE_PATH_INVALID", `\u4E0D\u5B89\u5168\u7684\u8BFE\u7A0B\u5305\u8DEF\u5F84\uFF1A${relative}`);
+  const absolute = path3.join(root, ...relative.split("/"));
+  const stat = await fs3.lstat(absolute);
   if (!stat.isFile() || stat.isSymbolicLink()) throw new CoursewareToolkitError("COURSEWARE_FILE_INVALID", `${relative} \u5FC5\u987B\u662F\u666E\u901A\u6587\u4EF6\u3002`);
-  const bytes = await fs2.readFile(absolute);
-  return { relative, absolute, bytes, size: bytes.length, sha256: sha256(bytes) };
+  const bytes = await fs3.readFile(absolute);
+  return { relative, absolute, bytes, size: bytes.length, sha256: sha2562(bytes) };
 }
 async function loadCoursewareInventory(root) {
-  const projectRoot = path2.resolve(root);
-  const manifest = await readJson2(path2.join(projectRoot, "mooyu-courseware.json"));
-  const fixed = ["mooyu-courseware.json", manifest.course, manifest.evidence, manifest.tests];
+  const projectRoot = path3.resolve(root);
+  const manifest = await readJson2(path3.join(projectRoot, "mooyu-courseware.json"));
+  const fixed = ["mooyu-courseware.json", manifest.course, manifest.experience, manifest.evidence, manifest.tests].filter(Boolean);
   const records = [];
   for (const relative of fixed) records.push(await fileRecord(projectRoot, relative));
-  const distRoot = path2.join(projectRoot, "dist");
+  const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+  if (moduleGraph) {
+    records.push(...coursewareModuleFiles(moduleGraph));
+    records.push({ relative: manifest.runtime.moduleLock, absolute: null, bytes: moduleGraph.lockBytes, size: moduleGraph.lockBytes.length, sha256: moduleGraph.lockSha256, generated: true });
+    records.push(...await coursewareRuntimeFiles(manifest));
+  }
+  const distRoot = path3.join(projectRoot, "dist");
   const walk = async (directory, prefix = "dist") => {
-    for (const entry of (await fs2.readdir(directory, { withFileTypes: true })).sort((left, right) => left.name.localeCompare(right.name, "en"))) {
+    for (const entry of (await fs3.readdir(directory, { withFileTypes: true })).sort((left, right) => left.name.localeCompare(right.name, "en"))) {
       const relative = `${prefix}/${entry.name}`;
+      if (relative === manifest.runtime?.moduleLock) continue;
       if (entry.isSymbolicLink()) throw new CoursewareToolkitError("COURSEWARE_SYMLINK_FORBIDDEN", `${relative} \u662F\u7B26\u53F7\u94FE\u63A5\u3002`);
-      if (entry.isDirectory()) await walk(path2.join(directory, entry.name), relative);
+      if (entry.isDirectory()) await walk(path3.join(directory, entry.name), relative);
       else if (entry.isFile()) records.push(await fileRecord(projectRoot, relative));
       else throw new CoursewareToolkitError("COURSEWARE_FILE_INVALID", `${relative} \u4E0D\u662F\u666E\u901A\u6587\u4EF6\u3002`);
       if (records.length > 2e3) throw new CoursewareToolkitError("COURSEWARE_FILE_COUNT_EXCEEDED", "\u8BFE\u7A0B\u5305\u6587\u4EF6\u8D85\u8FC7 2000 \u4E2A\u3002");
@@ -375,8 +768,8 @@ async function loadCoursewareInventory(root) {
   const deduplicated = [...new Map(records.map((record) => [record.relative, record])).values()].sort((left, right) => left.relative.localeCompare(right.relative, "en"));
   const totalBytes = deduplicated.reduce((sum, record) => sum + record.size, 0);
   if (totalBytes > 128 * 1024 * 1024) throw new CoursewareToolkitError("COURSEWARE_PROJECT_TOO_LARGE", "\u8BFE\u7A0B\u5305\u8D85\u8FC7 128 MiB\u3002");
-  const digest = sha256(Buffer.concat(deduplicated.flatMap((record) => [Buffer.from(record.relative), Buffer.from([0]), record.bytes, Buffer.from([0])])));
-  return { root: projectRoot, manifest, files: deduplicated, totalBytes, projectDigest: digest };
+  const digest = sha2562(Buffer.concat(deduplicated.flatMap((record) => [Buffer.from(record.relative), Buffer.from([0]), record.bytes, Buffer.from([0])])));
+  return { root: projectRoot, manifest, moduleGraph, files: deduplicated, totalBytes, projectDigest: digest };
 }
 async function describeCoursewareProject(root, inspect) {
   const report = await inspect(root);
@@ -385,10 +778,11 @@ async function describeCoursewareProject(root, inspect) {
     inventory = await loadCoursewareInventory(root);
   } catch {
   }
-  if (!inventory) return { kind: "interactive-courseware", root: path2.resolve(root), ok: false, report };
-  const course = await readJson2(path2.join(inventory.root, ...inventory.manifest.course.split("/")));
-  const evidence = await readJson2(path2.join(inventory.root, ...inventory.manifest.evidence.split("/")));
-  const journeys = await readJson2(path2.join(inventory.root, ...inventory.manifest.tests.split("/")));
+  if (!inventory) return { kind: "interactive-courseware", root: path3.resolve(root), ok: false, report };
+  const course = await readJson2(path3.join(inventory.root, ...inventory.manifest.course.split("/")));
+  const experience = inventory.manifest.experience ? await readJson2(path3.join(inventory.root, ...inventory.manifest.experience.split("/"))) : null;
+  const evidence = await readJson2(path3.join(inventory.root, ...inventory.manifest.evidence.split("/")));
+  const journeys = await readJson2(path3.join(inventory.root, ...inventory.manifest.tests.split("/")));
   return {
     kind: "interactive-courseware",
     root: inventory.root,
@@ -398,57 +792,59 @@ async function describeCoursewareProject(root, inspect) {
     defaultLocale: inventory.manifest.defaultLocale,
     locales: inventory.manifest.locales,
     subjects: inventory.manifest.subjects,
-    counts: { objectives: course.objectives?.length ?? 0, scenes: course.scenes?.length ?? 0, checkpoints: course.checkpoints?.length ?? 0, sources: evidence.sources?.length ?? 0, claims: evidence.claims?.length ?? 0, journeys: journeys.journeys?.length ?? 0, files: inventory.files.length },
+    counts: { objectives: course.objectives?.length ?? 0, scenes: course.scenes?.length ?? 0, checkpoints: course.checkpoints?.length ?? 0, modes: experience?.modes?.length ?? 0, challenges: experience?.modes?.filter((mode) => mode.kind === "scenario-challenge").length ?? 0, modules: inventory.moduleGraph?.records.length ?? 0, sources: evidence.sources?.length ?? 0, claims: evidence.claims?.length ?? 0, journeys: journeys.journeys?.length ?? 0, files: inventory.files.length },
     totalBytes: inventory.totalBytes,
     projectDigest: inventory.projectDigest,
     report
   };
 }
 async function initializeCoursewareProject({ templateRoot, targetRoot }) {
-  const source = path2.resolve(templateRoot);
-  const target = path2.resolve(targetRoot);
-  const sourceStat = await fs2.lstat(source).catch(() => null);
+  const source = path3.resolve(templateRoot);
+  const target = path3.resolve(targetRoot);
+  const sourceStat = await fs3.lstat(source).catch(() => null);
   if (!sourceStat?.isDirectory() || sourceStat.isSymbolicLink()) throw new CoursewareToolkitError("COURSEWARE_TEMPLATE_INVALID", "\u8BFE\u4EF6\u6A21\u677F\u76EE\u5F55\u4E0D\u53EF\u7528\u3002");
-  await assertNoSymlinkAncestors(path2.dirname(target));
-  const targetStat = await fs2.lstat(target).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
+  await assertNoSymlinkAncestors(path3.dirname(target));
+  const targetStat = await fs3.lstat(target).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
   if (targetStat) throw new CoursewareToolkitError("COURSEWARE_TARGET_EXISTS", "\u76EE\u6807\u76EE\u5F55\u5DF2\u7ECF\u5B58\u5728\uFF1B\u4E3A\u907F\u514D\u8986\u76D6\uFF0C\u672C\u5730\u521D\u59CB\u5316\u5DF2\u505C\u6B62\u3002");
-  await fs2.cp(source, target, { recursive: true, errorOnExist: true, force: false });
-  const manifest = await readJson2(path2.join(target, "mooyu-courseware.json"));
-  return { action: "created", template: path2.basename(source), target, id: manifest.id };
+  await fs3.cp(source, target, { recursive: true, errorOnExist: true, force: false });
+  const manifest = await readJson2(path3.join(target, "mooyu-courseware.json"));
+  return { action: "created", template: path3.basename(source), target, id: manifest.id };
 }
 async function ensureOutputDirectory(directory) {
   await assertNoSymlinkAncestors(directory);
-  const stat = await fs2.lstat(directory).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
+  const stat = await fs3.lstat(directory).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
   if (!stat) {
-    await fs2.mkdir(directory, { recursive: true });
+    await fs3.mkdir(directory, { recursive: true });
     return;
   }
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new CoursewareToolkitError("COURSEWARE_OUTPUT_INVALID", "\u8F93\u51FA\u4F4D\u7F6E\u5FC5\u987B\u662F\u666E\u901A\u76EE\u5F55\u3002");
-  if ((await fs2.readdir(directory)).length) throw new CoursewareToolkitError("COURSEWARE_OUTPUT_NOT_EMPTY", "\u81EA\u5B9A\u4E49\u8F93\u51FA\u76EE\u5F55\u5FC5\u987B\u4E3A\u7A7A\uFF0C\u907F\u514D\u8986\u76D6\u73B0\u6709\u6587\u4EF6\u3002");
+  if ((await fs3.readdir(directory)).length) throw new CoursewareToolkitError("COURSEWARE_OUTPUT_NOT_EMPTY", "\u81EA\u5B9A\u4E49\u8F93\u51FA\u76EE\u5F55\u5FC5\u987B\u4E3A\u7A7A\uFF0C\u907F\u514D\u8986\u76D6\u73B0\u6709\u6587\u4EF6\u3002");
 }
 async function buildCoursewareProject(root, { inspect, outputDirectory } = {}) {
   const report = await inspect(root);
   if (!report.ok) throw new CoursewareToolkitError("COURSEWARE_DOCTOR_FAILED", "Doctor \u672A\u901A\u8FC7\uFF0C\u4E0D\u80FD\u6784\u5EFA\u8BFE\u4EF6\u3002", report);
   const inventory = await loadCoursewareInventory(root);
-  const defaultOutput = path2.join(inventory.root, managedDirectory, "build", inventory.projectDigest);
-  const output2 = path2.resolve(outputDirectory ?? defaultOutput);
-  const existingReport = await readJson2(path2.join(output2, "build-report.json")).catch(() => null);
+  const defaultOutput = path3.join(inventory.root, managedDirectory, "build", inventory.projectDigest);
+  const output2 = path3.resolve(outputDirectory ?? defaultOutput);
+  const existingReport = await readJson2(path3.join(output2, "build-report.json")).catch(() => null);
   if (!outputDirectory && existingReport?.projectDigest === inventory.projectDigest) return { ...existingReport, output: output2, reused: true };
   await ensureOutputDirectory(output2);
   for (const file of inventory.files) {
-    const destination = path2.join(output2, ...file.relative.split("/"));
-    await fs2.mkdir(path2.dirname(destination), { recursive: true });
-    await fs2.copyFile(file.absolute, destination);
+    const destination = path3.join(output2, ...file.relative.split("/"));
+    await fs3.mkdir(path3.dirname(destination), { recursive: true });
+    if (file.absolute) await fs3.copyFile(file.absolute, destination);
+    else await fs3.writeFile(destination, file.bytes, { flag: "wx" });
   }
   const buildReport = {
     format: "mooyu.courseware-build",
     version: 1,
     coursewareId: inventory.manifest.id,
     projectDigest: inventory.projectDigest,
-    files: inventory.files.map(({ relative, size, sha256: hash }) => ({ path: relative, bytes: size, sha256: hash })),
-    totalBytes: inventory.totalBytes
+    files: inventory.files.map(({ relative, size, sha256: hash, generated }) => ({ path: relative, bytes: size, sha256: hash, ...generated ? { generated: true } : {} })),
+    totalBytes: inventory.totalBytes,
+    ...inventory.moduleGraph ? { moduleLock: { path: inventory.manifest.runtime.moduleLock, sha256: inventory.moduleGraph.lockSha256, modules: inventory.moduleGraph.records.length, roots: inventory.moduleGraph.lock.roots } } : {}
   };
-  await fs2.writeFile(path2.join(output2, "build-report.json"), `${JSON.stringify(buildReport, null, 2)}
+  await fs3.writeFile(path3.join(output2, "build-report.json"), `${JSON.stringify(buildReport, null, 2)}
 `, { flag: "wx" });
   return { ...buildReport, output: output2, reused: false };
 }
@@ -504,59 +900,56 @@ async function packageCoursewareProject(root, { inspect, outputPath } = {}) {
   if (!report.ok) throw new CoursewareToolkitError("COURSEWARE_DOCTOR_FAILED", "Doctor \u672A\u901A\u8FC7\uFF0C\u4E0D\u80FD\u6253\u5305\u8BFE\u4EF6\u3002", report);
   const inventory = await loadCoursewareInventory(root);
   const bytes = zipBuffer(inventory.files);
-  const artifactSha256 = sha256(bytes);
-  const destination = path2.resolve(outputPath ?? path2.join(inventory.root, managedDirectory, "packages", `${inventory.manifest.id}-${inventory.projectDigest.slice(0, 12)}.zip`));
-  if (path2.extname(destination).toLowerCase() !== ".zip") throw new CoursewareToolkitError("COURSEWARE_PACKAGE_EXTENSION_INVALID", "\u8BFE\u4EF6\u5305\u8F93\u51FA\u5FC5\u987B\u4F7F\u7528 .zip \u6269\u5C55\u540D\u3002");
+  const artifactSha256 = sha2562(bytes);
+  const destination = path3.resolve(outputPath ?? path3.join(inventory.root, managedDirectory, "packages", `${inventory.manifest.id}-${inventory.projectDigest.slice(0, 12)}.zip`));
+  if (path3.extname(destination).toLowerCase() !== ".zip") throw new CoursewareToolkitError("COURSEWARE_PACKAGE_EXTENSION_INVALID", "\u8BFE\u4EF6\u5305\u8F93\u51FA\u5FC5\u987B\u4F7F\u7528 .zip \u6269\u5C55\u540D\u3002");
   await assertNoSymlinkAncestors(destination);
-  const destinationStat = await fs2.lstat(destination).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
+  const destinationStat = await fs3.lstat(destination).catch((error) => error?.code === "ENOENT" ? null : Promise.reject(error));
   if (destinationStat?.isSymbolicLink() || destinationStat && !destinationStat.isFile()) throw new CoursewareToolkitError("COURSEWARE_PACKAGE_PATH_INVALID", "\u8BFE\u4EF6\u5305\u8F93\u51FA\u5FC5\u987B\u662F\u666E\u901A ZIP \u6587\u4EF6\uFF0C\u4E0D\u80FD\u662F\u7B26\u53F7\u94FE\u63A5\u3002");
-  const current = destinationStat ? await fs2.readFile(destination) : null;
+  const current = destinationStat ? await fs3.readFile(destination) : null;
   if (current) {
-    if (sha256(current) !== artifactSha256) throw new CoursewareToolkitError("COURSEWARE_PACKAGE_EXISTS", "\u76EE\u6807\u5305\u5DF2\u5B58\u5728\u4E14\u5185\u5BB9\u4E0D\u540C\uFF1B\u4E0D\u4F1A\u8986\u76D6\u3002");
+    if (sha2562(current) !== artifactSha256) throw new CoursewareToolkitError("COURSEWARE_PACKAGE_EXISTS", "\u76EE\u6807\u5305\u5DF2\u5B58\u5728\u4E14\u5185\u5BB9\u4E0D\u540C\uFF1B\u4E0D\u4F1A\u8986\u76D6\u3002");
     return { format: "mooyu.courseware-package", version: 1, coursewareId: inventory.manifest.id, projectDigest: inventory.projectDigest, artifactSha256, artifactBytes: bytes.length, path: destination, reused: true };
   }
-  await fs2.mkdir(path2.dirname(destination), { recursive: true });
-  await fs2.writeFile(destination, bytes, { flag: "wx" });
+  await fs3.mkdir(path3.dirname(destination), { recursive: true });
+  await fs3.writeFile(destination, bytes, { flag: "wx" });
   return { format: "mooyu.courseware-package", version: 1, coursewareId: inventory.manifest.id, projectDigest: inventory.projectDigest, artifactSha256, artifactBytes: bytes.length, path: destination, reused: false };
 }
 function createCoursewarePreviewHandler(root) {
-  const distRoot = path2.join(path2.resolve(root), "dist");
+  const projectRoot = path3.resolve(root);
   return async (request, response) => {
     try {
+      const inventory = await loadCoursewareInventory(projectRoot);
       const requestUrl = new URL(request.url ?? "/", "http://localhost");
       let relative = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, "");
-      if (!relative || relative.endsWith("/")) relative += "index.html";
-      if (!safeRelativePath2(relative)) {
+      if (!relative || relative.endsWith("/")) relative = inventory.manifest.build.entry;
+      if (!safeRelativePath3(relative)) {
         response.writeHead(400);
         response.end("Bad request");
         return;
       }
-      let absolute = path2.resolve(distRoot, ...relative.split("/"));
-      if (absolute !== distRoot && !absolute.startsWith(`${distRoot}${path2.sep}`)) {
-        response.writeHead(403);
-        response.end("Forbidden");
-        return;
+      let file = inventory.files.find((record) => record.relative === relative);
+      if (!file) {
+        const entryDirectory = path3.posix.dirname(inventory.manifest.build.entry);
+        const entryRelative = entryDirectory === "." ? relative : path3.posix.join(entryDirectory, relative);
+        if (safeRelativePath3(entryRelative)) file = inventory.files.find((record) => record.relative === entryRelative);
       }
-      let stat = await fs2.lstat(absolute).catch(() => null);
-      if ((!stat || !stat.isFile()) && !path2.extname(relative)) {
-        absolute = path2.join(distRoot, "index.html");
-        stat = await fs2.lstat(absolute).catch(() => null);
-      }
-      if (!stat?.isFile() || stat.isSymbolicLink()) {
+      if (!file && !path3.extname(relative)) file = inventory.files.find((record) => record.relative === inventory.manifest.build.entry);
+      if (!file) {
         response.writeHead(404);
         response.end("Not found");
         return;
       }
-      const content = await fs2.readFile(absolute);
+      const structured = inventory.manifest.build.profile === "mooyu-structured-v1";
       response.writeHead(200, {
-        "Content-Type": mimeTypes.get(path2.extname(absolute).toLowerCase()) ?? "application/octet-stream",
-        "Content-Length": content.length,
+        "Content-Type": mimeTypes.get(path3.extname(file.relative).toLowerCase()) ?? "application/octet-stream",
+        "Content-Length": file.bytes.length,
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
-        "Content-Security-Policy": "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+        "Content-Security-Policy": `default-src 'self' data: blob:; script-src 'self'${structured ? " blob:" : ""} 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src '${structured ? "self" : "none"}'; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'`
       });
-      response.end(content);
+      response.end(file.bytes);
     } catch {
       response.writeHead(500);
       response.end("Preview error");
@@ -586,8 +979,8 @@ async function testCoursewareProject(root, { inspect, browserModule = process.en
   }
   if (!driver?.chromium) throw new CoursewareToolkitError("COURSEWARE_BROWSER_DRIVER_INVALID", "\u6D4F\u89C8\u5668\u6A21\u5757\u6CA1\u6709\u5BFC\u51FA chromium\u3002");
   const inventory = await loadCoursewareInventory(root);
-  const course = await readJson2(path2.join(inventory.root, ...inventory.manifest.course.split("/")));
-  const tests = await readJson2(path2.join(inventory.root, ...inventory.manifest.tests.split("/")));
+  const course = await readJson2(path3.join(inventory.root, ...inventory.manifest.course.split("/")));
+  const tests = await readJson2(path3.join(inventory.root, ...inventory.manifest.tests.split("/")));
   const preview = await createCoursewarePreviewServer(root, { inspect });
   let browser;
   const results = [];
@@ -604,6 +997,18 @@ async function testCoursewareProject(root, { inspect, browserModule = process.en
         });
       });
       await page.goto(preview.url, { waitUntil: "load" });
+      await page.evaluate((locale) => window.postMessage({
+        protocol: "mooyu.learning.v1",
+        direction: "host-to-courseware",
+        type: "host.command",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        payload: { name: "locale.set", value: { locale } }
+      }, location.origin), journey.locale);
+      try {
+        await page.waitForFunction((locale) => document.documentElement.lang === locale, journey.locale);
+      } catch {
+        throw new CoursewareToolkitError("COURSEWARE_LOCALE_NOT_APPLIED", `${journey.id} \u672A\u5E94\u7528 Journey \u58F0\u660E\u7684\u8BED\u8A00 ${journey.locale}\u3002`);
+      }
       for (const step of journey.steps) {
         if (step.action === "enter") await page.locator(`[data-mooyu-scene="${step.target}"]`).waitFor();
         else if (step.action === "set") await page.locator(`[data-mooyu-target="${step.target}"],#${step.target}`).first().evaluate((element, value) => {
@@ -660,14 +1065,14 @@ var staticSecretPatterns = [
   /\bapi[_-]?key\s*[:=]\s*["'][^"']{12,}["']/iu
 ];
 async function inspectStaticWebProject(root) {
-  const projectRoot = path3.resolve(root);
+  const projectRoot = path4.resolve(root);
   const findings = [];
   const files = [];
   let totalBytes = 0;
   const walk = async (directory, prefix = "") => {
     let entries;
     try {
-      entries = await fs3.readdir(directory, { withFileTypes: true });
+      entries = await fs4.readdir(directory, { withFileTypes: true });
     } catch (error) {
       findings.push(item("error", "WEB_PROJECT_UNREADABLE", `\u65E0\u6CD5\u8BFB\u53D6 ${prefix || "\u9879\u76EE\u76EE\u5F55"}\uFF1A${error.message}`));
       return;
@@ -680,17 +1085,17 @@ async function inspectStaticWebProject(root) {
       }
       if (entry2.isDirectory()) {
         if (entry2.name === ".git" || entry2.name === "node_modules" || entry2.name === ".gamehub") continue;
-        await walk(path3.join(directory, entry2.name), relative);
+        await walk(path4.join(directory, entry2.name), relative);
         continue;
       }
       if (!entry2.isFile()) {
         findings.push(item("error", "WEB_FILE_TYPE_INVALID", `${relative} \u4E0D\u662F\u666E\u901A\u6587\u4EF6\u3002`));
         continue;
       }
-      const absolute = path3.join(directory, entry2.name);
-      const stat = await fs3.stat(absolute);
+      const absolute = path4.join(directory, entry2.name);
+      const stat = await fs4.stat(absolute);
       totalBytes += stat.size;
-      files.push({ relative, absolute, size: stat.size, extension: path3.extname(entry2.name).toLowerCase() });
+      files.push({ relative, absolute, size: stat.size, extension: path4.extname(entry2.name).toLowerCase() });
       if (files.length > 2e3) {
         findings.push(item("error", "WEB_FILE_COUNT_EXCEEDED", "\u9879\u76EE\u6587\u4EF6\u8D85\u8FC7 2000 \u4E2A\u3002", "\u5220\u9664\u6784\u5EFA\u7F13\u5B58\u3001\u6E90\u7801\u4F9D\u8D56\u548C\u65E0\u5173\u6587\u4EF6\uFF0C\u53EA\u4FDD\u7559\u6D4F\u89C8\u5668\u8FD0\u884C\u6240\u9700\u8D44\u6E90\u3002"));
         return;
@@ -704,11 +1109,11 @@ async function inspectStaticWebProject(root) {
   if (totalBytes > 128 * 1024 * 1024) findings.push(item("error", "WEB_PROJECT_TOO_LARGE", "\u9879\u76EE\u6587\u4EF6\u603B\u91CF\u8D85\u8FC7 128 MiB\u3002", "\u79FB\u9664\u6E90\u7D20\u6750\u3001\u7F16\u8F91\u5668\u7F13\u5B58\u548C\u672A\u4F7F\u7528\u8D44\u6E90\u3002"));
   for (const file of files) {
     if (staticForbiddenExtensions.has(file.extension)) findings.push(item("error", "WEB_EXECUTABLE_FORBIDDEN", `${file.relative} \u4E0D\u662F\u7F51\u9875\u53D1\u5E03\u7269\u5141\u8BB8\u7684\u6587\u4EF6\u7C7B\u578B\u3002`, "\u7F51\u9875\u5305\u53EA\u5E94\u5305\u542B\u6D4F\u89C8\u5668\u53EF\u8BFB\u53D6\u7684\u9759\u6001\u8D44\u6E90\u3002"));
-    if (/^(?:\.env(?:\.|$)|credentials?|secrets?)(?:\.|$)/iu.test(path3.basename(file.relative))) findings.push(item("error", "WEB_SECRET_FILE", `${file.relative} \u770B\u8D77\u6765\u662F\u51ED\u636E\u6587\u4EF6\u3002`, "\u4ECE\u53D1\u5E03\u76EE\u5F55\u5220\u9664\u51ED\u636E\uFF0C\u5E76\u7ACB\u5373\u8F6E\u6362\u5DF2\u7ECF\u66B4\u9732\u7684\u5BC6\u94A5\u3002"));
+    if (/^(?:\.env(?:\.|$)|credentials?|secrets?)(?:\.|$)/iu.test(path4.basename(file.relative))) findings.push(item("error", "WEB_SECRET_FILE", `${file.relative} \u770B\u8D77\u6765\u662F\u51ED\u636E\u6587\u4EF6\u3002`, "\u4ECE\u53D1\u5E03\u76EE\u5F55\u5220\u9664\u51ED\u636E\uFF0C\u5E76\u7ACB\u5373\u8F6E\u6362\u5DF2\u7ECF\u66B4\u9732\u7684\u5BC6\u94A5\u3002"));
     if (!staticTextExtensions.has(file.extension) || file.size > 1024 * 1024) continue;
     let source;
     try {
-      source = await fs3.readFile(file.absolute, "utf8");
+      source = await fs4.readFile(file.absolute, "utf8");
     } catch {
       continue;
     }
@@ -722,7 +1127,7 @@ async function inspectStaticWebProject(root) {
 }
 async function inspectCoursewareProject2(root) {
   const contract = await inspectCoursewareProject(root);
-  const runtime = await inspectStaticWebProject(path3.join(path3.resolve(root), "dist"));
+  const runtime = await inspectStaticWebProject(path4.join(path4.resolve(root), "dist"));
   const findings = [...contract.findings, ...runtime.findings.map((value) => ({ ...value, path: value.path ? `dist/${value.path}` : "dist" }))];
   const summary = { errors: findings.filter((value) => value.severity === "error").length, warnings: findings.filter((value) => value.severity === "warning").length, info: findings.filter((value) => value.severity === "info").length };
   return { ...contract, ok: summary.errors === 0, summary, findings };
@@ -737,7 +1142,7 @@ var testCoursewareProject2 = (root, options2 = {}) => testCoursewareProject(root
 async function loadCatalog() {
   const candidates = [new URL("../plugins/gamehub/toolkits/catalog.json", import.meta.url), new URL("../toolkits/catalog.json", import.meta.url)];
   for (const candidate of candidates) try {
-    return JSON.parse(await fs4.readFile(candidate, "utf8"));
+    return JSON.parse(await fs5.readFile(candidate, "utf8"));
   } catch {
   }
   throw new Error("\u58A8\u9C7C\u5DE5\u574A\u521B\u4F5C\u5DE5\u5177\u76EE\u5F55\u7F3A\u5931\uFF0C\u8BF7\u91CD\u65B0\u5B89\u88C5\u6216\u66F4\u65B0\u58A8\u9C7C\u5DE5\u574A Agent \u63D2\u4EF6\u3002");
@@ -775,7 +1180,7 @@ async function findTemplate(name) {
   if (!["concept-explorer", "causal-simulation", "algorithm-stepper"].includes(name)) throw new CoursewareToolkitError("COURSEWARE_TEMPLATE_UNKNOWN", `\u672A\u77E5\u8BFE\u4EF6\u6A21\u677F\uFF1A${name || "(missing)"}`);
   const candidates = [new URL(`../templates/courseware/${name}/`, import.meta.url), new URL(`../plugins/gamehub/templates/courseware/${name}/`, import.meta.url)];
   for (const candidate of candidates) try {
-    if ((await fs4.stat(candidate)).isDirectory()) return path4.resolve(fileURLToPath(candidate));
+    if ((await fs5.stat(candidate)).isDirectory()) return path5.resolve(fileURLToPath2(candidate));
   } catch {
   }
   throw new CoursewareToolkitError("COURSEWARE_TEMPLATE_MISSING", `\u5DF2\u5B89\u88C5\u63D2\u4EF6\u7F3A\u5C11 ${name} \u6A21\u677F\uFF0C\u8BF7\u66F4\u65B0\u58A8\u9C7C\u5DE5\u574A\u63D2\u4EF6\u3002`);
@@ -823,28 +1228,28 @@ try {
 \u4E0B\u4E00\u6B65\uFF1Acreator-toolkit doctor "${value.target}"`));
   } else if (command === "inspect") {
     if (!keyOrPath) throw new CoursewareToolkitError("COURSEWARE_INSPECT_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit inspect <\u8BFE\u4EF6\u76EE\u5F55> [--json]");
-    const result2 = await describeCoursewareProject2(path4.resolve(keyOrPath));
+    const result2 = await describeCoursewareProject2(path5.resolve(keyOrPath));
     output(result2, asJson, (value) => console.log(`${value.id} \xB7 ${value.ok ? "READY" : "NEEDS FIX"} \xB7 ${value.counts.scenes} scene \xB7 ${value.counts.checkpoints} checkpoint \xB7 ${value.totalBytes} bytes
 Digest: ${value.projectDigest}`));
     if (!result2.ok) process.exitCode = 1;
   } else if (command === "doctor") {
     if (!keyOrPath) throw new CoursewareToolkitError("DOCTOR_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit doctor <\u672C\u5730\u9879\u76EE\u76EE\u5F55> [--json]");
-    const target = path4.resolve(keyOrPath);
-    const isCourseware = await fs4.access(path4.join(target, "mooyu-courseware.json")).then(() => true, () => false);
+    const target = path5.resolve(keyOrPath);
+    const isCourseware = await fs5.access(path5.join(target, "mooyu-courseware.json")).then(() => true, () => false);
     const report = isCourseware ? await inspectCoursewareProject2(target) : await inspectStaticWebProject(target);
     output(report, asJson, (value) => printDoctor(value, isCourseware ? "Interactive Courseware" : "Local Web Project"));
     if (!report.ok) process.exitCode = 1;
   } else if (command === "test") {
     if (!keyOrPath) throw new CoursewareToolkitError("COURSEWARE_TEST_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit test <\u8BFE\u4EF6\u76EE\u5F55> [--browser-module <path>] [--json]");
     if (options["browser-module"] === true) throw new CoursewareToolkitError("COURSEWARE_TEST_USAGE", "--browser-module \u540E\u5FC5\u987B\u63D0\u4F9B\u5DF2\u5B89\u88C5\u6A21\u5757\u7684\u7EDD\u5BF9\u8DEF\u5F84\u6216\u5305\u540D\u3002");
-    const result2 = await testCoursewareProject2(path4.resolve(keyOrPath), { browserModule: options["browser-module"] });
+    const result2 = await testCoursewareProject2(path5.resolve(keyOrPath), { browserModule: options["browser-module"] });
     output(result2, asJson, (value) => console.log(`Browser journeys: PASS \xB7 ${value.journeys.length} journey \xB7 ${value.journeys.reduce((sum, item2) => sum + item2.steps, 0)} steps`));
   } else if (command === "preview") {
     if (!keyOrPath) throw new CoursewareToolkitError("COURSEWARE_PREVIEW_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit preview <\u8BFE\u4EF6\u76EE\u5F55> [--port <\u7AEF\u53E3>]");
     if (options.port === true) throw new CoursewareToolkitError("COURSEWARE_PREVIEW_PORT_INVALID", "--port \u540E\u5FC5\u987B\u63D0\u4F9B\u7AEF\u53E3\u53F7\u3002");
     const parsedPort = options.port === void 0 ? 4173 : Number(options.port);
     if (!Number.isInteger(parsedPort) || parsedPort < 0 || parsedPort > 65535) throw new CoursewareToolkitError("COURSEWARE_PREVIEW_PORT_INVALID", "\u9884\u89C8\u7AEF\u53E3\u5FC5\u987B\u662F 0 \u5230 65535 \u7684\u6574\u6570\u3002");
-    const preview = await createCoursewarePreviewServer2(path4.resolve(keyOrPath), { port: parsedPort });
+    const preview = await createCoursewarePreviewServer2(path5.resolve(keyOrPath), { port: parsedPort });
     console.log(`MOOYU.FUN courseware preview: ${preview.url}
 \u6309 Ctrl+C \u505C\u6B62\u3002`);
     const close = async () => {
@@ -856,13 +1261,13 @@ Digest: ${value.projectDigest}`));
   } else if (command === "build") {
     if (!keyOrPath) throw new CoursewareToolkitError("COURSEWARE_BUILD_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit build <\u8BFE\u4EF6\u76EE\u5F55> [--output <\u7A7A\u76EE\u5F55>] [--json]");
     if (options.output === true) throw new CoursewareToolkitError("COURSEWARE_BUILD_USAGE", "--output \u540E\u5FC5\u987B\u63D0\u4F9B\u7A7A\u76EE\u5F55\u3002");
-    const result2 = await buildCoursewareProject2(path4.resolve(keyOrPath), { outputDirectory: typeof options.output === "string" ? path4.resolve(options.output) : void 0 });
+    const result2 = await buildCoursewareProject2(path5.resolve(keyOrPath), { outputDirectory: typeof options.output === "string" ? path5.resolve(options.output) : void 0 });
     output(result2, asJson, (value) => console.log(`Build ${value.reused ? "reused" : "created"}: ${value.output}
 ${value.files.length} files \xB7 ${value.totalBytes} bytes \xB7 ${value.projectDigest}`));
   } else if (command === "package") {
     if (!keyOrPath) throw new CoursewareToolkitError("COURSEWARE_PACKAGE_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit package <\u8BFE\u4EF6\u76EE\u5F55> [--output <zip>] [--json]");
     if (options.output === true) throw new CoursewareToolkitError("COURSEWARE_PACKAGE_USAGE", "--output \u540E\u5FC5\u987B\u63D0\u4F9B ZIP \u8DEF\u5F84\u3002");
-    const result2 = await packageCoursewareProject2(path4.resolve(keyOrPath), { outputPath: typeof options.output === "string" ? path4.resolve(options.output) : void 0 });
+    const result2 = await packageCoursewareProject2(path5.resolve(keyOrPath), { outputPath: typeof options.output === "string" ? path5.resolve(options.output) : void 0 });
     output(result2, asJson, (value) => console.log(`Package ${value.reused ? "reused" : "created"}: ${value.path}
 ${value.artifactBytes} bytes \xB7 SHA-256 ${value.artifactSha256}`));
   } else throw new CoursewareToolkitError("CLI_USAGE", "\u7528\u6CD5\uFF1Acreator-toolkit <list|show|prompt|init|inspect|doctor|test|preview|build|package> [...args]");

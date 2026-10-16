@@ -5,6 +5,11 @@
       { "action": "enter", "target": "run-force-trials" }, { "action": "set", "target": "force", "value": 8 },
       { "action": "set", "target": "mass", "value": 4 }, { "action": "answer", "target": "predict-double-mass", "value": "halves" },
       { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true },
+    { "id": "double-mass-completion-en", "title": "Compare masses under the same force", "locale": "en", "steps": [
+      { "action": "enter", "target": "run-force-trials" }, { "action": "set", "target": "force", "value": 8 },
+      { "action": "set", "target": "mass", "value": 4 }, { "action": "answer", "target": "predict-double-mass", "value": "halves" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
     ], "expectsCompletion": true }
   ]
 }

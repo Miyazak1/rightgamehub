@@ -1,0 +1,21 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "journey.progress",
+  "version": "1.0.0",
+  "kind": "journey",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:00d240a88c91f51cbf60ee27d4d96bf4cd92059376ec500ac54c989e6608f01e",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "journey.progress"
+  ],
+  "commands": [
+    "scene.complete",
+    "checkpoint.complete",
+    "progress.reset"
+  ],
+  "dependencies": []
+}

@@ -1,0 +1,3502 @@
+{
+  "format": "mooyu.curriculum-review-report",
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-15T07:59:24.101Z",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "subject": {
+    "id": "mathematics",
+    "title": {
+      "zh-CN": "数学",
+      "en": "Mathematics"
+    },
+    "catalogStatus": "atomic-draft"
+  },
+  "coverage": {
+    "nodes": 181,
+    "relations": 95,
+    "clusters": 26,
+    "textbookMappings": 121,
+    "textbookMappingTargetNodes": 121,
+    "textbookMappedTargetNodes": 121,
+    "sourceCheckedNodes": 181,
+    "subjectCheckedNodes": 0,
+    "nodesByType": {
+      "concept": 26,
+      "method": 41,
+      "model": 42,
+      "module": 26,
+      "practice": 21,
+      "principle": 24,
+      "subject-root": 1
+    },
+    "nodesByPriority": {
+      "high": 63,
+      "low": 27,
+      "medium": 91
+    }
+  },
+  "gaps": [
+    {
+      "code": "SUBJECT_REVIEW_PENDING",
+      "severity": "blocking",
+      "count": 181,
+      "message": "节点尚未通过学科专家审校，不能进入 K2 完成态。"
+    },
+    {
+      "code": "COURSEWARE_DEPTH_UNMEASURED",
+      "severity": "non-blocking",
+      "count": 26,
+      "message": "知识簇尚未绑定发布课件的 C0-C5 深度证据。"
+    },
+    {
+      "code": "MATHEMATICS_ELECTIVE_E_SCHOOL_DEFINED",
+      "severity": "scope-note",
+      "count": 0,
+      "message": "数学 E 类课程由学校按需求开发或选用，国家课标只提供类型和示例，不属于全国统一固定清单。"
+    }
+  ],
+  "reviewQueue": [
+    {
+      "nodeId": "cn-hs.math.elective.a.calculus.definite-integral",
+      "title": "定积分、微积分基本定理及应用",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第61-62页：A类定积分"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.calculus.derivative-differential",
+      "title": "导数、二阶导数、中值定理与微分",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第61页：A类导数与微分"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.calculus.function-limits-continuity",
+      "title": "函数极限、ε-δ定义与连续性",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第60-61页：A类函数极限与连续函数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.probability-statistics.inference",
+      "title": "参数估计与假设检验",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第65页：A类参数估计与假设检验"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.probability-statistics.multiple-regression",
+      "title": "二元线性回归模型",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第65页：A类二元线性回归模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra.linear-systems",
+      "title": "三元一次方程组、高斯消元与克拉默法则",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第63页：A类三元一次方程组"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra.matrices-determinants",
+      "title": "三阶矩阵、行列式与正交矩阵",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第62页：A类三阶矩阵与行列式"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra.vector-space",
+      "title": "空间向量代数、外积与线性相关",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第62页：A类空间向量代数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.models.growth-wave-parametric",
+      "title": "指数增长、周期波动与参变数模型",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第71-72页：B类指数、三角与参变数模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.logic.reasoning-proof-axioms",
+      "title": "推理类型、证明方法与公理化思想",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第73页：C类逻辑第3-5项"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.models.economic",
+      "title": "存贷款、投入产出、经济增长、凯恩斯与生产函数模型",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第74-75页：C类经济数学模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.survey.analysis-report",
+      "title": "调查数据分析、报告与案例复盘",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第76-77页：C类社会调查第4-6项"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.survey.design-sampling",
+      "title": "调查方案、问卷与多阶段抽样设计",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第76页：C类社会调查第1-3项"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.d.music",
+      "title": "D类：音乐中的数学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第78-79页：D类音乐中的数学（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.d.sports",
+      "title": "D类：体育运动中的数学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第80-81页：D类体育运动中的数学（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.d.visual-art",
+      "title": "D类：美术中的数学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第79-80页：D类美术中的数学（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.daily-life",
+      "title": "E类：日常生活与家庭理财数学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第81页：E类日常生活课程示例"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.local",
+      "title": "E类：地方特色数学课程",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第81页：E类地方特色课程示例"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.exponential",
+      "title": "指数函数的概念、图像与性质",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第28页：指数函数（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.growth-comparison",
+      "title": "对数、线性与指数增长比较",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第31页：函数与数学模型（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.logarithm",
+      "title": "对数、换底与对数函数",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第28-29页：对数函数（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.monotonicity-extrema",
+      "title": "单调性与最大值、最小值",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第27页：函数性质（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.quadratic-graph-parameters",
+      "title": "二次函数图像、参数与零点",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第25-27页：一元二次函数与函数图像"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.representations",
+      "title": "函数的图像法、列表法与解析法",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第27页：函数概念（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.inquiry.process",
+      "title": "数学探究完整过程",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第43页：数学探究活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.modeling.process",
+      "title": "数学建模完整过程",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第42页：数学建模活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.preliminary.quadratic-connections",
+      "title": "从函数观点看一元二次方程和不等式",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第25-26页：从函数观点看一元二次方程和一元二次不等式"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability.classical-model",
+      "title": "古典概型",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第39页：随机事件与概率（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability.independence",
+      "title": "随机事件的独立性",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第39页：随机事件的独立性"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability.laws-frequency",
+      "title": "概率性质、运算法则与频率估计",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第39页：随机事件与概率（3）（4）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.research.lifecycle",
+      "title": "课题研究的选题、开题、做题与结题",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第43-44页：课题研究四个环节"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.sets.operations",
+      "title": "集合的交、并、补运算",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第23页：集合的基本运算"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.sets.venn-language",
+      "title": "用 Venn 图表达集合关系与运算",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第23页：Venn 图表达"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.incidence-facts",
+      "title": "空间点、直线、平面的位置关系与基本事实",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第36页：基本图形位置关系（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.parallel-perpendicular-criteria",
+      "title": "空间平行与垂直的判定定理",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第37页：基本图形位置关系（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.parallel-perpendicular-properties",
+      "title": "空间平行与垂直的性质定理",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第36页：基本图形位置关系（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.charts",
+      "title": "统计图表选择与数据可视化",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第40页：统计图表"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.distribution-percentile",
+      "title": "总体取值规律与百分位数估计",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第40-41页：用样本估计总体（3）（4）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.sampling-design",
+      "title": "根据问题设计抽样方法",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第40页：抽样方法的选择"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.properties",
+      "title": "三角函数图像与性质",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第29页：三角函数概念和性质（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.sinusoid-parameters",
+      "title": "正弦型函数的振幅、频率与相位",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第30页：y=A sin(ωx+φ) 参数意义"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.unit-circle",
+      "title": "单位圆上的正弦、余弦与正切",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第29页：三角函数概念和性质（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.coordinate-operations",
+      "title": "向量坐标运算及共线、垂直条件",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第34页：向量基本定理及坐标表示（3）-（5）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.dot-projection",
+      "title": "向量数量积、投影与垂直",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第34页：向量运算（4）-（6）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.sine-cosine-laws",
+      "title": "正弦定理、余弦定理与解三角形",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第34页：向量应用与解三角形（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.analytic.circles",
+      "title": "圆的方程与直线、圆的位置关系",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第52页：圆与方程"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.analytic.ellipse",
+      "title": "椭圆的定义、标准方程与性质",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第52页：圆锥曲线与方程（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.analytic.parabola-hyperbola",
+      "title": "抛物线与双曲线的定义、方程与性质",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第52页：圆锥曲线与方程（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.counting.add-multiply",
+      "title": "分类加法与分步乘法计数原理",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第54页：两个基本计数原理"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.counting.permutations-combinations",
+      "title": "排列、组合及其公式",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第54页：排列与组合"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.extrema-optimization",
+      "title": "极值、最值与简单优化",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第47页：导数在研究函数中的应用（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.monotonicity",
+      "title": "用导数研究函数单调性",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第47页：导数在研究函数中的应用（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.rate-limit",
+      "title": "从平均变化率到瞬时变化率与极限思想",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第47页：导数概念及其意义（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.binomial",
+      "title": "伯努利试验与二项分布",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第55页：离散型随机变量及其分布列（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.discrete-variable",
+      "title": "离散型随机变量、分布列、均值与方差",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第55页：离散型随机变量及其分布列（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.normal",
+      "title": "正态分布及其均值、方差",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第55-56页：正态分布"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.sequences.arithmetic",
+      "title": "等差数列、通项与前 n 项和",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第46页：等差数列"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.sequences.geometric",
+      "title": "等比数列、通项与前 n 项和",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第46页：等比数列"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.direction-normal",
+      "title": "直线方向向量与平面法向量",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第50-51页：空间向量的应用（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.distance-angle-algorithms",
+      "title": "空间距离与夹角问题的向量程序",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第51页：空间向量的应用（4）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.relations-angles",
+      "title": "空间平行、垂直与夹角的向量表达",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第51页：空间向量的应用（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.statistics.contingency-independence",
+      "title": "2×2 列联表与独立性检验",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第56页：2×2列联表"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.statistics.regression",
+      "title": "一元线性回归与最小二乘估计",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 3，第56页：一元线性回归模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.calculus.sequence-limits",
+      "title": "数列极限、ε-N定义与运算法则",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第60页：A类数列极限"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.probability-statistics.continuous-distributions",
+      "title": "连续型随机变量与常用分布",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第64页：A类连续型随机变量及其分布"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.probability-statistics.joint-distributions",
+      "title": "二维随机变量、联合分布与独立性",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第64-65页：A类二维随机变量及其联合分布"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra.isometries",
+      "title": "平面与空间等距变换及矩阵表示",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第63页：A类等距变换"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra.lines-planes",
+      "title": "空间直线、平面及位置和度量关系",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第63页：A类空间中的平面与直线"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.applied-statistics.clustering",
+      "title": "聚类分析",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第70页：B类聚类分析"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.applied-statistics.distributions-inference",
+      "title": "连续与联合分布、估计、检验和回归",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第69-70页：B类应用统计第1-5项"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.applied-statistics.orthogonal-design",
+      "title": "正交设计",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第70页：B类正交设计"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.calculus.bivariate",
+      "title": "二元函数、偏导数与区域最值",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第67页：B类二元函数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.calculus.core",
+      "title": "极限、导数与微分、定积分",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第66-67页：B类微积分核心内容"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.models.linear-quadratic",
+      "title": "一至三维线性模型与二次曲线模型",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第71页：B类线性模型和二次曲线模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.logic.propositions-premises",
+      "title": "定义、命题、条件与推理前提",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第72-73页：C类逻辑第1-2项"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.models.social",
+      "title": "等级评价、人口增长与信度评价模型",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第75页：C类社会数学模型"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.d.beauty",
+      "title": "D类：美与数学",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第77-78页：D类美与数学（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.horizon",
+      "title": "E类：拓展视野的数学课程",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第81页：E类拓展视野课程示例"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.complex.concept-geometry",
+      "title": "复数的引入、代数表示与几何意义",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35页：复数的概念"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.complex.operations",
+      "title": "复数四则运算及加减法几何意义",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35页：复数的运算"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.applications",
+      "title": "函数应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第30-31页：函数应用"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.bisection",
+      "title": "二分法求方程近似解",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第30-31页：二分法与求方程近似解"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.concepts-properties",
+      "title": "函数概念与性质",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第27页：函数概念与性质"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.definition-domain",
+      "title": "函数的对应关系、要素与定义域",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第27页：函数概念（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.exp-log-inverse",
+      "title": "指数函数与对数函数互为反函数",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第29页：对数函数（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.model-selection",
+      "title": "现实情境中的函数模型选择",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第31页：函数与数学模型（1）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.parity-periodicity",
+      "title": "奇偶性与周期性",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第27页：函数性质（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.piecewise",
+      "title": "分段函数",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第27页：函数概念（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.power",
+      "title": "幂函数及其变化规律",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第28页：幂函数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.power-exponential-logarithmic",
+      "title": "幂函数、指数函数、对数函数",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第28-29页：幂函数、指数函数、对数函数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.real-exponents",
+      "title": "指数幂拓展与运算性质",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第28页：指数函数（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions.trigonometric",
+      "title": "三角函数",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第29-30页：三角函数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.geometry-algebra.complex",
+      "title": "复数",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35页：复数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.geometry-algebra.plane-vectors",
+      "title": "平面向量及其应用",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，必修课程主题三：平面向量及其应用"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.geometry-algebra.solid-geometry",
+      "title": "立体几何初步",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35-38页：立体几何初步"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.inequality.basic",
+      "title": "基本不等式及最值",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24-25页：基本不等式与简单最值"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.inequality.properties",
+      "title": "等式与不等式的性质",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24页：等式与不等式的性质"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.logic.conditions",
+      "title": "必要条件、充分条件与充要条件",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24页：必要条件、充分条件、充要条件"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.logic.quantified-negation",
+      "title": "含量词命题的否定",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24页：全称量词命题与存在量词命题的否定"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.logic.quantifiers",
+      "title": "全称量词与存在量词",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24页：全称量词与存在量词"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.modeling-inquiry",
+      "title": "必修：数学建模与数学探究",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第42-44页：必修课程主题五"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.preliminary.equality-inequality",
+      "title": "相等关系与不等关系",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第24-25页：相等关系与不等关系"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.preliminary.logic",
+      "title": "常用逻辑用语",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第23-24页：常用逻辑用语"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.preliminary.sets",
+      "title": "集合",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第23页：集合"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability-statistics.probability",
+      "title": "概率",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第39页：概率"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability-statistics.statistics",
+      "title": "统计",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第39-41页：统计"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability.sample-space-events",
+      "title": "样本点、有限样本空间与随机事件",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第39页：随机事件与概率（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.quadratic.inequality-graph",
+      "title": "借助函数图像解一元二次不等式",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第25-26页：从函数观点看一元二次不等式"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.quadratic.root-zero",
+      "title": "函数零点与方程实根",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第25页：从函数观点看一元二次方程"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.research.reporting",
+      "title": "研究报告、交流评价与学术规范",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第44页：成果形式、评价与学术规范"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.sets.concept-representation",
+      "title": "集合概念与三种语言表示",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第23页：集合的概念与表示"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.sets.relations",
+      "title": "集合的包含、相等与子集",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第23页：集合的基本关系"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.figures",
+      "title": "柱、锥、台、球及组合体的结构",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35页：基本立体图形（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.oblique-drawing",
+      "title": "斜二测法绘制空间图形直观图",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第36页：基本立体图形（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.position-proofs",
+      "title": "空间位置关系的简单证明",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第37页：基本图形位置关系（4）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.solid.surface-volume",
+      "title": "基本几何体的表面积与体积",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第35页：基本立体图形（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.central-tendency",
+      "title": "用样本估计总体的集中趋势",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：用样本估计总体（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.data-sources",
+      "title": "数据获取途径",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：获取数据的基本途径"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.dispersion",
+      "title": "用样本估计总体的离散程度",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：用样本估计总体（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.population-sample",
+      "title": "总体、样本、样本量与随机性",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：获取数据的相关概念"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.simple-random-sampling",
+      "title": "简单随机抽样",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：简单随机抽样"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.statistics.stratified-sampling",
+      "title": "分层随机抽样",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第40页：分层随机抽样"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.angle-radian",
+      "title": "任意角与弧度制",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第29页：角与弧度"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.identities",
+      "title": "同角三角函数基本关系",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第30页：同角三角函数的基本关系式"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.trigonometry.transformations",
+      "title": "三角恒等变换",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第30页：三角恒等变换"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.add-subtract",
+      "title": "向量加法与减法",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第34页：向量运算（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.applications",
+      "title": "向量在几何、力学与现实问题中的应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第34页：向量应用与解三角形（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.basis-coordinates",
+      "title": "平面向量基本定理、正交分解与坐标表示",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第34页：向量基本定理及坐标表示（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.concept",
+      "title": "平面向量的实际背景、意义与几何表示",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第33页：向量概念"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.vectors.scalar-collinearity",
+      "title": "向量数乘、线性运算与共线",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第34页：向量运算（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.analytic.coordinate-method",
+      "title": "解析几何的坐标化解题过程",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第53-54页：平面解析几何学业要求"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.analytic.lines",
+      "title": "直线的斜率、方程、交点与距离",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第51-52页：直线与方程"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.counting.binomial",
+      "title": "二项式定理与展开式",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第55页：二项式定理"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.definition-examples",
+      "title": "由定义求基本函数导数",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第47页：导数运算（1）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.geometric-meaning",
+      "title": "导数的几何意义",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第47页：导数概念及其意义（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.rules",
+      "title": "基本导数公式、四则与简单复合函数求导",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第47页：导数运算（2）（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.functions.derivative",
+      "title": "一元函数导数及其应用",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第47-49页：一元函数导数及其应用"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.functions.sequences",
+      "title": "数列",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第45-47页：数列"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.geometry-algebra.analytic-geometry",
+      "title": "平面解析几何",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第51-53页：平面解析几何"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.geometry-algebra.spatial-vectors",
+      "title": "空间向量与立体几何",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第50-51页：空间向量与立体几何"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.modeling-inquiry",
+      "title": "选择性必修：数学建模与数学探究",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第58页：选择性必修课程主题四"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability-statistics.counting",
+      "title": "计数原理",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第54-55页：计数原理"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability-statistics.probability",
+      "title": "条件概率与随机变量",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第55-56页：概率"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability-statistics.statistics",
+      "title": "相关、回归与独立性检验",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第56-57页：统计"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.conditional",
+      "title": "条件概率与独立性",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第55页：随机事件的条件概率（1）（2）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.hypergeometric",
+      "title": "超几何分布",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第55页：离散型随机变量及其分布列（3）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability.total-bayes",
+      "title": "乘法公式、全概率公式与贝叶斯公式（选学）",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第55页：随机事件的条件概率（3）（4）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.research.extension",
+      "title": "选择性必修课题的延续与深化",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第58页：数学建模活动与数学探究活动"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.sequences.concept-representations",
+      "title": "数列概念、表示及其函数观点",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第46页：数列概念"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.sequences.induction",
+      "title": "数学归纳法（选学）",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第46页：数学归纳法（选学）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.basis-dot-projection",
+      "title": "空间向量基本定理、坐标、数量积与投影",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第50页：向量基本定理及坐标表示"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.coordinates-distance",
+      "title": "空间直角坐标系与两点距离",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第50页：空间直角坐标系"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.spatial.vector-operations",
+      "title": "空间向量及其运算",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第50页：空间向量及其运算"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.statistics.correlation",
+      "title": "成对数据与样本相关系数",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 3，第56页：成对数据的统计相关性"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a",
+      "title": "选修 A 类",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第58页起：选修课程 A 类"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.calculus",
+      "title": "A类：微积分",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第59-62页：A类微积分（2.5学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.probability-statistics",
+      "title": "A类：概率与统计",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第64-65页：A类概率与统计（1.5学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.a.spatial-algebra",
+      "title": "A类：空间向量与代数",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第62-64页：A类空间向量与代数（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b",
+      "title": "选修 B 类",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第58页起：选修课程 B 类"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.applied-statistics",
+      "title": "B类：应用统计",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第69-71页：B类应用统计（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.calculus",
+      "title": "B类：微积分与二元函数",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第65-67页：B类微积分（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.models",
+      "title": "B类：模型",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第71-72页：B类模型（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.b.spatial-algebra",
+      "title": "B类：空间向量与代数",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第67-68页：B类空间向量与代数（1学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c",
+      "title": "选修 C 类",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第58页起：选修课程 C 类"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.logic",
+      "title": "C类：逻辑推理初步",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第72-73页：C类逻辑推理初步（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.models",
+      "title": "C类：数学模型",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第73-75页：C类数学模型（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.c.survey",
+      "title": "C类：社会调查与数据分析",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第75-77页：C类社会调查与数据分析（2学分）"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.d",
+      "title": "选修 D 类",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第58页起：选修课程 D 类"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e",
+      "title": "选修 E 类",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第58页起：选修课程 E 类"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.pre-university",
+      "title": "E类：大学数学先修课程",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第81页：E类大学数学先修课程"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.pre-university.calculus",
+      "title": "大学先修：微积分",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第81页：大学数学先修微积分"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.pre-university.linear-algebra",
+      "title": "大学先修：解析几何与线性代数",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第81页：大学数学先修解析几何与线性代数"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.elective.e.pre-university.probability-statistics",
+      "title": "大学先修：概率论与数理统计",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第81页：大学数学先修概率论与数理统计"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.functions",
+      "title": "必修：函数",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第26-33页：必修课程主题二"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.geometry-algebra",
+      "title": "必修：几何与代数",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第33-38页：必修课程主题三"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.preliminary",
+      "title": "必修：预备知识",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第21-26页：必修课程主题一"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.required.probability-statistics",
+      "title": "必修：概率与统计",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第38-42页：必修课程主题四"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.functions",
+      "title": "选择性必修：函数",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第44-49页：选择性必修课程主题一"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.geometry-algebra",
+      "title": "选择性必修：几何与代数",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第49-54页：选择性必修课程主题二"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.probability-statistics",
+      "title": "选择性必修：概率与统计",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3，第54-58页：选择性必修课程主题三"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.mathematics",
+      "title": "普通高中数学",
+      "type": "subject-root",
+      "curriculumLevels": [
+        "required",
+        "selective-required",
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 3：普通高中数学课程标准"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@mooyu/courseware-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./browser-loader": "./src/browser-loader.mjs",
+    "./module-contract": "./src/module-contract.mjs",
+    "./module-lock": "./src/module-lock.mjs",
+    "./runtime": "./src/runtime.mjs"
+  }
+}

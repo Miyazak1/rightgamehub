@@ -47,9 +47,10 @@ const rangeFor = (header, size) => {
   return { start, end, partial: true };
 };
 
-const cspFor = capabilities => {
+const cspFor = (capabilities, structuredCourseware = false) => {
   const pointerLock = capabilities.includes('pointerLock') ? ' allow-pointer-lock' : '';
-  return `default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts${pointerLock}`;
+  const moduleSource = structuredCourseware ? ' blob:' : '';
+  return `default-src 'none'; script-src 'self'${moduleSource} 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts${pointerLock}`;
 };
 const permissionsFor = capabilities => `fullscreen=${capabilities.includes('fullscreen') ? '(self)' : '()'}, camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), payment=(), display-capture=(), clipboard-read=(), clipboard-write=()`;
 
@@ -86,7 +87,7 @@ export function createRuntimeEdgeApp({ repository, objectStore, runtimeDomain, l
     reply.header('Content-Type', expected.mime);
     reply.header('Content-Length', length);
     if (/^text\/html/.test(expected.mime)) {
-      reply.header('Content-Security-Policy', cspFor(manifest.approvedCapabilities));
+      reply.header('Content-Security-Policy', cspFor(manifest.approvedCapabilities, manifest.courseware?.runtime?.profile === 'structured-courseware'));
       reply.header('Permissions-Policy', permissionsFor(manifest.approvedCapabilities));
     }
     if (!selected.partial && request.headers['if-none-match'] === etag) return reply.status(304).send();

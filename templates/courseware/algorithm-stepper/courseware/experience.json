@@ -1,0 +1,63 @@
+{
+  "format": "mooyu.courseware-experience",
+  "schemaVersion": 1,
+  "engine": {
+    "id": "gas-equilibrium-reactor",
+    "version": 1,
+    "deterministic": true,
+    "snapshot": true,
+    "stateVariables": ["volume", "temperature", "equilibrium-constant", "total-units", "catalyst", "n2o4", "no2", "reaction-quotient", "progress"]
+  },
+  "defaultMode": "textbook",
+  "modes": [
+    {
+      "id": "textbook",
+      "kind": "textbook-lab",
+      "title": { "zh-CN": "教材实验", "en": "Textbook Lab" },
+      "sceneIds": ["control-equilibrium"],
+      "freedomLevel": "F1",
+      "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["particle-view", "qk-meter", "table", "history", "replay"],
+      "curiosityHook": { "zh-CN": "压缩、升温和催化剂为什么会产生完全不同的结果？", "en": "Why do compression, heating, and a catalyst produce fundamentally different results?" }
+    },
+    {
+      "id": "sandbox",
+      "kind": "free-sandbox",
+      "title": { "zh-CN": "反应器沙盒", "en": "Reactor Sandbox" },
+      "sceneIds": ["control-equilibrium"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["particle-view", "qk-meter", "table", "history", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "自由改变装料量、体积、温度和催化剂，能找到不同但等效的平衡方案吗？", "en": "Can different feed, volume, temperature, and catalyst choices reach equivalent equilibria?" }
+    },
+    {
+      "id": "production",
+      "kind": "scenario-challenge",
+      "title": { "zh-CN": "安全生产挑战", "en": "Safe Production Challenge" },
+      "sceneIds": ["control-equilibrium"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["particle-view", "qk-meter", "table", "history", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "如何增加 NO₂ 的物质的量，同时把它的浓度控制在安全线以下？", "en": "How can you increase the amount of NO₂ while keeping its concentration below a safety limit?" },
+      "challenge": {
+        "id": "safe-no2-batch",
+        "title": { "zh-CN": "安全 NO₂ 批次", "en": "Safe NO₂ Batch" },
+        "goal": { "zh-CN": "达到平衡后 NO₂ 不少于 0.60 mol、浓度不高于 0.50 mol/L，且温度不高于 318 K。", "en": "At equilibrium, produce at least 0.60 mol NO₂, keep concentration at or below 0.50 mol/L, and temperature at or below 318 K." },
+        "success": [
+          { "metric": "no2-amount", "operator": "gte", "value": 0.6 },
+          { "metric": "no2-concentration", "operator": "lte", "value": 0.5 },
+          { "metric": "temperature", "operator": "lte", "value": 318 }
+        ],
+        "attemptPolicy": { "maxAttempts": 4, "retry": "after-feedback" }
+      }
+    }
+  ],
+  "instruments": [
+    { "id": "particle-view", "kind": "probe", "title": { "zh-CN": "粒子模型", "en": "Particle Model" } },
+    { "id": "qk-meter", "kind": "comparison", "title": { "zh-CN": "Q/K 比较器", "en": "Q/K Comparator" } },
+    { "id": "table", "kind": "table", "title": { "zh-CN": "组成数据", "en": "Composition Data" } },
+    { "id": "history", "kind": "annotation", "title": { "zh-CN": "条件记录", "en": "Condition History" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "方案快照", "en": "Setup Snapshot" } },
+    { "id": "replay", "kind": "replay", "title": { "zh-CN": "平衡过程回放", "en": "Equilibrium Replay" } }
+  ]
+}

@@ -112,11 +112,20 @@ importers:
 
   packages/contracts: {}
 
+  packages/courseware-domain-packs: {}
+
+  packages/courseware-embed-sdk: {}
+
+  packages/courseware-runtime: {}
+
   packages/creator-tools:
     dependencies:
       '@gamehub/rules-sdk':
         specifier: workspace:*
         version: link:../rules-sdk
+      '@mooyu/courseware-runtime':
+        specifier: workspace:*
+        version: link:../courseware-runtime
 
   packages/host-contract: {}
 

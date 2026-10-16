@@ -1,22 +1,25 @@
 {
   "schemaVersion": 1,
   "objectives": [
-    { "id": "trace-insertion-sort", "text": { "zh-CN": "追踪插入排序每一步并识别有序区。", "en": "Trace insertion sort and identify its sorted prefix." } }
+    { "id": "predict-equilibrium-shift", "text": { "zh-CN": "使用 Q 与 K 的关系预测化学平衡移动方向。", "en": "Use the relationship between Q and K to predict the direction of equilibrium shift." } },
+    { "id": "distinguish-rate-equilibrium", "text": { "zh-CN": "区分催化剂对反应速率和平衡组成的不同影响。", "en": "Distinguish a catalyst's effect on reaction rate from its effect on equilibrium composition." } }
   ],
-  "prerequisites": [{ "zh-CN": "理解数组下标和大小比较。", "en": "Understands array indices and comparisons." }],
+  "prerequisites": [{ "zh-CN": "理解可逆反应、物质的量浓度和化学平衡常数。", "en": "Understands reversible reactions, molar concentration, and equilibrium constants." }],
   "misconceptions": [
-    { "id": "whole-array-sorted-each-step", "text": { "zh-CN": "误以为每一步都会让整个数组有序。", "en": "Assuming every step sorts the entire array." }, "objectiveIds": ["trace-insertion-sort"] }
+    { "id": "catalyst-shifts-equilibrium", "text": { "zh-CN": "误以为催化剂会改变平衡常数或平衡组成。", "en": "Assuming a catalyst changes the equilibrium constant or equilibrium composition." }, "objectiveIds": ["distinguish-rate-equilibrium"] },
+    { "id": "pressure-always-right", "text": { "zh-CN": "误以为增大压强总会使平衡正向移动。", "en": "Assuming higher pressure always shifts equilibrium toward products." }, "objectiveIds": ["predict-equilibrium-shift"] }
   ],
   "scenes": [
     {
-      "id": "step-through-sort", "type": "practice", "title": { "zh-CN": "逐步插入", "en": "Insert step by step" },
-      "objectiveIds": ["trace-insertion-sort"], "evidenceIds": ["insertion-sort-invariant"],
-      "component": { "type": "array-algorithm-stepper", "config": { "initial": [5, 2, 4, 1, 3] } },
-      "fallback": { "zh-CN": "若动画不可用，请在纸上标出每轮结束后的有序前缀。", "en": "If animation is unavailable, mark the sorted prefix after each pass on paper." }
+      "id": "control-equilibrium", "type": "simulate", "title": { "zh-CN": "调控 N₂O₄ ⇌ 2NO₂", "en": "Control N₂O₄ ⇌ 2NO₂" },
+      "objectiveIds": ["predict-equilibrium-shift", "distinguish-rate-equilibrium"], "evidenceIds": ["reaction-quotient-direction", "catalyst-equilibrium-claim"],
+      "component": { "type": "deterministic-equilibrium-simulator", "config": { "reaction": "N2O4 ⇌ 2NO2", "initialVolume": 1, "initialTemperature": 298, "initialKc": 0.36 } },
+      "fallback": { "zh-CN": "若动画不可用，请直接读取 Q、K 与最终浓度表；Q<K 时正向移动，Q>K 时逆向移动。", "en": "If animation is unavailable, use the Q, K, and final-concentration table; Q<K shifts forward and Q>K shifts backward." }
     }
   ],
   "checkpoints": [
-    { "id": "identify-prefix", "sceneId": "step-through-sort", "objectiveIds": ["trace-insertion-sort"], "kind": "multiple-choice", "prompt": { "zh-CN": "处理第三个元素后，哪个前缀保证有序？", "en": "After processing the third item, which prefix is guaranteed sorted?" }, "answer": "first-three" }
+    { "id": "predict-compression", "sceneId": "control-equilibrium", "objectiveIds": ["predict-equilibrium-shift"], "kind": "multiple-choice", "prompt": { "zh-CN": "恒温压缩容器后，N₂O₄ ⇌ 2NO₂ 的平衡向哪边移动？", "en": "After isothermal compression, which way does N₂O₄ ⇌ 2NO₂ shift?" }, "answer": "left" },
+    { "id": "predict-catalyst", "sceneId": "control-equilibrium", "objectiveIds": ["distinguish-rate-equilibrium"], "kind": "multiple-choice", "prompt": { "zh-CN": "加入催化剂后，最终平衡组成怎样变化？", "en": "How does a catalyst change the final equilibrium composition?" }, "answer": "unchanged" }
   ],
-  "completion": { "objectiveIds": ["trace-insertion-sort"], "checkpointIds": ["identify-prefix"] }
+  "completion": { "objectiveIds": ["predict-equilibrium-shift", "distinguish-rate-equilibrium"], "checkpointIds": ["predict-compression", "predict-catalyst"] }
 }

@@ -1,0 +1,22 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "math.quadratic",
+  "version": "1.0.0",
+  "kind": "domain",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:e99615e0178431f2f7acbdae20c94a181aaeff1c959111be9803d5c7ac6ce5ad",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "domain.function"
+  ],
+  "commands": [
+    "coefficient.set",
+    "sample.set",
+    "reference.toggle",
+    "model.reset"
+  ],
+  "dependencies": []
+}

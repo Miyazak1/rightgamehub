@@ -1,0 +1,152 @@
+{
+  "format": "mooyu.curriculum-textbook-baseline",
+  "schemaVersion": 1,
+  "id": "cn-hs.pep-first-baseline.2026",
+  "checkedAt": "2026-10-15",
+  "jurisdiction": "CN",
+  "educationStage": "upper-secondary",
+  "selectionPolicy": "platform-first-baseline",
+  "scopeNote": {
+    "zh-CN": "本基线用于墨鱼工坊首批可交互课件的章节映射。国家目录允许多出版社版本，各地实际选用也可能不同；本文件不声称人教版是全国唯一版本，后续可并列添加地方实际采用版本。",
+    "en": "This baseline supports the first MOOYU interactive-courseware mappings. The national catalog permits multiple publisher editions and regional adoption varies; it does not claim that PEP is the only edition and allows regional baselines to be added in parallel."
+  },
+  "authorities": [
+    {
+      "id": "moe.textbook-catalog.2023",
+      "kind": "national-catalog",
+      "title": { "zh-CN": "教育部办公厅关于印发2023年中小学教学用书目录的通知", "en": "MOE Notice on the 2023 National Textbook Catalog" },
+      "issuer": "中华人民共和国教育部",
+      "sourceUrl": "https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html"
+    },
+    {
+      "id": "pep.upper-secondary-set.11",
+      "kind": "publisher-catalog",
+      "title": { "zh-CN": "人教版第11套普通高中教科书", "en": "PEP 11th General Upper-secondary Textbook Set" },
+      "issuer": "人民教育出版社",
+      "sourceUrl": "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/"
+    },
+    {
+      "id": "yishui.no1-high-school.adoption.2026",
+      "kind": "regional-adoption-catalog",
+      "title": { "zh-CN": "沂水县第一中学2026年春季教科书使用目录（二）", "en": "Yishui No. 1 High School Spring 2026 Textbook Adoption Catalog II" },
+      "issuer": "沂水县人民政府（沂水县第一中学）",
+      "sourceUrl": "https://www.yishui.gov.cn/info/122819/488510.htm"
+    },
+    {
+      "id": "pep.math-a-selective-2.resources",
+      "kind": "publisher-resource",
+      "title": { "zh-CN": "高中数学A版选择性必修第二册教学资源", "en": "PEP Mathematics A Selective Compulsory Volume 2 Resources" },
+      "issuer": "人民教育出版社",
+      "sourceUrl": "https://www.pep.com.cn/xw/zt/xkzt/gsazy/gsaxbx2/"
+    },
+    {
+      "id": "smartedu.physics-required-1",
+      "kind": "official-digital-textbook",
+      "title": { "zh-CN": "普通高中教科书·物理必修第一册", "en": "General Upper-secondary Physics Compulsory Volume 1" },
+      "issuer": "国家智慧教育公共服务平台",
+      "sourceUrl": "https://r2-ndr.ykt.cbern.com.cn/edu_product/esp/assets_document/708256b6-6f06-4d14-89c7-4df16dfe3b81.pkg/pdf.pdf"
+    },
+    {
+      "id": "smartedu.chemistry-selective-1",
+      "kind": "official-digital-textbook",
+      "title": { "zh-CN": "普通高中教科书·化学选择性必修1 化学反应原理", "en": "General Upper-secondary Chemistry Selective Compulsory 1: Principles of Chemical Reactions" },
+      "issuer": "国家智慧教育公共服务平台",
+      "sourceUrl": "https://v2.ykt.cbern.com.cn/65/document/0f200f5b9af811ec9c6bfa20200f090a/pdf.pdf"
+    }
+  ],
+  "editions": [
+    {
+      "id": "pep.math-a.required-1.2019", "subjectId": "mathematics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·数学A版", "en": "General Upper-secondary Mathematics, Edition A" }, "volume": "必修第一册", "editionLabel": "人教A版（2019课标教材），第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.math-a.required-2.2019", "subjectId": "mathematics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·数学A版", "en": "General Upper-secondary Mathematics, Edition A" }, "volume": "必修第二册", "editionLabel": "人教A版（2019课标教材），第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.math-a.selective-1.2019", "subjectId": "mathematics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·数学A版", "en": "General Upper-secondary Mathematics, Edition A" }, "volume": "选择性必修第一册", "editionLabel": "人教A版（2019课标教材），第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.math-a.selective-2.2019",
+      "subjectId": "mathematics",
+      "publisher": "人民教育出版社",
+      "curriculumFamily": "普通高中课程标准（2017年版）配套教材",
+      "title": { "zh-CN": "普通高中教科书·数学A版", "en": "General Upper-secondary Mathematics, Edition A" },
+      "volume": "选择性必修第二册",
+      "editionLabel": "人教A版（2019课标教材），第1版",
+      "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书",
+      "isbn": "978-7-107-34597-5",
+      "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026", "pep.math-a-selective-2.resources"],
+      "sourceUrls": [
+        "https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html",
+        "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/",
+        "https://www.yishui.gov.cn/info/122819/488510.htm",
+        "https://www.pep.com.cn/xw/zt/xkzt/gsazy/gsaxbx2/"
+      ]
+    },
+    {
+      "id": "pep.math-a.selective-3.2019", "subjectId": "mathematics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·数学A版", "en": "General Upper-secondary Mathematics, Edition A" }, "volume": "选择性必修第三册", "editionLabel": "人教A版（2019课标教材），第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.physics.required-1.2019",
+      "subjectId": "physics",
+      "publisher": "人民教育出版社",
+      "curriculumFamily": "普通高中课程标准（2017年版）配套教材",
+      "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" },
+      "volume": "必修第一册",
+      "editionLabel": "2019年6月第1版",
+      "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书",
+      "isbn": "978-7-107-33576-1",
+      "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026", "smartedu.physics-required-1"],
+      "sourceUrls": [
+        "https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html",
+        "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/",
+        "https://www.yishui.gov.cn/info/122819/488510.htm",
+        "https://r2-ndr.ykt.cbern.com.cn/edu_product/esp/assets_document/708256b6-6f06-4d14-89c7-4df16dfe3b81.pkg/pdf.pdf"
+      ]
+    },
+    {
+      "id": "pep.physics.required-2.2019", "subjectId": "physics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" }, "volume": "必修第二册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.physics.required-3.2019", "subjectId": "physics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" }, "volume": "必修第三册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.physics.selective-1.2019", "subjectId": "physics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" }, "volume": "选择性必修第一册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.physics.selective-2.2019", "subjectId": "physics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" }, "volume": "选择性必修第二册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.physics.selective-3.2019", "subjectId": "physics", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·物理", "en": "General Upper-secondary Physics" }, "volume": "选择性必修第三册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.chemistry.required-1.2019", "subjectId": "chemistry", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·化学", "en": "General Upper-secondary Chemistry" }, "volume": "必修第一册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.chemistry.required-2.2019", "subjectId": "chemistry", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·化学", "en": "General Upper-secondary Chemistry" }, "volume": "必修第二册", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.chemistry.selective-1.2020",
+      "subjectId": "chemistry",
+      "publisher": "人民教育出版社",
+      "curriculumFamily": "普通高中课程标准（2017年版）配套教材",
+      "title": { "zh-CN": "普通高中教科书·化学", "en": "General Upper-secondary Chemistry" },
+      "volume": "选择性必修1 化学反应原理",
+      "editionLabel": "2020年5月第1版",
+      "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书",
+      "isbn": "978-7-107-34604-0",
+      "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026", "smartedu.chemistry-selective-1"],
+      "sourceUrls": [
+        "https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html",
+        "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/",
+        "https://www.yishui.gov.cn/info/122819/488510.htm",
+        "https://v2.ykt.cbern.com.cn/65/document/0f200f5b9af811ec9c6bfa20200f090a/pdf.pdf"
+      ]
+    },
+    {
+      "id": "pep.chemistry.selective-2.2020", "subjectId": "chemistry", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·化学", "en": "General Upper-secondary Chemistry" }, "volume": "选择性必修2 物质结构与性质", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    },
+    {
+      "id": "pep.chemistry.selective-3.2020", "subjectId": "chemistry", "publisher": "人民教育出版社", "curriculumFamily": "普通高中课程标准（2017年版）配套教材", "title": { "zh-CN": "普通高中教科书·化学", "en": "General Upper-secondary Chemistry" }, "volume": "选择性必修3 有机化学基础", "editionLabel": "第1版", "catalogLocator": "教育部2023年普通高中国家课程教学用书目录；人教社第11套普通高中教科书", "authorityIds": ["moe.textbook-catalog.2023", "pep.upper-secondary-set.11", "yishui.no1-high-school.adoption.2026"], "sourceUrls": ["https://www.moe.gov.cn/srcsite/A26/s8001/202305/t20230506_1058493.html", "https://www.pep.com.cn/xw/zt/rjwy/rjsd11tgzjksjs/", "https://www.yishui.gov.cn/info/122819/488510.htm"]
+    }
+  ]
+}

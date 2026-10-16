@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { crc32, deflateRawSync } from 'node:zlib';
+import { coursewareModuleFiles, coursewareRuntimeFiles, resolveCoursewareModuleGraph } from './courseware-modules.mjs';
 
 const require = createRequire(import.meta.url);
 const managedDirectory = '.mooyu';
@@ -44,16 +45,24 @@ async function fileRecord(root, relative) {
   return { relative, absolute, bytes, size:bytes.length, sha256:sha256(bytes) };
 }
 
+
 export async function loadCoursewareInventory(root) {
   const projectRoot = path.resolve(root);
   const manifest = await readJson(path.join(projectRoot, 'mooyu-courseware.json'));
-  const fixed = ['mooyu-courseware.json', manifest.course, manifest.evidence, manifest.tests];
+  const fixed = ['mooyu-courseware.json', manifest.course, manifest.experience, manifest.evidence, manifest.tests].filter(Boolean);
   const records = [];
   for (const relative of fixed) records.push(await fileRecord(projectRoot, relative));
+  const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+  if (moduleGraph) {
+    records.push(...coursewareModuleFiles(moduleGraph));
+    records.push({ relative:manifest.runtime.moduleLock,absolute:null,bytes:moduleGraph.lockBytes,size:moduleGraph.lockBytes.length,sha256:moduleGraph.lockSha256,generated:true });
+    records.push(...await coursewareRuntimeFiles(manifest));
+  }
   const distRoot = path.join(projectRoot, 'dist');
   const walk = async (directory, prefix = 'dist') => {
     for (const entry of (await fs.readdir(directory, { withFileTypes:true })).sort((left, right) => left.name.localeCompare(right.name, 'en'))) {
       const relative = `${prefix}/${entry.name}`;
+      if (relative === manifest.runtime?.moduleLock) continue;
       if (entry.isSymbolicLink()) throw new CoursewareToolkitError('COURSEWARE_SYMLINK_FORBIDDEN', `${relative} 是符号链接。`);
       if (entry.isDirectory()) await walk(path.join(directory, entry.name), relative);
       else if (entry.isFile()) records.push(await fileRecord(projectRoot, relative));
@@ -66,7 +75,7 @@ export async function loadCoursewareInventory(root) {
   const totalBytes = deduplicated.reduce((sum, record) => sum + record.size, 0);
   if (totalBytes > 128 * 1024 * 1024) throw new CoursewareToolkitError('COURSEWARE_PROJECT_TOO_LARGE', '课程包超过 128 MiB。');
   const digest = sha256(Buffer.concat(deduplicated.flatMap(record => [Buffer.from(record.relative), Buffer.from([0]), record.bytes, Buffer.from([0])])));
-  return { root:projectRoot,manifest,files:deduplicated,totalBytes,projectDigest:digest };
+  return { root:projectRoot,manifest,moduleGraph,files:deduplicated,totalBytes,projectDigest:digest };
 }
 
 export async function describeCoursewareProject(root, inspect) {
@@ -74,12 +83,13 @@ export async function describeCoursewareProject(root, inspect) {
   try { inventory = await loadCoursewareInventory(root); } catch {}
   if (!inventory) return { kind:'interactive-courseware',root:path.resolve(root),ok:false,report };
   const course = await readJson(path.join(inventory.root, ...inventory.manifest.course.split('/')));
+  const experience = inventory.manifest.experience ? await readJson(path.join(inventory.root, ...inventory.manifest.experience.split('/'))) : null;
   const evidence = await readJson(path.join(inventory.root, ...inventory.manifest.evidence.split('/')));
   const journeys = await readJson(path.join(inventory.root, ...inventory.manifest.tests.split('/')));
   return {
     kind:'interactive-courseware',root:inventory.root,ok:report.ok,id:inventory.manifest.id,title:inventory.manifest.title,
     defaultLocale:inventory.manifest.defaultLocale,locales:inventory.manifest.locales,subjects:inventory.manifest.subjects,
-    counts:{ objectives:course.objectives?.length ?? 0,scenes:course.scenes?.length ?? 0,checkpoints:course.checkpoints?.length ?? 0,sources:evidence.sources?.length ?? 0,claims:evidence.claims?.length ?? 0,journeys:journeys.journeys?.length ?? 0,files:inventory.files.length },
+    counts:{ objectives:course.objectives?.length ?? 0,scenes:course.scenes?.length ?? 0,checkpoints:course.checkpoints?.length ?? 0,modes:experience?.modes?.length ?? 0,challenges:experience?.modes?.filter(mode => mode.kind === 'scenario-challenge').length ?? 0,modules:inventory.moduleGraph?.records.length ?? 0,sources:evidence.sources?.length ?? 0,claims:evidence.claims?.length ?? 0,journeys:journeys.journeys?.length ?? 0,files:inventory.files.length },
     totalBytes:inventory.totalBytes,projectDigest:inventory.projectDigest,report,
   };
 }
@@ -115,11 +125,14 @@ export async function buildCoursewareProject(root, { inspect, outputDirectory } 
   await ensureOutputDirectory(output);
   for (const file of inventory.files) {
     const destination = path.join(output, ...file.relative.split('/'));
-    await fs.mkdir(path.dirname(destination), { recursive:true }); await fs.copyFile(file.absolute, destination);
+    await fs.mkdir(path.dirname(destination), { recursive:true });
+    if (file.absolute) await fs.copyFile(file.absolute, destination);
+    else await fs.writeFile(destination, file.bytes, { flag:'wx' });
   }
   const buildReport = {
     format:'mooyu.courseware-build',version:1,coursewareId:inventory.manifest.id,projectDigest:inventory.projectDigest,
-    files:inventory.files.map(({ relative,size,sha256:hash }) => ({ path:relative,bytes:size,sha256:hash })),totalBytes:inventory.totalBytes,
+    files:inventory.files.map(({ relative,size,sha256:hash,generated }) => ({ path:relative,bytes:size,sha256:hash,...(generated?{generated:true}:{}) })),totalBytes:inventory.totalBytes,
+    ...(inventory.moduleGraph ? { moduleLock:{ path:inventory.manifest.runtime.moduleLock,sha256:inventory.moduleGraph.lockSha256,modules:inventory.moduleGraph.records.length,roots:inventory.moduleGraph.lock.roots } } : {}),
   };
   await fs.writeFile(path.join(output, 'build-report.json'), `${JSON.stringify(buildReport, null, 2)}\n`, { flag:'wx' });
   return { ...buildReport,output,reused:false };
@@ -229,23 +242,27 @@ export async function publishCoursewareSubmission(root,{apiClient,platformUrl}={
 }
 
 export function createCoursewarePreviewHandler(root) {
-  const distRoot = path.join(path.resolve(root), 'dist');
+  const projectRoot = path.resolve(root);
   return async (request,response) => {
     try {
+      const inventory = await loadCoursewareInventory(projectRoot);
       const requestUrl = new URL(request.url ?? '/', 'http://localhost'); let relative = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '');
-      if (!relative || relative.endsWith('/')) relative += 'index.html';
+      if (!relative || relative.endsWith('/')) relative = inventory.manifest.build.entry;
       if (!safeRelativePath(relative)) { response.writeHead(400); response.end('Bad request'); return; }
-      let absolute = path.resolve(distRoot, ...relative.split('/'));
-      if (absolute !== distRoot && !absolute.startsWith(`${distRoot}${path.sep}`)) { response.writeHead(403); response.end('Forbidden'); return; }
-      let stat = await fs.lstat(absolute).catch(() => null);
-      if ((!stat || !stat.isFile()) && !path.extname(relative)) { absolute = path.join(distRoot, 'index.html'); stat = await fs.lstat(absolute).catch(() => null); }
-      if (!stat?.isFile() || stat.isSymbolicLink()) { response.writeHead(404); response.end('Not found'); return; }
-      const content = await fs.readFile(absolute);
+      let file = inventory.files.find(record => record.relative === relative);
+      if (!file) {
+        const entryDirectory = path.posix.dirname(inventory.manifest.build.entry);
+        const entryRelative = entryDirectory === '.' ? relative : path.posix.join(entryDirectory, relative);
+        if (safeRelativePath(entryRelative)) file = inventory.files.find(record => record.relative === entryRelative);
+      }
+      if (!file && !path.extname(relative)) file = inventory.files.find(record => record.relative === inventory.manifest.build.entry);
+      if (!file) { response.writeHead(404); response.end('Not found'); return; }
+      const structured = inventory.manifest.build.profile === 'mooyu-structured-v1';
       response.writeHead(200, {
-        'Content-Type':mimeTypes.get(path.extname(absolute).toLowerCase()) ?? 'application/octet-stream','Content-Length':content.length,
+        'Content-Type':mimeTypes.get(path.extname(file.relative).toLowerCase()) ?? 'application/octet-stream','Content-Length':file.bytes.length,
         'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
-        'Content-Security-Policy':"default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'",
-      }); response.end(content);
+        'Content-Security-Policy':`default-src 'self' data: blob:; script-src 'self'${structured ? ' blob:' : ''} 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src '${structured ? 'self' : 'none'}'; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'`,
+      }); response.end(file.bytes);
     } catch { response.writeHead(500); response.end('Preview error'); }
   };
 }
@@ -272,6 +289,15 @@ export async function testCoursewareProject(root, { inspect, browserModule = pro
       const page = await browser.newPage(); const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.addInitScript(() => { window.__mooyuLearningMessages = []; window.addEventListener('message', event => { if (event.data?.protocol === 'mooyu.learning.v1') window.__mooyuLearningMessages.push(event.data); }); });
       await page.goto(preview.url, { waitUntil:'load' });
+      await page.evaluate(locale => window.postMessage({
+        protocol: 'mooyu.learning.v1',
+        direction: 'host-to-courseware',
+        type: 'host.command',
+        timestamp: new Date().toISOString(),
+        payload: { name: 'locale.set', value: { locale } }
+      }, location.origin), journey.locale);
+      try { await page.waitForFunction(locale => document.documentElement.lang === locale, journey.locale); }
+      catch { throw new CoursewareToolkitError('COURSEWARE_LOCALE_NOT_APPLIED', `${journey.id} 未应用 Journey 声明的语言 ${journey.locale}。`); }
       for (const step of journey.steps) {
         if (step.action === 'enter') await page.locator(`[data-mooyu-scene="${step.target}"]`).waitFor();
         else if (step.action === 'set') await page.locator(`[data-mooyu-target="${step.target}"],#${step.target}`).first().evaluate((element, value) => { element.value = String(value); element.dispatchEvent(new Event('input', { bubbles:true })); element.dispatchEvent(new Event('change', { bubbles:true })); }, step.value);

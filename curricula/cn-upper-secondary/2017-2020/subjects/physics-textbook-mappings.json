@@ -1,0 +1,1337 @@
+{
+  "format": "mooyu.curriculum-knowledge-map-fragment",
+  "schemaVersion": 1,
+  "id": "cn-hs.physics.textbook-mappings.pep.2026",
+  "subjectId": "physics",
+  "nodes": [],
+  "relations": [],
+  "clusters": [],
+  "textbookMappings": [
+    {
+      "id": "pep.map.physics.required-1.experimental-science",
+      "nodeId": "cn-hs.physics.required-1.experimental-science",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 运动的描述",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-1.particle-model",
+      "nodeId": "cn-hs.physics.required-1.particle-model",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 运动的描述",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-1.kinematics",
+      "nodeId": "cn-hs.physics.required-1.kinematics",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 运动的描述",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-1.free-fall",
+      "nodeId": "cn-hs.physics.required-1.free-fall",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 匀变速直线运动的研究",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.work-power",
+      "nodeId": "cn-hs.physics.required-2.work-power",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 机械能守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.kinetic-energy-theorem",
+      "nodeId": "cn-hs.physics.required-2.kinetic-energy-theorem",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 机械能守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.potential-energy",
+      "nodeId": "cn-hs.physics.required-2.potential-energy",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 机械能守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.mechanical-energy-conservation",
+      "nodeId": "cn-hs.physics.required-2.mechanical-energy-conservation",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 机械能守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.curved-projectile-motion",
+      "nodeId": "cn-hs.physics.required-2.curved-projectile-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 抛体运动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.circular-motion",
+      "nodeId": "cn-hs.physics.required-2.circular-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 圆周运动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.gravitation-orbits",
+      "nodeId": "cn-hs.physics.required-2.gravitation-orbits",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 万有引力与宇宙航行",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-2.newtonian-limits-spacetime",
+      "nodeId": "cn-hs.physics.required-2.newtonian-limits-spacetime",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 万有引力与宇宙航行",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.charge-coulomb",
+      "nodeId": "cn-hs.physics.required-3.charge-coulomb",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第九章 静电场及其应用、第十章 静电场中的能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.electric-field",
+      "nodeId": "cn-hs.physics.required-3.electric-field",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第九章 静电场及其应用、第十章 静电场中的能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.potential-particle-motion",
+      "nodeId": "cn-hs.physics.required-3.potential-particle-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第九章 静电场及其应用、第十章 静电场中的能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.capacitor",
+      "nodeId": "cn-hs.physics.required-3.capacitor",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "section",
+      "locator": "第十章 静电场中的能量；电容器相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.resistance-resistivity",
+      "nodeId": "cn-hs.physics.required-3.resistance-resistivity",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.series-parallel",
+      "nodeId": "cn-hs.physics.required-3.series-parallel",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.closed-circuit-ohm",
+      "nodeId": "cn-hs.physics.required-3.closed-circuit-ohm",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.electric-energy-safety",
+      "nodeId": "cn-hs.physics.required-3.electric-energy-safety",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.magnetic-field-flux",
+      "nodeId": "cn-hs.physics.required-3.magnetic-field-flux",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十三章 电磁感应与电磁波初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.induction",
+      "nodeId": "cn-hs.physics.required-3.induction",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十三章 电磁感应与电磁波初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.em-waves-quantization",
+      "nodeId": "cn-hs.physics.required-3.em-waves-quantization",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十三章 电磁感应与电磁波初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.energy-sources-nuclear",
+      "nodeId": "cn-hs.physics.required-3.energy-sources-nuclear",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十四章 能源与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.energy-conservation-direction",
+      "nodeId": "cn-hs.physics.required-3.energy-conservation-direction",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十四章 能源与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.required-3.resources-environment",
+      "nodeId": "cn-hs.physics.required-3.resources-environment",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十四章 能源与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.impulse-momentum",
+      "nodeId": "cn-hs.physics.selective-required-1.impulse-momentum",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 动量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.momentum-conservation",
+      "nodeId": "cn-hs.physics.selective-required-1.momentum-conservation",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 动量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.collisions",
+      "nodeId": "cn-hs.physics.selective-required-1.collisions",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 动量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.simple-harmonic-motion",
+      "nodeId": "cn-hs.physics.selective-required-1.simple-harmonic-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 机械振动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.pendulum",
+      "nodeId": "cn-hs.physics.selective-required-1.pendulum",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 机械振动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.forced-resonance",
+      "nodeId": "cn-hs.physics.selective-required-1.forced-resonance",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 机械振动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.mechanical-waves",
+      "nodeId": "cn-hs.physics.selective-required-1.mechanical-waves",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 机械波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.wave-phenomena",
+      "nodeId": "cn-hs.physics.selective-required-1.wave-phenomena",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 机械波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.doppler-effect",
+      "nodeId": "cn-hs.physics.selective-required-1.doppler-effect",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 机械波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.refraction",
+      "nodeId": "cn-hs.physics.selective-required-1.refraction",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.total-internal-reflection",
+      "nodeId": "cn-hs.physics.selective-required-1.total-internal-reflection",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.wave-optics",
+      "nodeId": "cn-hs.physics.selective-required-1.wave-optics",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-1.laser",
+      "nodeId": "cn-hs.physics.selective-required-1.laser",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.ampere-force",
+      "nodeId": "cn-hs.physics.selective-required-2.ampere-force",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第一章 安培力与洛伦兹力",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.lorentz-force",
+      "nodeId": "cn-hs.physics.selective-required-2.lorentz-force",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第一章 安培力与洛伦兹力",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.charged-particle-motion",
+      "nodeId": "cn-hs.physics.selective-required-2.charged-particle-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第一章 安培力与洛伦兹力",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.lenz-law",
+      "nodeId": "cn-hs.physics.selective-required-2.lenz-law",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第二章 电磁感应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.faraday-law",
+      "nodeId": "cn-hs.physics.selective-required-2.faraday-law",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第二章 电磁感应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.self-induction-eddy",
+      "nodeId": "cn-hs.physics.selective-required-2.self-induction-eddy",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第二章 电磁感应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.alternating-current",
+      "nodeId": "cn-hs.physics.selective-required-2.alternating-current",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第三章 交变电流",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.transformer-transmission",
+      "nodeId": "cn-hs.physics.selective-required-2.transformer-transmission",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第三章 交变电流",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.generators-motors",
+      "nodeId": "cn-hs.physics.selective-required-2.generators-motors",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第三章 交变电流",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.maxwell-field",
+      "nodeId": "cn-hs.physics.selective-required-2.maxwell-field",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 电磁振荡与电磁波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.em-oscillation",
+      "nodeId": "cn-hs.physics.selective-required-2.em-oscillation",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 电磁振荡与电磁波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.em-wave-spectrum",
+      "nodeId": "cn-hs.physics.selective-required-2.em-wave-spectrum",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 电磁振荡与电磁波",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.sensor-conversion",
+      "nodeId": "cn-hs.physics.selective-required-2.sensor-conversion",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 传感器",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-2.sensor-control",
+      "nodeId": "cn-hs.physics.selective-required-2.sensor-control",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 传感器",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.molecular-size-theory",
+      "nodeId": "cn-hs.physics.selective-required-3.molecular-size-theory",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第一章 分子动理论",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.diffusion-brownian",
+      "nodeId": "cn-hs.physics.selective-required-3.diffusion-brownian",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第一章 分子动理论",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.material-structures",
+      "nodeId": "cn-hs.physics.selective-required-3.material-structures",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第二章 气体、固体和液体",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.surface-tension",
+      "nodeId": "cn-hs.physics.selective-required-3.surface-tension",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第二章 气体、固体和液体",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.gas-laws",
+      "nodeId": "cn-hs.physics.selective-required-3.gas-laws",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第二章 气体、固体和液体",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.first-law",
+      "nodeId": "cn-hs.physics.selective-required-3.first-law",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第三章 热力学定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.energy-conservation",
+      "nodeId": "cn-hs.physics.selective-required-3.energy-conservation",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第三章 热力学定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.second-law",
+      "nodeId": "cn-hs.physics.selective-required-3.second-law",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第三章 热力学定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.atomic-model-levels",
+      "nodeId": "cn-hs.physics.selective-required-3.atomic-model-levels",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第四章 原子结构和波粒二象性",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.nucleus-reactions",
+      "nodeId": "cn-hs.physics.selective-required-3.nucleus-reactions",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第五章 原子核",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.radioactivity",
+      "nodeId": "cn-hs.physics.selective-required-3.radioactivity",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第五章 原子核",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.binding-fission-fusion",
+      "nodeId": "cn-hs.physics.selective-required-3.binding-fission-fusion",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第五章 原子核",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.photoelectric-effect",
+      "nodeId": "cn-hs.physics.selective-required-3.photoelectric-effect",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第四章 原子结构和波粒二象性",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.selective-required-3.matter-waves-quantum",
+      "nodeId": "cn-hs.physics.selective-required-3.matter-waves-quantum",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第四章 原子结构和波粒二象性",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.instantaneous-speed",
+      "nodeId": "cn-hs.physics.experiment.instantaneous-speed",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 运动的描述",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.spring-force-deformation",
+      "nodeId": "cn-hs.physics.experiment.spring-force-deformation",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 相互作用——力",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.force-composition",
+      "nodeId": "cn-hs.physics.experiment.force-composition",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 相互作用——力",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.acceleration-force-mass",
+      "nodeId": "cn-hs.physics.experiment.acceleration-force-mass",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+      "baselineEditionId": "pep.physics.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 运动和力的关系",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.mechanical-energy-conservation",
+      "nodeId": "cn-hs.physics.experiment.mechanical-energy-conservation",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 机械能守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.projectile-motion",
+      "nodeId": "cn-hs.physics.experiment.projectile-motion",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 抛体运动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.centripetal-force",
+      "nodeId": "cn-hs.physics.experiment.centripetal-force",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第二册，第1版",
+      "baselineEditionId": "pep.physics.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 圆周运动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.capacitor-charge-discharge",
+      "nodeId": "cn-hs.physics.experiment.capacitor-charge-discharge",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "section",
+      "locator": "第十章 静电场中的能量；电容器相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.length-measurement",
+      "nodeId": "cn-hs.physics.experiment.length-measurement",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.resistivity",
+      "nodeId": "cn-hs.physics.experiment.resistivity",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.multimeter",
+      "nodeId": "cn-hs.physics.experiment.multimeter",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.source-emf-internal-resistance",
+      "nodeId": "cn-hs.physics.experiment.source-emf-internal-resistance",
+      "publisher": "人民教育出版社",
+      "edition": "物理必修第三册，第1版",
+      "baselineEditionId": "pep.physics.required-3.2019",
+      "precision": "chapter",
+      "locator": "第十一章 电路及其应用、第十二章 电能 能量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.momentum-conservation",
+      "nodeId": "cn-hs.physics.experiment.momentum-conservation",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 动量守恒定律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.pendulum-gravity",
+      "nodeId": "cn-hs.physics.experiment.pendulum-gravity",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 机械振动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.glass-refractive-index",
+      "nodeId": "cn-hs.physics.experiment.glass-refractive-index",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.double-slit-wavelength",
+      "nodeId": "cn-hs.physics.experiment.double-slit-wavelength",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第一册，第1版",
+      "baselineEditionId": "pep.physics.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 光",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.induced-current-direction",
+      "nodeId": "cn-hs.physics.experiment.induced-current-direction",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第二章 电磁感应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.transformer-turns-voltage",
+      "nodeId": "cn-hs.physics.experiment.transformer-turns-voltage",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第三章 交变电流",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.sensor-control-device",
+      "nodeId": "cn-hs.physics.experiment.sensor-control-device",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第二册，第1版",
+      "baselineEditionId": "pep.physics.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 传感器",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.oil-film-molecule-size",
+      "nodeId": "cn-hs.physics.experiment.oil-film-molecule-size",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第一章 分子动理论",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.physics.experiment.isothermal-gas-pressure-volume",
+      "nodeId": "cn-hs.physics.experiment.isothermal-gas-pressure-volume",
+      "publisher": "人民教育出版社",
+      "edition": "物理选择性必修第三册，第1版",
+      "baselineEditionId": "pep.physics.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第二章 气体、固体和液体",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    }
+  ],
+  "review": {
+    "status": "source-checked",
+    "sourceChecked": true,
+    "subjectChecked": false,
+    "note": "平台首套人教版教材章节映射；只覆盖必修、选择性必修的原子知识节点，结构节点与学校自主选修不计入教材映射分母。"
+  }
+}

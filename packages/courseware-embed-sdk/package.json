@@ -1,0 +1,15 @@
+{
+  "name": "@mooyu/courseware-embed-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./v2": "./src/index-v2.mjs",
+    "./protocol": "./src/protocol.mjs",
+    "./protocol-v2": "./src/protocol-v2.mjs",
+    "./gateway": "./src/gateway.mjs",
+    "./gateway-v2": "./src/gateway-v2.mjs",
+    "./policy": "./src/policy.mjs"
+  }
+}

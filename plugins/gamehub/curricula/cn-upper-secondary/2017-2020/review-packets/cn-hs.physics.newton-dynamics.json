@@ -1,0 +1,668 @@
+{
+  "format": "mooyu.curriculum-review-packet",
+  "schemaVersion": 1,
+  "id": "review.cn-hs.physics.newton-dynamics",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "briefId": "cn-hs.physics.newton-dynamics",
+  "subjectId": "physics",
+  "clusterId": "cn-hs.physics.cluster.newton-dynamics",
+  "status": "pending",
+  "reviewPolicy": [
+    {
+      "zh-CN": "此文件是复核工作表，不是审校结论；所有检查项默认为 pending。",
+      "en": "This file is a review worksheet, not an approval record; every check starts as pending."
+    },
+    {
+      "zh-CN": "只有具名学科审校人完成节点、关系与知识簇检查后，才能把源图谱改为 subject-checked。",
+      "en": "The source map may become subject-checked only after a named subject reviewer completes node, relation, and cluster checks."
+    },
+    {
+      "zh-CN": "教材映射必须基于实际采用版本录入，不得从课程标准页码推测教材章节。",
+      "en": "Textbook mappings must use an actually adopted edition and must not infer textbook chapters from curriculum-standard pages."
+    }
+  ],
+  "nodeReviews": [
+    {
+      "nodeId": "cn-hs.physics.required-1.forces-hooke-friction",
+      "title": {
+        "zh-CN": "重力、弹力、胡克定律与摩擦力",
+        "en": "Gravity, Elasticity, Hooke's Law, and Friction"
+      },
+      "type": "principle",
+      "parentId": "cn-hs.physics.required-1.interaction-laws",
+      "curriculumLevels": [
+        "required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 8，第21页：1.2.1",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "diagram",
+        "experimental"
+      ],
+      "observableVariables": [
+        "mass",
+        "gravity",
+        "extension",
+        "spring-constant",
+        "normal-force",
+        "friction-coefficient"
+      ],
+      "interactionCandidates": [
+        "spring-lab",
+        "friction-lab",
+        "force-probe",
+        "graph-scrubber"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+      "title": {
+        "zh-CN": "力的合成、分解与共点力平衡",
+        "en": "Force Composition, Decomposition, and Equilibrium"
+      },
+      "type": "method",
+      "parentId": "cn-hs.physics.required-1.interaction-laws",
+      "curriculumLevels": [
+        "required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 8，第21页：1.2.2",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "diagram",
+        "experimental"
+      ],
+      "observableVariables": [
+        "force-x",
+        "force-y",
+        "resultant",
+        "equilibrium"
+      ],
+      "interactionCandidates": [
+        "force-builder",
+        "component-decomposition",
+        "free-body-diagram",
+        "equilibrium-check"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.newton-laws",
+      "title": {
+        "zh-CN": "牛顿运动定律、超重与失重",
+        "en": "Newton's Laws, Apparent Weight, and Weightlessness"
+      },
+      "type": "principle",
+      "parentId": "cn-hs.physics.required-1.interaction-laws",
+      "curriculumLevels": [
+        "required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 8，第21-22页：1.2.3",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "verbal",
+        "symbolic",
+        "graph",
+        "diagram",
+        "experimental"
+      ],
+      "observableVariables": [
+        "force",
+        "mass",
+        "acceleration",
+        "apparent-weight"
+      ],
+      "interactionCandidates": [
+        "newton-lab",
+        "free-body-diagram",
+        "mass-force-sweep",
+        "elevator-simulation"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "relationReviews": [
+    {
+      "relationId": "physics.forces-to-composition",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.physics.required-1.forces-hooke-friction",
+      "toNodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.force-composition-to-newton",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+      "toNodeId": "cn-hs.physics.required-1.newton-laws",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.kinematics-to-newton",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.physics.required-1.kinematics",
+      "toNodeId": "cn-hs.physics.required-1.newton-laws",
+      "scope": "inbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.newton-to-circular",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.physics.required-1.newton-laws",
+      "toNodeId": "cn-hs.physics.required-2.circular-motion",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.newton-to-relativity-limits",
+      "type": "contrastsWith",
+      "fromNodeId": "cn-hs.physics.required-1.newton-laws",
+      "toNodeId": "cn-hs.physics.required-2.newtonian-limits-spacetime",
+      "scope": "outbound",
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 8，第25页：牛顿力学局限性",
+          "scope": "verbatim"
+        }
+      ],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.newton-to-impulse",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.physics.required-1.newton-laws",
+      "toNodeId": "cn-hs.physics.selective-required-1.impulse-momentum",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.hooke-applied-in-spring-experiment",
+      "type": "appliedIn",
+      "fromNodeId": "cn-hs.physics.required-1.forces-hooke-friction",
+      "toNodeId": "cn-hs.physics.experiment.spring-force-deformation",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.force-composition-applied-in-experiment",
+      "type": "appliedIn",
+      "fromNodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+      "toNodeId": "cn-hs.physics.experiment.force-composition",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "physics.newton-applied-in-acceleration-experiment",
+      "type": "appliedIn",
+      "fromNodeId": "cn-hs.physics.required-1.newton-laws",
+      "toNodeId": "cn-hs.physics.experiment.acceleration-force-mass",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "clusterReview": {
+    "title": {
+      "zh-CN": "受力分析、牛顿定律与运动",
+      "en": "Force Analysis, Newton's Laws, and Motion"
+    },
+    "coreNodeIds": [
+      "cn-hs.physics.required-1.force-composition-equilibrium",
+      "cn-hs.physics.required-1.newton-laws"
+    ],
+    "runtimeRequirements": [
+      "physics.mechanics",
+      "instrument.free-body-diagram",
+      "instrument.force-builder",
+      "instrument.mass-force-sweep",
+      "instrument.experiment-workflow",
+      "instrument.checkpoint"
+    ],
+    "checks": [
+      {
+        "code": "cluster-coherence",
+        "label": {
+          "zh-CN": "确认知识簇围绕一个可验证的学习进阶，而非简单拼接主题。",
+          "en": "Confirm the cluster forms a testable learning progression rather than a topic bundle."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "core-node-selection",
+        "label": {
+          "zh-CN": "确认核心节点足以代表课件学习目标。",
+          "en": "Confirm core nodes adequately represent the courseware objectives."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "runtime-fit",
+        "label": {
+          "zh-CN": "确认 Domain Pack 与 Instrument 能表达概念且结果可复现。",
+          "en": "Confirm Domain Packs and Instruments express the concepts with reproducible results."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "assessment-alignment",
+        "label": {
+          "zh-CN": "确认每个学习目标都有可观察、可判定的学习证据。",
+          "en": "Confirm every objective has observable, assessable learning evidence."
+        },
+        "required": true,
+        "status": "pending"
+      }
+    ]
+  },
+  "textbookMappingIntake": {
+    "status": "complete",
+    "requiredEditionFields": [
+      "publisher",
+      "edition",
+      "volume",
+      "chapter",
+      "section",
+      "page-range",
+      "isbn-or-catalog-id"
+    ],
+    "nodeRows": [
+      {
+        "nodeId": "cn-hs.physics.required-1.forces-hooke-friction",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.physics.r1.forces-hooke-friction",
+            "publisher": "人民教育出版社",
+            "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+            "locator": "第三章 相互作用——力；第1节 重力与弹力、第2节 摩擦力"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.physics.r1.force-composition-equilibrium",
+            "publisher": "人民教育出版社",
+            "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+            "locator": "第三章 相互作用——力；第4节 力的合成和分解、第5节 共点力的平衡"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.physics.required-1.newton-laws",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.physics.r1.newton-laws",
+            "publisher": "人民教育出版社",
+            "edition": "物理必修第一册，2019年6月第1版，ISBN 978-7-107-33576-1",
+            "locator": "第三章第3节 牛顿第三定律；第四章 运动和力的关系，第1—5节（牛顿第一定律、实验、牛顿第二定律、力学单位制及应用）"
+          }
+        ]
+      }
+    ]
+  },
+  "releaseConditions": [
+    {
+      "zh-CN": "所有必需检查项均为 pass 或有明确的 not-applicable 理由。",
+      "en": "Every required check is pass or has an explicit not-applicable rationale."
+    },
+    {
+      "zh-CN": "具名审校人和时间写回知识地图，节点与知识簇 subjectChecked=true。",
+      "en": "A named reviewer and time are recorded in the knowledge map and nodes and cluster have subjectChecked=true."
+    },
+    {
+      "zh-CN": "至少一个实际采用教材版本完成全部核心节点映射。",
+      "en": "At least one actually adopted textbook edition maps every core node."
+    },
+    {
+      "zh-CN": "课件规格重新校验后清除已满足的阻断项；学科审校必须保持独立人工签署。",
+      "en": "Revalidation clears satisfied blockers; subject review remains an independent human sign-off."
+    }
+  ]
+}

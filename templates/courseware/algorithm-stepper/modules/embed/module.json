@@ -1,0 +1,21 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "embed.bridge",
+  "version": "1.0.0",
+  "kind": "embed",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:d33bd4cc60ab8df4463f9d3750c4e4b2eeef597b72772e753e65bbea55aaf56a",
+  "hotSwap": "session",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "embed.bridge"
+  ],
+  "commands": [
+    "embed.ready",
+    "embed.command.received",
+    "embed.state.exported"
+  ],
+  "dependencies": []
+}

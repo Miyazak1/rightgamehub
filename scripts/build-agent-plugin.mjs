@@ -23,4 +23,5 @@ for (const file of ['creator-manifest.json','README.md','.gitignore']) await cop
 await copyFile(new URL('templates/creator-bingo/source/bingo.json',root),new URL('source/bingo.json',templateRoot));
 await cp(new URL('templates/courseware/',root),new URL('templates/courseware/',pluginRoot),{ recursive:true,force:true });
 await cp(new URL('packages/contracts/courseware/',root),new URL('contracts/courseware/',pluginRoot),{ recursive:true,force:true });
-console.log('Built the portable MOOYU.FUN creator publisher, local toolkit Doctor, Bingo template, and interactive courseware contracts.');
+await cp(new URL('curricula/',root),new URL('curricula/',pluginRoot),{ recursive:true,force:true });
+console.log('Built the portable MOOYU.FUN creator publisher, local toolkit Doctor, courseware contracts, and curriculum knowledge maps.');

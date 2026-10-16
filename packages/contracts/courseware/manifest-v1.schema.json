@@ -27,12 +27,13 @@
     "course": { "$ref": "#/$defs/localPath" },
     "evidence": { "$ref": "#/$defs/localPath" },
     "tests": { "$ref": "#/$defs/localPath" },
+    "experience": { "$ref": "#/$defs/localPath" },
     "build": {
       "type": "object",
       "additionalProperties": false,
       "required": ["profile", "entry"],
       "properties": {
-        "profile": { "const": "mooyu-static-v1" },
+        "profile": { "enum": ["mooyu-static-v1", "mooyu-structured-v1"] },
         "entry": { "const": "dist/index.html" }
       }
     },
@@ -43,7 +44,11 @@
       "properties": {
         "kind": { "enum": ["static-web", "static-wasm"] },
         "learningSdk": { "const": 1 },
-        "capabilities": { "type": "array", "uniqueItems": true, "items": { "enum": ["fullscreen", "pointerLock", "localSave", "fileExport", "shareLinks", "learningProgress", "learningEvents", "assessmentResult"] } }
+        "capabilities": { "type": "array", "uniqueItems": true, "items": { "enum": ["fullscreen", "pointerLock", "localSave", "fileExport", "shareLinks", "learningProgress", "learningEvents", "assessmentResult"] } },
+        "profile": { "enum": ["legacy-web", "structured-courseware"] },
+        "modules": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/jsonPath" } },
+        "rootModules": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/moduleId" } },
+        "moduleLock": { "const": "dist/mooyu-modules.lock.json" }
       }
     },
     "licenses": {
@@ -56,10 +61,25 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "build": { "properties": { "profile": { "const": "mooyu-structured-v1" } }, "required": ["profile"] } }, "required": ["build"] },
+      "then": {
+        "properties": {
+          "runtime": {
+            "required": ["kind", "learningSdk", "capabilities", "profile", "modules", "rootModules", "moduleLock"],
+            "properties": { "profile": { "const": "structured-courseware" } }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
     "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$", "maxLength": 24 },
     "localPath": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+    "jsonPath": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._/-]*\\.json$" },
+    "moduleId": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
     "localizedText": {
       "type": "object",
       "minProperties": 1,

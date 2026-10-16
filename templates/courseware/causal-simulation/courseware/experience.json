@@ -1,0 +1,62 @@
+{
+  "format": "mooyu.courseware-experience",
+  "schemaVersion": 1,
+  "engine": {
+    "id": "newtonian-cart-1d",
+    "version": 1,
+    "deterministic": true,
+    "snapshot": true,
+    "stateVariables": ["force", "mass", "time", "position", "velocity", "acceleration"]
+  },
+  "defaultMode": "textbook",
+  "modes": [
+    {
+      "id": "textbook",
+      "kind": "textbook-lab",
+      "title": { "zh-CN": "教材实验", "en": "Textbook Lab" },
+      "sceneIds": ["run-force-trials"],
+      "freedomLevel": "F1",
+      "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["trace", "vector", "graph", "table", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "相同的力推动更重的小车时，运动会怎样改变？", "en": "How does the same force change the motion of a heavier cart?" }
+    },
+    {
+      "id": "sandbox",
+      "kind": "free-sandbox",
+      "title": { "zh-CN": "自由实验", "en": "Free Sandbox" },
+      "sceneIds": ["run-force-trials"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["trace", "vector", "graph", "table", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "自己搭配载荷与推力，找出运动结果相同但方案不同的组合。", "en": "Build different payload and force combinations that produce the same motion." }
+    },
+    {
+      "id": "delivery",
+      "kind": "scenario-challenge",
+      "title": { "zh-CN": "货运挑战", "en": "Delivery Challenge" },
+      "sceneIds": ["run-force-trials"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["trace", "vector", "graph", "table", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "一辆救援车怎样在三次试车内，把足够重的补给准确送进卸货区？", "en": "Can a rescue cart deliver enough supplies into the unloading zone within three trials?" },
+      "challenge": {
+        "id": "deliver-supplies",
+        "title": { "zh-CN": "救援补给投送", "en": "Rescue Supply Delivery" },
+        "goal": { "zh-CN": "载荷至少 4 kg，并在 2.5 秒时进入 6.5–8.5 m 卸货区。", "en": "Carry at least 4 kg and enter the 6.5–8.5 m unloading zone at 2.5 seconds." },
+        "success": [
+          { "metric": "mass", "operator": "gte", "value": 4 },
+          { "metric": "position", "operator": "between", "values": [6.5, 8.5] }
+        ],
+        "attemptPolicy": { "maxAttempts": 3, "retry": "after-feedback" }
+      }
+    }
+  ],
+  "instruments": [
+    { "id": "trace", "kind": "trace", "title": { "zh-CN": "等时间轨迹", "en": "Equal-time Trace" } },
+    { "id": "vector", "kind": "vector", "title": { "zh-CN": "力矢量", "en": "Force Vector" } },
+    { "id": "graph", "kind": "graph", "title": { "zh-CN": "运动图像", "en": "Motion Graph" } },
+    { "id": "table", "kind": "table", "title": { "zh-CN": "实验记录", "en": "Trial Table" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "方案对照", "en": "Trial Comparison" } },
+    { "id": "replay", "kind": "replay", "title": { "zh-CN": "回放", "en": "Replay" } }
+  ]
+}

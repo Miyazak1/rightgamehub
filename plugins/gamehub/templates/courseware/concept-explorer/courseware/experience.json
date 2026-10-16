@@ -1,0 +1,61 @@
+{
+  "format": "mooyu.courseware-experience",
+  "schemaVersion": 1,
+  "engine": {
+    "id": "quadratic-graph-2d",
+    "version": 1,
+    "deterministic": true,
+    "snapshot": true,
+    "stateVariables": ["coefficient", "probe-x", "probe-y", "reference-coefficient"]
+  },
+  "defaultMode": "textbook",
+  "modes": [
+    {
+      "id": "textbook",
+      "kind": "textbook-lab",
+      "title": { "zh-CN": "教材探索", "en": "Textbook Lab" },
+      "sceneIds": ["explore-a"],
+      "freedomLevel": "F1",
+      "allowedCommands": ["object.configure", "object.place", "simulation.run", "simulation.pause", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["probe", "graph", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "一个系数怎样同时控制抛物线的方向和宽窄？", "en": "How can one coefficient control both the direction and width of a parabola?" }
+    },
+    {
+      "id": "sandbox",
+      "kind": "free-sandbox",
+      "title": { "zh-CN": "函数沙盒", "en": "Function Sandbox" },
+      "sceneIds": ["explore-a"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["probe", "graph", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "能否用不同的曲线，在同一个点相遇？", "en": "Can different curves meet at the same point?" }
+    },
+    {
+      "id": "target",
+      "kind": "scenario-challenge",
+      "title": { "zh-CN": "轨迹设计", "en": "Trajectory Design" },
+      "sceneIds": ["explore-a"],
+      "freedomLevel": "F2",
+      "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"],
+      "instrumentIds": ["probe", "graph", "comparison", "replay"],
+      "curiosityHook": { "zh-CN": "怎样设计一条恰好穿过目标点的抛物线？", "en": "How do you design a parabola that passes exactly through a target?" },
+      "challenge": {
+        "id": "hit-target-point",
+        "title": { "zh-CN": "穿过目标点", "en": "Hit the Target Point" },
+        "goal": { "zh-CN": "让 y=ax² 经过目标点 (2, -8)。", "en": "Make y=ax² pass through the target point (2, -8)." },
+        "success": [
+          { "metric": "coefficient", "operator": "eq", "value": -2 },
+          { "metric": "probe-x", "operator": "eq", "value": 2 },
+          { "metric": "probe-y", "operator": "eq", "value": -8 }
+        ],
+        "attemptPolicy": { "maxAttempts": 5, "retry": "after-feedback" }
+      }
+    }
+  ],
+  "instruments": [
+    { "id": "probe", "kind": "probe", "title": { "zh-CN": "坐标探针", "en": "Coordinate Probe" } },
+    { "id": "graph", "kind": "graph", "title": { "zh-CN": "函数图像", "en": "Function Graph" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "曲线快照", "en": "Curve Snapshot" } },
+    { "id": "replay", "kind": "replay", "title": { "zh-CN": "变化回放", "en": "Change Replay" } }
+  ]
+}

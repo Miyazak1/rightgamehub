@@ -26,6 +26,11 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [79 结构化课件模块运行时与可控热插拔契约](./79-modular-courseware-runtime.zh-CN.md) | **统一 Runtime Kernel、八类可选模块、能力依赖、状态所有权、生命周期、热插拔等级、固定 Release 边界与当前实现证据** |
+| [78 互动科学、数学课件与虚拟实验产品调研](./78-interactive-learning-products-benchmark.zh-CN.md) | **中国与海外近 20 个平台对标、自由实验/场景玩法/作者工具/嵌入协议矩阵，以及墨鱼工坊三科运行时与 B0—B4 路线调整** |
+| [77 好奇心驱动的情境化互动课件架构](./77-curiosity-driven-scenario-courseware-architecture.zh-CN.md) | **科学引擎与场景体验分离、F2/F3 建构式自由实验、科学状态驱动的挑战玩法、兴趣假设、试玩门禁和三科路线** |
+| [76 中国普通高中知识地图、场景组合与互动课件覆盖方案](./76-china-high-school-knowledge-map.zh-CN.md) | **以现行课程标准建立知识图谱、Learning Cluster、场景组合、覆盖口径和课件开发门禁** |
+| [75 交互课件托管与外部嵌入方案](./75-courseware-embed-service-roadmap.zh-CN.md) | **墨鱼工坊统一托管不可变课件、知识地图/运行时/场景体验/嵌入四轨路线、Embed Protocol、进度与隐私边界及安全模型** |
 | [74 Agent 原生互动课件插件平台完整设计](./74-agent-native-interactive-courseware-platform.zh-CN.md) | **外部 Agent 本地创作、统一课件规范、插件/Skill/MCP/CLI 分工、官方组件、验证门禁、发布运行、自动更新与分阶段验收** |
 | [73 中英文国际化实施规范](./73-internationalization-plan.zh-CN.md) | **语言决策、文案目录、用户内容边界、I1—I4 实施顺序与双语验收要求** |
 | [GameHub 开放游戏计划](./open-game-program-growth-strategy.zh-CN.md) | **以开放游戏提供免费游玩、保护作者权益，并通过作品传播、结构化反馈和真实贡献形成平台增长闭环** |

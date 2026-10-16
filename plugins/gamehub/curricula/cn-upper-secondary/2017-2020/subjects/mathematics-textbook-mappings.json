@@ -1,0 +1,1742 @@
+{
+  "format": "mooyu.curriculum-knowledge-map-fragment",
+  "schemaVersion": 1,
+  "id": "cn-hs.mathematics.textbook-mappings.pep.2026",
+  "subjectId": "mathematics",
+  "nodes": [],
+  "relations": [],
+  "clusters": [],
+  "textbookMappings": [
+    {
+      "id": "pep.map.math.required.preliminary.sets",
+      "nodeId": "cn-hs.math.required.preliminary.sets",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；集合相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.preliminary.logic",
+      "nodeId": "cn-hs.math.required.preliminary.logic",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；常用逻辑用语相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.preliminary.equality-inequality",
+      "nodeId": "cn-hs.math.required.preliminary.equality-inequality",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.preliminary.quadratic-connections",
+      "nodeId": "cn-hs.math.required.preliminary.quadratic-connections",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.concepts-properties",
+      "nodeId": "cn-hs.math.required.functions.concepts-properties",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.power-exponential-logarithmic",
+      "nodeId": "cn-hs.math.required.functions.power-exponential-logarithmic",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.trigonometric",
+      "nodeId": "cn-hs.math.required.functions.trigonometric",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.applications",
+      "nodeId": "cn-hs.math.required.functions.applications",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.quadratic-graph-parameters",
+      "nodeId": "cn-hs.math.required.functions.quadratic-graph-parameters",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.geometry-algebra.plane-vectors",
+      "nodeId": "cn-hs.math.required.geometry-algebra.plane-vectors",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.geometry-algebra.complex",
+      "nodeId": "cn-hs.math.required.geometry-algebra.complex",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 复数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.geometry-algebra.solid-geometry",
+      "nodeId": "cn-hs.math.required.geometry-algebra.solid-geometry",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability-statistics.probability",
+      "nodeId": "cn-hs.math.required.probability-statistics.probability",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第十章 概率",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability-statistics.statistics",
+      "nodeId": "cn-hs.math.required.probability-statistics.statistics",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.modeling-inquiry",
+      "nodeId": "cn-hs.math.required.modeling-inquiry",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "cross-volume",
+      "locator": "必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.functions.sequences",
+      "nodeId": "cn-hs.math.selective.functions.sequences",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 数列",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.functions.derivative",
+      "nodeId": "cn-hs.math.selective.functions.derivative",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 一元函数的导数及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.geometry-algebra.spatial-vectors",
+      "nodeId": "cn-hs.math.selective.geometry-algebra.spatial-vectors",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.geometry-algebra.analytic-geometry",
+      "nodeId": "cn-hs.math.selective.geometry-algebra.analytic-geometry",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 圆锥曲线的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability-statistics.counting",
+      "nodeId": "cn-hs.math.selective.probability-statistics.counting",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第六章 计数原理",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability-statistics.probability",
+      "nodeId": "cn-hs.math.selective.probability-statistics.probability",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability-statistics.statistics",
+      "nodeId": "cn-hs.math.selective.probability-statistics.statistics",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第八章 成对数据的统计分析",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.modeling-inquiry",
+      "nodeId": "cn-hs.math.selective.modeling-inquiry",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "cross-volume",
+      "locator": "选择性必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.sets.concept-representation",
+      "nodeId": "cn-hs.math.required.sets.concept-representation",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；集合相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.sets.relations",
+      "nodeId": "cn-hs.math.required.sets.relations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；集合相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.sets.operations",
+      "nodeId": "cn-hs.math.required.sets.operations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；集合相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.sets.venn-language",
+      "nodeId": "cn-hs.math.required.sets.venn-language",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；集合相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.logic.conditions",
+      "nodeId": "cn-hs.math.required.logic.conditions",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；常用逻辑用语相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.logic.quantifiers",
+      "nodeId": "cn-hs.math.required.logic.quantifiers",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；常用逻辑用语相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.logic.quantified-negation",
+      "nodeId": "cn-hs.math.required.logic.quantified-negation",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "section",
+      "locator": "第一章 集合与常用逻辑用语；常用逻辑用语相关小节",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.inequality.properties",
+      "nodeId": "cn-hs.math.required.inequality.properties",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.inequality.basic",
+      "nodeId": "cn-hs.math.required.inequality.basic",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.quadratic.root-zero",
+      "nodeId": "cn-hs.math.required.quadratic.root-zero",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.quadratic.inequality-graph",
+      "nodeId": "cn-hs.math.required.quadratic.inequality-graph",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 一元二次函数、方程和不等式",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.definition-domain",
+      "nodeId": "cn-hs.math.required.functions.definition-domain",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.representations",
+      "nodeId": "cn-hs.math.required.functions.representations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.piecewise",
+      "nodeId": "cn-hs.math.required.functions.piecewise",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.monotonicity-extrema",
+      "nodeId": "cn-hs.math.required.functions.monotonicity-extrema",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.parity-periodicity",
+      "nodeId": "cn-hs.math.required.functions.parity-periodicity",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 函数的概念与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.power",
+      "nodeId": "cn-hs.math.required.functions.power",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.real-exponents",
+      "nodeId": "cn-hs.math.required.functions.real-exponents",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.exponential",
+      "nodeId": "cn-hs.math.required.functions.exponential",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.logarithm",
+      "nodeId": "cn-hs.math.required.functions.logarithm",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.exp-log-inverse",
+      "nodeId": "cn-hs.math.required.functions.exp-log-inverse",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.angle-radian",
+      "nodeId": "cn-hs.math.required.trigonometry.angle-radian",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.unit-circle",
+      "nodeId": "cn-hs.math.required.trigonometry.unit-circle",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.properties",
+      "nodeId": "cn-hs.math.required.trigonometry.properties",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.identities",
+      "nodeId": "cn-hs.math.required.trigonometry.identities",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.transformations",
+      "nodeId": "cn-hs.math.required.trigonometry.transformations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.trigonometry.sinusoid-parameters",
+      "nodeId": "cn-hs.math.required.trigonometry.sinusoid-parameters",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第五章 三角函数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.bisection",
+      "nodeId": "cn-hs.math.required.functions.bisection",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.model-selection",
+      "nodeId": "cn-hs.math.required.functions.model-selection",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.functions.growth-comparison",
+      "nodeId": "cn-hs.math.required.functions.growth-comparison",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 指数函数与对数函数；函数应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.concept",
+      "nodeId": "cn-hs.math.required.vectors.concept",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.add-subtract",
+      "nodeId": "cn-hs.math.required.vectors.add-subtract",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.scalar-collinearity",
+      "nodeId": "cn-hs.math.required.vectors.scalar-collinearity",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.dot-projection",
+      "nodeId": "cn-hs.math.required.vectors.dot-projection",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.basis-coordinates",
+      "nodeId": "cn-hs.math.required.vectors.basis-coordinates",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.coordinate-operations",
+      "nodeId": "cn-hs.math.required.vectors.coordinate-operations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.applications",
+      "nodeId": "cn-hs.math.required.vectors.applications",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.vectors.sine-cosine-laws",
+      "nodeId": "cn-hs.math.required.vectors.sine-cosine-laws",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 平面向量及其应用",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.complex.concept-geometry",
+      "nodeId": "cn-hs.math.required.complex.concept-geometry",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 复数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.complex.operations",
+      "nodeId": "cn-hs.math.required.complex.operations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 复数",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.figures",
+      "nodeId": "cn-hs.math.required.solid.figures",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.surface-volume",
+      "nodeId": "cn-hs.math.required.solid.surface-volume",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.oblique-drawing",
+      "nodeId": "cn-hs.math.required.solid.oblique-drawing",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.incidence-facts",
+      "nodeId": "cn-hs.math.required.solid.incidence-facts",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.parallel-perpendicular-properties",
+      "nodeId": "cn-hs.math.required.solid.parallel-perpendicular-properties",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.parallel-perpendicular-criteria",
+      "nodeId": "cn-hs.math.required.solid.parallel-perpendicular-criteria",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.solid.position-proofs",
+      "nodeId": "cn-hs.math.required.solid.position-proofs",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 立体几何初步",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability.sample-space-events",
+      "nodeId": "cn-hs.math.required.probability.sample-space-events",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第十章 概率",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability.classical-model",
+      "nodeId": "cn-hs.math.required.probability.classical-model",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第十章 概率",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability.laws-frequency",
+      "nodeId": "cn-hs.math.required.probability.laws-frequency",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第十章 概率",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.probability.independence",
+      "nodeId": "cn-hs.math.required.probability.independence",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第十章 概率",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.data-sources",
+      "nodeId": "cn-hs.math.required.statistics.data-sources",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.population-sample",
+      "nodeId": "cn-hs.math.required.statistics.population-sample",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.simple-random-sampling",
+      "nodeId": "cn-hs.math.required.statistics.simple-random-sampling",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.stratified-sampling",
+      "nodeId": "cn-hs.math.required.statistics.stratified-sampling",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.sampling-design",
+      "nodeId": "cn-hs.math.required.statistics.sampling-design",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.charts",
+      "nodeId": "cn-hs.math.required.statistics.charts",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.central-tendency",
+      "nodeId": "cn-hs.math.required.statistics.central-tendency",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.dispersion",
+      "nodeId": "cn-hs.math.required.statistics.dispersion",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.statistics.distribution-percentile",
+      "nodeId": "cn-hs.math.required.statistics.distribution-percentile",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第二册，第1版",
+      "baselineEditionId": "pep.math-a.required-2.2019",
+      "precision": "chapter",
+      "locator": "第九章 统计",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.modeling.process",
+      "nodeId": "cn-hs.math.required.modeling.process",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "cross-volume",
+      "locator": "必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.inquiry.process",
+      "nodeId": "cn-hs.math.required.inquiry.process",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "cross-volume",
+      "locator": "必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.research.lifecycle",
+      "nodeId": "cn-hs.math.required.research.lifecycle",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "cross-volume",
+      "locator": "必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.required.research.reporting",
+      "nodeId": "cn-hs.math.required.research.reporting",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.required-1.2019",
+      "precision": "cross-volume",
+      "locator": "必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.sequences.concept-representations",
+      "nodeId": "cn-hs.math.selective.sequences.concept-representations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 数列",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.sequences.arithmetic",
+      "nodeId": "cn-hs.math.selective.sequences.arithmetic",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 数列",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.sequences.geometric",
+      "nodeId": "cn-hs.math.selective.sequences.geometric",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 数列",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.sequences.induction",
+      "nodeId": "cn-hs.math.selective.sequences.induction",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+      "baselineEditionId": "pep.math-a.selective-2.2019",
+      "precision": "chapter",
+      "locator": "第四章 数列",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.coordinates-distance",
+      "nodeId": "cn-hs.math.selective.spatial.coordinates-distance",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.vector-operations",
+      "nodeId": "cn-hs.math.selective.spatial.vector-operations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.basis-dot-projection",
+      "nodeId": "cn-hs.math.selective.spatial.basis-dot-projection",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.direction-normal",
+      "nodeId": "cn-hs.math.selective.spatial.direction-normal",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.relations-angles",
+      "nodeId": "cn-hs.math.selective.spatial.relations-angles",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.spatial.distance-angle-algorithms",
+      "nodeId": "cn-hs.math.selective.spatial.distance-angle-algorithms",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 空间向量与立体几何",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.analytic.lines",
+      "nodeId": "cn-hs.math.selective.analytic.lines",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 直线和圆的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.analytic.circles",
+      "nodeId": "cn-hs.math.selective.analytic.circles",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 直线和圆的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.analytic.ellipse",
+      "nodeId": "cn-hs.math.selective.analytic.ellipse",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 圆锥曲线的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.analytic.parabola-hyperbola",
+      "nodeId": "cn-hs.math.selective.analytic.parabola-hyperbola",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 圆锥曲线的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.analytic.coordinate-method",
+      "nodeId": "cn-hs.math.selective.analytic.coordinate-method",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第一册，第1版",
+      "baselineEditionId": "pep.math-a.selective-1.2019",
+      "precision": "chapter",
+      "locator": "第三章 圆锥曲线的方程",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.counting.add-multiply",
+      "nodeId": "cn-hs.math.selective.counting.add-multiply",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第六章 计数原理",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.counting.permutations-combinations",
+      "nodeId": "cn-hs.math.selective.counting.permutations-combinations",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第六章 计数原理",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.counting.binomial",
+      "nodeId": "cn-hs.math.selective.counting.binomial",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第六章 计数原理",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.conditional",
+      "nodeId": "cn-hs.math.selective.probability.conditional",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.total-bayes",
+      "nodeId": "cn-hs.math.selective.probability.total-bayes",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.discrete-variable",
+      "nodeId": "cn-hs.math.selective.probability.discrete-variable",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.binomial",
+      "nodeId": "cn-hs.math.selective.probability.binomial",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.hypergeometric",
+      "nodeId": "cn-hs.math.selective.probability.hypergeometric",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.probability.normal",
+      "nodeId": "cn-hs.math.selective.probability.normal",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第七章 随机变量及其分布",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.statistics.correlation",
+      "nodeId": "cn-hs.math.selective.statistics.correlation",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第八章 成对数据的统计分析",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.statistics.regression",
+      "nodeId": "cn-hs.math.selective.statistics.regression",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第八章 成对数据的统计分析",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.statistics.contingency-independence",
+      "nodeId": "cn-hs.math.selective.statistics.contingency-independence",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "chapter",
+      "locator": "第八章 成对数据的统计分析",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.math.selective.research.extension",
+      "nodeId": "cn-hs.math.selective.research.extension",
+      "publisher": "人民教育出版社",
+      "edition": "数学A版选择性必修第三册，第1版",
+      "baselineEditionId": "pep.math-a.selective-3.2019",
+      "precision": "cross-volume",
+      "locator": "选择性必修教材中的数学建模、数学探究与课题研究活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    }
+  ],
+  "review": {
+    "status": "source-checked",
+    "sourceChecked": true,
+    "subjectChecked": false,
+    "note": "平台首套人教版教材章节映射；只覆盖必修、选择性必修的原子知识节点，结构节点与学校自主选修不计入教材映射分母。"
+  }
+}

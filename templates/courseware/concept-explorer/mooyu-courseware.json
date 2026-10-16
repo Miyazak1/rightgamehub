@@ -9,9 +9,10 @@
   "subjects": ["mathematics", "algebra"],
   "audience": { "stages": ["lower-secondary", "upper-secondary"], "minimumAge": 12 },
   "course": "courseware/course.json",
+  "experience": "courseware/experience.json",
   "evidence": "evidence/sources.json",
   "tests": "tests/journeys.json",
-  "build": { "profile": "mooyu-static-v1", "entry": "dist/index.html" },
-  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"] },
+  "build": { "profile": "mooyu-structured-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["math.quadratic", "instrument.measurement", "component.workbench", "challenge.quadratic-target", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
   "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
 }

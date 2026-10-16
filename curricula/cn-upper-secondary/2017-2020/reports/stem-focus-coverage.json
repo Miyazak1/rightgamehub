@@ -1,0 +1,570 @@
+{
+  "format": "mooyu.curriculum-focus-coverage",
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-15T08:18:42.948Z",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "policy": {
+    "activeSubjects": [
+      "mathematics",
+      "physics",
+      "chemistry"
+    ],
+    "frozenSubjects": [
+      "chinese",
+      "english",
+      "ideological-political",
+      "history",
+      "geography",
+      "biology",
+      "information-technology",
+      "general-technology",
+      "arts",
+      "music",
+      "fine-arts",
+      "physical-education-health",
+      "japanese",
+      "russian",
+      "german",
+      "french",
+      "spanish"
+    ],
+    "rule": "三科完成门禁通过前，不继续拆分其他学科；顶层学科根节点不计作已完成覆盖。"
+  },
+  "aggregate": {
+    "nodes": 496,
+    "relations": 252,
+    "clusters": 89,
+    "textbookMappings": 280,
+    "sourceCheckedNodes": 496,
+    "subjectCheckedNodes": 0
+  },
+  "subjects": [
+    {
+      "subjectId": "mathematics",
+      "title": {
+        "zh-CN": "数学",
+        "en": "Mathematics"
+      },
+      "stage": "source-mapped-review-pending",
+      "coverage": {
+        "nodes": 181,
+        "relations": 95,
+        "clusters": 26,
+        "textbookMappings": 121,
+        "sourceCheckedNodes": 181,
+        "subjectCheckedNodes": 0
+      },
+      "gates": {
+        "sourceTraceability": {
+          "passed": true,
+          "current": 181,
+          "target": 181
+        },
+        "subjectReview": {
+          "passed": false,
+          "current": 0,
+          "target": 181
+        },
+        "textbookMapping": {
+          "passed": true,
+          "current": 121,
+          "target": 121,
+          "scope": "required-and-selective-required-atomic-nodes"
+        },
+        "representativeClusters": {
+          "passed": true,
+          "current": 26,
+          "target": 3
+        },
+        "representativeCourseware": {
+          "passed": true,
+          "current": 1,
+          "target": 1
+        },
+        "c4Courseware": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        },
+        "externalEmbedAcceptance": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        }
+      },
+      "courseware": [
+        {
+          "id": "coverage.math.quadratic-shape-explorer",
+          "subjectId": "mathematics",
+          "clusterId": "cn-hs.math.cluster.quadratic-functions-equations-inequalities",
+          "packageId": "quadratic-shape-explorer",
+          "packagePath": "templates/courseware/concept-explorer",
+          "coverageLevel": "representative-prototype",
+          "engineeringStatus": "doctor-verified",
+          "evidence": {
+            "doctor": true,
+            "bilingual": true,
+            "keyboardComplete": true,
+            "reducedMotion": true,
+            "embedHostCount": 2,
+            "browserJourneyCount": 0,
+            "subjectReviewed": false
+          }
+        }
+      ],
+      "topCoursewareCandidates": [
+        {
+          "clusterId": "cn-hs.math.cluster.derivative-and-optimization",
+          "title": {
+            "zh-CN": "导数、函数变化与优化",
+            "en": "Derivatives, Function Change, and Optimization"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.math.selective.derivative.rate-limit",
+            "cn-hs.math.selective.derivative.monotonicity",
+            "cn-hs.math.selective.derivative.extrema-optimization"
+          ],
+          "runtimeRequirements": [
+            "math.calculus",
+            "instrument.secant-tangent",
+            "instrument.graph-derivative-link",
+            "instrument.sign-chart",
+            "instrument.optimization",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.math.cluster.combinatorics",
+          "title": {
+            "zh-CN": "计数原理、排列组合与二项式",
+            "en": "Counting Principles, Combinatorics, and Binomial Expansion"
+          },
+          "score": 34,
+          "coreNodeIds": [
+            "cn-hs.math.selective.counting.add-multiply",
+            "cn-hs.math.selective.counting.permutations-combinations"
+          ],
+          "runtimeRequirements": [
+            "math.combinatorics",
+            "instrument.counting-tree",
+            "instrument.arrangement-builder",
+            "instrument.pascal-triangle",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.math.cluster.elective-calculus",
+          "title": {
+            "zh-CN": "极限、导数、微分与积分",
+            "en": "Limits, Derivatives, Differentials, and Integrals"
+          },
+          "score": 34,
+          "coreNodeIds": [
+            "cn-hs.math.elective.a.calculus.function-limits-continuity",
+            "cn-hs.math.elective.a.calculus.derivative-differential",
+            "cn-hs.math.elective.a.calculus.definite-integral"
+          ],
+          "runtimeRequirements": [
+            "math.calculus",
+            "instrument.limit-visualizer",
+            "instrument.derivative-link",
+            "instrument.integral-accumulator",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.math.cluster.elective-linear-algebra",
+          "title": {
+            "zh-CN": "空间向量、矩阵与线性方程组",
+            "en": "Spatial Vectors, Matrices, and Linear Systems"
+          },
+          "score": 34,
+          "coreNodeIds": [
+            "cn-hs.math.elective.a.spatial-algebra.vector-space",
+            "cn-hs.math.elective.a.spatial-algebra.matrices-determinants",
+            "cn-hs.math.elective.a.spatial-algebra.linear-systems"
+          ],
+          "runtimeRequirements": [
+            "math.linear-algebra",
+            "instrument.vector-space-lab",
+            "instrument.matrix-transform",
+            "instrument.row-reduction-stepper",
+            "instrument.spatial-view"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.math.cluster.function-representations-and-properties",
+          "title": {
+            "zh-CN": "函数多表征与性质",
+            "en": "Function Representations and Properties"
+          },
+          "score": 34,
+          "coreNodeIds": [
+            "cn-hs.math.required.functions.representations",
+            "cn-hs.math.required.functions.monotonicity-extrema"
+          ],
+          "runtimeRequirements": [
+            "math.functions",
+            "instrument.probe",
+            "instrument.table",
+            "instrument.interval-brush",
+            "instrument.representation-switch",
+            "instrument.checkpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "subjectId": "physics",
+      "title": {
+        "zh-CN": "物理",
+        "en": "Physics"
+      },
+      "stage": "source-mapped-review-pending",
+      "coverage": {
+        "nodes": 185,
+        "relations": 86,
+        "clusters": 36,
+        "textbookMappings": 91,
+        "sourceCheckedNodes": 185,
+        "subjectCheckedNodes": 0
+      },
+      "gates": {
+        "sourceTraceability": {
+          "passed": true,
+          "current": 185,
+          "target": 185
+        },
+        "subjectReview": {
+          "passed": false,
+          "current": 0,
+          "target": 185
+        },
+        "textbookMapping": {
+          "passed": true,
+          "current": 91,
+          "target": 91,
+          "scope": "required-and-selective-required-atomic-nodes"
+        },
+        "representativeClusters": {
+          "passed": true,
+          "current": 36,
+          "target": 3
+        },
+        "representativeCourseware": {
+          "passed": true,
+          "current": 1,
+          "target": 1
+        },
+        "c4Courseware": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        },
+        "externalEmbedAcceptance": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        }
+      },
+      "courseware": [
+        {
+          "id": "coverage.physics.force-motion-lab",
+          "subjectId": "physics",
+          "clusterId": "cn-hs.physics.cluster.newton-dynamics",
+          "briefId": "cn-hs.physics.newton-dynamics",
+          "packageId": "force-motion-lab",
+          "packagePath": "templates/courseware/causal-simulation",
+          "coverageLevel": "representative-prototype",
+          "engineeringStatus": "doctor-verified",
+          "evidence": {
+            "doctor": true,
+            "bilingual": true,
+            "keyboardComplete": true,
+            "reducedMotion": true,
+            "embedHostCount": 2,
+            "browserJourneyCount": 0,
+            "subjectReviewed": false
+          }
+        }
+      ],
+      "topCoursewareCandidates": [
+        {
+          "clusterId": "cn-hs.physics.cluster.induction-ac-grid",
+          "title": {
+            "zh-CN": "电磁感应、交流电与电网",
+            "en": "Electromagnetic Induction, Alternating Current, and the Grid"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.physics.selective-required-2.faraday-law",
+            "cn-hs.physics.selective-required-2.transformer-transmission"
+          ],
+          "runtimeRequirements": [
+            "physics.electromagnetism",
+            "instrument.induction-lab",
+            "instrument.flux-time-graph",
+            "instrument.oscilloscope",
+            "instrument.transformer-lab",
+            "instrument.grid-simulation",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.physics.cluster.kinematics",
+          "title": {
+            "zh-CN": "一维运动、图像与自由落体",
+            "en": "One-dimensional Motion, Graphs, and Free Fall"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.physics.required-1.kinematics",
+            "cn-hs.physics.required-1.free-fall"
+          ],
+          "runtimeRequirements": [
+            "physics.kinematics",
+            "instrument.motion-lab",
+            "instrument.graph-scrubber",
+            "instrument.trace",
+            "instrument.experiment-workflow",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.physics.cluster.mechanical-energy",
+          "title": {
+            "zh-CN": "功、机械能与守恒",
+            "en": "Work, Mechanical Energy, and Conservation"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.physics.required-2.kinetic-energy-theorem",
+            "cn-hs.physics.required-2.mechanical-energy-conservation"
+          ],
+          "runtimeRequirements": [
+            "physics.energy",
+            "instrument.energy-bar-chart",
+            "instrument.work-energy-trace",
+            "instrument.loss-toggle",
+            "instrument.experiment-workflow",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.physics.cluster.momentum-collisions",
+          "title": {
+            "zh-CN": "冲量、动量守恒与碰撞",
+            "en": "Impulse, Momentum Conservation, and Collisions"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.physics.selective-required-1.momentum-conservation",
+            "cn-hs.physics.selective-required-1.collisions"
+          ],
+          "runtimeRequirements": [
+            "physics.momentum",
+            "instrument.collision-lab",
+            "instrument.momentum-vector",
+            "instrument.impulse-graph",
+            "instrument.energy-bar-chart",
+            "instrument.checkpoint"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.physics.cluster.newton-dynamics",
+          "title": {
+            "zh-CN": "受力分析、牛顿定律与运动",
+            "en": "Force Analysis, Newton's Laws, and Motion"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.physics.required-1.force-composition-equilibrium",
+            "cn-hs.physics.required-1.newton-laws"
+          ],
+          "runtimeRequirements": [
+            "physics.mechanics",
+            "instrument.free-body-diagram",
+            "instrument.force-builder",
+            "instrument.mass-force-sweep",
+            "instrument.experiment-workflow",
+            "instrument.checkpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "subjectId": "chemistry",
+      "title": {
+        "zh-CN": "化学",
+        "en": "Chemistry"
+      },
+      "stage": "source-mapped-review-pending",
+      "coverage": {
+        "nodes": 130,
+        "relations": 71,
+        "clusters": 27,
+        "textbookMappings": 68,
+        "sourceCheckedNodes": 130,
+        "subjectCheckedNodes": 0
+      },
+      "gates": {
+        "sourceTraceability": {
+          "passed": true,
+          "current": 130,
+          "target": 130
+        },
+        "subjectReview": {
+          "passed": false,
+          "current": 0,
+          "target": 130
+        },
+        "textbookMapping": {
+          "passed": true,
+          "current": 68,
+          "target": 68,
+          "scope": "required-and-selective-required-atomic-nodes"
+        },
+        "representativeClusters": {
+          "passed": true,
+          "current": 27,
+          "target": 3
+        },
+        "representativeCourseware": {
+          "passed": true,
+          "current": 1,
+          "target": 1
+        },
+        "c4Courseware": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        },
+        "externalEmbedAcceptance": {
+          "passed": false,
+          "current": 0,
+          "target": 1
+        }
+      },
+      "courseware": [
+        {
+          "id": "coverage.chemistry.chemical-equilibrium-lab",
+          "subjectId": "chemistry",
+          "clusterId": "cn-hs.chemistry.cluster.equilibrium-kinetics-control",
+          "briefId": "cn-hs.chemistry.equilibrium-kinetics-control",
+          "packageId": "chemical-equilibrium-lab",
+          "packagePath": "templates/courseware/algorithm-stepper",
+          "coverageLevel": "representative-prototype",
+          "engineeringStatus": "doctor-verified",
+          "evidence": {
+            "doctor": true,
+            "bilingual": true,
+            "keyboardComplete": true,
+            "reducedMotion": true,
+            "embedHostCount": 2,
+            "browserJourneyCount": 0,
+            "subjectReviewed": false
+          }
+        }
+      ],
+      "topCoursewareCandidates": [
+        {
+          "clusterId": "cn-hs.chemistry.cluster.aqueous-equilibria",
+          "title": {
+            "zh-CN": "水溶液离子平衡与定量分析",
+            "en": "Aqueous Ionic Equilibria and Quantitative Analysis"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.chemistry.selective-required.aqueous.ionization-ph",
+            "cn-hs.chemistry.selective-required.aqueous.precipitation"
+          ],
+          "runtimeRequirements": [
+            "chemistry.aqueous",
+            "instrument.ion-view",
+            "instrument.ph-probe",
+            "instrument.titration-lab",
+            "instrument.precipitation-simulator"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.chemistry.cluster.atomic-periodicity",
+          "title": {
+            "zh-CN": "量子化原子结构与周期性",
+            "en": "Quantized Atomic Structure and Periodicity"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.chemistry.selective-required.structure.electron-state",
+            "cn-hs.chemistry.selective-required.structure.configuration-periodicity"
+          ],
+          "runtimeRequirements": [
+            "chemistry.atomic-structure",
+            "instrument.orbital-view",
+            "instrument.electron-configuration-builder",
+            "instrument.spectrum-viewer",
+            "instrument.periodic-trend-lab"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.chemistry.cluster.equilibrium-kinetics-control",
+          "title": {
+            "zh-CN": "化学平衡、动力学与过程调控",
+            "en": "Chemical Equilibrium, Kinetics, and Process Control"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+            "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism"
+          ],
+          "runtimeRequirements": [
+            "chemistry.kinetics",
+            "chemistry.equilibrium",
+            "instrument.equilibrium-simulator",
+            "instrument.reaction-rate-lab",
+            "instrument.process-optimizer"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.chemistry.cluster.inorganic-transformations",
+          "title": {
+            "zh-CN": "无机物分类、离子与价态转化",
+            "en": "Inorganic Classification, Ions, and Oxidation-State Transformations"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.chemistry.required.inorganic.redox",
+            "cn-hs.chemistry.required.inorganic.ionic-reactions"
+          ],
+          "runtimeRequirements": [
+            "chemistry.reactions",
+            "instrument.reaction-workbench",
+            "instrument.ion-view",
+            "instrument.oxidation-state-map",
+            "instrument.evidence-board"
+          ]
+        },
+        {
+          "clusterId": "cn-hs.chemistry.cluster.inquiry-lab",
+          "title": {
+            "zh-CN": "从化学问题到可复现实验",
+            "en": "From Chemical Question to Reproducible Experiment"
+          },
+          "score": 35,
+          "coreNodeIds": [
+            "cn-hs.chemistry.required.science-inquiry.inquiry-cycle",
+            "cn-hs.chemistry.required.science-inquiry.lab-methods"
+          ],
+          "runtimeRequirements": [
+            "chemistry.lab",
+            "instrument.experiment-workflow",
+            "instrument.apparatus-builder",
+            "instrument.evidence-board",
+            "instrument.safety-scenario"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,992 @@
+{
+  "format": "mooyu.curriculum-knowledge-map-fragment",
+  "schemaVersion": 1,
+  "id": "cn-hs.chemistry.textbook-mappings.pep.2026",
+  "subjectId": "chemistry",
+  "nodes": [],
+  "relations": [],
+  "clusters": [],
+  "textbookMappings": [
+    {
+      "id": "pep.map.chemistry.required.science-inquiry.discipline-methods",
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.discipline-methods",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.science-inquiry.amount-of-substance",
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.amount-of-substance",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.science-inquiry.inquiry-cycle",
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.inquiry-cycle",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.science-inquiry.lab-methods",
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.lab-methods",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.science-inquiry.lab-safety",
+      "nodeId": "cn-hs.chemistry.required.science-inquiry.lab-safety",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.inorganic.classification",
+      "nodeId": "cn-hs.chemistry.required.inorganic.classification",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.inorganic.redox",
+      "nodeId": "cn-hs.chemistry.required.inorganic.redox",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.inorganic.ionic-reactions",
+      "nodeId": "cn-hs.chemistry.required.inorganic.ionic-reactions",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.inorganic.metals",
+      "nodeId": "cn-hs.chemistry.required.inorganic.metals",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 海水中的重要元素——钠和氯、第三章 铁 金属材料",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.inorganic.nonmetals",
+      "nodeId": "cn-hs.chemistry.required.inorganic.nonmetals",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 化工生产中的重要非金属元素",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.structure-reaction.atomic-periodic",
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.atomic-periodic",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 物质结构 元素周期律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.structure-reaction.bonds",
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.bonds",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 物质结构 元素周期律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.structure-reaction.rate-equilibrium",
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.rate-equilibrium",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 化学反应与能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.structure-reaction.energy-cells",
+      "nodeId": "cn-hs.chemistry.required.structure-reaction.energy-cells",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 化学反应与能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.organic.structure",
+      "nodeId": "cn-hs.chemistry.required.organic.structure",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 有机化合物",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.organic.properties-reactions",
+      "nodeId": "cn-hs.chemistry.required.organic.properties-reactions",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 有机化合物",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.organic.macromolecules",
+      "nodeId": "cn-hs.chemistry.required.organic.macromolecules",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 有机化合物",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.society.green-chemistry",
+      "nodeId": "cn-hs.chemistry.required.society.green-chemistry",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 化学与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.society.materials-health",
+      "nodeId": "cn-hs.chemistry.required.society.materials-health",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 化学与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.society.resources-energy",
+      "nodeId": "cn-hs.chemistry.required.society.resources-energy",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 化学与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.required.society.environment-rules",
+      "nodeId": "cn-hs.chemistry.required.society.environment-rules",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第八章 化学与可持续发展",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.solution-concentration",
+      "nodeId": "cn-hs.chemistry.experiment.solution-concentration",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.iron-compounds",
+      "nodeId": "cn-hs.chemistry.experiment.iron-compounds",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第二章 海水中的重要元素——钠和氯、第三章 铁 金属材料",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.sulfur-transformations",
+      "nodeId": "cn-hs.chemistry.experiment.sulfur-transformations",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第五章 化工生产中的重要非金属元素",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.crude-salt-purification",
+      "nodeId": "cn-hs.chemistry.experiment.crude-salt-purification",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第一章 物质及其变化；教材实验活动",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.periodic-trends",
+      "nodeId": "cn-hs.chemistry.experiment.periodic-trends",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第一册，第1版",
+      "baselineEditionId": "pep.chemistry.required-1.2019",
+      "precision": "chapter",
+      "locator": "第四章 物质结构 元素周期律",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.reaction-rate-factors",
+      "nodeId": "cn-hs.chemistry.experiment.reaction-rate-factors",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 化学反应与能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.chemical-to-electrical-energy",
+      "nodeId": "cn-hs.chemistry.experiment.chemical-to-electrical-energy",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第六章 化学反应与能量",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.organic-ball-stick",
+      "nodeId": "cn-hs.chemistry.experiment.organic-ball-stick",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 有机化合物",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.ethanol-acetic-acid",
+      "nodeId": "cn-hs.chemistry.experiment.ethanol-acetic-acid",
+      "publisher": "人民教育出版社",
+      "edition": "化学必修第二册，第1版",
+      "baselineEditionId": "pep.chemistry.required-2.2019",
+      "precision": "chapter",
+      "locator": "第七章 有机化合物",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.electroplating",
+      "nodeId": "cn-hs.chemistry.experiment.electroplating",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第四章 化学反应与电能",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.fuel-cell",
+      "nodeId": "cn-hs.chemistry.experiment.fuel-cell",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第四章 化学反应与电能",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.equilibrium-shift",
+      "nodeId": "cn-hs.chemistry.experiment.equilibrium-shift",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第二章 化学反应速率与化学平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.acid-base-titration",
+      "nodeId": "cn-hs.chemistry.experiment.acid-base-titration",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.salt-hydrolysis",
+      "nodeId": "cn-hs.chemistry.experiment.salt-hydrolysis",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.coordination-compound",
+      "nodeId": "cn-hs.chemistry.experiment.coordination-compound",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第二章 分子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.ethyl-acetate",
+      "nodeId": "cn-hs.chemistry.experiment.ethyl-acetate",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第三章 烃的衍生物；有机合成",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.functional-group-tests",
+      "nodeId": "cn-hs.chemistry.experiment.functional-group-tests",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第三章 烃的衍生物；有机合成",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.experiment.carbohydrate-properties",
+      "nodeId": "cn-hs.chemistry.experiment.carbohydrate-properties",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第四章 生物大分子",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.energy.system-internal-energy",
+      "nodeId": "cn-hs.chemistry.selective-required.energy.system-internal-energy",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第一章 化学反应的热效应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.energy.enthalpy-hess",
+      "nodeId": "cn-hs.chemistry.selective-required.energy.enthalpy-hess",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第一章 化学反应的热效应",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.energy.electrochemistry",
+      "nodeId": "cn-hs.chemistry.selective-required.energy.electrochemistry",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第四章 化学反应与电能",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.aqueous.electrolyte-behavior",
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.electrolyte-behavior",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.aqueous.ionization-ph",
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.ionization-ph",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.aqueous.hydrolysis",
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.hydrolysis",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.aqueous.precipitation",
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.precipitation",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.aqueous.applications",
+      "nodeId": "cn-hs.chemistry.selective-required.aqueous.applications",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+      "baselineEditionId": "pep.chemistry.selective-1.2020",
+      "precision": "chapter",
+      "locator": "第三章 水溶液中的离子反应与平衡",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.electron-state",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.electron-state",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第一章 原子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.configuration-periodicity",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.configuration-periodicity",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第一章 原子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.particle-interactions",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.particle-interactions",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第二章 分子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.covalent-geometry",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.covalent-geometry",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第二章 分子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.crystals",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.crystals",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第三章 晶体结构与性质；结构测定与设计相关内容",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.exploration-scales",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.exploration-scales",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第一章 原子结构与性质",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.measurement-methods",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.measurement-methods",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第三章 晶体结构与性质；结构测定与设计相关内容",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.structure.design-value",
+      "nodeId": "cn-hs.chemistry.selective-required.structure.design-value",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修2 物质结构与性质，第1版",
+      "baselineEditionId": "pep.chemistry.selective-2.2020",
+      "precision": "chapter",
+      "locator": "第三章 晶体结构与性质；结构测定与设计相关内容",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.structure-analysis",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.structure-analysis",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第一章 有机化合物的结构特点与研究方法",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.functional-groups",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.functional-groups",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第一章 有机化合物的结构特点与研究方法",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.bonds-reactivity",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.bonds-reactivity",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第一章 有机化合物的结构特点与研究方法",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.hydrocarbons",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.hydrocarbons",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第二章 烃",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.derivatives",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.derivatives",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第三章 烃的衍生物；有机合成",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.synthesis",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.synthesis",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第三章 烃的衍生物；有机合成",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.safe-use",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.safe-use",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第三章 烃的衍生物；有机合成",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.polymer-structure",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.polymer-structure",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第五章 合成高分子",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.biomolecules",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.biomolecules",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第四章 生物大分子",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    },
+    {
+      "id": "pep.map.chemistry.selective-required.organic.synthetic-polymers",
+      "nodeId": "cn-hs.chemistry.selective-required.organic.synthetic-polymers",
+      "publisher": "人民教育出版社",
+      "edition": "化学选择性必修3 有机化学基础，第1版",
+      "baselineEditionId": "pep.chemistry.selective-3.2020",
+      "precision": "chapter",
+      "locator": "第五章 合成高分子",
+      "review": {
+        "status": "source-checked",
+        "sourceChecked": true,
+        "subjectChecked": false,
+        "note": "按教育部目录、人教社第11套教材体系和官方章节目次建立首套章节级映射；待具名学科教师复核。"
+      }
+    }
+  ],
+  "review": {
+    "status": "source-checked",
+    "sourceChecked": true,
+    "subjectChecked": false,
+    "note": "平台首套人教版教材章节映射；只覆盖必修、选择性必修的原子知识节点，结构节点与学校自主选修不计入教材映射分母。"
+  }
+}

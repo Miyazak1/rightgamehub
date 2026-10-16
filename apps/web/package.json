@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/build-multiplayer-templates.mjs && node ../../scripts/build-competition-template.mjs && vite --host 127.0.0.1",
-    "build": "node ../../scripts/build-multiplayer-templates.mjs && node ../../scripts/build-competition-template.mjs && vite build",
+    "dev": "node ../../scripts/build-learning-library.mjs && node ../../scripts/build-multiplayer-templates.mjs && node ../../scripts/build-competition-template.mjs && vite --host 127.0.0.1",
+    "build": "node ../../scripts/build-learning-library.mjs && node ../../scripts/build-multiplayer-templates.mjs && node ../../scripts/build-competition-template.mjs && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

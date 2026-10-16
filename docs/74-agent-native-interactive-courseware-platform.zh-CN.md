@@ -1,9 +1,9 @@
 # Agent 原生互动课件插件平台完整设计
 
-状态：D1.0 设计基线；L0、L1 已落地，L2 宿主适配已实现但真实跨宿主验收未完成，L3 平台基础已实现  
-版本：D1.2  
-日期：2026-10-14  
-关联文档：[69 Agent 优先的结构化创作与发布路线](./69-ai-creator-studio-roadmap.zh-CN.md)、[GameHub MCP App 与统一自动更新](./gamehub-mcp-app.zh-CN.md)、[18 多宿主完整客户端](./18-multi-host-client-spec.zh-CN.md)、[16 上传发布与运行隔离](./16-publishing-runtime-spec.zh-CN.md)
+状态：D1.2 结构化课件运行时、固定 Builder 与三科参考实现已完成
+版本：D1.6
+日期：2026-10-16
+关联文档：[69 Agent 优先的结构化创作与发布路线](./69-ai-creator-studio-roadmap.zh-CN.md)、[75 课件托管与外部嵌入](./75-courseware-embed-service-roadmap.zh-CN.md)、[76 中国普通高中知识地图](./76-china-high-school-knowledge-map.zh-CN.md)、[77 好奇心驱动的情境化互动课件架构](./77-curiosity-driven-scenario-courseware-architecture.zh-CN.md)、[GameHub MCP App 与统一自动更新](./gamehub-mcp-app.zh-CN.md)、[18 多宿主完整客户端](./18-multi-host-client-spec.zh-CN.md)、[16 上传发布与运行隔离](./16-publishing-runtime-spec.zh-CN.md)
 
 ## 1. 决策与产品定义
 
@@ -25,7 +25,18 @@
 
 产品定义为：
 
-> **面向 AI Agent 的互动课件开放制作、验证、发布与运行协议。**
+> **面向 AI Agent 的结构化互动课件生产、验证、托管与跨站运行基础设施。**
+
+结构化课件不再假设“一个知识点对应一个实验页面”。知识簇先产生可观察现象，再形成多个场景与话题候选；科学模型负责真实因果，场景体验负责好奇心、目标、选择和后果。旗舰课件必须把实验与分析放进具体情境，同时保留经典实验作为校准、教材联系和可访问性基线。场景是否有吸引力属于待验证的产品假设，不能由 Agent 自动自证。
+
+这里的“结构化”不是要求作者手写大量 JSON，也不是把所有作品做成同一种页面。它要求高质量课件的画面、参数、时间、测量、图表、题目和进度共享一个可验证、可序列化、可重放的状态模型。Agent 可以生成源码和内容，但发布产物必须由固定 Builder 与受控运行时把这些结构转换为确定的浏览器应用。
+
+平台同时保留两种兼容层：
+
+1. `legacy-web`：兼容现有经过验证的静态 Web ZIP，用于迁移和自由度更高的作品；
+2. `structured-courseware`：官方长期主线，使用共享运行时、学科包、工具和场景 Schema 生成静态 Release。
+
+两者都复用不可变 Release 与隔离托管；只有 `structured-courseware` 自动获得官方工具一致性、状态重放、结构化分析和更强的跨课件质量保证。
 
 平台的护城河不是某一个模型，而是：
 
@@ -69,6 +80,9 @@
 - 不让作者任意提交 Dockerfile、服务器镜像或安装脚本并自动上线；
 - 不用“大模型审核通过”代替事实、公式、测试和人工审核；
 - 不在首版实现完整 LMS、班级、排课、教师组织和正式成绩册；
+- 不把拍照、OCR、自动识题或摄像头采集作为课件平台入口；这些能力若未来出现，只能作为独立上游适配器，不进入运行时核心；
+- 不建设首版在线可视化编辑器；主要创作入口仍是外部 Agent 与本地项目；
+- 不让课件在学习时依赖实时大模型调用才能完成核心教学流程；
 - 不围绕 STORM 或其他单一开源项目反推平台架构；它们未来只能作为普通适配器或外部工具候选。
 
 ## 3. 角色与责任
@@ -102,12 +116,14 @@ flowchart LR
   B --> X[本机进度、学习事件、可选在线能力]
 ```
 
-系统分为四个平面：
+系统分为六个平面：
 
 1. **创作平面**：用户 Agent、本地工作区和本地 Toolkit；
-2. **控制平面**：规范、组件目录、作品、版本、验证、审核、更新和审计；
-3. **运行平面**：隔离的静态课件和受限能力桥；
-4. **数据平面**：对象存储、作品元数据、验证报告、学习进度和聚合事件。
+2. **编译平面**：固定 Builder 把结构化项目和版本固定的组件、学科包编译成静态产物；
+3. **控制平面**：规范、组件目录、作品、版本、验证、审核、更新和审计；
+4. **运行平面**：共享 Runtime Kernel 驱动的结构化课件或兼容静态课件，以及受限能力桥；
+5. **数据平面**：对象存储、作品元数据、验证报告、有限学习进度和聚合事件。
+6. **体验设计平面**：现象候选、场景族、兴趣假设、教师审校和学习者试玩证据；不参与科学求解，也不收集不必要的未成年人画像。
 
 创作平面与运行平面不得共享凭据或通用消息通道。
 
@@ -272,6 +288,9 @@ Course
   objectives[]
   prerequisites[]
   misconceptions[]
+  model
+  instruments[]
+  timeline
   scenes[]
     explanation
     visualization
@@ -290,7 +309,16 @@ Course
 - `fallback`：动画或高级能力不可用时的可读替代；
 - `evidenceIds`：该场景涉及的知识依据。
 
-首版不要求平台理解作品全部内部 UI，但必须能识别目标、场景、关键检查点、测试路径和来源。
+`structured-courseware` 必须进一步声明：
+
+- `model`：学科对象、参数、约束和初始状态；
+- `instruments`：探针、轨迹、数据表、函数图、向量、能量等观察工具；
+- `timeline`：播放、暂停、步进、复位、速度和关键时间点；
+- `views`：由同一状态派生的画面、数据、图表和文字解释；
+- `commands`：可执行动作及其参数 Schema，不允许任意脚本字符串；
+- `checkpoint`：根据同一状态和确定性规则判定，不以 UI 文本作为事实来源。
+
+`legacy-web` 首版不要求平台理解作品全部内部 UI，但仍必须能识别目标、场景、关键检查点、测试路径和来源。
 
 ### 7.4 Evidence
 
@@ -303,7 +331,54 @@ Course
 
 没有来源的声明可以保存为草稿，但不能获得“来源完整”质量标记。来源存在也不意味着内容一定正确。
 
-## 8. 官方组件与模板体系
+## 8. 共享运行时、学科包与模板体系
+
+### 8.0 统一状态原则
+
+官方结构化课件采用单一事实状态：
+
+```text
+CourseState
+  ├─ model：学科对象与参数
+  ├─ clock：时间、速度、播放状态和关键点
+  ├─ selection：当前对象、工具与焦点
+  ├─ construction：可用组件、连接关系、撤销栈和实验快照
+  ├─ instruments：探针、轨迹、图表和测量配置
+  ├─ scenario：世界对象映射和情境约束
+  ├─ challenge：目标、资源、成功/失败、得分依据和重试状态
+  ├─ journey：目标、检查点、提示、发现和复盘状态
+  └─ presentation：语言、主题、动效偏好和可访问性状态
+```
+
+画布动画、数值面板、图表、解释和检查点只能从 `CourseState` 与确定性学科引擎派生。任何一个区域都不得维护无法重放的平行真相。相同 Release、初始状态、命令序列和随机种子必须得到相同的关键结果。
+
+`CourseState` 是逻辑上的单一事实来源，不是要求所有模块共同写一个无边界大对象。Kernel 按模块 ID 分配独占状态分区；模块只能返回自己的下一状态，通过声明命令与只读观察量协作。模块清单、能力依赖、生命周期和热插拔规则以 [79](./79-modular-courseware-runtime.zh-CN.md) 为准。
+
+运行时建议分为：
+
+| 层 | 职责 | 首版边界 |
+| --- | --- | --- |
+| Runtime Kernel | 状态机、命令、时间轴、序列化、语言、主题、事件 | 不理解具体学科公式 |
+| Domain Pack | 数学函数、物理、算法等对象 Schema 与确定性求值 | 版本固定，不运行远程代码 |
+| Scenario Pack | 将学科对象映射为具体世界、角色、约束和目标 | 不覆盖 Domain Pack 的求值，不把热门话题写进科学模型 |
+| Construction Engine | 受控对象目录、添加/移除、摆放/连接、撤销、复位和方案快照 | 不执行任意代码；所有命令经 Domain Pack 校验 |
+| Challenge Engine | 从同一状态判定目标、资源、失败、成功、科学指标和重试 | 不维护平行规则，不用点击积分冒充科学结果 |
+| Component Registry | 画布、控件、面板和可访问性实现 | 只读受控状态并发出声明命令 |
+| Instrument Registry | 探针、轨迹、图表、表格、比较、标注 | 与 Domain Pack 的可观察量绑定 |
+| Journey Engine | Explore、Model、Analyse、检查点和完成条件 | 不把视觉标签当完成依据 |
+| Embed Adapter | 宿主语言、尺寸、暂停、进度和脱敏事件 | 不访问父页面 DOM 或身份 |
+
+以上是必要的职责分层，但并不要求九个独立服务或九套事实状态。各层以可选模块接入同一 Kernel：Component 与 Instrument 可以实时替换；Scenario、Construction、Challenge、Journey 与 Domain 至少在暂停点替换；Embed Adapter 随会话固定。正式 Release 只装载 Builder 已固定并校验摘要的本地模块，不从远程动态安装代码。
+
+`Explore / Model / Analyse` 是教学能力而不是装饰性标签，也不要求始终表现为三个固定页签：
+
+- **Explore**：使用预设场景和引导问题先形成直觉；
+- **Model**：改变参数、构造对象、比较假设；
+- **Analyse**：使用测量与图表验证关系并形成解释。
+
+旗舰 Journey 应形成 `Notice → Predict → Build → Act → Observe → Measure → Redesign → Explain → Transfer → Wonder` 的可循环体验。场景先让学习者看见值得追问的现象，允许亲手搭建和修改方案，工具在需要证据时出现，最终再把世界对象映射回变量、图表、公式和来源。
+
+课件可按目标裁剪模式，但出现的每个模式必须有真实能力；禁止用空标签模拟完整产品。
 
 ### 8.1 组件设计原则
 
@@ -328,9 +403,13 @@ Course
 | `@mooyu/courseware-charts` | 坐标系、函数图像、数据图表、时间轴 |
 | `@mooyu/courseware-math` | 公式步骤、数轴、向量、几何对象、参数滑块 |
 | `@mooyu/courseware-science` | 力与运动、电路、光线、粒子、测量仪表 |
+| `@mooyu/courseware-construction` | 对象工具箱、拖放/连接、约束提示、撤销、复位、试验快照 |
+| `@mooyu/courseware-challenges` | 目标区、资源预算、成功/失败、重试、关卡变体和科学指标评分 |
 | `@mooyu/courseware-algorithms` | 数组、图、树、指针、调用栈、代码步进 |
 | `@mooyu/courseware-assessment` | 单选、多选、排序、配对、数值输入、开放检查点 |
 | `@mooyu/courseware-a11y` | 文字替代、焦点管理、旁白同步、运动降级 |
+
+首个正式 Domain Pack 选择 `math.functions`，先把二次函数参考课件做成共享运行时的母版：同一函数模型驱动画布、参数控件、取点探针、表格、比较视图、时间演示与检查点。物理因果和算法步进继续作为兼容参考样本，等 Runtime Kernel 稳定后再迁移，避免同时建设多个不成熟引擎。
 
 包名为设计目标；实施前需通过依赖、许可证和包体积评审。
 
@@ -340,6 +419,7 @@ Course
 2. `causal-simulation`：改变变量、观察因果、预测再验证；
 3. `algorithm-stepper`：逐步执行、状态可视化、复杂度解释；
 4. `guided-practice`：示例、脚手架、独立练习和总结。
+5. `scenario-sandbox`：具体情境、目标约束、自由试验、按需测量、解释与迁移；在完成场景体验契约试玩前保持实验性，不作为稳定公共模板发布。
 
 模板不是截图或提示词，而是包含源码、Manifest、测试、来源样例和固定构建配置的可运行工程。
 
@@ -688,7 +768,7 @@ POST /v1/learning/events:batch
 
 ## 18. 实施阶段
 
-### 18.0 当前实现证据（2026-10-13）
+### 18.0 当前实现证据（更新至 2026-10-15）
 
 已落地：
 
@@ -730,6 +810,7 @@ POST /v1/learning/events:batch
 
 尚未完成且不得提前宣称：
 
+- `structured-courseware` 的 Runtime Kernel、`CourseState`、`math.functions` Domain Pack、Instrument Registry 和固定 Builder；
 - Web、Codex MCP App、VS Code/Cursor 中的真实共享播放器逐项验收；
 - Windows/macOS/Linux 路径矩阵，以及安装了 Playwright 的真实浏览器旅程验收；
 - L3 真实账号下的 Agent 提交—平台验证—用户确认发布端到端验收，以及详情页完整质量标记（两阶段命令与服务端门禁已实现，尚缺生产验收）；
@@ -773,6 +854,32 @@ POST /v1/learning/events:batch
 
 完成门槛：Agent 提交后，服务端可发现本地未发现的伪造报告、越界文件和 Manifest 变更；公开发布仍需用户确认。
 
+### L3.5：结构化课件运行时
+
+- 冻结 `CourseState`、命令、时间轴、派生视图和状态迁移契约；
+- 实现 Runtime Kernel、`math.functions` Domain Pack 与首批 Instrument；
+- 把二次函数参考课件升级为 Explore、Model、Analyse 三种真实工作流的母版；
+- 画面、数值、图表、解释和检查点共享同一状态；
+- 固定 Builder 把结构化项目编译成自包含静态 Release；
+- 现有三个静态参考包继续作为 `legacy-web` 回归样本，不要求一次性重写。
+
+完成门槛：相同 Release、初始状态、命令序列和随机种子产生相同关键结果；核心路径支持一屏桌面、窄屏重排、键盘、触控、双语、200% 缩放和 reduced-motion；运行不依赖拍照、登录、外部 API 或实时模型。
+
+该阶段受 [76 中国普通高中知识地图](./76-china-high-school-knowledge-map.zh-CN.md) 门禁约束：Runtime Kernel 可先行，但 `math.functions` 和正式课件开发必须绑定已追溯、已审校的 Learning Cluster。一个演示页面不能替代学科覆盖证明。
+
+### L3.6：场景族与体验验证
+
+- 将 Scientific Model、Scenario Pack 与 Scene Experience 分层，禁止场景脚本覆盖学科求值；
+- 现有小车、函数画布和反应容器作为经典实验与引擎基线，不直接冒充旗舰体验；
+- 为同一 Learning Cluster 制作多个低保真场景候选，记录兴趣假设、模型映射、简化和淘汰理由；
+- 用教师审校和学习者试玩筛选场景，再投入高保真资产；
+- 形成具体情境、自由操作、按需测量、解释和迁移组成的完整 Journey；
+- 适合实验的旗舰候选至少达到 F2：学习者能够添加、移除、摆放或连接受控对象，而不只是调预设参数；
+- 同一候选至少验证一个由科学状态判定的挑战回路，支持多种策略、失败反馈与低成本重试；
+- 在首轮原型与试玩完成前，Scene Experience 字段保持草案状态，不破坏既有 Courseware v1 Release。
+
+完成门槛：至少一个知识簇证明“同一确定性模型驱动经典实验与多个情境候选”，至少一个候选获得学习者试玩支持；场景中的世界对象、数值、动画、图表和检查点均可追溯到同一科学状态，体验验证状态不会被视觉完成度或 Agent 自评提升。
+
 ### L4：Learning SDK
 
 - `learningProgress` 本机模式；
@@ -806,6 +913,11 @@ POST /v1/learning/events:batch
 | LC10 | 插件更新失败保留现有版本；权限增加不会静默激活 |
 | LC11 | 游客不注册即可运行课件并使用本机进度；分析关闭后核心流程仍可用 |
 | LC12 | 管理员可以按插件、Validator、Schema、组件和 Release 摘要追溯问题范围 |
+| LC13 | 结构化课件的画面、数值、图表、解释和检查点均从同一可序列化状态派生 |
+| LC14 | `legacy-web` 与 `structured-courseware` 能力被准确标记，旧包不会被静默重写或冒充结构化课件 |
+| LC15 | 官方旗舰课件在适合实验时至少达到 F2 建构自由度，具有可撤销、可复位、可保存比较的实验路径；不适合时必须记录学科理由 |
+| LC16 | 场景目录分别显示科学审校与兴趣证据状态；Agent、作者和视觉完成度都不能把未试玩场景标记为“学生验证” |
+| LC17 | 游戏挑战的目标、失败、成功和评分均来自同一科学状态，允许多种合理策略与安全重试，不以点击积分或装饰奖励冒充玩法 |
 
 ## 20. 与现有系统的迁移关系
 
@@ -820,15 +932,18 @@ POST /v1/learning/events:batch
 5. 继续复用插件自动更新契约，并把数字签名和权限差异作为独立安全增量；
 6. 不因增加学习专区而更改现有游戏、社区、存档、竞赛和 GitHub 导入行为。
 
-## 21. 开始实施前必须冻结的五个产物
+## 21. 下一阶段必须交付的八个产物
 
 1. `mooyu-courseware.schema.json`；
 2. `course.schema.json`、`sources.schema.json`、`journeys.schema.json`；
 3. `Doctor report schema v1`；
 4. `Learning SDK protocol v1`；
 5. 三个端到端参考课件及其预期验证报告。
+6. `CourseState`、命令、时间轴和派生视图 Schema；
+7. `math.functions` Domain Pack、首批 Instrument 与固定 Builder 的版本契约。
+8. Scene Experience、Construction Sandbox 与 Challenge Rules 规格草案，自由度等级、兴趣证据等级和教师/学习者试玩协议。
 
-这五项冻结前，不先建设大型学习专区页面，不开放第三方组件市场，也不承诺在线 AI 辅导。它们是不同 Agent 能稳定协作的共同语言。
+前七项冻结前，不先建设大型学习专区页面，不开放第三方组件市场，也不承诺在线 AI 辅导。第八项先通过牛顿动力学场景族原型与试玩验证，再决定是否冻结为公共 Schema；不能为了凑齐契约而提前固化团队对学生兴趣的猜测。
 
 ## 22. 参考项目带来的设计依据
 

@@ -15,6 +15,7 @@ COPY packages/platform-api-client/package.json packages/platform-api-client/pack
 COPY packages/host-contract/package.json packages/host-contract/package.json
 COPY packages/player-core/package.json packages/player-core/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
+COPY packages/courseware-runtime/package.json packages/courseware-runtime/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin... --filter @gamehub/creator-tools...
 COPY apps/web apps/web
 COPY packages/platform-client packages/platform-client
@@ -26,6 +27,7 @@ COPY packages/host-contract packages/host-contract
 COPY packages/save-cache packages/save-cache
 COPY packages/player-core packages/player-core
 COPY packages/creator-tools packages/creator-tools
+COPY packages/courseware-runtime packages/courseware-runtime
 COPY packages/contracts/courseware packages/contracts/courseware
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
@@ -44,6 +46,7 @@ COPY scripts/build-extension.mjs scripts/build-extension.mjs
 COPY scripts/build-harness.mjs scripts/build-harness.mjs
 COPY scripts/build-multiplayer-templates.mjs scripts/build-multiplayer-templates.mjs
 COPY scripts/build-agent-plugin.mjs scripts/build-agent-plugin.mjs
+COPY scripts/build-learning-library.mjs scripts/build-learning-library.mjs
 COPY scripts/creator-toolkit-cli.mjs scripts/creator-toolkit-cli.mjs
 COPY scripts/submit-creator-package.mjs scripts/submit-creator-package.mjs
 COPY scripts/package-vscode-extension.mjs scripts/package-vscode-extension.mjs

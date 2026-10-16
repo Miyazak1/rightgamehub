@@ -1,0 +1,79 @@
+{
+  "format": "mooyu.courseware-brief",
+  "schemaVersion": 1,
+  "id": "cn-hs.math.derivative-optimization",
+  "subjectId": "mathematics",
+  "clusterId": "cn-hs.math.cluster.derivative-and-optimization",
+  "title": { "zh-CN": "导数、函数变化与优化互动实验室", "en": "Derivatives, Change, and Optimization Lab" },
+  "status": "review-blocked",
+  "targetDepth": "C4",
+  "knowledgeNodeIds": [
+    "cn-hs.math.selective.derivative.rate-limit",
+    "cn-hs.math.selective.derivative.geometric-meaning",
+    "cn-hs.math.selective.derivative.definition-examples",
+    "cn-hs.math.selective.derivative.rules",
+    "cn-hs.math.selective.derivative.monotonicity",
+    "cn-hs.math.selective.derivative.extrema-optimization"
+  ],
+  "blockingGates": ["subject-review"],
+  "runtimeRequirements": ["math.calculus", "instrument.secant-tangent", "instrument.graph-derivative-link", "instrument.sign-chart", "instrument.optimization", "instrument.checkpoint"],
+  "learning": {
+    "objectives": [
+      { "id": "rate-to-derivative", "text": { "zh-CN": "通过割线逼近切线解释平均变化率如何趋近瞬时变化率。", "en": "Explain how secant slopes approach an instantaneous rate and tangent slope." } },
+      { "id": "derivative-to-shape", "text": { "zh-CN": "联动函数图像、导函数和符号表，判断单调区间与临界点。", "en": "Link a function, its derivative, and a sign chart to determine monotonic intervals and critical points." } },
+      { "id": "optimize-with-evidence", "text": { "zh-CN": "把实际约束转化为单变量模型，并用导数和边界比较证明最优解。", "en": "Turn a constrained situation into a one-variable model and justify an optimum with derivatives and boundary checks." } }
+    ],
+    "prerequisites": [
+      { "zh-CN": "函数的图像、定义域与平均变化率。", "en": "Function graphs, domains, and average rates of change." },
+      { "zh-CN": "基本代数运算与一次、二次函数。", "en": "Basic algebra and linear and quadratic functions." }
+    ],
+    "misconceptions": [
+      { "id": "derivative-is-height", "text": { "zh-CN": "把导数值误认为函数在该点的纵坐标。", "en": "Confusing the derivative value with the function's height at that point." }, "objectiveIds": ["rate-to-derivative"] },
+      { "id": "positive-derivative-positive-function", "text": { "zh-CN": "认为 f'(x)>0 等同于 f(x)>0。", "en": "Assuming f'(x)>0 means f(x)>0." }, "objectiveIds": ["derivative-to-shape"] },
+      { "id": "stationary-is-global-best", "text": { "zh-CN": "认为任意 f'(x)=0 的点都是全局最大值。", "en": "Treating every point where f'(x)=0 as a global maximum." }, "objectiveIds": ["optimize-with-evidence"] }
+    ]
+  },
+  "model": {
+    "stateVariables": [
+      { "id": "function-family", "type": "enum", "default": "cubic" },
+      { "id": "probe-x", "type": "number", "minimum": -8, "maximum": 8, "default": 1 },
+      { "id": "secant-delta", "type": "number", "minimum": 0.001, "maximum": 4, "default": 2 },
+      { "id": "constraint-parameter", "type": "number", "minimum": 1, "maximum": 20, "default": 10 }
+    ],
+    "commands": ["set-function", "set-probe", "set-delta", "play-limit", "toggle-derivative", "select-optimization-case", "reset"],
+    "derivedViews": ["function-value", "secant-slope", "derivative-value", "monotonic-intervals", "critical-points", "objective-value"],
+    "invariants": [
+      { "zh-CN": "相同函数与探针位置必须产生可复现的函数值、导数值和符号表。", "en": "The same function and probe position must reproduce the same function value, derivative value, and sign chart." },
+      { "zh-CN": "最优解必须同时检查定义域内部临界点和可行域边界。", "en": "An optimum must compare interior critical points with feasible-domain boundaries." }
+    ]
+  },
+  "instruments": [
+    { "id": "secant-tangent", "type": "instrument.secant-tangent", "observes": ["probe-x", "secant-delta", "secant-slope", "derivative-value"] },
+    { "id": "graph-derivative-link", "type": "instrument.graph-derivative-link", "observes": ["function-value", "derivative-value", "critical-points"] },
+    { "id": "sign-chart", "type": "instrument.sign-chart", "observes": ["derivative-value", "monotonic-intervals"] },
+    { "id": "optimization", "type": "instrument.optimization", "observes": ["constraint-parameter", "objective-value", "critical-points"] }
+  ],
+  "scenes": [
+    { "id": "secant-to-tangent", "type": "explore", "title": { "zh-CN": "从割线到切线", "en": "From Secant to Tangent" }, "objectiveIds": ["rate-to-derivative"], "instrumentIds": ["secant-tangent"] },
+    { "id": "read-the-shape", "type": "simulate", "title": { "zh-CN": "读懂函数的变化", "en": "Read the Function's Change" }, "objectiveIds": ["derivative-to-shape"], "instrumentIds": ["graph-derivative-link", "sign-chart"] },
+    { "id": "optimization-studio", "type": "practice", "title": { "zh-CN": "带约束优化工作室", "en": "Constrained Optimization Studio" }, "objectiveIds": ["optimize-with-evidence"], "instrumentIds": ["optimization", "sign-chart"] }
+  ],
+  "checkpoints": [
+    { "id": "predict-slope", "sceneId": "secant-to-tangent", "kind": "prediction", "prompt": { "zh-CN": "缩小 Δx 前，预测割线斜率将趋近哪个值并说明依据。", "en": "Before reducing Δx, predict the value approached by the secant slope and explain why." }, "objectiveIds": ["rate-to-derivative"], "successEvidence": { "zh-CN": "预测与模拟极限一致，并明确区分函数值与斜率。", "en": "The prediction matches the simulated limit and distinguishes function value from slope." } },
+    { "id": "match-sign-intervals", "sceneId": "read-the-shape", "kind": "ordering", "prompt": { "zh-CN": "将导数符号区间与函数增减区间配对。", "en": "Match derivative-sign intervals to increasing and decreasing intervals." }, "objectiveIds": ["derivative-to-shape"], "successEvidence": { "zh-CN": "所有区间和临界点配对正确。", "en": "All intervals and critical points are matched correctly." } },
+    { "id": "justify-optimum", "sceneId": "optimization-studio", "kind": "free-response", "prompt": { "zh-CN": "选择最优参数，并用导数、可行域和边界值给出证明。", "en": "Choose the optimal parameter and justify it using the derivative, feasible domain, and boundary values." }, "objectiveIds": ["optimize-with-evidence"], "successEvidence": { "zh-CN": "答案包含模型、临界点、边界比较和带单位结论。", "en": "The response includes the model, critical point, boundary comparison, and a conclusion with units." } }
+  ],
+  "acceptance": {
+    "journeys": [
+      { "id": "math-zh", "locale": "zh-CN", "steps": ["仅用键盘改变 Δx 并播放割线趋近动画。", "联动查看 f 与 f' 并完成符号表检查点。", "完成一次约束优化并导出学习证据。", "在两个外部测试站点中完成相同流程。"] },
+      { "id": "math-en", "locale": "en", "steps": ["Change Δx and play the secant-limit animation using only the keyboard.", "Inspect linked f and f' graphs and complete the sign-chart checkpoint.", "Complete one constrained optimization and export learning evidence.", "Repeat the flow in two external test hosts."] }
+    ],
+    "embedHosts": 2,
+    "keyboardComplete": true,
+    "reducedMotion": true,
+    "accessibility": [
+      { "zh-CN": "颜色之外还使用线型、标签和文字表达正负与增减。", "en": "Line styles, labels, and text communicate signs and trends without relying on color." },
+      { "zh-CN": "动画可暂停、逐步执行，并在减少动态效果时保留状态变化。", "en": "Animation is pausable and stepwise, and reduced motion preserves state changes." }
+    ]
+  }
+}

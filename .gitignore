@@ -7,10 +7,15 @@ poc/deskcat-server.err.log
 .m0-config-check.tmp
 artifacts/
 apps/web/public/downloads/
+apps/web/public/learning/courseware/
 extensions/harness/lib/
 node_modules/
 .pnpm-store/
 **/dist/
+!templates/courseware/*/dist/
+!templates/courseware/*/dist/index.html
+!plugins/gamehub/templates/courseware/*/dist/
+!plugins/gamehub/templates/courseware/*/dist/index.html
 *.log
 *.pid
 .env

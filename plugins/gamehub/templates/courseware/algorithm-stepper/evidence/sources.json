@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "sources": [
-    { "id": "open-data-structures", "type": "book", "title": "Open Data Structures", "publisher": "AU Press", "url": "https://opendatastructures.org/", "license": "CC-BY-2.5", "locator": "Sorting Algorithms" }
+    { "id": "pep-chemistry-equilibrium", "type": "book", "title": "普通高中教科书·化学选择性必修1 化学反应原理", "publisher": "人民教育出版社", "url": "https://v2.ykt.cbern.com.cn/65/document/0f200f5b9af811ec9c6bfa20200f090a/pdf.pdf", "locator": "第二章 化学反应速率与化学平衡" }
   ],
   "claims": [
-    { "id": "insertion-sort-invariant", "text": { "zh-CN": "插入排序第 i 轮结束后，前 i+1 个元素构成有序前缀。", "en": "After iteration i, the first i+1 elements form a sorted prefix." }, "sourceIds": ["open-data-structures"], "locators": ["Sorting Algorithms"], "verification": "primary-source" }
+    { "id": "reaction-quotient-direction", "text": { "zh-CN": "恒温下 Q<K 时反应正向进行，Q>K 时反应逆向进行，直至 Q=K。", "en": "At constant temperature, Q<K drives the reaction forward and Q>K drives it backward until Q=K." }, "sourceIds": ["pep-chemistry-equilibrium"], "locators": ["第二章 第二节 化学平衡"], "verification": "primary-source" },
+    { "id": "catalyst-equilibrium-claim", "text": { "zh-CN": "催化剂同时加快正、逆反应速率，缩短达到平衡的时间，但不改变平衡常数和平衡组成。", "en": "A catalyst accelerates both directions and shortens equilibration time without changing K or the equilibrium composition." }, "sourceIds": ["pep-chemistry-equilibrium"], "locators": ["第二章 化学反应速率与化学平衡"], "verification": "primary-source" }
   ]
 }

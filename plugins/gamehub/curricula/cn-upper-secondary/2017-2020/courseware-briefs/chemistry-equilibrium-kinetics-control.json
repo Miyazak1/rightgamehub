@@ -1,0 +1,73 @@
+{
+  "format": "mooyu.courseware-brief",
+  "schemaVersion": 1,
+  "id": "cn-hs.chemistry.equilibrium-kinetics-control",
+  "subjectId": "chemistry",
+  "clusterId": "cn-hs.chemistry.cluster.equilibrium-kinetics-control",
+  "title": { "zh-CN": "化学平衡、动力学与过程调控实验室", "en": "Chemical Equilibrium, Kinetics, and Process Control Lab" },
+  "status": "review-blocked",
+  "targetDepth": "C4",
+  "knowledgeNodeIds": ["cn-hs.chemistry.selective-required.equilibrium.direction-constant", "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism", "cn-hs.chemistry.selective-required.equilibrium.control"],
+  "blockingGates": ["subject-review"],
+  "runtimeRequirements": ["chemistry.kinetics", "chemistry.equilibrium", "instrument.equilibrium-simulator", "instrument.reaction-rate-lab", "instrument.process-optimizer"],
+  "learning": {
+    "objectives": [
+      { "id": "compare-q-k", "text": { "zh-CN": "计算并比较 Q 与 K，判断反应净进行方向。", "en": "Calculate and compare Q with K to determine the net reaction direction." } },
+      { "id": "separate-rate-position", "text": { "zh-CN": "用正逆反应速率和微观粒子变化区分平衡建立速度与平衡位置。", "en": "Use forward and reverse rates and particle-level changes to distinguish equilibration speed from equilibrium position." } },
+      { "id": "optimize-process", "text": { "zh-CN": "综合温度、浓度、压强与催化剂对速率、产率、能耗和安全的影响进行过程调控。", "en": "Balance temperature, concentration, pressure, and catalyst effects on rate, yield, energy, and safety." } }
+    ],
+    "prerequisites": [
+      { "zh-CN": "可逆反应、化学计量关系和浓度表示。", "en": "Reversible reactions, stoichiometry, and concentration." },
+      { "zh-CN": "碰撞理论、活化能和反应速率。", "en": "Collision theory, activation energy, and reaction rate." }
+    ],
+    "misconceptions": [
+      { "id": "equilibrium-stopped", "text": { "zh-CN": "认为达到平衡后正逆反应停止或各物质浓度相等。", "en": "Believing forward and reverse reactions stop, or all concentrations become equal, at equilibrium." }, "objectiveIds": ["separate-rate-position"] },
+      { "id": "catalyst-changes-k", "text": { "zh-CN": "认为催化剂会改变平衡常数或最终平衡组成。", "en": "Believing a catalyst changes the equilibrium constant or final equilibrium composition." }, "objectiveIds": ["separate-rate-position", "optimize-process"] },
+      { "id": "rate-yield-always-align", "text": { "zh-CN": "认为提高反应速率的条件一定同时提高平衡产率。", "en": "Assuming conditions that increase rate must also increase equilibrium yield." }, "objectiveIds": ["optimize-process"] }
+    ]
+  },
+  "model": {
+    "stateVariables": [
+      { "id": "temperature", "type": "number", "unit": "K", "minimum": 250, "maximum": 1000, "default": 450 },
+      { "id": "pressure", "type": "number", "unit": "bar", "minimum": 0.1, "maximum": 300, "default": 10 },
+      { "id": "initial-composition", "type": "series", "unit": "mol/L", "default": [1, 1, 0, 0] },
+      { "id": "activation-energy", "type": "number", "unit": "kJ/mol", "minimum": 1, "maximum": 300, "default": 80 },
+      { "id": "catalyst-enabled", "type": "boolean", "default": false },
+      { "id": "time", "type": "number", "unit": "s", "minimum": 0, "maximum": 600, "default": 0 }
+    ],
+    "commands": ["select-reaction", "set-temperature", "set-pressure", "set-composition", "toggle-catalyst", "inject-species", "run", "pause", "step", "reset"],
+    "derivedViews": ["reaction-quotient", "equilibrium-constant", "forward-rate", "reverse-rate", "equilibrium-composition", "concentration-time-graph", "rate-time-graph", "yield", "energy-cost", "risk-score"],
+    "invariants": [
+      { "zh-CN": "物料守恒和给定反应的化学计量关系在每一步都成立。", "en": "Mass conservation and reaction stoichiometry hold at every step." },
+      { "zh-CN": "同一温度下催化剂可同时改变正逆反应速率，但不改变 K 和平衡组成。", "en": "At a fixed temperature, a catalyst may change both rates but not K or equilibrium composition." }
+    ]
+  },
+  "instruments": [
+    { "id": "equilibrium-simulator", "type": "instrument.equilibrium-simulator", "observes": ["temperature", "pressure", "initial-composition", "reaction-quotient", "equilibrium-constant", "equilibrium-composition"] },
+    { "id": "reaction-rate-lab", "type": "instrument.reaction-rate-lab", "observes": ["activation-energy", "catalyst-enabled", "time", "forward-rate", "reverse-rate", "concentration-time-graph", "rate-time-graph"] },
+    { "id": "process-optimizer", "type": "instrument.process-optimizer", "observes": ["temperature", "pressure", "catalyst-enabled", "yield", "energy-cost", "risk-score"] }
+  ],
+  "scenes": [
+    { "id": "q-versus-k", "type": "explore", "title": { "zh-CN": "Q 与 K：反应往哪里走", "en": "Q and K: Which Way Will It Go?" }, "objectiveIds": ["compare-q-k"], "instrumentIds": ["equilibrium-simulator"] },
+    { "id": "dynamic-equilibrium", "type": "simulate", "title": { "zh-CN": "看见动态平衡", "en": "See Dynamic Equilibrium" }, "objectiveIds": ["separate-rate-position"], "instrumentIds": ["equilibrium-simulator", "reaction-rate-lab"] },
+    { "id": "process-control", "type": "practice", "title": { "zh-CN": "速率、产率与代价的权衡", "en": "Trade Off Rate, Yield, and Cost" }, "objectiveIds": ["optimize-process"], "instrumentIds": ["process-optimizer", "reaction-rate-lab"] }
+  ],
+  "checkpoints": [
+    { "id": "predict-direction", "sceneId": "q-versus-k", "kind": "prediction", "prompt": { "zh-CN": "改变初始组成后先比较 Q 与 K，再预测净反应方向。", "en": "After changing initial composition, compare Q with K and predict the net reaction direction." }, "objectiveIds": ["compare-q-k"], "successEvidence": { "zh-CN": "Q、K 计算及方向判断一致。", "en": "The Q and K calculation supports the stated direction." } },
+    { "id": "test-catalyst", "sceneId": "dynamic-equilibrium", "kind": "free-response", "prompt": { "zh-CN": "用有无催化剂的两次实验说明速率与平衡位置的区别。", "en": "Compare trials with and without a catalyst to distinguish rate from equilibrium position." }, "objectiveIds": ["separate-rate-position"], "successEvidence": { "zh-CN": "证据显示到达平衡所需时间改变，但同温度下 K 与最终组成不变。", "en": "Evidence shows equilibration time changes while K and final composition remain unchanged at the same temperature." } },
+    { "id": "choose-process", "sceneId": "process-control", "kind": "free-response", "prompt": { "zh-CN": "在产率、时间、能耗和风险约束下选择工艺条件并解释权衡。", "en": "Choose process conditions under yield, time, energy, and risk constraints and justify the tradeoff." }, "objectiveIds": ["optimize-process"], "successEvidence": { "zh-CN": "方案引用模拟数据，并区分动力学影响和平衡影响。", "en": "The plan cites simulated data and distinguishes kinetic from equilibrium effects." } }
+  ],
+  "acceptance": {
+    "journeys": [
+      { "id": "chemistry-zh", "locale": "zh-CN", "steps": ["用键盘改变组成并完成 Q 与 K 方向预测。", "对比有无催化剂的速率曲线和平衡终态。", "在多目标约束下选择工艺条件并提交解释。", "在两个外部测试站点中重复核心流程。"] },
+      { "id": "chemistry-en", "locale": "en", "steps": ["Change composition with the keyboard and predict direction from Q and K.", "Compare rate curves and final equilibrium states with and without a catalyst.", "Choose process conditions under multiple constraints and submit an explanation.", "Repeat the core flow in two external test hosts."] }
+    ],
+    "embedHosts": 2,
+    "keyboardComplete": true,
+    "reducedMotion": true,
+    "accessibility": [
+      { "zh-CN": "粒子动画同步提供浓度、速率和文字状态，不依赖动画本身传达结论。", "en": "Particle animation is paired with concentrations, rates, and text states so meaning does not depend on motion." },
+      { "zh-CN": "图线使用标签、线型和数据表区分，不只依赖颜色。", "en": "Curves use labels, line styles, and a data table rather than color alone." }
+    ]
+  }
+}

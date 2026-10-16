@@ -1,0 +1,28 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "challenge.quadratic-target",
+  "version": "1.0.0",
+  "kind": "challenge",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:0647cb30d496111d987b799314831c07a3d7fbfe68bc2cf501c7fd59b6ee6501",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "challenge.evaluate"
+  ],
+  "commands": [
+    "challenge.attempt",
+    "challenge.reset"
+  ],
+  "dependencies": [
+    {
+      "id": "math.quadratic",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.function"
+      ]
+    }
+  ]
+}

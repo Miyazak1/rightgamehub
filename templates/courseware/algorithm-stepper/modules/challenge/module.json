@@ -1,0 +1,28 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "challenge.safe-no2-batch",
+  "version": "1.0.0",
+  "kind": "challenge",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:aab25f9f3a2c6d0bb396c6444a717e735e04ed790dcdf0d7a82d7d439690eff6",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "challenge.evaluate"
+  ],
+  "commands": [
+    "challenge.attempt",
+    "challenge.reset"
+  ],
+  "dependencies": [
+    {
+      "id": "chemistry.equilibrium",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.equilibrium"
+      ]
+    }
+  ]
+}

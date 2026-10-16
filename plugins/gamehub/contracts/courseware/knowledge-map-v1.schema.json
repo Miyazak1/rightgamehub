@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/knowledge-map-v1.schema.json",
+  "title": "MOOYU Curriculum Knowledge Map v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "id", "title", "jurisdiction", "educationStage", "curriculumVersion", "authorities", "subjects", "fragments", "nodes", "relations", "clusters", "textbookMappings", "review"],
+  "properties": {
+    "format": { "const": "mooyu.curriculum-knowledge-map" },
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "$ref": "#/$defs/localizedText" },
+    "jurisdiction": { "const": "CN" },
+    "educationStage": { "const": "upper-secondary" },
+    "curriculumVersion": { "type": "string", "pattern": "^[0-9]{4}(?:-[0-9]{4})?$", "maxLength": 16 },
+    "authorities": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "$ref": "#/$defs/authority" } },
+    "subjects": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "$ref": "#/$defs/subject" } },
+    "fragments": { "type": "array", "maxItems": 1000, "uniqueItems": true, "items": { "$ref": "#/$defs/localPath" } },
+    "nodes": { "type": "array", "minItems": 1, "maxItems": 50000, "items": { "$ref": "#/$defs/node" } },
+    "relations": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/relation" } },
+    "clusters": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/cluster" } },
+    "textbookMappings": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/textbookMapping" } },
+    "review": { "$ref": "#/$defs/review" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$", "maxLength": 24 },
+    "localPath": { "type": "string", "minLength": 1, "maxLength": 255, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+    "localizedText": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 12,
+      "propertyNames": { "$ref": "#/$defs/locale" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 1200 }
+    },
+    "curriculumLevel": { "enum": ["required", "selective-required", "elective"] },
+    "reviewStatus": { "enum": ["draft", "source-checked", "subject-checked", "approved", "deprecated"] },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "issuer", "documentKind", "publishedAt", "sourceUrl"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "issuer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "documentKind": { "enum": ["curriculum-plan", "curriculum-standard", "textbook-catalog", "regional-extension"] },
+        "publishedAt": { "type": "string", "format": "date" },
+        "sourceUrl": { "type": "string", "format": "uri", "maxLength": 2000 },
+        "artifactUrl": { "type": "string", "format": "uri", "maxLength": 2000 },
+        "artifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "authorityId", "standardNumber", "rootNodeId", "curriculumLevels", "catalogStatus"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "authorityId": { "$ref": "#/$defs/id" },
+        "standardNumber": { "type": "integer", "minimum": 1, "maximum": 999 },
+        "rootNodeId": { "$ref": "#/$defs/id" },
+        "curriculumLevels": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "$ref": "#/$defs/curriculumLevel" } },
+        "catalogStatus": { "enum": ["source-verified", "module-draft", "module-reviewed", "atomic-draft", "atomic-reviewed"] }
+      }
+    },
+    "standardRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorityId", "locator", "scope"],
+      "properties": {
+        "authorityId": { "$ref": "#/$defs/id" },
+        "locator": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "scope": { "enum": ["verbatim", "normalized", "inferred"] },
+        "quote": { "type": "string", "minLength": 1, "maxLength": 4000 }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "sourceChecked", "subjectChecked"],
+      "properties": {
+        "status": { "$ref": "#/$defs/reviewStatus" },
+        "sourceChecked": { "type": "boolean" },
+        "subjectChecked": { "type": "boolean" },
+        "reviewer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "note": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "subjectId", "type", "title", "curriculumLevels", "standardRefs", "representations", "observableVariables", "interactionCandidates", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "subjectId": { "$ref": "#/$defs/id" },
+        "parentId": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["subject-root", "module", "concept", "principle", "method", "model", "experiment", "practice"] },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "description": { "$ref": "#/$defs/localizedText" },
+        "curriculumLevels": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "$ref": "#/$defs/curriculumLevel" } },
+        "standardRefs": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "#/$defs/standardRef" } },
+        "representations": { "type": "array", "maxItems": 30, "uniqueItems": true, "items": { "enum": ["verbal", "symbolic", "graph", "table", "diagram", "spatial", "temporal", "experimental", "algorithmic", "map", "timeline", "audio", "visual", "embodied"] } },
+        "observableVariables": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 120 } },
+        "interactionCandidates": { "type": "array", "maxItems": 50, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" } },
+        "misconceptions": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/localizedText" } },
+        "review": { "$ref": "#/$defs/review" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fromNodeId", "toNodeId", "standardRefs", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["prerequisiteOf", "partOf", "explains", "contrastsWith", "representedBy", "measuredBy", "appliedIn", "extendsTo"] },
+        "fromNodeId": { "$ref": "#/$defs/id" },
+        "toNodeId": { "$ref": "#/$defs/id" },
+        "standardRefs": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/standardRef" } },
+        "review": { "$ref": "#/$defs/review" }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "subjectId", "title", "nodeIds", "coreNodeIds", "priority", "runtimeRequirements", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "subjectId": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "nodeIds": { "type": "array", "minItems": 1, "maxItems": 500, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "coreNodeIds": { "type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "priority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["curriculumWeight", "prerequisiteCentrality", "interactionGain", "misconceptionIntensity", "engineReuse", "determinism", "assessmentValue"],
+          "properties": {
+            "curriculumWeight": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "prerequisiteCentrality": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "interactionGain": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "misconceptionIntensity": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "engineReuse": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "determinism": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "assessmentValue": { "type": "integer", "minimum": 0, "maximum": 5 }
+          }
+        },
+        "runtimeRequirements": { "type": "array", "maxItems": 50, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "review": { "$ref": "#/$defs/review" }
+      }
+    },
+    "textbookMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nodeId", "publisher", "edition", "locator", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodeId": { "$ref": "#/$defs/id" },
+        "publisher": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "edition": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "baselineEditionId": { "$ref": "#/$defs/id" },
+        "precision": { "enum": ["chapter", "section", "activity", "cross-volume"] },
+        "locator": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "review": { "$ref": "#/$defs/review" }
+      }
+    }
+  }
+}

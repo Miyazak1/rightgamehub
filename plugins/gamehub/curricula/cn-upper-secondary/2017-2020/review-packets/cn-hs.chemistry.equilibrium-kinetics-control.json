@@ -1,0 +1,526 @@
+{
+  "format": "mooyu.curriculum-review-packet",
+  "schemaVersion": 1,
+  "id": "review.cn-hs.chemistry.equilibrium-kinetics-control",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "briefId": "cn-hs.chemistry.equilibrium-kinetics-control",
+  "subjectId": "chemistry",
+  "clusterId": "cn-hs.chemistry.cluster.equilibrium-kinetics-control",
+  "status": "pending",
+  "reviewPolicy": [
+    {
+      "zh-CN": "此文件是复核工作表，不是审校结论；所有检查项默认为 pending。",
+      "en": "This file is a review worksheet, not an approval record; every check starts as pending."
+    },
+    {
+      "zh-CN": "只有具名学科审校人完成节点、关系与知识簇检查后，才能把源图谱改为 subject-checked。",
+      "en": "The source map may become subject-checked only after a named subject reviewer completes node, relation, and cluster checks."
+    },
+    {
+      "zh-CN": "教材映射必须基于实际采用版本录入，不得从课程标准页码推测教材章节。",
+      "en": "Textbook mappings must use an actually adopted edition and must not infer textbook chapters from curriculum-standard pages."
+    }
+  ],
+  "nodeReviews": [
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "title": {
+        "zh-CN": "反应方向、平衡常数与浓度商",
+        "en": "Reaction Direction, Equilibrium Constant, and Reaction Quotient"
+      },
+      "type": "principle",
+      "parentId": "cn-hs.chemistry.selective-required.reaction-principles.equilibrium-rate",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 9，第38-39页：2.1",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "table"
+      ],
+      "observableVariables": [
+        "enthalpy",
+        "entropy",
+        "equilibrium-constant",
+        "reaction-quotient",
+        "conversion",
+        "reaction-direction"
+      ],
+      "interactionCandidates": [
+        "equilibrium-simulator",
+        "quotient-constant-compare",
+        "composition-scrubber",
+        "conversion-calculator"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism",
+      "title": {
+        "zh-CN": "反应速率、反应历程与活化能",
+        "en": "Reaction Rate, Mechanism, and Activation Energy"
+      },
+      "type": "model",
+      "parentId": "cn-hs.chemistry.selective-required.reaction-principles.equilibrium-rate",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 9，第39页：2.2",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "experimental",
+        "temporal"
+      ],
+      "observableVariables": [
+        "concentration",
+        "pressure",
+        "temperature",
+        "catalyst",
+        "activation-energy",
+        "reaction-rate",
+        "step-rate"
+      ],
+      "interactionCandidates": [
+        "reaction-rate-lab",
+        "mechanism-stepper",
+        "energy-profile",
+        "parameter-sweep",
+        "rate-fit"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.chemistry.selective-required.equilibrium.control",
+      "title": {
+        "zh-CN": "化学反应速率与平衡的综合调控",
+        "en": "Integrated Control of Reaction Rate and Equilibrium"
+      },
+      "type": "practice",
+      "parentId": "cn-hs.chemistry.selective-required.reaction-principles.equilibrium-rate",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 9，第39页：2.3",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "graph",
+        "table",
+        "diagram"
+      ],
+      "observableVariables": [
+        "yield",
+        "rate",
+        "energy-use",
+        "temperature",
+        "pressure",
+        "catalyst",
+        "cost"
+      ],
+      "interactionCandidates": [
+        "process-optimizer",
+        "tradeoff-board",
+        "condition-selector",
+        "pareto-view"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "relationReviews": [
+    {
+      "relationId": "chemistry.required-rate-extends-equilibrium",
+      "type": "extendsTo",
+      "fromNodeId": "cn-hs.chemistry.required.structure-reaction.rate-equilibrium",
+      "toNodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "scope": "inbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "chemistry.equilibrium-prerequisite-control",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "toNodeId": "cn-hs.chemistry.selective-required.equilibrium.control",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "chemistry.kinetics-prerequisite-control",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism",
+      "toNodeId": "cn-hs.chemistry.selective-required.equilibrium.control",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "chemistry.equilibrium-applied-in-shift-experiment",
+      "type": "appliedIn",
+      "fromNodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "toNodeId": "cn-hs.chemistry.experiment.equilibrium-shift",
+      "scope": "outbound",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "clusterReview": {
+    "title": {
+      "zh-CN": "化学平衡、动力学与过程调控",
+      "en": "Chemical Equilibrium, Kinetics, and Process Control"
+    },
+    "coreNodeIds": [
+      "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+      "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism"
+    ],
+    "runtimeRequirements": [
+      "chemistry.kinetics",
+      "chemistry.equilibrium",
+      "instrument.equilibrium-simulator",
+      "instrument.reaction-rate-lab",
+      "instrument.process-optimizer"
+    ],
+    "checks": [
+      {
+        "code": "cluster-coherence",
+        "label": {
+          "zh-CN": "确认知识簇围绕一个可验证的学习进阶，而非简单拼接主题。",
+          "en": "Confirm the cluster forms a testable learning progression rather than a topic bundle."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "core-node-selection",
+        "label": {
+          "zh-CN": "确认核心节点足以代表课件学习目标。",
+          "en": "Confirm core nodes adequately represent the courseware objectives."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "runtime-fit",
+        "label": {
+          "zh-CN": "确认 Domain Pack 与 Instrument 能表达概念且结果可复现。",
+          "en": "Confirm Domain Packs and Instruments express the concepts with reproducible results."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "assessment-alignment",
+        "label": {
+          "zh-CN": "确认每个学习目标都有可观察、可判定的学习证据。",
+          "en": "Confirm every objective has observable, assessable learning evidence."
+        },
+        "required": true,
+        "status": "pending"
+      }
+    ]
+  },
+  "textbookMappingIntake": {
+    "status": "complete",
+    "requiredEditionFields": [
+      "publisher",
+      "edition",
+      "volume",
+      "chapter",
+      "section",
+      "page-range",
+      "isbn-or-catalog-id"
+    ],
+    "nodeRows": [
+      {
+        "nodeId": "cn-hs.chemistry.selective-required.equilibrium.direction-constant",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.chemistry.s1.equilibrium.direction-constant",
+            "publisher": "人民教育出版社",
+            "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+            "locator": "第二章 化学反应速率与化学平衡；第二节 化学平衡、第三节 化学反应的方向"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.chemistry.selective-required.equilibrium.kinetics-mechanism",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.chemistry.s1.equilibrium.kinetics-mechanism",
+            "publisher": "人民教育出版社",
+            "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+            "locator": "第二章 化学反应速率与化学平衡；第一节 化学反应速率、第二节 化学平衡"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.chemistry.selective-required.equilibrium.control",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.chemistry.s1.equilibrium.control",
+            "publisher": "人民教育出版社",
+            "edition": "化学选择性必修1 化学反应原理，2020年5月第1版，ISBN 978-7-107-34604-0",
+            "locator": "第二章 化学反应速率与化学平衡；第四节 化学反应的调控、实验活动1 探究影响化学平衡移动的因素"
+          }
+        ]
+      }
+    ]
+  },
+  "releaseConditions": [
+    {
+      "zh-CN": "所有必需检查项均为 pass 或有明确的 not-applicable 理由。",
+      "en": "Every required check is pass or has an explicit not-applicable rationale."
+    },
+    {
+      "zh-CN": "具名审校人和时间写回知识地图，节点与知识簇 subjectChecked=true。",
+      "en": "A named reviewer and time are recorded in the knowledge map and nodes and cluster have subjectChecked=true."
+    },
+    {
+      "zh-CN": "至少一个实际采用教材版本完成全部核心节点映射。",
+      "en": "At least one actually adopted textbook edition maps every core node."
+    },
+    {
+      "zh-CN": "课件规格重新校验后清除已满足的阻断项；学科审校必须保持独立人工签署。",
+      "en": "Revalidation clears satisfied blockers; subject review remains an independent human sign-off."
+    }
+  ]
+}

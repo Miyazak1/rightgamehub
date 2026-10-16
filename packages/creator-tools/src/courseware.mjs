@@ -1,11 +1,12 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { coursewareRuntimeFiles, resolveCoursewareModuleGraph } from './courseware-modules.mjs';
 
 export const COURSEWARE_FORMAT = 'mooyu.courseware';
 export const COURSEWARE_SCHEMA_VERSION = 1;
 export const COURSEWARE_DOCTOR_REPORT_VERSION = 1;
-export const COURSEWARE_VALIDATOR_VERSION = '0.1.0';
+export const COURSEWARE_VALIDATOR_VERSION = '0.2.0';
 
 const idPattern = /^[a-z][a-z0-9._-]{0,63}$/u;
 const localePattern = /^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$/u;
@@ -16,6 +17,11 @@ const checkpointKinds = new Set(['observation', 'prediction', 'multiple-choice',
 const sourceTypes = new Set(['book', 'paper', 'standard', 'documentation', 'dataset', 'web']);
 const verificationKinds = new Set(['primary-source', 'cross-checked', 'reviewed', 'author-asserted']);
 const journeyActions = new Set(['enter', 'set', 'click', 'answer', 'assert', 'complete']);
+const experienceModeKinds = new Set(['textbook-lab', 'free-sandbox', 'scenario-challenge']);
+const freedomLevels = new Set(['F0', 'F1', 'F2', 'F3']);
+const experienceCommands = new Set(['object.add', 'object.remove', 'object.place', 'object.connect', 'object.configure', 'simulation.run', 'simulation.pause', 'simulation.step', 'simulation.reset', 'measurement.record', 'snapshot.save', 'snapshot.compare']);
+const instrumentKinds = new Set(['probe', 'trace', 'vector', 'graph', 'table', 'comparison', 'annotation', 'replay']);
+const sandboxMinimumCommands = ['object.add', 'object.remove', 'object.place', 'object.configure', 'simulation.run', 'simulation.reset', 'measurement.record', 'snapshot.save'];
 const ignoredDirectories = new Set(['.git', '.gamehub', '.mooyu', 'node_modules']);
 const finding = (severity, code, message, details = {}) => ({ severity, code, message, ...details });
 const isObject = value => Boolean(value) && !Array.isArray(value) && typeof value === 'object';
@@ -99,18 +105,27 @@ async function projectDigest(projectRoot) {
 }
 
 async function publishableProjectDigest(projectRoot, manifest) {
-  const fixed = ['mooyu-courseware.json',manifest?.course,manifest?.evidence,manifest?.tests];
+  const fixed = ['mooyu-courseware.json',manifest?.course,manifest?.experience,manifest?.evidence,manifest?.tests].filter(Boolean);
   if (fixed.some(relative => !safeRelativePath(relative))) return projectDigest(projectRoot);
   const records = [];
   const add = async relative => records.push({ relative,bytes:await fs.readFile(path.join(projectRoot,...relative.split('/'))) });
   try {
     for (const relative of fixed) await add(relative);
+    const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+    if (moduleGraph) {
+      for (const record of moduleGraph.records) {
+        records.push({ relative:record.manifestFile.relative,bytes:record.manifestFile.bytes });
+        records.push({ relative:record.entryFile.relative,bytes:record.entryFile.bytes });
+      }
+      records.push({ relative:manifest.runtime.moduleLock,bytes:moduleGraph.lockBytes });
+      for (const record of await coursewareRuntimeFiles(manifest)) records.push({ relative:record.relative,bytes:record.bytes });
+    }
     const walk = async (directory,prefix='dist') => {
       for (const entry of await fs.readdir(directory,{ withFileTypes:true })) {
         const relative = `${prefix}/${entry.name}`;
         if (entry.isSymbolicLink()) continue;
         if (entry.isDirectory()) await walk(path.join(directory,entry.name),relative);
-        else if (entry.isFile()) await add(relative);
+        else if (entry.isFile() && relative !== manifest?.runtime?.moduleLock && !relative.startsWith('dist/_mooyu/')) await add(relative);
       }
     };
     await walk(path.join(projectRoot,'dist'));
@@ -124,7 +139,7 @@ async function publishableProjectDigest(projectRoot, manifest) {
 
 function validateManifest(manifest, findings) {
   const file = 'mooyu-courseware.json';
-  const allowed = ['format', 'schemaVersion', 'id', 'title', 'summary', 'defaultLocale', 'locales', 'subjects', 'audience', 'course', 'evidence', 'tests', 'build', 'runtime', 'licenses'];
+  const allowed = ['format', 'schemaVersion', 'id', 'title', 'summary', 'defaultLocale', 'locales', 'subjects', 'audience', 'course', 'experience', 'evidence', 'tests', 'build', 'runtime', 'licenses'];
   const required = ['format', 'schemaVersion', 'id', 'title', 'defaultLocale', 'locales', 'subjects', 'audience', 'course', 'evidence', 'tests', 'build', 'runtime', 'licenses'];
   if (!requireFields(manifest, required, findings, file)) return;
   rejectUnknown(manifest, allowed, findings, file);
@@ -136,10 +151,19 @@ function validateManifest(manifest, findings) {
   if (!isObject(manifest.audience) || !Array.isArray(manifest.audience.stages) || !manifest.audience.stages.length || new Set(manifest.audience.stages).size !== manifest.audience.stages.length || manifest.audience.stages.some(stage => !audienceStages.has(stage))) findings.push(finding('error', 'COURSEWARE_AUDIENCE_INVALID', 'audience.stages 必须是无重复的受支持学习阶段。', { path: file, pointer: '/audience' }));
   else rejectUnknown(manifest.audience, ['stages', 'minimumAge', 'maximumAge'], findings, file, '/audience');
   for (const key of ['course', 'evidence', 'tests']) if (!safeRelativePath(manifest[key])) findings.push(finding('error', 'COURSEWARE_PATH_INVALID', `${key} 必须是包内安全相对路径。`, { path: file, pointer: `/${key}` }));
-  if (!isObject(manifest.build) || manifest.build.profile !== 'mooyu-static-v1' || manifest.build.entry !== 'dist/index.html') findings.push(finding('error', 'COURSEWARE_BUILD_PROFILE_INVALID', 'build 必须使用 mooyu-static-v1 和 dist/index.html。', { path: file, pointer: '/build' }));
+  if (manifest.experience !== undefined && !safeRelativePath(manifest.experience)) findings.push(finding('error', 'COURSEWARE_PATH_INVALID', 'experience 必须是包内安全相对路径。', { path: file, pointer: '/experience' }));
+  if (!isObject(manifest.build) || !['mooyu-static-v1', 'mooyu-structured-v1'].includes(manifest.build.profile) || manifest.build.entry !== 'dist/index.html') findings.push(finding('error', 'COURSEWARE_BUILD_PROFILE_INVALID', 'build 必须使用受支持的固定构建配置和 dist/index.html。', { path: file, pointer: '/build' }));
   else rejectUnknown(manifest.build, ['profile', 'entry'], findings, file, '/build');
   if (!isObject(manifest.runtime) || manifest.runtime.learningSdk !== 1 || !['static-web', 'static-wasm'].includes(manifest.runtime.kind) || !Array.isArray(manifest.runtime.capabilities) || new Set(manifest.runtime.capabilities).size !== manifest.runtime.capabilities.length || manifest.runtime.capabilities.some(capability => !runtimeCapabilities.has(capability))) findings.push(finding('error', 'COURSEWARE_RUNTIME_INVALID', 'runtime 必须声明静态运行类型、Learning SDK v1 与无重复的已知能力数组。', { path: file, pointer: '/runtime' }));
-  else rejectUnknown(manifest.runtime, ['kind', 'learningSdk', 'capabilities'], findings, file, '/runtime');
+  else {
+    rejectUnknown(manifest.runtime, ['kind', 'learningSdk', 'capabilities', 'profile', 'modules', 'rootModules', 'moduleLock'], findings, file, '/runtime');
+    const structured = manifest.build?.profile === 'mooyu-structured-v1';
+    if (structured && (manifest.runtime.profile !== 'structured-courseware'
+      || !Array.isArray(manifest.runtime.modules) || manifest.runtime.modules.length === 0 || new Set(manifest.runtime.modules).size !== manifest.runtime.modules.length || manifest.runtime.modules.some(modulePath => !safeRelativePath(modulePath) || !modulePath.endsWith('.json'))
+      || !Array.isArray(manifest.runtime.rootModules) || manifest.runtime.rootModules.length === 0 || new Set(manifest.runtime.rootModules).size !== manifest.runtime.rootModules.length || manifest.runtime.rootModules.some(id => !idPattern.test(id))
+      || manifest.runtime.moduleLock !== 'dist/mooyu-modules.lock.json')) findings.push(finding('error', 'COURSEWARE_MODULE_GRAPH_INVALID', '结构化课件必须声明模块清单、根模块与固定模块锁路径。', { path:file,pointer:'/runtime' }));
+    if (!structured && manifest.runtime.profile !== undefined && manifest.runtime.profile !== 'legacy-web') findings.push(finding('error', 'COURSEWARE_RUNTIME_PROFILE_INVALID', '静态课件只能声明 legacy-web 运行配置。', { path:file,pointer:'/runtime/profile' }));
+  }
   if (!isObject(manifest.licenses) || typeof manifest.licenses.code !== 'string' || typeof manifest.licenses.content !== 'string') findings.push(finding('error', 'COURSEWARE_LICENSE_INVALID', 'licenses 必须声明 code 与 content。', { path: file, pointer: '/licenses' }));
   else rejectUnknown(manifest.licenses, ['code', 'content'], findings, file, '/licenses');
 }
@@ -239,6 +263,79 @@ function validateJourneys(journeys, findings, file, courseSets) {
   if (!journeys.journeys.some(journey => journey.expectsCompletion === true && journey.steps?.some(step => step.action === 'complete'))) findings.push(finding('error', 'COURSEWARE_COMPLETION_JOURNEY_MISSING', '至少需要一条可完成课程的验收路径。', { path: file, pointer: '/journeys' }));
 }
 
+function validateExperience(experience, findings, file, courseSets) {
+  const rootFields = ['format', 'schemaVersion', 'engine', 'defaultMode', 'modes', 'instruments'];
+  if (!requireFields(experience, ['format', 'schemaVersion', 'engine', 'defaultMode', 'modes'], findings, file)) return;
+  rejectUnknown(experience, rootFields, findings, file);
+  if (experience.format !== 'mooyu.courseware-experience' || experience.schemaVersion !== 1) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_FORMAT_INVALID', 'experience 必须使用 mooyu.courseware-experience schemaVersion 1。', { path:file,pointer:'/format' }));
+
+  const engine = experience.engine;
+  const engineFields = ['id', 'version', 'deterministic', 'snapshot', 'stateVariables'];
+  if (requireFields(engine, engineFields, findings, file, '/engine')) {
+    rejectUnknown(engine, engineFields, findings, file, '/engine');
+    requireId(engine.id, findings, file, '/engine/id');
+    if (!Number.isInteger(engine.version) || engine.version < 1 || engine.deterministic !== true || engine.snapshot !== true) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_ENGINE_INVALID', '实验引擎必须有正整数版本，并支持确定性重放和状态快照。', { path:file,pointer:'/engine' }));
+    requireIdList(engine.stateVariables, findings, file, '/engine/stateVariables');
+  }
+
+  const instruments = Array.isArray(experience.instruments) ? experience.instruments : [];
+  if (experience.instruments !== undefined && !Array.isArray(experience.instruments)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_INSTRUMENTS_INVALID', 'experience.instruments 必须是数组。', { path:file,pointer:'/instruments' }));
+  const instrumentIds = new Set(instruments.map(value => value?.id));
+  if (instrumentIds.size !== instruments.length) findings.push(finding('error', 'COURSEWARE_ID_DUPLICATE', 'experience 中存在重复工具 ID。', { path:file,pointer:'/instruments' }));
+  for (const [index, instrument] of instruments.entries()) {
+    const pointer = `/instruments/${index}`;
+    if (!requireFields(instrument, ['id', 'kind', 'title'], findings, file, pointer)) continue;
+    rejectUnknown(instrument, ['id', 'kind', 'title'], findings, file, pointer);
+    requireId(instrument.id, findings, file, `${pointer}/id`); requireTextMap(instrument.title, findings, file, `${pointer}/title`);
+    if (!instrumentKinds.has(instrument.kind)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_INSTRUMENT_INVALID', `工具 ${instrument.id ?? index} 的 kind 不受支持。`, { path:file,pointer:`${pointer}/kind` }));
+  }
+
+  const modes = Array.isArray(experience.modes) ? experience.modes : [];
+  if (!modes.length) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_MODES_EMPTY', 'experience 至少需要一种真实可用的体验模式。', { path:file,pointer:'/modes' }));
+  const modeIds = new Set(modes.map(value => value?.id));
+  if (modeIds.size !== modes.length) findings.push(finding('error', 'COURSEWARE_ID_DUPLICATE', 'experience 中存在重复模式 ID。', { path:file,pointer:'/modes' }));
+  if (!modeIds.has(experience.defaultMode)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_DEFAULT_MODE_INVALID', 'defaultMode 必须引用已声明的模式。', { path:file,pointer:'/defaultMode' }));
+
+  for (const [index, mode] of modes.entries()) {
+    const pointer = `/modes/${index}`;
+    const fields = ['id', 'kind', 'title', 'sceneIds', 'freedomLevel', 'allowedCommands', 'instrumentIds', 'curiosityHook'];
+    if (!requireFields(mode, fields, findings, file, pointer)) continue;
+    rejectUnknown(mode, [...fields, 'challenge'], findings, file, pointer);
+    requireId(mode.id, findings, file, `${pointer}/id`); requireTextMap(mode.title, findings, file, `${pointer}/title`); requireTextMap(mode.curiosityHook, findings, file, `${pointer}/curiosityHook`);
+    if (!experienceModeKinds.has(mode.kind)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_MODE_KIND_INVALID', `模式 ${mode.id ?? index} 的 kind 不受支持。`, { path:file,pointer:`${pointer}/kind` }));
+    if (!freedomLevels.has(mode.freedomLevel)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_FREEDOM_INVALID', `模式 ${mode.id ?? index} 的 freedomLevel 无效。`, { path:file,pointer:`${pointer}/freedomLevel` }));
+    for (const sceneId of requireIdList(mode.sceneIds, findings, file, `${pointer}/sceneIds`)) if (!courseSets?.sceneIds.has(sceneId)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_SCENE_INVALID', `模式 ${mode.id} 引用了不存在的场景 ${sceneId}。`, { path:file,pointer:`${pointer}/sceneIds` }));
+    const commands = requireIdList(mode.allowedCommands, findings, file, `${pointer}/allowedCommands`, { allowEmpty:true });
+    for (const command of commands) if (!experienceCommands.has(command)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_COMMAND_INVALID', `模式 ${mode.id} 声明了未知命令 ${command}。`, { path:file,pointer:`${pointer}/allowedCommands` }));
+    for (const instrumentId of requireIdList(mode.instrumentIds, findings, file, `${pointer}/instrumentIds`, { allowEmpty:true })) if (!instrumentIds.has(instrumentId)) findings.push(finding('error', 'COURSEWARE_EXPERIENCE_INSTRUMENT_REFERENCE_INVALID', `模式 ${mode.id} 引用了不存在的工具 ${instrumentId}。`, { path:file,pointer:`${pointer}/instrumentIds` }));
+
+    if (mode.kind === 'free-sandbox') {
+      const missing = sandboxMinimumCommands.filter(command => !commands.includes(command));
+      if (!['F2', 'F3'].includes(mode.freedomLevel) || missing.length) findings.push(finding('error', 'COURSEWARE_SANDBOX_FREEDOM_INSUFFICIENT', `自由实验必须达到 F2/F3，并支持自由增删、放置、配置、运行、复位、记录和快照；缺少：${missing.join('、') || '无'}。`, { path:file,pointer }));
+    }
+
+    if (mode.kind !== 'scenario-challenge') {
+      if (mode.challenge !== undefined) findings.push(finding('error', 'COURSEWARE_CHALLENGE_UNEXPECTED', `非场景挑战模式 ${mode.id} 不应声明 challenge。`, { path:file,pointer:`${pointer}/challenge` }));
+      continue;
+    }
+    const challenge = mode.challenge;
+    const challengeFields = ['id', 'title', 'goal', 'success', 'attemptPolicy'];
+    if (!requireFields(challenge, challengeFields, findings, file, `${pointer}/challenge`)) continue;
+    rejectUnknown(challenge, challengeFields, findings, file, `${pointer}/challenge`);
+    requireId(challenge.id, findings, file, `${pointer}/challenge/id`); requireTextMap(challenge.title, findings, file, `${pointer}/challenge/title`); requireTextMap(challenge.goal, findings, file, `${pointer}/challenge/goal`);
+    if (!Array.isArray(challenge.success) || !challenge.success.length) findings.push(finding('error', 'COURSEWARE_CHALLENGE_RULES_INVALID', `挑战 ${challenge.id ?? index} 缺少成功条件。`, { path:file,pointer:`${pointer}/challenge/success` }));
+    for (const [conditionIndex, condition] of (challenge.success ?? []).entries()) {
+      const conditionPointer = `${pointer}/challenge/success/${conditionIndex}`;
+      if (!isObject(condition) || !idPattern.test(condition.metric ?? '') || !['eq', 'gte', 'lte', 'between'].includes(condition.operator)) { findings.push(finding('error', 'COURSEWARE_CHALLENGE_RULES_INVALID', `挑战 ${challenge.id ?? index} 包含无效成功条件。`, { path:file,pointer:conditionPointer })); continue; }
+      rejectUnknown(condition, condition.operator === 'between' ? ['metric', 'operator', 'values'] : ['metric', 'operator', 'value'], findings, file, conditionPointer);
+      if (condition.operator === 'between' ? (!Array.isArray(condition.values) || condition.values.length !== 2 || condition.values.some(value => typeof value !== 'number') || condition.values[0] > condition.values[1]) : typeof condition.value !== 'number') findings.push(finding('error', 'COURSEWARE_CHALLENGE_RULES_INVALID', `挑战 ${challenge.id ?? index} 的成功阈值无效。`, { path:file,pointer:conditionPointer }));
+    }
+    const attempt = challenge.attemptPolicy;
+    if (!isObject(attempt) || !Number.isInteger(attempt.maxAttempts) || attempt.maxAttempts < 1 || attempt.maxAttempts > 100 || !['instant', 'after-feedback'].includes(attempt.retry)) findings.push(finding('error', 'COURSEWARE_CHALLENGE_ATTEMPT_POLICY_INVALID', `挑战 ${challenge.id ?? index} 的尝试规则无效。`, { path:file,pointer:`${pointer}/challenge/attemptPolicy` }));
+    else rejectUnknown(attempt, ['maxAttempts', 'retry'], findings, file, `${pointer}/challenge/attemptPolicy`);
+  }
+}
+
 export async function inspectCoursewareProject(root) {
   const projectRoot = path.resolve(root); const findings = [];
   const manifest = await readJson(projectRoot, 'mooyu-courseware.json', findings, 'COURSEWARE_MANIFEST_INVALID');
@@ -248,16 +345,27 @@ export async function inspectCoursewareProject(root) {
   const testsPath = safeRelativePath(manifest?.tests) ? manifest.tests : 'tests/journeys.json';
   const course = manifest ? await readJson(projectRoot, coursePath, findings) : null;
   const courseSets = course ? validateCourse(course, findings, coursePath) : null;
+  const experiencePath = safeRelativePath(manifest?.experience) ? manifest.experience : null;
+  const experience = experiencePath ? await readJson(projectRoot, experiencePath, findings) : null;
+  if (experience) validateExperience(experience, findings, experiencePath, courseSets);
   const evidence = manifest ? await readJson(projectRoot, evidencePath, findings) : null;
   if (evidence) validateEvidence(evidence, findings, evidencePath, course, coursePath);
   const journeys = manifest ? await readJson(projectRoot, testsPath, findings) : null;
   if (journeys) validateJourneys(journeys, findings, testsPath, courseSets);
+  if (manifest?.build?.profile === 'mooyu-structured-v1' && !findings.some(value => value.severity === 'error' && value.path === 'mooyu-courseware.json')) {
+    try {
+      const graph = await resolveCoursewareModuleGraph(projectRoot, manifest);
+      findings.push(finding('info', 'COURSEWARE_MODULE_GRAPH_READY', `${graph.records.length} 个模块的依赖、API 版本与入口完整性已通过检查。`, { path:'mooyu-courseware.json',pointer:'/runtime/modules' }));
+    } catch (error) {
+      findings.push(finding('error', error.code ?? 'COURSEWARE_MODULE_GRAPH_INVALID', error.message, { path:error.path ?? 'mooyu-courseware.json',pointer:error.pointer ?? '/runtime/modules' }));
+    }
+  }
   const entry = manifest?.build?.entry ?? 'dist/index.html';
   if (safeRelativePath(entry)) try {
     const stat = await fs.lstat(path.join(projectRoot, ...entry.split('/')));
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 16) throw new Error('不是有效普通文件');
   } catch (error) { findings.push(finding('error', 'COURSEWARE_ENTRY_MISSING', `构建入口 ${entry} 不可用：${error.message}`, { path: 'mooyu-courseware.json', pointer: '/build/entry' })); }
-  if (!findings.some(value => value.severity === 'error')) findings.push(finding('info', 'COURSEWARE_CONTRACT_READY', '课程结构、证据链、学习路径和构建入口通过 L0 契约检查。'));
+  if (!findings.some(value => value.severity === 'error')) findings.push(finding('info', 'COURSEWARE_CONTRACT_READY', `课程结构、证据链、学习路径${experience ? '、体验模式' : ''}和构建入口通过 L0 契约检查。`));
   findings.push(finding('warning', 'COURSEWARE_DOCTOR_LIMIT', 'L0 Doctor 验证结构与引用完整性，不替代学科专家审校、无障碍审计或浏览器旅程执行。'));
   const summary = { errors: findings.filter(value => value.severity === 'error').length, warnings: findings.filter(value => value.severity === 'warning').length, info: findings.filter(value => value.severity === 'info').length };
   return { reportVersion: COURSEWARE_DOCTOR_REPORT_VERSION, validatorVersion: COURSEWARE_VALIDATOR_VERSION, projectDigest: await publishableProjectDigest(projectRoot,manifest), root: projectRoot, ok: summary.errors === 0, summary, findings };

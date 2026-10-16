@@ -1,0 +1,74 @@
+{
+  "format": "mooyu.courseware-brief",
+  "schemaVersion": 1,
+  "id": "cn-hs.physics.newton-dynamics",
+  "subjectId": "physics",
+  "clusterId": "cn-hs.physics.cluster.newton-dynamics",
+  "title": { "zh-CN": "受力分析与牛顿动力学实验室", "en": "Force Analysis and Newtonian Dynamics Lab" },
+  "status": "review-blocked",
+  "targetDepth": "C4",
+  "knowledgeNodeIds": ["cn-hs.physics.required-1.forces-hooke-friction", "cn-hs.physics.required-1.force-composition-equilibrium", "cn-hs.physics.required-1.newton-laws"],
+  "blockingGates": ["subject-review"],
+  "runtimeRequirements": ["physics.mechanics", "instrument.free-body-diagram", "instrument.force-builder", "instrument.mass-force-sweep", "instrument.experiment-workflow", "instrument.checkpoint"],
+  "learning": {
+    "objectives": [
+      { "id": "construct-fbd", "text": { "zh-CN": "确定研究对象并绘制只包含作用在该对象上的力的受力图。", "en": "Choose a system and draw a free-body diagram containing only forces acting on it." } },
+      { "id": "resultant-to-motion", "text": { "zh-CN": "用矢量合成和牛顿第二定律预测加速度方向与大小。", "en": "Use vector addition and Newton's second law to predict acceleration direction and magnitude." } },
+      { "id": "investigate-force-mass", "text": { "zh-CN": "通过控制变量实验归纳加速度与合力、质量的关系并解释摩擦影响。", "en": "Use controlled experiments to infer how acceleration depends on net force and mass, including friction effects." } }
+    ],
+    "prerequisites": [
+      { "zh-CN": "位移、速度和加速度的矢量表示。", "en": "Vector representations of displacement, velocity, and acceleration." },
+      { "zh-CN": "力的图示、矢量分解与合成。", "en": "Force diagrams and vector decomposition and addition." }
+    ],
+    "misconceptions": [
+      { "id": "force-maintains-motion", "text": { "zh-CN": "认为物体保持运动必须有沿运动方向的合力。", "en": "Believing a net force in the direction of motion is required to maintain motion." }, "objectiveIds": ["resultant-to-motion"] },
+      { "id": "third-law-cancels", "text": { "zh-CN": "把作用力与反作用力画在同一物体上并相互抵消。", "en": "Drawing an action-reaction pair on the same object and canceling them." }, "objectiveIds": ["construct-fbd"] },
+      { "id": "normal-always-mg", "text": { "zh-CN": "认为支持力在所有情境下都等于重力。", "en": "Assuming the normal force always equals weight." }, "objectiveIds": ["construct-fbd", "investigate-force-mass"] }
+    ]
+  },
+  "model": {
+    "stateVariables": [
+      { "id": "mass", "type": "number", "unit": "kg", "minimum": 0.1, "maximum": 20, "default": 2 },
+      { "id": "applied-force", "type": "vector", "unit": "N", "default": [8, 0] },
+      { "id": "friction-coefficient", "type": "number", "minimum": 0, "maximum": 1, "default": 0.2 },
+      { "id": "incline-angle", "type": "number", "unit": "deg", "minimum": 0, "maximum": 60, "default": 0 },
+      { "id": "spring-constant", "type": "number", "unit": "N/m", "minimum": 1, "maximum": 100, "default": 20 },
+      { "id": "time", "type": "number", "unit": "s", "minimum": 0, "maximum": 10, "default": 0 }
+    ],
+    "commands": ["select-system", "add-force", "set-mass", "set-friction", "set-incline", "run", "pause", "step", "reset"],
+    "derivedViews": ["force-components", "net-force", "acceleration", "velocity", "position", "force-time-graph", "acceleration-time-graph"],
+    "invariants": [
+      { "zh-CN": "每一帧均满足同一参考系中的矢量关系 ΣF=ma。", "en": "Every frame satisfies the vector relation ΣF=ma in one reference frame." },
+      { "zh-CN": "牛顿第三定律力对作用于不同物体，不能在单一受力图中抵消。", "en": "Third-law pairs act on different bodies and cannot cancel in one free-body diagram." }
+    ]
+  },
+  "instruments": [
+    { "id": "free-body-diagram", "type": "instrument.free-body-diagram", "observes": ["applied-force", "force-components", "net-force"] },
+    { "id": "force-builder", "type": "instrument.force-builder", "observes": ["mass", "applied-force", "friction-coefficient", "incline-angle", "net-force"] },
+    { "id": "mass-force-sweep", "type": "instrument.mass-force-sweep", "observes": ["mass", "net-force", "acceleration"] },
+    { "id": "experiment-workflow", "type": "instrument.experiment-workflow", "observes": ["time", "acceleration", "velocity", "position", "acceleration-time-graph"] }
+  ],
+  "scenes": [
+    { "id": "fbd-builder", "type": "explore", "title": { "zh-CN": "受力图构建器", "en": "Free-body Diagram Builder" }, "objectiveIds": ["construct-fbd"], "instrumentIds": ["free-body-diagram", "force-builder"] },
+    { "id": "force-to-motion", "type": "simulate", "title": { "zh-CN": "从合力到运动", "en": "From Net Force to Motion" }, "objectiveIds": ["resultant-to-motion"], "instrumentIds": ["force-builder", "experiment-workflow"] },
+    { "id": "controlled-sweep", "type": "practice", "title": { "zh-CN": "力与质量的控制变量实验", "en": "Controlled Force and Mass Sweep" }, "objectiveIds": ["investigate-force-mass"], "instrumentIds": ["mass-force-sweep", "experiment-workflow"] }
+  ],
+  "checkpoints": [
+    { "id": "identify-system-forces", "sceneId": "fbd-builder", "kind": "multiple-choice", "prompt": { "zh-CN": "选择研究对象后，只保留真正作用在它上面的力。", "en": "After choosing the system, keep only forces that actually act on it." }, "objectiveIds": ["construct-fbd"], "successEvidence": { "zh-CN": "力的施力物体、方向和作用对象均正确。", "en": "Each force has the correct source, direction, and target." } },
+    { "id": "predict-acceleration", "sceneId": "force-to-motion", "kind": "prediction", "prompt": { "zh-CN": "运行前预测加速度方向及增大外力后的变化。", "en": "Before running, predict the acceleration direction and its change when applied force increases." }, "objectiveIds": ["resultant-to-motion"], "successEvidence": { "zh-CN": "预测与矢量合力及模拟结果一致。", "en": "The prediction agrees with the vector net force and simulation." } },
+    { "id": "infer-second-law", "sceneId": "controlled-sweep", "kind": "free-response", "prompt": { "zh-CN": "依据两组控制变量数据归纳 a、F、m 的关系并说明摩擦造成的偏差。", "en": "Use two controlled sweeps to infer the relation among a, F, and m and explain the friction-related deviation." }, "objectiveIds": ["investigate-force-mass"], "successEvidence": { "zh-CN": "结论引用图表数据、控制变量和 ΣF=ma。", "en": "The conclusion cites graph data, controlled variables, and ΣF=ma." } }
+  ],
+  "acceptance": {
+    "journeys": [
+      { "id": "physics-zh", "locale": "zh-CN", "steps": ["用键盘选择物体并完成受力图。", "预测加速度后运行、暂停和逐帧检查。", "完成力和质量两组控制变量扫描并提交结论。", "在两个外部测试站点中重复核心流程。"] },
+      { "id": "physics-en", "locale": "en", "steps": ["Select a body and complete its free-body diagram using the keyboard.", "Predict acceleration, then run, pause, and inspect frame by frame.", "Complete force and mass sweeps and submit a conclusion.", "Repeat the core flow in two external test hosts."] }
+    ],
+    "embedHosts": 2,
+    "keyboardComplete": true,
+    "reducedMotion": true,
+    "accessibility": [
+      { "zh-CN": "所有力矢量都有文本名称、数值和方向描述。", "en": "Every force vector has a text name, value, and direction description." },
+      { "zh-CN": "减少动态效果模式用离散帧和数据表替代连续运动。", "en": "Reduced-motion mode replaces continuous motion with discrete frames and a data table." }
+    ]
+  }
+}

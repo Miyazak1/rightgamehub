@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/experience-v1.schema.json",
+  "title": "MOOYU Courseware Experience v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "engine", "defaultMode", "modes"],
+  "properties": {
+    "format": { "const": "mooyu.courseware-experience" },
+    "schemaVersion": { "const": 1 },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "deterministic", "snapshot", "stateVariables"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "deterministic": { "const": true },
+        "snapshot": { "const": true },
+        "stateVariables": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "defaultMode": { "$ref": "#/$defs/id" },
+    "modes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/mode" }
+    },
+    "instruments": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "title"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "kind": { "enum": ["probe", "trace", "vector", "graph", "table", "comparison", "annotation", "replay"] },
+          "title": { "$ref": "#/$defs/localizedText" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z][A-Za-z0-9]{1,7})?$", "maxLength": 24 },
+    "localizedText": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 12,
+      "propertyNames": { "$ref": "#/$defs/locale" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 500 }
+    },
+    "command": {
+      "enum": [
+        "object.add", "object.remove", "object.place", "object.connect", "object.configure",
+        "simulation.run", "simulation.pause", "simulation.step", "simulation.reset",
+        "measurement.record", "snapshot.save", "snapshot.compare"
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metric", "operator", "value"],
+          "properties": {
+            "metric": { "$ref": "#/$defs/id" },
+            "operator": { "enum": ["eq", "gte", "lte"] },
+            "value": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metric", "operator", "values"],
+          "properties": {
+            "metric": { "$ref": "#/$defs/id" },
+            "operator": { "const": "between" },
+            "values": {
+              "type": "array",
+              "prefixItems": [{ "type": "number" }, { "type": "number" }],
+              "items": false,
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      ]
+    },
+    "challenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "goal", "success", "attemptPolicy"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "goal": { "$ref": "#/$defs/localizedText" },
+        "success": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "$ref": "#/$defs/condition" } },
+        "attemptPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxAttempts", "retry"],
+          "properties": {
+            "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "retry": { "enum": ["instant", "after-feedback"] }
+          }
+        }
+      }
+    },
+    "mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "sceneIds", "freedomLevel", "allowedCommands", "instrumentIds", "curiosityHook"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["textbook-lab", "free-sandbox", "scenario-challenge"] },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "sceneIds": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "freedomLevel": { "enum": ["F0", "F1", "F2", "F3"] },
+        "allowedCommands": { "type": "array", "minItems": 0, "maxItems": 24, "uniqueItems": true, "items": { "$ref": "#/$defs/command" } },
+        "instrumentIds": { "type": "array", "minItems": 0, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "curiosityHook": { "$ref": "#/$defs/localizedText" },
+        "challenge": { "$ref": "#/$defs/challenge" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "scenario-challenge" } }, "required": ["kind"] },
+          "then": { "required": ["challenge"] },
+          "else": { "not": { "required": ["challenge"] } }
+        }
+      ]
+    }
+  }
+}

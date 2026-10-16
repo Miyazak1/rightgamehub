@@ -1,0 +1,853 @@
+{
+  "format": "mooyu.curriculum-review-packet",
+  "schemaVersion": 1,
+  "id": "review.cn-hs.math.derivative-optimization",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "briefId": "cn-hs.math.derivative-optimization",
+  "subjectId": "mathematics",
+  "clusterId": "cn-hs.math.cluster.derivative-and-optimization",
+  "status": "pending",
+  "reviewPolicy": [
+    {
+      "zh-CN": "此文件是复核工作表，不是审校结论；所有检查项默认为 pending。",
+      "en": "This file is a review worksheet, not an approval record; every check starts as pending."
+    },
+    {
+      "zh-CN": "只有具名学科审校人完成节点、关系与知识簇检查后，才能把源图谱改为 subject-checked。",
+      "en": "The source map may become subject-checked only after a named subject reviewer completes node, relation, and cluster checks."
+    },
+    {
+      "zh-CN": "教材映射必须基于实际采用版本录入，不得从课程标准页码推测教材章节。",
+      "en": "Textbook mappings must use an actually adopted edition and must not infer textbook chapters from curriculum-standard pages."
+    }
+  ],
+  "nodeReviews": [
+    {
+      "nodeId": "cn-hs.math.selective.derivative.rate-limit",
+      "title": {
+        "zh-CN": "从平均变化率到瞬时变化率与极限思想",
+        "en": "From Average to Instantaneous Rate and the Limit Idea"
+      },
+      "type": "concept",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数概念及其意义（1）（2）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "verbal",
+        "symbolic",
+        "graph",
+        "table",
+        "temporal"
+      ],
+      "observableVariables": [
+        "delta-x",
+        "delta-y",
+        "average-rate",
+        "instantaneous-rate"
+      ],
+      "interactionCandidates": [
+        "secant-to-tangent",
+        "interval-shrink",
+        "rate-probe"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.geometric-meaning",
+      "title": {
+        "zh-CN": "导数的几何意义",
+        "en": "Geometric Meaning of the Derivative"
+      },
+      "type": "concept",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数概念及其意义（3）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "diagram"
+      ],
+      "observableVariables": [
+        "point",
+        "secant-slope",
+        "tangent-slope"
+      ],
+      "interactionCandidates": [
+        "secant-to-tangent",
+        "tangent-drag",
+        "slope-probe"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.definition-examples",
+      "title": {
+        "zh-CN": "由定义求基本函数导数",
+        "en": "Derivatives of Basic Functions from the Definition"
+      },
+      "type": "method",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数运算（1）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "algorithmic"
+      ],
+      "observableVariables": [
+        "difference-quotient",
+        "limit",
+        "derivative"
+      ],
+      "interactionCandidates": [
+        "interval-shrink",
+        "derivation-stepper",
+        "graph-derivative-link"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.rules",
+      "title": {
+        "zh-CN": "基本导数公式、四则与简单复合函数求导",
+        "en": "Basic Derivative Formulas, Arithmetic Rules, and Simple Composition"
+      },
+      "type": "method",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数运算（2）（3）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "algorithmic"
+      ],
+      "observableVariables": [
+        "expression",
+        "rule",
+        "derivative"
+      ],
+      "interactionCandidates": [
+        "rule-stepper",
+        "expression-tree",
+        "formula-table"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.monotonicity",
+      "title": {
+        "zh-CN": "用导数研究函数单调性",
+        "en": "Using Derivatives to Study Monotonicity"
+      },
+      "type": "principle",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数在研究函数中的应用（1）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "symbolic",
+        "graph",
+        "table"
+      ],
+      "observableVariables": [
+        "derivative-sign",
+        "monotonic-interval"
+      ],
+      "interactionCandidates": [
+        "graph-derivative-link",
+        "sign-chart",
+        "interval-brush"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "nodeId": "cn-hs.math.selective.derivative.extrema-optimization",
+      "title": {
+        "zh-CN": "极值、最值与简单优化",
+        "en": "Extrema, Global Bounds, and Simple Optimization"
+      },
+      "type": "method",
+      "parentId": "cn-hs.math.selective.functions.derivative",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "sourceRefs": [
+        {
+          "authorityId": "moe.cn-hs-2017-2020-bundle",
+          "locator": "PDF 3，第47页：导数在研究函数中的应用（2）",
+          "scope": "verbatim"
+        }
+      ],
+      "representations": [
+        "verbal",
+        "symbolic",
+        "graph",
+        "table"
+      ],
+      "observableVariables": [
+        "critical-point",
+        "local-extremum",
+        "endpoint",
+        "global-extremum"
+      ],
+      "interactionCandidates": [
+        "optimization",
+        "critical-point-probe",
+        "graph-derivative-link"
+      ],
+      "misconceptions": [],
+      "checks": [
+        {
+          "code": "scope-boundary",
+          "label": {
+            "zh-CN": "确认知识边界与粒度符合课标，不与相邻节点重复或遗漏。",
+            "en": "Confirm that scope and granularity match the standard without overlap or omission."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "terminology",
+          "label": {
+            "zh-CN": "确认中英文术语、符号、单位和表述准确。",
+            "en": "Confirm Chinese and English terminology, symbols, units, and wording."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "prerequisites",
+          "label": {
+            "zh-CN": "确认先修关系充分、方向正确且没有隐含跳步。",
+            "en": "Confirm prerequisites are sufficient, correctly directed, and contain no hidden leaps."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "observables",
+          "label": {
+            "zh-CN": "确认可观察量能够支撑目标概念，不把界面效果当成学习证据。",
+            "en": "Confirm observables support the concept rather than treating visual effects as evidence."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "misconceptions",
+          "label": {
+            "zh-CN": "确认典型误区真实、可诊断并适合检查点验证。",
+            "en": "Confirm misconceptions are authentic, diagnosable, and suitable for checkpoint evidence."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "relationReviews": [
+    {
+      "relationId": "math.derivative-rate-to-geometric",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.rate-limit",
+      "toNodeId": "cn-hs.math.selective.derivative.geometric-meaning",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "math.derivative-rate-to-definition",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.rate-limit",
+      "toNodeId": "cn-hs.math.selective.derivative.definition-examples",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "math.derivative-definition-to-rules",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.definition-examples",
+      "toNodeId": "cn-hs.math.selective.derivative.rules",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "math.derivative-geometric-to-monotonicity",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.geometric-meaning",
+      "toNodeId": "cn-hs.math.selective.derivative.monotonicity",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "math.derivative-rules-to-monotonicity",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.rules",
+      "toNodeId": "cn-hs.math.selective.derivative.monotonicity",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "relationId": "math.derivative-monotonicity-to-extrema",
+      "type": "prerequisiteOf",
+      "fromNodeId": "cn-hs.math.selective.derivative.monotonicity",
+      "toNodeId": "cn-hs.math.selective.derivative.extrema-optimization",
+      "scope": "internal",
+      "sourceRefs": [],
+      "checks": [
+        {
+          "code": "relation-validity",
+          "label": {
+            "zh-CN": "确认关系类型与方向准确。",
+            "en": "Confirm relation type and direction."
+          },
+          "required": true,
+          "status": "pending"
+        },
+        {
+          "code": "relation-evidence",
+          "label": {
+            "zh-CN": "确认关系有课标依据或明确标为推断。",
+            "en": "Confirm the relation is sourced or explicitly marked as inferred."
+          },
+          "required": true,
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "clusterReview": {
+    "title": {
+      "zh-CN": "导数、函数变化与优化",
+      "en": "Derivatives, Function Change, and Optimization"
+    },
+    "coreNodeIds": [
+      "cn-hs.math.selective.derivative.rate-limit",
+      "cn-hs.math.selective.derivative.monotonicity",
+      "cn-hs.math.selective.derivative.extrema-optimization"
+    ],
+    "runtimeRequirements": [
+      "math.calculus",
+      "instrument.secant-tangent",
+      "instrument.graph-derivative-link",
+      "instrument.sign-chart",
+      "instrument.optimization",
+      "instrument.checkpoint"
+    ],
+    "checks": [
+      {
+        "code": "cluster-coherence",
+        "label": {
+          "zh-CN": "确认知识簇围绕一个可验证的学习进阶，而非简单拼接主题。",
+          "en": "Confirm the cluster forms a testable learning progression rather than a topic bundle."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "core-node-selection",
+        "label": {
+          "zh-CN": "确认核心节点足以代表课件学习目标。",
+          "en": "Confirm core nodes adequately represent the courseware objectives."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "runtime-fit",
+        "label": {
+          "zh-CN": "确认 Domain Pack 与 Instrument 能表达概念且结果可复现。",
+          "en": "Confirm Domain Packs and Instruments express the concepts with reproducible results."
+        },
+        "required": true,
+        "status": "pending"
+      },
+      {
+        "code": "assessment-alignment",
+        "label": {
+          "zh-CN": "确认每个学习目标都有可观察、可判定的学习证据。",
+          "en": "Confirm every objective has observable, assessable learning evidence."
+        },
+        "required": true,
+        "status": "pending"
+      }
+    ]
+  },
+  "textbookMappingIntake": {
+    "status": "complete",
+    "requiredEditionFields": [
+      "publisher",
+      "edition",
+      "volume",
+      "chapter",
+      "section",
+      "page-range",
+      "isbn-or-catalog-id"
+    ],
+    "nodeRows": [
+      {
+        "nodeId": "cn-hs.math.selective.derivative.rate-limit",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.rate-limit",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.1.1 变化率问题、5.1.2 导数的概念及其几何意义"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.math.selective.derivative.geometric-meaning",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.geometric-meaning",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.1.2 导数的概念及其几何意义"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.math.selective.derivative.definition-examples",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.definition-examples",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.1.2 导数的概念及其几何意义、5.2.1 基本初等函数的导数"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.math.selective.derivative.rules",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.rules",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.2 导数的运算（5.2.1—5.2.3）"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.math.selective.derivative.monotonicity",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.monotonicity",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.3.1 函数的单调性"
+          }
+        ]
+      },
+      {
+        "nodeId": "cn-hs.math.selective.derivative.extrema-optimization",
+        "status": "mapped",
+        "mappings": [
+          {
+            "mappingId": "pep.math-a.s2.derivative.extrema-optimization",
+            "publisher": "人民教育出版社",
+            "edition": "人教A版选择性必修第二册，第1版，ISBN 978-7-107-34597-5",
+            "locator": "第五章 一元函数的导数及其应用；5.3.2 函数的极值与最大（小）值"
+          }
+        ]
+      }
+    ]
+  },
+  "releaseConditions": [
+    {
+      "zh-CN": "所有必需检查项均为 pass 或有明确的 not-applicable 理由。",
+      "en": "Every required check is pass or has an explicit not-applicable rationale."
+    },
+    {
+      "zh-CN": "具名审校人和时间写回知识地图，节点与知识簇 subjectChecked=true。",
+      "en": "A named reviewer and time are recorded in the knowledge map and nodes and cluster have subjectChecked=true."
+    },
+    {
+      "zh-CN": "至少一个实际采用教材版本完成全部核心节点映射。",
+      "en": "At least one actually adopted textbook edition maps every core node."
+    },
+    {
+      "zh-CN": "课件规格重新校验后清除已满足的阻断项；学科审校必须保持独立人工签署。",
+      "en": "Revalidation clears satisfied blockers; subject review remains an independent human sign-off."
+    }
+  ]
+}

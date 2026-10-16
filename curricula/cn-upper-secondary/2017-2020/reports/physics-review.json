@@ -1,0 +1,3580 @@
+{
+  "format": "mooyu.curriculum-review-report",
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-15T07:59:25.182Z",
+  "catalogId": "cn-upper-secondary-2017-2020",
+  "catalogDigest": "9019050c998a8d1fef60d89cddd4418d077472e729e32bfe5c753f401eb163c6",
+  "subject": {
+    "id": "physics",
+    "title": {
+      "zh-CN": "物理",
+      "en": "Physics"
+    },
+    "catalogStatus": "atomic-draft"
+  },
+  "coverage": {
+    "nodes": 185,
+    "relations": 86,
+    "clusters": 36,
+    "textbookMappings": 91,
+    "textbookMappingTargetNodes": 91,
+    "textbookMappedTargetNodes": 91,
+    "sourceCheckedNodes": 185,
+    "subjectCheckedNodes": 0,
+    "nodesByType": {
+      "concept": 22,
+      "experiment": 21,
+      "method": 3,
+      "model": 26,
+      "module": 47,
+      "practice": 33,
+      "principle": 32,
+      "subject-root": 1
+    },
+    "nodesByPriority": {
+      "high": 81,
+      "low": 48,
+      "medium": 56
+    }
+  },
+  "gaps": [
+    {
+      "code": "SUBJECT_REVIEW_PENDING",
+      "severity": "blocking",
+      "count": 185,
+      "message": "节点尚未通过学科专家审校，不能进入 K2 完成态。"
+    },
+    {
+      "code": "COURSEWARE_DEPTH_UNMEASURED",
+      "severity": "non-blocking",
+      "count": 36,
+      "message": "知识簇尚未绑定发布课件的 C0-C5 深度证据。"
+    },
+    {
+      "code": "SCHOOL_DEFINED_ELECTIVES_OUT_OF_BASELINE",
+      "severity": "scope-note",
+      "count": 0,
+      "message": "学校自主设置的选修模块不属于国家课标基线的可穷举范围。"
+    }
+  ],
+  "reviewQueue": [
+    {
+      "nodeId": "cn-hs.physics.elective-1.computers-mobile-life",
+      "title": "计算机、手机的发展与生活影响",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.electromagnetism-industrial-revolution",
+      "title": "电磁学与第二次工业革命",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第46页：1.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.energy-in-life",
+      "title": "可再生与不可再生能源的生活应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.galileo-newton-method",
+      "title": "伽利略方法、牛顿力学的成就与局限",
+      "type": "method",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.information-social-impact",
+      "title": "信息技术应用与社会发展",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第46页：1.2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.modern-physics-revolution",
+      "title": "19 世纪末发现与近代物理学革命",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.energy-development-need",
+      "title": "可再生与不可再生能源开发及新能源必要性",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第48页：2.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.nanomaterials",
+      "title": "纳米材料的特性与应用",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第49页：2.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.nuclear-energy-waste",
+      "title": "核裂变、核聚变、核能利用与核废料",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第48页：2.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.satellite-positioning",
+      "title": "卫星定位系统的发展与应用",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第49页：2.4.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.smartphone",
+      "title": "智能手机功能与生活影响",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第49页：2.4.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.superconductors",
+      "title": "超导体特点与超导技术",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第49页：2.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.ultrasound-doppler",
+      "title": "声波反射、多普勒效应与超声成像",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第48页：2.1.1-2.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.xray-ct",
+      "title": "X 射线穿透与 CT 扫描",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第48页：2.1.3-2.1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.big-bang",
+      "title": "大爆炸宇宙论模型与观测证据",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.dark-matter-energy",
+      "title": "暗物质与暗能量初步",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.de-broglie",
+      "title": "德布罗意物质波与波粒二象性",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第50页：3.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.four-interactions",
+      "title": "四种基本相互作用及其特点",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第51页：3.4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.length-time-effects",
+      "title": "长度收缩与时间延缓",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第50页：3.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.relativity-postulates",
+      "title": "相对性原理与光速不变原理",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第50页：3.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.uncertainty",
+      "title": "海森伯不确定性原理初步",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第50页：3.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.unification-search",
+      "title": "相互作用统一思想与探索",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第51页：3.4.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.acceleration-force-mass",
+      "title": "探究加速度与物体受力、物体质量的关系",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修1实验4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.capacitor-charge-discharge",
+      "title": "观察电容器的充、放电现象",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验8"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.centripetal-force",
+      "title": "探究向心力大小与半径、角速度、质量的关系",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修2实验7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.double-slit-wavelength",
+      "title": "用双缝干涉实验测量光的波长",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修1实验4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.force-composition",
+      "title": "探究两个互成角度的力的合成规律",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修1实验3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.glass-refractive-index",
+      "title": "测量玻璃的折射率",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修1实验3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.induced-current-direction",
+      "title": "探究影响感应电流方向的因素",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修2实验5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.instantaneous-speed",
+      "title": "测量做直线运动物体的瞬时速度",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修1实验1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.isothermal-gas-pressure-volume",
+      "title": "探究等温情况下定量气体压强与体积的关系",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修3实验9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.length-measurement",
+      "title": "长度的测量及其测量工具的选用",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.mechanical-energy-conservation",
+      "title": "验证机械能守恒定律",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修2实验5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.momentum-conservation",
+      "title": "验证动量守恒定律",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修1实验1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.multimeter",
+      "title": "用多用电表测量电学中的物理量",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验11"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.oil-film-molecule-size",
+      "title": "用油膜法估测油酸分子的大小",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修3实验8"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.pendulum-gravity",
+      "title": "用单摆测量重力加速度的大小",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修1实验2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.projectile-motion",
+      "title": "探究平抛运动的特点",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修2实验6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.resistivity",
+      "title": "测量金属丝的电阻率",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验10"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.sensor-control-device",
+      "title": "利用传感器制作简单的自动控制装置",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修2实验7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.source-emf-internal-resistance",
+      "title": "测量电源的电动势和内阻",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验12"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.spring-force-deformation",
+      "title": "探究弹簧弹力与形变量的关系",
+      "type": "experiment",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第52页：必修1实验2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.experiment.transformer-turns-voltage",
+      "title": "探究变压器原、副线圈电压与匝数的关系",
+      "type": "experiment",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修2实验6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.force-composition-equilibrium",
+      "title": "力的合成、分解与共点力平衡",
+      "type": "method",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第21页：1.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.free-fall",
+      "title": "自由落体运动与实验推理",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第21页：1.1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.kinematics",
+      "title": "位移、速度、加速度与匀变速直线运动",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第20-21页：1.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.newton-laws",
+      "title": "牛顿运动定律、超重与失重",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第21-22页：1.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.circular-motion",
+      "title": "匀速圆周运动、向心加速度与向心力",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第24页：2.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.gravitation-orbits",
+      "title": "万有引力、卫星轨道与宇宙速度",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第24-25页：2.2.4-2.2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.kinetic-energy-theorem",
+      "title": "动能与动能定理",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第23-24页：2.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.mechanical-energy-conservation",
+      "title": "机械能守恒定律及实验验证",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第24页：2.1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.closed-circuit-ohm",
+      "title": "闭合电路欧姆定律、电动势与内阻",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第28页：3.2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.electric-field",
+      "title": "电场强度与电场线",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第27页：3.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.energy-conservation-direction",
+      "title": "能量守恒、转化与方向性",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第30页：3.4.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.induction",
+      "title": "电磁感应现象与感应电流条件",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第29页：3.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.magnetic-field-flux",
+      "title": "磁场、磁感应强度、磁感线与磁通量",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第29页：3.3.1-3.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.potential-particle-motion",
+      "title": "电势能、电势、电势差与带电粒子运动",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第27-28页：3.1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.resources-environment",
+      "title": "可再生能源、环境影响与协调发展",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第30页：3.4.3-3.4.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.series-parallel",
+      "title": "串并联电路的电阻特点",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第28页：3.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.collisions",
+      "title": "一维弹性碰撞与非弹性碰撞",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第33页：1.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.forced-resonance",
+      "title": "受迫振动与共振",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.mechanical-waves",
+      "title": "横波、纵波及波速关系",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.momentum-conservation",
+      "title": "动量守恒定律及其普适性",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第33页：1.1.1、1.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.refraction",
+      "title": "光的折射定律与折射率测量",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第34页：1.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.simple-harmonic-motion",
+      "title": "简谐运动及其公式与图像",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.wave-optics",
+      "title": "光的干涉、衍射、偏振与波长测量",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第35页：1.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.wave-phenomena",
+      "title": "波的反射、折射、干涉与衍射",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.charged-particle-motion",
+      "title": "带电粒子在匀强磁场中的圆周运动与偏转",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第37页：2.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.em-wave-spectrum",
+      "title": "电磁波的发射、传播、接收与电磁波谱",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第38-39页：2.3.3-2.3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.faraday-law",
+      "title": "法拉第电磁感应定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第37页：2.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.lorentz-force",
+      "title": "洛伦兹力及其方向和大小",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第37页：2.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.sensor-control",
+      "title": "常见传感器与自动控制装置",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第39页：2.4.2-2.4.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.transformer-transmission",
+      "title": "变压器与高压输电",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第38页：2.2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.binding-fission-fusion",
+      "title": "结合能、核裂变与核聚变",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第43页：3.3.4-3.3.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.diffusion-brownian",
+      "title": "扩散、布朗运动与分子速率分布",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第41页：3.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.first-law",
+      "title": "热力学第一定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第42页：3.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.gas-laws",
+      "title": "气体实验定律与理想气体模型",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第42页：3.1.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.matter-waves-quantum",
+      "title": "实物粒子的波动性与微观量子化",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第43页：3.4.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.photoelectric-effect",
+      "title": "光电效应与爱因斯坦光电效应方程",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第43页：3.4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.radioactivity",
+      "title": "放射性、核衰变与半衰期",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第43页：3.3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.second-law",
+      "title": "宏观过程方向性与热力学第二定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "high",
+      "sourceLocators": [
+        "PDF 8，第42页：3.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.aerospace-life",
+      "title": "航天技术与生活",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.chinese-physicists",
+      "title": "中国物理学家的成果与贡献",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.cosmologies-kepler-newton",
+      "title": "古代宇宙观、日心说、开普勒定律与万有引力",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.integrated-circuits",
+      "title": "集成电路、微电子技术与社会发展",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.laser-fiber-life",
+      "title": "激光与光纤通信的生活应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.microelectronics-broadcast",
+      "title": "微电子与电视广播技术",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.nuclear-social-impact",
+      "title": "核技术应用与社会发展",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.relativity-quantum-impact",
+      "title": "相对论时空观、质能关系与量子论影响",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.steam-industrial-revolution",
+      "title": "蒸汽机与第一次工业革命",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.wave-particle-idea",
+      "title": "波粒二象性的物理思想",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.computer-components",
+      "title": "计算机主要部件及其作用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第49页：2.4.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.functional-materials",
+      "title": "功能材料的特性与应用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第49页：2.3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.geothermal-tidal-wind",
+      "title": "地热能、潮汐能与风能",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第48页：2.2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.physics-information-contribution",
+      "title": "物理学对信息技术发展的贡献",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第49页：2.4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.physics-material-development",
+      "title": "物理学在新材料开发中的作用",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第49页：2.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.radiation-medicine-safety",
+      "title": "典型射线的医学应用、影响与防护",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第48页：2.1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.solar-energy",
+      "title": "太阳能利用方式与前景",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第48页：2.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.antimatter",
+      "title": "反物质与物质",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.black-holes",
+      "title": "黑洞及其观测方法",
+      "type": "model",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.cosmology-progress",
+      "title": "宇宙论的进展与开放问题",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.general-relativity",
+      "title": "广义相对论思想、结论与观测证据",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第50页：3.2.4-3.2.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.macro-micro-motion",
+      "title": "宏观物体与微观粒子运动描述的差异",
+      "type": "concept",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第50页：3.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.mass-energy",
+      "title": "爱因斯坦质能方程",
+      "type": "principle",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第50页：3.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.particle-models-exploration",
+      "title": "基本粒子模型与探索历程",
+      "type": "practice",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第50页：3.1.4-3.1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.experimental-science",
+      "title": "近代实验科学与证据方法",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第20页：1.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.forces-hooke-friction",
+      "title": "重力、弹力、胡克定律与摩擦力",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第21页：1.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.particle-model",
+      "title": "质点模型及其适用条件",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第20页：1.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.curved-projectile-motion",
+      "title": "曲线运动条件、平抛与运动分解",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第24页：2.2.1-2.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.newtonian-limits-spacetime",
+      "title": "牛顿力学适用范围与相对论时空观",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第25页：2.3.1-2.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.potential-energy",
+      "title": "重力势能、重力做功与弹性势能",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第24页：2.1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.work-power",
+      "title": "功与功率",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第23页：2.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.capacitor",
+      "title": "电容器、电容与充放电",
+      "type": "model",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第28页：3.1.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.charge-coulomb",
+      "title": "静电现象、电荷守恒、点电荷与库仑定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第27页：3.1.1-3.1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.electric-energy-safety",
+      "title": "电功、电功率、焦耳定律与安全用电",
+      "type": "practice",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第28-29页：3.2.5-3.2.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.em-waves-quantization",
+      "title": "电磁波、光与初步量子化",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第29-30页：3.3.4-3.3.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.energy-sources-nuclear",
+      "title": "水能、风能、太阳能、核能与裂变聚变",
+      "type": "concept",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第30页：3.4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.resistance-resistivity",
+      "title": "电阻、电阻率与 I-U 特性",
+      "type": "principle",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第28页：3.2.1-3.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.doppler-effect",
+      "title": "多普勒效应及其应用",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.impulse-momentum",
+      "title": "冲量、动量与动量定理",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第33页：1.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.laser",
+      "title": "激光特性与技术应用",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第35页：1.3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.pendulum",
+      "title": "单摆周期与重力加速度测量",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.total-internal-reflection",
+      "title": "全反射与光纤",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第34-35页：1.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.alternating-current",
+      "title": "正弦交变电流及其公式与图像",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第38页：2.2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.ampere-force",
+      "title": "安培力及其方向、大小和应用",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第37页：2.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.em-oscillation",
+      "title": "电磁振荡",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第38页：2.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.generators-motors",
+      "title": "发电机、电动机与能量转化",
+      "type": "practice",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第38页：2.2.6"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.lenz-law",
+      "title": "感应电流方向与楞次定律",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第37页：2.2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.maxwell-field",
+      "title": "麦克斯韦电磁场理论初步",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第38页：2.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.self-induction-eddy",
+      "title": "自感与涡流",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第37-38页：2.2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.sensor-conversion",
+      "title": "非电学量到电学量的转换",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第39页：2.4.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.atomic-model-levels",
+      "title": "原子核式结构、氢原子光谱与能级",
+      "type": "model",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第43页：3.3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.energy-conservation",
+      "title": "能量守恒的普遍性",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第42页：3.2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.material-structures",
+      "title": "晶体、非晶体、液晶与材料",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第41-42页：3.1.3-3.1.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.molecular-size-theory",
+      "title": "油膜法估测分子大小与分子动理论",
+      "type": "concept",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第41页：3.1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.nucleus-reactions",
+      "title": "原子核组成、核力与核反应方程",
+      "type": "method",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第43页：3.3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.surface-tension",
+      "title": "表面张力与毛细现象",
+      "type": "principle",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "medium",
+      "sourceLocators": [
+        "PDF 8，第42页：3.1.5"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics",
+      "title": "普通高中物理",
+      "type": "subject-root",
+      "curriculumLevels": [
+        "required",
+        "selective-required",
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8：普通高中物理课程标准"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1",
+      "title": "选修 1：物理学与社会发展",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第45-47页：选修1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.civic-life",
+      "title": "物理学与公民生活",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第47页：1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.human-knowledge",
+      "title": "物理学与人类认识",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第46页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-1.social-change",
+      "title": "物理学与社会变革",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第46-47页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2",
+      "title": "选修 2：物理学与技术应用",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第47-49页：选修2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.information-technology",
+      "title": "物理学与信息技术",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第49页：2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.medical",
+      "title": "物理学与医疗技术",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第48页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.new-energy",
+      "title": "物理学与新能源",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第48页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-2.new-materials",
+      "title": "物理学与新材料",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第49页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3",
+      "title": "选修 3：近代物理学初步",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第49-51页：选修3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.cosmic",
+      "title": "宇观世界",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第51页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.high-speed",
+      "title": "高速世界",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第50页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.microscopic",
+      "title": "微观世界",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第50页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.elective-3.unity",
+      "title": "世界的统一性",
+      "type": "module",
+      "curriculumLevels": [
+        "elective"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第51页：3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1",
+      "title": "必修 1",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第20-23页：必修1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.interaction-laws",
+      "title": "相互作用与运动定律",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第21-22页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-1.motion-models",
+      "title": "机械运动与物理模型",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第20-21页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2",
+      "title": "必修 2",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第23-27页：必修2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.curves-gravitation",
+      "title": "曲线运动与万有引力定律",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第24-25页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.mechanical-energy",
+      "title": "机械能及其守恒定律",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第23-24页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-2.relativity",
+      "title": "牛顿力学的局限性与相对论初步",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第25页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3",
+      "title": "必修 3",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第27-32页：必修3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.circuits",
+      "title": "电路及其应用",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第28-29页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.electromagnetic-field-waves",
+      "title": "电磁场与电磁波初步",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第29-30页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.electrostatics",
+      "title": "静电场",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第27-28页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-3.energy-sustainability",
+      "title": "能源与可持续发展",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第30-31页：3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments",
+      "title": "学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required",
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第52-53页：学生必做实验"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.required-1",
+      "title": "必修 1 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第52页：必修1实验1-4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.required-2",
+      "title": "必修 2 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第52页：必修2实验5-7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.required-3",
+      "title": "必修 3 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第52页：必修3实验8-12"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.selective-required-1",
+      "title": "选择性必修 1 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修1实验1-4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.selective-required-2",
+      "title": "选择性必修 2 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修2实验5-7"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.required-experiments.selective-required-3",
+      "title": "选择性必修 3 学生必做实验",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第53页：选择性必修3实验8-9"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1",
+      "title": "选择性必修 1",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第33-36页：选择性必修1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.momentum",
+      "title": "动量与动量守恒定律",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第33页：1.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.optics",
+      "title": "光及其应用",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第34-35页：1.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-1.oscillations-waves",
+      "title": "机械振动与机械波",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第34页：1.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2",
+      "title": "选择性必修 2",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第37-41页：选择性必修2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.em-oscillations-waves",
+      "title": "电磁振荡与电磁波",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第38-39页：2.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.induction-applications",
+      "title": "电磁感应及其应用",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第37-38页：2.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.magnetic-field",
+      "title": "磁场",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第37页：2.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-2.sensors",
+      "title": "传感器",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第39页：2.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3",
+      "title": "选择性必修 3",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第41-45页：选择性必修3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.atomic-nuclear",
+      "title": "原子与原子核",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第43页：3.3"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.states-matter",
+      "title": "固体、液体和气体",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第41-42页：3.1"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.thermodynamics",
+      "title": "热力学定律",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第42页：3.2"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    },
+    {
+      "nodeId": "cn-hs.physics.selective-required-3.wave-particle",
+      "title": "波粒二象性",
+      "type": "module",
+      "curriculumLevels": [
+        "selective-required"
+      ],
+      "priority": "low",
+      "sourceLocators": [
+        "PDF 8，第43页：3.4"
+      ],
+      "reviewChecks": [
+        "边界与粒度",
+        "术语准确性",
+        "先修关系",
+        "可观察变量",
+        "互动候选"
+      ]
+    }
+  ]
+}

@@ -44,6 +44,13 @@
     "test:quiz-runner": "node --test tests/client/quiz-runner-package.test.cjs",
     "start:adarkroom-acceptance": "npm run build:adarkroom && node scripts/start-adarkroom-acceptance.mjs",
     "start:adarkroom-installed-acceptance": "npm run build:adarkroom && npm run pack:vscode && node scripts/start-adarkroom-installed-acceptance.mjs",
-    "verify:adarkroom-installed": "node scripts/verify-adarkroom-installed.mjs"
+    "verify:adarkroom-installed": "node scripts/verify-adarkroom-installed.mjs",
+    "start:courseware-embed-acceptance": "node scripts/start-courseware-embed-acceptance.mjs",
+    "knowledge-map:check": "node scripts/validate-knowledge-map.mjs",
+    "knowledge-map:review": "node scripts/report-knowledge-map-review.mjs",
+    "knowledge-map:focus-report": "node scripts/report-three-subject-coverage.mjs",
+    "knowledge-map:review-packets": "node scripts/report-courseware-review-packets.mjs",
+    "knowledge-map:textbooks": "node scripts/generate-textbook-mappings.mjs",
+    "courseware:briefs:check": "node scripts/validate-courseware-briefs.mjs"
   }
 }

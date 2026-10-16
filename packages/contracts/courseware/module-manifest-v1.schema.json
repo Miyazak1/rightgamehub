@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/module-manifest-v1.schema.json",
+  "title": "MOOYU Courseware Module Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format", "schemaVersion", "id", "version", "kind", "apiVersion", "entry", "integrity",
+    "hotSwap", "stateSchemaVersion", "capabilities", "commands", "dependencies"
+  ],
+  "properties": {
+    "format": { "const": "mooyu.courseware-module" },
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$" },
+    "kind": { "enum": ["domain", "scenario", "construction", "challenge", "component", "instrument", "journey", "embed"] },
+    "apiVersion": { "type": "integer", "minimum": 1 },
+    "entry": { "type": "string", "pattern": "^\\./[a-zA-Z0-9._/-]+\\.mjs$", "maxLength": 255 },
+    "integrity": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "hotSwap": { "enum": ["live", "paused", "session"] },
+    "stateSchemaVersion": { "type": "integer", "minimum": 1 },
+    "capabilities": { "$ref": "#/$defs/ids" },
+    "commands": { "$ref": "#/$defs/ids" },
+    "dependencies": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "apiVersion", "capabilities"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "apiVersion": { "type": "integer", "minimum": 1 },
+          "capabilities": { "$ref": "#/$defs/ids" },
+          "optional": { "type": "boolean", "default": false }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "embed" } }, "required": ["kind"] },
+      "then": { "properties": { "hotSwap": { "const": "session" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "enum": ["domain", "scenario", "construction", "challenge", "journey"] } }, "required": ["kind"] },
+      "then": { "properties": { "hotSwap": { "enum": ["paused", "session"] } } }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
+    "ids": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    }
+  }
+}

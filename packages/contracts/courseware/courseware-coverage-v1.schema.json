@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/courseware-coverage-v1.schema.json",
+  "title": "MOOYU Courseware Coverage Registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "catalogId", "entries"],
+  "properties": {
+    "format": { "const": "mooyu.courseware-coverage" },
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "$ref": "#/$defs/id" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "subjectId", "clusterId", "packageId", "packagePath", "coverageLevel", "engineeringStatus", "evidence"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "subjectId": { "$ref": "#/$defs/id" },
+        "clusterId": { "$ref": "#/$defs/id" },
+        "briefId": { "$ref": "#/$defs/id" },
+        "packageId": { "$ref": "#/$defs/id" },
+        "packagePath": { "type": "string", "pattern": "^templates/courseware/[a-z][a-z0-9._-]+$" },
+        "coverageLevel": { "enum": ["representative-prototype", "C4", "C5"] },
+        "engineeringStatus": { "enum": ["draft", "doctor-verified", "browser-verified", "release-ready"] },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["doctor", "bilingual", "keyboardComplete", "reducedMotion", "embedHostCount", "browserJourneyCount", "subjectReviewed"],
+          "properties": {
+            "doctor": { "type": "boolean" },
+            "bilingual": { "type": "boolean" },
+            "keyboardComplete": { "type": "boolean" },
+            "reducedMotion": { "type": "boolean" },
+            "embedHostCount": { "type": "integer", "minimum": 0 },
+            "browserJourneyCount": { "type": "integer", "minimum": 0 },
+            "subjectReviewed": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}
