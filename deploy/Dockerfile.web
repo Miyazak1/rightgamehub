@@ -29,6 +29,7 @@ COPY packages/player-core packages/player-core
 COPY packages/creator-tools packages/creator-tools
 COPY packages/courseware-runtime packages/courseware-runtime
 COPY packages/contracts/courseware packages/contracts/courseware
+COPY curricula curricula
 COPY extensions/harness extensions/harness
 COPY extensions/vscode extensions/vscode
 COPY plugins plugins

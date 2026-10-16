@@ -4,6 +4,8 @@ artifacts
 node_modules
 **/node_modules
 **/dist
+!templates/courseware/**/dist
+!templates/courseware/**/dist/**
 **/*.vsix
 **/*.tgz
 docs/evidence

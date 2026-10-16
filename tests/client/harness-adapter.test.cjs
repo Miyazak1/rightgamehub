@@ -322,6 +322,7 @@ test('portable Agent plugin manifests keep Codex and Claude Code installable', a
 test('official editor installers use verified mooyu.fun artifacts without source checkout', async () => {
   const rootPackage = JSON.parse(await readFile('package.json', 'utf8'));
   const dockerfile = await readFile('deploy/Dockerfile.web', 'utf8');
+  const dockerignore = await readFile('.dockerignore', 'utf8');
   const packer = await readFile('scripts/package-vscode-extension.mjs', 'utf8');
   const downloads = await readFile('scripts/prepare-agent-downloads.mjs', 'utf8');
   const powershell = await readFile('apps/web/public/install.ps1', 'utf8');
@@ -332,9 +333,11 @@ test('official editor installers use verified mooyu.fun artifacts without source
   assert.match(dockerfile, /COPY packages\/courseware-runtime\/package\.json packages\/courseware-runtime\/package\.json/);
   assert.match(dockerfile, /COPY packages\/courseware-runtime packages\/courseware-runtime/);
   assert.match(dockerfile, /COPY packages\/contracts\/courseware packages\/contracts\/courseware/);
+  assert.match(dockerfile, /COPY curricula curricula/);
   assert.match(dockerfile, /pnpm install --frozen-lockfile[^\n]*--filter @gamehub\/creator-tools\.\.\./);
   assert.match(dockerfile, /COPY templates\/creator-bingo templates\/creator-bingo/);
   assert.match(dockerfile, /COPY templates\/courseware templates\/courseware/);
+  assert.match(dockerignore, /!templates\/courseware\/\*\*\/dist\/\*\*/);
   assert.match(dockerfile, /COPY scripts\/build-agent-plugin\.mjs scripts\/build-agent-plugin\.mjs/);
   assert.match(dockerfile, /COPY scripts\/creator-toolkit-cli\.mjs scripts\/creator-toolkit-cli\.mjs/);
   assert.match(dockerfile, /node scripts\/build-agent-plugin\.mjs && node scripts\/prepare-agent-downloads\.mjs/);
