@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
+COPY packages/courseware-runtime/package.json packages/courseware-runtime/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json
 COPY packages/rules-sdk/package.json packages/rules-sdk/package.json
@@ -19,7 +20,9 @@ COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=dependencies /app/packages/creator-tools/node_modules ./packages/creator-tools/node_modules
 COPY --chown=node:node apps/api/src/rule-build-policy.mjs apps/api/src/rule-source-builder.mjs apps/api/src/rule-source-builder-cli.mjs apps/api/src/rule-build-runner.mjs apps/api/src/rule-builder-service.mjs ./apps/api/src/
 COPY --chown=node:node packages/creator-tools ./packages/creator-tools
+COPY --chown=node:node packages/courseware-runtime ./packages/courseware-runtime
 COPY --chown=node:node packages/rules-sdk ./packages/rules-sdk
+RUN node -e "import('./apps/api/src/rule-source-builder.mjs')"
 RUN mkdir -p /data/rule-builder && chown -R node:node /data
 USER node
 CMD ["node", "apps/api/src/rule-builder-service.mjs"]

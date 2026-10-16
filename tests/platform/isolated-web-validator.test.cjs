@@ -102,6 +102,9 @@ test('production compose isolates the Rule Builder from secrets and networks', a
   assert.match(worker,/multiplayer-rule-build-worker-cli\.mjs/u);assert.match(worker,/rule-builder:\/data\/rule-builder/u);assert.match(worker,/quarantine:\/data\/quarantine(?!:ro)/u);
   assert.doesNotMatch(worker,/(avatars:\/data\/avatars|covers:\/data\/covers|runtime-assets:\/data\/runtime|source-builder:\/data\/builder)/u);
   assert.match(dockerfile,/packages\/creator-tools\/node_modules/u);
+  assert.match(dockerfile,/COPY packages\/courseware-runtime\/package\.json packages\/courseware-runtime\/package\.json/u);
+  assert.match(dockerfile,/COPY --chown=node:node packages\/courseware-runtime \.\/packages\/courseware-runtime/u);
+  assert.match(dockerfile,/RUN node -e "import\('\.\/apps\/api\/src\/rule-source-builder\.mjs'\)"/u);
   assert.match(apiDockerfile,/COPY packages\/creator-tools\/package\.json packages\/creator-tools\/package\.json/u);
   assert.match(apiDockerfile,/COPY packages\/courseware-runtime\/package\.json packages\/courseware-runtime\/package\.json/u);
   assert.match(apiDockerfile,/packages\/creator-tools\/node_modules/u);
