@@ -1,16 +1,17 @@
+import {COMMUNITY_ENABLED} from './community-availability.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import { useI18n } from './I18n.jsx';
 
 const playerLinks = [
   ['/discover', 'navigation.discover', '✦', route => route === '/discover' || route.startsWith('/works/')],
   ['/learn', 'navigation.learning', '◈', route => route === '/learn'],
-  ['/community', 'navigation.community', '✣', route => route === '/social' || route.startsWith('/community') || route.startsWith('/contribute')],
+  ...(COMMUNITY_ENABLED ? [['/community', 'navigation.community', '✣', route => route === '/social' || route.startsWith('/community') || route.startsWith('/contribute')]] : []),
   ['/library', 'navigation.library', '▣', route => route === '/library'],
 ];
 
 export function PlayerNavigation({ route, go, mobile = false }) {
   const { t } = useI18n();
-  return <nav className={mobile ? 'mobile-nav' : 'desktop-nav'} aria-label={t(mobile ? 'navigation.mobile' : 'navigation.main')}>
+  return <nav style={mobile?{gridTemplateColumns:'repeat('+playerLinks.length+',minmax(0,1fr))'}:undefined} className={mobile ? 'mobile-nav' : 'desktop-nav'} aria-label={t(mobile ? 'navigation.mobile' : 'navigation.main')}>
     {playerLinks.map(([path, label, icon, matches]) => <button key={path} className={'nav-item' + (matches(route) ? ' is-active' : '')} aria-current={matches(route) ? 'page' : undefined} onClick={() => go(path)}><span aria-hidden="true">{icon}</span>{t(label)}</button>)}
   </nav>;
 }
