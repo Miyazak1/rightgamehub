@@ -79,6 +79,10 @@ test('mathematics, physics, and chemistry share the gold-standard shell and 3 by
     assert.doesNotMatch(html,/id="locale"|id="lang"|class="[^"]*language-action/u);
     if(['concept-explorer','derivative-optimization'].includes(name))assert.match(html,/data-toolbar-rows="2"/u,'the two-row mathematics tool shelf must opt into the shared row-aware toolbar contract');
     else assert.doesNotMatch(html,/data-toolbar-rows="2"/u,`${name} must retain the single-row toolbar contract`);
+    if(name==='derivative-optimization'){
+      assert.match(html,/runtime\.dispatch\('challenge\.optimization-target','challenge\.reset'\)/u);
+      assert.match(html,/challengeAttempts=0/u);
+    }
   }
 });
 

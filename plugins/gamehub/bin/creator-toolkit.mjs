@@ -746,11 +746,18 @@ function validateMission(mission, findings, file) {
         if (!requireFields(action[field], ["to"], findings, file, `${actionPointer}/${field}`)) continue;
         rejectUnknown(action[field], ["to", "when"], findings, file, `${actionPointer}/${field}`);
         if (!nodeIds.has(action[field].to)) findings.push(finding("error", "COURSEWARE_MISSION_NODE_REFERENCE_INVALID", `\u884C\u52A8 ${action.id} \u6307\u5411\u4E0D\u5B58\u5728\u7684\u8282\u70B9 ${action[field].to}\u3002`, { path: file, pointer: `${actionPointer}/${field}/to` }));
-        for (const [conditionIndex, condition] of (action[field].when ?? []).entries()) validateMissionCondition(condition, findings, file, `${actionPointer}/${field}/when/${conditionIndex}`, meters, metricIds);
+        const when = action[field].when;
+        if (when !== void 0 && !Array.isArray(when)) findings.push(finding("error", "COURSEWARE_MISSION_CONDITION_INVALID", `\u884C\u52A8 ${action.id} \u7684 ${field}.when \u5FC5\u987B\u662F\u6761\u4EF6\u6570\u7EC4\u3002`, { path: file, pointer: `${actionPointer}/${field}/when` }));
+        for (const [conditionIndex, condition] of (Array.isArray(when) ? when : []).entries()) validateMissionCondition(condition, findings, file, `${actionPointer}/${field}/when/${conditionIndex}`, meters, metricIds);
       }
-      for (const [evidenceIndex, evidence] of (action?.evidence ?? []).entries()) {
-        rejectUnknown(evidence, ["claimId", "kind", "strength"], findings, file, `${actionPointer}/evidence/${evidenceIndex}`);
-        requireId(evidence?.claimId, findings, file, `${actionPointer}/evidence/${evidenceIndex}/claimId`);
+      const evidenceItems = action?.evidence;
+      if (evidenceItems !== void 0 && !Array.isArray(evidenceItems)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_INVALID", `\u884C\u52A8 ${action?.id ?? actionIndex} \u7684 evidence \u5FC5\u987B\u662F\u8BC1\u636E\u6570\u7EC4\u3002`, { path: file, pointer: `${actionPointer}/evidence` }));
+      for (const [evidenceIndex, evidence] of (Array.isArray(evidenceItems) ? evidenceItems : []).entries()) {
+        const evidencePointer = `${actionPointer}/evidence/${evidenceIndex}`;
+        requireFields(evidence, ["claimId", "kind"], findings, file, evidencePointer);
+        rejectUnknown(evidence, ["claimId", "kind", "strength"], findings, file, evidencePointer);
+        requireId(evidence?.claimId, findings, file, `${evidencePointer}/claimId`);
+        if (!["prediction", "calculation", "configuration", "measurement", "comparison", "explanation", "transfer"].includes(evidence?.kind) || evidence?.strength !== void 0 && (!Number.isFinite(evidence.strength) || evidence.strength < 0 || evidence.strength > 1)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_INVALID", `\u884C\u52A8 ${action?.id ?? actionIndex} \u7684\u8BC1\u636E\u7C7B\u578B\u6216\u5F3A\u5EA6\u65E0\u6548\u3002`, { path: file, pointer: evidencePointer }));
         emittedClaims.add(evidence?.claimId);
       }
     }
@@ -764,7 +771,8 @@ function validateMission(mission, findings, file) {
     requireId(outcome?.id, findings, file, `${pointer}/id`);
     requireTextMap(outcome?.title, findings, file, `${pointer}/title`);
     if (!["success", "partial", "failure"].includes(outcome?.kind)) findings.push(finding("error", "COURSEWARE_MISSION_OUTCOME_INVALID", `\u7ED3\u5C40 ${outcome?.id ?? index} kind \u65E0\u6548\u3002`, { path: file, pointer: `${pointer}/kind` }));
-    for (const [conditionIndex, condition] of (outcome?.when ?? []).entries()) validateMissionCondition(condition, findings, file, `${pointer}/when/${conditionIndex}`, meters, metricIds);
+    if (!Array.isArray(outcome?.when)) findings.push(finding("error", "COURSEWARE_MISSION_CONDITION_INVALID", `\u7ED3\u5C40 ${outcome?.id ?? index} \u7684 when \u5FC5\u987B\u662F\u6761\u4EF6\u6570\u7EC4\u3002`, { path: file, pointer: `${pointer}/when` }));
+    for (const [conditionIndex, condition] of (Array.isArray(outcome?.when) ? outcome.when : []).entries()) validateMissionCondition(condition, findings, file, `${pointer}/when/${conditionIndex}`, meters, metricIds);
   }
   return { id: mission.id, slots, nodeIds, metricIds, emittedClaims };
 }

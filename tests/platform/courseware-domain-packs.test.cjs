@@ -112,6 +112,19 @@ test('projectile rescue challenge evaluates target range and obstacle clearance 
   session.dispatch('challenge.projectile-rescue','challenge.attempt');assert.deepEqual(session.observe('challenge.projectile-rescue'),exhausted);
 });
 
+test('derivative optimization challenge preserves exhaustion until reset', async () => {
+  const [runtime,{default:domain},{default:challenge}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('templates/courseware/derivative-optimization/modules/domain/index.mjs'),load('templates/courseware/derivative-optimization/modules/challenge/index.mjs')]);
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:moduleManifest('math.derivative','domain','./derivative.mjs',['domain.derivative'],['function.set','probe.set','delta.set','derivative.toggle','optimization.cut.set','model.reset']),...domain});
+  session.register({manifest:moduleManifest('challenge.optimization-target','challenge','./challenge.mjs',['challenge.evaluate'],['challenge.attempt','challenge.reset'],[{id:'math.derivative',apiVersion:1,capabilities:['domain.derivative']}]),...challenge});
+  session.activate('challenge.optimization-target');
+  for(let attempt=0;attempt<4;attempt+=1)session.dispatch('challenge.optimization-target','challenge.attempt');
+  const exhausted=session.observe('challenge.optimization-target');assert.equal(exhausted.attempts,4);assert.equal(exhausted.solved,false);
+  session.dispatch('math.derivative','optimization.cut.set',{value:20/6});session.dispatch('challenge.optimization-target','challenge.attempt');
+  assert.deepEqual(session.observe('challenge.optimization-target'),exhausted);
+  session.dispatch('challenge.optimization-target','challenge.reset');assert.equal(session.observe('challenge.optimization-target').attempts,0);
+});
+
 test('journey and embed modules keep host concerns optional and isolated', async () => {
   const [runtime,{default:journey},{default:embed}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/journey/progress.mjs'),load('packages/courseware-domain-packs/src/embed/bridge.mjs')]);
   const session=new runtime.CoursewareRuntime();

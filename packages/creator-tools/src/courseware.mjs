@@ -418,14 +418,22 @@ function validateMission(mission, findings, file) {
         if(!requireFields(action[field],['to'],findings,file,`${actionPointer}/${field}`))continue;
         rejectUnknown(action[field],['to','when'],findings,file,`${actionPointer}/${field}`);
         if (!nodeIds.has(action[field].to)) findings.push(finding('error','COURSEWARE_MISSION_NODE_REFERENCE_INVALID',`行动 ${action.id} 指向不存在的节点 ${action[field].to}。`,{path:file,pointer:`${actionPointer}/${field}/to`}));
-        for (const [conditionIndex,condition] of (action[field].when ?? []).entries()) validateMissionCondition(condition,findings,file,`${actionPointer}/${field}/when/${conditionIndex}`,meters,metricIds);
+        const when=action[field].when;
+        if(when!==undefined&&!Array.isArray(when))findings.push(finding('error','COURSEWARE_MISSION_CONDITION_INVALID',`行动 ${action.id} 的 ${field}.when 必须是条件数组。`,{path:file,pointer:`${actionPointer}/${field}/when`}));
+        for (const [conditionIndex,condition] of (Array.isArray(when)?when:[]).entries()) validateMissionCondition(condition,findings,file,`${actionPointer}/${field}/when/${conditionIndex}`,meters,metricIds);
       }
-      for (const [evidenceIndex,evidence] of (action?.evidence ?? []).entries()) { rejectUnknown(evidence,['claimId','kind','strength'],findings,file,`${actionPointer}/evidence/${evidenceIndex}`); requireId(evidence?.claimId,findings,file,`${actionPointer}/evidence/${evidenceIndex}/claimId`); emittedClaims.add(evidence?.claimId); }
+      const evidenceItems=action?.evidence;
+      if(evidenceItems!==undefined&&!Array.isArray(evidenceItems))findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_INVALID',`行动 ${action?.id ?? actionIndex} 的 evidence 必须是证据数组。`,{path:file,pointer:`${actionPointer}/evidence`}));
+      for (const [evidenceIndex,evidence] of (Array.isArray(evidenceItems)?evidenceItems:[]).entries()) {
+        const evidencePointer=`${actionPointer}/evidence/${evidenceIndex}`; requireFields(evidence,['claimId','kind'],findings,file,evidencePointer); rejectUnknown(evidence,['claimId','kind','strength'],findings,file,evidencePointer); requireId(evidence?.claimId,findings,file,`${evidencePointer}/claimId`);
+        if(!['prediction','calculation','configuration','measurement','comparison','explanation','transfer'].includes(evidence?.kind)||(evidence?.strength!==undefined&&(!Number.isFinite(evidence.strength)||evidence.strength<0||evidence.strength>1)))findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_INVALID',`行动 ${action?.id ?? actionIndex} 的证据类型或强度无效。`,{path:file,pointer:evidencePointer}));
+        emittedClaims.add(evidence?.claimId);
+      }
     }
   }
   const outcomes=Array.isArray(mission.outcomes)?mission.outcomes:[]; const outcomeIds=new Set(outcomes.map(outcome=>outcome?.id));
   if (!outcomes.length || outcomeIds.size !== outcomes.length) findings.push(finding('error','COURSEWARE_MISSION_OUTCOME_INVALID','任务必须声明无重复的结局。',{path:file,pointer:'/outcomes'}));
-  for (const [index,outcome] of outcomes.entries()) { const pointer=`/outcomes/${index}`; rejectUnknown(outcome,['id','kind','title','when'],findings,file,pointer); requireId(outcome?.id,findings,file,`${pointer}/id`); requireTextMap(outcome?.title,findings,file,`${pointer}/title`); if (!['success','partial','failure'].includes(outcome?.kind)) findings.push(finding('error','COURSEWARE_MISSION_OUTCOME_INVALID',`结局 ${outcome?.id ?? index} kind 无效。`,{path:file,pointer:`${pointer}/kind`})); for(const [conditionIndex,condition] of (outcome?.when ?? []).entries()) validateMissionCondition(condition,findings,file,`${pointer}/when/${conditionIndex}`,meters,metricIds); }
+  for (const [index,outcome] of outcomes.entries()) { const pointer=`/outcomes/${index}`; rejectUnknown(outcome,['id','kind','title','when'],findings,file,pointer); requireId(outcome?.id,findings,file,`${pointer}/id`); requireTextMap(outcome?.title,findings,file,`${pointer}/title`); if (!['success','partial','failure'].includes(outcome?.kind)) findings.push(finding('error','COURSEWARE_MISSION_OUTCOME_INVALID',`结局 ${outcome?.id ?? index} kind 无效。`,{path:file,pointer:`${pointer}/kind`})); if(!Array.isArray(outcome?.when))findings.push(finding('error','COURSEWARE_MISSION_CONDITION_INVALID',`结局 ${outcome?.id ?? index} 的 when 必须是条件数组。`,{path:file,pointer:`${pointer}/when`})); for(const [conditionIndex,condition] of (Array.isArray(outcome?.when)?outcome.when:[]).entries()) validateMissionCondition(condition,findings,file,`${pointer}/when/${conditionIndex}`,meters,metricIds); }
   return { id:mission.id,slots,nodeIds,metricIds,emittedClaims };
 }
 
