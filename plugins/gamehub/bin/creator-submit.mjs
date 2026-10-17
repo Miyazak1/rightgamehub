@@ -1185,7 +1185,7 @@ function validateExperience(experience, findings, file, courseSets) {
     requireTextMap(challenge.title, findings, file, `${pointer}/challenge/title`);
     requireTextMap(challenge.goal, findings, file, `${pointer}/challenge/goal`);
     if (!Array.isArray(challenge.success) || !challenge.success.length) findings.push(finding("error", "COURSEWARE_CHALLENGE_RULES_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u7F3A\u5C11\u6210\u529F\u6761\u4EF6\u3002`, { path: file, pointer: `${pointer}/challenge/success` }));
-    for (const [conditionIndex, condition] of (challenge.success ?? []).entries()) {
+    for (const [conditionIndex, condition] of (Array.isArray(challenge.success) ? challenge.success : []).entries()) {
       const conditionPointer = `${pointer}/challenge/success/${conditionIndex}`;
       if (!isObject(condition) || !idPattern3.test(condition.metric ?? "") || !["eq", "gte", "lte", "between"].includes(condition.operator)) {
         findings.push(finding("error", "COURSEWARE_CHALLENGE_RULES_INVALID", `\u6311\u6218 ${challenge.id ?? index} \u5305\u542B\u65E0\u6548\u6210\u529F\u6761\u4EF6\u3002`, { path: file, pointer: conditionPointer }));
@@ -1305,16 +1305,22 @@ function validateCapabilityBindings(document2, findings, file, missionInfo, modu
   const metrics = /* @__PURE__ */ new Set();
   for (const [index, binding] of bindings.entries()) {
     const pointer = `/bindings/${index}`;
+    requireFields(binding, ["slot", "moduleId", "capability", "metrics"], findings, file, pointer);
     rejectUnknown(binding, ["slot", "moduleId", "capability", "query", "metrics"], findings, file, pointer);
     requireId(binding?.slot, findings, file, `${pointer}/slot`);
     requireId(binding?.moduleId, findings, file, `${pointer}/moduleId`);
     requireId(binding?.capability, findings, file, `${pointer}/capability`);
     if (slots.has(binding?.slot) || !missionInfo?.slots.has(binding?.slot)) findings.push(finding("error", "COURSEWARE_MISSION_SLOT_REFERENCE_INVALID", `\u80FD\u529B\u69FD ${binding?.slot} \u91CD\u590D\u6216\u672A\u5728\u4EFB\u52A1\u4E2D\u58F0\u660E\u3002`, { path: file, pointer: `${pointer}/slot` }));
     slots.add(binding?.slot);
-    for (const [metricIndex, metric] of (binding?.metrics ?? []).entries()) {
-      rejectUnknown(metric, ["id", "path"], findings, file, `${pointer}/metrics/${metricIndex}`);
-      requireId(metric?.id, findings, file, `${pointer}/metrics/${metricIndex}/id`);
-      if (metrics.has(metric?.id)) findings.push(finding("error", "COURSEWARE_MISSION_METRIC_DUPLICATE", `\u6307\u6807 ${metric?.id} \u88AB\u91CD\u590D\u7ED1\u5B9A\u3002`, { path: file, pointer: `${pointer}/metrics/${metricIndex}/id` }));
+    const bindingMetrics = binding?.metrics;
+    if (!Array.isArray(bindingMetrics) || bindingMetrics.length === 0) findings.push(finding("error", "COURSEWARE_MISSION_BINDING_INVALID", `\u80FD\u529B\u69FD ${binding?.slot ?? index} \u7684 metrics \u5FC5\u987B\u662F\u975E\u7A7A\u6570\u7EC4\u3002`, { path: file, pointer: `${pointer}/metrics` }));
+    for (const [metricIndex, metric] of (Array.isArray(bindingMetrics) ? bindingMetrics : []).entries()) {
+      const metricPointer = `${pointer}/metrics/${metricIndex}`;
+      requireFields(metric, ["id", "path"], findings, file, metricPointer);
+      rejectUnknown(metric, ["id", "path"], findings, file, metricPointer);
+      requireId(metric?.id, findings, file, `${metricPointer}/id`);
+      if (typeof metric?.path !== "string" || metric.path.length > 255 || !/^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/u.test(metric.path)) findings.push(finding("error", "COURSEWARE_MISSION_BINDING_INVALID", `\u6307\u6807 ${metric?.id ?? metricIndex} \u7684 path \u65E0\u6548\u3002`, { path: file, pointer: `${metricPointer}/path` }));
+      if (metrics.has(metric?.id)) findings.push(finding("error", "COURSEWARE_MISSION_METRIC_DUPLICATE", `\u6307\u6807 ${metric?.id} \u88AB\u91CD\u590D\u7ED1\u5B9A\u3002`, { path: file, pointer: `${metricPointer}/id` }));
       metrics.add(metric?.id);
     }
     if (moduleGraph) {

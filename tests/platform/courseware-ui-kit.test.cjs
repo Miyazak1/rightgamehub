@@ -83,6 +83,7 @@ test('mathematics, physics, and chemistry share the gold-standard shell and 3 by
       assert.match(html,/runtime\.dispatch\('challenge\.optimization-target','challenge\.reset'\)/u);
       assert.match(html,/challengeAttempts=0/u);
     }
+    if(name==='kinematics-motion')assert.match(html,/if\(attempts>=4\|\|solved\)\{syncChallengeCopy\(\);return\}/u);
   }
 });
 

@@ -356,7 +356,7 @@ function validateExperience(experience, findings, file, courseSets) {
     rejectUnknown(challenge, challengeFields, findings, file, `${pointer}/challenge`);
     requireId(challenge.id, findings, file, `${pointer}/challenge/id`); requireTextMap(challenge.title, findings, file, `${pointer}/challenge/title`); requireTextMap(challenge.goal, findings, file, `${pointer}/challenge/goal`);
     if (!Array.isArray(challenge.success) || !challenge.success.length) findings.push(finding('error', 'COURSEWARE_CHALLENGE_RULES_INVALID', `挑战 ${challenge.id ?? index} 缺少成功条件。`, { path:file,pointer:`${pointer}/challenge/success` }));
-    for (const [conditionIndex, condition] of (challenge.success ?? []).entries()) {
+    for (const [conditionIndex, condition] of (Array.isArray(challenge.success)?challenge.success:[]).entries()) {
       const conditionPointer = `${pointer}/challenge/success/${conditionIndex}`;
       if (!isObject(condition) || !idPattern.test(condition.metric ?? '') || !['eq', 'gte', 'lte', 'between'].includes(condition.operator)) { findings.push(finding('error', 'COURSEWARE_CHALLENGE_RULES_INVALID', `挑战 ${challenge.id ?? index} 包含无效成功条件。`, { path:file,pointer:conditionPointer })); continue; }
       rejectUnknown(condition, condition.operator === 'between' ? ['metric', 'operator', 'values'] : ['metric', 'operator', 'value'], findings, file, conditionPointer);
@@ -442,9 +442,15 @@ function validateCapabilityBindings(document, findings, file, missionInfo, modul
   if(document.format!=='mooyu.mission-capability-binding'||document.schemaVersion!==1||document.missionId!==missionInfo?.id)findings.push(finding('error','COURSEWARE_MISSION_BINDING_INVALID','能力绑定格式、版本或 missionId 不匹配。',{path:file,pointer:'/missionId'}));
   const bindings=Array.isArray(document.bindings)?document.bindings:[]; const slots=new Set(); const metrics=new Set();
   for(const [index,binding] of bindings.entries()){
-    const pointer=`/bindings/${index}`; rejectUnknown(binding,['slot','moduleId','capability','query','metrics'],findings,file,pointer); requireId(binding?.slot,findings,file,`${pointer}/slot`); requireId(binding?.moduleId,findings,file,`${pointer}/moduleId`); requireId(binding?.capability,findings,file,`${pointer}/capability`);
+    const pointer=`/bindings/${index}`; requireFields(binding,['slot','moduleId','capability','metrics'],findings,file,pointer); rejectUnknown(binding,['slot','moduleId','capability','query','metrics'],findings,file,pointer); requireId(binding?.slot,findings,file,`${pointer}/slot`); requireId(binding?.moduleId,findings,file,`${pointer}/moduleId`); requireId(binding?.capability,findings,file,`${pointer}/capability`);
     if(slots.has(binding?.slot)||!missionInfo?.slots.has(binding?.slot))findings.push(finding('error','COURSEWARE_MISSION_SLOT_REFERENCE_INVALID',`能力槽 ${binding?.slot} 重复或未在任务中声明。`,{path:file,pointer:`${pointer}/slot`})); slots.add(binding?.slot);
-    for(const [metricIndex,metric] of (binding?.metrics??[]).entries()){ rejectUnknown(metric,['id','path'],findings,file,`${pointer}/metrics/${metricIndex}`); requireId(metric?.id,findings,file,`${pointer}/metrics/${metricIndex}/id`); if(metrics.has(metric?.id))findings.push(finding('error','COURSEWARE_MISSION_METRIC_DUPLICATE',`指标 ${metric?.id} 被重复绑定。`,{path:file,pointer:`${pointer}/metrics/${metricIndex}/id`})); metrics.add(metric?.id); }
+    const bindingMetrics=binding?.metrics;
+    if(!Array.isArray(bindingMetrics)||bindingMetrics.length===0)findings.push(finding('error','COURSEWARE_MISSION_BINDING_INVALID',`能力槽 ${binding?.slot ?? index} 的 metrics 必须是非空数组。`,{path:file,pointer:`${pointer}/metrics`}));
+    for(const [metricIndex,metric] of (Array.isArray(bindingMetrics)?bindingMetrics:[]).entries()){
+      const metricPointer=`${pointer}/metrics/${metricIndex}`; requireFields(metric,['id','path'],findings,file,metricPointer); rejectUnknown(metric,['id','path'],findings,file,metricPointer); requireId(metric?.id,findings,file,`${metricPointer}/id`);
+      if(typeof metric?.path!=='string'||metric.path.length>255||!/^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/u.test(metric.path))findings.push(finding('error','COURSEWARE_MISSION_BINDING_INVALID',`指标 ${metric?.id ?? metricIndex} 的 path 无效。`,{path:file,pointer:`${metricPointer}/path`}));
+      if(metrics.has(metric?.id))findings.push(finding('error','COURSEWARE_MISSION_METRIC_DUPLICATE',`指标 ${metric?.id} 被重复绑定。`,{path:file,pointer:`${metricPointer}/id`})); metrics.add(metric?.id);
+    }
     if(moduleGraph){ const record=moduleGraph.records.find(item=>item.module.id===binding?.moduleId); if(!record)findings.push(finding('error','COURSEWARE_MISSION_MODULE_REFERENCE_INVALID',`能力槽 ${binding?.slot} 绑定了未发布模块 ${binding?.moduleId}。`,{path:file,pointer:`${pointer}/moduleId`})); else if(!record.module.capabilities.includes(binding?.capability))findings.push(finding('error','COURSEWARE_MISSION_CAPABILITY_INVALID',`模块 ${binding.moduleId} 不提供能力 ${binding.capability}。`,{path:file,pointer:`${pointer}/capability`})); }
   }
   for(const slot of missionInfo?.slots??[])if(!slots.has(slot))findings.push(finding('error','COURSEWARE_MISSION_SLOT_UNBOUND',`任务能力槽 ${slot} 未绑定。`,{path:file,pointer:'/bindings'}));

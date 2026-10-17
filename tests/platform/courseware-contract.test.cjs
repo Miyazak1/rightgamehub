@@ -168,6 +168,11 @@ test('courseware Doctor rejects incomplete scenario challenge rules', async t =>
   const report = await inspectCoursewareProject(directory);
   assert.equal(report.ok, false);
   assert.ok(report.findings.some(item => item.code === 'COURSEWARE_CHALLENGE_RULES_INVALID'));
+  experience.modes.find(mode => mode.kind === 'scenario-challenge').challenge.success = {};
+  await fs.writeFile(experiencePath, `${JSON.stringify(experience, null, 2)}\n`);
+  const malformed = await inspectCoursewareProject(directory);
+  assert.equal(malformed.ok, false);
+  assert.ok(malformed.findings.some(item => item.code === 'COURSEWARE_CHALLENGE_RULES_INVALID'));
 });
 
 test('courseware Doctor validates composite mission graph, capability bindings and learning evidence', async t => {
@@ -227,6 +232,19 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   assert.ok(invalidEvidenceBounds.findings.some(item=>item.code==='COURSEWARE_LEARNING_EVIDENCE_INVALID'));
   firstClaim.weight=1;firstClaim.minimumStrength=.8;
   await fs.writeFile(path.join(directory,manifest.evidenceModel),`${JSON.stringify(evidenceModel,null,2)}\n`);
+  const validMetrics=bindings.bindings[0].metrics;
+  bindings.bindings[0].metrics={id:'shape.coefficient',path:'coefficient'};
+  await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
+  const malformedBindingMetrics=await inspectCoursewareProject(directory);
+  assert.equal(malformedBindingMetrics.ok,false);
+  assert.ok(malformedBindingMetrics.findings.some(item=>item.code==='COURSEWARE_MISSION_BINDING_INVALID'&&item.pointer.endsWith('/metrics')));
+  bindings.bindings[0].metrics=[{id:'shape.coefficient'}];
+  await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
+  const missingMetricPath=await inspectCoursewareProject(directory);
+  assert.equal(missingMetricPath.ok,false);
+  assert.ok(missingMetricPath.findings.some(item=>item.code==='COURSEWARE_FIELD_REQUIRED'&&item.pointer.endsWith('/path')));
+  assert.ok(missingMetricPath.findings.some(item=>item.code==='COURSEWARE_MISSION_BINDING_INVALID'&&item.pointer.endsWith('/path')));
+  bindings.bindings[0].metrics=validMetrics;
   bindings.bindings[0].capability='domain.missing';
   await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
   const invalid=await inspectCoursewareProject(directory);

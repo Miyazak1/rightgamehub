@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -7,6 +8,7 @@ const root = path.resolve(__dirname, '../..');
 const load = relative => import(pathToFileURL(path.join(root, relative)).href);
 const integrity=`sha256:${'b'.repeat(64)}`;
 const moduleManifest=(id,kind,entry,capabilities,commands,dependencies=[])=>({ format:'mooyu.courseware-module',schemaVersion:1,id,version:'1.0.0',kind,apiVersion:1,entry,integrity,hotSwap:kind==='instrument'||kind==='component'?'live':'paused',stateSchemaVersion:1,capabilities,commands,dependencies });
+const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?`[${value.map(canonical).join(',')}]`:`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
 
 test('math Domain Pack exposes deterministic quadratic geometry', async () => {
   const [runtime,{ default:implementation }]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/math/quadratic.mjs')]);
@@ -125,6 +127,29 @@ test('derivative optimization challenge preserves exhaustion until reset', async
   session.dispatch('challenge.optimization-target','challenge.reset');assert.equal(session.observe('challenge.optimization-target').attempts,0);
 });
 
+test('every bounded reference challenge preserves exhaustion until reset', async () => {
+  const modules=await Promise.all([
+    load('packages/courseware-domain-packs/src/challenge/quadratic-target.mjs'),
+    load('packages/courseware-domain-packs/src/challenge/supply-cart.mjs'),
+    load('packages/courseware-domain-packs/src/challenge/safe-no2-batch.mjs'),
+    load('templates/courseware/kinematics-motion/modules/challenge/index.mjs'),
+  ]);
+  const observations=[
+    {coefficient:1},
+    {mass:1,force:1,acceleration:1},
+    {composition:{no2:0},concentrations:{no2:0},progress:0,temperature:298},
+    {initialVelocity:0,acceleration:0},
+  ];
+  for(const [index,{default:challenge}] of modules.entries()){
+    let state=challenge.createState(),context={dependencies:[{id:'domain'}],observe:()=>observations[index]};
+    for(let attempt=0;attempt<state.maxAttempts;attempt+=1)state=challenge.reduce({state,command:{name:'challenge.attempt',payload:{}},context});
+    const exhausted=structuredClone(state);assert.equal(exhausted.attempts,exhausted.maxAttempts);assert.equal(exhausted.solved,false);
+    context={dependencies:[{id:'domain'}],observe:()=>{throw new Error('exhausted challenge must not read the domain');}};
+    state=challenge.reduce({state,command:{name:'challenge.attempt',payload:{}},context});assert.deepEqual(state,exhausted);
+    state=challenge.reduce({state,command:{name:'challenge.reset',payload:{}},context});assert.equal(state.attempts,0);
+  }
+});
+
 test('journey and embed modules keep host concerns optional and isolated', async () => {
   const [runtime,{default:journey},{default:embed}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/journey/progress.mjs'),load('packages/courseware-domain-packs/src/embed/bridge.mjs')]);
   const session=new runtime.CoursewareRuntime();
@@ -153,7 +178,8 @@ test('composite mission orchestrates three authoritative physics capabilities wi
     {id:'physics.work-energy',apiVersion:1,capabilities:['domain.work-energy']},
     {id:'physics.braking',apiVersion:1,capabilities:['domain.braking']},
   ];
-  session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],dependencies),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings})});
+  const releaseDigest=`sha256:${'c'.repeat(64)}`;
+  session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],dependencies),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings,releaseDigest})});
   session.activate('scenario.energy-train');
   session.dispatch('scenario.energy-train','mission.start');
   assert.equal(session.observe('scenario.energy-train').activeNodeId,'accelerate');
@@ -172,6 +198,11 @@ test('composite mission orchestrates three authoritative physics capabilities wi
   const replay=session.observe('scenario.energy-train',{kind:'replay'});
   assert.equal(replay.commands.length,5);
   assert.deepEqual(replay.commands.map(item=>item.sequence),[0,1,2,3,4]);
+  assert.deepEqual(replay.commands.map(item=>item.moduleId),Array(5).fill('scenario.energy-train'));
+  assert.equal(replay.format,'mooyu.mission-replay');assert.equal(replay.schemaVersion,1);assert.equal(replay.releaseDigest,releaseDigest);
+  assert.equal(replay.initialSnapshot.status,'ready');assert.match(replay.finalStateDigest,/^sha256:[a-f0-9]{64}$/u);
+  const {node,metrics,...authoritativeState}=result;
+  assert.equal(replay.finalStateDigest,`sha256:${crypto.createHash('sha256').update(canonical(authoritativeState)).digest('hex')}`);
 });
 
 test('mission pressure is deterministic state and failed attempts consume declared time and resources', async () => {
