@@ -255,13 +255,15 @@ export function evaluateLearningEvidence(model, evidence) {
   if (!model || model.format !== 'mooyu.learning-evidence-model' || model.schemaVersion !== 1) fail('LEARNING_EVIDENCE_MODEL_INVALID', 'Learning evidence model is invalid.');
   const observations = Array.isArray(evidence) ? evidence : [];
   const claims = model.claims.map(claim => {
-    const strength = observations.filter(item => item.claimId === claim.id).reduce((maximum, item) => Math.max(maximum, Number(item.strength) || 0), 0);
-    return { id:claim.id,objectiveId:claim.objectiveId,strength,minimumStrength:claim.minimumStrength,satisfied:strength >= claim.minimumStrength,required:claim.required === true,weight:claim.weight };
+    const matching = observations.filter(item => item?.claimId === claim.id && item?.kind === claim.kind);
+    const strength = matching.reduce((maximum, item) => Math.max(maximum, Number(item.strength) || 0), 0);
+    const observed = matching.length > 0;
+    return { id:claim.id,objectiveId:claim.objectiveId,strength,minimumStrength:claim.minimumStrength,observed,satisfied:observed && strength >= claim.minimumStrength,required:claim.required === true,weight:claim.weight };
   });
   const objectives = model.objectiveIds.map(objectiveId => {
     const related = claims.filter(claim => claim.objectiveId === objectiveId);
     const totalWeight = related.reduce((sum, claim) => sum + claim.weight, 0);
-    const earnedWeight = related.reduce((sum, claim) => sum + claim.weight * (claim.minimumStrength <= 0 ? 1 : Math.min(1, claim.strength / claim.minimumStrength)), 0);
+    const earnedWeight = related.reduce((sum, claim) => sum + (claim.satisfied ? claim.weight * (claim.minimumStrength <= 0 ? 1 : Math.min(1, claim.strength / claim.minimumStrength)) : 0), 0);
     return { id:objectiveId,score:totalWeight === 0 ? 0 : earnedWeight / totalWeight,mastered:related.length > 0 && related.filter(claim => claim.required).every(claim => claim.satisfied) && related.some(claim => claim.satisfied) };
   });
   return { claims,objectives,mastered:objectives.length > 0 && objectives.every(objective => objective.mastered) };

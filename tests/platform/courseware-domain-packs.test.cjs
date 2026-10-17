@@ -261,3 +261,26 @@ test('mission pressure is deterministic state and failed attempts consume declar
   assert.equal(replay.commands[0].name,'mission.start');
   assert.equal(replay.commands.at(-1).sequence,1008);
 });
+
+test('learning evidence requires an observed matching kind even at a zero threshold', async () => {
+  const missionEngine=await load('packages/courseware-mission-engine/src/index.mjs');
+  const model={
+    format:'mooyu.learning-evidence-model',
+    schemaVersion:1,
+    objectiveIds:['objective'],
+    claims:[{id:'claim',objectiveId:'objective',kind:'calculation',weight:1,minimumStrength:0,required:true}],
+  };
+  const empty=missionEngine.evaluateLearningEvidence(model,[]);
+  assert.equal(empty.claims[0].observed,false);
+  assert.equal(empty.claims[0].satisfied,false);
+  assert.equal(empty.objectives[0].score,0);
+  assert.equal(empty.mastered,false);
+  const mismatched=missionEngine.evaluateLearningEvidence(model,[{claimId:'claim',kind:'prediction',strength:1}]);
+  assert.equal(mismatched.claims[0].satisfied,false);
+  assert.equal(mismatched.mastered,false);
+  const matching=missionEngine.evaluateLearningEvidence(model,[{claimId:'claim',kind:'calculation',strength:0}]);
+  assert.equal(matching.claims[0].observed,true);
+  assert.equal(matching.claims[0].satisfied,true);
+  assert.equal(matching.objectives[0].score,1);
+  assert.equal(matching.mastered,true);
+});
