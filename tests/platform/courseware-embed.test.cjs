@@ -85,6 +85,7 @@ test('Embed schemas and reference pages are strict, versioned and complete',asyn
   assert.match(projectile,/runtime\.dispatch\('challenge\.projectile-rescue','challenge\.restore'/u);
   assert.match(projectile,/type:'projectile-trial'/u);
   assert.match(projectile,/'obstacle-height':reading\.obstacleHeight/u);
+  assert.match(projectile,/Number\.isFinite\(trialSequence\)\?\{trialSequence\}:\{\}/u);
   assert.match(projectile,/attempt:answerAttempts/u);
   assert.match(projectile,/'answer-attempts':answerAttempts/u);
   const readme=await fs.readFile(path.join(root,'samples/courseware-embed/README.md'),'utf8');assert.match(readme,/答案原文/u);assert.match(readme,/Chrome、Edge、Firefox、Safari/u);

@@ -225,6 +225,17 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   assert.ok(missingRequiredEvidence.findings.some(item=>item.code==='COURSEWARE_LEARNING_EVIDENCE_UNREACHABLE'&&item.pointer==='/claims/1'));
   mission.nodes[1].actions[0].evidence=explanationEvidence;
   await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
+  const requiredFlags=evidenceModel.claims.map(claim=>claim.required);
+  evidenceModel.claims.forEach(claim=>{claim.required=false;});
+  const actionEvidence=mission.nodes.map(node=>node.actions[0].evidence);
+  mission.nodes.forEach(node=>{node.actions[0].evidence=[];});
+  await Promise.all([fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`),fs.writeFile(path.join(directory,manifest.evidenceModel),`${JSON.stringify(evidenceModel,null,2)}\n`)]);
+  const unreachableObjective=await inspectCoursewareProject(directory);
+  assert.equal(unreachableObjective.ok,false);
+  assert.ok(unreachableObjective.findings.some(item=>item.code==='COURSEWARE_LEARNING_OBJECTIVE_UNREACHABLE'&&item.pointer==='/objectiveIds/0'));
+  evidenceModel.claims.forEach((claim,index)=>{claim.required=requiredFlags[index];});
+  mission.nodes.forEach((node,index)=>{node.actions[0].evidence=actionEvidence[index];});
+  await Promise.all([fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`),fs.writeFile(path.join(directory,manifest.evidenceModel),`${JSON.stringify(evidenceModel,null,2)}\n`)]);
   delete firstAction.success;delete firstAction.onSuccess;
   await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
   const missingActionFields=await inspectCoursewareProject(directory);
