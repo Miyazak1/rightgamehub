@@ -24,6 +24,7 @@ import CommunityHome from './CommunityHome.jsx';
 import CommunityParticipation from './CommunityParticipation.jsx';
 import DiscoverPage from './DiscoverPage.jsx';
 import LearningPage from './LearningPage.jsx';
+import {OfficialToolHost,ToolsPage} from './ToolsPage.jsx';
 import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
 import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
@@ -79,7 +80,7 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', learn: 'learning', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
+  return ({ discover: 'discover', learn: 'learning', tools: 'tools', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
@@ -1915,6 +1916,8 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art}/>;
+  else if (route === '/tools') content = <ToolsPage go={go}/>;
+  else if (parts[0] === 'tools' && parts[1]) content = <OfficialToolHost toolId={parts[1]} go={go}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;
