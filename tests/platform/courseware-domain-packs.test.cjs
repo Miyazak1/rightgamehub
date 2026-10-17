@@ -52,6 +52,9 @@ test('projectile Domain Pack calculates a deterministic trajectory and obstacle 
   assert.ok(initial.range>27&&initial.range<31);assert.ok(initial.clearance>0);
   session.dispatch('physics.projectile','simulation.run');session.dispatch('physics.projectile','simulation.step',{seconds:.08});
   assert.ok(session.observe('physics.projectile').x>0);
+  for(let index=0;index<14;index+=1)session.dispatch('physics.projectile','measurement.record');
+  const recorded=session.observe('physics.projectile');
+  assert.equal(recorded.trials.length,12);assert.equal(recorded.trials[0].id,3);assert.equal(recorded.trials.at(-1).id,14);assert.equal(recorded.trialSequence,14);
 });
 
 test('measurement Instrument Pack reads only its declared Domain dependency', async () => {
@@ -112,11 +115,12 @@ test('projectile rescue challenge evaluates target range and obstacle clearance 
   for(let attempt=0;attempt<5;attempt+=1)session.dispatch('challenge.projectile-rescue','challenge.attempt');
   const exhausted=session.observe('challenge.projectile-rescue');assert.equal(exhausted.attempts,5);assert.equal(exhausted.solved,false);
   session.dispatch('challenge.projectile-rescue','challenge.attempt');assert.deepEqual(session.observe('challenge.projectile-rescue'),exhausted);
-  const trial={speed:21,angle:43,range:36,maxHeight:8.7,clearance:.2};
-  session.dispatch('physics.projectile','model.restore',{speed:21,angle:43,gravity:9.8,targetX:36,obstacleX:19,obstacleHeight:8.5,time:.4,trials:[trial]});
+  const trial={id:7,speed:21,angle:43,range:36,maxHeight:8.7,clearance:.2};
+  session.dispatch('physics.projectile','model.restore',{speed:21,angle:43,gravity:9.8,targetX:36,obstacleX:19,obstacleHeight:8.5,time:.4,trials:[trial],trialSequence:9});
   session.dispatch('challenge.projectile-rescue','challenge.restore',{attempts:3,solved:true,reason:'success',metrics:{...trial,targetX:36}});
   const restoredModel=session.observe('physics.projectile'),restoredChallenge=session.observe('challenge.projectile-rescue');
-  assert.equal(restoredModel.obstacleHeight,8.5);assert.equal(restoredModel.trials.length,1);assert.equal(restoredModel.time,.4);
+  assert.equal(restoredModel.obstacleHeight,8.5);assert.equal(restoredModel.trials[0].id,7);assert.equal(restoredModel.trialSequence,9);assert.equal(restoredModel.time,.4);
+  session.dispatch('physics.projectile','measurement.record');assert.equal(session.observe('physics.projectile').trials.at(-1).id,10);
   assert.equal(restoredChallenge.attempts,3);assert.equal(restoredChallenge.solved,true);assert.equal(restoredChallenge.last.reason,'success');
 });
 

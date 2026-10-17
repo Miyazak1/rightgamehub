@@ -759,8 +759,9 @@ function validateMission(mission, findings, file) {
         requireId(evidence?.claimId, findings, file, `${evidencePointer}/claimId`);
         if (!["prediction", "calculation", "configuration", "measurement", "comparison", "explanation", "transfer"].includes(evidence?.kind) || evidence?.strength !== void 0 && (!Number.isFinite(evidence.strength) || evidence.strength < 0 || evidence.strength > 1)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_INVALID", `\u884C\u52A8 ${action?.id ?? actionIndex} \u7684\u8BC1\u636E\u7C7B\u578B\u6216\u5F3A\u5EA6\u65E0\u6548\u3002`, { path: file, pointer: evidencePointer }));
         if (typeof evidence?.claimId === "string" && typeof evidence?.kind === "string") {
-          if (!emittedClaims.has(evidence.claimId)) emittedClaims.set(evidence.claimId, /* @__PURE__ */ new Set());
-          emittedClaims.get(evidence.claimId).add(evidence.kind);
+          if (!emittedClaims.has(evidence.claimId)) emittedClaims.set(evidence.claimId, /* @__PURE__ */ new Map());
+          const kinds = emittedClaims.get(evidence.claimId), strength = Number.isFinite(evidence.strength) ? evidence.strength : 0;
+          kinds.set(evidence.kind, Math.max(kinds.get(evidence.kind) ?? 0, strength));
         }
       }
     }
@@ -839,7 +840,11 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
   for (const [claimId, kinds] of missionInfo?.emittedClaims ?? []) {
     const claim = claimsById.get(claimId);
     if (!claim) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID", `\u4EFB\u52A1\u53D1\u5C04\u4E86\u672A\u5728\u5B66\u4E60\u8BC1\u636E\u6A21\u578B\u58F0\u660E\u7684 ${claimId}\u3002`, { path: file, pointer: "/claims" }));
-    else for (const kind of kinds) if (kind !== claim.kind) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_KIND_MISMATCH", `\u4EFB\u52A1\u4E3A ${claimId} \u53D1\u5C04\u4E86 ${kind}\uFF0C\u4F46\u8BC1\u636E\u6A21\u578B\u8981\u6C42 ${claim.kind}\u3002`, { path: file, pointer: "/claims" }));
+    else for (const kind of kinds.keys()) if (kind !== claim.kind) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_KIND_MISMATCH", `\u4EFB\u52A1\u4E3A ${claimId} \u53D1\u5C04\u4E86 ${kind}\uFF0C\u4F46\u8BC1\u636E\u6A21\u578B\u8981\u6C42 ${claim.kind}\u3002`, { path: file, pointer: "/claims" }));
+  }
+  for (const [index, claim] of claims.entries()) if (claim?.required === true && typeof claim.id === "string" && typeof claim.kind === "string" && Number.isFinite(claim.minimumStrength)) {
+    const strength = missionInfo?.emittedClaims?.get(claim.id)?.get(claim.kind);
+    if (strength === void 0 || strength < claim.minimumStrength) findings.push(finding("error", "COURSEWARE_LEARNING_EVIDENCE_UNREACHABLE", `\u5FC5\u9700\u8BC1\u636E ${claim.id} \u6CA1\u6709\u53EF\u8FBE\u5230\u9608\u503C ${claim.minimumStrength} \u7684\u4EFB\u52A1\u53D1\u5C04\u8DEF\u5F84\u3002`, { path: file, pointer: `/claims/${index}` }));
   }
 }
 async function inspectCoursewareProject(root) {
