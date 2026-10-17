@@ -1,0 +1,12 @@
+{
+  "format": "mooyu.courseware", "schemaVersion": 1, "id": "kinematics-motion-lab",
+  "title": { "zh-CN": "运动图像实验室", "en": "Motion Graph Laboratory" },
+  "summary": { "zh-CN": "操纵初速度和加速度，把真实运动与 x-t、v-t、a-t 图像逐时刻对应起来。", "en": "Control initial velocity and acceleration, then connect real motion with x-t, v-t, and a-t graphs moment by moment." },
+  "defaultLocale": "zh-CN", "locales": ["zh-CN", "en"], "subjects": ["physics", "kinematics"],
+  "audience": { "stages": ["upper-secondary"], "minimumAge": 15 },
+  "catalog": { "category": "simulations", "topic": { "zh-CN": "运动学 · 匀变速直线运动", "en": "Kinematics · Uniformly accelerated motion" }, "estimatedMinutes": 12, "order": 190, "cover": { "symbol": "x–t", "tone": "physics" } },
+  "course": "courseware/course.json", "experience": "courseware/experience.json", "evidence": "evidence/sources.json", "tests": "tests/journeys.json",
+  "build": { "profile": "mooyu-structured-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/ui-kit/module.json", "modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["component.courseware-ui", "physics.kinematics-track", "instrument.measurement", "component.workbench", "challenge.motion-window", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
+  "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
+}

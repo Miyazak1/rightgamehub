@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "journeys": [
+    { "id": "projectile-rescue-zh", "title": "越过障碍精准投送", "locale": "zh-CN", "steps": [{ "action": "enter", "target": "launch-projectile" }, { "action": "set", "target": "speed", "value": 17 }, { "action": "set", "target": "angle", "value": 40 }, { "action": "answer", "target": "predict-range-angle", "value": "near-45" }, { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }], "expectsCompletion": true },
+    { "id": "projectile-rescue-en", "title": "Clear the obstacle and reach the target", "locale": "en", "steps": [{ "action": "enter", "target": "launch-projectile" }, { "action": "set", "target": "speed", "value": 17 }, { "action": "set", "target": "angle", "value": 40 }, { "action": "answer", "target": "predict-range-angle", "value": "near-45" }, { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }], "expectsCompletion": true }
+  ]
+}

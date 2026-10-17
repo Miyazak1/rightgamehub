@@ -1,0 +1,5 @@
+{
+  "format":"mooyu.courseware-module","schemaVersion":1,"id":"challenge.motion-window","version":"1.1.0","kind":"challenge","apiVersion":1,"entry":"./index.mjs","integrity":"sha256:3705acb9787a15335a564a1f1438bfcdb6bbbf2fe2e9ddc38a1c4504355936ff","hotSwap":"paused","stateSchemaVersion":1,
+  "capabilities":["challenge.evaluate"],"commands":["challenge.attempt","challenge.reset","challenge.restore"],
+  "dependencies":[{"id":"physics.kinematics-track","apiVersion":1,"capabilities":["domain.motion"]}]
+}

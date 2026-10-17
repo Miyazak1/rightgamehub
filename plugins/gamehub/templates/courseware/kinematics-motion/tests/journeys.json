@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "journeys": [
+    { "id": "textbook-explore", "title": "教材 × 探索：预测图像斜率", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.textbook" },
+      { "action": "click", "target": "view.explore" }, { "action": "answer", "target": "predict-vt-slope", "value": "steeper" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true },
+    { "id": "textbook-model", "title": "教材 × 建模：对应方程与图像", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.textbook" },
+      { "action": "click", "target": "view.model" }, { "action": "assert", "target": "model.motion-equations", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "textbook-analyse", "title": "教材 × 分析：形成学习证据", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.textbook" },
+      { "action": "click", "target": "view.analyse" }, { "action": "click", "target": "trial.save" },
+      { "action": "assert", "target": "evidence.recorded", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-explore", "title": "自由 × 探索：构造不同运动方案", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.sandbox" },
+      { "action": "click", "target": "view.explore" }, { "action": "set", "target": "initial-velocity", "value": 6 },
+      { "action": "set", "target": "acceleration", "value": 0.5 }, { "action": "click", "target": "trial.save" },
+      { "action": "assert", "target": "sandbox.saved-trials", "expect": 1 }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-model", "title": "自由 × 建模：反推参数组合", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.sandbox" },
+      { "action": "click", "target": "view.model" }, { "action": "assert", "target": "model.parameter-relations", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-analyse", "title": "自由 × 分析：比较多个方案", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.sandbox" },
+      { "action": "click", "target": "view.analyse" }, { "action": "click", "target": "trial.save" },
+      { "action": "assert", "target": "analysis.comparison", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-explore", "title": "挑战 × 探索：命中双窗口", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.signal" },
+      { "action": "click", "target": "view.explore" }, { "action": "set", "target": "initial-velocity", "value": 6 },
+      { "action": "set", "target": "acceleration", "value": 0.75 }, { "action": "click", "target": "simulation.run" },
+      { "action": "assert", "target": "challenge.success", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-model", "title": "挑战 × 建模：计算可行参数", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.signal" },
+      { "action": "click", "target": "view.model" }, { "action": "assert", "target": "model.target-window", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-analyse", "title": "挑战 × 分析：读取成败证据", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "click", "target": "mode.signal" },
+      { "action": "click", "target": "view.analyse" }, { "action": "assert", "target": "analysis.challenge-result", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "motion-graphs-completion-en", "title": "English locale and completion smoke test", "locale": "en", "steps": [
+      { "action": "enter", "target": "link-motion-graphs" }, { "action": "set", "target": "initial-velocity", "value": 6 },
+      { "action": "set", "target": "acceleration", "value": 0.75 }, { "action": "answer", "target": "predict-vt-slope", "value": "steeper" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
+    ], "expectsCompletion": true }
+  ]
+}

@@ -1,12 +1,46 @@
 {
   "schemaVersion": 1,
   "journeys": [
-    { "id": "negative-a-completion", "title": "改变 a 并回答方向", "locale": "zh-CN", "steps": [
-      { "action": "enter", "target": "explore-a" }, { "action": "set", "target": "a", "value": -2 },
-      { "action": "answer", "target": "predict-opening", "value": "down" }, { "action": "assert", "target": "assessment.correct", "expect": true },
-      { "action": "complete", "target": "course" }
+    { "id": "textbook-explore", "title": "教材 × 探索：判断开口方向", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.textbook" }, { "action": "click", "target": "view.explore" },
+      { "action": "set", "target": "a", "value": -2 }, { "action": "answer", "target": "predict-opening", "value": "down" },
+      { "action": "assert", "target": "assessment.correct", "expect": true }, { "action": "complete", "target": "course" }
     ], "expectsCompletion": true },
-    { "id": "negative-a-completion-en", "title": "Change a and answer the opening direction", "locale": "en", "steps": [
+    { "id": "textbook-model", "title": "教材 × 建模：验证符号与伸缩", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.textbook" }, { "action": "click", "target": "view.model" },
+      { "action": "assert", "target": "model.quadratic-rules", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "textbook-analyse", "title": "教材 × 分析：读取同点函数值", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.textbook" }, { "action": "click", "target": "view.analyse" },
+      { "action": "assert", "target": "analysis.value-table", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-explore", "title": "自由 × 探索：构造不同抛物线", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.sandbox" }, { "action": "click", "target": "view.explore" },
+      { "action": "set", "target": "a", "value": 0.5 }, { "action": "click", "target": "snapshot.save" },
+      { "action": "assert", "target": "sandbox.reference-saved", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-model", "title": "自由 × 建模：比较参数作用", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.sandbox" }, { "action": "click", "target": "view.model" },
+      { "action": "assert", "target": "model.parameter-relations", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "sandbox-analyse", "title": "自由 × 分析：比较当前与参考曲线", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.sandbox" }, { "action": "click", "target": "view.analyse" },
+      { "action": "click", "target": "snapshot.save" }, { "action": "assert", "target": "analysis.comparison", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-explore", "title": "挑战 × 探索：命中目标点", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.signal" }, { "action": "click", "target": "view.explore" },
+      { "action": "set", "target": "a", "value": -2 }, { "action": "click", "target": "challenge.check" },
+      { "action": "assert", "target": "challenge.success", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-model", "title": "挑战 × 建模：计算目标系数", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.signal" }, { "action": "click", "target": "view.model" },
+      { "action": "assert", "target": "model.target-coefficient", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "signal-analyse", "title": "挑战 × 分析：解释命中证据", "locale": "zh-CN", "steps": [
+      { "action": "enter", "target": "explore-a" }, { "action": "click", "target": "mode.signal" }, { "action": "click", "target": "view.analyse" },
+      { "action": "assert", "target": "analysis.challenge-result", "expect": true }
+    ], "expectsCompletion": false },
+    { "id": "quadratic-completion-en", "title": "English locale and completion smoke test", "locale": "en", "steps": [
       { "action": "enter", "target": "explore-a" }, { "action": "set", "target": "a", "value": -2 },
       { "action": "answer", "target": "predict-opening", "value": "down" }, { "action": "assert", "target": "assessment.correct", "expect": true },
       { "action": "complete", "target": "course" }

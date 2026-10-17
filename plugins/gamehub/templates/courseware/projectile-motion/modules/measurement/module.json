@@ -1,0 +1,30 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "instrument.measurement",
+  "version": "1.0.0",
+  "kind": "instrument",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:25a803eea332d570b148edb8e3f49cb736df3d3b753018bb1aaa9867359facee",
+  "hotSwap": "live",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "instrument.measurement"
+  ],
+  "commands": [
+    "instrument.channel.set",
+    "measurement.record",
+    "comparison.select",
+    "measurement.clear"
+  ],
+  "dependencies": [
+    {
+      "id": "physics.projectile",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.projectile"
+      ]
+    }
+  ]
+}

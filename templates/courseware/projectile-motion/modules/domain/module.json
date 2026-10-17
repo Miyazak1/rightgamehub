@@ -1,0 +1,28 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "physics.projectile",
+  "version": "1.0.0",
+  "kind": "domain",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:b06915c76a4fd25e0de7d26dcd926ae7c138525730b8d343ef6f9fd19dd405a1",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "domain.projectile"
+  ],
+  "commands": [
+    "speed.set",
+    "angle.set",
+    "gravity.set",
+    "target.set",
+    "obstacle.set",
+    "simulation.run",
+    "simulation.pause",
+    "simulation.reset",
+    "simulation.step",
+    "measurement.record"
+  ],
+  "dependencies": []
+}

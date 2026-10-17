@@ -9,6 +9,12 @@
     "stateVariables": ["force", "mass", "time", "position", "velocity", "acceleration"]
   },
   "defaultMode": "textbook",
+  "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "预测并运行小车实验，观察力、质量与运动的变化。", "en": "Predict and run cart trials to observe force, mass, and motion." }, "instrumentIds": ["trace", "vector", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "用受力图和 a=F/m 解释实验结果。", "en": "Explain trials with a force diagram and a=F/m." }, "instrumentIds": ["vector", "graph"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "比较曲线、实验记录和控制变量证据。", "en": "Compare curves, trial records, and controlled-variable evidence." }, "instrumentIds": ["graph", "table", "comparison"] }
+  ],
   "modes": [
     {
       "id": "textbook",

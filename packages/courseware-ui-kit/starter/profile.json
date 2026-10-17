@@ -1,0 +1,12 @@
+{
+  "id": "gold-standard-v1",
+  "experienceModes": ["textbook", "sandbox", "signal"],
+  "viewModes": ["explore", "model", "analyse"],
+  "requiredJourneyIds": [
+    "textbook-explore", "textbook-model", "textbook-analyse",
+    "sandbox-explore", "sandbox-model", "sandbox-analyse",
+    "signal-explore", "signal-model", "signal-analyse"
+  ],
+  "hostOwnsLocale": true,
+  "embedStateVersion": 2
+}

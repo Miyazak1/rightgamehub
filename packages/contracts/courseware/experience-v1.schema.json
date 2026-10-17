@@ -5,6 +5,10 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "schemaVersion", "engine", "defaultMode", "modes"],
+  "dependentRequired": {
+    "defaultView": ["views"],
+    "views": ["defaultView"]
+  },
   "properties": {
     "format": { "const": "mooyu.courseware-experience" },
     "schemaVersion": { "const": 1 },
@@ -32,6 +36,13 @@
       "minItems": 1,
       "maxItems": 12,
       "items": { "$ref": "#/$defs/mode" }
+    },
+    "defaultView": { "$ref": "#/$defs/id" },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/view" }
     },
     "instruments": {
       "type": "array",
@@ -114,6 +125,18 @@
             "retry": { "enum": ["instant", "after-feedback"] }
           }
         }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "purpose", "instrumentIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["explore", "model", "analyse"] },
+        "title": { "$ref": "#/$defs/localizedText" },
+        "purpose": { "$ref": "#/$defs/localizedText" },
+        "instrumentIds": { "type": "array", "minItems": 0, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
       }
     },
     "mode": {

@@ -1,0 +1,12 @@
+{
+  "format": "mooyu.courseware", "schemaVersion": 1, "id": "projectile-motion-challenge",
+  "title": { "zh-CN": "抛体运动挑战场", "en": "Projectile Motion Challenge" },
+  "summary": { "zh-CN": "拆分初速度、预测轨迹，并通过障碍物把救援胶囊精准送达目标区。", "en": "Decompose launch velocity, predict a trajectory, and deliver a rescue capsule over an obstacle into the target zone." },
+  "defaultLocale": "zh-CN", "locales": ["zh-CN", "en"], "subjects": ["physics", "projectile-motion"],
+  "audience": { "stages": ["upper-secondary"], "minimumAge": 15 },
+  "catalog": { "category": "simulations", "topic": { "zh-CN": "运动学 · 抛体运动", "en": "Kinematics · Projectile motion" }, "estimatedMinutes": 15, "order": 220, "cover": { "symbol": "v₀ ↗", "tone": "physics" } },
+  "course": "courseware/course.json", "experience": "courseware/experience.json", "evidence": "evidence/sources.json", "tests": "tests/journeys.json",
+  "build": { "profile": "mooyu-structured-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["physics.projectile", "instrument.measurement", "component.workbench", "challenge.projectile-rescue", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
+  "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
+}

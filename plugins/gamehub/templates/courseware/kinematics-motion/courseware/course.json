@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "objectives": [
+    { "id": "connect-motion-representations", "text": { "zh-CN": "根据位置、速度和加速度的关系解释 x-t、v-t、a-t 图像。", "en": "Explain x-t, v-t, and a-t graphs using the relationships among position, velocity, and acceleration." } },
+    { "id": "predict-uniform-acceleration", "text": { "zh-CN": "用 x=x₀+v₀t+½at² 和 v=v₀+at 预测匀变速直线运动。", "en": "Predict uniformly accelerated motion with x=x₀+v₀t+½at² and v=v₀+at." } }
+  ],
+  "prerequisites": [{ "zh-CN": "理解位移、速度和时间的基本含义。", "en": "Understands the basic meanings of displacement, velocity, and time." }],
+  "misconceptions": [
+    { "id": "graph-is-path", "text": { "zh-CN": "把运动图像误认为物体在空间中的实际轨迹。", "en": "Mistaking a motion graph for the object's physical path." }, "objectiveIds": ["connect-motion-representations"] },
+    { "id": "positive-velocity-means-speeding-up", "text": { "zh-CN": "认为速度为正就一定在加速。", "en": "Assuming positive velocity always means speeding up." }, "objectiveIds": ["predict-uniform-acceleration"] }
+  ],
+  "scenes": [{
+    "id": "link-motion-graphs", "type": "simulate", "title": { "zh-CN": "运动与图像同步实验", "en": "Linked motion and graph experiment" },
+    "objectiveIds": ["connect-motion-representations", "predict-uniform-acceleration"], "evidenceIds": ["kinematics-relations-claim"],
+    "component": { "type": "kinematics-track", "config": { "initialVelocityRange": [0, 12], "accelerationRange": [-3, 3], "duration": 5 } },
+    "fallback": { "zh-CN": "若动画不可用，请使用运动方程计算每秒的位置与速度并绘图。", "en": "If animation is unavailable, use the motion equations to calculate and plot position and velocity each second." }
+  }],
+  "checkpoints": [{ "id": "predict-vt-slope", "sceneId": "link-motion-graphs", "objectiveIds": ["connect-motion-representations", "predict-uniform-acceleration"], "kind": "multiple-choice", "prompt": { "zh-CN": "加速度增大时，v-t 图像的斜率怎样变化？", "en": "What happens to the slope of a v-t graph when acceleration increases?" }, "answer": "steeper" }],
+  "completion": { "objectiveIds": ["connect-motion-representations", "predict-uniform-acceleration"], "checkpointIds": ["predict-vt-slope"] }
+}

@@ -1,14 +1,25 @@
 # 墨鱼工坊交互课件参考包
 
-这三个参考包共同验证 `mooyu.courseware` v1 的通用边界，而不是限定视觉风格：
+这些参考包共同验证 `mooyu.courseware` v1 的通用边界，而不是限定视觉风格：
 
 - `concept-explorer`：用同一个二次函数引擎支持教材探索、F2 曲线沙盒和命中目标点挑战。
 - `causal-simulation`：用同一个力学引擎支持教材实验、F2 自由搭建和救援投送挑战。
+- `projectile-motion`：用二维抛体引擎支持速度分解、星球参数沙盒和山谷救援挑战。
 - `algorithm-stepper`：用同一个化学平衡引擎支持教材实验、F2 反应器沙盒和安全生产挑战。
+- `kinematics-motion`：用一维匀变速引擎把真实运动与 x-t、v-t、a-t 图像同步，并支持自由方案与双窗口挑战。
+
+新课件应使用 `@mooyu/courseware-ui-kit` 的壳层合同。规范源位于 `packages/courseware-ui-kit`，发布课件在 `modules/ui-kit` 中携带可校验、可热替换的副本；宿主负责语言切换，课件内部不要再放第二个语言入口。
+
+UI Kit 检查与同步：
+
+```text
+npm run courseware:ui-kit:check
+npm run courseware:ui-kit:sync
+```
 
 复制最接近的目录到用户工作区，再编辑课程结构、证据、验收路径和 `dist` 静态产物。不要直接修改已安装插件中的模板。
 
-三个参考包都在 manifest 中声明 `experience`。Doctor 会检查三种体验是否齐全、自由实验是否真的支持对象增删与状态快照、挑战是否有机器可判定的成功条件；只换文案或只暴露一个滑块不算自由实验。
+每个参考包都在 manifest 中声明 `experience`。Doctor 会检查三种体验是否齐全、自由实验是否真的支持对象增删与状态快照、挑战是否有机器可判定的成功条件；只换文案或只暴露一个滑块不算自由实验。
 
 校验命令：
 

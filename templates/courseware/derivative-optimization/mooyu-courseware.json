@@ -1,0 +1,19 @@
+{
+  "format": "mooyu.courseware",
+  "schemaVersion": 1,
+  "id": "derivative-optimization-lab",
+  "title": { "zh-CN": "导数与优化实验室", "en": "Derivative & Optimization Lab" },
+  "summary": { "zh-CN": "让割线逼近切线，联动函数与导函数，并用导数解决一个真实的包装优化任务。", "en": "Approach a tangent with secants, link a function to its derivative, and solve a packaging optimization task." },
+  "defaultLocale": "zh-CN",
+  "locales": ["zh-CN", "en"],
+  "subjects": ["mathematics", "calculus"],
+  "audience": { "stages": ["upper-secondary"], "minimumAge": 15 },
+  "catalog": { "category": "simulations", "topic": { "zh-CN": "函数 · 导数与优化", "en": "Functions · Derivatives & Optimization" }, "estimatedMinutes": 15, "order": 110, "cover": { "symbol": "f′(x)", "tone": "math" } },
+  "course": "courseware/course.json",
+  "experience": "courseware/experience.json",
+  "evidence": "evidence/sources.json",
+  "tests": "tests/journeys.json",
+  "build": { "profile": "mooyu-structured-v1", "entry": "dist/index.html" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/ui-kit/module.json", "modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["component.courseware-ui", "math.derivative", "instrument.measurement", "component.workbench", "challenge.optimization-target", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
+  "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
+}

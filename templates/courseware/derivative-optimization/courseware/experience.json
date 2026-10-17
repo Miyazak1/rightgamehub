@@ -1,0 +1,26 @@
+{
+  "format": "mooyu.courseware-experience",
+  "schemaVersion": 1,
+  "engine": { "id": "derivative-optimization-2d", "version": 1, "deterministic": true, "snapshot": true, "stateVariables": ["function-family", "probe-x", "delta-x", "derivative-visible", "sheet-side", "cut"] },
+  "defaultMode": "textbook",
+  "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "拖动点并缩小 Δx，亲手把割线推向切线。", "en": "Move the point and shrink Δx to drive a secant toward the tangent." }, "instrumentIds": ["secant-tangent", "probe", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "联动 f、f′ 与符号表，把局部斜率组织成整体形状。", "en": "Link f, f′, and a sign chart to turn local slopes into global shape." }, "instrumentIds": ["linked-graphs", "sign-chart", "probe"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "建立体积函数，比较临界点与边界，完成有约束的优化。", "en": "Build a volume function and compare critical points with boundaries to optimize under constraints." }, "instrumentIds": ["optimization", "comparison"] }
+  ],
+  "modes": [
+    { "id": "textbook", "kind": "textbook-lab", "title": { "zh-CN": "教材", "en": "Textbook" }, "sceneIds": ["secant-to-tangent", "read-the-shape", "optimization-studio"], "freedomLevel": "F1", "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.reset", "measurement.record", "snapshot.save"], "instrumentIds": ["secant-tangent", "linked-graphs", "sign-chart", "optimization", "probe"], "curiosityHook": { "zh-CN": "一条越来越短的割线，怎样变成某一点的速度计？", "en": "How can a shrinking secant become a speedometer at one point?" } },
+    { "id": "sandbox", "kind": "free-sandbox", "title": { "zh-CN": "自由", "en": "Sandbox" }, "sceneIds": ["secant-to-tangent", "read-the-shape", "optimization-studio"], "freedomLevel": "F2", "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"], "instrumentIds": ["secant-tangent", "linked-graphs", "sign-chart", "optimization", "comparison", "probe", "replay"], "curiosityHook": { "zh-CN": "换一条函数、换一个观察点，哪些规律仍然成立？", "en": "Which patterns survive when you change the function and the observation point?" } },
+    { "id": "signal", "kind": "scenario-challenge", "title": { "zh-CN": "挑战", "en": "Challenge" }, "sceneIds": ["optimization-studio"], "freedomLevel": "F2", "allowedCommands": ["object.configure", "simulation.run", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"], "instrumentIds": ["optimization", "comparison"], "curiosityHook": { "zh-CN": "材料只够做一次样品：怎样计算出容量最大的包装盒？", "en": "There is material for one prototype: how do you calculate the largest possible box?" }, "challenge": { "id": "maximize-package-volume", "title": { "zh-CN": "最大容量包装", "en": "Maximum-volume Package" }, "goal": { "zh-CN": "从 20 cm 正方形纸板四角切去相同小正方形，使无盖盒体积尽可能大。", "en": "Cut equal squares from a 20 cm sheet to maximize the volume of an open box." }, "success": [{ "metric": "cut", "operator": "between", "values": [3.25, 3.42] }], "attemptPolicy": { "maxAttempts": 4, "retry": "after-feedback" } } }
+  ],
+  "instruments": [
+    { "id": "secant-tangent", "kind": "graph", "title": { "zh-CN": "割线—切线仪", "en": "Secant–Tangent Instrument" } },
+    { "id": "linked-graphs", "kind": "graph", "title": { "zh-CN": "函数—导函数联动图", "en": "Linked Function–Derivative Graph" } },
+    { "id": "sign-chart", "kind": "table", "title": { "zh-CN": "导数符号表", "en": "Derivative Sign Chart" } },
+    { "id": "optimization", "kind": "graph", "title": { "zh-CN": "优化分析器", "en": "Optimization Analyser" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "方案比较", "en": "Plan Comparison" } },
+    { "id": "probe", "kind": "probe", "title": { "zh-CN": "坐标探针", "en": "Coordinate Probe" } },
+    { "id": "replay", "kind": "replay", "title": { "zh-CN": "极限演示", "en": "Limit Replay" } }
+  ]
+}

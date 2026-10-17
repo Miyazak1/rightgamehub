@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "sources": [{ "id": "openstax-physics-kinematics", "type": "book", "title": "Physics", "publisher": "OpenStax", "url": "https://openstax.org/details/books/physics", "license": "CC-BY-4.0", "locator": "Chapter 3" }],
+  "claims": [{ "id": "kinematics-relations-claim", "text": { "zh-CN": "匀变速直线运动中，速度随时间线性变化，位置随时间呈二次变化。", "en": "In uniformly accelerated one-dimensional motion, velocity changes linearly with time and position changes quadratically with time." }, "sourceIds": ["openstax-physics-kinematics"], "locators": ["Chapter 3"], "verification": "primary-source" }]
+}

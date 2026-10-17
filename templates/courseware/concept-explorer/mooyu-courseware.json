@@ -8,11 +8,12 @@
   "locales": ["zh-CN", "en"],
   "subjects": ["mathematics", "algebra"],
   "audience": { "stages": ["lower-secondary", "upper-secondary"], "minimumAge": 12 },
+  "catalog": { "category": "simulations", "topic": { "zh-CN": "函数 · 二次函数", "en": "Functions · Quadratics" }, "estimatedMinutes": 8, "order": 100, "cover": { "symbol": "y = ax²", "tone": "math" } },
   "course": "courseware/course.json",
   "experience": "courseware/experience.json",
   "evidence": "evidence/sources.json",
   "tests": "tests/journeys.json",
   "build": { "profile": "mooyu-structured-v1", "entry": "dist/index.html" },
-  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["math.quadratic", "instrument.measurement", "component.workbench", "challenge.quadratic-target", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
+  "runtime": { "kind": "static-web", "learningSdk": 1, "capabilities": ["learningProgress", "learningEvents", "assessmentResult"], "profile": "structured-courseware", "modules": ["modules/ui-kit/module.json", "modules/domain/module.json", "modules/measurement/module.json", "modules/workbench/module.json", "modules/challenge/module.json", "modules/journey/module.json", "modules/embed/module.json"], "rootModules": ["component.courseware-ui", "math.quadratic", "instrument.measurement", "component.workbench", "challenge.quadratic-target", "journey.progress", "embed.bridge"], "moduleLock": "dist/mooyu-modules.lock.json" },
   "licenses": { "code": "MIT", "content": "CC-BY-4.0" }
 }

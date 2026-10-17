@@ -41,6 +41,17 @@ test('chemistry Domain Pack separates catalyst speed from equilibrium compositio
   assert.deepEqual(after.composition,before.composition); assert.equal(after.constant,before.constant); assert.equal(after.catalyst,true);
 });
 
+test('projectile Domain Pack calculates a deterministic trajectory and obstacle clearance', async () => {
+  const [runtime,{default:implementation}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/physics/projectile.mjs')]);
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:moduleManifest('physics.projectile','domain','./projectile.mjs',['domain.projectile'],['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...implementation});
+  session.activate('physics.projectile');
+  const initial=session.observe('physics.projectile');
+  assert.ok(initial.range>27&&initial.range<31);assert.ok(initial.clearance>0);
+  session.dispatch('physics.projectile','simulation.run');session.dispatch('physics.projectile','simulation.step',{seconds:.08});
+  assert.ok(session.observe('physics.projectile').x>0);
+});
+
 test('measurement Instrument Pack reads only its declared Domain dependency', async () => {
   const [runtime,{ default:domain },{ default:instrument }]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/math/quadratic.mjs'),load('packages/courseware-domain-packs/src/instrument/measurement.mjs')]);
   const session=new runtime.CoursewareRuntime();
@@ -48,6 +59,27 @@ test('measurement Instrument Pack reads only its declared Domain dependency', as
   session.register({ manifest:moduleManifest('instrument.measurement','instrument','./measurement.mjs',['instrument.measurement'],['instrument.channel.set','measurement.record','comparison.select','measurement.clear'],[{ id:'math.quadratic',apiVersion:1,capabilities:['domain.function'] }]),...instrument });
   session.activate('instrument.measurement');
   assert.equal(session.observe('instrument.measurement',{ sourceQuery:{ kind:'curve' } }).live.points.length,81);
+});
+
+test('workbench component discovers modes and synchronizes DOM, runtime and learning events', async () => {
+  const [runtime,workbench]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/component/workbench.mjs')]);
+  const button=dataset=>({dataset,attributes:{},listeners:new Map(),setAttribute(name,value){this.attributes[name]=value;},addEventListener(name,listener){this.listeners.set(name,listener);},removeEventListener(name){this.listeners.delete(name);},click(){this.listeners.get('click')?.();}});
+  const experienceButtons=[button({experienceMode:'textbook'}),button({experienceMode:'sandbox'}),button({experienceMode:'target'})];
+  const viewButtons=[button({mode:'explore'}),button({mode:'model'}),button({mode:'analyse'})];
+  const rootElement={dataset:{experience:'textbook',mode:'explore'},querySelectorAll(selector){return selector==='[data-experience-mode]'?experienceButtons:selector==='[data-mode]'?viewButtons:[];}};
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:{...moduleManifest('component.workbench','component','./workbench.mjs',['component.workbench','component.workbench.modes'],['capabilities.configure','experience.set','panel.set','locale.set','motion.set']),version:'1.1.0',stateSchemaVersion:2},...workbench.default});
+  session.activate('component.workbench');
+  const events=[];
+  const controller=workbench.createWorkbenchController({root:rootElement,sceneId:'explore-a',getRuntime:()=>session,emit:(name,data)=>events.push({name,data})});
+  controller.bind();controller.connectRuntime();experienceButtons[1].click();viewButtons[2].click();
+  assert.deepEqual(controller.capabilities.experienceModes,['textbook','sandbox','target']);
+  assert.deepEqual(controller.capabilities.viewModes,['explore','model','analyse']);
+  assert.equal(rootElement.dataset.experience,'sandbox');assert.equal(rootElement.dataset.mode,'analyse');
+  assert.equal(experienceButtons[1].attributes['aria-pressed'],'true');assert.equal(viewButtons[2].attributes['aria-pressed'],'true');
+  assert.deepEqual(session.observe('component.workbench'),{experience:'sandbox',panel:'analyse',locale:'zh-CN',motion:'system',capabilities:{experienceModes:['textbook','sandbox','target'],viewModes:['explore','model','analyse']}});
+  assert.deepEqual(events.map(event=>event.name),['experience.mode.changed','view.mode.changed']);
+  controller.destroy();assert.equal(experienceButtons[0].listeners.size,0);assert.equal(viewButtons[0].listeners.size,0);
 });
 
 test('scenario challenges evaluate authoritative Domain state instead of UI labels', async () => {
@@ -67,6 +99,15 @@ test('scenario challenges evaluate authoritative Domain state instead of UI labe
   const supply=session.observe('challenge.supply-cart'); assert.equal(supply.solved,true); assert.ok(supply.last.metrics.position>=6.5&&supply.last.metrics.position<=8.5);
 });
 
+test('projectile rescue challenge evaluates target range and obstacle clearance from domain state', async () => {
+  const [runtime,{default:domain},{default:challenge}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/physics/projectile.mjs'),load('packages/courseware-domain-packs/src/challenge/projectile-rescue.mjs')]);
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:moduleManifest('physics.projectile','domain','./projectile.mjs',['domain.projectile'],['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...domain});
+  session.register({manifest:moduleManifest('challenge.projectile-rescue','challenge','./challenge.mjs',['challenge.evaluate'],['challenge.attempt','challenge.reset'],[{id:'physics.projectile',apiVersion:1,capabilities:['domain.projectile']}]),...challenge});
+  session.activate('challenge.projectile-rescue');session.dispatch('challenge.projectile-rescue','challenge.attempt');
+  const result=session.observe('challenge.projectile-rescue');assert.equal(result.solved,true);assert.equal(result.last.reason,'success');
+});
+
 test('journey and embed modules keep host concerns optional and isolated', async () => {
   const [runtime,{default:journey},{default:embed}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/journey/progress.mjs'),load('packages/courseware-domain-packs/src/embed/bridge.mjs')]);
   const session=new runtime.CoursewareRuntime();
@@ -75,4 +116,72 @@ test('journey and embed modules keep host concerns optional and isolated', async
   session.activate(['journey.progress','embed.bridge']);
   session.dispatch('journey.progress','scene.complete',{id:'explore-a'});session.dispatch('journey.progress','checkpoint.complete',{id:'predict-opening'});session.dispatch('embed.bridge','embed.ready');
   assert.equal(session.observe('journey.progress').completed,true);assert.equal(session.observe('embed.bridge').ready,true);
+});
+
+test('composite mission orchestrates three authoritative physics capabilities without duplicating formulas', async () => {
+  const [runtime,missionEngine,{default:newton},{default:energy},{default:braking},sample]=await Promise.all([
+    load('packages/courseware-runtime/src/index.mjs'),
+    load('packages/courseware-mission-engine/src/index.mjs'),
+    load('packages/courseware-domain-packs/src/physics/newton-cart.mjs'),
+    load('packages/courseware-domain-packs/src/physics/work-energy.mjs'),
+    load('packages/courseware-domain-packs/src/physics/braking.mjs'),
+    load('samples/courseware-mission/energy-train.mjs'),
+  ]);
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:moduleManifest('physics.newton-cart','domain','./newton.mjs',['domain.motion'],['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...newton});
+  session.register({manifest:moduleManifest('physics.work-energy','domain','./energy.mjs',['domain.work-energy'],['mass.set','speed.set','height.set','friction.set','path-length.set','model.reset']),...energy});
+  session.register({manifest:moduleManifest('physics.braking','domain','./braking.mjs',['domain.braking'],['speed.set','deceleration.set','runway.set','model.reset']),...braking});
+  const dependencies=[
+    {id:'physics.newton-cart',apiVersion:1,capabilities:['domain.motion']},
+    {id:'physics.work-energy',apiVersion:1,capabilities:['domain.work-energy']},
+    {id:'physics.braking',apiVersion:1,capabilities:['domain.braking']},
+  ];
+  session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],dependencies),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings})});
+  session.activate('scenario.energy-train');
+  session.dispatch('scenario.energy-train','mission.start');
+  assert.equal(session.observe('scenario.energy-train').activeNodeId,'accelerate');
+  for(const actionId of ['commit-traction','commit-climb','commit-braking','complete-debrief']) session.dispatch('scenario.energy-train','mission.act',{actionId});
+  const result=session.observe('scenario.energy-train');
+  assert.equal(result.status,'succeeded');
+  assert.equal(result.outcomeId,'route-complete');
+  assert.deepEqual(result.completedNodeIds,['accelerate','climb','brake','debrief']);
+  assert.deepEqual(result.clocks,{window:122});
+  assert.deepEqual(result.resources,{battery:40});
+  assert.deepEqual(result.evidence.map(item=>item.claimId),['newton.configure','energy.balance','braking.calculate','system.explain']);
+  const assessment=missionEngine.evaluateLearningEvidence(sample.evidenceModel,result.evidence);
+  assert.equal(assessment.mastered,true);
+  assert.deepEqual(assessment.objectives.map(item=>item.id),['newton.second-law','mechanical-energy','uniform-deceleration']);
+  assert.ok(result.metrics['traction.acceleration']>2.9);
+  const replay=session.observe('scenario.energy-train',{kind:'replay'});
+  assert.equal(replay.commands.length,5);
+  assert.deepEqual(replay.commands.map(item=>item.sequence),[0,1,2,3,4]);
+});
+
+test('mission pressure is deterministic state and failed attempts consume declared time and resources', async () => {
+  const [runtime,missionEngine,{default:newton},{default:energy},{default:braking},sample]=await Promise.all([
+    load('packages/courseware-runtime/src/index.mjs'),
+    load('packages/courseware-mission-engine/src/index.mjs'),
+    load('packages/courseware-domain-packs/src/physics/newton-cart.mjs'),
+    load('packages/courseware-domain-packs/src/physics/work-energy.mjs'),
+    load('packages/courseware-domain-packs/src/physics/braking.mjs'),
+    load('samples/courseware-mission/energy-train.mjs'),
+  ]);
+  const session=new runtime.CoursewareRuntime();
+  session.register({manifest:moduleManifest('physics.newton-cart','domain','./newton.mjs',['domain.motion'],['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...newton});
+  session.register({manifest:moduleManifest('physics.work-energy','domain','./energy.mjs',['domain.work-energy'],['mass.set','speed.set','height.set','friction.set','path-length.set','model.reset']),...energy});
+  session.register({manifest:moduleManifest('physics.braking','domain','./braking.mjs',['domain.braking'],['speed.set','deceleration.set','runway.set','model.reset']),...braking});
+  session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],[
+    {id:'physics.newton-cart',apiVersion:1,capabilities:['domain.motion']},{id:'physics.work-energy',apiVersion:1,capabilities:['domain.work-energy']},{id:'physics.braking',apiVersion:1,capabilities:['domain.braking']},
+  ]),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings})});
+  session.activate('scenario.energy-train');
+  session.dispatch('physics.newton-cart','mass.set',{value:10});
+  session.dispatch('scenario.energy-train','mission.start');
+  for(let attempt=0;attempt<7;attempt+=1) session.dispatch('scenario.energy-train','mission.act',{actionId:'commit-traction'});
+  const result=session.observe('scenario.energy-train');
+  assert.equal(result.status,'failed');
+  assert.equal(result.outcomeId,'battery-empty');
+  assert.equal(result.activeNodeId,'accelerate');
+  assert.equal(result.clocks.window,54);
+  assert.equal(result.resources.battery,0);
+  assert.equal(result.evidence.length,0);
 });

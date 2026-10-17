@@ -10,7 +10,7 @@ const { pathToFileURL } = require('node:url');
 
 const exec = promisify(execFile);
 const root = path.resolve(__dirname, '../..');
-const templates = ['concept-explorer', 'causal-simulation', 'algorithm-stepper'];
+const templates = ['concept-explorer', 'causal-simulation', 'projectile-motion', 'algorithm-stepper'];
 
 async function temporaryCopy(t, name = 'concept-explorer') {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mooyu-courseware-'));
@@ -23,21 +23,21 @@ test('courseware schemas are strict, versioned JSON Schema documents', async () 
   const schemaRoot = path.join(root, 'packages/contracts/courseware');
   const files = (await fs.readdir(schemaRoot)).filter(file => file.endsWith('.schema.json'));
   assert.deepEqual(files.sort(), [
-    'course-v1.schema.json', 'courseware-brief-v1.schema.json', 'courseware-coverage-v1.schema.json', 'curriculum-review-packet-v1.schema.json', 'doctor-report-v1.schema.json', 'embed-descriptor-v1.schema.json',
-    'embed-protocol-v1.schema.json', 'embed-protocol-v2.schema.json', 'experience-v1.schema.json', 'journeys-v1.schema.json', 'knowledge-map-fragment-v1.schema.json',
-    'knowledge-map-v1.schema.json', 'learning-sdk-v1.schema.json', 'manifest-v1.schema.json', 'module-lock-v1.schema.json', 'module-manifest-v1.schema.json', 'sources-v1.schema.json', 'textbook-baseline-v1.schema.json',
+    'capability-binding-v1.schema.json', 'course-v1.schema.json', 'courseware-brief-v1.schema.json', 'courseware-coverage-v1.schema.json', 'curriculum-review-packet-v1.schema.json', 'doctor-report-v1.schema.json', 'embed-descriptor-v1.schema.json',
+    'embed-protocol-v1.schema.json', 'embed-protocol-v2.schema.json', 'evidence-model-v1.schema.json', 'experience-v1.schema.json', 'journeys-v1.schema.json', 'knowledge-map-fragment-v1.schema.json',
+    'knowledge-map-v1.schema.json', 'learning-sdk-v1.schema.json', 'manifest-v1.schema.json', 'mission-replay-v1.schema.json', 'mission-v1.schema.json', 'module-lock-v1.schema.json', 'module-manifest-v1.schema.json', 'sources-v1.schema.json', 'textbook-baseline-v1.schema.json',
   ]);
   for (const file of files) {
     const schema = JSON.parse(await fs.readFile(path.join(schemaRoot, file), 'utf8'));
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
     assert.match(schema.$id, /^https:\/\/mooyu\.fun\/schemas\/courseware\//u);
   }
-  for (const file of ['manifest-v1.schema.json', 'course-v1.schema.json', 'courseware-brief-v1.schema.json', 'courseware-coverage-v1.schema.json', 'curriculum-review-packet-v1.schema.json', 'sources-v1.schema.json', 'journeys-v1.schema.json', 'doctor-report-v1.schema.json', 'embed-descriptor-v1.schema.json', 'embed-protocol-v2.schema.json', 'experience-v1.schema.json', 'module-lock-v1.schema.json', 'module-manifest-v1.schema.json', 'textbook-baseline-v1.schema.json']) {
+  for (const file of ['manifest-v1.schema.json', 'course-v1.schema.json', 'courseware-brief-v1.schema.json', 'courseware-coverage-v1.schema.json', 'curriculum-review-packet-v1.schema.json', 'sources-v1.schema.json', 'journeys-v1.schema.json', 'doctor-report-v1.schema.json', 'embed-descriptor-v1.schema.json', 'embed-protocol-v2.schema.json', 'experience-v1.schema.json', 'module-lock-v1.schema.json', 'module-manifest-v1.schema.json', 'textbook-baseline-v1.schema.json', 'mission-v1.schema.json', 'capability-binding-v1.schema.json', 'evidence-model-v1.schema.json', 'mission-replay-v1.schema.json']) {
     assert.equal(JSON.parse(await fs.readFile(path.join(schemaRoot, file), 'utf8')).additionalProperties, false, `${file} must reject unknown root fields`);
   }
 });
 
-test('all three reference courseware packages pass the L0 Doctor', async () => {
+test('all reference courseware packages pass the L0 Doctor', async () => {
   const { inspectCoursewareProject, describeCoursewareProject } = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
   for (const name of templates) {
     const templateRoot = path.join(root, 'templates/courseware', name);
@@ -46,13 +46,15 @@ test('all three reference courseware packages pass the L0 Doctor', async () => {
     assert.match(report.projectDigest, /^[a-f0-9]{64}$/u);
     assert.ok(report.findings.some(item => item.code === 'COURSEWARE_CONTRACT_READY'));
     assert.ok(report.findings.some(item => item.code === 'COURSEWARE_MODULE_GRAPH_READY'));
-    const summary = await describeCoursewareProject(templateRoot);
-    assert.equal(summary.counts.modules, 6, `${name} must ship its domain, instrument, component, challenge, journey and embed modules`);
     const manifest = JSON.parse(await fs.readFile(path.join(templateRoot, 'mooyu-courseware.json'), 'utf8'));
+    const usesUiKit=manifest.runtime.modules.includes('modules/ui-kit/module.json');
+    const expectedModuleCount=usesUiKit?7:6;
+    const summary = await describeCoursewareProject(templateRoot);
+    assert.equal(summary.counts.modules, expectedModuleCount, `${name} must ship its declared hot-swappable modules`);
     assert.equal(manifest.build.profile, 'mooyu-structured-v1');
     assert.equal(manifest.runtime.profile, 'structured-courseware');
     assert.equal(manifest.runtime.moduleLock, 'dist/mooyu-modules.lock.json');
-    assert.equal(new Set(manifest.runtime.rootModules).size, 6);
+    assert.equal(new Set(manifest.runtime.rootModules).size, expectedModuleCount);
     for (const moduleName of ['domain', 'measurement', 'workbench', 'challenge', 'journey', 'embed']) {
       const moduleRoot = path.join(templateRoot, 'modules', moduleName);
       const entry = await fs.readFile(path.join(moduleRoot, 'index.mjs'));
@@ -105,7 +107,7 @@ test('creator toolkit CLI auto-detects courseware packages', async () => {
   assert.equal(report.reportVersion, 1);
 });
 
-test('all three subject references declare real three-mode experiences and reject a slider-only sandbox', async t => {
+test('all subject references declare real three-mode experiences and reject a slider-only sandbox', async t => {
   const tools = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
   for (const name of templates) {
     const source = path.join(root, 'templates/courseware', name);
@@ -113,6 +115,9 @@ test('all three subject references declare real three-mode experiences and rejec
     assert.equal(summary.ok, true, name);
     assert.equal(summary.counts.modes, 3, `${name} must implement textbook, free and challenge modes`);
     assert.equal(summary.counts.challenges, 1, `${name} must ship a measurable challenge`);
+    const experience = JSON.parse(await fs.readFile(path.join(source, 'courseware/experience.json'), 'utf8'));
+    assert.equal(experience.defaultView, 'explore', `${name} must declare its initial observation view`);
+    assert.deepEqual(experience.views.map(view => view.kind), ['explore', 'model', 'analyse'], `${name} must describe the shared learning loop`);
   }
 
   const directory = await temporaryCopy(t, 'causal-simulation');
@@ -133,10 +138,24 @@ test('experience capabilities are composable instead of globally requiring every
   const experience = JSON.parse(await fs.readFile(experiencePath, 'utf8'));
   experience.modes = [experience.modes.find(mode => mode.kind === 'textbook-lab')];
   experience.modes[0].instrumentIds = [];
+  delete experience.defaultView;
+  delete experience.views;
   delete experience.instruments;
   await fs.writeFile(experiencePath, `${JSON.stringify(experience, null, 2)}\n`);
   const report = await tools.inspectCoursewareProject(directory);
   assert.equal(report.ok, true, JSON.stringify(report.findings, null, 2));
+});
+
+test('experience view declarations stay optional for v1 but reject broken instrument references', async t => {
+  const { inspectCoursewareProject } = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
+  const directory = await temporaryCopy(t, 'algorithm-stepper');
+  const experiencePath = path.join(directory, 'courseware/experience.json');
+  const experience = JSON.parse(await fs.readFile(experiencePath, 'utf8'));
+  experience.views[0].instrumentIds = ['missing-instrument'];
+  await fs.writeFile(experiencePath, `${JSON.stringify(experience, null, 2)}\n`);
+  const report = await inspectCoursewareProject(directory);
+  assert.equal(report.ok, false);
+  assert.ok(report.findings.some(item => item.code === 'COURSEWARE_EXPERIENCE_INSTRUMENT_REFERENCE_INVALID'));
 });
 
 test('courseware Doctor rejects incomplete scenario challenge rules', async t => {
@@ -151,6 +170,35 @@ test('courseware Doctor rejects incomplete scenario challenge rules', async t =>
   assert.ok(report.findings.some(item => item.code === 'COURSEWARE_CHALLENGE_RULES_INVALID'));
 });
 
+test('courseware Doctor validates composite mission graph, capability bindings and learning evidence', async t => {
+  const { inspectCoursewareProject } = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
+  const directory = await temporaryCopy(t, 'concept-explorer');
+  const manifestPath=path.join(directory,'mooyu-courseware.json');
+  const manifest=JSON.parse(await fs.readFile(manifestPath,'utf8'));
+  Object.assign(manifest,{mission:'courseware/mission.json',capabilityBindings:'courseware/capability-bindings.json',evidenceModel:'courseware/evidence-model.json'});
+  await fs.writeFile(manifestPath,`${JSON.stringify(manifest,null,2)}\n`);
+  const mission={
+    format:'mooyu.learning-mission',schemaVersion:1,id:'math.shape-mission',version:'1.0.0',title:{'zh-CN':'函数形状任务'},initialNodeId:'shape',capabilitySlots:['function'],
+    clocks:[{id:'window',initial:60,minimum:0,maximum:60}],resources:[],
+    nodes:[{id:'shape',kind:'calculation',title:{'zh-CN':'判断开口'},capabilitySlots:['function'],actions:[{id:'commit',title:{'zh-CN':'提交'},success:[{source:'metric',id:'shape.coefficient',operator:'eq',value:1}],onSuccess:{to:'debrief'},onFailure:{to:'shape'},evidence:[{claimId:'shape.calculate',kind:'calculation',strength:1}]}]},{id:'debrief',kind:'debrief',title:{'zh-CN':'解释'},capabilitySlots:[],actions:[{id:'explain',title:{'zh-CN':'解释'},success:[],onSuccess:{to:'debrief'},evidence:[{claimId:'shape.explain',kind:'explanation',strength:1}]}]}],
+    outcomes:[{id:'complete',kind:'success',title:{'zh-CN':'完成'},when:[{source:'state',id:'completed.debrief',operator:'truthy'}]}],
+  };
+  const bindings={format:'mooyu.mission-capability-binding',schemaVersion:1,missionId:'math.shape-mission',bindings:[{slot:'function',moduleId:'math.quadratic',capability:'domain.function',metrics:[{id:'shape.coefficient',path:'coefficient'}]}]};
+  const evidenceModel={format:'mooyu.learning-evidence-model',schemaVersion:1,id:'math.shape-evidence',objectiveIds:['shape-from-a'],claims:[{id:'shape.calculate',objectiveId:'shape-from-a',kind:'calculation',weight:1,minimumStrength:.8,required:true},{id:'shape.explain',objectiveId:'shape-from-a',kind:'explanation',weight:1,minimumStrength:.8,required:true}]};
+  await Promise.all([
+    fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`),
+    fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`),
+    fs.writeFile(path.join(directory,manifest.evidenceModel),`${JSON.stringify(evidenceModel,null,2)}\n`),
+  ]);
+  const valid=await inspectCoursewareProject(directory);
+  assert.equal(valid.ok,true,JSON.stringify(valid.findings,null,2));
+  bindings.bindings[0].capability='domain.missing';
+  await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
+  const invalid=await inspectCoursewareProject(directory);
+  assert.equal(invalid.ok,false);
+  assert.ok(invalid.findings.some(item=>item.code==='COURSEWARE_MISSION_CAPABILITY_INVALID'));
+});
+
 test('courseware toolkit initializes without overwrite and exposes a stable inspection summary', async t => {
   const tools = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
   const parent = await fs.mkdtemp(path.join(os.tmpdir(), 'mooyu-courseware-init-'));
@@ -160,7 +208,7 @@ test('courseware toolkit initializes without overwrite and exposes a stable insp
   assert.equal(created.action, 'created'); assert.equal(created.id, 'quadratic-shape-explorer');
   await assert.rejects(tools.initializeCoursewareProject({ templateRoot:path.join(root, 'templates/courseware/concept-explorer'),targetRoot:target }), { code:'COURSEWARE_TARGET_EXISTS' });
   const summary = await tools.describeCoursewareProject(target);
-  assert.equal(summary.ok, true); assert.equal(summary.counts.objectives, 1); assert.equal(summary.counts.journeys, 2); assert.match(summary.projectDigest, /^[a-f0-9]{64}$/u); assert.equal(summary.projectDigest, summary.report.projectDigest);
+  assert.equal(summary.ok, true); assert.equal(summary.counts.objectives, 1); assert.equal(summary.counts.journeys, 10); assert.match(summary.projectDigest, /^[a-f0-9]{64}$/u); assert.equal(summary.projectDigest, summary.report.projectDigest);
 });
 
 test('reference courseware templates expose real bilingual, keyboard and motion-safe acceptance surfaces', async () => {
@@ -182,20 +230,31 @@ test('reference courseware templates expose real bilingual, keyboard and motion-
     assert.match(html, /data-app-action="new"/u, `${name} must expose the shared new-experiment action`);
     assert.match(html, /data-app-action="notes"|id="snapshot"/u, `${name} must expose the shared notes action`);
     assert.match(html, /data-app-action="help"/u, `${name} must expose the shared help action`);
-    assert.match(html, /id="lang"/u, `${name} must expose the shared language action`);
+    const manifest = JSON.parse(await fs.readFile(path.join(templateRoot, 'mooyu-courseware.json'), 'utf8'));
+    if(manifest.runtime.modules.includes('modules/ui-kit/module.json'))assert.doesNotMatch(html, /id="lang"|id="locale"|class="[^"]*language-action/u, `${name} must leave locale control to the host`);
+    else assert.match(html, /id="lang"/u, `${name} legacy shell must expose its language action`);
     assert.match(html, /class="guide-chip"/u, `${name} must expose the shared experience status chip`);
     assert.match(html, /class="tool-shelf"/u, `${name} must expose subject tools instead of a button-only demo`);
     assert.match(html, /class="live-grid"/u, `${name} must expose live readable measurements`);
     assert.match(html, /type="module" src="\.\/_mooyu\/bootstrap\.mjs"/u, `${name} must boot through the verified structured runtime`);
+    assert.match(html, /createWorkbenchController/u, `${name} must use the shared workbench controller`);
+    assert.match(html, /\.\.\/modules\/workbench\/index\.mjs/u, `${name} must load the hot-swappable workbench module`);
+    assert.match(html, /workbench\.bind\(\)/u, `${name} must bind modes through the shared controller`);
     assert.doesNotMatch(html, /max-width:1180px/u, `${name} must use the full available embed width`);
     assert.match(html, /\.book\{position:relative;width:100%/u, `${name} must align its workbench to the full iframe width`);
     assert.match(html, /html,body\{height:100%;overflow:hidden\}/u, `${name} must provide a desktop single-screen workbench`);
     assert.match(html, /minmax\(0,1fr\)/u, `${name} must let its central workspace consume remaining viewport height`);
+    assert.match(html, /Desktop readability/u, `${name} must define an explicit desktop readability scale`);
+    assert.match(html, /@media\(min-width:1100px\) and \(min-height:700px\)/u, `${name} must enlarge teaching text without changing compact breakpoints`);
   }
   const concept = await fs.readFile(path.join(root, 'templates/courseware/concept-explorer/dist/index.html'), 'utf8');
   assert.match(concept, /data-tool="probe"/u); assert.match(concept, /setPointerCapture/u); assert.match(concept, /demoProgress/u);
   assert.match(concept, /function syncChallengeResult/u, 'dynamic challenge feedback must follow locale changes');
   assert.equal((concept.match(/data-experience-mode=/gu) ?? []).length, 3); assert.match(concept, /id="checkChallenge"/u); assert.match(concept, /hit-target-point/u);
+  assert.match(concept, /data-panel="explore"/u); assert.match(concept, /data-panel="model"/u); assert.match(concept, /data-panel="analyse"/u);
+  assert.match(concept, /id="sampleRows"/u); assert.match(concept, /id="saveReference"/u); assert.match(concept, /function activateView/u);
+  assert.match(concept, /@media\(max-width:780px\)[^{]*\{[^}]*[\s\S]*?\.margin\{display:block;min-width:0\}\.mode-panel\[data-panel=explore\]\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\);grid-template-rows:auto\}/u, 'the single-column tablet layout must not activate while the desktop workbench still fits');
+  assert.match(concept, /@media\(max-width:680px\)[^{]*\{[^}]*[\s\S]*?\.mode-panel\[data-panel=explore\]\{grid-template-columns:1fr;grid-template-rows:auto auto\}/u, 'phone layout must stack the explore cards again');
   const causal = await fs.readFile(path.join(root, 'templates/courseware/causal-simulation/dist/index.html'), 'utf8');
   assert.match(causal, /data-tool="trace"/u); assert.match(causal, /id="playhead"/u); assert.match(causal, /liveVelocity/u);
   assert.match(causal, /id="forceHandle"/u); assert.match(causal, /setPointerCapture/u); assert.match(causal, /draggable="true"/u);
@@ -209,6 +268,7 @@ test('reference courseware templates expose real bilingual, keyboard and motion-
   assert.match(causal, /data-panel="explore"/u); assert.match(causal, /data-panel="model"/u); assert.match(causal, /data-panel="analyse"/u);
   assert.match(causal, /id="chart"/u); assert.match(causal, /selectComparison/u); assert.match(causal, /compareMass/u);
   assert.match(causal, /structuredRuntime\?\.observe\('physics\.newton-cart'\)/u); assert.match(causal, /hasControlledPair/u); assert.match(causal, /compareSame/u); assert.match(causal, /Number\(playhead\.value\)>=1000/u);
+  assert.match(causal, /workbench\.snapshot\(\)/u); assert.match(causal, /workbench\.restore\(/u, 'physics snapshots must preserve shared workbench state');
   assert.match(causal, /lastChallengeOutcome/u, 'physics challenge feedback must preserve semantic state for translation');
   const algorithm = await fs.readFile(path.join(root, 'templates/courseware/algorithm-stepper/dist/index.html'), 'utf8');
   assert.doesNotMatch(algorithm, /CHEMISTRY LAB/u, 'chemistry must not fork the shared product brand');
@@ -219,6 +279,8 @@ test('reference courseware templates expose real bilingual, keyboard and motion-
   assert.match(algorithm, /data-tool="compress"/u); assert.match(algorithm, /id="stepProgress"/u); assert.match(algorithm, /quotient\(state/u); assert.match(algorithm, /predict-catalyst/u);
   assert.equal((algorithm.match(/data-experience-mode=/gu) ?? []).length, 3); assert.match(algorithm, /id="addFeed"/u); assert.match(algorithm, /id="removeFeed"/u);
   assert.match(algorithm, /safe-no2-batch/u); assert.match(algorithm, /function saveSnapshot/u);
+  assert.match(algorithm, /data-panel="explore"/u); assert.match(algorithm, /data-panel="model"/u); assert.match(algorithm, /data-panel="analyse"/u);
+  assert.match(algorithm, /id="chemChart"/u); assert.match(algorithm, /function activateView/u); assert.match(algorithm, /function drawChemChart/u);
   assert.match(algorithm, /lastChallengeOutcome/u, 'chemistry challenge feedback must preserve semantic state for translation');
 });
 
@@ -268,6 +330,7 @@ test('structured Builder freezes module graph and rejects changed release bytes'
   const lock = JSON.parse(await fs.readFile(path.join(output, built.moduleLock.path), 'utf8'));
   assert.deepEqual(lock.roots, ['math.quadratic']);
   assert.equal(lock.modules[0].entry, 'modules/math-quadratic/index.mjs');
+  assert.match(await fs.readFile(path.join(output, 'dist/_mooyu/bootstrap.mjs'), 'utf8'), /new URL\('\.\.\/\.\.\/', import\.meta\.url\)/u, 'bootstrap must resolve the courseware root, not the templates parent');
   await modules.verifyCoursewareModuleLock(output, manifest, null, { required:true });
   await fs.appendFile(path.join(output, lock.modules[0].entry), '// changed after build\n');
   await assert.rejects(modules.verifyCoursewareModuleLock(output, manifest, null, { required:true }), { code:'COURSEWARE_MODULE_INTEGRITY_MISMATCH' });
@@ -281,7 +344,7 @@ test('courseware preview is loopback-only, no-store and serves the verified dist
   await handler({ url:'/' },response);
   assert.equal(response.status, 200); assert.equal(response.headers['Cache-Control'], 'no-store'); assert.match(response.headers['Content-Security-Policy'], /connect-src 'self'/u); assert.match(response.headers['Content-Security-Policy'], /script-src 'self' blob:/u); assert.match(response.body.toString(), /data-mooyu-scene="control-equilibrium"/u);
   const lockResponse = responseFor(); await handler({ url:'/dist/mooyu-modules.lock.json' },lockResponse);
-  assert.equal(lockResponse.status, 200); assert.equal(JSON.parse(lockResponse.body.toString()).modules.length, 6);
+  assert.equal(lockResponse.status, 200); assert.equal(JSON.parse(lockResponse.body.toString()).modules.length, 7);
   const bootstrapResponse = responseFor(); await handler({ url:'/_mooyu/bootstrap.mjs' },bootstrapResponse);
   assert.equal(bootstrapResponse.status, 200); assert.match(bootstrapResponse.body.toString(), /mooyu:runtime-error/u); assert.match(bootstrapResponse.body.toString(), /dataset\.mooyuRuntime = 'ready'/u);
   const runtimeResponse = responseFor(); await handler({ url:'/_mooyu/runtime/index.mjs' },runtimeResponse);
