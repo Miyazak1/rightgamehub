@@ -104,14 +104,20 @@ test('scenario challenges evaluate authoritative Domain state instead of UI labe
 test('projectile rescue challenge evaluates target range and obstacle clearance from domain state', async () => {
   const [runtime,{default:domain},{default:challenge}]=await Promise.all([load('packages/courseware-runtime/src/index.mjs'),load('packages/courseware-domain-packs/src/physics/projectile.mjs'),load('packages/courseware-domain-packs/src/challenge/projectile-rescue.mjs')]);
   const session=new runtime.CoursewareRuntime();
-  session.register({manifest:moduleManifest('physics.projectile','domain','./projectile.mjs',['domain.projectile'],['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...domain});
-  session.register({manifest:moduleManifest('challenge.projectile-rescue','challenge','./challenge.mjs',['challenge.evaluate'],['challenge.attempt','challenge.reset'],[{id:'physics.projectile',apiVersion:1,capabilities:['domain.projectile']}]),...challenge});
+  session.register({manifest:moduleManifest('physics.projectile','domain','./projectile.mjs',['domain.projectile'],['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record','model.restore']),...domain});
+  session.register({manifest:moduleManifest('challenge.projectile-rescue','challenge','./challenge.mjs',['challenge.evaluate'],['challenge.attempt','challenge.reset','challenge.restore'],[{id:'physics.projectile',apiVersion:1,capabilities:['domain.projectile']}]),...challenge});
   session.activate('challenge.projectile-rescue');session.dispatch('challenge.projectile-rescue','challenge.attempt');
   const result=session.observe('challenge.projectile-rescue');assert.equal(result.solved,true);assert.equal(result.last.reason,'success');
   session.dispatch('challenge.projectile-rescue','challenge.reset');session.dispatch('physics.projectile','target.set',{value:45});
   for(let attempt=0;attempt<5;attempt+=1)session.dispatch('challenge.projectile-rescue','challenge.attempt');
   const exhausted=session.observe('challenge.projectile-rescue');assert.equal(exhausted.attempts,5);assert.equal(exhausted.solved,false);
   session.dispatch('challenge.projectile-rescue','challenge.attempt');assert.deepEqual(session.observe('challenge.projectile-rescue'),exhausted);
+  const trial={speed:21,angle:43,range:36,maxHeight:8.7,clearance:.2};
+  session.dispatch('physics.projectile','model.restore',{speed:21,angle:43,gravity:9.8,targetX:36,obstacleX:19,obstacleHeight:8.5,time:.4,trials:[trial]});
+  session.dispatch('challenge.projectile-rescue','challenge.restore',{attempts:3,solved:true,reason:'success',metrics:{...trial,targetX:36}});
+  const restoredModel=session.observe('physics.projectile'),restoredChallenge=session.observe('challenge.projectile-rescue');
+  assert.equal(restoredModel.obstacleHeight,8.5);assert.equal(restoredModel.trials.length,1);assert.equal(restoredModel.time,.4);
+  assert.equal(restoredChallenge.attempts,3);assert.equal(restoredChallenge.solved,true);assert.equal(restoredChallenge.last.reason,'success');
 });
 
 test('derivative optimization challenge preserves exhaustion until reset', async () => {
@@ -183,6 +189,9 @@ test('composite mission orchestrates three authoritative physics capabilities wi
   session.activate('scenario.energy-train');
   session.dispatch('physics.newton-cart','force.set',{value:4});
   session.dispatch('scenario.energy-train','mission.start');
+  const branchPoint=session.snapshot();
+  session.dispatch('physics.newton-cart','force.set',{value:8});
+  session.restore(branchPoint);
   session.dispatch('physics.newton-cart','force.set',{value:6});
   assert.equal(session.observe('scenario.energy-train').activeNodeId,'accelerate');
   for(const actionId of ['commit-traction','commit-climb','commit-braking','complete-debrief']) session.dispatch('scenario.energy-train','mission.act',{actionId});

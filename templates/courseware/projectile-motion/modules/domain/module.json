@@ -6,7 +6,7 @@
   "kind": "domain",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:b06915c76a4fd25e0de7d26dcd926ae7c138525730b8d343ef6f9fd19dd405a1",
+  "integrity": "sha256:932d047cf06339126ff73d2da0644379e41c31f85b1fd9c23aba84ef12db24f7",
   "hotSwap": "paused",
   "stateSchemaVersion": 1,
   "capabilities": [
@@ -22,7 +22,8 @@
     "simulation.pause",
     "simulation.reset",
     "simulation.step",
-    "measurement.record"
+    "measurement.record",
+    "model.restore"
   ],
   "dependencies": []
 }

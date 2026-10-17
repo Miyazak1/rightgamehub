@@ -85,6 +85,9 @@ test('mathematics, physics, and chemistry share the gold-standard shell and 3 by
       assert.doesNotMatch(html,/runtime\.(?:progress|assess|event|snapshot)\(/u);
       assert.match(html,/runtime\.dispatch\('journey\.progress','scene\.complete'/u);
       assert.match(html,/runtime\.dispatch\('embed\.bridge','embed\.state\.exported'/u);
+      assert.match(html,/completedCheckpointIds=new Set\(\)/u);
+      assert.match(html,/complete\('read-the-shape','match-sign-intervals'\)/u);
+      assert.match(html,/completedCheckpointIds:\[\.\.\.completedCheckpointIds\]/u);
     }
     if(name==='kinematics-motion')assert.match(html,/if\(attempts>=4\|\|solved\)\{syncChallengeCopy\(\);return\}/u);
   }

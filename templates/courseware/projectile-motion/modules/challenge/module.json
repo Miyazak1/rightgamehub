@@ -6,7 +6,7 @@
   "kind": "challenge",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:26ba3fa2e80aa3e1045939f33f3cc14f5f6013c5b2f9c6473012a63f04e990ba",
+  "integrity": "sha256:a7f36ba8d40ec22c0228ea38aa746547ac91f39aa2ba14619b1f6901d07c2067",
   "hotSwap": "paused",
   "stateSchemaVersion": 1,
   "capabilities": [
@@ -14,7 +14,8 @@
   ],
   "commands": [
     "challenge.attempt",
-    "challenge.reset"
+    "challenge.reset",
+    "challenge.restore"
   ],
   "dependencies": [
     {

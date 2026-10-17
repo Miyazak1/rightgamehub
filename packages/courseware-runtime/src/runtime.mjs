@@ -27,6 +27,17 @@ function checkedState(value, moduleId) {
   return clone(value);
 }
 
+function checkedCommandLog(value, active) {
+  if (!Array.isArray(value) || value.length > 10000) fail('COURSEWARE_RUNTIME_COMMAND_LOG_INVALID', 'Runtime command history must be a bounded array.');
+  return value.map((command, index) => {
+    const definition=command && typeof command === 'object' && !Array.isArray(command) ? active.get(command.moduleId) : null;
+    if (!definition || typeof command.name !== 'string' || !definition.manifest.commands.includes(command.name) || !serializable(command.payload)) {
+      fail('COURSEWARE_RUNTIME_COMMAND_LOG_INVALID', `Runtime command history entry ${index} is invalid.`, { index });
+    }
+    return { moduleId:command.moduleId,name:command.name,payload:clone(command.payload) };
+  });
+}
+
 function dependencyCompatible(dependency, manifest) {
   return manifest.apiVersion === dependency.apiVersion && dependency.capabilities.every(capability => manifest.capabilities.includes(capability));
 }
@@ -83,6 +94,7 @@ export class CoursewareRuntime {
           phase:this.#phase,
           clock:this.#clock,
           preferences:this.#preferences,
+          commands:this.#commands.filter(command => accessibleModuleIds.has(command.moduleId)),
           modules:Object.fromEntries([...this.#active]
             .filter(([id]) => accessibleModuleIds.has(id))
             .map(([id, definition]) => [id, {
@@ -145,6 +157,7 @@ export class CoursewareRuntime {
     if (!definition) fail('COURSEWARE_MODULE_INACTIVE', `Module ${moduleId} is not active.`, { moduleId });
     if (!definition.manifest.commands.includes(name)) fail('COURSEWARE_MODULE_COMMAND_UNSUPPORTED', `Module ${moduleId} does not declare command ${name}.`, { moduleId, command: name });
     if (!serializable(payload)) fail('COURSEWARE_MODULE_COMMAND_INVALID', 'Command payload must be serializable.', { moduleId, command: name });
+    if (this.#commands.length >= 10000) fail('COURSEWARE_RUNTIME_COMMAND_LIMIT_EXCEEDED', 'A courseware runtime session cannot contain more than 10,000 commands.');
     const current = clone(this.#states.get(moduleId));
     const next = definition.reduce({ state: current, command: Object.freeze({ name, payload: clone(payload) }), context: this.#context(moduleId) });
     this.#states.set(moduleId, checkedState(next, moduleId));
@@ -199,6 +212,7 @@ export class CoursewareRuntime {
       phase: this.#phase,
       clock: this.#clock,
       preferences: this.#preferences,
+      commands: this.#commands,
       modules: Object.fromEntries([...this.#active].map(([id, definition]) => [id, { version: definition.manifest.version, stateSchemaVersion: definition.manifest.stateSchemaVersion, state: this.#states.get(id) }])),
     });
   }
@@ -214,7 +228,8 @@ export class CoursewareRuntime {
       if (record.version !== manifest.version || record.stateSchemaVersion !== manifest.stateSchemaVersion) fail('COURSEWARE_RUNTIME_SNAPSHOT_INCOMPATIBLE', `Snapshot does not match module ${id}.`, { moduleId: id });
       restored.set(id, checkedState(record.state, id));
     }
-    this.#states = restored; this.#clock = clone(snapshot.clock); this.#preferences = clone(snapshot.preferences); this.#phase = snapshot.phase === 'running' ? 'paused' : snapshot.phase;
+    const restoredCommands=checkedCommandLog(snapshot.commands ?? [],this.#active);
+    this.#states = restored; this.#clock = clone(snapshot.clock); this.#preferences = clone(snapshot.preferences); this.#commands = restoredCommands; this.#phase = snapshot.phase === 'running' ? 'paused' : snapshot.phase;
     this.#record('runtime.restored', null); return this.snapshot();
   }
   dispose() {

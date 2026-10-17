@@ -14,7 +14,7 @@ const shared={
 const lessons={
   'concept-explorer':{ source:'packages/courseware-domain-packs/src/math/quadratic.mjs',id:'math.quadratic',capability:'domain.function',commands:['coefficient.set','sample.set','reference.toggle','model.reset'],challenge:{source:'packages/courseware-domain-packs/src/challenge/quadratic-target.mjs',id:'challenge.quadratic-target'} },
   'causal-simulation':{ source:'packages/courseware-domain-packs/src/physics/newton-cart.mjs',id:'physics.newton-cart',capability:'domain.motion',commands:['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record'],challenge:{source:'packages/courseware-domain-packs/src/challenge/supply-cart.mjs',id:'challenge.supply-cart'} },
-  'projectile-motion':{ source:'packages/courseware-domain-packs/src/physics/projectile.mjs',id:'physics.projectile',capability:'domain.projectile',commands:['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record'],challenge:{source:'packages/courseware-domain-packs/src/challenge/projectile-rescue.mjs',id:'challenge.projectile-rescue'} },
+  'projectile-motion':{ source:'packages/courseware-domain-packs/src/physics/projectile.mjs',id:'physics.projectile',capability:'domain.projectile',commands:['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record','model.restore'],challenge:{source:'packages/courseware-domain-packs/src/challenge/projectile-rescue.mjs',id:'challenge.projectile-rescue',commands:['challenge.attempt','challenge.reset','challenge.restore']} },
   'algorithm-stepper':{ source:'packages/courseware-domain-packs/src/chemistry/equilibrium.mjs',id:'chemistry.equilibrium',capability:'domain.equilibrium',commands:['volume.set','temperature.set','catalyst.toggle','feed.set','simulation.run','simulation.pause','simulation.step','simulation.reset'],challenge:{source:'packages/courseware-domain-packs/src/challenge/safe-no2-batch.mjs',id:'challenge.safe-no2-batch'} },
 };
 const digest=bytes=>`sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -32,7 +32,7 @@ for(const target of targets)for(const [lesson,domain] of Object.entries(lessons)
   await writeModule(base,'domain',domain);
   await writeModule(base,'measurement',shared.measurement,[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
   await writeModule(base,'workbench',shared.workbench);
-  await writeModule(base,'challenge',{...domain.challenge,kind:'challenge',hotSwap:'paused',capabilities:['challenge.evaluate'],commands:['challenge.attempt','challenge.reset']},[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
+  await writeModule(base,'challenge',{...domain.challenge,kind:'challenge',hotSwap:'paused',capabilities:['challenge.evaluate'],commands:domain.challenge.commands??['challenge.attempt','challenge.reset']},[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
   await writeModule(base,'journey',shared.journey);
   await writeModule(base,'embed',shared.embed);
 }

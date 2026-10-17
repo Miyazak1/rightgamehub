@@ -53,6 +53,21 @@ test('the same initial state and command sequence produces the same snapshot', a
   assert.deepEqual(run(), run());
 });
 
+test('runtime snapshots restore the authoritative command branch', async () => {
+  const runtime=await import(runtimeUrl),session=new runtime.CoursewareRuntime();
+  session.register(mathModule(runtime));session.activate('math.functions');
+  session.dispatch('math.functions','coefficient.set',{value:-2});
+  const branchPoint=session.snapshot();
+  session.dispatch('math.functions','coefficient.set',{value:9});
+  session.restore(branchPoint);
+  session.dispatch('math.functions','coefficient.set',{value:3});
+  const restored=session.snapshot();
+  assert.deepEqual(restored.commands.map(command=>command.payload.value),[-2,3]);
+  assert.equal(session.observe('math.functions').coefficient,3);
+  const fresh=new runtime.CoursewareRuntime();fresh.register(mathModule(runtime));fresh.activate('math.functions');fresh.restore(restored);
+  assert.deepEqual(fresh.snapshot().commands,restored.commands);
+});
+
 test('live instruments hot swap while running and preserve their isolated state', async () => {
   const runtime = await import(runtimeUrl);
   const session = new runtime.CoursewareRuntime();

@@ -12,6 +12,15 @@ export default {
   createState:()=>({ speed:17,angle:40,gravity:9.8,time:0,running:false,targetX:29,obstacleX:14,obstacleHeight:5.5,trials:[] }),
   reduce:({state,command})=>{
     const reset=patch=>({...state,...patch,time:0,running:false});
+    if(command.name==='model.restore'){
+      const targetX=clamp(command.payload.targetX,18,45,state.targetX),restored={
+        ...state,
+        speed:clamp(command.payload.speed,6,30,state.speed),angle:clamp(command.payload.angle,10,80,state.angle),gravity:clamp(command.payload.gravity,1.6,12,state.gravity),
+        targetX,obstacleX:clamp(command.payload.obstacleX,6,targetX-4,state.obstacleX),obstacleHeight:clamp(command.payload.obstacleHeight,1,12,state.obstacleHeight),running:false,
+        trials:(Array.isArray(command.payload.trials)?command.payload.trials:[]).map((trial,index)=>({id:index+1,speed:number(trial?.speed,NaN),angle:number(trial?.angle,NaN),range:number(trial?.range,NaN),maxHeight:number(trial?.maxHeight,NaN),clearance:number(trial?.clearance,NaN)})).filter(trial=>[trial.speed,trial.angle,trial.range,trial.maxHeight,trial.clearance].every(Number.isFinite)).slice(-12),
+      };
+      return {...restored,time:clamp(command.payload.time,0,sample(restored).flightTime,0)};
+    }
     if(command.name==='speed.set')return reset({speed:clamp(command.payload.value,6,30,state.speed)});
     if(command.name==='angle.set')return reset({angle:clamp(command.payload.value,10,80,state.angle)});
     if(command.name==='gravity.set')return reset({gravity:clamp(command.payload.value,1.6,12,state.gravity)});
