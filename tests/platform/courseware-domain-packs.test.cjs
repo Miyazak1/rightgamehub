@@ -181,7 +181,9 @@ test('composite mission orchestrates three authoritative physics capabilities wi
   const releaseDigest=`sha256:${'c'.repeat(64)}`;
   session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],dependencies),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings,releaseDigest})});
   session.activate('scenario.energy-train');
+  session.dispatch('physics.newton-cart','force.set',{value:4});
   session.dispatch('scenario.energy-train','mission.start');
+  session.dispatch('physics.newton-cart','force.set',{value:6});
   assert.equal(session.observe('scenario.energy-train').activeNodeId,'accelerate');
   for(const actionId of ['commit-traction','commit-climb','commit-braking','complete-debrief']) session.dispatch('scenario.energy-train','mission.act',{actionId});
   const result=session.observe('scenario.energy-train');
@@ -196,13 +198,24 @@ test('composite mission orchestrates three authoritative physics capabilities wi
   assert.deepEqual(assessment.objectives.map(item=>item.id),['newton.second-law','mechanical-energy','uniform-deceleration']);
   assert.ok(result.metrics['traction.acceleration']>2.9);
   const replay=session.observe('scenario.energy-train',{kind:'replay'});
-  assert.equal(replay.commands.length,5);
-  assert.deepEqual(replay.commands.map(item=>item.sequence),[0,1,2,3,4]);
-  assert.deepEqual(replay.commands.map(item=>item.moduleId),Array(5).fill('scenario.energy-train'));
+  assert.equal(replay.commands.length,6);
+  assert.deepEqual(replay.commands.map(item=>item.sequence),[0,1,2,3,4,5]);
+  assert.deepEqual(replay.commands.map(item=>item.moduleId),['scenario.energy-train','physics.newton-cart',...Array(4).fill('scenario.energy-train')]);
   assert.equal(replay.format,'mooyu.mission-replay');assert.equal(replay.schemaVersion,1);assert.equal(replay.releaseDigest,releaseDigest);
-  assert.equal(replay.initialSnapshot.status,'ready');assert.match(replay.finalStateDigest,/^sha256:[a-f0-9]{64}$/u);
+  assert.equal(replay.initialSnapshot.modules['scenario.energy-train'].state.status,'ready');
+  assert.equal(replay.initialSnapshot.modules['physics.newton-cart'].state.force,4);
+  assert.match(replay.finalStateDigest,/^sha256:[a-f0-9]{64}$/u);
   const {node,metrics,...authoritativeState}=result;
   assert.equal(replay.finalStateDigest,`sha256:${crypto.createHash('sha256').update(canonical(authoritativeState)).digest('hex')}`);
+  const replayed=new runtime.CoursewareRuntime();
+  replayed.register({manifest:moduleManifest('physics.newton-cart','domain','./newton.mjs',['domain.motion'],['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...newton});
+  replayed.register({manifest:moduleManifest('physics.work-energy','domain','./energy.mjs',['domain.work-energy'],['mass.set','speed.set','height.set','friction.set','path-length.set','model.reset']),...energy});
+  replayed.register({manifest:moduleManifest('physics.braking','domain','./braking.mjs',['domain.braking'],['speed.set','deceleration.set','runway.set','model.reset']),...braking});
+  replayed.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],dependencies),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings,releaseDigest})});
+  replayed.activate('scenario.energy-train');replayed.restore(replay.initialSnapshot);
+  for(const command of replay.commands)replayed.dispatch(command.moduleId,command.name,command.payload);
+  const {node:replayedNode,metrics:replayedMetrics,...replayedState}=replayed.observe('scenario.energy-train');
+  assert.equal(replay.finalStateDigest,`sha256:${crypto.createHash('sha256').update(canonical(replayedState)).digest('hex')}`);
 });
 
 test('mission pressure is deterministic state and failed attempts consume declared time and resources', async () => {
@@ -218,12 +231,14 @@ test('mission pressure is deterministic state and failed attempts consume declar
   session.register({manifest:moduleManifest('physics.newton-cart','domain','./newton.mjs',['domain.motion'],['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record']),...newton});
   session.register({manifest:moduleManifest('physics.work-energy','domain','./energy.mjs',['domain.work-energy'],['mass.set','speed.set','height.set','friction.set','path-length.set','model.reset']),...energy});
   session.register({manifest:moduleManifest('physics.braking','domain','./braking.mjs',['domain.braking'],['speed.set','deceleration.set','runway.set','model.reset']),...braking});
+  const releaseDigest=`sha256:${'d'.repeat(64)}`;
   session.register({manifest:moduleManifest('scenario.energy-train','scenario','./mission.mjs',['scenario.mission'],['mission.start','mission.act','mission.advance','mission.reset'],[
     {id:'physics.newton-cart',apiVersion:1,capabilities:['domain.motion']},{id:'physics.work-energy',apiVersion:1,capabilities:['domain.work-energy']},{id:'physics.braking',apiVersion:1,capabilities:['domain.braking']},
-  ]),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings})});
+  ]),...missionEngine.createMissionModule({mission:sample.mission,bindings:sample.bindings,releaseDigest})});
   session.activate('scenario.energy-train');
   session.dispatch('physics.newton-cart','mass.set',{value:10});
   session.dispatch('scenario.energy-train','mission.start');
+  for(let step=0;step<1001;step+=1)session.dispatch('scenario.energy-train','mission.advance',{amount:0});
   for(let attempt=0;attempt<7;attempt+=1) session.dispatch('scenario.energy-train','mission.act',{actionId:'commit-traction'});
   const result=session.observe('scenario.energy-train');
   assert.equal(result.status,'failed');
@@ -232,4 +247,8 @@ test('mission pressure is deterministic state and failed attempts consume declar
   assert.equal(result.clocks.window,54);
   assert.equal(result.resources.battery,0);
   assert.equal(result.evidence.length,0);
+  const replay=session.observe('scenario.energy-train',{kind:'replay'});
+  assert.equal(replay.commands.length,1009);
+  assert.equal(replay.commands[0].name,'mission.start');
+  assert.equal(replay.commands.at(-1).sequence,1008);
 });

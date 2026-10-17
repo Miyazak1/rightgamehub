@@ -137,7 +137,18 @@ function initialState(definition) {
     sequence:0,
     lastAction:null,
     history:[],
+    replay:null,
   };
+}
+
+function publicState(state) {
+  const { replay: _replay, ...visible } = state;
+  return visible;
+}
+
+function appendHistory(history, item) {
+  if (history.length >= 10000) fail('MISSION_REPLAY_COMMAND_LIMIT_EXCEEDED', 'Mission replay cannot contain more than 10,000 commands.');
+  return [...history, item];
 }
 
 function clampMeter(value, definition) {
@@ -178,14 +189,14 @@ export function createMissionModule({ mission, bindings, releaseDigest=null }) {
   const metricBindings = compileBindings(bindings);
   if (bindings.missionId !== definition.id) fail('MISSION_BINDING_INVALID', 'Capability bindings target a different mission.');
   if(releaseDigest!==null&&!digestPattern.test(releaseDigest))fail('MISSION_REPLAY_INVALID','Mission replay releaseDigest must be a SHA-256 digest.');
-  const replayInitialSnapshot=initialState(definition);
   return {
     createState:() => initialState(definition),
     reduce:({ state, command, context }) => {
       if (command.name === 'mission.reset') return initialState(definition);
       if (command.name === 'mission.start') {
         const fresh = initialState(definition);
-        return { ...fresh, status:'running', history:[{ sequence:0, name:'mission.start', payload:{} }] };
+        const replay={ commandOffset:context.replay.commands().length,initialSnapshot:context.replay.snapshot(fresh) };
+        return { ...fresh, status:'running', history:[{ sequence:0, name:'mission.start', payload:{} }],replay };
       }
       if (state.status !== 'running') return state;
       if (command.name === 'mission.advance') {
@@ -194,7 +205,7 @@ export function createMissionModule({ mission, bindings, releaseDigest=null }) {
         if (!Number.isFinite(amount) || amount < 0) fail('MISSION_COMMAND_INVALID', 'Mission advance amount must be non-negative.');
         const clocks = spend(state, { [clockId]:amount }, definition.clocks, 'clocks');
         const sequence = state.sequence + 1;
-        const advanced = { ...state, clocks, sequence, history:[...state.history, { sequence, name:command.name, payload:{ clockId, amount } }].slice(-1000) };
+        const advanced = { ...state, clocks, sequence, history:appendHistory(state.history, { sequence, name:command.name, payload:{ clockId, amount } }) };
         return resolveOutcome(advanced, definition, context, metricBindings);
       }
       if (command.name !== 'mission.act') return state;
@@ -217,7 +228,7 @@ export function createMissionModule({ mission, bindings, releaseDigest=null }) {
         evidence,
         sequence,
         lastAction:{ id:actionId, nodeId:node.id, success },
-        history:[...state.history, { sequence, name:command.name, payload:{ actionId } }].slice(-1000),
+        history:appendHistory(state.history, { sequence, name:command.name, payload:{ actionId } }),
       };
       const transitionReader = makeReader({ state:next, context, metricBindings });
       if (requestedTransition && conditionsPass(requestedTransition.when, transitionReader)) next = { ...next,activeNodeId:requestedTransition.to };
@@ -227,12 +238,15 @@ export function createMissionModule({ mission, bindings, releaseDigest=null }) {
       if (query?.kind === 'definition') return publicDefinition(definition);
       if (query?.kind === 'replay') {
         if(!releaseDigest)fail('MISSION_REPLAY_METADATA_REQUIRED','Mission replay requires the immutable release digest.');
-        return { format:'mooyu.mission-replay',schemaVersion:1,missionId:definition.id,missionVersion:definition.version,releaseDigest,initialSnapshot:clone(replayInitialSnapshot),commands:state.history.map(item=>({ ...clone(item),moduleId:context.moduleId })),finalStateDigest:digest(state) };
+        if(!state.replay)fail('MISSION_REPLAY_NOT_STARTED','Start the mission before exporting its replay.');
+        const commands=context.replay.commands().slice(state.replay.commandOffset);
+        if(commands.length>10000)fail('MISSION_REPLAY_COMMAND_LIMIT_EXCEEDED','Mission replay cannot contain more than 10,000 commands.');
+        return { format:'mooyu.mission-replay',schemaVersion:1,missionId:definition.id,missionVersion:definition.version,releaseDigest,initialSnapshot:clone(state.replay.initialSnapshot),commands:commands.map((item,sequence)=>({ sequence,...clone(item) })),finalStateDigest:digest(publicState(state)) };
       }
       const node = definition.nodes.find(item => item.id === state.activeNodeId);
       const reader = makeReader({ state, context, metricBindings });
       const metrics = Object.fromEntries([...metricBindings.keys()].map(id => [id, reader({ source:'metric', id })]));
-      return { ...clone(state), node:node ? { id:node.id,kind:node.kind,title:clone(node.title),actions:node.actions.map(action => ({ id:action.id,title:clone(action.title) })) } : null, metrics };
+      return { ...clone(publicState(state)), node:node ? { id:node.id,kind:node.kind,title:clone(node.title),actions:node.actions.map(action => ({ id:action.id,title:clone(action.title) })) } : null, metrics };
     },
   };
 }

@@ -51,7 +51,7 @@ export class CoursewareModuleRegistry {
 }
 
 export class CoursewareRuntime {
-  #registry; #phase = 'created'; #active = new Map(); #states = new Map(); #events = []; #clock; #preferences;
+  #registry; #phase = 'created'; #active = new Map(); #states = new Map(); #events = []; #commands = []; #clock; #preferences;
   constructor({ registry = new CoursewareModuleRegistry(), locale = 'zh-CN', theme = 'light', motion = 'system' } = {}) {
     this.#registry = registry;
     this.#clock = { elapsedMs: 0, speed: 1 };
@@ -66,6 +66,7 @@ export class CoursewareRuntime {
   #sessionView() { return Object.freeze({ phase: this.#phase, clock: clone(this.#clock), preferences: clone(this.#preferences), activeModuleIds: Object.freeze([...this.#active.keys()]) }); }
   #context(moduleId) {
     const caller = this.#active.get(moduleId) ?? this.#registry.get(moduleId);
+    const accessibleModuleIds = new Set([moduleId, ...(caller?.manifest.dependencies ?? []).map(dependency => dependency.id)]);
     return Object.freeze({
       moduleId,
       dependencies:Object.freeze((caller?.manifest.dependencies ?? []).map(dependency => Object.freeze({ ...dependency,capabilities:Object.freeze([...dependency.capabilities]) }))),
@@ -76,6 +77,22 @@ export class CoursewareRuntime {
         }
         return this.observe(id, query);
       },
+      replay:Object.freeze({
+        snapshot:(ownState) => clone({
+          schemaVersion:1,
+          phase:this.#phase,
+          clock:this.#clock,
+          preferences:this.#preferences,
+          modules:Object.fromEntries([...this.#active]
+            .filter(([id]) => accessibleModuleIds.has(id))
+            .map(([id, definition]) => [id, {
+              version:definition.manifest.version,
+              stateSchemaVersion:definition.manifest.stateSchemaVersion,
+              state:id === moduleId && ownState !== undefined ? checkedState(ownState, id) : this.#states.get(id),
+            }])),
+        }),
+        commands:() => clone(this.#commands.filter(command => accessibleModuleIds.has(command.moduleId))),
+      }),
     });
   }
   #record(type, moduleId, details = {}) { this.#events.push({ index: this.#events.length, type, moduleId, ...clone(details) }); }
@@ -131,6 +148,7 @@ export class CoursewareRuntime {
     const current = clone(this.#states.get(moduleId));
     const next = definition.reduce({ state: current, command: Object.freeze({ name, payload: clone(payload) }), context: this.#context(moduleId) });
     this.#states.set(moduleId, checkedState(next, moduleId));
+    this.#commands.push({ moduleId,name,payload:clone(payload) });
     this.#record('module.command', moduleId, { name, payload });
     return clone(this.#states.get(moduleId));
   }

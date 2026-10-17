@@ -212,6 +212,12 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   assert.equal(malformedTransitionConditions.ok,false);
   assert.ok(malformedTransitionConditions.findings.some(item=>item.code==='COURSEWARE_MISSION_CONDITION_INVALID'&&item.pointer.endsWith('/onSuccess/when')));
   delete firstAction.onSuccess.when;
+  const validOutcomeWhen=mission.outcomes[0].when;mission.outcomes[0].when=[];
+  await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
+  const emptyOutcomeConditions=await inspectCoursewareProject(directory);
+  assert.equal(emptyOutcomeConditions.ok,false);
+  assert.ok(emptyOutcomeConditions.findings.some(item=>item.code==='COURSEWARE_MISSION_CONDITION_INVALID'&&item.pointer.endsWith('/outcomes/0/when')));
+  mission.outcomes[0].when=validOutcomeWhen;
   const validEmission={...firstAction.evidence[0]};firstAction.evidence[0].kind='bogus';firstAction.evidence[0].strength=2;
   await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
   const invalidEmission=await inspectCoursewareProject(directory);
