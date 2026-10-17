@@ -174,6 +174,34 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     };
   });
 
+  registerAppTool(server, 'open_document_compare', {
+    title: 'Open MOOYU Document Compare',
+    description: 'Open the local MOOYU.FUN document comparison workspace. The user can paste or choose private documents inside the UI; never put document contents in tool arguments. Supports local text, PDF, and DOCX comparison.',
+    inputSchema: {
+      mode: z.enum(['lines', 'words', 'characters']).default('lines'),
+      leftLabel: z.string().trim().min(1).max(80).optional(),
+      rightLabel: z.string().trim().min(1).max(80).optional(),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local document comparison workspace…',
+      'openai/toolInvocation/invoked': 'Document comparison workspace opened.',
+    },
+  }, async ({ mode = 'lines', leftLabel, rightLabel }) => {
+    const query = new URLSearchParams({ mode });
+    if (leftLabel) query.set('leftLabel', leftLabel);
+    if (rightLabel) query.set('rightLabel', rightLabel);
+    const path = `/tools/document-compare?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local document comparison workspace. Ask the user to paste or choose both documents there; do not request private document contents as tool arguments.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   return server;
 }
 
