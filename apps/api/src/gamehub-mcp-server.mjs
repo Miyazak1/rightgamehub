@@ -148,6 +148,32 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     };
   });
 
+  registerAppTool(server, 'open_privacy_redactor', {
+    title: 'Open MOOYU Privacy Redactor',
+    description: 'Open the local-first MOOYU.FUN privacy tool for reviewing and redacting sensitive text, images, or PDFs. Use this instead of putting private content into tool arguments. The content stays in the user interface and is not uploaded by this tool.',
+    inputSchema: {
+      mode: z.enum(['text', 'image', 'pdf']).default('text'),
+      types: z.array(z.enum(['email', 'phone', 'idCard', 'bankCard', 'ipAddress', 'secret'])).max(6).optional(),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local privacy workspace…',
+      'openai/toolInvocation/invoked': 'Privacy workspace opened.',
+    },
+  }, async ({ mode = 'text', types }) => {
+    const query = new URLSearchParams({ mode });
+    if (types?.length) query.set('types', [...new Set(types)].join(','));
+    const path = `/tools/privacy-redactor?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local privacy workspace. Ask the user to paste or choose the sensitive content there; do not request that private content as a tool argument.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   return server;
 }
 
