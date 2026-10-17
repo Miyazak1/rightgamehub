@@ -105,7 +105,7 @@ test('module lifecycle changes keep runtime-produced snapshots restorable', asyn
   deactivated.dispatch('math.functions', 'coefficient.set', { value: 2 });
   deactivated.deactivate('math.functions');
   const inactiveSnapshot = deactivated.snapshot();
-  assert.deepEqual(inactiveSnapshot.commands, []);
+  assert.deepEqual(inactiveSnapshot.commands.map(command=>command.name), ['coefficient.set']);
   assert.doesNotThrow(() => deactivated.restore(inactiveSnapshot));
 
   const instrument = (version, commands) => runtime.defineCoursewareModule({
@@ -118,7 +118,7 @@ test('module lifecycle changes keep runtime-produced snapshots restorable', asyn
   swapped.dispatch('instrument.lifecycle','increment');
   swapped.swap(instrument('2.0.0',['decrement']));
   const swappedSnapshot = swapped.snapshot();
-  assert.deepEqual(swappedSnapshot.commands, []);
+  assert.deepEqual(swappedSnapshot.commands.map(command=>command.name), ['increment']);
   assert.doesNotThrow(() => swapped.restore(swappedSnapshot));
 });
 

@@ -34,6 +34,10 @@ export function missionActionButtonsMarkup(actions=[],locale='zh-CN',fallback=''
   return actions.map(action=>`<button type="button" class="mission-primary" data-mission-action="${text(action.id)}">${text(localize(action.title,locale)||fallback)}</button>`).join('');
 }
 
+export function resolveMissionClockId({experience,definition,state}={}){
+  return experience?.clockId??definition?.clocks?.[0]?.id??Object.keys(state?.clocks??{})[0]??null;
+}
+
 function fieldMarkup(field,reading,locale){
   const value=Number(readPath(reading,field.path));
   const shown=Number.isFinite(value)?value:Number(field.min??0);
@@ -86,7 +90,7 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
   }
 
   function renderPressure(state=getState()){
-    const clockId=experience.clockId??Object.keys(state.clocks??{})[0],resourceId=experience.resourceId??Object.keys(state.resources??{})[0];
+    const clockId=resolveMissionClockId({experience,definition,state}),resourceId=experience.resourceId??Object.keys(state.resources??{})[0];
     const clock=Number(state.clocks?.[clockId]??0),clockMax=Number(experience.clockMaximum??120),resource=Number(state.resources?.[resourceId]??0),resourceMax=Number(experience.resourceMaximum??100);
     app.dataset.missionStatus=state.status??'ready';
     query('[data-clock-value]').textContent=`${Math.ceil(clock)} s`;
@@ -165,7 +169,7 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
   }
   function onClick(event){const action=event.target.closest?.('[data-mission-action]');if(action)commitAction(action.dataset.missionAction);else if(event.target.closest?.('[data-mission-primary]'))primary();else if(event.target.closest?.('[data-mission-reset]'))reset();}
   root.addEventListener('input',onInput);root.addEventListener('click',onClick);
-  timer=setInterval(()=>{const before=getState();if(before.status==='running'&&globalThis.document?.visibilityState!=='hidden'){runtime.dispatch(missionModuleId,'mission.advance',{clockId:experience.clockId,amount:1});const after=getState();if(after.status!==before.status||after.activeNodeId!==before.activeNodeId)render();else renderPressure(after);}},Math.max(250,tickMilliseconds));
+  timer=setInterval(()=>{const before=getState();if(before.status==='running'&&globalThis.document?.visibilityState!=='hidden'){const clockId=resolveMissionClockId({experience,definition,state:before});runtime.dispatch(missionModuleId,'mission.advance',clockId?{clockId,amount:1}:{amount:1});const after=getState();if(after.status!==before.status||after.activeNodeId!==before.activeNodeId)render();else renderPressure(after);}},Math.max(250,tickMilliseconds));
   render();
   return Object.freeze({render,reset,getViewModel:()=>{const state=getState();return deriveMissionViewModel({definition,state,assessment:getAssessment(state),locale});},destroy(){disposed=true;clearInterval(timer);root.removeEventListener('input',onInput);root.removeEventListener('click',onClick);}});
 }

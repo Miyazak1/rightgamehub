@@ -31,6 +31,9 @@ test('the motion courseware consumes the canonical hot-swappable UI shell',async
   assert.match(html,/data-copy="textbook"/u);
   assert.match(html,/function exportState\(requestId\)/u);
   assert.match(html,/objects:records\.map/u);
+  assert.match(html,/id:\+\+recordSequence/u);
+  assert.match(html,/'record-sequence':recordSequence/u);
+  assert.match(html,/recordSequence=Math\.max/u);
   assert.match(html,/function restoreState\(value\)/u);
   assert.match(html,/challenge\.restore/u);
   assert.match(html,/id="sandboxTrialCount"/u);

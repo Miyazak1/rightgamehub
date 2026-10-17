@@ -30,6 +30,13 @@ test('mission workbench renders every action in a branching node',async()=>{
   assert.equal((markup.match(/data-mission-action=/gu)??[]).length,2);
 });
 
+test('mission workbench resolves an omitted clock from the mission definition',async()=>{
+  const {resolveMissionClockId}=await load('packages/courseware-mission-workbench/src/index.mjs');
+  assert.equal(resolveMissionClockId({experience:{},definition:{clocks:[{id:'window'}]},state:{clocks:{window:60}}}),'window');
+  assert.equal(resolveMissionClockId({experience:{clockId:'deadline'},definition:{clocks:[{id:'window'}]},state:{clocks:{deadline:30}}}),'deadline');
+  assert.equal(resolveMissionClockId({experience:{},definition:{clocks:[]},state:{clocks:{fallback:10}}}),'fallback');
+});
+
 test('energy train experience stays declarative and maps every mission node',async()=>{
   const [sample,{experience}]=await Promise.all([load('samples/courseware-mission/energy-train.mjs'),load('samples/courseware-mission/energy-train-experience.mjs')]);
   assert.deepEqual(Object.keys(experience.stages),sample.mission.nodes.map(node=>node.id));

@@ -27,11 +27,10 @@ function checkedState(value, moduleId) {
   return clone(value);
 }
 
-function checkedCommandLog(value, active) {
+function checkedCommandLog(value) {
   if (!Array.isArray(value) || value.length > 10000) fail('COURSEWARE_RUNTIME_COMMAND_LOG_INVALID', 'Runtime command history must be a bounded array.');
   return value.map((command, index) => {
-    const definition=command && typeof command === 'object' && !Array.isArray(command) ? active.get(command.moduleId) : null;
-    if (!definition || typeof command.name !== 'string' || !definition.manifest.commands.includes(command.name) || !serializable(command.payload)) {
+    if (!command || typeof command !== 'object' || Array.isArray(command) || !/^[a-z][a-z0-9._-]{0,127}$/u.test(command.moduleId) || !/^[a-z][a-z0-9._-]{0,127}$/u.test(command.name) || !serializable(command.payload)) {
       fail('COURSEWARE_RUNTIME_COMMAND_LOG_INVALID', `Runtime command history entry ${index} is invalid.`, { index });
     }
     return { moduleId:command.moduleId,name:command.name,payload:clone(command.payload) };
@@ -179,7 +178,7 @@ export class CoursewareRuntime {
     const dependent = [...this.#active.values()].find(item => item.manifest.dependencies.some(dependency => !dependency.optional && dependency.id === moduleId));
     if (dependent) fail('COURSEWARE_MODULE_DEPENDENT_ACTIVE', `Module ${moduleId} is required by ${dependent.manifest.id}.`, { moduleId, dependentId: dependent.manifest.id });
     definition.deactivate?.({ state: clone(this.#states.get(moduleId)), context: this.#context(moduleId) });
-    this.#active.delete(moduleId); this.#commands = this.#commands.filter(command => command.moduleId !== moduleId); this.#record('module.deactivated', moduleId, { version: definition.manifest.version }); return true;
+    this.#active.delete(moduleId); this.#record('module.deactivated', moduleId, { version: definition.manifest.version }); return true;
   }
   swap(definition) {
     this.#assertUsable();
@@ -202,8 +201,6 @@ export class CoursewareRuntime {
     const activated = next.activate?.({ state: clone(state), context: this.#context(id) });
     if (activated !== undefined) state = checkedState(activated, id);
     this.#registry.replace(next); this.#active.set(id, next); this.#states.set(id, state);
-    const supportedCommands = new Set(next.manifest.commands);
-    this.#commands = this.#commands.filter(command => command.moduleId !== id || supportedCommands.has(command.name));
     this.#record('module.swapped', id, { fromVersion: current.manifest.version, toVersion: next.manifest.version });
     return { moduleId: id, fromVersion: current.manifest.version, toVersion: next.manifest.version };
   }
@@ -230,7 +227,7 @@ export class CoursewareRuntime {
       if (record.version !== manifest.version || record.stateSchemaVersion !== manifest.stateSchemaVersion) fail('COURSEWARE_RUNTIME_SNAPSHOT_INCOMPATIBLE', `Snapshot does not match module ${id}.`, { moduleId: id });
       restored.set(id, checkedState(record.state, id));
     }
-    const restoredCommands=checkedCommandLog(snapshot.commands ?? [],this.#active);
+    const restoredCommands=checkedCommandLog(snapshot.commands ?? []);
     this.#states = restored; this.#clock = clone(snapshot.clock); this.#preferences = clone(snapshot.preferences); this.#commands = restoredCommands; this.#phase = snapshot.phase === 'running' ? 'paused' : snapshot.phase;
     this.#record('runtime.restored', null); return this.snapshot();
   }
