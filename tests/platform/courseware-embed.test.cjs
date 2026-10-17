@@ -78,11 +78,15 @@ test('Embed schemas and reference pages are strict, versioned and complete',asyn
   const referenceHost=await fs.readFile(path.join(root,'samples/courseware-embed/reference-host.mjs'),'utf8');assert.match(referenceHost,/createCoursewareEmbedHostV2/u);assert.match(referenceHost,/host\.restoreState/u);
   const runtimeGateway=await fs.readFile(path.join(root,'samples/courseware-embed/runtime-gateway.mjs'),'utf8');assert.match(runtimeGateway,/createCoursewareEmbedGatewayV2/u);
   for(const name of ['concept-explorer','causal-simulation','projectile-motion','algorithm-stepper','kinematics-motion','derivative-optimization']){const html=await fs.readFile(path.join(root,'templates/courseware',name,'dist/index.html'),'utf8');assert.match(html,/state\.export/u);assert.match(html,/state\.restore/u);assert.match(html,/state\.snapshot/u);}
+  for(const name of ['concept-explorer','causal-simulation','algorithm-stepper']){const html=await fs.readFile(path.join(root,'templates/courseware',name,'dist/index.html'),'utf8');assert.match(html,/connectStructuredRuntime\(\);/u,`${name} must connect when the runtime booted before its listener`);}
+  const kinematics=await fs.readFile(path.join(root,'templates/courseware/kinematics-motion/dist/index.html'),'utf8');assert.match(kinematics,/connectRuntime\(\);/u);
   const projectile=await fs.readFile(path.join(root,'templates/courseware/projectile-motion/dist/index.html'),'utf8');
   assert.match(projectile,/runtime\.dispatch\('physics\.projectile','model\.restore'/u);
   assert.match(projectile,/runtime\.dispatch\('challenge\.projectile-rescue','challenge\.restore'/u);
   assert.match(projectile,/type:'projectile-trial'/u);
   assert.match(projectile,/'obstacle-height':reading\.obstacleHeight/u);
+  assert.match(projectile,/attempt:answerAttempts/u);
+  assert.match(projectile,/'answer-attempts':answerAttempts/u);
   const readme=await fs.readFile(path.join(root,'samples/courseware-embed/README.md'),'utf8');assert.match(readme,/答案原文/u);assert.match(readme,/Chrome、Edge、Firefox、Safari/u);
   const styles=await fs.readFile(path.join(root,'samples/courseware-embed/styles.css'),'utf8');assert.match(styles,/grid-template-rows:auto minmax\(0,1fr\) auto/u);assert.match(styles,/body\{[^}]*overflow:hidden/u);
   assert.doesNotMatch(styles,/iframe\{height:1120px\}|iframe\{height:1240px\}/u);assert.match(styles,/@media\(max-width:900px\)\{html,body\{height:100%;overflow:hidden\}/u);

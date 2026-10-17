@@ -402,7 +402,7 @@ function validateMission(mission, findings, file) {
   const nodes=Array.isArray(mission.nodes)?mission.nodes:[]; const nodeIds=new Set(nodes.map(node=>node?.id));
   if (!nodes.length || nodeIds.size !== nodes.length) findings.push(finding('error','COURSEWARE_MISSION_NODE_INVALID','任务节点必须非空且 ID 无重复。',{path:file,pointer:'/nodes'}));
   if (!nodeIds.has(mission.initialNodeId)) findings.push(finding('error','COURSEWARE_MISSION_NODE_REFERENCE_INVALID',`初始节点 ${mission.initialNodeId} 不存在。`,{path:file,pointer:'/initialNodeId'}));
-  const metricIds=new Set(); const emittedClaims=new Set();
+  const metricIds=new Set(); const emittedClaims=new Map();
   for (const [nodeIndex,node] of nodes.entries()) {
     const pointer=`/nodes/${nodeIndex}`; rejectUnknown(node,['id','kind','title','capabilitySlots','actions'],findings,file,pointer); requireId(node?.id,findings,file,`${pointer}/id`); requireTextMap(node?.title,findings,file,`${pointer}/title`);
     if (!['briefing','calculation','construction','simulation','decision','checkpoint','debrief'].includes(node?.kind)) findings.push(finding('error','COURSEWARE_MISSION_NODE_INVALID',`节点 ${node?.id ?? nodeIndex} 的 kind 无效。`,{path:file,pointer:`${pointer}/kind`}));
@@ -427,7 +427,7 @@ function validateMission(mission, findings, file) {
       for (const [evidenceIndex,evidence] of (Array.isArray(evidenceItems)?evidenceItems:[]).entries()) {
         const evidencePointer=`${actionPointer}/evidence/${evidenceIndex}`; requireFields(evidence,['claimId','kind'],findings,file,evidencePointer); rejectUnknown(evidence,['claimId','kind','strength'],findings,file,evidencePointer); requireId(evidence?.claimId,findings,file,`${evidencePointer}/claimId`);
         if(!['prediction','calculation','configuration','measurement','comparison','explanation','transfer'].includes(evidence?.kind)||(evidence?.strength!==undefined&&(!Number.isFinite(evidence.strength)||evidence.strength<0||evidence.strength>1)))findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_INVALID',`行动 ${action?.id ?? actionIndex} 的证据类型或强度无效。`,{path:file,pointer:evidencePointer}));
-        emittedClaims.add(evidence?.claimId);
+        if(typeof evidence?.claimId==='string'&&typeof evidence?.kind==='string'){if(!emittedClaims.has(evidence.claimId))emittedClaims.set(evidence.claimId,new Set());emittedClaims.get(evidence.claimId).add(evidence.kind);}
       }
     }
   }
@@ -463,13 +463,13 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
   if(model.format!=='mooyu.learning-evidence-model'||model.schemaVersion!==1)findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_FORMAT_INVALID','evidenceModel 格式或版本无效。',{path:file,pointer:'/format'}));
   const objectives=new Set(requireIdList(model.objectiveIds,findings,file,'/objectiveIds'));
   for(const objective of objectives)if(courseSets&&!courseSets.objectiveIds.has(objective))findings.push(finding('error','COURSEWARE_OBJECTIVE_REFERENCE_INVALID',`学习证据模型引用了不存在的目标 ${objective}。`,{path:file,pointer:'/objectiveIds'}));
-  const claims=Array.isArray(model.claims)?model.claims:[]; const claimIds=new Set(claims.map(claim=>claim?.id)); if(!claims.length||claimIds.size!==claims.length)findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_INVALID','学习证据声明必须非空且 ID 无重复。',{path:file,pointer:'/claims'}));
+  const claims=Array.isArray(model.claims)?model.claims:[]; const claimIds=new Set(claims.map(claim=>claim?.id)),claimsById=new Map(claims.map(claim=>[claim?.id,claim])); if(!claims.length||claimIds.size!==claims.length)findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_INVALID','学习证据声明必须非空且 ID 无重复。',{path:file,pointer:'/claims'}));
   for(const [index,claim] of claims.entries()){
     const pointer=`/claims/${index}`; requireFields(claim,['id','objectiveId','kind','weight','minimumStrength'],findings,file,pointer); rejectUnknown(claim,['id','objectiveId','kind','weight','minimumStrength','required'],findings,file,pointer); requireId(claim?.id,findings,file,`${pointer}/id`);
     if(!objectives.has(claim?.objectiveId))findings.push(finding('error','COURSEWARE_OBJECTIVE_REFERENCE_INVALID',`证据声明 ${claim?.id} 引用了未声明目标 ${claim?.objectiveId}。`,{path:file,pointer:`${pointer}/objectiveId`}));
     if(!['prediction','calculation','configuration','measurement','comparison','explanation','transfer'].includes(claim?.kind)||!Number.isFinite(claim?.weight)||claim.weight<=0||claim.weight>100||!Number.isFinite(claim?.minimumStrength)||claim.minimumStrength<0||claim.minimumStrength>1||(claim.required!==undefined&&typeof claim.required!=='boolean'))findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_INVALID',`证据声明 ${claim?.id ?? index} 的类型、权重、阈值或 required 无效。`,{path:file,pointer}));
   }
-  for(const claimId of missionInfo?.emittedClaims??[])if(!claimIds.has(claimId))findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID',`任务发射了未在学习证据模型声明的 ${claimId}。`,{path:file,pointer:'/claims'}));
+  for(const [claimId,kinds] of missionInfo?.emittedClaims??[]){const claim=claimsById.get(claimId);if(!claim)findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID',`任务发射了未在学习证据模型声明的 ${claimId}。`,{path:file,pointer:'/claims'}));else for(const kind of kinds)if(kind!==claim.kind)findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_KIND_MISMATCH',`任务为 ${claimId} 发射了 ${kind}，但证据模型要求 ${claim.kind}。`,{path:file,pointer:'/claims'}));}
 }
 
 export async function inspectCoursewareProject(root) {

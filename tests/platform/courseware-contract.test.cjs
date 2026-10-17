@@ -238,6 +238,13 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   assert.ok(invalidEvidenceBounds.findings.some(item=>item.code==='COURSEWARE_LEARNING_EVIDENCE_INVALID'));
   firstClaim.weight=1;firstClaim.minimumStrength=.8;
   await fs.writeFile(path.join(directory,manifest.evidenceModel),`${JSON.stringify(evidenceModel,null,2)}\n`);
+  firstAction.evidence[0]={...validEmission,kind:'prediction'};
+  await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
+  const mismatchedEvidenceKind=await inspectCoursewareProject(directory);
+  assert.equal(mismatchedEvidenceKind.ok,false);
+  assert.ok(mismatchedEvidenceKind.findings.some(item=>item.code==='COURSEWARE_MISSION_EVIDENCE_KIND_MISMATCH'));
+  firstAction.evidence[0]=validEmission;
+  await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
   const validMetrics=bindings.bindings[0].metrics;
   bindings.bindings[0].metrics={id:'shape.coefficient',path:'coefficient'};
   await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
