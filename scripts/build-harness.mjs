@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import vm from 'node:vm';
-import { inlineComponentCss } from './esbuild-inline-css.mjs';
+import { inlineComponentCss, inlineImportedAssets } from './esbuild-inline-css.mjs';
 
 const root = new URL('../', import.meta.url);
 const pluginRoot = new URL('extensions/harness/', root);
@@ -20,7 +20,7 @@ const result = await build({
   target: ['chrome110'],
   loader: { '.png': 'dataurl' },
   external: ['react'],
-  plugins: [inlineComponentCss],
+  plugins: [inlineImportedAssets, inlineComponentCss],
   write: false,
   logLevel: 'silent',
 });

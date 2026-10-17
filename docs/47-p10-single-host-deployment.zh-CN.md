@@ -81,12 +81,48 @@ BACKUP_ROOT=/srv/gamehub-backups ./backup.sh
 
 ## 7. 更新与回滚
 
-更新：
+生产服务器只跟随 `main`，不要把功能分支直接拉入生产工作区。更新前先确认工作区干净、当前分支正确，并让任一步失败立即停止：
+
+```sh
+set -e
+cd /www/gamehub
+git status --short
+test "$(git branch --show-current)" = "main"
+git pull --ff-only origin main
+git log -1 --oneline
+```
+
+只有 `git pull --ff-only` 成功并确认提交号后，才能继续构建。拉取失败后继续执行 Docker 构建，只会用服务器原有源码重新生成旧镜像，不能视为更新成功。
+
+完整更新：
 
 ```sh
 ./backup.sh
 ./deploy.sh
 ```
+
+仅更新 Web 前端且没有数据库迁移时，可以在 `deploy/` 下执行：
+
+```sh
+docker compose --env-file .env.prod -f compose.prod.yml build web
+docker compose --env-file .env.prod -f compose.prod.yml up -d --no-deps web
+docker compose --env-file .env.prod -f compose.prod.yml ps web
+```
+
+### 7.1 `--ff-only` 因历史分叉失败
+
+出现 `diverging branches can't be fast-forwarded` 时立即停止，不要在生产服务器执行 `reset --hard`、强制拉取、盲目 `stash`，也不要改为直接拉功能分支。先收集：
+
+```sh
+git status --short
+git branch --show-current
+git show -s --format='%h %D %s' HEAD
+git log --oneline --decorate --graph --max-count=20 --all
+```
+
+常见原因是功能分支通过 squash merge 合入 `main`：修复内容相同，但主分支上的提交哈希和原功能分支不同，Git 因此不能快进。安全处理方式是在开发机从最新 `origin/main` 新建分支，只 cherry-pick 尚未合入的增量提交，验证后通过 PR 合回 `main`；生产服务器随后仍只拉 `main`。
+
+2026-10-17 的官方工具更新就是这一情况：`e2dfac2b` 的内容被 squash 为主分支的 `9140c67b`，PDF 增量提交为 `77561e11`。服务器从 `9140c67b` 直接拉原功能分支失败是预期行为；正确修复是从 `origin/main` 新建分支并只移植 PDF 增量，而不是覆盖生产分支。
 
 Compose 会先运行新增 migration，成功后才启动新版 API。回滚必须使用与现有 migration 兼容的旧代码版本；如果 migration 不兼容，不得仅回退容器镜像。
 
