@@ -1,6 +1,7 @@
 import { readFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { inlineComponentCss } from './esbuild-inline-css.mjs';
 
 const root = new URL('../', import.meta.url);
 const extensionRoot = new URL('extensions/vscode/', root);
@@ -17,6 +18,7 @@ await build({
   entryPoints: [fileURLToPath(new URL('src/platform-client.jsx', extensionRoot))],
   outfile: fileURLToPath(new URL('gamehub.js', out)),
   bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], sourcemap: true,
+  plugins: [inlineComponentCss],
   nodePaths: workspaceModules,
   loader: { '.png': 'dataurl' },
   define: {
