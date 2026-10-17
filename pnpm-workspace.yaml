@@ -6,5 +6,6 @@ packages:
 allowBuilds:
   '@modelcontextprotocol/ext-apps': false
   esbuild: true
+  tesseract.js: false
 
 autoInstallPeers: false
