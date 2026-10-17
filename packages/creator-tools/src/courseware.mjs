@@ -440,6 +440,7 @@ function validateMission(mission, findings, file) {
 function validateCapabilityBindings(document, findings, file, missionInfo, moduleGraph=null) {
   const fields=['format','schemaVersion','missionId','bindings']; if(!requireFields(document,fields,findings,file))return null; rejectUnknown(document,fields,findings,file);
   if(document.format!=='mooyu.mission-capability-binding'||document.schemaVersion!==1||document.missionId!==missionInfo?.id)findings.push(finding('error','COURSEWARE_MISSION_BINDING_INVALID','能力绑定格式、版本或 missionId 不匹配。',{path:file,pointer:'/missionId'}));
+  if(!Array.isArray(document.bindings)||document.bindings.length===0)findings.push(finding('error','COURSEWARE_MISSION_BINDING_INVALID','bindings 必须是非空数组。',{path:file,pointer:'/bindings'}));
   const bindings=Array.isArray(document.bindings)?document.bindings:[]; const slots=new Set(); const metrics=new Set();
   for(const [index,binding] of bindings.entries()){
     const pointer=`/bindings/${index}`; requireFields(binding,['slot','moduleId','capability','metrics'],findings,file,pointer); rejectUnknown(binding,['slot','moduleId','capability','query','metrics'],findings,file,pointer); requireId(binding?.slot,findings,file,`${pointer}/slot`); requireId(binding?.moduleId,findings,file,`${pointer}/moduleId`); requireId(binding?.capability,findings,file,`${pointer}/capability`);

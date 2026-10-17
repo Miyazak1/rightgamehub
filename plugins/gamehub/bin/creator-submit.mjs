@@ -1303,6 +1303,7 @@ function validateCapabilityBindings(document2, findings, file, missionInfo, modu
   if (!requireFields(document2, fields, findings, file)) return null;
   rejectUnknown(document2, fields, findings, file);
   if (document2.format !== "mooyu.mission-capability-binding" || document2.schemaVersion !== 1 || document2.missionId !== missionInfo?.id) findings.push(finding("error", "COURSEWARE_MISSION_BINDING_INVALID", "\u80FD\u529B\u7ED1\u5B9A\u683C\u5F0F\u3001\u7248\u672C\u6216 missionId \u4E0D\u5339\u914D\u3002", { path: file, pointer: "/missionId" }));
+  if (!Array.isArray(document2.bindings) || document2.bindings.length === 0) findings.push(finding("error", "COURSEWARE_MISSION_BINDING_INVALID", "bindings \u5FC5\u987B\u662F\u975E\u7A7A\u6570\u7EC4\u3002", { path: file, pointer: "/bindings" }));
   const bindings = Array.isArray(document2.bindings) ? document2.bindings : [];
   const slots = /* @__PURE__ */ new Set();
   const metrics = /* @__PURE__ */ new Set();

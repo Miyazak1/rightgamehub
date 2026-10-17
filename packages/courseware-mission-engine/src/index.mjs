@@ -263,7 +263,7 @@ export function evaluateLearningEvidence(model, evidence) {
   const objectives = model.objectiveIds.map(objectiveId => {
     const related = claims.filter(claim => claim.objectiveId === objectiveId);
     const totalWeight = related.reduce((sum, claim) => sum + claim.weight, 0);
-    const earnedWeight = related.reduce((sum, claim) => sum + (claim.satisfied ? claim.weight * (claim.minimumStrength <= 0 ? 1 : Math.min(1, claim.strength / claim.minimumStrength)) : 0), 0);
+    const earnedWeight = related.reduce((sum, claim) => sum + (claim.observed ? claim.weight * (claim.minimumStrength <= 0 ? 1 : Math.min(1, claim.strength / claim.minimumStrength)) : 0), 0);
     return { id:objectiveId,score:totalWeight === 0 ? 0 : earnedWeight / totalWeight,mastered:related.length > 0 && related.filter(claim => claim.required).every(claim => claim.satisfied) && related.some(claim => claim.satisfied) };
   });
   return { claims,objectives,mastered:objectives.length > 0 && objectives.every(objective => objective.mastered) };

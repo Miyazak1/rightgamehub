@@ -278,6 +278,12 @@ test('learning evidence requires an observed matching kind even at a zero thresh
   const mismatched=missionEngine.evaluateLearningEvidence(model,[{claimId:'claim',kind:'prediction',strength:1}]);
   assert.equal(mismatched.claims[0].satisfied,false);
   assert.equal(mismatched.mastered,false);
+  const partialModel={...model,claims:[{...model.claims[0],minimumStrength:.8}]};
+  const partial=missionEngine.evaluateLearningEvidence(partialModel,[{claimId:'claim',kind:'calculation',strength:.4}]);
+  assert.equal(partial.claims[0].observed,true);
+  assert.equal(partial.claims[0].satisfied,false);
+  assert.equal(partial.objectives[0].score,.5);
+  assert.equal(partial.mastered,false);
   const matching=missionEngine.evaluateLearningEvidence(model,[{claimId:'claim',kind:'calculation',strength:0}]);
   assert.equal(matching.claims[0].observed,true);
   assert.equal(matching.claims[0].satisfied,true);

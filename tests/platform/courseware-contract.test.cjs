@@ -199,6 +199,16 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   assert.equal(valid.ok,true,JSON.stringify(valid.findings,null,2));
   const inventory=await loadCoursewareInventory(directory),inventoryPaths=new Set(inventory.files.map(file=>file.relative));
   for(const relative of [manifest.mission,manifest.capabilityBindings,manifest.evidenceModel])assert.equal(inventoryPaths.has(relative),true,`${relative} must ship in the built package`);
+  const validBindings=bindings.bindings;
+  for(const invalidBindings of [[],{}]){
+    bindings.bindings=invalidBindings;
+    await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
+    const invalidBindingCollection=await inspectCoursewareProject(directory);
+    assert.equal(invalidBindingCollection.ok,false);
+    assert.ok(invalidBindingCollection.findings.some(item=>item.code==='COURSEWARE_MISSION_BINDING_INVALID'&&item.pointer==='/bindings'));
+  }
+  bindings.bindings=validBindings;
+  await fs.writeFile(path.join(directory,manifest.capabilityBindings),`${JSON.stringify(bindings,null,2)}\n`);
   const firstAction=mission.nodes[0].actions[0],validSuccess=firstAction.success,validTransition=firstAction.onSuccess;
   delete firstAction.success;delete firstAction.onSuccess;
   await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
