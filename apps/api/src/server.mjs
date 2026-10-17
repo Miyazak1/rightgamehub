@@ -5,6 +5,7 @@ process.stdout.write(`GameHub API loaded ${runtime.rulesRegistry.list().length} 
 await runtime.guessBaikeService.seedBuiltIns();
 await runtime.app.listen({ host: runtime.config.host, port: runtime.config.port });
 runtime.guessBaikeAutomation.start();
+runtime.changeRadarWorker.start();
 await runtime.storageCapacityService.start();
 const shutdown = async signal => { process.stderr.write(`GameHub API received ${signal}; shutting down.\n`); await runtime.app.close(); process.exit(0); };
 process.once('SIGTERM', () => shutdown('SIGTERM'));

@@ -120,6 +120,13 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
   }
   return {
     ...communityApi(request),
+    listChangeWatches: options => request('/v1/me/change-watches', { ...options, auth: true }),
+    createChangeWatch: (body, options) => request('/v1/me/change-watches', { ...options, method: 'POST', body, auth: true }),
+    getChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, auth: true }),
+    updateChangeWatch: (id, body, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, method: 'PATCH', body, auth: true }),
+    deleteChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, method: 'DELETE', auth: true }),
+    listChangeWatchSnapshots: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/snapshots`, { ...options, auth: true }),
+    checkChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/check`, { ...options, method: 'POST', auth: true }),
     listWorkLeaderboards: (workId,options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards`,options),
     readCompetitionLeaderboard: (workId,boardId,query={},options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards/${encodeURIComponent(boardId)}?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!=null))}`,{...options,auth:true}),
     listCompetitionModes: (session,options) => request('/v1/competition/modes',{...options,auth:true,headers:{'X-GameHub-Session':session}}),

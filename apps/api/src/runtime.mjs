@@ -82,6 +82,8 @@ import { PostgresProjectClaimRepository, createProjectClaimService } from './pro
 import { PostgresDevelopmentLogRepository, createDevelopmentLogService } from './development-log-service.mjs';
 import { PostgresDiscoveryCampaignRepository, createDiscoveryCampaignService } from './discovery-campaign-service.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
+import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
+import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -125,6 +127,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const projectClaimService = createProjectClaimService({ repository: new PostgresProjectClaimRepository(database.pool) });
   const authorOutreachService = createAuthorOutreachService({ repository: new PostgresAuthorOutreachRepository(database.pool),siteOrigin:config.gameShareSiteOrigin });
+  const changeRadarService=createChangeRadarService({repository:new PostgresChangeRadarRepository(database.pool),fetchPage:createChangeRadarFetcher()});
+  const changeRadarWorker=createChangeRadarWorker({service:changeRadarService});
   const quarantineStore = new LocalQuarantineStore(config.quarantineRoot);
   const storageLogger = {
     info: event => process.stdout.write(`${JSON.stringify({ service: 'storage-capacity', ...event })}\n`),
@@ -229,6 +233,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     githubSourceService,
     projectClaimService,
     authorOutreachService,
+    changeRadarService,
     sourceBuildService,
     uploadService,
     catalogService,
@@ -255,7 +260,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { changeRadarWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return {
     config,
     database,
@@ -268,6 +273,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     githubSourceService,
     projectClaimService,
     authorOutreachService,
+    changeRadarService,
+    changeRadarWorker,
     sourceBuildService,
     sourceBuildWorker,
     multiplayerRuleBuildWorker,

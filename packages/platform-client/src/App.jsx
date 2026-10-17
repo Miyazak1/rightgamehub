@@ -1917,7 +1917,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art}/>;
   else if (route === '/tools') content = <ToolsPage go={go}/>;
-  else if (parts[0] === 'tools' && parts[1]) content = <OfficialToolHost toolId={parts[1]} go={go}/>;
+  else if (parts[0] === 'tools' && parts[1]) content = <OfficialToolHost toolId={parts[1]} go={go} api={api} accountProfile={accountProfile}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (route === '/games/guess-baike/players') content = <SocialPage key={accountProfile?.id||'guest'} api={api} go={go} demo={demo}/>;

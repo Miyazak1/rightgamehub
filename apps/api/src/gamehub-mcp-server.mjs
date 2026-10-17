@@ -119,6 +119,35 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
+  registerAppTool(server, 'open_change_radar', {
+    title: 'Open MOOYU Change Radar',
+    description: 'Open the MOOYU.FUN Change Radar with a monitoring task prefilled. Use this when the user asks to monitor a public webpage for future changes. The user reviews and confirms the task in the sidebar before it becomes active.',
+    inputSchema: {
+      url: z.string().url().max(2048),
+      title: z.string().trim().min(1).max(120).optional(),
+      condition: z.string().trim().max(500).optional(),
+      intervalMinutes: z.number().int().min(15).max(10080).default(360),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Preparing the Change Radar…',
+      'openai/toolInvocation/invoked': 'Change Radar is ready for review.',
+    },
+  }, async ({ url: watchedUrl, title, condition, intervalMinutes = 360 }) => {
+    const query = new URLSearchParams({ url: watchedUrl, interval: String(intervalMinutes) });
+    if (title) query.set('title', title);
+    if (condition) query.set('condition', condition);
+    const path = `/tools/change-radar?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'The monitoring task is prepared. Ask the user to review and confirm it in the MOOYU.FUN sidebar.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   return server;
 }
 
