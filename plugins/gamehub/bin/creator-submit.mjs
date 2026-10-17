@@ -1241,7 +1241,7 @@ function validateMission(mission, findings, file) {
   if (!nodes.length || nodeIds.size !== nodes.length) findings.push(finding("error", "COURSEWARE_MISSION_NODE_INVALID", "\u4EFB\u52A1\u8282\u70B9\u5FC5\u987B\u975E\u7A7A\u4E14 ID \u65E0\u91CD\u590D\u3002", { path: file, pointer: "/nodes" }));
   if (!nodeIds.has(mission.initialNodeId)) findings.push(finding("error", "COURSEWARE_MISSION_NODE_REFERENCE_INVALID", `\u521D\u59CB\u8282\u70B9 ${mission.initialNodeId} \u4E0D\u5B58\u5728\u3002`, { path: file, pointer: "/initialNodeId" }));
   const metricIds = /* @__PURE__ */ new Set();
-  const emittedClaims = /* @__PURE__ */ new Set();
+  const emittedClaims = /* @__PURE__ */ new Map();
   for (const [nodeIndex, node] of nodes.entries()) {
     const pointer = `/nodes/${nodeIndex}`;
     rejectUnknown(node, ["id", "kind", "title", "capabilitySlots", "actions"], findings, file, pointer);
@@ -1277,7 +1277,10 @@ function validateMission(mission, findings, file) {
         rejectUnknown(evidence, ["claimId", "kind", "strength"], findings, file, evidencePointer);
         requireId(evidence?.claimId, findings, file, `${evidencePointer}/claimId`);
         if (!["prediction", "calculation", "configuration", "measurement", "comparison", "explanation", "transfer"].includes(evidence?.kind) || evidence?.strength !== void 0 && (!Number.isFinite(evidence.strength) || evidence.strength < 0 || evidence.strength > 1)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_INVALID", `\u884C\u52A8 ${action?.id ?? actionIndex} \u7684\u8BC1\u636E\u7C7B\u578B\u6216\u5F3A\u5EA6\u65E0\u6548\u3002`, { path: file, pointer: evidencePointer }));
-        emittedClaims.add(evidence?.claimId);
+        if (typeof evidence?.claimId === "string" && typeof evidence?.kind === "string") {
+          if (!emittedClaims.has(evidence.claimId)) emittedClaims.set(evidence.claimId, /* @__PURE__ */ new Set());
+          emittedClaims.get(evidence.claimId).add(evidence.kind);
+        }
       }
     }
   }
@@ -1290,7 +1293,7 @@ function validateMission(mission, findings, file) {
     requireId(outcome?.id, findings, file, `${pointer}/id`);
     requireTextMap(outcome?.title, findings, file, `${pointer}/title`);
     if (!["success", "partial", "failure"].includes(outcome?.kind)) findings.push(finding("error", "COURSEWARE_MISSION_OUTCOME_INVALID", `\u7ED3\u5C40 ${outcome?.id ?? index} kind \u65E0\u6548\u3002`, { path: file, pointer: `${pointer}/kind` }));
-    if (!Array.isArray(outcome?.when)) findings.push(finding("error", "COURSEWARE_MISSION_CONDITION_INVALID", `\u7ED3\u5C40 ${outcome?.id ?? index} \u7684 when \u5FC5\u987B\u662F\u6761\u4EF6\u6570\u7EC4\u3002`, { path: file, pointer: `${pointer}/when` }));
+    if (!Array.isArray(outcome?.when) || outcome.when.length === 0) findings.push(finding("error", "COURSEWARE_MISSION_CONDITION_INVALID", `\u7ED3\u5C40 ${outcome?.id ?? index} \u7684 when \u5FC5\u987B\u662F\u975E\u7A7A\u6761\u4EF6\u6570\u7EC4\u3002`, { path: file, pointer: `${pointer}/when` }));
     for (const [conditionIndex, condition] of (Array.isArray(outcome?.when) ? outcome.when : []).entries()) validateMissionCondition(condition, findings, file, `${pointer}/when/${conditionIndex}`, meters, metricIds);
   }
   return { id: mission.id, slots, nodeIds, metricIds, emittedClaims };
@@ -1341,7 +1344,7 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
   const objectives = new Set(requireIdList(model.objectiveIds, findings, file, "/objectiveIds"));
   for (const objective of objectives) if (courseSets && !courseSets.objectiveIds.has(objective)) findings.push(finding("error", "COURSEWARE_OBJECTIVE_REFERENCE_INVALID", `\u5B66\u4E60\u8BC1\u636E\u6A21\u578B\u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u76EE\u6807 ${objective}\u3002`, { path: file, pointer: "/objectiveIds" }));
   const claims = Array.isArray(model.claims) ? model.claims : [];
-  const claimIds = new Set(claims.map((claim) => claim?.id));
+  const claimIds = new Set(claims.map((claim) => claim?.id)), claimsById = new Map(claims.map((claim) => [claim?.id, claim]));
   if (!claims.length || claimIds.size !== claims.length) findings.push(finding("error", "COURSEWARE_LEARNING_EVIDENCE_INVALID", "\u5B66\u4E60\u8BC1\u636E\u58F0\u660E\u5FC5\u987B\u975E\u7A7A\u4E14 ID \u65E0\u91CD\u590D\u3002", { path: file, pointer: "/claims" }));
   for (const [index, claim] of claims.entries()) {
     const pointer = `/claims/${index}`;
@@ -1351,7 +1354,11 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
     if (!objectives.has(claim?.objectiveId)) findings.push(finding("error", "COURSEWARE_OBJECTIVE_REFERENCE_INVALID", `\u8BC1\u636E\u58F0\u660E ${claim?.id} \u5F15\u7528\u4E86\u672A\u58F0\u660E\u76EE\u6807 ${claim?.objectiveId}\u3002`, { path: file, pointer: `${pointer}/objectiveId` }));
     if (!["prediction", "calculation", "configuration", "measurement", "comparison", "explanation", "transfer"].includes(claim?.kind) || !Number.isFinite(claim?.weight) || claim.weight <= 0 || claim.weight > 100 || !Number.isFinite(claim?.minimumStrength) || claim.minimumStrength < 0 || claim.minimumStrength > 1 || claim.required !== void 0 && typeof claim.required !== "boolean") findings.push(finding("error", "COURSEWARE_LEARNING_EVIDENCE_INVALID", `\u8BC1\u636E\u58F0\u660E ${claim?.id ?? index} \u7684\u7C7B\u578B\u3001\u6743\u91CD\u3001\u9608\u503C\u6216 required \u65E0\u6548\u3002`, { path: file, pointer }));
   }
-  for (const claimId of missionInfo?.emittedClaims ?? []) if (!claimIds.has(claimId)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID", `\u4EFB\u52A1\u53D1\u5C04\u4E86\u672A\u5728\u5B66\u4E60\u8BC1\u636E\u6A21\u578B\u58F0\u660E\u7684 ${claimId}\u3002`, { path: file, pointer: "/claims" }));
+  for (const [claimId, kinds] of missionInfo?.emittedClaims ?? []) {
+    const claim = claimsById.get(claimId);
+    if (!claim) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID", `\u4EFB\u52A1\u53D1\u5C04\u4E86\u672A\u5728\u5B66\u4E60\u8BC1\u636E\u6A21\u578B\u58F0\u660E\u7684 ${claimId}\u3002`, { path: file, pointer: "/claims" }));
+    else for (const kind of kinds) if (kind !== claim.kind) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_KIND_MISMATCH", `\u4EFB\u52A1\u4E3A ${claimId} \u53D1\u5C04\u4E86 ${kind}\uFF0C\u4F46\u8BC1\u636E\u6A21\u578B\u8981\u6C42 ${claim.kind}\u3002`, { path: file, pointer: "/claims" }));
+  }
 }
 async function inspectCoursewareProject(root) {
   const projectRoot = path2.resolve(root);
@@ -1442,7 +1449,7 @@ async function fileRecord(root, relative) {
 async function loadCoursewareInventory(root) {
   const projectRoot = path3.resolve(root);
   const manifest = await readJson2(path3.join(projectRoot, "mooyu-courseware.json"));
-  const fixed = ["mooyu-courseware.json", manifest.course, manifest.experience, manifest.evidence, manifest.tests].filter(Boolean);
+  const fixed = ["mooyu-courseware.json", manifest.course, manifest.experience, manifest.mission, manifest.capabilityBindings, manifest.evidenceModel, manifest.evidence, manifest.tests].filter(Boolean);
   const records = [];
   for (const relative of fixed) records.push(await fileRecord(projectRoot, relative));
   const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);

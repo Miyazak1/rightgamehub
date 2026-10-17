@@ -176,7 +176,7 @@ test('courseware Doctor rejects incomplete scenario challenge rules', async t =>
 });
 
 test('courseware Doctor validates composite mission graph, capability bindings and learning evidence', async t => {
-  const { inspectCoursewareProject } = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
+  const { inspectCoursewareProject,loadCoursewareInventory } = await import(pathToFileURL(path.join(root, 'packages/creator-tools/src/index.mjs')));
   const directory = await temporaryCopy(t, 'concept-explorer');
   const manifestPath=path.join(directory,'mooyu-courseware.json');
   const manifest=JSON.parse(await fs.readFile(manifestPath,'utf8'));
@@ -197,6 +197,8 @@ test('courseware Doctor validates composite mission graph, capability bindings a
   ]);
   const valid=await inspectCoursewareProject(directory);
   assert.equal(valid.ok,true,JSON.stringify(valid.findings,null,2));
+  const inventory=await loadCoursewareInventory(directory),inventoryPaths=new Set(inventory.files.map(file=>file.relative));
+  for(const relative of [manifest.mission,manifest.capabilityBindings,manifest.evidenceModel])assert.equal(inventoryPaths.has(relative),true,`${relative} must ship in the built package`);
   const firstAction=mission.nodes[0].actions[0],validSuccess=firstAction.success,validTransition=firstAction.onSuccess;
   delete firstAction.success;delete firstAction.onSuccess;
   await fs.writeFile(path.join(directory,manifest.mission),`${JSON.stringify(mission,null,2)}\n`);
