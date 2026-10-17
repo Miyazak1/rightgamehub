@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
-import {useI18n} from './i18n.jsx';
+import {useI18n} from './I18n.jsx';
 
 const intervalOptions=[15,60,360,720,1440,10080];
 const pendingStorageKey='mooyu.change-radar.pending';
