@@ -106,6 +106,10 @@ test('projectile rescue challenge evaluates target range and obstacle clearance 
   session.register({manifest:moduleManifest('challenge.projectile-rescue','challenge','./challenge.mjs',['challenge.evaluate'],['challenge.attempt','challenge.reset'],[{id:'physics.projectile',apiVersion:1,capabilities:['domain.projectile']}]),...challenge});
   session.activate('challenge.projectile-rescue');session.dispatch('challenge.projectile-rescue','challenge.attempt');
   const result=session.observe('challenge.projectile-rescue');assert.equal(result.solved,true);assert.equal(result.last.reason,'success');
+  session.dispatch('challenge.projectile-rescue','challenge.reset');session.dispatch('physics.projectile','target.set',{value:45});
+  for(let attempt=0;attempt<5;attempt+=1)session.dispatch('challenge.projectile-rescue','challenge.attempt');
+  const exhausted=session.observe('challenge.projectile-rescue');assert.equal(exhausted.attempts,5);assert.equal(exhausted.solved,false);
+  session.dispatch('challenge.projectile-rescue','challenge.attempt');assert.deepEqual(session.observe('challenge.projectile-rescue'),exhausted);
 });
 
 test('journey and embed modules keep host concerns optional and isolated', async () => {

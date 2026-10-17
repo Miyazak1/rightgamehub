@@ -4,6 +4,17 @@
   "catalogId": "cn-upper-secondary-2017-2020",
   "entries": [
     {
+      "id": "coverage.math.derivative-optimization-lab",
+      "subjectId": "mathematics",
+      "clusterId": "cn-hs.math.cluster.derivative-and-optimization",
+      "briefId": "cn-hs.math.derivative-optimization",
+      "packageId": "derivative-optimization-lab",
+      "packagePath": "templates/courseware/derivative-optimization",
+      "coverageLevel": "representative-prototype",
+      "engineeringStatus": "doctor-verified",
+      "evidence": { "doctor": true, "bilingual": true, "keyboardComplete": true, "reducedMotion": true, "embedHostCount": 2, "browserJourneyCount": 0, "subjectReviewed": false }
+    },
+    {
       "id": "coverage.math.quadratic-shape-explorer",
       "subjectId": "mathematics",
       "clusterId": "cn-hs.math.cluster.quadratic-functions-equations-inequalities",

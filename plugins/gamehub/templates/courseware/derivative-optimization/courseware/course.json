@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "objectives": [
+    { "id": "rate-to-derivative", "text": { "zh-CN": "从平均变化率的极限理解瞬时变化率与导数。", "en": "Interpret the derivative as the limiting value of an average rate of change." } },
+    { "id": "derivative-to-shape", "text": { "zh-CN": "用导数的符号判断函数的增减与极值。", "en": "Use the sign of a derivative to determine monotonicity and extrema." } },
+    { "id": "optimize-with-evidence", "text": { "zh-CN": "在约束条件下比较临界点与边界，完成优化并解释结论。", "en": "Compare critical points and boundaries to optimize under constraints and justify the result." } }
+  ],
+  "prerequisites": [{ "zh-CN": "会计算函数值、平均变化率，并能读懂直角坐标系。", "en": "Can evaluate functions, calculate average rate of change, and read a Cartesian plane." }],
+  "misconceptions": [
+    { "id": "derivative-is-only-a-formula", "text": { "zh-CN": "把导数只当作求导公式，忽略它是局部变化率。", "en": "Treating derivatives only as symbolic rules rather than local rates of change." }, "objectiveIds": ["rate-to-derivative"] },
+    { "id": "critical-point-always-optimum", "text": { "zh-CN": "找到导数为零的点就停止，不检查可行域与边界。", "en": "Stopping at a zero derivative without checking the feasible interval and boundaries." }, "objectiveIds": ["optimize-with-evidence"] }
+  ],
+  "scenes": [
+    { "id": "secant-to-tangent", "type": "explore", "title": { "zh-CN": "从割线到切线", "en": "Secant to Tangent" }, "objectiveIds": ["rate-to-derivative"], "evidenceIds": ["derivative-limit-claim"], "component": { "type": "secant-tangent-plot", "config": { "function": "x^3-3x", "deltaMinimum": 0.05, "deltaMaximum": 3 } }, "fallback": { "zh-CN": "若动画不可用，请比较 Δx=2、1、0.5、0.1 时的割线斜率。", "en": "If animation is unavailable, compare secant slopes for Δx=2, 1, 0.5, and 0.1." } },
+    { "id": "read-the-shape", "type": "simulate", "title": { "zh-CN": "用导数读图像", "en": "Read Shape with Derivatives" }, "objectiveIds": ["derivative-to-shape"], "evidenceIds": ["derivative-sign-claim"], "component": { "type": "linked-function-derivative", "config": { "showSignChart": true } }, "fallback": { "zh-CN": "若联动图像不可用，请使用导数符号表判断增减区间。", "en": "If linked graphs are unavailable, use the derivative sign chart to determine monotonic intervals." } },
+    { "id": "optimization-studio", "type": "practice", "title": { "zh-CN": "包装盒优化工作室", "en": "Packaging Optimization Studio" }, "objectiveIds": ["optimize-with-evidence"], "evidenceIds": ["optimization-boundary-claim"], "component": { "type": "constrained-optimization", "config": { "sheetSideCm": 20, "variable": "cut" } }, "fallback": { "zh-CN": "若图像不可用，请比较 V(c)=c(20-2c)^2 在临界点和边界的值。", "en": "If the graph is unavailable, compare V(c)=c(20-2c)^2 at critical points and boundaries." } }
+  ],
+  "checkpoints": [
+    { "id": "predict-slope", "sceneId": "secant-to-tangent", "objectiveIds": ["rate-to-derivative"], "kind": "multiple-choice", "prompt": { "zh-CN": "当 Δx 逐渐趋近 0 时，割线斜率趋近什么？", "en": "As Δx approaches 0, what does the secant slope approach?" }, "answer": "tangent" },
+    { "id": "match-sign-intervals", "sceneId": "read-the-shape", "objectiveIds": ["derivative-to-shape"], "kind": "multiple-choice", "prompt": { "zh-CN": "若 f′ 的符号依次为正、负、正，f 的变化顺序是什么？", "en": "If f′ has signs positive, negative, positive, how does f change?" }, "answer": "increase-decrease-increase" },
+    { "id": "justify-optimum", "sceneId": "optimization-studio", "objectiveIds": ["optimize-with-evidence"], "kind": "numeric", "prompt": { "zh-CN": "20 cm 正方形纸板的最佳切角约为多少厘米？", "en": "Approximately what corner cut maximizes a box made from a 20 cm square sheet?" }, "answer": 3.33 }
+  ],
+  "completion": { "objectiveIds": ["rate-to-derivative", "derivative-to-shape", "optimize-with-evidence"], "checkpointIds": ["predict-slope", "match-sign-intervals", "justify-optimum"] }
+}

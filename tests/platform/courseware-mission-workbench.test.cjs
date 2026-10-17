@@ -17,6 +17,17 @@ test('mission workbench derives route progress without deciding domain success',
   assert.deepEqual(view.clocks,{window:72});
   assert.equal(view.evidenceCount,1);
   assert.equal(view.mastered,false);
+  const branched=deriveMissionViewModel({definition,state:{...state,activeNodeId:'c'},assessment:null,locale:'zh-CN'});
+  assert.deepEqual(branched.nodes.map(node=>node.state),['complete','pending','active']);
+  assert.equal(branched.progress,.5);
+});
+
+test('mission workbench renders every action in a branching node',async()=>{
+  const {missionActionButtonsMarkup}=await load('packages/courseware-mission-workbench/src/index.mjs');
+  const markup=missionActionButtonsMarkup([{id:'safe',title:{'zh-CN':'稳妥方案'}},{id:'fast',title:{'zh-CN':'快速方案'}}],'zh-CN');
+  assert.match(markup,/data-mission-action="safe"[^>]*>稳妥方案/u);
+  assert.match(markup,/data-mission-action="fast"[^>]*>快速方案/u);
+  assert.equal((markup.match(/data-mission-action=/gu)??[]).length,2);
 });
 
 test('energy train experience stays declarative and maps every mission node',async()=>{

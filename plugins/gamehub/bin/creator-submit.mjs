@@ -1254,12 +1254,15 @@ function validateMission(mission, findings, file) {
     if (!actions.length || actionIds.size !== actions.length) findings.push(finding("error", "COURSEWARE_MISSION_ACTION_INVALID", `\u8282\u70B9 ${node?.id ?? nodeIndex} \u5FC5\u987B\u6709\u65E0\u91CD\u590D\u884C\u52A8\u3002`, { path: file, pointer: `${pointer}/actions` }));
     for (const [actionIndex, action] of actions.entries()) {
       const actionPointer = `${pointer}/actions/${actionIndex}`;
+      requireFields(action, ["id", "title", "success", "onSuccess"], findings, file, actionPointer);
       rejectUnknown(action, ["id", "title", "clockCosts", "resourceCosts", "success", "onSuccess", "onFailure", "evidence"], findings, file, actionPointer);
       requireId(action?.id, findings, file, `${actionPointer}/id`);
       requireTextMap(action?.title, findings, file, `${actionPointer}/title`);
       for (const [field, meterSet] of [["clockCosts", meters.clocks], ["resourceCosts", meters.resources]]) for (const [id, amount] of Object.entries(action?.[field] ?? {})) if (!meterSet.has(id) || !Number.isFinite(amount) || amount < 0) findings.push(finding("error", "COURSEWARE_MISSION_COST_INVALID", `\u884C\u52A8 ${action?.id} \u7684 ${field}.${id} \u65E0\u6548\u3002`, { path: file, pointer: `${actionPointer}/${field}/${id}` }));
-      for (const [conditionIndex, condition] of (action?.success ?? []).entries()) validateMissionCondition(condition, findings, file, `${actionPointer}/success/${conditionIndex}`, meters, metricIds);
-      for (const field of ["onSuccess", "onFailure"]) if (action?.[field]) {
+      if (!Array.isArray(action?.success)) findings.push(finding("error", "COURSEWARE_MISSION_ACTION_INVALID", `\u884C\u52A8 ${action?.id ?? actionIndex} \u7684 success \u5FC5\u987B\u662F\u6761\u4EF6\u6570\u7EC4\u3002`, { path: file, pointer: `${actionPointer}/success` }));
+      for (const [conditionIndex, condition] of (Array.isArray(action?.success) ? action.success : []).entries()) validateMissionCondition(condition, findings, file, `${actionPointer}/success/${conditionIndex}`, meters, metricIds);
+      for (const field of ["onSuccess", "onFailure"]) if (action?.[field] !== void 0) {
+        if (!requireFields(action[field], ["to"], findings, file, `${actionPointer}/${field}`)) continue;
         rejectUnknown(action[field], ["to", "when"], findings, file, `${actionPointer}/${field}`);
         if (!nodeIds.has(action[field].to)) findings.push(finding("error", "COURSEWARE_MISSION_NODE_REFERENCE_INVALID", `\u884C\u52A8 ${action.id} \u6307\u5411\u4E0D\u5B58\u5728\u7684\u8282\u70B9 ${action[field].to}\u3002`, { path: file, pointer: `${actionPointer}/${field}/to` }));
         for (const [conditionIndex, condition] of (action[field].when ?? []).entries()) validateMissionCondition(condition, findings, file, `${actionPointer}/${field}/when/${conditionIndex}`, meters, metricIds);
@@ -1328,9 +1331,11 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
   if (!claims.length || claimIds.size !== claims.length) findings.push(finding("error", "COURSEWARE_LEARNING_EVIDENCE_INVALID", "\u5B66\u4E60\u8BC1\u636E\u58F0\u660E\u5FC5\u987B\u975E\u7A7A\u4E14 ID \u65E0\u91CD\u590D\u3002", { path: file, pointer: "/claims" }));
   for (const [index, claim] of claims.entries()) {
     const pointer = `/claims/${index}`;
+    requireFields(claim, ["id", "objectiveId", "kind", "weight", "minimumStrength"], findings, file, pointer);
     rejectUnknown(claim, ["id", "objectiveId", "kind", "weight", "minimumStrength", "required"], findings, file, pointer);
     requireId(claim?.id, findings, file, `${pointer}/id`);
     if (!objectives.has(claim?.objectiveId)) findings.push(finding("error", "COURSEWARE_OBJECTIVE_REFERENCE_INVALID", `\u8BC1\u636E\u58F0\u660E ${claim?.id} \u5F15\u7528\u4E86\u672A\u58F0\u660E\u76EE\u6807 ${claim?.objectiveId}\u3002`, { path: file, pointer: `${pointer}/objectiveId` }));
+    if (!["prediction", "calculation", "configuration", "measurement", "comparison", "explanation", "transfer"].includes(claim?.kind) || !Number.isFinite(claim?.weight) || claim.weight <= 0 || claim.weight > 100 || !Number.isFinite(claim?.minimumStrength) || claim.minimumStrength < 0 || claim.minimumStrength > 1 || claim.required !== void 0 && typeof claim.required !== "boolean") findings.push(finding("error", "COURSEWARE_LEARNING_EVIDENCE_INVALID", `\u8BC1\u636E\u58F0\u660E ${claim?.id ?? index} \u7684\u7C7B\u578B\u3001\u6743\u91CD\u3001\u9608\u503C\u6216 required \u65E0\u6548\u3002`, { path: file, pointer }));
   }
   for (const claimId of missionInfo?.emittedClaims ?? []) if (!claimIds.has(claimId)) findings.push(finding("error", "COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID", `\u4EFB\u52A1\u53D1\u5C04\u4E86\u672A\u5728\u5B66\u4E60\u8BC1\u636E\u6A21\u578B\u58F0\u660E\u7684 ${claimId}\u3002`, { path: file, pointer: "/claims" }));
 }

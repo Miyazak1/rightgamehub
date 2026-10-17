@@ -410,10 +410,12 @@ function validateMission(mission, findings, file) {
     const actions=Array.isArray(node?.actions)?node.actions:[]; const actionIds=new Set(actions.map(action=>action?.id));
     if (!actions.length || actionIds.size !== actions.length) findings.push(finding('error','COURSEWARE_MISSION_ACTION_INVALID',`节点 ${node?.id ?? nodeIndex} 必须有无重复行动。`,{path:file,pointer:`${pointer}/actions`}));
     for (const [actionIndex,action] of actions.entries()) {
-      const actionPointer=`${pointer}/actions/${actionIndex}`; rejectUnknown(action,['id','title','clockCosts','resourceCosts','success','onSuccess','onFailure','evidence'],findings,file,actionPointer); requireId(action?.id,findings,file,`${actionPointer}/id`); requireTextMap(action?.title,findings,file,`${actionPointer}/title`);
+      const actionPointer=`${pointer}/actions/${actionIndex}`; requireFields(action,['id','title','success','onSuccess'],findings,file,actionPointer); rejectUnknown(action,['id','title','clockCosts','resourceCosts','success','onSuccess','onFailure','evidence'],findings,file,actionPointer); requireId(action?.id,findings,file,`${actionPointer}/id`); requireTextMap(action?.title,findings,file,`${actionPointer}/title`);
       for (const [field,meterSet] of [['clockCosts',meters.clocks],['resourceCosts',meters.resources]]) for (const [id,amount] of Object.entries(action?.[field] ?? {})) if (!meterSet.has(id) || !Number.isFinite(amount) || amount < 0) findings.push(finding('error','COURSEWARE_MISSION_COST_INVALID',`行动 ${action?.id} 的 ${field}.${id} 无效。`,{path:file,pointer:`${actionPointer}/${field}/${id}`}));
-      for (const [conditionIndex,condition] of (action?.success ?? []).entries()) validateMissionCondition(condition,findings,file,`${actionPointer}/success/${conditionIndex}`,meters,metricIds);
-      for (const field of ['onSuccess','onFailure']) if (action?.[field]) {
+      if(!Array.isArray(action?.success))findings.push(finding('error','COURSEWARE_MISSION_ACTION_INVALID',`行动 ${action?.id ?? actionIndex} 的 success 必须是条件数组。`,{path:file,pointer:`${actionPointer}/success`}));
+      for (const [conditionIndex,condition] of (Array.isArray(action?.success)?action.success:[]).entries()) validateMissionCondition(condition,findings,file,`${actionPointer}/success/${conditionIndex}`,meters,metricIds);
+      for (const field of ['onSuccess','onFailure']) if (action?.[field] !== undefined) {
+        if(!requireFields(action[field],['to'],findings,file,`${actionPointer}/${field}`))continue;
         rejectUnknown(action[field],['to','when'],findings,file,`${actionPointer}/${field}`);
         if (!nodeIds.has(action[field].to)) findings.push(finding('error','COURSEWARE_MISSION_NODE_REFERENCE_INVALID',`行动 ${action.id} 指向不存在的节点 ${action[field].to}。`,{path:file,pointer:`${actionPointer}/${field}/to`}));
         for (const [conditionIndex,condition] of (action[field].when ?? []).entries()) validateMissionCondition(condition,findings,file,`${actionPointer}/${field}/when/${conditionIndex}`,meters,metricIds);
@@ -448,7 +450,11 @@ function validateLearningEvidenceModel(model, findings, file, missionInfo, cours
   const objectives=new Set(requireIdList(model.objectiveIds,findings,file,'/objectiveIds'));
   for(const objective of objectives)if(courseSets&&!courseSets.objectiveIds.has(objective))findings.push(finding('error','COURSEWARE_OBJECTIVE_REFERENCE_INVALID',`学习证据模型引用了不存在的目标 ${objective}。`,{path:file,pointer:'/objectiveIds'}));
   const claims=Array.isArray(model.claims)?model.claims:[]; const claimIds=new Set(claims.map(claim=>claim?.id)); if(!claims.length||claimIds.size!==claims.length)findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_INVALID','学习证据声明必须非空且 ID 无重复。',{path:file,pointer:'/claims'}));
-  for(const [index,claim] of claims.entries()){ const pointer=`/claims/${index}`; rejectUnknown(claim,['id','objectiveId','kind','weight','minimumStrength','required'],findings,file,pointer); requireId(claim?.id,findings,file,`${pointer}/id`); if(!objectives.has(claim?.objectiveId))findings.push(finding('error','COURSEWARE_OBJECTIVE_REFERENCE_INVALID',`证据声明 ${claim?.id} 引用了未声明目标 ${claim?.objectiveId}。`,{path:file,pointer:`${pointer}/objectiveId`})); }
+  for(const [index,claim] of claims.entries()){
+    const pointer=`/claims/${index}`; requireFields(claim,['id','objectiveId','kind','weight','minimumStrength'],findings,file,pointer); rejectUnknown(claim,['id','objectiveId','kind','weight','minimumStrength','required'],findings,file,pointer); requireId(claim?.id,findings,file,`${pointer}/id`);
+    if(!objectives.has(claim?.objectiveId))findings.push(finding('error','COURSEWARE_OBJECTIVE_REFERENCE_INVALID',`证据声明 ${claim?.id} 引用了未声明目标 ${claim?.objectiveId}。`,{path:file,pointer:`${pointer}/objectiveId`}));
+    if(!['prediction','calculation','configuration','measurement','comparison','explanation','transfer'].includes(claim?.kind)||!Number.isFinite(claim?.weight)||claim.weight<=0||claim.weight>100||!Number.isFinite(claim?.minimumStrength)||claim.minimumStrength<0||claim.minimumStrength>1||(claim.required!==undefined&&typeof claim.required!=='boolean'))findings.push(finding('error','COURSEWARE_LEARNING_EVIDENCE_INVALID',`证据声明 ${claim?.id ?? index} 的类型、权重、阈值或 required 无效。`,{path:file,pointer}));
+  }
   for(const claimId of missionInfo?.emittedClaims??[])if(!claimIds.has(claimId))findings.push(finding('error','COURSEWARE_MISSION_EVIDENCE_REFERENCE_INVALID',`任务发射了未在学习证据模型声明的 ${claimId}。`,{path:file,pointer:'/claims'}));
 }
 

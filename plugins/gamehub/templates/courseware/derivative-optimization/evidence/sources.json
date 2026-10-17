@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    { "id": "moe-cn-hs-math-2020", "type": "standard", "title": "普通高中数学课程标准（2017年版2020年修订）", "publisher": "中华人民共和国教育部", "url": "https://www.moe.gov.cn/srcsite/A26/s8001/202006/t20200603_462199.html", "license": "official-publication", "locator": "选择性必修：一元函数的导数及其应用" },
+    { "id": "pep-a-selective-required-2", "type": "book", "title": "普通高中教科书 数学 选择性必修 第二册（A版）", "publisher": "人民教育出版社", "url": "https://www.pep.com.cn/", "license": "all-rights-reserved", "locator": "第五章 一元函数的导数及其应用；ISBN 978-7-107-34597-5" }
+  ],
+  "claims": [
+    { "id": "derivative-limit-claim", "text": { "zh-CN": "导数刻画函数在一点处的瞬时变化率，可由割线斜率的极限来理解。", "en": "A derivative describes instantaneous rate of change and can be understood as the limit of secant slopes." }, "sourceIds": ["moe-cn-hs-math-2020", "pep-a-selective-required-2"], "locators": ["一元函数的导数及其应用", "第五章"], "verification": "primary-source" },
+    { "id": "derivative-sign-claim", "text": { "zh-CN": "在区间内，导数的正负可用于判断原函数的单调性。", "en": "On an interval, the sign of the derivative can determine the monotonicity of the original function." }, "sourceIds": ["moe-cn-hs-math-2020", "pep-a-selective-required-2"], "locators": ["导数与函数单调性", "第五章"], "verification": "primary-source" },
+    { "id": "optimization-boundary-claim", "text": { "zh-CN": "闭区间上的最优化需要比较可行域内的临界点与边界值。", "en": "Optimization on a closed interval requires comparing feasible critical points with boundary values." }, "sourceIds": ["pep-a-selective-required-2"], "locators": ["导数在研究函数中的应用"], "verification": "cross-checked" }
+  ]
+}

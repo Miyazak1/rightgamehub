@@ -7,6 +7,7 @@ const clamp=(value,minimum,maximum)=>Math.max(minimum,Math.min(maximum,value));
 export function deriveMissionViewModel({definition,state,assessment=null,locale='zh-CN'}={}){
   const nodes=definition?.nodes??[];
   const activeIndex=Math.max(0,nodes.findIndex(node=>node.id===state?.activeNodeId));
+  const completedNodeIds=new Set(state?.completedNodeIds??[]);
   return {
     id:definition?.id??'',
     title:localize(definition?.title,locale),
@@ -14,12 +15,12 @@ export function deriveMissionViewModel({definition,state,assessment=null,locale=
     outcomeId:state?.outcomeId??null,
     activeNodeId:state?.activeNodeId??definition?.initialNodeId??null,
     activeIndex,
-    progress:nodes.length<=1?0:activeIndex/(nodes.length-1),
-    nodes:nodes.map((node,index)=>({
+    progress:nodes.length<=1?(completedNodeIds.size?1:0):clamp(completedNodeIds.size/(nodes.length-1),0,1),
+    nodes:nodes.map(node=>({
       id:node.id,
       title:localize(node.title,locale),
       kind:node.kind,
-      state:state?.completedNodeIds?.includes(node.id)?'complete':index===activeIndex?'active':index<activeIndex?'complete':'pending',
+      state:completedNodeIds.has(node.id)?'complete':node.id===state?.activeNodeId?'active':'pending',
     })),
     clocks:clone(state?.clocks??{}),
     resources:clone(state?.resources??{}),
@@ -27,6 +28,10 @@ export function deriveMissionViewModel({definition,state,assessment=null,locale=
     mastered:Boolean(assessment?.mastered),
     lastAction:clone(state?.lastAction??null),
   };
+}
+
+export function missionActionButtonsMarkup(actions=[],locale='zh-CN',fallback=''){
+  return actions.map(action=>`<button type="button" class="mission-primary" data-mission-action="${text(action.id)}">${text(localize(action.title,locale)||fallback)}</button>`).join('');
 }
 
 function fieldMarkup(field,reading,locale){
@@ -62,7 +67,7 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
     <header class="mission-topbar"><div class="mission-brand"><span class="mission-brand-mark">M</span><span>MOOYU MISSION LAB</span></div><div class="mission-title"><span>${text(localize(experience.subject,locale))}</span><strong>${text(localize(experience.title,locale)||localize(definition.title,locale))}</strong></div><div class="mission-actions"><button type="button" data-mission-reset>${text(locale==='zh-CN'?'新任务':'New mission')}</button></div></header>
     <section class="mission-hud"><div class="mission-route" data-mission-route></div><div class="mission-pressure"><div class="mission-pressure-copy"><span>${text(localize(experience.clockLabel,locale))}</span><strong data-clock-value>${text(experience.clockMaximum??120)} s</strong></div><div class="mission-pressure-track"><i data-clock-bar></i><span data-gate-marker></span></div></div><div class="mission-resource"><span>${text(localize(experience.resourceLabel,locale))}</span><strong data-resource-value>100%</strong></div></section>
     <main class="mission-main"><section class="mission-scene-panel"><div class="mission-scene-head"><div><span data-stage-kicker></span><h1 data-stage-title></h1><p data-stage-story></p></div><span class="mission-formula" data-stage-formula></span></div><div class="mission-world" data-mission-world><div class="mission-sky"><span class="star star-a"></span><span class="star star-b"></span><span class="star star-c"></span><span class="moon"></span></div><div class="mission-land land-a"></div><div class="mission-land land-b"></div><div class="mission-track"><i></i></div><div class="mission-checkpoint checkpoint-a"><span>01</span></div><div class="mission-checkpoint checkpoint-b"><span>02</span></div><div class="mission-gate"><i></i><i></i><b>${text(locale==='zh-CN'?'磁闸':'GATE')}</b></div><div class="mission-train" data-mission-train><span class="mission-core"></span><i class="wheel wheel-a"></i><i class="wheel wheel-b"></i></div><div class="mission-world-label" data-world-label></div></div><div class="mission-scene-note"><span data-feedback>${text(locale==='zh-CN'?'先阅读任务，再开始计时。':'Read the mission, then start the clock.')}</span><span data-evidence-count>证据 0</span></div></section>
-      <aside class="mission-console"><div class="mission-console-head"><span>${text(locale==='zh-CN'?'计算工作台':'CALCULATION DESK')}</span><b data-console-step>01 / 04</b></div><div class="mission-brief"><small>${text(locale==='zh-CN'?'本阶段目标':'STAGE TARGET')}</small><p data-stage-target></p></div><div class="mission-fields" data-mission-fields></div><div class="mission-equation" data-stage-equation></div><div class="mission-metrics" data-mission-metrics></div><button type="button" class="mission-primary" data-mission-primary></button><p class="mission-attempt-cost" data-attempt-cost></p></aside></main>
+      <aside class="mission-console"><div class="mission-console-head"><span>${text(locale==='zh-CN'?'计算工作台':'CALCULATION DESK')}</span><b data-console-step>01 / 04</b></div><div class="mission-brief"><small>${text(locale==='zh-CN'?'本阶段目标':'STAGE TARGET')}</small><p data-stage-target></p></div><div class="mission-fields" data-mission-fields></div><div class="mission-equation" data-stage-equation></div><div class="mission-metrics" data-mission-metrics></div><div class="mission-action-list" data-mission-actions></div><p class="mission-attempt-cost" data-attempt-cost></p></aside></main>
     <footer class="mission-footer"><div class="mission-help"><kbd>1</kbd><span>${text(locale==='zh-CN'?'读任务':'Read')}</span><i></i><kbd>2</kbd><span>${text(locale==='zh-CN'?'计算并调参':'Calculate')}</span><i></i><kbd>3</kbd><span>${text(locale==='zh-CN'?'提交方案':'Commit')}</span><i></i><kbd>4</kbd><span>${text(locale==='zh-CN'?'复盘证据':'Debrief')}</span></div><div class="mission-status"><span class="mission-status-dot"></span><strong data-mission-status-copy>${text(statusCopy('ready',locale))}</strong></div></footer>
     <div class="mission-overlay" data-mission-overlay hidden><section><span data-overlay-mark>✓</span><small data-overlay-kicker></small><h2 data-overlay-title></h2><p data-overlay-copy></p><div data-overlay-evidence></div><button type="button" data-mission-reset>${text(locale==='zh-CN'?'重新规划':'Plan again')}</button></section></div>
   </div>`;
@@ -117,9 +122,10 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
     for(const field of stage.fields??[]){if(!readings.has(field.moduleId))readings.set(field.moduleId,runtime.observe(field.moduleId));}
     query('[data-mission-fields]').innerHTML=(stage.fields??[]).map(field=>fieldMarkup(field,readings.get(field.moduleId),locale)).join('');
     query('[data-mission-metrics]').innerHTML=(stage.metrics??[]).map(metric=>metricMarkup(metric,state.metrics?.[metric.id],locale)).join('');
-    const action=state.node?.actions?.[0],primary=query('[data-mission-primary]');
-    primary.textContent=view.status==='ready'?localize(experience.startLabel,locale):view.status==='running'?(localize(action?.title,locale)||localize(experience.commitLabel,locale)):localize(experience.restartLabel,locale);
-    primary.disabled=view.status==='partial';
+    const actionList=query('[data-mission-actions]');
+    if(view.status==='ready')actionList.innerHTML=`<button type="button" class="mission-primary" data-mission-primary>${text(localize(experience.startLabel,locale))}</button>`;
+    else if(view.status==='running')actionList.innerHTML=missionActionButtonsMarkup(state.node?.actions??[],locale,localize(experience.commitLabel,locale));
+    else actionList.innerHTML=`<button type="button" class="mission-primary" data-mission-primary>${text(localize(experience.restartLabel,locale))}</button>`;
     query('[data-attempt-cost]').textContent=view.status==='running'?localize(stage.cost,locale):localize(experience.readyHint,locale);
     query('[data-evidence-count]').textContent=`${locale==='zh-CN'?'证据':'Evidence'} ${view.evidenceCount}/${evidenceModel?.claims?.length??0}`;
     query('[data-mission-train]').style.left=`calc(8% + ${Math.round(view.progress*72)}%)`;
@@ -141,7 +147,9 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
     const before=getState();
     if(before.status==='ready'){runtime.dispatch(missionModuleId,'mission.start');setFeedback(locale==='zh-CN'?'计时开始。每次提交都会消耗时间与能源。':'Clock started. Every submission costs time and energy.','warning');render();return;}
     if(['succeeded','failed','partial'].includes(before.status)){reset();return;}
-    const actionId=before.node?.actions?.[0]?.id;if(!actionId)return;
+  }
+  function commitAction(actionId){
+    const before=getState();if(before.status!=='running'||!before.node?.actions?.some(action=>action.id===actionId))return;
     runtime.dispatch(missionModuleId,'mission.act',{actionId});
     const after=getState(),passed=after.lastAction?.success;
     setFeedback(passed?(locale==='zh-CN'?'计算成立，列车进入下一段线路。':'Calculation accepted. The train advances.'):(locale==='zh-CN'?'方案未通过，代价已扣除；请根据读数重新计算。':'Plan rejected; cost applied. Recalculate from the readings.'),passed?'success':'danger');
@@ -155,7 +163,7 @@ export function createMissionWorkbench({root,runtime,missionModuleId,evidenceMod
     const output=query(`[data-field-output="${field.id}"]`);if(output)output.textContent=`${Number(input.value).toFixed(field.precision??1)} ${localize(field.unit,locale)}`;
     renderStageTelemetry(stage,getState());
   }
-  function onClick(event){if(event.target.closest?.('[data-mission-primary]'))primary();else if(event.target.closest?.('[data-mission-reset]'))reset();}
+  function onClick(event){const action=event.target.closest?.('[data-mission-action]');if(action)commitAction(action.dataset.missionAction);else if(event.target.closest?.('[data-mission-primary]'))primary();else if(event.target.closest?.('[data-mission-reset]'))reset();}
   root.addEventListener('input',onInput);root.addEventListener('click',onClick);
   timer=setInterval(()=>{const before=getState();if(before.status==='running'&&globalThis.document?.visibilityState!=='hidden'){runtime.dispatch(missionModuleId,'mission.advance',{clockId:experience.clockId,amount:1});const after=getState();if(after.status!==before.status||after.activeNodeId!==before.activeNodeId)render();else renderPressure(after);}},Math.max(250,tickMilliseconds));
   render();
