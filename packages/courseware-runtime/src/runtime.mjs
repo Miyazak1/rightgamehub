@@ -179,7 +179,7 @@ export class CoursewareRuntime {
     const dependent = [...this.#active.values()].find(item => item.manifest.dependencies.some(dependency => !dependency.optional && dependency.id === moduleId));
     if (dependent) fail('COURSEWARE_MODULE_DEPENDENT_ACTIVE', `Module ${moduleId} is required by ${dependent.manifest.id}.`, { moduleId, dependentId: dependent.manifest.id });
     definition.deactivate?.({ state: clone(this.#states.get(moduleId)), context: this.#context(moduleId) });
-    this.#active.delete(moduleId); this.#record('module.deactivated', moduleId, { version: definition.manifest.version }); return true;
+    this.#active.delete(moduleId); this.#commands = this.#commands.filter(command => command.moduleId !== moduleId); this.#record('module.deactivated', moduleId, { version: definition.manifest.version }); return true;
   }
   swap(definition) {
     this.#assertUsable();
@@ -202,6 +202,8 @@ export class CoursewareRuntime {
     const activated = next.activate?.({ state: clone(state), context: this.#context(id) });
     if (activated !== undefined) state = checkedState(activated, id);
     this.#registry.replace(next); this.#active.set(id, next); this.#states.set(id, state);
+    const supportedCommands = new Set(next.manifest.commands);
+    this.#commands = this.#commands.filter(command => command.moduleId !== id || supportedCommands.has(command.name));
     this.#record('module.swapped', id, { fromVersion: current.manifest.version, toVersion: next.manifest.version });
     return { moduleId: id, fromVersion: current.manifest.version, toVersion: next.manifest.version };
   }

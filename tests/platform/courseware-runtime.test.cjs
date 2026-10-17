@@ -98,6 +98,30 @@ test('domain swaps require a pause and explicit migration when state schema chan
   assert.deepEqual(session.observe('math.functions'), { a: 1, family: 'quadratic' });
 });
 
+test('module lifecycle changes keep runtime-produced snapshots restorable', async () => {
+  const runtime = await import(runtimeUrl);
+  const deactivated = new runtime.CoursewareRuntime();
+  deactivated.register(mathModule(runtime)); deactivated.activate('math.functions');
+  deactivated.dispatch('math.functions', 'coefficient.set', { value: 2 });
+  deactivated.deactivate('math.functions');
+  const inactiveSnapshot = deactivated.snapshot();
+  assert.deepEqual(inactiveSnapshot.commands, []);
+  assert.doesNotThrow(() => deactivated.restore(inactiveSnapshot));
+
+  const instrument = (version, commands) => runtime.defineCoursewareModule({
+    manifest: manifest({ id:'instrument.lifecycle',version,kind:'instrument',entry:'./lifecycle.mjs',hotSwap:'live',capabilities:['instrument.lifecycle'],commands,dependencies:[] }),
+    createState: () => ({ count:0 }),
+    reduce: ({ state,command }) => ({ count:state.count + (command.name === 'increment' ? 1 : -1) }),
+  });
+  const swapped = new runtime.CoursewareRuntime();
+  swapped.register(instrument('1.0.0',['increment'])); swapped.activate('instrument.lifecycle');
+  swapped.dispatch('instrument.lifecycle','increment');
+  swapped.swap(instrument('2.0.0',['decrement']));
+  const swappedSnapshot = swapped.snapshot();
+  assert.deepEqual(swappedSnapshot.commands, []);
+  assert.doesNotThrow(() => swapped.restore(swappedSnapshot));
+});
+
 test('manifest policy rejects unsafe hot swap and missing hard dependencies', async () => {
   const runtime = await import(runtimeUrl);
   assert.throws(() => runtime.defineCoursewareModule({ manifest: manifest({ id: 'embed.host', kind: 'embed', entry: './embed.mjs', hotSwap: 'live', commands: [] }) }), { code: 'COURSEWARE_MODULE_HOT_SWAP_INVALID' });
