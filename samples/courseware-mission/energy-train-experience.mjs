@@ -1,0 +1,51 @@
+export const experience={
+  title:{'zh-CN':'极昼列车：穿越磁闸',en:'Polar Express: breach the gate'},
+  subject:{'zh-CN':'物理 · 综合任务',en:'Physics · Composite mission'},
+  clockId:'window',clockLabel:{'zh-CN':'磁闸关闭倒计时',en:'Gate closing in'},clockMaximum:180,
+  resourceId:'battery',resourceLabel:{'zh-CN':'能源核心',en:'Energy core'},resourceMaximum:100,
+  startLabel:{'zh-CN':'开始任务',en:'Start mission'},commitLabel:{'zh-CN':'提交方案',en:'Commit plan'},restartLabel:{'zh-CN':'重新规划',en:'Plan again'},
+  readyHint:{'zh-CN':'开始后倒计时持续运行；错误提交同样消耗资源。',en:'The clock keeps moving after start; failed submissions still cost resources.'},
+  successTitle:{'zh-CN':'磁闸通过，能源核心稳定',en:'Gate cleared, energy core stable'},
+  successCopy:{'zh-CN':'你用三个相互衔接的物理模型完成了整段线路，并留下了可复盘的计算证据。',en:'You completed the route with three connected physics models and left reviewable evidence.'},
+  failureTitle:{'zh-CN':'通行窗口已经关闭',en:'The transit window has closed'},
+  failureCopy:{'zh-CN':'任务压力是真实状态。回看失败阶段的读数，减少试错并重新计算。',en:'Mission pressure is authoritative state. Review the failed readings, reduce guessing and recalculate.'},
+  objectives:{
+    'newton.second-law':{'zh-CN':'牛顿第二定律',en:'Newton’s second law'},
+    'mechanical-energy':{'zh-CN':'机械能与功',en:'Mechanical energy and work'},
+    'uniform-deceleration':{'zh-CN':'匀减速制动',en:'Uniform deceleration'},
+  },
+  stages:{
+    accelerate:{
+      kicker:{'zh-CN':'阶段 01 · 牵引配置',en:'STAGE 01 · TRACTION'},title:{'zh-CN':'让列车安全进入加速轨',en:'Enter the acceleration rail'},
+      story:{'zh-CN':'能源核心不能承受剧烈冲击。调节牵引力与总质量，把加速度控制在安全窗口内。',en:'The energy core cannot absorb a violent launch. Tune force and total mass into the safe acceleration window.'},
+      formula:'a = F / m',target:{'zh-CN':'目标加速度：2.8–3.2 m/s²',en:'Target acceleration: 2.8–3.2 m/s²'},equation:'a = F ÷ m',worldLabel:{'zh-CN':'低温加速区 · 避免核心过载',en:'Cryogenic launch zone · avoid core overload'},
+      cost:{'zh-CN':'每次提交：−18 s · −15% 能源',en:'Each submission: −18 s · −15% energy'},
+      fields:[
+        {id:'force',moduleId:'physics.newton-cart',path:'force',command:'force.set',label:{'zh-CN':'牵引力 F',en:'Traction F'},unit:'N',min:1,max:10,step:.5,precision:1},
+        {id:'mass',moduleId:'physics.newton-cart',path:'mass',command:'mass.set',label:{'zh-CN':'列车总质量 m',en:'Train mass m'},unit:'kg',min:1,max:6,step:1,precision:0},
+      ],metrics:[{id:'traction.acceleration',label:{'zh-CN':'实时加速度',en:'Live acceleration'},unit:'m/s²',precision:2}],
+    },
+    climb:{
+      kicker:{'zh-CN':'阶段 02 · 能量坡道',en:'STAGE 02 · ENERGY SLOPE'},title:{'zh-CN':'用刚好的动能越过极昼坡',en:'Cross the polar energy slope'},
+      story:{'zh-CN':'坡高、摩擦和路径已经锁定。计算克服重力与摩擦后剩余的动能，决定入口速度。',en:'Height, friction and path are locked. Account for gravity and friction, then choose the entry speed.'},
+      formula:'½mv₀² − mgh − μmgs = ½mv²',target:{'zh-CN':'坡顶速度：3.5–4.5 m/s',en:'Summit speed: 3.5–4.5 m/s'},equation:'½mv² = ½mv₀² − mgh − μmgs',worldLabel:{'zh-CN':'极昼坡 · 速度太低会停车，太高会撞击',en:'Polar slope · too slow stalls, too fast impacts'},
+      cost:{'zh-CN':'每次提交：−24 s · −25% 能源',en:'Each submission: −24 s · −25% energy'},
+      fields:[{id:'entry-speed',moduleId:'physics.work-energy',path:'entrySpeed',command:'speed.set',label:{'zh-CN':'坡道入口速度 v₀',en:'Entry speed v₀'},unit:'m/s',min:4,max:12,step:.1,precision:1}],
+      metrics:[{id:'slope.exit-speed',label:{'zh-CN':'计算坡顶速度',en:'Calculated summit speed'},unit:'m/s',precision:2}],
+    },
+    brake:{
+      kicker:{'zh-CN':'阶段 03 · 制动窗口',en:'STAGE 03 · BRAKING'},title:{'zh-CN':'停在磁闸安全线之前',en:'Stop before the magnetic gate'},
+      story:{'zh-CN':'列车以 4.0 m/s 进入最后五米。设置制动减速度，让停车点留在安全线内且余量不超过 1.5 m。',en:'The train enters the final five metres at 4.0 m/s. Set deceleration so it stops inside the line with no more than 1.5 m spare.'},
+      formula:'s = v² / 2a',target:{'zh-CN':'制动余量：0–1.5 m',en:'Braking margin: 0–1.5 m'},equation:'sₛₜₒₚ = v² ÷ 2a',worldLabel:{'zh-CN':'磁闸接近 · 过早停车也无法完成交付',en:'Gate approach · stopping too early also fails delivery'},
+      cost:{'zh-CN':'每次提交：−16 s · −20% 能源',en:'Each submission: −16 s · −20% energy'},
+      fields:[{id:'deceleration',moduleId:'physics.braking',path:'deceleration',command:'deceleration.set',label:{'zh-CN':'制动减速度 a',en:'Deceleration a'},unit:'m/s²',min:.5,max:5,step:.1,precision:1}],
+      metrics:[{id:'braking.margin',label:{'zh-CN':'停车余量',en:'Stopping margin'},unit:'m',precision:2}],
+    },
+    debrief:{
+      kicker:{'zh-CN':'阶段 04 · 任务复盘',en:'STAGE 04 · DEBRIEF'},title:{'zh-CN':'把三次决策连成一条证据链',en:'Connect the three decisions'},
+      story:{'zh-CN':'列车已经停稳。确认提交后，系统会分别评价任务结果与知识掌握证据。',en:'The train has stopped. Confirm to evaluate mission outcome and learning evidence separately.'},
+      formula:'F → W → Δv',target:{'zh-CN':'确认三个模型均留下有效证据',en:'Confirm that all three models left valid evidence'},equation:'a = F/m　→　W = ΔEₖ　→　v² = v₀² + 2as',worldLabel:{'zh-CN':'交付平台 · 任务成功不等于每个知识点都掌握',en:'Delivery platform · mission success is not identical to mastery'},
+      cost:{'zh-CN':'复盘提交不再消耗资源',en:'Debrief does not consume resources'},fields:[],metrics:[],
+    },
+  },
+};

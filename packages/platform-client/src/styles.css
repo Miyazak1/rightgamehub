@@ -2694,3 +2694,14 @@ footer.community-actions > .community-report-button {
 @media(max-width:960px){.learning-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:820px){.learning-page{width:calc(100% - 32px)}.learning-section-heading{align-items:flex-start;flex-direction:column;gap:8px}.learning-section-heading>p{text-align:left}.learning-catalog__head{align-items:stretch;flex-direction:column}.learning-catalog__head input{width:100%}}
 @media(max-width:540px){.learning-page{width:calc(100% - 24px)}.learning-hero{margin-bottom:28px}.learning-category-grid{grid-template-columns:1fr}.learning-category-grid>button{min-height:112px}.learning-card{display:block}.learning-card__cover,.learning-card__cover .art{height:auto;aspect-ratio:auto}.learning-card__body{min-height:215px}.learning-card__open{opacity:1;transform:none}}
+
+/* Learning must remain comfortably readable at a normal desktop zoom. */
+@media(min-width:961px){
+  .learning-page{width:min(calc(100% - 64px),1280px)}
+  .learning-kicker{font-size:12px}.learning-hero p{font-size:15px}
+  .learning-section-heading h2{font-size:25px}.learning-section-heading>p{font-size:14px}
+  .learning-category-grid>button{min-height:138px;padding:20px}.learning-category__copy strong{font-size:16px}.learning-category__copy small{font-size:13px;line-height:1.6}.learning-category__count{font-size:11px}
+  .learning-catalog__head h2{font-size:27px}.learning-catalog__head p{font-size:14px}.learning-catalog__head input{height:44px;font-size:14px}
+  .learning-subjects button{min-width:80px;padding:8px 15px;font-size:12px}
+  .learning-card__body{min-height:250px;padding:19px}.learning-card__meta{font-size:12px}.learning-card__verified{font-size:11px}.learning-card h3{font-size:19px}.learning-card__body>p{height:48px;font-size:14px;line-height:1.7}.learning-card__context span{font-size:11px}.learning-card footer>span{font-size:12px}.learning-card footer button{padding:8px 12px;font-size:13px}
+}

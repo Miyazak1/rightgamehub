@@ -7,13 +7,14 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const targets=['templates/courseware','plugins/gamehub/templates/courseware'];
 const shared={
   measurement:{ source:'packages/courseware-domain-packs/src/instrument/measurement.mjs',id:'instrument.measurement',kind:'instrument',hotSwap:'live',capabilities:['instrument.measurement'],commands:['instrument.channel.set','measurement.record','comparison.select','measurement.clear'] },
-  workbench:{ source:'packages/courseware-domain-packs/src/component/workbench.mjs',id:'component.workbench',kind:'component',hotSwap:'live',capabilities:['component.workbench'],commands:['experience.set','panel.set','locale.set','motion.set'] },
+  workbench:{ source:'packages/courseware-domain-packs/src/component/workbench.mjs',id:'component.workbench',version:'1.1.0',kind:'component',hotSwap:'live',stateSchemaVersion:2,capabilities:['component.workbench','component.workbench.modes'],commands:['capabilities.configure','experience.set','panel.set','locale.set','motion.set'] },
   journey:{ source:'packages/courseware-domain-packs/src/journey/progress.mjs',id:'journey.progress',kind:'journey',hotSwap:'paused',capabilities:['journey.progress'],commands:['scene.complete','checkpoint.complete','progress.reset'] },
   embed:{ source:'packages/courseware-domain-packs/src/embed/bridge.mjs',id:'embed.bridge',kind:'embed',hotSwap:'session',capabilities:['embed.bridge'],commands:['embed.ready','embed.command.received','embed.state.exported'] },
 };
 const lessons={
   'concept-explorer':{ source:'packages/courseware-domain-packs/src/math/quadratic.mjs',id:'math.quadratic',capability:'domain.function',commands:['coefficient.set','sample.set','reference.toggle','model.reset'],challenge:{source:'packages/courseware-domain-packs/src/challenge/quadratic-target.mjs',id:'challenge.quadratic-target'} },
   'causal-simulation':{ source:'packages/courseware-domain-packs/src/physics/newton-cart.mjs',id:'physics.newton-cart',capability:'domain.motion',commands:['force.set','mass.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record'],challenge:{source:'packages/courseware-domain-packs/src/challenge/supply-cart.mjs',id:'challenge.supply-cart'} },
+  'projectile-motion':{ source:'packages/courseware-domain-packs/src/physics/projectile.mjs',id:'physics.projectile',capability:'domain.projectile',commands:['speed.set','angle.set','gravity.set','target.set','obstacle.set','simulation.run','simulation.pause','simulation.reset','simulation.step','measurement.record','model.restore'],challenge:{source:'packages/courseware-domain-packs/src/challenge/projectile-rescue.mjs',id:'challenge.projectile-rescue',commands:['challenge.attempt','challenge.reset','challenge.restore']} },
   'algorithm-stepper':{ source:'packages/courseware-domain-packs/src/chemistry/equilibrium.mjs',id:'chemistry.equilibrium',capability:'domain.equilibrium',commands:['volume.set','temperature.set','catalyst.toggle','feed.set','simulation.run','simulation.pause','simulation.step','simulation.reset'],challenge:{source:'packages/courseware-domain-packs/src/challenge/safe-no2-batch.mjs',id:'challenge.safe-no2-batch'} },
 };
 const digest=bytes=>`sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -22,7 +23,7 @@ const writeModule=async(base,name,definition,dependencies=[])=>{
   const source=await fs.readFile(path.join(root,definition.source),'utf8');
   const bytes=Buffer.from(source.replace(/\r\n?/gu,'\n'),'utf8');
   await fs.writeFile(path.join(directory,'index.mjs'),bytes);
-  const manifest={ format:'mooyu.courseware-module',schemaVersion:1,id:definition.id,version:'1.0.0',kind:definition.kind??'domain',apiVersion:1,entry:'./index.mjs',integrity:digest(bytes),hotSwap:definition.hotSwap??'paused',stateSchemaVersion:1,capabilities:definition.capabilities??[definition.capability],commands:definition.commands,dependencies };
+  const manifest={ format:'mooyu.courseware-module',schemaVersion:1,id:definition.id,version:definition.version??'1.0.0',kind:definition.kind??'domain',apiVersion:1,entry:'./index.mjs',integrity:digest(bytes),hotSwap:definition.hotSwap??'paused',stateSchemaVersion:definition.stateSchemaVersion??1,capabilities:definition.capabilities??[definition.capability],commands:definition.commands,dependencies };
   await fs.writeFile(path.join(directory,'module.json'),`${JSON.stringify(manifest,null,2)}\n`);
 };
 
@@ -31,9 +32,15 @@ for(const target of targets)for(const [lesson,domain] of Object.entries(lessons)
   await writeModule(base,'domain',domain);
   await writeModule(base,'measurement',shared.measurement,[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
   await writeModule(base,'workbench',shared.workbench);
-  await writeModule(base,'challenge',{...domain.challenge,kind:'challenge',hotSwap:'paused',capabilities:['challenge.evaluate'],commands:['challenge.attempt','challenge.reset']},[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
+  await writeModule(base,'challenge',{...domain.challenge,kind:'challenge',hotSwap:'paused',capabilities:['challenge.evaluate'],commands:domain.challenge.commands??['challenge.attempt','challenge.reset']},[{ id:domain.id,apiVersion:1,capabilities:[domain.capability] }]);
   await writeModule(base,'journey',shared.journey);
   await writeModule(base,'embed',shared.embed);
 }
-for(const lesson of Object.keys(lessons))await fs.copyFile(path.join(root,'templates/courseware',lesson,'dist/index.html'),path.join(root,'plugins/gamehub/templates/courseware',lesson,'dist/index.html'));
+for(const lesson of Object.keys(lessons)){
+  const source=path.join(root,'templates/courseware',lesson),destination=path.join(root,'plugins/gamehub/templates/courseware',lesson);
+  for(const relative of ['mooyu-courseware.json','courseware/course.json','courseware/experience.json','evidence/sources.json','tests/journeys.json','dist/index.html']){
+    await fs.mkdir(path.dirname(path.join(destination,relative)),{recursive:true});
+    await fs.copyFile(path.join(source,relative),path.join(destination,relative));
+  }
+}
 console.log('Synchronized structured courseware domain modules.');

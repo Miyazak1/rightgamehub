@@ -1,0 +1,21 @@
+{
+  "format": "mooyu.courseware-experience", "schemaVersion": 1,
+  "engine": { "id": "projectile-motion-2d", "version": 1, "deterministic": true, "snapshot": true, "stateVariables": ["speed", "angle", "gravity", "time", "x", "y", "vx", "vy", "range", "max-height"] },
+  "defaultMode": "textbook", "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "调整速度与角度，观察真实时间轨迹。", "en": "Adjust speed and angle and observe the time-based trajectory." }, "instrumentIds": ["trace", "vector", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "把初速度分解为水平和竖直分量。", "en": "Resolve initial velocity into horizontal and vertical components." }, "instrumentIds": ["vector", "equation"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "比较射程、最大高度与试射记录。", "en": "Compare range, maximum height, and trial evidence." }, "instrumentIds": ["graph", "table", "comparison"] }
+  ],
+  "modes": [
+    { "id": "textbook", "kind": "textbook-lab", "title": { "zh-CN": "教材", "en": "Textbook" }, "sceneIds": ["launch-projectile"], "freedomLevel": "F1", "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save"], "instrumentIds": ["trace", "vector", "graph", "table", "replay"], "curiosityHook": { "zh-CN": "为什么飞行物在水平方向匀速，轨迹却是弯的？", "en": "Why is horizontal motion uniform while the flight path curves?" } },
+    { "id": "sandbox", "kind": "free-sandbox", "title": { "zh-CN": "自由", "en": "Sandbox" }, "sceneIds": ["launch-projectile"], "freedomLevel": "F3", "allowedCommands": ["object.add", "object.remove", "object.place", "object.connect", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save"], "instrumentIds": ["trace", "vector", "graph", "table", "comparison", "replay"], "curiosityHook": { "zh-CN": "换一颗星球、移动目标和障碍物，你能发现哪些不变的规律？", "en": "Change the planet, target, and obstacle. Which patterns remain?" } },
+    { "id": "rescue", "kind": "scenario-challenge", "title": { "zh-CN": "救援挑战", "en": "Rescue Challenge" }, "sceneIds": ["launch-projectile"], "freedomLevel": "F3", "allowedCommands": ["object.add", "object.remove", "object.place", "object.connect", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save"], "instrumentIds": ["trace", "vector", "graph", "table", "comparison", "replay"], "curiosityHook": { "zh-CN": "五次试射内，让救援胶囊越过风塔并落入山谷目标区。", "en": "Clear the wind tower and land a rescue capsule in the canyon target within five launches." }, "challenge": { "id": "projectile-rescue", "title": { "zh-CN": "山谷精准投送", "en": "Canyon precision drop" }, "goal": { "zh-CN": "飞越障碍物，并落在目标点 ±2 m 范围内。", "en": "Clear the obstacle and land within ±2 m of the target." }, "success": [{ "metric": "clearance", "operator": "gte", "value": 0 }, { "metric": "range", "operator": "between", "values": [27, 31] }], "attemptPolicy": { "maxAttempts": 5, "retry": "after-feedback" } } }
+  ],
+  "instruments": [
+    { "id": "trace", "kind": "trace", "title": { "zh-CN": "等时间轨迹", "en": "Equal-time Trace" } }, { "id": "vector", "kind": "vector", "title": { "zh-CN": "速度矢量", "en": "Velocity Vectors" } },
+    { "id": "graph", "kind": "graph", "title": { "zh-CN": "运动图像", "en": "Motion Graph" } }, { "id": "table", "kind": "table", "title": { "zh-CN": "试射记录", "en": "Trial Table" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "方案对照", "en": "Trial Comparison" } }, { "id": "replay", "kind": "replay", "title": { "zh-CN": "回放", "en": "Replay" } },
+    { "id": "equation", "kind": "annotation", "title": { "zh-CN": "方程", "en": "Equations" } }
+  ]
+}

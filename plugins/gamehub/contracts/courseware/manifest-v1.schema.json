@@ -24,10 +24,33 @@
         "maximumAge": { "type": "integer", "minimum": 3, "maximum": 120 }
       }
     },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "topic", "estimatedMinutes", "cover"],
+      "properties": {
+        "category": { "enum": ["simulations", "practice", "tools", "topics"] },
+        "topic": { "$ref": "#/$defs/localizedText" },
+        "estimatedMinutes": { "type": "integer", "minimum": 1, "maximum": 240 },
+        "order": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "cover": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["symbol", "tone"],
+          "properties": {
+            "symbol": { "type": "string", "minLength": 1, "maxLength": 40 },
+            "tone": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
     "course": { "$ref": "#/$defs/localPath" },
     "evidence": { "$ref": "#/$defs/localPath" },
     "tests": { "$ref": "#/$defs/localPath" },
     "experience": { "$ref": "#/$defs/localPath" },
+    "mission": { "$ref": "#/$defs/localPath" },
+    "capabilityBindings": { "$ref": "#/$defs/localPath" },
+    "evidenceModel": { "$ref": "#/$defs/localPath" },
     "build": {
       "type": "object",
       "additionalProperties": false,

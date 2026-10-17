@@ -6,6 +6,8 @@
   "exports": {
     "./math/quadratic": "./src/math/quadratic.mjs",
     "./physics/newton-cart": "./src/physics/newton-cart.mjs",
+    "./physics/work-energy": "./src/physics/work-energy.mjs",
+    "./physics/braking": "./src/physics/braking.mjs",
     "./chemistry/equilibrium": "./src/chemistry/equilibrium.mjs",
     "./instrument/measurement": "./src/instrument/measurement.mjs",
     "./component/workbench": "./src/component/workbench.mjs",

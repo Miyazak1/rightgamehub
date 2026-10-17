@@ -1,0 +1,6 @@
+{
+  "format": "mooyu.courseware-module", "schemaVersion": 1, "id": "math.derivative", "version": "1.0.0", "kind": "domain", "apiVersion": 1,
+  "entry": "./index.mjs", "integrity": "sha256:d33434fe56f10f62c71ee19cc7adf0ae9843ef27d04ec0e8978ea02462b5e697", "hotSwap": "paused", "stateSchemaVersion": 1,
+  "capabilities": ["domain.function", "domain.calculus", "domain.optimization"],
+  "commands": ["function.set", "probe.set", "delta.set", "derivative.toggle", "optimization.side.set", "optimization.cut.set", "model.reset"], "dependencies": []
+}

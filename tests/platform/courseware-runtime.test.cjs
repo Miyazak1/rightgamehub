@@ -53,6 +53,21 @@ test('the same initial state and command sequence produces the same snapshot', a
   assert.deepEqual(run(), run());
 });
 
+test('runtime snapshots restore the authoritative command branch', async () => {
+  const runtime=await import(runtimeUrl),session=new runtime.CoursewareRuntime();
+  session.register(mathModule(runtime));session.activate('math.functions');
+  session.dispatch('math.functions','coefficient.set',{value:-2});
+  const branchPoint=session.snapshot();
+  session.dispatch('math.functions','coefficient.set',{value:9});
+  session.restore(branchPoint);
+  session.dispatch('math.functions','coefficient.set',{value:3});
+  const restored=session.snapshot();
+  assert.deepEqual(restored.commands.map(command=>command.payload.value),[-2,3]);
+  assert.equal(session.observe('math.functions').coefficient,3);
+  const fresh=new runtime.CoursewareRuntime();fresh.register(mathModule(runtime));fresh.activate('math.functions');fresh.restore(restored);
+  assert.deepEqual(fresh.snapshot().commands,restored.commands);
+});
+
 test('live instruments hot swap while running and preserve their isolated state', async () => {
   const runtime = await import(runtimeUrl);
   const session = new runtime.CoursewareRuntime();
@@ -81,6 +96,30 @@ test('domain swaps require a pause and explicit migration when state schema chan
   assert.throws(() => session.swap(upgraded), { code: 'COURSEWARE_MODULE_PAUSE_REQUIRED' });
   session.pause(); session.swap(upgraded);
   assert.deepEqual(session.observe('math.functions'), { a: 1, family: 'quadratic' });
+});
+
+test('module lifecycle changes keep runtime-produced snapshots restorable', async () => {
+  const runtime = await import(runtimeUrl);
+  const deactivated = new runtime.CoursewareRuntime();
+  deactivated.register(mathModule(runtime)); deactivated.activate('math.functions');
+  deactivated.dispatch('math.functions', 'coefficient.set', { value: 2 });
+  deactivated.deactivate('math.functions');
+  const inactiveSnapshot = deactivated.snapshot();
+  assert.deepEqual(inactiveSnapshot.commands.map(command=>command.name), ['coefficient.set']);
+  assert.doesNotThrow(() => deactivated.restore(inactiveSnapshot));
+
+  const instrument = (version, commands) => runtime.defineCoursewareModule({
+    manifest: manifest({ id:'instrument.lifecycle',version,kind:'instrument',entry:'./lifecycle.mjs',hotSwap:'live',capabilities:['instrument.lifecycle'],commands,dependencies:[] }),
+    createState: () => ({ count:0 }),
+    reduce: ({ state,command }) => ({ count:state.count + (command.name === 'increment' ? 1 : -1) }),
+  });
+  const swapped = new runtime.CoursewareRuntime();
+  swapped.register(instrument('1.0.0',['increment'])); swapped.activate('instrument.lifecycle');
+  swapped.dispatch('instrument.lifecycle','increment');
+  swapped.swap(instrument('2.0.0',['decrement']));
+  const swappedSnapshot = swapped.snapshot();
+  assert.deepEqual(swappedSnapshot.commands.map(command=>command.name), ['increment']);
+  assert.doesNotThrow(() => swapped.restore(swappedSnapshot));
 });
 
 test('manifest policy rejects unsafe hot swap and missing hard dependencies', async () => {

@@ -8,6 +8,7 @@
   "locales": ["zh-CN", "en"],
   "subjects": ["physics", "mechanics"],
   "audience": { "stages": ["lower-secondary", "upper-secondary"], "minimumAge": 12 },
+  "catalog": { "category": "simulations", "topic": { "zh-CN": "力学 · 牛顿第二定律", "en": "Mechanics · Newton's second law" }, "estimatedMinutes": 12, "order": 200, "cover": { "symbol": "F = ma", "tone": "physics" } },
   "course": "courseware/course.json",
   "experience": "courseware/experience.json",
   "evidence": "evidence/sources.json",

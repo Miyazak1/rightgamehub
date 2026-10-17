@@ -1,0 +1,6 @@
+{
+  "format":"mooyu.courseware-module","schemaVersion":1,"id":"physics.kinematics-track","version":"1.0.0","kind":"domain","apiVersion":1,"entry":"./index.mjs","integrity":"sha256:6992b88ae95a04df851ea9321767884591bbfc865ab10bce5d610919d82c74f6","hotSwap":"paused","stateSchemaVersion":1,
+  "capabilities":["domain.motion"],
+  "commands":["velocity.set","acceleration.set","simulation.run","simulation.pause","simulation.reset","simulation.step","measurement.record"],
+  "dependencies":[]
+}

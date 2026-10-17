@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>新交互课件</title>
+  <style>
+    *{box-sizing:border-box}html,body{height:100%;margin:0}.cw-shell{display:grid;height:100dvh;grid-template-rows:54px 70px minmax(0,1fr) 58px;background:#fbfaf5;color:#172523;font:12px system-ui,sans-serif}.cw-shell__header,.cw-toolbar,.cw-transport{display:flex;align-items:center;gap:12px;padding:8px 16px;border:1px solid #d9d5ca}.cw-experiences,.cw-views{display:flex;gap:6px}.cw-views{margin:auto}.cw-workspace{min-height:0;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.7fr);gap:10px;padding:10px}.cw-lesson,.cw-evidence{min-height:0;padding:16px;border:1px solid #d9d5ca;border-radius:10px;background:#fff}.cw-panel{display:none}[data-mode=explore] [data-panel=explore],[data-mode=model] [data-panel=model],[data-mode=analyse] [data-panel=analyse]{display:block}button{min-height:34px;border:1px solid #d9d5ca;border-radius:7px;background:#fff}button[aria-pressed=true]{color:#fff;background:#7255df}@media(max-width:760px){.cw-shell{height:auto;min-height:100dvh;grid-template-rows:auto}.cw-workspace{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main class="cw-shell" data-mooyu-scene="replace-scene-id" data-experience="textbook" data-mode="explore">
+  <header class="cw-shell__header">
+    <strong data-copy="brand">墨鱼课件实验室</strong>
+    <div class="cw-experiences" aria-label="学习模式">
+      <button data-experience-mode="textbook" aria-pressed="true" data-copy="textbook">教材</button>
+      <button data-experience-mode="sandbox" aria-pressed="false" data-copy="sandbox">自由</button>
+      <button data-experience-mode="signal" aria-pressed="false" data-copy="challenge">挑战</button>
+    </div>
+    <nav class="cw-views" aria-label="工作阶段">
+      <button data-mode="explore" aria-pressed="true" data-copy="explore">探索</button>
+      <button data-mode="model" aria-pressed="false" data-copy="model">建模</button>
+      <button data-mode="analyse" aria-pressed="false" data-copy="analyse">分析</button>
+    </nav>
+    <span class="cw-shell__status" aria-live="polite" data-copy="ready">实验台已就绪</span>
+  </header>
+  <section class="cw-toolbar"><strong class="cw-toolbar__label" data-copy="build">构建</strong><div class="cw-toolbar__actions"><button>替换为学科工具</button></div></section>
+  <section class="cw-workspace">
+    <article class="cw-lesson"><h1>替换为学科实验</h1><p>模型、图形和直接操作属于课件，不属于 UI Kit。</p></article>
+    <aside class="cw-evidence">
+      <section class="cw-panel" data-panel="explore"><h2>探索</h2><p>引导问题、开放任务或挑战目标。</p></section>
+      <section class="cw-panel" data-panel="model"><h2>建模</h2><p>解释变量、关系和计算。</p></section>
+      <section class="cw-panel" data-panel="analyse"><h2>分析</h2><p>保存、比较并解释证据。</p></section>
+    </aside>
+  </section>
+  <footer class="cw-transport"><button data-copy="run">开始实验</button><input type="range" aria-label="实验进度"><output aria-live="polite">0 / 0</output></footer>
+</main>
+<script type="module">
+  const root=document.querySelector('[data-mooyu-scene]');
+  root.querySelectorAll('[data-experience-mode]').forEach(button=>button.onclick=()=>{root.dataset.experience=button.dataset.experienceMode;root.querySelectorAll('[data-experience-mode]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)))});
+  root.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{root.dataset.mode=button.dataset.mode;root.querySelectorAll('[data-mode]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)))});
+</script>
+</body>
+</html>

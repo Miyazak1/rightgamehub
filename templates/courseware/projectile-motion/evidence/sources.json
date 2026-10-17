@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "sources": [{ "id": "openstax-physics-projectile", "type": "book", "title": "Physics", "publisher": "OpenStax", "url": "https://openstax.org/details/books/physics", "license": "CC-BY-4.0", "locator": "Section 5.3" }],
+  "claims": [{ "id": "projectile-independence", "text": { "zh-CN": "忽略空气阻力时，抛体的水平运动和竖直运动可独立分析。", "en": "Neglecting air resistance, a projectile's horizontal and vertical motions can be analysed independently." }, "sourceIds": ["openstax-physics-projectile"], "locators": ["Section 5.3"], "verification": "primary-source" }]
+}

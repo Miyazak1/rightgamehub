@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "objectives": [{ "id": "predict-projectile-trajectory", "text": { "zh-CN": "分解初速度并用水平、竖直运动预测抛体轨迹。", "en": "Resolve initial velocity and combine horizontal and vertical motion to predict a projectile trajectory." } }],
+  "prerequisites": [{ "zh-CN": "了解速度、加速度与三角函数。", "en": "Understands velocity, acceleration, and trigonometric ratios." }],
+  "misconceptions": [
+    { "id": "horizontal-speed-falls", "text": { "zh-CN": "误以为无空气阻力时水平速度也会不断减小。", "en": "Assuming horizontal velocity decreases without air resistance." }, "objectiveIds": ["predict-projectile-trajectory"] },
+    { "id": "angle-always-45", "text": { "zh-CN": "误以为任何任务的最佳发射角都必然是 45°。", "en": "Assuming every launch task must have an optimal angle of 45°." }, "objectiveIds": ["predict-projectile-trajectory"] }
+  ],
+  "scenes": [{ "id": "launch-projectile", "type": "simulate", "title": { "zh-CN": "山谷救援投送", "en": "Canyon rescue launch" }, "objectiveIds": ["predict-projectile-trajectory"], "evidenceIds": ["projectile-independence"], "component": { "type": "projectile-range-simulation", "config": { "speedRange": [6, 30], "angleRange": [10, 80] } }, "fallback": { "zh-CN": "若动画不可用，请用 x=v₀cosθ·t 与 y=v₀sinθ·t-½gt² 计算。", "en": "If animation is unavailable, calculate with x=v₀cosθ·t and y=v₀sinθ·t-½gt²." } }],
+  "checkpoints": [{ "id": "predict-range-angle", "sceneId": "launch-projectile", "objectiveIds": ["predict-projectile-trajectory"], "kind": "multiple-choice", "prompt": { "zh-CN": "在同高发射和落地、速度不变时，射程在哪个角度附近最大？", "en": "For equal launch and landing heights at fixed speed, near which angle is range greatest?" }, "answer": "near-45" }],
+  "completion": { "objectiveIds": ["predict-projectile-trajectory"], "checkpointIds": ["predict-range-angle"] }
+}

@@ -41,10 +41,9 @@ function output(value,asJson,formatter) {
 }
 
 async function findTemplate(name) {
-  if (!['concept-explorer','causal-simulation','algorithm-stepper'].includes(name)) throw new CoursewareToolkitError('COURSEWARE_TEMPLATE_UNKNOWN', `未知课件模板：${name || '(missing)'}`);
   const candidates = [new URL(`../templates/courseware/${name}/`,import.meta.url),new URL(`../plugins/gamehub/templates/courseware/${name}/`,import.meta.url)];
-  for (const candidate of candidates) try { if ((await fs.stat(candidate)).isDirectory()) return path.resolve(fileURLToPath(candidate)); } catch {}
-  throw new CoursewareToolkitError('COURSEWARE_TEMPLATE_MISSING', `已安装插件缺少 ${name} 模板，请更新墨鱼工坊插件。`);
+  for (const candidate of candidates) try { if ((await fs.stat(candidate)).isDirectory() && (await fs.stat(new URL('mooyu-courseware.json',candidate))).isFile()) return path.resolve(fileURLToPath(candidate)); } catch {}
+  throw new CoursewareToolkitError('COURSEWARE_TEMPLATE_UNKNOWN', `未知或未安装的课件模板：${name || '(missing)'}`);
 }
 
 const catalog = await loadCatalog();
@@ -78,7 +77,7 @@ try {
     if (command === 'prompt') process.stdout.write(`${toolkit.agentPrompt}\n`); else printToolkit(toolkit);
   } else if (command === 'init') {
     const [template,target] = positionals;
-    if (!template || !target) throw new CoursewareToolkitError('COURSEWARE_INIT_USAGE', '用法：creator-toolkit init <concept-explorer|causal-simulation|algorithm-stepper> <新目录> [--json]');
+    if (!template || !target) throw new CoursewareToolkitError('COURSEWARE_INIT_USAGE', '用法：creator-toolkit init <课件模板名> <新目录> [--json]');
     const result = await initializeCoursewareProject({ templateRoot:await findTemplate(template),targetRoot:target });
     output(result,asJson,value => console.log(`已从 ${value.template} 创建 ${value.target}\n下一步：creator-toolkit doctor "${value.target}"`));
   } else if (command === 'inspect') {

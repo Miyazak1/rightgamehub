@@ -9,6 +9,12 @@
     "stateVariables": ["volume", "temperature", "equilibrium-constant", "total-units", "catalyst", "n2o4", "no2", "reaction-quotient", "progress"]
   },
   "defaultMode": "textbook",
+  "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "改变反应条件并观察粒子组成与平衡移动。", "en": "Change reaction conditions and observe composition and equilibrium shifts." }, "instrumentIds": ["particle-view", "qk-meter", "history", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "用 Q、K 和因果链解释体积、温度与催化剂的作用。", "en": "Explain volume, temperature, and catalyst effects through Q, K, and causal links." }, "instrumentIds": ["particle-view", "qk-meter"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "比较组成曲线、条件记录和反应器快照。", "en": "Compare composition curves, condition records, and reactor snapshots." }, "instrumentIds": ["table", "history", "comparison"] }
+  ],
   "modes": [
     {
       "id": "textbook",
@@ -31,7 +37,7 @@
       "curiosityHook": { "zh-CN": "自由改变装料量、体积、温度和催化剂，能找到不同但等效的平衡方案吗？", "en": "Can different feed, volume, temperature, and catalyst choices reach equivalent equilibria?" }
     },
     {
-      "id": "production",
+      "id": "signal",
       "kind": "scenario-challenge",
       "title": { "zh-CN": "安全生产挑战", "en": "Safe Production Challenge" },
       "sceneIds": ["control-equilibrium"],

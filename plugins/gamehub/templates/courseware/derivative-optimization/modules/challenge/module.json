@@ -1,0 +1,6 @@
+{
+  "format": "mooyu.courseware-module", "schemaVersion": 1, "id": "challenge.optimization-target", "version": "1.0.0", "kind": "challenge", "apiVersion": 1,
+  "entry": "./index.mjs", "integrity": "sha256:149e9784085711e4a1465ee12713af59122385d2e39b947ba53ea2cd44a3e36e", "hotSwap": "paused", "stateSchemaVersion": 1,
+  "capabilities": ["challenge.evaluate"], "commands": ["challenge.attempt", "challenge.reset", "challenge.restore"],
+  "dependencies": [{ "id": "math.derivative", "apiVersion": 1, "capabilities": ["domain.function", "domain.optimization"] }]
+}

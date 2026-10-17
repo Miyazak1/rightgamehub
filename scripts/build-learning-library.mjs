@@ -1,16 +1,73 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { builtInLearningItems } from '../packages/platform-client/src/learning-catalog.mjs';
 import { loadCoursewareInventory } from '../packages/creator-tools/src/courseware-toolkit.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const templateRoot = path.join(root, 'templates', 'courseware');
 const targetRoot = path.join(root, 'apps', 'web', 'public', 'learning', 'courseware');
-const templates = [...new Set(builtInLearningItems.map(item => item.template).filter(Boolean))];
+const generatedFile = path.join(root, 'packages', 'platform-client', 'src', 'generated-learning-items.mjs');
+const subjectLabels = {
+  mathematics:{ 'zh-CN':'数学',en:'Mathematics' }, physics:{ 'zh-CN':'物理',en:'Physics' }, chemistry:{ 'zh-CN':'化学',en:'Chemistry' },
+};
+const stageLabels = {
+  primary:{ 'zh-CN':'小学',en:'Primary' }, 'lower-secondary':{ 'zh-CN':'初中',en:'Lower secondary' }, 'upper-secondary':{ 'zh-CN':'高中',en:'Upper secondary' },
+};
+const modeKinds = { 'textbook-lab':'textbook','free-sandbox':'sandbox','scenario-challenge':'challenge' };
+const goldModes=['textbook','sandbox','signal'];
+const goldViews=['explore','model','analyse'];
+const goldJourneyIds=goldModes.flatMap(mode=>goldViews.map(view=>`${mode}-${view}`));
 
-for (const name of templates) {
+function matchesAll(values,required){return required.every(value=>values.includes(value));}
+
+function inspectGoldStandardRelease(inventory,manifest,experience){
+  const hasUiKit=manifest.runtime.modules.includes('modules/ui-kit/module.json');
+  if(!hasUiKit)return null;
+  const entry=inventory.files.find(file=>file.relative===manifest.build.entry);
+  const journeysFile=inventory.files.find(file=>file.relative===manifest.tests);
+  const html=entry?.bytes.toString('utf8')??'';
+  const journeys=journeysFile?JSON.parse(journeysFile.bytes.toString('utf8')):{journeys:[]};
+  const htmlModes=[...html.matchAll(/data-experience-mode="([^"]+)"/gu)].map(match=>match[1]);
+  const htmlViews=[...html.matchAll(/data-mode="([^"]+)"/gu)].map(match=>match[1]);
+  const experienceModes=experience.modes.map(mode=>mode.id);
+  const experienceViews=experience.views.map(view=>view.id);
+  const journeyIds=journeys.journeys.map(journey=>journey.id);
+  const problems=[];
+  if(!matchesAll(htmlModes,goldModes)||!matchesAll(experienceModes,goldModes))problems.push('textbook/sandbox/signal modes');
+  if(!matchesAll(htmlViews,goldViews)||!matchesAll(experienceViews,goldViews))problems.push('explore/model/analyse views');
+  if(!matchesAll(journeyIds,goldJourneyIds))problems.push('nine matrix journeys');
+  if(/id="locale"|id="lang"|class="[^"]*language-action|data-locale-switch/u.test(html))problems.push('host-owned locale control');
+  if(problems.length)throw new Error(`${manifest.id}: gold-standard release is missing ${problems.join(', ')}.`);
+  return {id:'gold-standard-v1',matrixSize:goldModes.length*goldViews.length,modes:goldModes,views:goldViews};
+}
+
+const directories = (await readdir(templateRoot,{ withFileTypes:true })).filter(entry=>entry.isDirectory()).map(entry=>entry.name).sort((a,b)=>a.localeCompare(b,'en'));
+const releases=[];
+for (const name of directories) {
+  const projectRoot=path.join(templateRoot,name);
+  let inventory;
+  try { inventory=await loadCoursewareInventory(projectRoot); } catch (error) { if(error?.code==='ENOENT')continue; throw error; }
+  const { manifest }=inventory;
+  if(!manifest.catalog)throw new Error(`${name}: manifest.catalog is required for the learning library.`);
+  const experienceFile=inventory.files.find(file=>file.relative===manifest.experience);
+  const experience=JSON.parse(experienceFile.bytes.toString('utf8'));
+  const shell=inspectGoldStandardRelease(inventory,manifest,experience);
+  const stages=manifest.audience.stages;
+  const stage=stages.length===1 ? stageLabels[stages[0]] : { 'zh-CN':stages.map(value=>stageLabels[value]?.['zh-CN']??value).join('—'),en:stages.map(value=>stageLabels[value]?.en??value).join('–') };
+  releases.push({ name,order:manifest.catalog.order??10000,inventory,item:{
+    id:manifest.id,catalogCategory:manifest.catalog.category,title:manifest.title,description:manifest.summary,
+    subject:manifest.subjects[0],subjectLabel:subjectLabels[manifest.subjects[0]]??{ 'zh-CN':manifest.subjects[0],en:manifest.subjects[0] },
+    topic:manifest.catalog.topic,stage,estimatedMinutes:manifest.catalog.estimatedMinutes,template:name,
+    runtimeUrl:`/learning/courseware/${name}/dist/index.html`,symbol:manifest.catalog.cover.symbol,
+    coverTone:manifest.catalog.cover.tone,verified:true,modes:[...new Set(experience.modes.map(mode=>modeKinds[mode.kind]).filter(Boolean))],
+    shellProfile:shell?.id??null,views:shell?.views??experience.views.map(view=>view.id),matrixSize:shell?.matrixSize??null,
+  }});
+}
+releases.sort((a,b)=>a.order-b.order||a.item.id.localeCompare(b.item.id,'en'));
+await writeFile(generatedFile,`// Generated by scripts/build-learning-library.mjs. Do not edit by hand.\nexport const generatedLearningItems = ${JSON.stringify(releases.map(release=>release.item),null,2)};\n`);
+
+for (const { name,inventory } of releases) {
   const target = path.join(targetRoot, name);
-  const inventory=await loadCoursewareInventory(path.join(root,'templates','courseware',name));
   for(const file of inventory.files){
     const destination=path.join(target,...file.relative.split('/'));
     await mkdir(path.dirname(destination),{recursive:true});
@@ -19,4 +76,4 @@ for (const name of templates) {
   await writeFile(path.join(target,'index.html'),`<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./dist/index.html"><title>Opening courseware…</title><p><a href="./dist/index.html">Open courseware</a></p>\n`);
 }
 
-console.log(`Prepared ${templates.length} locked learning courseware releases.`);
+console.log(`Prepared ${releases.length} manifest-driven learning courseware releases.`);

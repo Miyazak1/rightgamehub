@@ -51,6 +51,8 @@
     "knowledge-map:focus-report": "node scripts/report-three-subject-coverage.mjs",
     "knowledge-map:review-packets": "node scripts/report-courseware-review-packets.mjs",
     "knowledge-map:textbooks": "node scripts/generate-textbook-mappings.mjs",
-    "courseware:briefs:check": "node scripts/validate-courseware-briefs.mjs"
+    "courseware:briefs:check": "node scripts/validate-courseware-briefs.mjs",
+    "courseware:ui-kit:sync": "node scripts/sync-courseware-ui-kit.mjs",
+    "courseware:ui-kit:check": "node scripts/sync-courseware-ui-kit.mjs --check"
   }
 }

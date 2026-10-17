@@ -9,6 +9,12 @@
     "stateVariables": ["coefficient", "probe-x", "probe-y", "reference-coefficient"]
   },
   "defaultMode": "textbook",
+  "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "直接操纵系数和探针，观察图像即时变化。", "en": "Manipulate the coefficient and probe to observe the graph directly." }, "instrumentIds": ["probe", "graph", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "把符号、尺度与对称性组织成可验证的因果模型。", "en": "Organize sign, scale, and symmetry into a testable causal model." }, "instrumentIds": ["probe", "graph"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "比较取值表、曲线快照与不同函数方案。", "en": "Compare value tables, curve snapshots, and function designs." }, "instrumentIds": ["graph", "comparison"] }
+  ],
   "modes": [
     {
       "id": "textbook",
@@ -31,7 +37,7 @@
       "curiosityHook": { "zh-CN": "能否用不同的曲线，在同一个点相遇？", "en": "Can different curves meet at the same point?" }
     },
     {
-      "id": "target",
+      "id": "signal",
       "kind": "scenario-challenge",
       "title": { "zh-CN": "轨迹设计", "en": "Trajectory Design" },
       "sceneIds": ["explore-a"],

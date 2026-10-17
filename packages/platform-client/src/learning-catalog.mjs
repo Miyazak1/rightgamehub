@@ -1,3 +1,5 @@
+import { generatedLearningItems } from './generated-learning-items.mjs';
+
 export const learningCategories = [
   {
     id: 'simulations',
@@ -25,59 +27,7 @@ export const learningCategories = [
   },
 ];
 
-export const builtInLearningItems = [
-  {
-    id: 'quadratic-shape-explorer',
-    catalogCategory: 'simulations',
-    title: { 'zh-CN': '二次函数形状探索', en: 'Quadratic Shape Explorer' },
-    description: { 'zh-CN': '拖动参数，观察抛物线的开口、方向和宽窄如何变化。', en: 'Move parameters and observe how a parabola changes direction and width.' },
-    subject: 'mathematics',
-    subjectLabel: { 'zh-CN': '数学', en: 'Mathematics' },
-    topic: { 'zh-CN': '函数 · 二次函数', en: 'Functions · Quadratics' },
-    stage: { 'zh-CN': '初中—高中', en: 'Lower–upper secondary' },
-    estimatedMinutes: 8,
-    template: 'concept-explorer',
-    runtimeUrl: '/learning/courseware/concept-explorer/dist/index.html',
-    symbol: 'y = ax²',
-    coverTone: 'math',
-    verified: true,
-    modes: ['textbook', 'sandbox', 'challenge'],
-  },
-  {
-    id: 'force-motion-lab',
-    catalogCategory: 'simulations',
-    title: { 'zh-CN': '力与运动实验室', en: 'Force and Motion Lab' },
-    description: { 'zh-CN': '自由改变力和质量，用同步运动图像理解牛顿第二定律。', en: "Change force and mass, then use linked motion graphs to understand Newton's second law." },
-    subject: 'physics',
-    subjectLabel: { 'zh-CN': '物理', en: 'Physics' },
-    topic: { 'zh-CN': '力学 · 牛顿第二定律', en: "Mechanics · Newton's second law" },
-    stage: { 'zh-CN': '初中—高中', en: 'Lower–upper secondary' },
-    estimatedMinutes: 12,
-    template: 'causal-simulation',
-    runtimeUrl: '/learning/courseware/causal-simulation/dist/index.html',
-    symbol: 'F = ma',
-    coverTone: 'physics',
-    verified: true,
-    modes: ['textbook', 'sandbox', 'challenge'],
-  },
-  {
-    id: 'chemical-equilibrium-lab',
-    catalogCategory: 'simulations',
-    title: { 'zh-CN': '化学平衡调控实验室', en: 'Chemical Equilibrium Control Lab' },
-    description: { 'zh-CN': '操控体积、温度和催化剂，比较 Q 与 K 并预测平衡移动。', en: 'Control volume, temperature, and catalysts; compare Q with K and predict equilibrium shifts.' },
-    subject: 'chemistry',
-    subjectLabel: { 'zh-CN': '化学', en: 'Chemistry' },
-    topic: { 'zh-CN': '反应原理 · 化学平衡', en: 'Reaction principles · Equilibrium' },
-    stage: { 'zh-CN': '高中', en: 'Upper secondary' },
-    estimatedMinutes: 12,
-    template: 'algorithm-stepper',
-    runtimeUrl: '/learning/courseware/algorithm-stepper/dist/index.html',
-    symbol: 'Q ⇌ K',
-    coverTone: 'chemistry',
-    verified: true,
-    modes: ['textbook', 'sandbox', 'challenge'],
-  },
-];
+export const builtInLearningItems = generatedLearningItems;
 
 export const learningSubjects = [
   { id: 'all', label: { 'zh-CN': '全部学科', en: 'All subjects' } },

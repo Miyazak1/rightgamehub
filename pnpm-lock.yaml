@@ -116,7 +116,13 @@ importers:
 
   packages/courseware-embed-sdk: {}
 
+  packages/courseware-mission-engine: {}
+
+  packages/courseware-mission-workbench: {}
+
   packages/courseware-runtime: {}
+
+  packages/courseware-ui-kit: {}
 
   packages/creator-tools:
     dependencies:

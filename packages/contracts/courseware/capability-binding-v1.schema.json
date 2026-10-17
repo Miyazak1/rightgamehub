@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/capability-binding-v1.schema.json",
+  "title": "MOOYU Mission Capability Binding v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "missionId", "bindings"],
+  "properties": {
+    "format": { "const": "mooyu.mission-capability-binding" },
+    "schemaVersion": { "const": 1 },
+    "missionId": { "$ref": "#/$defs/id" },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot", "moduleId", "capability", "metrics"],
+        "properties": {
+          "slot": { "$ref": "#/$defs/id" },
+          "moduleId": { "$ref": "#/$defs/id" },
+          "capability": { "$ref": "#/$defs/id" },
+          "query": { "type": ["object", "null"], "additionalProperties": true },
+          "metrics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "path"],
+              "properties": {
+                "id": { "$ref": "#/$defs/id" },
+                "path": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+(?:\\.[a-zA-Z0-9_-]+)*$", "maxLength": 255 }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" }
+  }
+}

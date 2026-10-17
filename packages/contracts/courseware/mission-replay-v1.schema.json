@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/courseware/mission-replay-v1.schema.json",
+  "title": "MOOYU Deterministic Mission Replay v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "missionId", "missionVersion", "releaseDigest", "initialSnapshot", "commands", "finalStateDigest"],
+  "properties": {
+    "format": { "const": "mooyu.mission-replay" },
+    "schemaVersion": { "const": 1 },
+    "missionId": { "$ref": "#/$defs/id" },
+    "missionVersion": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "releaseDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "initialSnapshot": { "type": "object", "additionalProperties": true },
+    "commands": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "moduleId", "name", "payload"],
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 0 },
+          "moduleId": { "$ref": "#/$defs/id" },
+          "name": { "$ref": "#/$defs/id" },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
+    "finalStateDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" }
+  }
+}

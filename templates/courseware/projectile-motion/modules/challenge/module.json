@@ -1,0 +1,29 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "challenge.projectile-rescue",
+  "version": "1.0.0",
+  "kind": "challenge",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:a7f36ba8d40ec22c0228ea38aa746547ac91f39aa2ba14619b1f6901d07c2067",
+  "hotSwap": "paused",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "challenge.evaluate"
+  ],
+  "commands": [
+    "challenge.attempt",
+    "challenge.reset",
+    "challenge.restore"
+  ],
+  "dependencies": [
+    {
+      "id": "physics.projectile",
+      "apiVersion": 1,
+      "capabilities": [
+        "domain.projectile"
+      ]
+    }
+  ]
+}

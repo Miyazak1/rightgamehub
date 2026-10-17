@@ -49,7 +49,7 @@ async function fileRecord(root, relative) {
 export async function loadCoursewareInventory(root) {
   const projectRoot = path.resolve(root);
   const manifest = await readJson(path.join(projectRoot, 'mooyu-courseware.json'));
-  const fixed = ['mooyu-courseware.json', manifest.course, manifest.experience, manifest.evidence, manifest.tests].filter(Boolean);
+  const fixed = ['mooyu-courseware.json',manifest.course,manifest.experience,manifest.mission,manifest.capabilityBindings,manifest.evidenceModel,manifest.evidence,manifest.tests].filter(Boolean);
   const records = [];
   for (const relative of fixed) records.push(await fileRecord(projectRoot, relative));
   const moduleGraph = await resolveCoursewareModuleGraph(projectRoot, manifest);

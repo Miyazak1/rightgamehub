@@ -1,0 +1,18 @@
+{
+  "format": "mooyu.courseware-module",
+  "schemaVersion": 1,
+  "id": "component.courseware-ui",
+  "version": "1.4.2",
+  "kind": "component",
+  "apiVersion": 1,
+  "entry": "./index.mjs",
+  "integrity": "sha256:bdbf137cb57d8c29c3238b471e326117712e338bee09c6817667b1cdc7464b4b",
+  "hotSwap": "live",
+  "stateSchemaVersion": 1,
+  "capabilities": [
+    "component.courseware-ui",
+    "component.courseware-ui.shell"
+  ],
+  "commands": [],
+  "dependencies": []
+}

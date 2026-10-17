@@ -1,0 +1,23 @@
+{
+  "format": "mooyu.courseware-experience", "schemaVersion": 1,
+  "engine": { "id": "uniform-acceleration-1d", "version": 1, "deterministic": true, "snapshot": true, "stateVariables": ["initial-velocity", "acceleration", "time", "position", "velocity", "trials"] },
+  "defaultMode": "textbook", "defaultView": "explore",
+  "views": [
+    { "id": "explore", "kind": "explore", "title": { "zh-CN": "探索", "en": "Explore" }, "purpose": { "zh-CN": "拖动参数并逐时刻观察运动。", "en": "Adjust parameters and observe motion moment by moment." }, "instrumentIds": ["trace", "replay"] },
+    { "id": "model", "kind": "model", "title": { "zh-CN": "建模", "en": "Model" }, "purpose": { "zh-CN": "把运动方程中的每一项映射到图像特征。", "en": "Map each term of the motion equations to a graph feature." }, "instrumentIds": ["equation", "graph"] },
+    { "id": "analyse", "kind": "analyse", "title": { "zh-CN": "分析", "en": "Analyse" }, "purpose": { "zh-CN": "同步读取三张运动图像并比较实验记录。", "en": "Read three synchronized motion graphs and compare trials." }, "instrumentIds": ["graph", "table", "comparison"] }
+  ],
+  "modes": [
+    { "id": "textbook", "kind": "textbook-lab", "title": { "zh-CN": "教材", "en": "Textbook" }, "sceneIds": ["link-motion-graphs"], "freedomLevel": "F1", "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"], "instrumentIds": ["trace", "graph", "table", "replay"], "curiosityHook": { "zh-CN": "三张形状不同的图，为什么描述的是同一次运动？", "en": "How can three differently shaped graphs describe the same motion?" } },
+    { "id": "sandbox", "kind": "free-sandbox", "title": { "zh-CN": "自由", "en": "Sandbox" }, "sceneIds": ["link-motion-graphs"], "freedomLevel": "F2", "allowedCommands": ["object.add", "object.remove", "object.place", "object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"], "instrumentIds": ["trace", "graph", "table", "comparison", "replay"], "curiosityHook": { "zh-CN": "能否用不同的初速度与加速度，在同一时刻到达同一位置？", "en": "Can different initial velocities and accelerations reach the same position at the same time?" } },
+    { "id": "signal", "kind": "scenario-challenge", "title": { "zh-CN": "挑战", "en": "Challenge" }, "sceneIds": ["link-motion-graphs"], "freedomLevel": "F2", "allowedCommands": ["object.configure", "simulation.run", "simulation.pause", "simulation.step", "simulation.reset", "measurement.record", "snapshot.save", "snapshot.compare"], "instrumentIds": ["trace", "graph", "table", "comparison", "replay"], "curiosityHook": { "zh-CN": "四次调参内，让测试车在 4 秒时同时满足位置窗和速度窗。", "en": "Within four attempts, place the test car inside both the position and velocity windows at 4 seconds." }, "challenge": { "id": "motion-window", "title": { "zh-CN": "双窗口校准", "en": "Dual-window calibration" }, "goal": { "zh-CN": "4.0 秒时位于 29–31 m，速度为 8.5–9.5 m/s。", "en": "At 4.0 s, be at 29–31 m with a velocity of 8.5–9.5 m/s." }, "success": [{ "metric": "position", "operator": "between", "values": [29, 31] }, { "metric": "velocity", "operator": "between", "values": [8.5, 9.5] }], "attemptPolicy": { "maxAttempts": 4, "retry": "after-feedback" } } }
+  ],
+  "instruments": [
+    { "id": "trace", "kind": "trace", "title": { "zh-CN": "等时间位置", "en": "Equal-time Positions" } },
+    { "id": "graph", "kind": "graph", "title": { "zh-CN": "x-t / v-t / a-t 图像", "en": "x-t / v-t / a-t Graphs" } },
+    { "id": "table", "kind": "table", "title": { "zh-CN": "实验记录", "en": "Trial Table" } },
+    { "id": "comparison", "kind": "comparison", "title": { "zh-CN": "方案对照", "en": "Trial Comparison" } },
+    { "id": "replay", "kind": "replay", "title": { "zh-CN": "回放", "en": "Replay" } },
+    { "id": "equation", "kind": "annotation", "title": { "zh-CN": "运动方程", "en": "Motion Equations" } }
+  ]
+}
