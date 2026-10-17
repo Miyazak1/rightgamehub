@@ -1,0 +1,3 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises');
+
+test('extension and harness builds inline official tool component CSS',async()=>{const [helper,extension,harness,dockerfile]=await Promise.all(['scripts/esbuild-inline-css.mjs','scripts/build-extension.mjs','scripts/build-harness.mjs','deploy/Dockerfile.web'].map(path=>fs.readFile(path,'utf8')));assert.match(helper,/onLoad\(\{ filter: \/\\\.css\$\/u \}/u);assert.match(helper,/document\.createElement\(\\"style\\"\)/u);assert.match(extension,/plugins: \[inlineComponentCss\]/u);assert.match(harness,/plugins: \[inlineComponentCss\]/u);assert.match(dockerfile,/COPY scripts\/esbuild-inline-css\.mjs scripts\/esbuild-inline-css\.mjs/u);});
