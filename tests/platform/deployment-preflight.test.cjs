@@ -39,7 +39,7 @@ test('deployment preflight preserves both release branches and rejects missing a
   const runCase = (name,start,branch,target,edit) => {
     const checkout = path.join(directory,name);git(directory,'clone','--no-checkout',remote,checkout);identity(checkout);
     git(checkout,'switch','-c',branch,start);
-    fs.mkdirSync(path.join(checkout,'deploy'),{recursive:true});fs.writeFileSync(path.join(checkout,'deploy/.env.prod'),'FIXTURE_ONLY=true\n');
+    fs.mkdirSync(path.join(checkout,'deploy'),{recursive:true});fs.writeFileSync(path.join(checkout,'deploy/.env.prod'),'FIXTURE_ONLY=true\nPUBLIC_COMMUNITY_RELEASE=true\n');
     edit?.(checkout);
     const before = git(checkout,'rev-parse','HEAD');
     const script = path.join(directory,name+'.sh');

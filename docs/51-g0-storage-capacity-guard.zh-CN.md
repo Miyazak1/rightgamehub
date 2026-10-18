@@ -10,8 +10,8 @@
 
 默认阈值：
 
-- 磁盘使用率达到 70%：进入 `warning`，继续接受上传并记录状态变化。
-- 当前使用量加全部活动上传预留达到 85%：进入 `blocked`，新上传返回可重试的 HTTP 507、错误码 `STORAGE_CAPACITY_EXCEEDED`。
+- 磁盘使用率达到 60%：进入 `warning`，与当前 ECS 云监控告警线保持一致，继续接受上传并记录状态变化。
+- 当前使用量加全部活动上传预留达到 80%：进入 `blocked`，为小容量系统盘保留维护空间；新上传返回可重试的 HTTP 507、错误码 `STORAGE_CAPACITY_EXCEEDED`。
 - 任意必需存储根无法探测：fail-closed，新上传返回可重试的 HTTP 503、错误码 `STORAGE_CAPACITY_UNAVAILABLE`。
 - 使用率恢复到阈值以下后自动重新开放，不需要重启服务。
 
@@ -49,8 +49,8 @@ API 每 60 秒检查以下逻辑存储根：
 生产 Compose 已设置：
 
 ```dotenv
-STORAGE_WARN_PERCENT=70
-STORAGE_BLOCK_PERCENT=85
+STORAGE_WARN_PERCENT=60
+STORAGE_BLOCK_PERCENT=80
 STORAGE_MONITOR_INTERVAL_SECONDS=60
 ```
 
@@ -60,7 +60,7 @@ STORAGE_MONITOR_INTERVAL_SECONDS=60
 
 ## 5. 管理入口与日志
 
-管理员进入“平台运营”页即可看到 `STORAGE GUARD`：总体状态、最高使用率、70/85 阈值、各逻辑目录实际字节、卷剩余容量及最近清理结果。
+管理员进入“平台运营”页即可看到 `STORAGE GUARD`：总体状态、最高使用率、60/80 阈值、去重后的文件系统容量、各逻辑目录实际字节及最近清理结果。
 
 API 还提供管理员专用、禁止缓存的接口：
 
@@ -84,15 +84,15 @@ Authorization: Bearer <admin access token>
 cd /www/gamehub
 git pull --ff-only origin main
 bash deploy/deploy.sh
-docker compose --env-file .env.prod -f compose.prod.yml ps api worker validator
-docker compose --env-file .env.prod -f compose.prod.yml logs --tail=100 api | grep 'storage\.'
+docker compose --env-file deploy/.env.prod -f deploy/compose.prod.yml ps api worker validator
+docker compose --env-file deploy/.env.prod -f deploy/compose.prod.yml logs --tail=100 api | grep 'storage\.'
 curl -fsS https://mooyu.fun/ready
 ```
 
 上线后由管理员打开“平台运营”页，确认：
 
 1. `STORAGE GUARD` 可见且不是“容量探测失败”；
-2. 五个存储区均显示卷可用容量；
+2. 文件系统容量只出现一次，各逻辑存储区分别显示实际目录占用；
 3. `warning` 仍允许上传，预测达到 `blocked` 时新上传得到 507；
 4. 阻断期间既有作品仍可游玩和下载；
 5. 释放空间后，下一次检查自动恢复上传；
