@@ -52,7 +52,7 @@ docker system df || true
 echo "== removing rebuildable Docker residue older than ${PRUNE_AGE_HOURS} hours =="
 docker container prune -f --filter "until=${PRUNE_AGE_HOURS}h"
 docker image prune -f --filter "until=${PRUNE_AGE_HOURS}h"
-docker builder prune -f --filter "until=${PRUNE_AGE_HOURS}h"
+docker builder prune --all -f --filter "until=${PRUNE_AGE_HOURS}h"
 
 echo "Docker volumes, named data volumes, active images, backups, and pending rule intake were not removed."
 echo "== usage after maintenance =="

@@ -10,7 +10,7 @@ test('production storage maintenance is bounded and never prunes volumes',()=>{
   const ignore=fs.readFileSync('.gitignore','utf8');
   assert.match(script,/docker container prune -f --filter/);
   assert.match(script,/docker image prune -f --filter/);
-  assert.match(script,/docker builder prune -f --filter/);
+  assert.match(script,/docker builder prune --all -f --filter/);
   assert.doesNotMatch(script,/docker (?:system prune|volume prune)/);
   assert.match(script,/pending rule intake \(report only\)/);
   assert.match(script,/pending rule intake were not removed/);
