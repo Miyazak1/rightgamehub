@@ -119,6 +119,89 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
+  registerAppTool(server, 'open_change_radar', {
+    title: 'Open MOOYU Change Radar',
+    description: 'Open the MOOYU.FUN Change Radar with a monitoring task prefilled. Use this when the user asks to monitor a public webpage for future changes. The user reviews and confirms the task in the sidebar before it becomes active.',
+    inputSchema: {
+      url: z.string().url().max(2048),
+      title: z.string().trim().min(1).max(120).optional(),
+      condition: z.string().trim().max(500).optional(),
+      intervalMinutes: z.number().int().min(15).max(10080).default(360),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Preparing the Change Radar…',
+      'openai/toolInvocation/invoked': 'Change Radar is ready for review.',
+    },
+  }, async ({ url: watchedUrl, title, condition, intervalMinutes = 360 }) => {
+    const query = new URLSearchParams({ url: watchedUrl, interval: String(intervalMinutes) });
+    if (title) query.set('title', title);
+    if (condition) query.set('condition', condition);
+    const path = `/tools/change-radar?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'The monitoring task is prepared. Ask the user to review and confirm it in the MOOYU.FUN sidebar.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
+  registerAppTool(server, 'open_privacy_redactor', {
+    title: 'Open MOOYU Privacy Redactor',
+    description: 'Open the local-first MOOYU.FUN privacy tool for reviewing and redacting sensitive text, images, or PDFs. Use this instead of putting private content into tool arguments. The content stays in the user interface and is not uploaded by this tool.',
+    inputSchema: {
+      mode: z.enum(['text', 'image', 'pdf']).default('text'),
+      types: z.array(z.enum(['email', 'phone', 'idCard', 'bankCard', 'ipAddress', 'secret'])).max(6).optional(),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local privacy workspace…',
+      'openai/toolInvocation/invoked': 'Privacy workspace opened.',
+    },
+  }, async ({ mode = 'text', types }) => {
+    const query = new URLSearchParams({ mode });
+    if (types?.length) query.set('types', [...new Set(types)].join(','));
+    const path = `/tools/privacy-redactor?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local privacy workspace. Ask the user to paste or choose the sensitive content there; do not request that private content as a tool argument.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
+  registerAppTool(server, 'open_document_compare', {
+    title: 'Open MOOYU Document Compare',
+    description: 'Open the local MOOYU.FUN document comparison workspace. The user can paste or choose private documents inside the UI; never put document contents in tool arguments. Supports local text, PDF, and DOCX comparison.',
+    inputSchema: {
+      mode: z.enum(['lines', 'words', 'characters']).default('lines'),
+      leftLabel: z.string().trim().min(1).max(80).optional(),
+      rightLabel: z.string().trim().min(1).max(80).optional(),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local document comparison workspace…',
+      'openai/toolInvocation/invoked': 'Document comparison workspace opened.',
+    },
+  }, async ({ mode = 'lines', leftLabel, rightLabel }) => {
+    const query = new URLSearchParams({ mode });
+    if (leftLabel) query.set('leftLabel', leftLabel);
+    if (rightLabel) query.set('rightLabel', rightLabel);
+    const path = `/tools/document-compare?${query}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local document comparison workspace. Ask the user to paste or choose both documents there; do not request private document contents as tool arguments.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   return server;
 }
 

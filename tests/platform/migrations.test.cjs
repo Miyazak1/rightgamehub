@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 69);
+  assert.equal(files.length, 70);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -23,9 +23,12 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const brandedOutreach = fs.readFileSync(path.join(migrationDir, '0067_author_outreach_brand.sql'), 'utf8');
   const openedOutreach = fs.readFileSync(path.join(migrationDir, '0068_author_outreach_opened_state.sql'), 'utf8');
   const interactiveCourseware = fs.readFileSync(path.join(migrationDir, '0069_interactive_courseware_kind.sql'), 'utf8');
+  const changeRadar = fs.readFileSync(path.join(migrationDir, '0070_official_change_radar.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
+  assert.match(changeRadar, /CREATE TABLE tool_change_watches/);
+  assert.match(changeRadar, /CREATE TABLE tool_change_snapshots/);
   assert.match(creatorGeneration, /prompt_version text NOT NULL/);
   assert.match(creatorGeneration, /one_active_per_draft/);
   assert.match(communityProjects, /CREATE TABLE community_projects/);
@@ -200,7 +203,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'source_revisions', 'build_jobs', 'release_provenance', 'multiplayer_rule_builds', 'multiplayer_rule_build_events',
     'creator_feedback', 'creator_feedback_events',
     'game_share_links', 'creator_drafts', 'creator_draft_revisions', 'creator_generation_jobs', 'project_claims', 'project_claim_events', 'work_remix_events',
-    'work_development_entries', 'work_development_entry_events',
+    'work_development_entries', 'work_development_entry_events', 'tool_change_watches', 'tool_change_snapshots',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

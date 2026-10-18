@@ -8,6 +8,15 @@ export const officialTools=[
   Object.freeze({
     id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr'],load:()=>import('./PdfReaderTool.jsx'),
   }),
+  Object.freeze({
+    id:'change-radar',route:'/tools/change-radar',titleKey:'tools.changeRadar.title',descriptionKey:'tools.changeRadar.description',mark:'⌁',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['watch.create','watch.read','watch.patch','watch.check','watch.history'],load:()=>import('./ChangeRadarTool.jsx'),
+  }),
+  Object.freeze({
+    id:'privacy-redactor',route:'/tools/privacy-redactor',titleKey:'tools.privacy.title',descriptionKey:'tools.privacy.description',mark:'▧',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['privacy.scan','privacy.redact','privacy.image','privacy.pdf','privacy.metadata.strip','document.export'],load:()=>import('./PrivacyRedactorTool.jsx'),
+  }),
+  Object.freeze({
+    id:'document-compare',route:'/tools/document-compare',titleKey:'tools.documentCompare.title',descriptionKey:'tools.documentCompare.description',mark:'⇄',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.read','document.compare','document.diff.navigate','document.export'],load:()=>import('./DocumentCompareTool.jsx'),
+  }),
 ];
 
 export function findOfficialTool(id){return officialTools.find(tool=>tool.id===id)??null;}
