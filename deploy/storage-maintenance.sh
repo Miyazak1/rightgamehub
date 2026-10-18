@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 MODE=${1:---report}
 PRUNE_AGE_HOURS=${PRUNE_AGE_HOURS:-168}
 BACKUP_ROOT=${BACKUP_ROOT:-/www/backup/gamehub}
+RULES_INCOMING_ROOT=${RULES_INCOMING_ROOT:-/www/gamehub/rules-incoming}
 
 case "$MODE" in
   --report|--apply) ;;
@@ -33,6 +34,10 @@ report() {
     echo "== local backups =="
     du -xhd1 "$BACKUP_ROOT" 2>/dev/null | sort -h || true
   fi
+  if [ -d "$RULES_INCOMING_ROOT" ]; then
+    echo "== pending rule intake (report only) =="
+    du -xhd1 "$RULES_INCOMING_ROOT" 2>/dev/null | sort -h || true
+  fi
 }
 
 if [ "$MODE" = "--report" ]; then
@@ -49,7 +54,7 @@ docker container prune -f --filter "until=${PRUNE_AGE_HOURS}h"
 docker image prune -f --filter "until=${PRUNE_AGE_HOURS}h"
 docker builder prune -f --filter "until=${PRUNE_AGE_HOURS}h"
 
-echo "Docker volumes, named data volumes, active images, and backups were not removed."
+echo "Docker volumes, named data volumes, active images, backups, and pending rule intake were not removed."
 echo "== usage after maintenance =="
 df -hT / || true
 docker system df || true
