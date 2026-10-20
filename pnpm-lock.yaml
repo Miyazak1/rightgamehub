@@ -13,6 +13,9 @@ importers:
       '@alicloud/credentials':
         specifier: ^2.4.7
         version: 2.4.7
+      '@gamehub/agent-capabilities':
+        specifier: workspace:*
+        version: link:../../packages/agent-capabilities
       '@gamehub/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -110,6 +113,8 @@ importers:
 
   extensions/vscode: {}
 
+  packages/agent-capabilities: {}
+
   packages/contracts: {}
 
   packages/courseware-domain-packs: {}
@@ -141,6 +146,9 @@ importers:
 
   packages/platform-client:
     dependencies:
+      '@gamehub/agent-capabilities':
+        specifier: workspace:*
+        version: link:../agent-capabilities
       '@gamehub/host-contract':
         specifier: workspace:*
         version: link:../host-contract

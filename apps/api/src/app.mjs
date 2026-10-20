@@ -478,7 +478,7 @@ export function createApp(dependencies) {
     });
   }
   if (catalogService) {
-    registerGameHubMcpRoutes(app, { catalogService, siteOrigin });
+    registerGameHubMcpRoutes(app, { catalogService, discoveryCampaignService, siteOrigin });
     app.get('/w/:workId', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@alicloud/credentials": "^2.4.7",
+    "@gamehub/agent-capabilities": "workspace:*",
     "@gamehub/contracts": "workspace:*",
     "@gamehub/creator-tools": "workspace:*",
     "@gamehub/multiplayer-protocol": "workspace:*",

@@ -1,26 +1,21 @@
+import { officialToolCapabilities, toOfficialToolClientMetadata } from '@gamehub/agent-capabilities';
+
 export const TOOL_DOCUMENT_FORMAT='mooyu.tool-document';
 export const TOOL_DOCUMENT_SCHEMA_VERSION=1;
 
-export const officialTools=[
-  Object.freeze({
-    id:'knowledge-map',route:'/tools/knowledge-map',titleKey:'tools.knowledgeMap.title',descriptionKey:'tools.knowledgeMap.description',mark:'◇',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.version','agent.context','agent.create','agent.patch'],load:()=>import('./KnowledgeMapTool.jsx'),
-  }),
-  Object.freeze({
-    id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr','document.search','document.annotate','document.cite','document.library','agent.context'],load:()=>import('./PdfReaderTool.jsx'),
-  }),
-  Object.freeze({
-    id:'change-radar',route:'/tools/change-radar',titleKey:'tools.changeRadar.title',descriptionKey:'tools.changeRadar.description',mark:'⌁',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['watch.create','watch.read','watch.patch','watch.check','watch.history','watch.diff','watch.rules','watch.inbox','agent.context'],load:()=>import('./ChangeRadarTool.jsx'),
-  }),
-  Object.freeze({
-    id:'privacy-redactor',route:'/tools/privacy-redactor',titleKey:'tools.privacy.title',descriptionKey:'tools.privacy.description',mark:'▧',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['privacy.scan','privacy.redact','privacy.image','privacy.pdf','privacy.metadata.strip','document.export'],load:()=>import('./PrivacyRedactorTool.jsx'),
-  }),
-  Object.freeze({
-    id:'document-compare',route:'/tools/document-compare',titleKey:'tools.documentCompare.title',descriptionKey:'tools.documentCompare.description',mark:'⇄',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.read','document.compare','document.diff.navigate','document.export'],load:()=>import('./DocumentCompareTool.jsx'),
-  }),
-  Object.freeze({
-    id:'spreadsheet-audit',route:'/tools/spreadsheet-audit',titleKey:'tools.spreadsheetAudit.title',descriptionKey:'tools.spreadsheetAudit.description',mark:'ƒx',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['spreadsheet.read','spreadsheet.audit','spreadsheet.compare','spreadsheet.trace','document.export'],load:()=>import('./SpreadsheetAuditTool.jsx'),
-  }),
-];
+const toolLoaders=Object.freeze({
+  'knowledge-map':()=>import('./KnowledgeMapTool.jsx'),
+  'pdf-reader':()=>import('./PdfReaderTool.jsx'),
+  'change-radar':()=>import('./ChangeRadarTool.jsx'),
+  'privacy-redactor':()=>import('./PrivacyRedactorTool.jsx'),
+  'document-compare':()=>import('./DocumentCompareTool.jsx'),
+  'spreadsheet-audit':()=>import('./SpreadsheetAuditTool.jsx'),
+});
+
+export const officialTools=Object.freeze(officialToolCapabilities.map(capability=>Object.freeze({
+  ...toOfficialToolClientMetadata(capability),
+  load:toolLoaders[capability.toolId],
+})));
 
 export function findOfficialTool(id){return officialTools.find(tool=>tool.id===id)??null;}
 export function createToolDocument(toolId,{documentId=globalThis.crypto?.randomUUID?.()??`${toolId}-${Date.now()}`,content={},view={},metadata={}}={}){
