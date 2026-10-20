@@ -8,7 +8,7 @@ const { pathToFileURL } = require('node:url');
 const root = path.resolve(__dirname, '../..');
 
 test('GameHub MCP exposes catalog and official app tools with a content-addressed hosted UI', async t => {
-  const [{ createGameHubMcpServer }, { createGameHubMcpWidget }, { Client }, { InMemoryTransport }] = await Promise.all([
+  const [{ createGameHubMcpServer }, { createGameHubMcpWidget, GAMEHUB_MCP_UI_COMPATIBILITY_URIS }, { Client }, { InMemoryTransport }] = await Promise.all([
     import(pathToFileURL(path.join(root, 'apps/api/src/gamehub-mcp-server.mjs'))),
     import(pathToFileURL(path.join(root, 'apps/api/src/gamehub-mcp-widget.mjs'))),
     import(pathToFileURL(path.join(root, 'apps/api/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js'))),
@@ -137,6 +137,20 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.deepEqual(resource.contents[0]._meta['openai/widgetCSP'].frame_domains, ['https://mooyu.fun']);
   assert.equal(resource.contents[0]._meta['openai/widgetDomain'], 'https://mooyu.fun');
   assert.deepEqual(resource.contents[0]._meta['openai/ui'].availableDisplayModes, ['fullscreen']);
+
+  const resources = await client.listResources();
+  assert.deepEqual(
+    resources.resources.map(item => item.uri),
+    [mcpUiUri, ...GAMEHUB_MCP_UI_COMPATIBILITY_URIS],
+  );
+  for (const compatibilityUri of GAMEHUB_MCP_UI_COMPATIBILITY_URIS) {
+    const compatibilityResource = await client.readResource({ uri: compatibilityUri });
+    assert.equal(compatibilityResource.contents[0].uri, compatibilityUri);
+    assert.equal(compatibilityResource.contents[0].mimeType, 'text/html;profile=mcp-app');
+    assert.equal(compatibilityResource.contents[0].text, widget.html);
+    assert.doesNotMatch(compatibilityResource.contents[0].text, /<script type="module">/u);
+    assert.match(compatibilityResource.contents[0].text, /<script type="module" src=/u);
+  }
 });
 
 test('portable plugin connects the remote MCP server and ships through the common verified updater', async () => {

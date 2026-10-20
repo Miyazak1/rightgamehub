@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
-import { createGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
+import { createGameHubMcpWidget, GAMEHUB_MCP_UI_COMPATIBILITY_URIS } from './gamehub-mcp-widget.mjs';
 
 const asPublicWork = (work, siteOrigin) => ({
   id: work.id,
@@ -70,10 +70,9 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
-  registerAppResource(server, 'MOOYU.FUN hosted platform', uiResourceUri, {
-    description: 'The complete hosted MOOYU.FUN platform interface. Pages, games, and interface content are served by MOOYU.FUN rather than packaged in the plugin.',
-  }, async () => ({ contents: [{
-    uri: uiResourceUri,
+  const uiResourceDescription = 'The complete hosted MOOYU.FUN platform interface. Pages, games, and interface content are served by MOOYU.FUN rather than packaged in the plugin.';
+  const readUiResource = uri => ({ contents: [{
+    uri,
     mimeType: RESOURCE_MIME_TYPE,
     text: widget.html,
     _meta: {
@@ -92,7 +91,17 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
         connect_domains: [origin],
       },
     },
-  }] }));
+  }] });
+
+  registerAppResource(server, 'MOOYU.FUN hosted platform', uiResourceUri, {
+    description: uiResourceDescription,
+  }, async () => readUiResource(uiResourceUri));
+
+  for (const [index, compatibilityUri] of GAMEHUB_MCP_UI_COMPATIBILITY_URIS.entries()) {
+    registerAppResource(server, `MOOYU.FUN hosted platform compatibility ${index + 1}`, compatibilityUri, {
+      description: `${uiResourceDescription} Compatibility resource for an existing ChatGPT conversation.`,
+    }, async () => readUiResource(compatibilityUri));
+  }
 
   registerAppTool(server, 'open_gamehub', {
     title: 'Open MOOYU.FUN',

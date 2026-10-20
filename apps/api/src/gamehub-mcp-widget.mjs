@@ -2,6 +2,15 @@ import { createHash } from 'node:crypto';
 
 export const GAMEHUB_MCP_UI_REVISION_TOKEN = '__GAMEHUB_MCP_UI_REVISION__';
 
+// ChatGPT conversations retain the UI resource URI that was advertised when
+// the conversation started. Keep the last broken inline-script revision (and
+// the former stable URI) readable so existing conversations can recover after
+// the CSP-safe widget is deployed.
+export const GAMEHUB_MCP_UI_COMPATIBILITY_URIS = Object.freeze([
+  'ui://gamehub/platform-971d34a51d9bad7b.html',
+  'ui://gamehub/platform-v9.html',
+]);
+
 const resourceUri = revision => `ui://gamehub/platform-${revision}.html`;
 const INLINE_SCRIPT_OPEN = '<script type="module">';
 const INLINE_SCRIPT_CLOSE = '</script>';
