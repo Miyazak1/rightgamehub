@@ -5,9 +5,11 @@ import ocrWorkerUrl from 'tesseract.js/dist/worker.min.js?url';
 import ocrCoreUrl from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url';
 import englishDataUrl from '@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz?url';
 import chineseDataUrl from '@tesseract.js-data/chi_sim/4.0.0_best_int/chi_sim.traineddata.gz?url';
+import { setMany as setOcrCacheEntries } from 'idb-keyval';
 import { useI18n } from './I18n.jsx';
 import { assertToolDocument, createToolDocument } from './official-tools.mjs';
 import { extractPdfDocumentPages } from './pdf-reader-model.mjs';
+import { OCR_CACHE_PATH, prepareOcrLanguages, withOcrTimeout } from './pdf-reader-ocr.mjs';
 import './PdfReaderTool.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -58,12 +60,6 @@ function searchSnippet(text, query) {
   const start = Math.max(0, index - 45);
   const end = Math.min(normalized.length, index + query.length + 75);
   return `${start ? '…' : ''}${normalized.slice(start, end)}${end < normalized.length ? '…' : ''}`;
-}
-
-async function fetchLanguage(code, url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Unable to load ${code} OCR data`);
-  return { code, data: new Uint8Array(await response.arrayBuffer()) };
 }
 
 export default function PdfReaderTool() {
@@ -242,20 +238,29 @@ export default function PdfReaderTool() {
       imageCanvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: imageCanvas.getContext('2d', { alpha: false }), viewport }).promise;
       if (!workerRef.current) {
-        const [{ createWorker }, english, chinese] = await Promise.all([
+        const [{ createWorker }, languages] = await Promise.all([
           import('tesseract.js'),
-          fetchLanguage('eng', englishDataUrl),
-          fetchLanguage('chi_sim', chineseDataUrl),
+          prepareOcrLanguages([
+            { code: 'eng', url: englishDataUrl },
+            { code: 'chi_sim', url: chineseDataUrl },
+          ], { writeCache: setOcrCacheEntries }),
         ]);
-        workerRef.current = await createWorker([english, chinese], 1, {
+        let initializationError;
+        const workerPromise = createWorker(languages, 1, {
           workerPath: ocrWorkerUrl,
           corePath: ocrCoreUrl,
           workerBlobURL: false,
-          cacheMethod: 'write',
-          logger: message => setOcrProgress({ status: t('tools.pdfReader.ocrRunning'), progress: Math.max(0, Math.min(1, message.progress || 0)) }),
+          cachePath: OCR_CACHE_PATH,
+          cacheMethod: 'readOnly',
+          errorHandler: error => { initializationError = error; },
+          logger: message => setOcrProgress({ status: t('tools.pdfReader.ocrRunning'), progress: Math.max(0, Math.min(0.99, message.progress || 0)) }),
         });
+        workerRef.current = await withOcrTimeout(workerPromise.then(worker => {
+          if (initializationError) throw new Error(String(initializationError));
+          return worker;
+        }), 90_000, 'OCR worker initialization timed out');
       }
-      const result = await workerRef.current.recognize(imageCanvas);
+      const result = await withOcrTimeout(workerRef.current.recognize(imageCanvas), 120_000, 'OCR recognition timed out');
       const text = result?.data?.text?.trim() || '';
       setOcrTexts(current => ({ ...current, [pageNumber]: text }));
       setNotice(text ? t('tools.pdfReader.ocrDone') : t('tools.pdfReader.ocrEmpty'));
