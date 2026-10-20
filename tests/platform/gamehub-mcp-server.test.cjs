@@ -1,12 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const root = path.resolve(__dirname, '../..');
 
-test('GameHub MCP exposes catalog and official app tools with a versioned hosted UI', async t => {
+test('GameHub MCP exposes catalog and official app tools with a content-addressed hosted UI', async t => {
   const [{ createGameHubMcpServer }, { Client }, { InMemoryTransport }] = await Promise.all([
     import(pathToFileURL(path.join(root, 'apps/api/src/gamehub-mcp-server.mjs'))),
     import(pathToFileURL(path.join(root, 'apps/api/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js'))),
@@ -28,9 +29,19 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_game', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
-  assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v9.html');
+  const mcpUiUri = openGameHubTool._meta.ui.resourceUri;
+  const revision = mcpUiUri.match(/^ui:\/\/gamehub\/platform-([a-f0-9]{16})\.html$/u)?.[1];
+  assert.ok(revision, `Expected a content-addressed MCP UI URI, received ${mcpUiUri}`);
   assert.deepEqual(openGameHubTool._meta.ui.visibility, ['model', 'app']);
-  assert.equal(openGameHubTool._meta['openai/outputTemplate'], 'ui://gamehub/platform-v9.html');
+  assert.equal(openGameHubTool._meta['openai/outputTemplate'], mcpUiUri);
+  const uiTools = tools.tools.filter(item => item._meta?.ui?.resourceUri);
+  assert.equal(uiTools.length, 7);
+  for (const tool of uiTools) {
+    assert.equal(tool._meta.ui.resourceUri, mcpUiUri);
+    assert.equal(tool._meta['openai/outputTemplate'], mcpUiUri);
+  }
+  assert.equal(tools.tools.find(item => item.name === 'search_games')._meta?.ui, undefined);
+  assert.equal(tools.tools.find(item => item.name === 'get_game')._meta?.ui, undefined);
 
   const search = await client.callTool({ name: 'search_games', arguments: { query: 'orbit', limit: 4 } });
   assert.equal(search.structuredContent.games[0].playUrl, 'https://mooyu.fun/w/game-1');
@@ -87,11 +98,14 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.match(spreadsheet.structuredContent.view.path, /mode=compare/u);
   assert.match(spreadsheet.structuredContent.view.url, /gh_route=%2Ftools%2Fspreadsheet-audit/u);
 
-  const resource = await client.readResource({ uri: 'ui://gamehub/platform-v9.html' });
+  const resource = await client.readResource({ uri: mcpUiUri });
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resource.contents[0].text, /<iframe id="gamehub-frame"/u);
   assert.match(resource.contents[0].text, /ui\/request-display-mode/u);
-  assert.match(resource.contents[0].text, /gh_embed','platform-v9'/u);
+  assert.ok(resource.contents[0].text.includes(`gh_embed','${revision}'`));
+  assert.doesNotMatch(resource.contents[0].text, /__GAMEHUB_MCP_UI_REVISION__/u);
+  const canonicalHtml = resource.contents[0].text.replaceAll(revision, '__GAMEHUB_MCP_UI_REVISION__');
+  assert.equal(createHash('sha256').update(canonicalHtml, 'utf8').digest('hex').slice(0, 16), revision);
   assert.match(resource.contents[0].text, /searchParams\.set\('lang',locale\)/u);
   assert.match(resource.contents[0].text, /gamehub\/navigation\.openExternal/u);
   assert.match(resource.contents[0].text, /gamehub\/spreadsheet-audit\.submit/u);

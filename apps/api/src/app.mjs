@@ -44,6 +44,7 @@ import { growthContentSlides, renderWorkXhsSlide } from './growth-content-render
 import { AuthorOutreachError } from './author-outreach-service.mjs';
 import { registerAuthorOutreachRoutes } from './author-outreach-routes.mjs';
 import { registerGameHubMcpRoutes } from './gamehub-mcp-server.mjs';
+import { describeGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
 import { ChangeRadarError } from './change-radar-service.mjs';
 import { registerChangeRadarRoutes } from './change-radar-routes.mjs';
 import { publicLocaleQuerySchema, resolvePublicLocale } from './public-locale.mjs';
@@ -178,7 +179,8 @@ export function createApp(dependencies) {
     try {
       const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
       if (!databaseOk || !migration.ready || !realtimeOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk }));
-      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
+      const mcpUi = describeGameHubMcpWidget(config.gameShareSiteOrigin || 'https://mooyu.fun');
+      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null, mcpUi, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
     } catch {
       return reply.status(503).send(envelope({ status: 'not-ready', database: false }));
     }

@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
-import { GAMEHUB_MCP_UI_URI, renderGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
+import { createGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
 
 const asPublicWork = (work, siteOrigin) => ({
   id: work.id,
@@ -20,6 +20,8 @@ const toolError = message => ({ isError: true, content: [{ type: 'text', text: m
 
 export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://mooyu.fun' }) {
   const origin = new URL(siteOrigin).origin;
+  const widget = createGameHubMcpWidget(origin);
+  const uiResourceUri = widget.uri;
   const server = new McpServer({ name: 'gamehub', title: '墨鱼工坊 MOOYU.FUN', version: '1.0.0' });
 
   server.registerTool('search_games', {
@@ -68,12 +70,12 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
-  registerAppResource(server, 'MOOYU.FUN hosted platform', GAMEHUB_MCP_UI_URI, {
+  registerAppResource(server, 'MOOYU.FUN hosted platform', uiResourceUri, {
     description: 'The complete hosted MOOYU.FUN platform interface. Pages, games, and interface content are served by MOOYU.FUN rather than packaged in the plugin.',
   }, async () => ({ contents: [{
-    uri: GAMEHUB_MCP_UI_URI,
+    uri: uiResourceUri,
     mimeType: RESOURCE_MIME_TYPE,
-    text: renderGameHubMcpWidget(origin),
+    text: widget.html,
     _meta: {
       ui: {
         prefersBorder: false,
@@ -99,8 +101,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Opening MOOYU.FUN…',
       'openai/toolInvocation/invoked': 'MOOYU.FUN opened.',
     },
@@ -126,8 +128,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Opening the local PDF workspace…',
       'openai/toolInvocation/invoked': 'PDF workspace opened.',
     },
@@ -155,8 +157,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Building the knowledge map…',
       'openai/toolInvocation/invoked': 'Knowledge map opened.',
     },
@@ -184,8 +186,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Preparing the Change Radar…',
       'openai/toolInvocation/invoked': 'Change Radar is ready for review.',
     },
@@ -212,8 +214,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Opening the local privacy workspace…',
       'openai/toolInvocation/invoked': 'Privacy workspace opened.',
     },
@@ -239,8 +241,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Opening the local document comparison workspace…',
       'openai/toolInvocation/invoked': 'Document comparison workspace opened.',
     },
@@ -265,8 +267,8 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: {
-      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
-      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      ui: { resourceUri: uiResourceUri, visibility: ['model', 'app'] },
+      'openai/outputTemplate': uiResourceUri,
       'openai/toolInvocation/invoking': 'Opening the local spreadsheet audit workspace…',
       'openai/toolInvocation/invoked': 'Spreadsheet audit workspace opened.',
     },

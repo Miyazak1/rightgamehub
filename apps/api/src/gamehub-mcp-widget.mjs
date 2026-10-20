@@ -1,6 +1,10 @@
-export const GAMEHUB_MCP_UI_URI = 'ui://gamehub/platform-v9.html';
+import { createHash } from 'node:crypto';
 
-export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
+export const GAMEHUB_MCP_UI_REVISION_TOKEN = '__GAMEHUB_MCP_UI_REVISION__';
+
+const resourceUri = revision => `ui://gamehub/platform-${revision}.html`;
+
+function renderGameHubMcpWidgetTemplate(siteOrigin = 'https://mooyu.fun') {
   const origin = new URL(siteOrigin).origin;
   const encodedOrigin = JSON.stringify(origin).replace(/</gu, '\\u003c');
   return `<!doctype html>
@@ -34,7 +38,7 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
     const RADAR_CONTEXT='gamehub/change-radar.context',RADAR_STATUS='gamehub/change-radar.status';
     const KNOWLEDGE_DRAFT='gamehub/knowledge-map.draft',KNOWLEDGE_CONTEXT='gamehub/knowledge-map.context',KNOWLEDGE_REQUEST='gamehub/knowledge-map.request-agent',KNOWLEDGE_STATUS='gamehub/knowledge-map.status';
     const safePath=path=>typeof path==='string'&&path.startsWith('/')&&!path.startsWith('//')?path:'/discover';
-    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');url.searchParams.set('gh_embed','platform-v9');url.searchParams.set('lang',locale);return url.href;};
+    const viewUrl=path=>{const url=new URL('/mcp-app',SITE_ORIGIN);url.searchParams.set('gh_route',safePath(path));url.searchParams.set('gh_host','mcp-app');url.searchParams.set('gh_embed','${GAMEHUB_MCP_UI_REVISION_TOKEN}');url.searchParams.set('lang',locale);return url.href;};
     const externalUrl=path=>{const route=safePath(path);const work=route.match(new RegExp('^/works/([^/?#]+)/?$'));return new URL(work?'/w/'+work[1]:route,SITE_ORIGIN).href;};
     const notify=(method,params)=>window.parent.postMessage({jsonrpc:'2.0',method,params},'*');
     const request=(method,params,timeoutMs=12000)=>new Promise((resolve,reject)=>{const id=++rpcId;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(method+' timed out'));},timeoutMs);pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:error=>{clearTimeout(timer);reject(error);}});window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*');});
@@ -68,4 +72,27 @@ export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
   </script>
 </body>
 </html>`;
+}
+
+export function createGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
+  const template = renderGameHubMcpWidgetTemplate(siteOrigin);
+  // Hash the canonical template before inserting the revision so the cache key
+  // changes with every UI change without creating a self-referential digest.
+  const sha256 = createHash('sha256').update(template, 'utf8').digest('hex');
+  const revision = sha256.slice(0, 16);
+  return Object.freeze({
+    uri: resourceUri(revision),
+    revision,
+    sha256,
+    html: template.replaceAll(GAMEHUB_MCP_UI_REVISION_TOKEN, revision),
+  });
+}
+
+export function describeGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
+  const { uri, revision, sha256 } = createGameHubMcpWidget(siteOrigin);
+  return Object.freeze({ uri, revision, sha256 });
+}
+
+export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
+  return createGameHubMcpWidget(siteOrigin).html;
 }
