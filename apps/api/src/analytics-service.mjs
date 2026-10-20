@@ -7,8 +7,8 @@ export class AnalyticsError extends Error {
 }
 
 const EVENT_TYPES = new Set(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']);
-const HOST_KINDS = new Set(['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown']);
-const ROUTES = new Set(['discover','library','social','creator','admin','work','play','auth','settings','unknown']);
+const HOST_KINDS = new Set(['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown']);
+const ROUTES = new Set(['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown']);
 const ATTRIBUTION_SOURCES = new Set(['share_copy','share_system','readme','external','campaign']);
 const CAMPAIGN_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
 const WORK_KEY = /^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F-]{36})$/;

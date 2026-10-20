@@ -71,7 +71,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   assert.equal(await menu.count(), 0); assert.equal(await page.evaluate(() => document.activeElement === document.body), false);
   await avatar.click(); await avatar.click(); assert.equal(await menu.count(), 0, 'clicking the avatar twice closes the menu');
   await avatar.focus(); await page.keyboard.press('Space'); await menu.waitFor(); await page.keyboard.press('Escape');
-  await avatar.click(); await page.getByRole('heading', { name: '休息一下？' }).click(); assert.equal(await menu.count(), 0);
+  await avatar.click(); await page.getByRole('heading', { name: '发现点有趣的' }).click(); assert.equal(await menu.count(), 0);
   await avatar.click(); await menu.getByRole('menuitem', { name: '申请成为创作者' }).click();
   await page.getByRole('heading', { name: '申请成为创作者' }).waitFor(); assert.equal(await page.getByRole('navigation', { name: '创作中心导航' }).count(), 0);
   await goAs('player', '/admin'); await page.getByRole('heading', { name: '仅管理员可访问' }).waitFor();
@@ -90,7 +90,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), workId);
   assert.equal(await workspace.getByRole('link', { name: /能力接入/ }).getAttribute('aria-current'), 'page');
   await page.goto(base + '/creator/multiplayer/docs'); await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
-  await page.getByRole('button', { name: /返回 GameHub/ }).click(); await page.getByRole('heading', { name: '休息一下？' }).waitFor();
+  await page.getByRole('button', { name: /返回 GameHub/ }).click(); await page.getByRole('heading', { name: '发现点有趣的' }).waitFor();
   await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /#\/library$/);
   await goAs('admin'); await avatar.click(); await menu.getByRole('menuitem', { name: '治理', exact: true }).click();
   await page.getByRole('heading', { name: '平台运营', exact: true }).waitFor(); assert.equal((await page.request.get(base + '/v1/admin/reports')).status(), 200);

@@ -793,8 +793,8 @@ export const schemas = Object.freeze({
     events: { type: 'array', minItems: 1, maxItems: 20, items: object({
       type: stringEnum(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']),
       anonymousId: id, sessionId: id,
-      hostKind: stringEnum(['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown']),
-      route: stringEnum(['discover','library','social','creator','admin','work','play','auth','settings','unknown']),
+      hostKind: stringEnum(['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown']),
+      route: stringEnum(['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown']),
         workId: workKey, releaseId: id, attributionSource: stringEnum(['share_copy','share_system','readme','external','campaign']),
         campaignKey: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
         durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: dateTime,

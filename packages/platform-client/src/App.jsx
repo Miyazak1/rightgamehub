@@ -1867,16 +1867,27 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   useEffect(() => {
     if (demo) return undefined;
     let live = true, generation = 0;
-    const load = () => {
+    const load = async () => {
       const current = ++generation;
       setAccountStatus('loading');
-      api.getProfile().then(({ data }) => {
+      let accessToken = null;
+      try { accessToken = await host.account?.getAccessToken?.(); } catch {}
+      if (!live || current !== generation) return;
+      if (!accessToken) {
+        setAccountProfile(null);
+        setAccountStatus('anonymous');
+        return;
+      }
+      try {
+        const { data } = await api.getProfile();
         if (live && current === generation) { setAccountProfile(data); setAccountStatus('ready'); }
-      }).catch(() => { if (live && current === generation) { setAccountProfile(null); setAccountStatus('anonymous'); } });
+      } catch {
+        if (live && current === generation) { setAccountProfile(null); setAccountStatus('anonymous'); }
+      }
     };
-    load();
+    void load();
     const off = host.account?.onTokensChanged?.(tokens => {
-      if (tokens) load();
+      if (tokens) void load();
       else { generation++; setAccountProfile(null); setAccountStatus('anonymous'); }
     });
     return () => { live = false; off?.(); };

@@ -35299,6 +35299,7 @@
                   "type": "string",
                   "enum": [
                     "browser",
+                    "mcp-app",
                     "cursor",
                     "vscode",
                     "code",
@@ -35313,6 +35314,8 @@
                   "type": "string",
                   "enum": [
                     "discover",
+                    "learning",
+                    "tools",
                     "library",
                     "social",
                     "creator",
@@ -35321,6 +35324,7 @@
                     "play",
                     "auth",
                     "settings",
+                    "profile",
                     "unknown"
                   ]
                 },

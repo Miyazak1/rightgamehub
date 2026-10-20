@@ -407,8 +407,8 @@ export function createApp(dependencies) {
       type: 'object', additionalProperties: false, required: ['type','anonymousId','sessionId','hostKind','occurredAt'], properties: {
         type: { type: 'string', enum: ['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end'] },
         anonymousId: { type: 'string', format: 'uuid' }, sessionId: { type: 'string', format: 'uuid' },
-        hostKind: { type: 'string', enum: ['browser','cursor','vscode','code','harness','codex','claude','opencode','unknown'] },
-        route: { type: 'string', enum: ['discover','library','social','creator','admin','work','play','auth','settings','unknown'] },
+        hostKind: { type: 'string', enum: ['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown'] },
+        route: { type: 'string', enum: ['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown'] },
         workId: workKeySchema, releaseId: { type: 'string', format: 'uuid' },
         attributionSource: { type: 'string', enum: ['share_copy','share_system','readme','external','campaign'] },
         campaignKey: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },

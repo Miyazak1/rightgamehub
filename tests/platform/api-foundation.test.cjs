@@ -189,12 +189,12 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   const sharp = require('../../apps/api/node_modules/sharp');
   const workId = '00000000-0000-4000-8000-000000000777';
   const actor = { userId: 'creator-user', scopes: ['works:read'], profile: { canPublish: true } };
-  const calls = [];
+  const calls = [], analyticsEvents = [];
   const coverBody = await sharp({ create: { width: 960, height: 540, channels: 3, background: '#563d7c' } }).png().toBuffer();
   const app = createApp({
     config: { requestBodyLimit: 65536, gameShareSiteOrigin: 'https://games.example' }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
     authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
-    analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async () => ({ accepted: 1 }) },
+    analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async (viewer, input) => { analyticsEvents.push([viewer, input]); return { accepted: input.events.length }; } },
     catalogService: {
       get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', kind: 'game', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover`, revision: '7' }; },
       list: async query => { calls.push(['catalog-list', query]); return [{ id: workId, title: '公开游戏', kind: 'game', updatedAt: '2026-10-12T08:00:00.000Z' }]; },
@@ -202,6 +202,13 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
     workService: { getCover: async id => { calls.push(['cover', id]); return { mediaType: 'image/webp', body: coverBody }; } },
   });
   t.after(() => app.close());
+  const tracked = await app.inject({ method: 'POST', url: '/v1/analytics/events', payload: { events: [{
+    type: 'page_view', anonymousId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333',
+    hostKind: 'mcp-app', route: 'learning', occurredAt: '2026-10-20T12:00:00.000Z',
+  }] } });
+  assert.equal(tracked.statusCode, 202);
+  assert.equal(analyticsEvents[0][1].events[0].hostKind, 'mcp-app');
+  assert.equal(analyticsEvents[0][1].events[0].route, 'learning');
   const denied = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30' });
   assert.equal(denied.statusCode, 401);
   const analytics = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30', headers: { authorization: 'Bearer token' } });

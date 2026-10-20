@@ -18,6 +18,22 @@ test('analytics service accepts bounded privacy-preserving events', async () => 
   assert.equal('ip' in inserted[0], false);
 });
 
+test('analytics service preserves MCP app learning and tools routes', async () => {
+  const { createAnalyticsService } = await import('../../apps/api/src/analytics-service.mjs');
+  const inserted = []; const now = new Date('2026-10-20T12:00:00.000Z');
+  const service = createAnalyticsService({ repository: { insert: async rows => inserted.push(...rows) }, clock: () => now, ids: () => '11111111-1111-4111-8111-111111111111' });
+  const identity = { anonymousId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333', hostKind: 'mcp-app', occurredAt: now.toISOString() };
+  const result = await service.record(null, { events: [
+    { ...identity, type: 'page_view', route: 'learning' },
+    { ...identity, type: 'page_view', route: 'tools' },
+  ] });
+  assert.deepEqual(result, { accepted: 2 });
+  assert.deepEqual(inserted.map(({ hostKind, route }) => ({ hostKind, route })), [
+    { hostKind: 'mcp-app', route: 'learning' },
+    { hostKind: 'mcp-app', route: 'tools' },
+  ]);
+});
+
 test('analytics service rejects arbitrary attribution and identifying campaign values', async () => {
   const { createAnalyticsService } = await import('../../apps/api/src/analytics-service.mjs');
   const now = new Date('2026-09-30T12:00:00.000Z');

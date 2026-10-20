@@ -44,6 +44,7 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   assert.equal(await page.locator('.discovery-catalog [data-work-id="gamehub-guess-baike"]').count(),1);
   assert.equal(await page.locator('[data-work-id="7359a350-cc0a-4a09-875d-cec9b5b8f93f"] .discovery-game__provenance').getByText('MIT · 可二创').count(),1);
   assert.equal(requests.some(req=>req.url.startsWith('/v1/me/library')),false);
+  assert.equal(requests.some(req=>req.url==='/v1/me'),false,'anonymous discovery must not probe the authenticated profile endpoint');
   await page.getByRole('button',{name:'开放源码',exact:true}).click();await page.getByRole('heading',{name:'2048',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('openSource=true')));
   await page.getByRole('button',{name:'待认领',exact:true}).click();await page.getByRole('heading',{name:'OI 重开模拟器',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('claimable=true')));
   await page.getByRole('button',{name:'全部权益',exact:true}).click();await page.getByLabel('运行方式').selectOption('windows');await page.getByRole('heading',{name:'宇宙巡航机',exact:true}).waitFor();assert.ok(requests.some(req=>req.url.includes('runtime=windows')));
@@ -83,7 +84,7 @@ test('discovery browser: complete catalog, remote search, private recent plays a
     const tops=await nav.getByRole('button').evaluateAll(buttons=>buttons.map(button=>Math.round(button.getBoundingClientRect().top)));
     assert.equal(new Set(tops).size,1,'all four navigation entries must stay on one row');
     await nav.getByRole('button',{name:'共建',exact:true}).waitFor();await page.locator('.header__tools').getByRole('button',{name:'＋ 添加到 Agent',exact:true}).waitFor();
-    await page.getByRole('heading',{name:'休息一下？',exact:true}).click();
+    await page.getByRole('heading',{name:'发现点有趣的',exact:true}).click();
     await page.screenshot({path:path.join(shots,'narrow-'+width+'.png'),fullPage:true});
   }
   await page.goto(base+'/?small=1&noShares=1');await page.locator('.discovery-catalog__grid .discovery-game').nth(5).waitFor();

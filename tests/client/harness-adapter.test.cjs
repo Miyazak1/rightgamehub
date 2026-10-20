@@ -212,7 +212,7 @@ test('shared client scopes theme writes and responds to its sidebar container', 
   assert.match(css, /container-type:\s*inline-size/);
   assert.match(css, /@container \(max-width: 767px\)/);
   assert.match(css, /@container \(max-width: 479px\)/);
-  assert.match(app, /休息一下？/);
+  assert.match(app, /发现点有趣的/);
   assert.match(app, /globalThis\.scrollTo/);
   assert.match(css, /\.mobile-nav \{ position: sticky/);
   assert.doesNotMatch(app, /PLAY SOMETHING NEW/);
