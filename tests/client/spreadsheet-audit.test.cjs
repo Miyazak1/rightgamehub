@@ -94,3 +94,16 @@ test('embedded Agent bridge automatically syncs PDF context without submitting a
   listeners.get('message')({source:parent,data:{type:bridge.PDF_READER_STATUS,status:'synced'}});
   assert.equal(received.status,'synced');
 });
+
+test('embedded Agent bridge automatically syncs Change Radar evidence',async()=>{
+  const bridge=await import(pathToFileURL(path.resolve('packages/platform-client/src/agent-tool-bridge.mjs')).href);
+  const listeners=new Map(),posted=[];
+  const parent={postMessage:message=>posted.push(message)};
+  const windowImpl={addEventListener:(name,handler)=>listeners.set(name,handler),removeEventListener:()=>{}};
+  assert.equal(bridge.syncChangeRadarContext({kind:'change-radar-context',version:2,events:[]},{parentWindow:parent,currentWindow:windowImpl}),true);
+  assert.equal(posted[0].type,bridge.CHANGE_RADAR_CONTEXT);
+  let received=null;
+  bridge.subscribeChangeRadarStatus(message=>{received=message;},{parentWindow:parent,windowImpl});
+  listeners.get('message')({source:parent,data:{type:bridge.CHANGE_RADAR_STATUS,status:'synced'}});
+  assert.equal(received.status,'synced');
+});

@@ -9,7 +9,7 @@ export const officialTools=[
     id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr','document.search','document.annotate','document.cite','document.library','agent.context'],load:()=>import('./PdfReaderTool.jsx'),
   }),
   Object.freeze({
-    id:'change-radar',route:'/tools/change-radar',titleKey:'tools.changeRadar.title',descriptionKey:'tools.changeRadar.description',mark:'⌁',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['watch.create','watch.read','watch.patch','watch.check','watch.history'],load:()=>import('./ChangeRadarTool.jsx'),
+    id:'change-radar',route:'/tools/change-radar',titleKey:'tools.changeRadar.title',descriptionKey:'tools.changeRadar.description',mark:'⌁',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['watch.create','watch.read','watch.patch','watch.check','watch.history','watch.diff','watch.rules','watch.inbox','agent.context'],load:()=>import('./ChangeRadarTool.jsx'),
   }),
   Object.freeze({
     id:'privacy-redactor',route:'/tools/privacy-redactor',titleKey:'tools.privacy.title',descriptionKey:'tools.privacy.description',mark:'▧',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['privacy.scan','privacy.redact','privacy.image','privacy.pdf','privacy.metadata.strip','document.export'],load:()=>import('./PrivacyRedactorTool.jsx'),

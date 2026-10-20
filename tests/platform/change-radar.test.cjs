@@ -6,6 +6,19 @@ const {pathToFileURL}=require('node:url');
 const root=path.resolve(__dirname,'../..');
 const moduleUrl=file=>pathToFileURL(path.join(root,file)).href;
 
+test('change radar builds readable diffs, suppresses volatile timestamps and evaluates rules',async()=>{
+  const {buildTextDiff,evaluateChangeRule,normalizeRadarText}=await import(moduleUrl('apps/api/src/change-radar-diff.mjs'));
+  const before='Plan\nPrice: 99\nUpdated 2 minutes ago';
+  const after='Plan\nPrice: 79\nUpdated 8 minutes ago\nRegistration open';
+  assert.equal(normalizeRadarText(before).includes('2 minutes'),false);
+  const diff=buildTextDiff(normalizeRadarText(before),normalizeRadarText(after));
+  assert.equal(diff.modified,1);
+  assert.equal(diff.added,1);
+  assert.equal(evaluateChangeRule({type:'keyword_appears',value:'Registration open'},before,after).matched,true);
+  assert.equal(evaluateChangeRule({type:'number_changes'},before,after).matched,true);
+  assert.equal(evaluateChangeRule({type:'keyword_disappears',value:'Plan'},before,after).matched,false);
+});
+
 test('change radar rejects private targets and normalizes text safely',async()=>{
   const {assertPublicHttpUrl,isPrivateAddress,normalizeFetchedText}=await import(moduleUrl('apps/api/src/change-radar-fetcher.mjs'));
   assert.equal(isPrivateAddress('127.0.0.1'),true);
@@ -54,17 +67,19 @@ test('change radar service requires an account, validates input and checks owned
   assert.throws(()=>service.list(null),error=>error instanceof ChangeRadarError&&error.code==='AUTH_REQUIRED');
   const actor={userId:'user-1'},watch=await service.create(actor,{title:' Release notes ',url:'https://example.com/releases',condition:'new section',intervalMinutes:60});
   assert.equal(watch.title,'Release notes');
+  assert.equal(watch.ruleType,'any');
   assert.equal((await service.list(actor)).length,1);
   const checked=await service.checkNow(actor,watch.id);
   assert.equal(checked.initial,true);
   await assert.rejects(service.create(actor,{title:'Bad interval',url:'https://example.com',intervalMinutes:3}),error=>error.code==='CHANGE_RADAR_INVALID');
+  await assert.rejects(service.create(actor,{title:'Missing keyword',url:'https://example.com',intervalMinutes:60,ruleType:'keyword_appears'}),error=>error.code==='CHANGE_RADAR_INVALID');
   await assert.rejects(service.get({userId:'user-2'},watch.id),error=>error.code==='CHANGE_RADAR_NOT_FOUND');
 });
 
 test('change radar routes are authenticated and expose the account-scoped API',async t=>{
   const [{default:Fastify},{registerChangeRadarRoutes}]=await Promise.all([import(moduleUrl('apps/api/node_modules/fastify/fastify.js')),import(moduleUrl('apps/api/src/change-radar-routes.mjs'))]);
   const app=Fastify({logger:false});
-  const service={list:async actor=>[{id:'watch-1',owner:actor.userId}],create:async()=>({id:'watch-1'})};
+  const service={list:async actor=>[{id:'watch-1',owner:actor.userId}],create:async()=>({id:'watch-1'}),events:async()=>[{id:'00000000-0000-4000-8000-000000000001'}],markRead:async()=>({id:'00000000-0000-4000-8000-000000000001',isRead:true})};
   const requireAuth=async request=>{if(request.headers.authorization!=='Bearer ok'){const error=new Error('Authentication required.');error.statusCode=401;throw error;}request.actor={userId:'user-1'};};
   registerChangeRadarRoutes(app,{service,requireAuth});
   t.after(()=>app.close());
@@ -72,4 +87,9 @@ test('change radar routes are authenticated and expose the account-scoped API',a
   const list=await app.inject({method:'GET',url:'/v1/me/change-watches',headers:{authorization:'Bearer ok'}});
   assert.equal(list.statusCode,200);
   assert.equal(list.json().data[0].owner,'user-1');
+  const events=await app.inject({method:'GET',url:'/v1/me/change-events?unreadOnly=true&limit=10',headers:{authorization:'Bearer ok'}});
+  assert.equal(events.statusCode,200);
+  const read=await app.inject({method:'POST',url:'/v1/me/change-events/00000000-0000-4000-8000-000000000001/read',headers:{authorization:'Bearer ok'}});
+  assert.equal(read.statusCode,200);
+  assert.equal(read.json().data.isRead,true);
 });

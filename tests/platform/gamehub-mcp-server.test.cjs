@@ -96,6 +96,7 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.match(resource.contents[0].text, /gamehub\/navigation\.openExternal/u);
   assert.match(resource.contents[0].text, /gamehub\/spreadsheet-audit\.submit/u);
   assert.match(resource.contents[0].text, /gamehub\/pdf-reader\.context/u);
+  assert.match(resource.contents[0].text, /gamehub\/change-radar\.context/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.context/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.request-agent/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.draft/u);

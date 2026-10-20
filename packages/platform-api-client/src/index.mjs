@@ -127,6 +127,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     deleteChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, method: 'DELETE', auth: true }),
     listChangeWatchSnapshots: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/snapshots`, { ...options, auth: true }),
     checkChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/check`, { ...options, method: 'POST', auth: true }),
+    listChangeEvents: ({ unreadOnly = false, limit = 50 } = {}, options) => request(`/v1/me/change-events?${new URLSearchParams({ unreadOnly: String(Boolean(unreadOnly)), limit: String(limit) })}`, { ...options, auth: true }),
+    markChangeEventRead: (id, options) => request(`/v1/me/change-events/${encodeURIComponent(id)}/read`, { ...options, method: 'POST', auth: true }),
     listWorkLeaderboards: (workId,options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards`,options),
     readCompetitionLeaderboard: (workId,boardId,query={},options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards/${encodeURIComponent(boardId)}?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!=null))}`,{...options,auth:true}),
     listCompetitionModes: (session,options) => request('/v1/competition/modes',{...options,auth:true,headers:{'X-GameHub-Session':session}}),

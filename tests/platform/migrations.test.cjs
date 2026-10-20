@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 70);
+  assert.equal(files.length, 71);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -24,11 +24,15 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const openedOutreach = fs.readFileSync(path.join(migrationDir, '0068_author_outreach_opened_state.sql'), 'utf8');
   const interactiveCourseware = fs.readFileSync(path.join(migrationDir, '0069_interactive_courseware_kind.sql'), 'utf8');
   const changeRadar = fs.readFileSync(path.join(migrationDir, '0070_official_change_radar.sql'), 'utf8');
+  const changeRadarV2 = fs.readFileSync(path.join(migrationDir, '0071_change_radar_v2.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
   assert.match(changeRadar, /CREATE TABLE tool_change_watches/);
   assert.match(changeRadar, /CREATE TABLE tool_change_snapshots/);
+  assert.match(changeRadarV2, /ADD COLUMN rule_type/);
+  assert.match(changeRadarV2, /ADD COLUMN diff_json/);
+  assert.match(changeRadarV2, /ADD COLUMN is_read/);
   assert.match(creatorGeneration, /prompt_version text NOT NULL/);
   assert.match(creatorGeneration, /one_active_per_draft/);
   assert.match(communityProjects, /CREATE TABLE community_projects/);

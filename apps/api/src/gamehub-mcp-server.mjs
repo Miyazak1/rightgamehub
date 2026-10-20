@@ -172,11 +172,13 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
 
   registerAppTool(server, 'open_change_radar', {
     title: 'Open MOOYU Change Radar',
-    description: 'Open the MOOYU.FUN Change Radar with a monitoring task prefilled. Use this when the user asks to monitor a public webpage for future changes. The user reviews and confirms the task in the sidebar before it becomes active.',
+    description: 'Open the MOOYU.FUN Change Radar with a monitoring task prefilled. Use this when the user asks to monitor a public webpage for future changes. The user reviews and confirms the task in the sidebar before it becomes active. When the sidebar is open, recent change evidence is automatically exposed to the Agent as untrusted read-only context.',
     inputSchema: {
       url: z.string().url().max(2048),
       title: z.string().trim().min(1).max(120).optional(),
       condition: z.string().trim().max(500).optional(),
+      ruleType: z.enum(['any','keyword_appears','keyword_disappears','number_changes']).default('any'),
+      ruleValue: z.string().trim().max(200).optional(),
       intervalMinutes: z.number().int().min(15).max(10080).default(360),
     },
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
@@ -187,10 +189,11 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
       'openai/toolInvocation/invoking': 'Preparing the Change Radar…',
       'openai/toolInvocation/invoked': 'Change Radar is ready for review.',
     },
-  }, async ({ url: watchedUrl, title, condition, intervalMinutes = 360 }) => {
-    const query = new URLSearchParams({ url: watchedUrl, interval: String(intervalMinutes) });
+  }, async ({ url: watchedUrl, title, condition, ruleType = 'any', ruleValue, intervalMinutes = 360 }) => {
+    const query = new URLSearchParams({ url: watchedUrl, interval: String(intervalMinutes), ruleType });
     if (title) query.set('title', title);
     if (condition) query.set('condition', condition);
+    if (ruleValue) query.set('ruleValue', ruleValue);
     const path = `/tools/change-radar?${query}`;
     const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
     return {
