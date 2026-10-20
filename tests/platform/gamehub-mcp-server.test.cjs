@@ -28,9 +28,9 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_game', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
-  assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v7.html');
+  assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v8.html');
   assert.deepEqual(openGameHubTool._meta.ui.visibility, ['model', 'app']);
-  assert.equal(openGameHubTool._meta['openai/outputTemplate'], 'ui://gamehub/platform-v7.html');
+  assert.equal(openGameHubTool._meta['openai/outputTemplate'], 'ui://gamehub/platform-v8.html');
 
   const search = await client.callTool({ name: 'search_games', arguments: { query: 'orbit', limit: 4 } });
   assert.equal(search.structuredContent.games[0].playUrl, 'https://mooyu.fun/w/game-1');
@@ -67,18 +67,24 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.equal(spreadsheetTool.annotations.readOnlyHint, true);
   assert.equal(spreadsheetTool.annotations.destructiveHint, false);
   assert.match(spreadsheetTool.description, /never put workbook contents in tool arguments/iu);
+  assert.match(spreadsheetTool.description, /minimal audit summary/iu);
   const spreadsheet = await client.callTool({ name: 'open_spreadsheet_audit', arguments: { mode: 'compare' } });
   assert.match(spreadsheet.structuredContent.view.path, /^\/tools\/spreadsheet-audit\?/u);
   assert.match(spreadsheet.structuredContent.view.path, /mode=compare/u);
   assert.match(spreadsheet.structuredContent.view.url, /gh_route=%2Ftools%2Fspreadsheet-audit/u);
 
-  const resource = await client.readResource({ uri: 'ui://gamehub/platform-v7.html' });
+  const resource = await client.readResource({ uri: 'ui://gamehub/platform-v8.html' });
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resource.contents[0].text, /<iframe id="gamehub-frame"/u);
   assert.match(resource.contents[0].text, /ui\/request-display-mode/u);
-  assert.match(resource.contents[0].text, /gh_embed','platform-v7'/u);
+  assert.match(resource.contents[0].text, /gh_embed','platform-v8'/u);
   assert.match(resource.contents[0].text, /searchParams\.set\('lang',locale\)/u);
   assert.match(resource.contents[0].text, /gamehub\/navigation\.openExternal/u);
+  assert.match(resource.contents[0].text, /gamehub\/spreadsheet-audit\.submit/u);
+  assert.match(resource.contents[0].text, /event\.origin===SITE_ORIGIN/u);
+  assert.match(resource.contents[0].text, /ui\/update-model-context/u);
+  assert.match(resource.contents[0].text, /ui\/message/u);
+  assert.match(resource.contents[0].text, /ordinaryCellValuesShared:false/u);
   assert.match(resource.contents[0].text, /openai\?\.openExternal/u);
   assert.ok(resource.contents[0].text.includes("new RegExp('^/works/([^/?#]+)/?$')"));
   assert.doesNotMatch(resource.contents[0].text, /route\.match\(\/\^\/works\//u);

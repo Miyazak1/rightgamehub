@@ -1,6 +1,7 @@
-import React,{useMemo,useRef,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {useI18n} from './I18n.jsx';
-import {analyzeWorkbook,buildSpreadsheetAuditReport,compareWorkbooks} from './spreadsheet-audit.mjs';
+import {isEmbeddedAgentTool,submitSpreadsheetAudit,subscribeSpreadsheetAuditStatus} from './agent-tool-bridge.mjs';
+import {analyzeWorkbook,buildSpreadsheetAgentPayload,buildSpreadsheetAuditReport,compareWorkbooks} from './spreadsheet-audit.mjs';
 import {readSpreadsheetFile,SPREADSHEET_ACCEPT} from './spreadsheet-reader.mjs';
 import './SpreadsheetAuditTool.css';
 
@@ -22,12 +23,21 @@ const CellButton=({item,active,onClick,children})=><button type="button" classNa
 
 export default function SpreadsheetAuditTool(){
   const {t}=useI18n();
+  const agentHost=useMemo(()=>isEmbeddedAgentTool(),[]),agentRequest=useRef('');
   const [currentFile,setCurrentFile]=useState(null),[current,setCurrent]=useState(null),[analysis,setAnalysis]=useState(null);
   const [baselineFile,setBaselineFile]=useState(null),[baseline,setBaseline]=useState(null);
-  const [busy,setBusy]=useState(''),[notice,setNotice]=useState(''),[tab,setTab]=useState('issues'),[sheet,setSheet]=useState('all'),[query,setQuery]=useState(''),[selected,setSelected]=useState(null);
+  const [busy,setBusy]=useState(''),[notice,setNotice]=useState(''),[agentDelivery,setAgentDelivery]=useState('idle'),[tab,setTab]=useState('issues'),[sheet,setSheet]=useState('all'),[query,setQuery]=useState(''),[selected,setSelected]=useState(null);
   const comparison=useMemo(()=>baseline&&current?compareWorkbooks(baseline,current):null,[baseline,current]);
   const relation=useMemo(()=>selected&&analysis?analysis.relations(selected.sheet,selected.address):null,[analysis,selected]);
-  const load=async(kind,file)=>{if(!file)return;setBusy(kind);setNotice('');try{const workbook=await readSpreadsheetFile(file,{onProgress:({sheet:position,total,name})=>setNotice(t('tools.spreadsheetAudit.readingSheet',{position,total,name}))});if(kind==='current'){setCurrentFile(file);setCurrent(workbook);const next=analyzeWorkbook(workbook);setAnalysis(next);setSelected(next.formulas[0]||null);setSheet('all');setTab(next.issues.length?'issues':'formulas');}else{setBaselineFile(file);setBaseline(workbook);setTab('changes');}setNotice(t('tools.spreadsheetAudit.ready',{name:file.name}));}catch(error){setNotice(t(`tools.spreadsheetAudit.error.${error?.code||'unknown'}`));}finally{setBusy('');}};
+  useEffect(()=>subscribeSpreadsheetAuditStatus(message=>{if(message.requestId!==agentRequest.current)return;if(message.status==='sent'){setAgentDelivery('sent');setNotice(t('tools.spreadsheetAudit.agentSent'));}else{setAgentDelivery('failed');setNotice(t('tools.spreadsheetAudit.agentSendFailed'));}}),[t]);
+  const sendToAgent=({nextAnalysis,nextComparison=null,nextCurrentFile,currentWorkbook,nextBaselineFile=null})=>{
+    if(!agentHost||!nextAnalysis)return;
+    const payload=buildSpreadsheetAgentPayload({analysis:nextAnalysis,comparison:nextComparison,currentName:nextCurrentFile?.name,baselineName:nextBaselineFile?.name,hasMacros:currentWorkbook?.hasMacros});
+    const requestId=submitSpreadsheetAudit(payload);
+    if(!requestId){setAgentDelivery('failed');setNotice(t('tools.spreadsheetAudit.agentSendFailed'));return;}
+    agentRequest.current=requestId;setAgentDelivery('sending');setNotice(t('tools.spreadsheetAudit.agentSending'));
+  };
+  const load=async(kind,file)=>{if(!file)return;setBusy(kind);setNotice('');try{const workbook=await readSpreadsheetFile(file,{onProgress:({sheet:position,total,name})=>setNotice(t('tools.spreadsheetAudit.readingSheet',{position,total,name}))});let nextAnalysis=analysis,nextComparison=null,nextCurrent=current,nextCurrentFile=currentFile,nextBaselineFile=baselineFile;if(kind==='current'){setCurrentFile(file);setCurrent(workbook);nextAnalysis=analyzeWorkbook(workbook);nextCurrent=workbook;nextCurrentFile=file;nextComparison=baseline?compareWorkbooks(baseline,workbook):null;setAnalysis(nextAnalysis);setSelected(nextAnalysis.formulas[0]||null);setSheet('all');setTab(nextAnalysis.issues.length?'issues':'formulas');}else{setBaselineFile(file);setBaseline(workbook);nextBaselineFile=file;nextComparison=current?compareWorkbooks(workbook,current):null;setTab('changes');}setNotice(t('tools.spreadsheetAudit.ready',{name:file.name}));if(agentHost&&nextAnalysis&&nextCurrent)sendToAgent({nextAnalysis,nextComparison,nextCurrentFile,currentWorkbook:nextCurrent,nextBaselineFile});}catch(error){setNotice(t(`tools.spreadsheetAudit.error.${error?.code||'unknown'}`));}finally{setBusy('');}};
   const sheets=current?.sheets.map(item=>item.name)||[];
   const matches=item=>(sheet==='all'||item.sheet===sheet)&&(!query||`${item.sheet} ${item.address} ${item.formula||''} ${item.before||''} ${item.after||''} ${item.code||''}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const issueRows=analysis?.issues.filter(matches)||[],formulaRows=analysis?.formulas.filter(matches)||[],changeRows=comparison?.changes.filter(matches)||[];
@@ -36,7 +46,7 @@ export default function SpreadsheetAuditTool(){
   const exportReport=()=>{if(!analysis)return;downloadText(report(),`${safeName(currentFile?.name)}-formula-audit.md`);setNotice(t('tools.spreadsheetAudit.exported'));};
 
   return <section className="sheet-audit" aria-label={t('tools.spreadsheetAudit.workspace')}>
-    <div className="sheet-audit-trust"><span aria-hidden="true">●</span><div><strong>{t('tools.spreadsheetAudit.localOnly')}</strong><p>{t('tools.spreadsheetAudit.localLead')}</p></div></div>
+    <div className={`sheet-audit-trust${agentHost?' is-agent':''}`}><span aria-hidden="true">●</span><div><strong>{t(agentHost?'tools.spreadsheetAudit.agentLocalOnly':'tools.spreadsheetAudit.localOnly')}</strong><p>{t(agentHost?'tools.spreadsheetAudit.agentLocalLead':'tools.spreadsheetAudit.localLead')}</p></div></div>
     <div className="sheet-audit-files">
       <WorkbookDrop kind="current" file={currentFile} workbook={current} busy={Boolean(busy)} onFile={file=>load('current',file)} t={t}/>
       <WorkbookDrop kind="baseline" file={baselineFile} workbook={baseline} busy={Boolean(busy)} onFile={file=>load('baseline',file)} t={t}/>
@@ -55,7 +65,7 @@ export default function SpreadsheetAuditTool(){
           {selected?<><header><span className="kicker">FORMULA TRACE</span><h3>{selected.sheet}!{selected.address}</h3></header><div className="sheet-audit-formula"><span>{t('tools.spreadsheetAudit.formula')}</span><code>{selected.formula||'—'}</code></div><div className="sheet-audit-relations"><section><h4>{t('tools.spreadsheetAudit.precedents')}</h4>{relation?.precedents.length?<ul>{relation.precedents.slice(0,100).map(item=><li key={item.key}><button onClick={()=>item.cell?.formula&&setSelected(analysis.formulaByKey.get(item.key))}>{item.key}</button><span>{item.cell?.formula||item.cell?.value||t('tools.spreadsheetAudit.notLoaded')}</span></li>)}</ul>:<p>{t('tools.spreadsheetAudit.none')}</p>}</section><section><h4>{t('tools.spreadsheetAudit.dependents')}</h4>{relation?.dependents.length?<ul>{relation.dependents.slice(0,100).map(item=><li key={item.key}><button onClick={()=>setSelected(item.cell)}>{item.key}</button><span>{item.cell?.formula}</span></li>)}</ul>:<p>{t('tools.spreadsheetAudit.none')}</p>}</section></div><small className="sheet-audit-caution">{t('tools.spreadsheetAudit.caution')}</small></>:<div className="sheet-audit-detail__empty"><span>ƒx</span><p>{t('tools.spreadsheetAudit.selectCell')}</p></div>}
         </aside>
       </div>
-      <footer className="sheet-audit-actions"><p>{t('tools.spreadsheetAudit.reportLead')}</p><div><button className="button button--secondary" onClick={()=>copyReport(false)}>{t('tools.spreadsheetAudit.copy')}</button><button className="button button--secondary" onClick={exportReport}>{t('tools.spreadsheetAudit.export')}</button><button className="button button--primary" onClick={()=>copyReport(true)}>{t('tools.spreadsheetAudit.copyAgent')}</button></div></footer>
+      <footer className="sheet-audit-actions"><p>{t(agentHost?'tools.spreadsheetAudit.agentReportLead':'tools.spreadsheetAudit.reportLead')}</p><div><button className="button button--secondary" onClick={()=>copyReport(false)}>{t('tools.spreadsheetAudit.copy')}</button><button className="button button--secondary" onClick={exportReport}>{t('tools.spreadsheetAudit.export')}</button>{agentHost?(agentDelivery==='failed'?<button className="button button--primary" onClick={()=>sendToAgent({nextAnalysis:analysis,nextComparison:comparison,nextCurrentFile:currentFile,currentWorkbook:current,nextBaselineFile:baselineFile})}>{t('tools.spreadsheetAudit.agentRetry')}</button>:<span className={`sheet-audit-agent-state is-${agentDelivery}`}>{t(agentDelivery==='sent'?'tools.spreadsheetAudit.agentSentLabel':'tools.spreadsheetAudit.agentSendingButton')}</span>):<button className="button button--primary" onClick={()=>copyReport(true)}>{t('tools.spreadsheetAudit.copyAgent')}</button>}</div></footer>
     </>:<div className="sheet-audit-start"><span aria-hidden="true">ƒx</span><strong>{t('tools.spreadsheetAudit.startTitle')}</strong><p>{t('tools.spreadsheetAudit.startLead')}</p></div>}
     {notice?<div className="sheet-audit-notice" role="status">{notice}</div>:null}
   </section>;

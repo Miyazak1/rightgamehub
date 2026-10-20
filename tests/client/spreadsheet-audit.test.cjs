@@ -43,3 +43,40 @@ test('workbook comparison reports formula additions, removals, and edits',async(
   assert.deepEqual(result.stats,{added:1,removed:1,changed:1});
   assert.deepEqual(result.changes.map(item=>item.type).sort(),['added','changed','removed']);
 });
+
+test('Agent audit payload is bounded and never includes ordinary cell values',async()=>{
+  const {analyzeWorkbook,buildSpreadsheetAgentPayload}=await modulePromise;
+  const cells=Array.from({length:45},(_,index)=>({address:`A${index+1}`,row:index+1,column:1,formula:'=#REF!+B1',value:`private-value-${index}`}));
+  const analysis=analyzeWorkbook(workbook(cells));
+  const payload=buildSpreadsheetAgentPayload({analysis,currentName:'finance\u0000.xlsx',hasMacros:true});
+  assert.equal(payload.kind,'spreadsheet-formula-audit');
+  assert.equal(payload.workbook.name,'finance .xlsx');
+  assert.equal(payload.workbook.hasMacros,true);
+  assert.equal(payload.issues.length,40);
+  assert.equal(payload.issuesOmitted,5);
+  assert.equal(payload.disclosure.rawWorkbookShared,false);
+  assert.equal(payload.disclosure.ordinaryCellValuesShared,false);
+  const serialized=JSON.stringify(payload);
+  assert.doesNotMatch(serialized,/private-value/u);
+  assert.doesNotMatch(serialized,/"value"/u);
+});
+
+test('embedded Agent bridge submits a bounded message and accepts status only from its parent',async()=>{
+  const bridge=await import(pathToFileURL(path.resolve('packages/platform-client/src/agent-tool-bridge.mjs')).href);
+  const listeners=new Map(),posted=[];
+  const parent={postMessage:message=>posted.push(message)};
+  const windowImpl={addEventListener:(name,handler)=>listeners.set(name,handler),removeEventListener:(name,handler)=>{if(listeners.get(name)===handler)listeners.delete(name);}};
+  assert.equal(bridge.isEmbeddedAgentTool({pathname:'/mcp-app',search:'?gh_host=mcp-app'}),true);
+  assert.equal(bridge.isEmbeddedAgentTool({pathname:'/tools/spreadsheet-audit',search:''}),false);
+  const requestId=bridge.submitSpreadsheetAudit({kind:'spreadsheet-formula-audit'},{parentWindow:parent,currentWindow:windowImpl,cryptoImpl:{randomUUID:()=> 'audit-id'}});
+  assert.equal(requestId,'audit-id');
+  assert.equal(posted[0].type,bridge.SPREADSHEET_AUDIT_SUBMIT);
+  let received=null;
+  const unsubscribe=bridge.subscribeSpreadsheetAuditStatus(message=>{received=message;},{parentWindow:parent,windowImpl});
+  listeners.get('message')({source:{},data:{type:bridge.SPREADSHEET_AUDIT_STATUS,requestId,status:'sent'}});
+  assert.equal(received,null);
+  listeners.get('message')({source:parent,data:{type:bridge.SPREADSHEET_AUDIT_STATUS,requestId,status:'sent'}});
+  assert.equal(received.status,'sent');
+  unsubscribe();
+  assert.equal(listeners.has('message'),false);
+});

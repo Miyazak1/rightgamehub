@@ -204,7 +204,7 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
 
   registerAppTool(server, 'open_spreadsheet_audit', {
     title: 'Open MOOYU Spreadsheet Formula Audit',
-    description: 'Open the local MOOYU.FUN spreadsheet formula audit workspace for tracing formulas, finding structural anomalies, and comparing workbook versions. The user chooses XLSX or XLSM files inside the UI; never put workbook contents in tool arguments. Files stay on the user device and are not uploaded by this tool.',
+    description: 'Open the local MOOYU.FUN spreadsheet formula audit workspace for tracing formulas, finding structural anomalies, and comparing workbook versions. The user chooses XLSX or XLSM files inside the UI; never put workbook contents in tool arguments. Raw files stay on the user device. After the user selects a file, the UI sends this conversation a disclosed minimal audit summary without ordinary cell values.',
     inputSchema: {
       mode: z.enum(['audit', 'compare']).default('audit'),
     },
@@ -220,7 +220,7 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     const path = `/tools/spreadsheet-audit?${new URLSearchParams({ mode })}`;
     const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
     return {
-      content: [{ type: 'text', text: 'Opened the local spreadsheet formula audit workspace. Ask the user to choose the workbook there; do not request workbook contents as tool arguments.' }],
+      content: [{ type: 'text', text: 'Opened the local spreadsheet formula audit workspace. Ask the user to choose the workbook there. The raw file stays local; after selection, the UI automatically returns a minimal disclosed audit summary to this conversation.' }],
       structuredContent: { view: { path, url: url.href } },
     };
   });

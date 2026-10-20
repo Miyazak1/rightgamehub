@@ -203,3 +203,54 @@ export function buildSpreadsheetAuditReport({ analysis, comparison = null, curre
   lines.push('', '> 本报告只检查公式结构和引用关系，不判断业务规则是否正确。');
   return lines.join('\n');
 }
+
+const compactText = (value, maxLength) => String(value || '').replace(/[\u0000-\u001f\u007f]/gu, ' ').trim().slice(0, maxLength);
+
+export function buildSpreadsheetAgentPayload({ analysis, comparison = null, currentName = 'workbook.xlsx', baselineName = '', hasMacros = false }) {
+  if (!analysis?.stats || !Array.isArray(analysis.issues)) throw new TypeError('A completed spreadsheet analysis is required.');
+  const issueLimit = 40, changeLimit = 40;
+  const issues = analysis.issues.slice(0, issueLimit).map(item => ({
+    severity: compactText(item.severity, 12),
+    code: compactText(item.code, 40),
+    sheet: compactText(item.sheet, 120),
+    address: compactText(item.address, 24),
+    formula: compactText(item.formula, 500),
+    ...(Array.isArray(item.neighbors) ? { neighbors: item.neighbors.slice(0, 2).map(value => compactText(value, 24)) } : {}),
+  }));
+  const changes = comparison?.changes?.slice(0, changeLimit).map(item => ({
+    type: compactText(item.type, 16),
+    sheet: compactText(item.sheet, 120),
+    address: compactText(item.address, 24),
+    before: compactText(item.before, 500),
+    after: compactText(item.after, 500),
+  })) || [];
+  return {
+    kind: 'spreadsheet-formula-audit',
+    version: 1,
+    workbook: {
+      name: compactText(currentName, 180),
+      hasMacros: Boolean(hasMacros),
+      sheets: Number(analysis.stats.sheets || 0),
+      formulas: Number(analysis.stats.formulas || 0),
+      references: Number(analysis.stats.references || 0),
+      issueCount: Number(analysis.stats.issues || 0),
+    },
+    issues,
+    issuesOmitted: Math.max(0, Number(analysis.stats.issues || 0) - issues.length),
+    comparison: comparison ? {
+      baselineName: compactText(baselineName, 180),
+      added: Number(comparison.stats?.added || 0),
+      removed: Number(comparison.stats?.removed || 0),
+      changed: Number(comparison.stats?.changed || 0),
+      changes,
+      changesOmitted: Math.max(0, Number(comparison.changes?.length || 0) - changes.length),
+    } : null,
+    disclosure: {
+      rawWorkbookShared: false,
+      ordinaryCellValuesShared: false,
+      includesFileName: true,
+      includesSheetNames: true,
+      includesFlaggedFormulaText: true,
+    },
+  };
+}
