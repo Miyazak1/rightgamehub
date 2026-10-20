@@ -6,7 +6,7 @@ export const officialTools=[
     id:'knowledge-map',route:'/tools/knowledge-map',titleKey:'tools.knowledgeMap.title',descriptionKey:'tools.knowledgeMap.description',mark:'◇',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.version','agent.context','agent.create','agent.patch'],load:()=>import('./KnowledgeMapTool.jsx'),
   }),
   Object.freeze({
-    id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr'],load:()=>import('./PdfReaderTool.jsx'),
+    id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr','document.search','document.annotate','document.cite','document.library','agent.context'],load:()=>import('./PdfReaderTool.jsx'),
   }),
   Object.freeze({
     id:'change-radar',route:'/tools/change-radar',titleKey:'tools.changeRadar.title',descriptionKey:'tools.changeRadar.description',mark:'⌁',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['watch.create','watch.read','watch.patch','watch.check','watch.history'],load:()=>import('./ChangeRadarTool.jsx'),

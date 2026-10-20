@@ -25,7 +25,7 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   t.after(async () => { await client.close(); await server.close(); });
 
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_game', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_games']);
+  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_game', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
   assert.equal(openGameHubTool._meta.ui.resourceUri, 'ui://gamehub/platform-v9.html');
@@ -38,6 +38,12 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.equal(opened.structuredContent.view.path, '/works/game-1');
   assert.match(opened.structuredContent.view.url, /\/mcp-app\?gh_route=/u);
   assert.match(opened.structuredContent.view.url, /gh_host=mcp-app/u);
+  const pdfTool = tools.tools.find(item => item.name === 'open_pdf_reader');
+  assert.equal(pdfTool.annotations.readOnlyHint, true);
+  assert.match(pdfTool.description, /never put document contents in tool arguments/iu);
+  const pdfReader = await client.callTool({ name: 'open_pdf_reader', arguments: {} });
+  assert.equal(pdfReader.structuredContent.view.path, '/tools/pdf-reader');
+  assert.match(pdfReader.structuredContent.view.url, /gh_route=%2Ftools%2Fpdf-reader/u);
   const knowledgeTool = tools.tools.find(item => item.name === 'open_knowledge_map');
   assert.equal(knowledgeTool.annotations.readOnlyHint, false);
   assert.equal(knowledgeTool.annotations.destructiveHint, false);
@@ -89,6 +95,7 @@ test('GameHub MCP exposes catalog and official app tools with a versioned hosted
   assert.match(resource.contents[0].text, /searchParams\.set\('lang',locale\)/u);
   assert.match(resource.contents[0].text, /gamehub\/navigation\.openExternal/u);
   assert.match(resource.contents[0].text, /gamehub\/spreadsheet-audit\.submit/u);
+  assert.match(resource.contents[0].text, /gamehub\/pdf-reader\.context/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.context/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.request-agent/u);
   assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.draft/u);
@@ -154,6 +161,6 @@ test('GameHub MCP route accepts a real stateless Streamable HTTP client', async 
   await client.connect(transport);
   t.after(async () => { await client.close(); await app.close(); });
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 8);
+  assert.equal(tools.tools.length, 9);
   assert.equal((await client.callTool({ name: 'search_games', arguments: {} })).structuredContent.games.length, 0);
 });

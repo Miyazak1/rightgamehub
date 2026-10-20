@@ -119,6 +119,27 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
+  registerAppTool(server, 'open_pdf_reader', {
+    title: 'Open MOOYU PDF Reader',
+    description: 'Open the local-first MOOYU.FUN PDF reading workspace. The user chooses the PDF inside the UI; never put document contents in tool arguments. Extracted text, OCR results, notes, excerpts, and citations stay on the user device. In an embedded Agent, the UI automatically shares a bounded reading context while never sharing the raw PDF.',
+    inputSchema: {},
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local PDF workspace…',
+      'openai/toolInvocation/invoked': 'PDF workspace opened.',
+    },
+  }, async () => {
+    const path = '/tools/pdf-reader';
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local PDF reader. Ask the user to choose a PDF there. The raw file stays local; readable page text and annotations are automatically exposed as bounded conversation context.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   registerAppTool(server, 'open_knowledge_map', {
     title: 'Open MOOYU Knowledge Map',
     description: 'Create or open an editable visual knowledge map in the MOOYU.FUN sidebar. Use this when the user asks to turn the current conversation, plan, research, or notes into a knowledge map. Supply complete Markdown headings and lists. Use mode "replace" when revising the map already open in this conversation; use "new" for a separate map. The map remains in the user interface and is saved locally on that device.',

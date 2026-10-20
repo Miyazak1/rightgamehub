@@ -1,5 +1,7 @@
 export const SPREADSHEET_AUDIT_SUBMIT = 'gamehub/spreadsheet-audit.submit';
 export const SPREADSHEET_AUDIT_STATUS = 'gamehub/spreadsheet-audit.status';
+export const PDF_READER_CONTEXT = 'gamehub/pdf-reader.context';
+export const PDF_READER_STATUS = 'gamehub/pdf-reader.status';
 
 export function isEmbeddedAgentTool(locationImpl = globalThis.location) {
   if (!locationImpl) return false;
@@ -18,6 +20,22 @@ export function subscribeSpreadsheetAuditStatus(handler, { parentWindow = global
   if (!windowImpl?.addEventListener) return () => {};
   const onMessage = event => {
     if (event.source !== parentWindow || event.data?.type !== SPREADSHEET_AUDIT_STATUS) return;
+    handler(event.data);
+  };
+  windowImpl.addEventListener('message', onMessage);
+  return () => windowImpl.removeEventListener('message', onMessage);
+}
+
+export function syncPdfReaderContext(payload, { parentWindow = globalThis.parent, currentWindow = globalThis } = {}) {
+  if (!parentWindow?.postMessage || parentWindow === currentWindow) return false;
+  parentWindow.postMessage({ type: PDF_READER_CONTEXT, payload }, '*');
+  return true;
+}
+
+export function subscribePdfReaderStatus(handler, { parentWindow = globalThis.parent, windowImpl = globalThis } = {}) {
+  if (!windowImpl?.addEventListener) return () => {};
+  const onMessage = event => {
+    if (event.source !== parentWindow || event.data?.type !== PDF_READER_STATUS) return;
     handler(event.data);
   };
   windowImpl.addEventListener('message', onMessage);
