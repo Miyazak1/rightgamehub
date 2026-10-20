@@ -136,6 +136,48 @@ test('public profile reads are anonymous while profile edits require the current
   assert.equal(updated.statusCode, 200); assert.equal(updated.headers['cache-control'], 'no-store'); assert.equal(calls[1][1], actor);
 });
 
+test('session bootstrap resolves valid, refreshable, and expired browser credentials without 401 responses', async t => {
+  const { createApp } = await import(moduleUrl('app.mjs'));
+  const { AuthError } = await import(moduleUrl('auth-service.mjs'));
+  const actor = { userId: crypto.randomUUID(), scopes: ['profile:read'] };
+  const profile = { id: actor.userId, displayName: '墨鱼玩家', role: 'user', canPublish: false };
+  const refreshedTokens = { accessToken: 'a'.repeat(43), refreshToken: 'r'.repeat(43), profile };
+  const app = createApp({
+    config: { requestBodyLimit: 65536 }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
+    authService: {
+      authenticateBearer: async authorization => {
+        if (authorization === 'Bearer valid-session-token') return actor;
+        throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.');
+      },
+      refresh: async ({ refreshToken }) => {
+        if (refreshToken === 'g'.repeat(43)) return refreshedTokens;
+        throw new AuthError('REFRESH_INVALID', 401, 'Refresh token is invalid.');
+      },
+      getProfile: async current => ({ ...profile, id: current.userId }),
+    },
+  });
+  t.after(() => app.close());
+
+  const anonymous = await app.inject({ method: 'POST', url: '/v1/auth/session', payload: {} });
+  assert.equal(anonymous.statusCode, 200);
+  assert.equal(anonymous.headers['cache-control'], 'no-store');
+  assert.deepEqual(anonymous.json().data, { authenticated: false, profile: null, tokens: null });
+
+  const valid = await app.inject({ method: 'POST', url: '/v1/auth/session', headers: { authorization: 'Bearer valid-session-token' }, payload: {} });
+  assert.equal(valid.statusCode, 200);
+  assert.equal(valid.json().data.authenticated, true);
+  assert.equal(valid.json().data.tokens, null);
+
+  const rotated = await app.inject({ method: 'POST', url: '/v1/auth/session', headers: { authorization: 'Bearer expired-session-token' }, payload: { refreshToken: 'g'.repeat(43) } });
+  assert.equal(rotated.statusCode, 200);
+  assert.equal(rotated.json().data.authenticated, true);
+  assert.equal(rotated.json().data.tokens.accessToken, refreshedTokens.accessToken);
+
+  const expired = await app.inject({ method: 'POST', url: '/v1/auth/session', headers: { authorization: 'Bearer expired-session-token' }, payload: { refreshToken: 'x'.repeat(43) } });
+  assert.equal(expired.statusCode, 200);
+  assert.deepEqual(expired.json().data, { authenticated: false, profile: null, tokens: null });
+});
+
 test('creator work routes accept discovery metadata from the creation form', async t => {
   const { createApp } = await import(moduleUrl('app.mjs'));
   let received, receivedUpdate;
@@ -193,7 +235,7 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   const coverBody = await sharp({ create: { width: 960, height: 540, channels: 3, background: '#563d7c' } }).png().toBuffer();
   const app = createApp({
     config: { requestBodyLimit: 65536, gameShareSiteOrigin: 'https://games.example' }, database: { ping: async () => true }, migrations: { status: async () => ({ ready: true }) },
-    authService: { authenticateBearer: async authorization => { if (!authorization) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
+    authService: { authenticateBearer: async authorization => { if (!authorization || authorization === 'Bearer stale') throw new AuthError('AUTH_REQUIRED', 401, 'Authentication required.'); return actor; } },
     analyticsService: { creatorOverview: async (viewer, query) => { calls.push(['analytics', viewer, query]); return { range: { days: 30 }, totals: {}, daily: [], works: [] }; }, overview: async () => ({}), record: async (viewer, input) => { analyticsEvents.push([viewer, input]); return { accepted: input.events.length }; } },
     catalogService: {
       get: async id => { calls.push(['catalog', id]); return { id, title: '公开游戏 <测试>', description: '一起玩 & 分享', kind: 'game', creatorDisplayName: '作者 "甲"', coverUrl: `/v1/works/${id}/cover`, revision: '7' }; },
@@ -209,6 +251,12 @@ test('creator analytics, public work pages and badges stay catalog-gated', async
   assert.equal(tracked.statusCode, 202);
   assert.equal(analyticsEvents[0][1].events[0].hostKind, 'mcp-app');
   assert.equal(analyticsEvents[0][1].events[0].route, 'learning');
+  const trackedWithStaleAuth = await app.inject({ method: 'POST', url: '/v1/analytics/events', headers: { authorization: 'Bearer stale' }, payload: { events: [{
+    type: 'session_ping', anonymousId: '22222222-2222-4222-8222-222222222222', sessionId: '33333333-3333-4333-8333-333333333333',
+    hostKind: 'browser', route: 'discover', occurredAt: '2026-10-20T12:00:00.000Z',
+  }] } });
+  assert.equal(trackedWithStaleAuth.statusCode, 202);
+  assert.equal(analyticsEvents[1][0], null);
   const denied = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30' });
   assert.equal(denied.statusCode, 401);
   const analytics = await app.inject({ method: 'GET', url: '/v1/creator/analytics?days=30', headers: { authorization: 'Bearer token' } });

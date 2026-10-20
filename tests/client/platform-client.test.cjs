@@ -189,6 +189,25 @@ test('API client submits analytics and reads administrator and creator overviews
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer analytics-token'));
 });
 
+test('API client bootstraps a stale browser session without triggering its normal 401 refresh path', async () => {
+  const { createApiClient } = await import('../../packages/platform-api-client/src/index.mjs');
+  const requests = [];
+  const client = createApiClient({
+    getAccessToken: () => 'expired-access',
+    getRefreshToken: () => 'unused-by-request-layer',
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      return Response.json({ data: { authenticated: false, profile: null, tokens: null } });
+    },
+  });
+  const result = await client.bootstrapSession('refresh-token');
+  assert.equal(result.data.authenticated, false);
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].url, /\/v1\/auth\/session$/u);
+  assert.equal(requests[0].init.headers.Authorization, 'Bearer expired-access');
+  assert.deepEqual(JSON.parse(requests[0].init.body), { refreshToken: 'refresh-token' });
+});
+
 test('creator insights, README badges and work sharing use stable public links', async () => {
   const [source, messages] = await Promise.all([
     fs.readFile('packages/platform-client/src/App.jsx', 'utf8'),

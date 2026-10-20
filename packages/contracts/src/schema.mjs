@@ -283,6 +283,12 @@ export const schemas = Object.freeze({
     tokens: { oneOf: [{ $ref: '#/components/schemas/AuthTokens' }, { type: 'null' }] },
   }),
   RefreshRequest: object({ refreshToken: { type: 'string', minLength: 32 } }),
+  SessionBootstrapRequest: object({ refreshToken: { type: 'string', minLength: 32 } }, []),
+  SessionBootstrapResponse: object({
+    authenticated: { type: 'boolean' },
+    profile: { oneOf: [{ $ref: '#/components/schemas/AccountProfile' }, { type: 'null' }] },
+    tokens: { oneOf: [{ $ref: '#/components/schemas/AuthTokens' }, { type: 'null' }] },
+  }),
   DeviceSession: object({
     id,
     deviceLabel: { type: 'string', minLength: 1, maxLength: 120 },
@@ -884,6 +890,7 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/auth/github/web', operationId: 'startGitHubWeb', auth: 'anonymous', request: 'GitHubWebStartRequest', response: 'GitHubWebChallenge' },
   { method: 'post', path: '/v1/auth/github/web/{challengeId}/poll', operationId: 'pollGitHubWeb', auth: 'anonymous', response: 'GitHubWebPoll', pathId: 'challengeId' },
   { method: 'post', path: '/v1/auth/refresh', operationId: 'refreshDeviceGrant', auth: 'anonymous', request: 'RefreshRequest', response: 'AuthTokens' },
+  { method: 'post', path: '/v1/auth/session', operationId: 'bootstrapSession', auth: 'optional', request: 'SessionBootstrapRequest', response: 'SessionBootstrapResponse' },
   { method: 'post', path: '/v1/realtime/tickets', operationId: 'createRealtimeTicket', auth: 'bearer', response: 'RealtimeTicket' },
   { method: 'get', path: '/v1/works/{workId}/multiplayer-modes', operationId: 'listMultiplayerModes', auth: 'anonymous', response: 'MultiplayerMode', responseArray: true, pathWorkKey: true },
   { method: 'post', path: '/v1/admin/multiplayer/modes', operationId: 'createMultiplayerMode', auth: 'bearer', request: 'CreateMultiplayerModeRequest', response: 'MultiplayerMode' },

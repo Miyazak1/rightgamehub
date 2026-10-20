@@ -247,6 +247,28 @@ export function createApp(dependencies) {
     return envelope(await authService.refresh(request.body));
   });
 
+  app.post('/v1/auth/session', {
+    schema: { body: { type: 'object', additionalProperties: false, properties: { refreshToken: { type: 'string', minLength: 32 } } } },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    let actor = null;
+    if (request.headers.authorization) {
+      try { actor = await authService.authenticateBearer(request.headers.authorization); }
+      catch (error) { if (!(error instanceof AuthError) || error.statusCode !== 401) throw error; }
+    }
+    if (actor) return envelope({ authenticated: true, profile: await authService.getProfile(actor), tokens: null });
+    if (request.body?.refreshToken) {
+      try {
+        const tokens = await authService.refresh({ refreshToken: request.body.refreshToken });
+        const profile = await authService.getProfile({ userId: tokens.profile.id });
+        return envelope({ authenticated: true, profile, tokens });
+      } catch (error) {
+        if (!(error instanceof AuthError) || ![400, 401].includes(error.statusCode)) throw error;
+      }
+    }
+    return envelope({ authenticated: false, profile: null, tokens: null });
+  });
+
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
   const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService});
@@ -261,7 +283,12 @@ export function createApp(dependencies) {
   if (gameShareService) registerGameShareRoutes(app, {service:gameShareService,requireAuth});
   if (gameSessionService) registerGameSessionRoutes(app, { service: gameSessionService, requireAuth });
   const identifyOptional = async request => {
-    request.actor = request.headers.authorization ? await authService.authenticateBearer(request.headers.authorization) : null;
+    if (!request.headers.authorization) { request.actor = null; return; }
+    try { request.actor = await authService.authenticateBearer(request.headers.authorization); }
+    catch (error) {
+      if (!(error instanceof AuthError) || error.statusCode !== 401) throw error;
+      request.actor = null;
+    }
   };
   if (competitionService) registerCompetitionRoutes(app,{service:competitionService,requireAuth,identifyOptional});
   const workKeySchema = { type: 'string', pattern: '^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$' };

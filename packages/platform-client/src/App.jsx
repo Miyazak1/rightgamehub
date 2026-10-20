@@ -43,6 +43,7 @@ import { resolveAuthClientKind } from './auth-client-kind.mjs';
 export { createBrowserHostAdapter };
 import { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } from './analytics-attribution.mjs';
 import { enqueueAnalytics } from './analytics-delivery.mjs';
+import { bootstrapAccountSession } from './account-bootstrap.mjs';
 const decodeRouteValue = value => { try { return decodeURIComponent(value||''); } catch { return value||''; } };
 
 import { playerRuntimeOptions } from './player-runtime-options.mjs';
@@ -1871,17 +1872,9 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     const load = async () => {
       const current = ++generation;
       setAccountStatus('loading');
-      let accessToken = null;
-      try { accessToken = await host.account?.getAccessToken?.(); } catch {}
-      if (!live || current !== generation) return;
-      if (!accessToken) {
-        setAccountProfile(null);
-        setAccountStatus('anonymous');
-        return;
-      }
       try {
-        const { data } = await api.getProfile();
-        if (live && current === generation) { setAccountProfile(data); setAccountStatus('ready'); }
+        const session = await bootstrapAccountSession({ api, account: host.account });
+        if (live && current === generation) { setAccountProfile(session.profile); setAccountStatus(session.status); }
       } catch {
         if (live && current === generation) { setAccountProfile(null); setAccountStatus('anonymous'); }
       }
@@ -1893,12 +1886,12 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     });
     return () => { live = false; off?.(); };
   }, [api, demo, host]);
-  useEffect(() => { if (hostReady) emitAnalytics(api, hostIdentity.id, { type: 'page_view', route: routeCategory(route) }, demo); }, [api, hostIdentity.id, hostReady, route, demo]);
+  useEffect(() => { if (hostReady && accountStatus !== 'loading') emitAnalytics(api, hostIdentity.id, { type: 'page_view', route: routeCategory(route) }, demo); }, [api, hostIdentity.id, hostReady, accountStatus, route, demo]);
   useEffect(() => {
-    if (demo || !hostReady) return undefined;
+    if (demo || !hostReady || accountStatus === 'loading') return undefined;
     const timer = setInterval(() => { if (globalThis.document?.visibilityState === 'visible') emitAnalytics(api, hostIdentity.id, { type: 'session_ping', route: routeCategory(route), durationMs: 30000 }, false); }, 30000);
     return () => clearInterval(timer);
-  }, [api, hostIdentity.id, hostReady, route, demo]);
+  }, [api, hostIdentity.id, hostReady, accountStatus, route, demo]);
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
   if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;

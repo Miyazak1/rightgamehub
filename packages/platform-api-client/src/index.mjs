@@ -260,6 +260,9 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     startGitHubWeb: (body, options) => request('/v1/auth/github/web', { ...options, method: 'POST', body }),
     pollGitHubWeb: (challengeId, options) => request(`/v1/auth/github/web/${encodeURIComponent(challengeId)}/poll`, { ...options, method: 'POST' }),
     getProfile: options => request('/v1/me', { ...options, auth: true }),
+    bootstrapSession: (refreshToken, options) => request('/v1/auth/session', {
+      ...options, method: 'POST', body: { ...(refreshToken ? { refreshToken } : {}) }, auth: true, allowRefresh: false,
+    }),
     getCreatorApplication: options => request('/v1/me/creator-application', { ...options, auth: true }),
     applyForCreator: (statement, options) => request('/v1/me/creator-application', { ...options, method: 'POST', body: { statement }, auth: true }),
     listCreatorApplications: (status = 'pending', options) => request(`/v1/admin/creator-applications?status=${encodeURIComponent(status)}`, { ...options, auth: true }),
