@@ -11,6 +11,12 @@ fi
 set -a
 . "./$ENV_FILE"
 set +a
+if [ "${PUBLIC_COMMUNITY_RELEASE:-false}" != "true" ]; then
+  COMMUNITY_ENABLED=false
+  COMMUNITY_POSTING_ENABLED=false
+  COMMUNITY_IMAGES_ENABLED=false
+  export COMMUNITY_ENABLED COMMUNITY_POSTING_ENABLED COMMUNITY_IMAGES_ENABLED
+fi
 for name in APP_DOMAIN RUNTIME_DOMAIN ACME_EMAIL ALIYUN_ACCESS_KEY_ID ALIYUN_ACCESS_KEY_SECRET POSTGRES_PASSWORD OTP_HMAC_KEY MAIL_FROM RESEND_API_KEY; do
   eval "value=\${$name:-}"
   if [ -z "$value" ] || echo "$value" | grep -qi 'replace'; then
@@ -27,6 +33,9 @@ if [ "${RULE_BUILD_ENABLED:-false}" = "true" ]; then
 fi
 
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml config >/dev/null
-docker compose --env-file "$ENV_FILE" -f compose.prod.yml up -d --build --remove-orphans
+docker compose --env-file "$ENV_FILE" -f compose.prod.yml up -d --build --remove-orphans --wait --wait-timeout "${DEPLOY_WAIT_SECONDS:-240}"
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml ps
+if [ "${DEPLOY_PRUNE:-true}" = "true" ]; then
+  PRUNE_AGE_HOURS="${PRUNE_AGE_HOURS:-168}" ./storage-maintenance.sh --apply
+fi
 echo "GameHub deployment submitted. Check: https://$APP_DOMAIN/ready"

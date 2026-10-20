@@ -79,8 +79,8 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const validatorExecutionMode = env.VALIDATOR_EXECUTION_MODE?.trim() || (nodeEnv === 'production' ? 'isolated' : 'local');
   if (!['local', 'isolated'].includes(validatorExecutionMode)) throw new Error('VALIDATOR_EXECUTION_MODE must be local or isolated');
   if (nodeEnv === 'production' && validatorExecutionMode !== 'isolated') throw new Error('VALIDATOR_EXECUTION_MODE must be isolated in production');
-  const storageWarnPercent = integer(env.STORAGE_WARN_PERCENT, 70, 'STORAGE_WARN_PERCENT', 1, 98);
-  const storageBlockPercent = integer(env.STORAGE_BLOCK_PERCENT, 85, 'STORAGE_BLOCK_PERCENT', 2, 99);
+  const storageWarnPercent = integer(env.STORAGE_WARN_PERCENT, 60, 'STORAGE_WARN_PERCENT', 1, 98);
+  const storageBlockPercent = integer(env.STORAGE_BLOCK_PERCENT, 80, 'STORAGE_BLOCK_PERCENT', 2, 99);
   if (storageWarnPercent >= storageBlockPercent) throw new Error('STORAGE_WARN_PERCENT must be lower than STORAGE_BLOCK_PERCENT');
   const objectStorageProvider = env.OBJECT_STORAGE_PROVIDER?.trim() || 'local';
   if (!['local', 'aliyun-oss'].includes(objectStorageProvider)) throw new Error('OBJECT_STORAGE_PROVIDER must be local or aliyun-oss');

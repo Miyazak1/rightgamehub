@@ -8,3 +8,7 @@ test('community pause preserves work sharing, games, leaderboards and creator to
  const {visiblePlatformRoute}=await import('../../packages/platform-client/src/community-availability.mjs');
  for(const route of ['/discover','/learn','/library','/works/id','/play/id','/s/share-code','/games/guess-baike/community','/creator','/creator/multiplayer','/account','/community-other'])assert.equal(visiblePlatformRoute(route),route);
 });
+test('retired lounge and challenge entry points return to the game leaderboard',async()=>{
+ const {visiblePlatformRoute}=await import('../../packages/platform-client/src/community-availability.mjs');
+ for(const route of ['/games/guess-baike/players','/challenge/PIXEL-1','/challenge'])assert.equal(visiblePlatformRoute(route),'/games/guess-baike/community');
+});

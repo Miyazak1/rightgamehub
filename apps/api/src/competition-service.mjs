@@ -13,7 +13,7 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const chinaDate=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 const boardView=row=>({id:row.id,...row.definition,timeZone:'Asia/Shanghai'});
 const runView=row=>({id:row.id,boardId:row.board_id,status:row.status,periodKey:row.period_key,seed:Number(row.seed),expiresAt:new Date(row.expires_at).toISOString(),metrics:row.metrics,channel:row.channel});
-const legacyDefinition={id:'daily',key:'daily',modeKey:'daily',rulesetVersion:1,title:'每日挑战榜',period:'daily',timeZone:'Asia/Shanghai',verification:'client_reported',challengeScoped:true,playerCenter:'/games/guess-baike/players',metrics:[{key:'hints',label:'提示',unit:'次'},{key:'guessedCount',label:'猜字',unit:'个'},{key:'elapsedSeconds',label:'用时',unit:'秒'}],ranking:[{metric:'hints',direction:'asc'},{metric:'guessedCount',direction:'asc'},{metric:'elapsedSeconds',direction:'asc'}]};
+const legacyDefinition={id:'daily',key:'daily',modeKey:'daily',rulesetVersion:1,title:'每日挑战榜',period:'daily',timeZone:'Asia/Shanghai',verification:'client_reported',challengeScoped:true,metrics:[{key:'hints',label:'提示',unit:'次'},{key:'guessedCount',label:'猜字',unit:'个'},{key:'elapsedSeconds',label:'用时',unit:'秒'}],ranking:[{metric:'hints',direction:'asc'},{metric:'guessedCount',direction:'asc'},{metric:'elapsedSeconds',direction:'asc'}]};
 
 // Called only after archive validation, inside the release publication transaction.
 // This is a bounded platform policy, not a grant accepting IDs supplied by an author.

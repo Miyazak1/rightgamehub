@@ -7,6 +7,10 @@ EXPECTED=${1:?Usage: bash update-community-sharing.sh FULL_COMMIT_SHA}
 [[ "$EXPECTED" =~ ^[0-9a-f]{40}$ ]] || { echo '需要完整提交 SHA。'; exit 1; }
 cd /www/gamehub
 test -f deploy/.env.prod || { echo '缺少 /www/gamehub/deploy/.env.prod，停止更新。'; exit 1; }
+set -a
+. deploy/.env.prod
+set +a
+[[ "${PUBLIC_COMMUNITY_RELEASE:-false}" == "true" ]] || { echo '社区当前处于产品暂停状态。只有经过新的发布评审并在 deploy/.env.prod 显式设置 PUBLIC_COMMUNITY_RELEASE=true 后才能重新启用。'; exit 1; }
 test -z "$(git status --porcelain)" || { echo '工作区有改动，停止；不要 reset/clean。'; exit 1; }
 CURRENT=$(git rev-parse HEAD)
 BRANCH=$(git branch --show-current)

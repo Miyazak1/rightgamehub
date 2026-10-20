@@ -54,8 +54,8 @@ const additionsFor = ({ packageType, declaredBytes, existingReservations = {} })
 
 export function createStorageCapacityService({
   roots,
-  warnPercent = 70,
-  blockPercent = 85,
+  warnPercent = 60,
+  blockPercent = 80,
   monitorIntervalMs = 60_000,
   clock = () => new Date(),
   statFilesystem = defaultFilesystem,
@@ -121,6 +121,33 @@ export function createStorageCapacityService({
       const error = measurement.error;
       return { id: area.id, available: false, level: 'unavailable', errorCode: error.code ?? 'STORAGE_STAT_FAILED' };
     }));
+    const filesystemsByDevice = new Map();
+    for (const measurement of measurements) {
+      if (measurement.error) continue;
+      const { filesystem, area } = measurement;
+      const deviceId = filesystem.deviceId ?? `area:${area.id}`;
+      const existing = filesystemsByDevice.get(deviceId);
+      if (existing) {
+        existing.storeIds.push(area.id);
+        continue;
+      }
+      const reservedBytes = reservationsByDevice.get(deviceId) ?? 0;
+      const projectedUsedBytes = Math.min(filesystem.totalBytes, filesystem.usedBytes + reservedBytes);
+      const usedPercent = percent(filesystem.usedBytes, filesystem.totalBytes);
+      const projectedUsedPercent = percent(projectedUsedBytes, filesystem.totalBytes);
+      filesystemsByDevice.set(deviceId, {
+        id: `filesystem-${filesystemsByDevice.size + 1}`,
+        storeIds: [area.id],
+        totalBytes: String(filesystem.totalBytes),
+        availableBytes: String(filesystem.availableBytes),
+        usedBytes: String(filesystem.usedBytes),
+        usedPercent,
+        projectedUsedPercent,
+        reservedBytes: String(reservedBytes),
+        level: projectedUsedPercent >= blockPercent ? 'blocked' : usedPercent >= warnPercent || projectedUsedPercent >= warnPercent ? 'warning' : 'healthy',
+      });
+    }
+    const filesystems = [...filesystemsByDevice.values()];
     const level = stores.some(store => store.level === 'unavailable') ? 'unavailable' : stores.some(store => store.level === 'blocked') ? 'blocked' : stores.some(store => store.level === 'warning') ? 'warning' : 'healthy';
     const usedPercent = Math.max(0, ...stores.filter(store => store.available).map(store => store.usedPercent));
     const snapshot = {
@@ -129,6 +156,7 @@ export function createStorageCapacityService({
       acceptingUploads: level !== 'blocked' && level !== 'unavailable',
       usedPercent,
       thresholds: { warnPercent, blockPercent },
+      filesystems,
       stores,
       lastCleanup,
     };

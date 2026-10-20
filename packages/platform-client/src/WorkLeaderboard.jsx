@@ -53,6 +53,7 @@ function Leaderboard({workId,api,go,accountProfile,Avatar,date:requestedDate,puz
     finally{if(!controller.signal.aborted){loadingMore.current=false;setMoreBusy(false);}}
   }
   const board=state.board,canPlay=!daily||date===today;
+  const playerCenter=definition.playerCenter==='/games/guess-baike/players'?null:definition.playerCenter;
   const chooseDate=value=>{if(value){if(definition.challengeScoped)go(workLeaderboardPath(workId,value));else{setDate(value);setExpanded(false);}}};
   const rules=definition.ranking.map((clause,index)=>t('leaderboard.ruleClause',{order:t(index?'leaderboard.thenCompare':'leaderboard.firstCompare'),metric:definition.metrics.find(metric=>metric.key===clause.metric)?.label,direction:t(clause.direction==='asc'?'leaderboard.lowerBetter':'leaderboard.higherBetter')})).join(t('leaderboard.ruleSeparator'));
   return <section className="work-leaderboard panel" aria-labelledby="work-board-title" ref={section} tabIndex={-1} style={{'--board-metric-count':definition.metrics.length,'--board-score-width':`${Math.max(100,definition.metrics.length*80-8)}px`}}>
@@ -70,6 +71,6 @@ function Leaderboard({workId,api,go,accountProfile,Avatar,date:requestedDate,puz
       {board.hasMore&&<button className="work-leaderboard__expand" disabled={moreBusy} onClick={()=>expanded?loadMore():setExpanded(true)}>{t(moreBusy?'leaderboard.loading':moreError?'leaderboard.retryMore':expanded?'leaderboard.loadMore':'leaderboard.expand')}</button>}
       {expanded&&<button className="work-leaderboard__collapse" onClick={()=>setExpanded(false)}>{t('leaderboard.collapse')}</button>}
     </>}
-    <footer className="work-leaderboard__footer"><span>{t(daily?'leaderboard.bestDaily':'leaderboard.bestAllTime')}</span>{definition.playerCenter&&<button onClick={()=>go(definition.playerCenter)}>{t('leaderboard.playerCenter')} ↗</button>}</footer>
+    <footer className="work-leaderboard__footer"><span>{t(daily?'leaderboard.bestDaily':'leaderboard.bestAllTime')}</span>{playerCenter&&<button onClick={()=>go(playerCenter)}>{t('leaderboard.playerCenter')} ↗</button>}</footer>
   </section>;
 }

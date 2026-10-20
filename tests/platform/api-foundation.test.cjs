@@ -17,8 +17,8 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(config.port, 3091);
   assert.equal(config.requestBodyLimit, 65536);
   assert.equal(config.validatorExecutionMode, 'local');
-  assert.equal(config.storageWarnPercent, 70);
-  assert.equal(config.storageBlockPercent, 85);
+  assert.equal(config.storageWarnPercent, 60);
+  assert.equal(config.storageBlockPercent, 80);
   assert.equal(config.rulesManifestPath, null);
   assert.deepEqual(config.rulesTrustedKeys, {});
   assert.deepEqual(config.corsOrigins, []);

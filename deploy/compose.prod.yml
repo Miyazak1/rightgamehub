@@ -59,8 +59,8 @@ x-api-environment: &api-environment
   SAVE_STORAGE_MAX_USED_PERCENT: ${SAVE_STORAGE_MAX_USED_PERCENT:-85}
   SAVE_STORAGE_MIN_FREE_INODE_PERCENT: ${SAVE_STORAGE_MIN_FREE_INODE_PERCENT:-5}
   SAVE_STORAGE_MAX_WAL_BYTES: ${SAVE_STORAGE_MAX_WAL_BYTES:-2147483648}
-  STORAGE_WARN_PERCENT: "70"
-  STORAGE_BLOCK_PERCENT: "85"
+  STORAGE_WARN_PERCENT: "60"
+  STORAGE_BLOCK_PERCENT: "80"
   STORAGE_MONITOR_INTERVAL_SECONDS: "60"
   OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-local}
   OSS_REGION: ${OSS_REGION:-}
@@ -73,8 +73,16 @@ x-api-environment: &api-environment
   GUESS_BAIKE_WIKIPEDIA_USER_AGENT: "${GUESS_BAIKE_WIKIPEDIA_USER_AGENT:-GameHub-GuessBaikeBot/0.3 (https://mooyu.fun/; automated daily puzzle) Node.js}"
   NODE_OPTIONS: --max-old-space-size=320
 
+x-service-defaults: &service-defaults
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   redis:
+    <<: *service-defaults
     image: redis:7.4-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
@@ -89,6 +97,7 @@ services:
     mem_limit: 160m
 
   postgres:
+    <<: *service-defaults
     image: postgres:16.10-alpine
     restart: unless-stopped
     environment:
@@ -106,6 +115,7 @@ services:
     mem_limit: 640m
 
   migrate:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -125,6 +135,7 @@ services:
     restart: "no"
 
   api:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -152,6 +163,7 @@ services:
     mem_limit: 384m
 
   realtime:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.realtime
@@ -184,6 +196,7 @@ services:
     mem_limit: 192m
 
   validator:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.validator
@@ -214,6 +227,7 @@ services:
       retries: 20
 
   community-image:
+    <<: *service-defaults
     profiles: [community-images]
     build:
       context: ..
@@ -240,6 +254,7 @@ services:
     mem_limit: 256m
 
   source-builder:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.builder
@@ -267,6 +282,7 @@ services:
       retries: 20
 
   source-worker:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -288,6 +304,7 @@ services:
     mem_limit: 512m
 
   rule-builder:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.rule-builder
@@ -315,6 +332,7 @@ services:
       retries: 20
 
   rule-worker:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -332,6 +350,7 @@ services:
     mem_limit: 384m
 
   rules-operator:
+    <<: *service-defaults
     profiles: [rules-operations]
     build:
       context: ..
@@ -350,6 +369,7 @@ services:
     mem_limit: 128m
 
   worker:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -371,6 +391,7 @@ services:
     mem_limit: 512m
 
   runtime:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -390,6 +411,7 @@ services:
 
   # Enable after save rollout acceptance: COMPOSE_PROFILES=save-operations.
   save-storage-probe:
+    <<: *service-defaults
     image: postgres:16.10-alpine
     profiles: [save-operations]
     user: postgres
@@ -423,6 +445,7 @@ services:
       retries: 3
 
   save-maintenance:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
@@ -449,6 +472,7 @@ services:
       retries: 3
 
   web:
+    <<: *service-defaults
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web

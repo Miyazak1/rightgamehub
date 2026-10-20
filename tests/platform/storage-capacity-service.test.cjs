@@ -9,24 +9,27 @@ const rootsFor = root => ({
   avatars: path.join(root,'avatars'), covers: path.join(root,'covers'),
 });
 
-test('storage capacity gate warns at 70 percent and blocks projected 85 percent without affecting reads', async () => {
+test('storage capacity gate warns at 60 percent and blocks projected 80 percent without affecting reads', async () => {
   const { createStorageCapacityService } = await import('../../apps/api/src/storage-capacity-service.mjs');
-  let used = 710;
+  let used = 610;
   const service = createStorageCapacityService({
     roots: rootsFor(path.join(os.tmpdir(),'gamehub-storage-capacity-test')),
-    statFilesystem: async () => ({ totalBytes: 1000,availableBytes: 1000-used,usedBytes: used }),
+    statFilesystem: async () => ({ deviceId: 'root-device',totalBytes: 1000,availableBytes: 1000-used,usedBytes: used }),
     measureDirectory: async () => 42,
   });
   const warning = await service.assertCanAccept({ packageType: 'windows_standalone_exe',declaredBytes: 10 });
   assert.equal(warning.level,'warning');
   assert.equal(warning.acceptingUploads,true);
-  used = 840;
+  used = 740;
   await assert.rejects(
     service.assertCanAccept({ packageType: 'windows_standalone_exe',declaredBytes: 20 }),
     error => error.code === 'STORAGE_CAPACITY_EXCEEDED' && error.statusCode === 507 && error.retryable,
   );
+  used = 790;
   const admin = await service.adminOverview({ profile: { role: 'admin' } });
   assert.equal(admin.level,'warning');
+  assert.equal(admin.filesystems.length,1);
+  assert.deepEqual(admin.filesystems[0].storeIds,['quarantine','validator','runtime','avatars','covers']);
   assert.equal(admin.stores[0].logicalBytes,'42');
   await assert.rejects(() => service.adminOverview({ profile: { role: 'user' } }), error => error.code === 'ADMIN_REQUIRED');
 });

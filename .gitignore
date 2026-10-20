@@ -29,3 +29,6 @@ rules/previous
 rules/.release.lock/
 rules/.trusted-keys.*
 rules/.incoming-*/
+# Operator-uploaded rule bundles are runtime intake data, not source files.
+# Preserve them across branch switches and review/clean them through release ops.
+rules-incoming/
