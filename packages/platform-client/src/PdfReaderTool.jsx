@@ -7,6 +7,7 @@ import englishDataUrl from '@tesseract.js-data/eng/4.0.0_best_int/eng.traineddat
 import chineseDataUrl from '@tesseract.js-data/chi_sim/4.0.0_best_int/chi_sim.traineddata.gz?url';
 import { useI18n } from './I18n.jsx';
 import { assertToolDocument, createToolDocument } from './official-tools.mjs';
+import { extractPdfDocumentPages } from './pdf-reader-model.mjs';
 import './PdfReaderTool.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -50,16 +51,6 @@ function safeStem(fileName) {
   return String(fileName || '墨鱼文献').replace(/\.pdf$/iu, '').replace(/[\\/:*?"<>|]+/gu, '-').slice(0, 80) || '墨鱼文献';
 }
 
-function textFromContent(content) {
-  let text = '';
-  for (const item of content.items || []) {
-    if (typeof item.str !== 'string') continue;
-    text += item.str;
-    text += item.hasEOL ? '\n' : ' ';
-  }
-  return text.replace(/[ \t]+\n/gu, '\n').replace(/\n{3,}/gu, '\n\n').trim();
-}
-
 function searchSnippet(text, query) {
   const normalized = text.replace(/\s+/gu, ' ').trim();
   const index = normalized.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
@@ -96,6 +87,7 @@ export default function PdfReaderTool() {
   const fileInputRef = useRef(null);
   const renderTaskRef = useRef(null);
   const workerRef = useRef(null);
+  const pdfDocumentRef = useRef(null);
   const extractionGenerationRef = useRef(0);
 
   const notes = toolDocument.content.notes || {};
@@ -158,8 +150,9 @@ export default function PdfReaderTool() {
     extractionGenerationRef.current += 1;
     renderTaskRef.current?.cancel?.();
     workerRef.current?.terminate?.();
-    pdfDocument?.destroy?.();
-  }, [pdfDocument]);
+    pdfDocumentRef.current?.destroy?.();
+    pdfDocumentRef.current = null;
+  }, []);
 
   const patchDocument = (contentPatch, viewPatch = {}) => setToolDocument(current => ({
     ...current,
@@ -170,18 +163,15 @@ export default function PdfReaderTool() {
   }));
 
   const extractAllPages = async (document, generation) => {
-    const texts = Array(document.numPages).fill('');
-    setPageTexts(texts);
-    setExtractProgress({ current: 0, total: document.numPages });
-    for (let number = 1; number <= document.numPages; number += 1) {
-      if (generation !== extractionGenerationRef.current) return;
-      try {
-        const page = await document.getPage(number);
-        texts[number - 1] = textFromContent(await page.getTextContent());
-      } catch { texts[number - 1] = ''; }
-      if (generation !== extractionGenerationRef.current) return;
-      setPageTexts([...texts]);
-      setExtractProgress({ current: number, total: document.numPages });
+    const result = await extractPdfDocumentPages(document, {
+      isCurrent: () => generation === extractionGenerationRef.current,
+      onProgress: progress => {
+        setPageTexts(progress.texts);
+        setExtractProgress({ current: progress.current, total: progress.total });
+      },
+    });
+    if (result.status === 'complete' && result.failedPages === result.total && result.total > 0) {
+      setNotice(t('tools.pdfReader.extractFailed'));
     }
   };
 
@@ -194,12 +184,16 @@ export default function PdfReaderTool() {
     const generation = extractionGenerationRef.current + 1;
     extractionGenerationRef.current = generation;
     try {
-      await pdfDocument?.destroy?.();
+      const previousDocument = pdfDocumentRef.current;
+      pdfDocumentRef.current = null;
+      setPdfDocument(null);
+      await previousDocument?.destroy?.();
       const bytes = new Uint8Array(await file.arrayBuffer());
       const document = await pdfjsLib.getDocument({ data: bytes }).promise;
       if (generation !== extractionGenerationRef.current) { await document.destroy(); return; }
       const metadata = await document.getMetadata().catch(() => ({ info: {} }));
       const title = String(metadata?.info?.Title || safeStem(file.name));
+      pdfDocumentRef.current = document;
       setPdfDocument(document);
       setFileInfo({ name: file.name, size: file.size, title, pages: document.numPages });
       setPageNumber(1);
@@ -213,7 +207,9 @@ export default function PdfReaderTool() {
         view: { page: 1, zoom: 1 },
         metadata: { createdAt: current.metadata?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() },
       }));
-      extractAllPages(document, generation);
+      void extractAllPages(document, generation).catch(() => {
+        if (generation === extractionGenerationRef.current) setNotice(t('tools.pdfReader.extractFailed'));
+      });
     } catch (error) {
       setNotice(error?.name === 'PasswordException' ? t('tools.pdfReader.passwordUnsupported') : t('tools.pdfReader.openFailed'));
     } finally { setLoading(false); }
