@@ -3,7 +3,7 @@ export const TOOL_DOCUMENT_SCHEMA_VERSION=1;
 
 export const officialTools=[
   Object.freeze({
-    id:'knowledge-map',route:'/tools/knowledge-map',titleKey:'tools.knowledgeMap.title',descriptionKey:'tools.knowledgeMap.description',mark:'◇',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export'],load:()=>import('./KnowledgeMapTool.jsx'),
+    id:'knowledge-map',route:'/tools/knowledge-map',titleKey:'tools.knowledgeMap.title',descriptionKey:'tools.knowledgeMap.description',mark:'◇',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.version','agent.context','agent.create','agent.patch'],load:()=>import('./KnowledgeMapTool.jsx'),
   }),
   Object.freeze({
     id:'pdf-reader',route:'/tools/pdf-reader',titleKey:'tools.pdfReader.title',descriptionKey:'tools.pdfReader.description',mark:'▤',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.create','document.read','document.patch','document.import','document.export','document.ocr'],load:()=>import('./PdfReaderTool.jsx'),

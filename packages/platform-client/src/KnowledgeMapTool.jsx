@@ -1,12 +1,35 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Transformer } from 'markmap-lib';
 import { Markmap } from 'markmap-view';
 import { useI18n } from './I18n.jsx';
 import { assertToolDocument, createToolDocument } from './official-tools.mjs';
+import {
+  KNOWLEDGE_MAP_LIBRARY_VERSION,
+  KNOWLEDGE_MAP_MAX_DOCUMENTS,
+  KNOWLEDGE_MAP_MAX_MARKDOWN,
+  KNOWLEDGE_MAP_MAX_SNAPSHOTS,
+  addKnowledgeChild,
+  buildKnowledgeMapContext,
+  createKnowledgeSnapshot,
+  extractKnowledgeBranch,
+  normalizeKnowledgeDraft,
+  parseKnowledgeOutline,
+  removeKnowledgeBranch,
+  renameKnowledgeNode,
+  restoreKnowledgeSnapshot,
+} from './knowledge-map-model.mjs';
 import './KnowledgeMapTool.css';
 
-const STORAGE_KEY = 'mooyu.official-tool.knowledge-map.v1';
+const STORAGE_KEY = 'mooyu.official-tool.knowledge-map.library.v2';
+const LEGACY_STORAGE_KEY = 'mooyu.official-tool.knowledge-map.v1';
+const GUIDE_STORAGE_KEY = 'mooyu.official-tool.knowledge-map.guide.v1';
 const transformer = new Transformer();
+const query = new URLSearchParams(globalThis.location?.search || '');
+const agentSurface = query.get('gh_host') === 'mcp-app';
+const KNOWLEDGE_DRAFT = 'gamehub/knowledge-map.draft';
+const KNOWLEDGE_CONTEXT = 'gamehub/knowledge-map.context';
+const KNOWLEDGE_REQUEST = 'gamehub/knowledge-map.request-agent';
+const KNOWLEDGE_STATUS = 'gamehub/knowledge-map.status';
 
 const templates = {
   learning: `# AI 时代学习体系
@@ -76,19 +99,47 @@ const templates = {
 - 后续验证`,
 };
 
-function createInitialDocument() {
+function createMapDocument(title = 'AI 时代学习体系', markdown = templates.learning) {
+  return createToolDocument('knowledge-map', {
+    content: { title: String(title).slice(0, 100), markdown: String(markdown).slice(0, KNOWLEDGE_MAP_MAX_MARKDOWN) },
+    view: { layout: 'mindmap' },
+    metadata: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), snapshots: [] },
+  });
+}
+
+function validMapDocument(value) {
+  const document = assertToolDocument(value, 'knowledge-map');
+  if (typeof document.content?.markdown !== 'string' || typeof document.content?.title !== 'string') throw new Error('invalid content');
+  const snapshots = Array.isArray(document.metadata?.snapshots) ? document.metadata.snapshots.slice(-KNOWLEDGE_MAP_MAX_SNAPSHOTS).map(snapshot => ({
+    id: String(snapshot?.id || `snapshot-${Date.now()}`).slice(0, 120),
+    revision: Math.max(0, Math.trunc(Number(snapshot?.revision || 0))),
+    title: String(snapshot?.title || '未命名知识图').slice(0, 100),
+    markdown: String(snapshot?.markdown || '').slice(0, KNOWLEDGE_MAP_MAX_MARKDOWN),
+    createdAt: String(snapshot?.createdAt || new Date().toISOString()).slice(0, 40),
+    reason: String(snapshot?.reason || 'imported').slice(0, 40),
+  })) : [];
+  return { ...document, content: { ...document.content, title: document.content.title.slice(0, 100), markdown: document.content.markdown.slice(0, KNOWLEDGE_MAP_MAX_MARKDOWN) }, metadata: { ...document.metadata, snapshots } };
+}
+
+function createInitialLibrary() {
   try {
     const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = assertToolDocument(JSON.parse(stored), 'knowledge-map');
-      if (typeof parsed.content?.markdown === 'string' && typeof parsed.content?.title === 'string') return parsed;
+      const value = JSON.parse(stored);
+      const documents = Array.isArray(value.documents) ? value.documents.map(validMapDocument).slice(0, KNOWLEDGE_MAP_MAX_DOCUMENTS) : [];
+      if (value.version === KNOWLEDGE_MAP_LIBRARY_VERSION && documents.length) {
+        const activeId = documents.some(item => item.documentId === value.activeId) ? value.activeId : documents[0].documentId;
+        return { version: KNOWLEDGE_MAP_LIBRARY_VERSION, activeId, documents };
+      }
     }
-  } catch { /* A corrupt local draft should never prevent the tool from opening. */ }
-  return createToolDocument('knowledge-map', {
-    content: { title: 'AI 时代学习体系', markdown: templates.learning },
-    view: { layout: 'mindmap' },
-    metadata: { createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  });
+    const legacy = globalThis.localStorage?.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      const document = validMapDocument(JSON.parse(legacy));
+      return { version: KNOWLEDGE_MAP_LIBRARY_VERSION, activeId: document.documentId, documents: [document] };
+    }
+  } catch { /* Corrupt local data should never prevent the tool from opening. */ }
+  const document = createMapDocument();
+  return { version: KNOWLEDGE_MAP_LIBRARY_VERSION, activeId: document.documentId, documents: [document] };
 }
 
 function safeFileName(value, extension) {
@@ -127,27 +178,47 @@ function serialiseSvg(svg) {
 
 export default function KnowledgeMapTool() {
   const { t } = useI18n();
-  const [toolDocument, setToolDocument] = useState(createInitialDocument);
+  const [library, setLibrary] = useState(createInitialLibrary);
   const [notice, setNotice] = useState('');
   const [editorOpen, setEditorOpen] = useState(true);
   const [canvasMode, setCanvasMode] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => globalThis.localStorage?.getItem(GUIDE_STORAGE_KEY) !== 'hidden');
+  const [selectedNodeId, setSelectedNodeId] = useState('');
+  const [snapshotId, setSnapshotId] = useState('');
   const svgRef = useRef(null);
   const mapRef = useRef(null);
   const fileRef = useRef(null);
 
+  const toolDocument = library.documents.find(item => item.documentId === library.activeId) ?? library.documents[0];
   const title = toolDocument.content.title;
   const markdown = toolDocument.content.markdown;
+  const outline = useMemo(() => parseKnowledgeOutline(markdown), [markdown]);
+  const selectedNode = outline.find(item => item.id === selectedNodeId) ?? null;
   const transformed = useMemo(() => {
     try { return { root: transformer.transform(markdown || `# ${title || t('tools.knowledgeMap.untitled')}`).root, error: '' }; }
     catch (caught) { return { root: null, error: caught?.message || t('tools.knowledgeMap.parseError') }; }
   }, [markdown, title, t]);
 
+  const updateActive = useCallback(updater => setLibrary(current => ({
+    ...current,
+    documents: current.documents.map(document => document.documentId === current.activeId ? updater(document) : document),
+  })), []);
+
   useEffect(() => {
-    try { globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(toolDocument)); setNotice(t('tools.knowledgeMap.saved')); }
+    try { globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(library)); }
     catch { setNotice(t('tools.knowledgeMap.saveFailed')); }
-    const timer = setTimeout(() => setNotice(''), 1500);
+  }, [library, t]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(''), 2600);
     return () => clearTimeout(timer);
-  }, [toolDocument, t]);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!selectedNodeId || selectedNode) return;
+    setSelectedNodeId('');
+  }, [selectedNode, selectedNodeId]);
 
   useEffect(() => {
     if (!svgRef.current || !transformed.root) return undefined;
@@ -156,18 +227,100 @@ export default function KnowledgeMapTool() {
     return undefined;
   }, [transformed.root]);
 
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return undefined;
+    const selectRenderedNode = event => {
+      const group = event.target?.closest?.('g.markmap-node');
+      const data = group?.__data__?.data ?? group?.__data__;
+      const startLine = Number.parseInt(String(data?.payload?.lines ?? '').split(',')[0], 10);
+      if (Number.isInteger(startLine)) setSelectedNodeId(`line-${startLine}`);
+    };
+    svg.addEventListener('click', selectRenderedNode);
+    return () => svg.removeEventListener('click', selectRenderedNode);
+  }, [transformed.root]);
+
   useEffect(() => () => { mapRef.current?.destroy?.(); mapRef.current = null; }, []);
   useEffect(() => { const timer = setTimeout(() => mapRef.current?.fit?.(), 80); return () => clearTimeout(timer); }, [editorOpen, canvasMode]);
 
-  const patchContent = patch => setToolDocument(current => ({
+  useEffect(() => {
+    if (!agentSurface) return undefined;
+    const timer = setTimeout(() => {
+      globalThis.parent?.postMessage({ type: KNOWLEDGE_CONTEXT, payload: buildKnowledgeMapContext(toolDocument, selectedNodeId) }, '*');
+    }, 650);
+    return () => clearTimeout(timer);
+  }, [selectedNodeId, toolDocument]);
+
+  useEffect(() => {
+    if (!agentSurface) return undefined;
+    const onMessage = event => {
+      if (event.source !== globalThis.parent) return;
+      const message = event.data;
+      if (message?.type === KNOWLEDGE_STATUS) {
+        if (message.status === 'synced') setNotice(t('tools.knowledgeMap.agentSynced'));
+        if (message.status === 'sent') setNotice(t('tools.knowledgeMap.agentRequested'));
+        if (message.status === 'failed') setNotice(t('tools.knowledgeMap.agentFailed'));
+        return;
+      }
+      if (message?.type !== KNOWLEDGE_DRAFT) return;
+      const draft = normalizeKnowledgeDraft(message.payload);
+      if (!draft) return;
+      if (draft.mode === 'replace') {
+        updateActive(current => {
+          const snapshotted = createKnowledgeSnapshot(current, 'before-agent-update');
+          return { ...snapshotted, revision: current.revision + 1, content: { ...current.content, title: draft.title, markdown: draft.markdown }, metadata: { ...snapshotted.metadata, updatedAt: new Date().toISOString() } };
+        });
+      } else {
+        if (library.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS) { setNotice(t('tools.knowledgeMap.libraryFull')); return; }
+        const document = createMapDocument(draft.title, draft.markdown);
+        setLibrary(current => current.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS
+          ? current
+          : { ...current, activeId: document.documentId, documents: [...current.documents, document] });
+      }
+      setSelectedNodeId('');
+      setNotice(t('tools.knowledgeMap.agentApplied'));
+    };
+    globalThis.addEventListener('message', onMessage, { passive: true });
+    return () => globalThis.removeEventListener('message', onMessage);
+  }, [library.documents.length, t, updateActive]);
+
+  const patchContent = patch => updateActive(current => ({
     ...current,
     revision: current.revision + 1,
     content: { ...current.content, ...patch },
     metadata: { ...current.metadata, updatedAt: new Date().toISOString() },
   }));
+  const patchMarkdown = nextMarkdown => patchContent({ markdown: nextMarkdown });
   const useTemplate = key => {
     const source = templates[key];
-    patchContent({ title: source.split('\n')[0].replace(/^#\s*/u, ''), markdown: source });
+    updateActive(current => {
+      const snapshotted = createKnowledgeSnapshot(current, 'before-template');
+      return { ...snapshotted, revision: current.revision + 1, content: { ...current.content, title: source.split('\n')[0].replace(/^#\s*/u, ''), markdown: source }, metadata: { ...snapshotted.metadata, updatedAt: new Date().toISOString() } };
+    });
+    setSelectedNodeId('');
+  };
+  const createDocument = () => {
+    if (library.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS) { setNotice(t('tools.knowledgeMap.libraryFull')); return; }
+    const document = createMapDocument(t('tools.knowledgeMap.untitled'), `# ${t('tools.knowledgeMap.untitled')}`);
+    setLibrary(current => ({ ...current, activeId: document.documentId, documents: [...current.documents, document] }));
+    setSelectedNodeId('');
+  };
+  const deleteDocument = () => {
+    if (library.documents.length === 1) { setNotice(t('tools.knowledgeMap.keepOne')); return; }
+    if (!globalThis.confirm?.(t('tools.knowledgeMap.deleteConfirm'))) return;
+    setLibrary(current => {
+      const documents = current.documents.filter(item => item.documentId !== current.activeId);
+      return { ...current, activeId: documents[0].documentId, documents };
+    });
+    setSelectedNodeId('');
+  };
+  const saveSnapshot = () => { updateActive(current => createKnowledgeSnapshot(current, 'manual')); setNotice(t('tools.knowledgeMap.snapshotSaved')); };
+  const restoreSnapshot = () => {
+    if (!snapshotId) return;
+    updateActive(current => restoreKnowledgeSnapshot(current, snapshotId));
+    setSnapshotId('');
+    setSelectedNodeId('');
+    setNotice(t('tools.knowledgeMap.snapshotRestored'));
   };
   const exportDocument = () => downloadBlob(new Blob([JSON.stringify(toolDocument, null, 2)], { type: 'application/json;charset=utf-8' }), safeFileName(title, 'mooyu-map.json'));
   const exportSvg = () => {
@@ -197,39 +350,82 @@ export default function KnowledgeMapTool() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    if (library.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS) { setNotice(t('tools.knowledgeMap.libraryFull')); return; }
     try {
-      const text = await file.text();
       if (/\.md(?:own)?$/iu.test(file.name)) {
-        patchContent({ title: file.name.replace(/\.md(?:own)?$/iu, ''), markdown: text });
+        const text = await file.text();
+        const document = createMapDocument(file.name.replace(/\.md(?:own)?$/iu, ''), text);
+        setLibrary(current => current.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS ? current : { ...current, activeId: document.documentId, documents: [...current.documents, document] });
       } else {
-        const imported = assertToolDocument(JSON.parse(text), 'knowledge-map');
-        if (typeof imported.content?.title !== 'string' || typeof imported.content?.markdown !== 'string') throw new Error('invalid content');
-        setToolDocument({ ...imported, revision: imported.revision + 1, metadata: { ...imported.metadata, importedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } });
+        const imported = validMapDocument(JSON.parse(await file.text()));
+        const document = { ...imported, documentId: globalThis.crypto?.randomUUID?.() ?? `knowledge-map-${Date.now()}`, revision: imported.revision + 1, metadata: { ...imported.metadata, importedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } };
+        setLibrary(current => current.documents.length >= KNOWLEDGE_MAP_MAX_DOCUMENTS ? current : { ...current, activeId: document.documentId, documents: [...current.documents, document] });
       }
+      setSelectedNodeId('');
       setNotice(t('tools.knowledgeMap.imported'));
     } catch { setNotice(t('tools.knowledgeMap.importFailed')); }
   };
-  const copyAgentPrompt = async () => {
-    const prompt = `${t('tools.knowledgeMap.agentPrompt')}\n\n${markdown}`;
-    try { await navigator.clipboard.writeText(prompt); setNotice(t('tools.knowledgeMap.promptCopied')); }
+  const requestAgent = async wholeMap => {
+    const branch = wholeMap ? markdown : extractKnowledgeBranch(markdown, selectedNodeId);
+    if (!branch) { setNotice(t('tools.knowledgeMap.selectNodeFirst')); return; }
+    const instruction = wholeMap ? t('tools.knowledgeMap.agentWholePrompt') : t('tools.knowledgeMap.agentBranchPrompt');
+    if (agentSurface) {
+      globalThis.parent?.postMessage({
+        type: KNOWLEDGE_REQUEST,
+        requestId: globalThis.crypto?.randomUUID?.() ?? `knowledge-${Date.now()}`,
+        payload: { ...buildKnowledgeMapContext(toolDocument, selectedNodeId), request: { scope: wholeMap ? 'whole' : 'branch', instruction, branch } },
+      }, '*');
+      setNotice(t('tools.knowledgeMap.agentSending'));
+      return;
+    }
+    try { await navigator.clipboard.writeText(`${instruction}\n\n${branch}`); setNotice(t('tools.knowledgeMap.promptCopied')); }
     catch { setNotice(t('tools.knowledgeMap.copyFailed')); }
+  };
+  const closeGuide = () => {
+    setGuideOpen(false);
+    try { globalThis.localStorage?.setItem(GUIDE_STORAGE_KEY, 'hidden'); }
+    catch { /* The guide still closes when storage is unavailable. */ }
   };
 
   return <section className={`knowledge-map-tool ${canvasMode ? 'is-canvas-mode' : ''}`} aria-label={t('tools.knowledgeMap.workspace')}>
     <div className="knowledge-map-toolbar">
-      <div className="knowledge-map-toolbar__title"><span aria-hidden="true">◇</span><div><strong>{title || t('tools.knowledgeMap.untitled')}</strong><small>{notice || t('tools.knowledgeMap.localNote')}</small></div></div>
+      <div className="knowledge-map-toolbar__title"><span aria-hidden="true">◇</span><div><strong>{title || t('tools.knowledgeMap.untitled')}</strong><small>{notice || (agentSurface ? t('tools.knowledgeMap.agentAutoNote') : t('tools.knowledgeMap.localNote'))}</small></div></div>
       <div className="knowledge-map-toolbar__actions">
+        <button type="button" aria-expanded={guideOpen && !canvasMode} onClick={() => setGuideOpen(value => !value)}>{t('tools.knowledgeMap.guideOpen')}</button>
         <button type="button" onClick={() => setEditorOpen(value => !value)}>{editorOpen ? t('tools.knowledgeMap.hideEditor') : t('tools.knowledgeMap.showEditor')}</button>
         <button type="button" onClick={() => mapRef.current?.fit?.()}>{t('tools.knowledgeMap.fit')}</button>
         <button type="button" onClick={() => setCanvasMode(value => { const next = !value; if (next) setEditorOpen(false); return next; })}>{canvasMode ? t('tools.knowledgeMap.exitCanvas') : t('tools.knowledgeMap.canvas')}</button>
       </div>
     </div>
+    {guideOpen && !canvasMode && <section className="knowledge-map-guide" aria-labelledby="knowledge-map-guide-title">
+      <header>
+        <div><span>{t('tools.knowledgeMap.guideEyebrow')}</span><h2 id="knowledge-map-guide-title">{t('tools.knowledgeMap.guideTitle')}</h2></div>
+        <button type="button" onClick={closeGuide}>{t('tools.knowledgeMap.guideClose')}</button>
+      </header>
+      <ol>
+        <li><span>1</span><div><strong>{t('tools.knowledgeMap.guideStep1Title')}</strong><p>{agentSurface ? t('tools.knowledgeMap.guideStep1Agent') : t('tools.knowledgeMap.guideStep1Browser')}</p></div></li>
+        <li><span>2</span><div><strong>{t('tools.knowledgeMap.guideStep2Title')}</strong><p>{t('tools.knowledgeMap.guideStep2Body')}</p></div></li>
+        <li><span>3</span><div><strong>{t('tools.knowledgeMap.guideStep3Title')}</strong><p>{agentSurface ? t('tools.knowledgeMap.guideStep3Agent') : t('tools.knowledgeMap.guideStep3Browser')}</p></div></li>
+      </ol>
+      {agentSurface && <p className="knowledge-map-guide__example"><strong>{t('tools.knowledgeMap.guideExampleTitle')}</strong><span>{t('tools.knowledgeMap.guideExample')}</span></p>}
+      <p className="knowledge-map-guide__note">{t('tools.knowledgeMap.guideNote')}</p>
+    </section>}
     <div className={`knowledge-map-workspace ${editorOpen ? '' : 'is-editor-hidden'}`}>
       {editorOpen && <aside className="knowledge-map-editor">
+        {agentSurface && <div className="knowledge-map-agent-disclosure"><strong>{t('tools.knowledgeMap.agentConnected')}</strong><span>{t('tools.knowledgeMap.agentDisclosure')}</span></div>}
+        <div className="knowledge-map-library">
+          <label><span>{t('tools.knowledgeMap.documents')}</span><select value={library.activeId} onChange={event => { setLibrary(current => ({ ...current, activeId: event.target.value })); setSelectedNodeId(''); }}>
+            {library.documents.map(document => <option key={document.documentId} value={document.documentId}>{document.content.title || t('tools.knowledgeMap.untitled')}</option>)}
+          </select></label>
+          <div><button type="button" onClick={createDocument}>{t('tools.knowledgeMap.newDocument')}</button><button type="button" onClick={deleteDocument}>{t('tools.knowledgeMap.deleteDocument')}</button></div>
+        </div>
         <label><span>{t('tools.knowledgeMap.documentTitle')}</span><input value={title} maxLength={100} onChange={event => patchContent({ title: event.target.value })}/></label>
-        <label className="knowledge-map-source"><span>{t('tools.knowledgeMap.markdown')}</span><textarea value={markdown} spellCheck="false" onChange={event => patchContent({ markdown: event.target.value })}/></label>
+        <label className="knowledge-map-source"><span>{t('tools.knowledgeMap.markdown')}</span><textarea value={markdown} maxLength={KNOWLEDGE_MAP_MAX_MARKDOWN} spellCheck="false" onChange={event => patchContent({ markdown: event.target.value })}/></label>
+        <div className="knowledge-map-outline"><span>{t('tools.knowledgeMap.nodes')}</span><div>{outline.map(node => <button className={node.id === selectedNodeId ? 'is-selected' : ''} style={{ '--node-depth': Math.min(node.depth, 6) }} type="button" key={node.id} onClick={() => setSelectedNodeId(node.id)}>{node.label}</button>)}</div></div>
+        {selectedNode && <div className="knowledge-map-node-editor"><strong>{t('tools.knowledgeMap.selectedNode')}</strong><input aria-label={t('tools.knowledgeMap.selectedNode')} value={selectedNode.label} onChange={event => patchMarkdown(renameKnowledgeNode(markdown, selectedNode.id, event.target.value))}/><div><button type="button" onClick={() => patchMarkdown(addKnowledgeChild(markdown, selectedNode.id))}>{t('tools.knowledgeMap.addChild')}</button><button type="button" onClick={() => { patchMarkdown(removeKnowledgeBranch(markdown, selectedNode.id)); setSelectedNodeId(''); }}>{t('tools.knowledgeMap.deleteBranch')}</button></div><button className="is-agent-action" type="button" onClick={() => requestAgent(false)}>{agentSurface ? t('tools.knowledgeMap.askAgentBranch') : t('tools.knowledgeMap.copyBranch')}</button></div>}
         <div className="knowledge-map-templates"><span>{t('tools.knowledgeMap.templates')}</span><div><button type="button" onClick={() => useTemplate('learning')}>{t('tools.knowledgeMap.templateLearning')}</button><button type="button" onClick={() => useTemplate('project')}>{t('tools.knowledgeMap.templateProject')}</button><button type="button" onClick={() => useTemplate('research')}>{t('tools.knowledgeMap.templateResearch')}</button></div></div>
-        <div className="knowledge-map-agent"><strong>{t('tools.knowledgeMap.agentTitle')}</strong><p>{t('tools.knowledgeMap.agentLead')}</p><button type="button" onClick={copyAgentPrompt}>{t('tools.knowledgeMap.copyAgent')}</button></div>
+        <div className="knowledge-map-history"><span>{t('tools.knowledgeMap.history')}</span><div><button type="button" onClick={saveSnapshot}>{t('tools.knowledgeMap.saveSnapshot')}</button><select value={snapshotId} onChange={event => setSnapshotId(event.target.value)}><option value="">{t('tools.knowledgeMap.chooseSnapshot')}</option>{[...(toolDocument.metadata.snapshots || [])].reverse().map(snapshot => <option key={snapshot.id} value={snapshot.id}>{new Date(snapshot.createdAt).toLocaleString()} · {snapshot.title}</option>)}</select><button type="button" disabled={!snapshotId} onClick={restoreSnapshot}>{t('tools.knowledgeMap.restoreSnapshot')}</button></div></div>
+        <div className="knowledge-map-agent"><strong>{t('tools.knowledgeMap.agentTitle')}</strong><p>{agentSurface ? t('tools.knowledgeMap.agentLiveLead') : t('tools.knowledgeMap.agentLead')}</p><button type="button" onClick={() => requestAgent(true)}>{agentSurface ? t('tools.knowledgeMap.askAgentWhole') : t('tools.knowledgeMap.copyAgent')}</button></div>
       </aside>}
       <div className="knowledge-map-canvas">
         <div className="knowledge-map-canvas__actions">

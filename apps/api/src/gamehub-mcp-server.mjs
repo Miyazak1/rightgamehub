@@ -119,6 +119,36 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     }
   });
 
+  registerAppTool(server, 'open_knowledge_map', {
+    title: 'Open MOOYU Knowledge Map',
+    description: 'Create or open an editable visual knowledge map in the MOOYU.FUN sidebar. Use this when the user asks to turn the current conversation, plan, research, or notes into a knowledge map. Supply complete Markdown headings and lists. Use mode "replace" when revising the map already open in this conversation; use "new" for a separate map. The map remains in the user interface and is saved locally on that device.',
+    inputSchema: {
+      title: z.string().trim().min(1).max(100).optional(),
+      markdown: z.string().trim().min(1).max(30000).optional(),
+      mode: z.enum(['new', 'replace']).default('new'),
+      focusLabel: z.string().trim().max(240).optional(),
+    },
+    outputSchema: {
+      view: z.object({ path: z.string(), url: z.string().url() }),
+      knowledgeMap: z.object({ title: z.string(), markdown: z.string(), mode: z.enum(['new', 'replace']), focusLabel: z.string() }),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Building the knowledge map…',
+      'openai/toolInvocation/invoked': 'Knowledge map opened.',
+    },
+  }, async ({ title = '未命名知识图', markdown, mode = 'new', focusLabel = '' }) => {
+    const source = markdown || `# ${title}`;
+    const path = '/tools/knowledge-map';
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: `Opened “${title}” as an editable MOOYU knowledge map. The visible map contains ${source.length} Markdown characters and is saved locally on the user's device.` }],
+      structuredContent: { view: { path, url: url.href }, knowledgeMap: { title, markdown: source, mode, focusLabel } },
+    };
+  });
+
   registerAppTool(server, 'open_change_radar', {
     title: 'Open MOOYU Change Radar',
     description: 'Open the MOOYU.FUN Change Radar with a monitoring task prefilled. Use this when the user asks to monitor a public webpage for future changes. The user reviews and confirms the task in the sidebar before it becomes active.',
