@@ -292,6 +292,19 @@ export function registerGameHubMcpRoutes(app, dependencies) {
     .header('Access-Control-Expose-Headers', 'Mcp-Session-Id');
 
   app.options('/mcp', async (_request, reply) => corsHeaders(reply).status(204).send());
+  app.get('/mcp-widget/:revision/widget.js', async (request, reply) => {
+    const widget = createGameHubMcpWidget(dependencies.siteOrigin);
+    if (request.params.revision !== widget.script.revision) {
+      return reply.header('Cache-Control', 'no-store').status(404).send({ error: 'MCP_WIDGET_NOT_FOUND' });
+    }
+    return reply
+      .header('Access-Control-Allow-Origin', '*')
+      .header('Cross-Origin-Resource-Policy', 'cross-origin')
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .type('text/javascript; charset=utf-8')
+      .send(widget.script.text);
+  });
   for (const method of ['POST', 'GET', 'DELETE']) app.route({ method, url: '/mcp', handler: async (request, reply) => {
     corsHeaders(reply).header('Cache-Control', 'no-store');
     const server = createGameHubMcpServer(dependencies);

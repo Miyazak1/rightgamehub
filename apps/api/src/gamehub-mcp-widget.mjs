@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 export const GAMEHUB_MCP_UI_REVISION_TOKEN = '__GAMEHUB_MCP_UI_REVISION__';
 
 const resourceUri = revision => `ui://gamehub/platform-${revision}.html`;
+const INLINE_SCRIPT_OPEN = '<script type="module">';
+const INLINE_SCRIPT_CLOSE = '</script>';
 
 function renderGameHubMcpWidgetTemplate(siteOrigin = 'https://mooyu.fun') {
   const origin = new URL(siteOrigin).origin;
@@ -75,22 +77,35 @@ function renderGameHubMcpWidgetTemplate(siteOrigin = 'https://mooyu.fun') {
 }
 
 export function createGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
-  const template = renderGameHubMcpWidgetTemplate(siteOrigin);
-  // Hash the canonical template before inserting the revision so the cache key
-  // changes with every UI change without creating a self-referential digest.
-  const sha256 = createHash('sha256').update(template, 'utf8').digest('hex');
+  const origin = new URL(siteOrigin).origin;
+  const inlineTemplate = renderGameHubMcpWidgetTemplate(origin);
+  const scriptStart = inlineTemplate.indexOf(INLINE_SCRIPT_OPEN);
+  const scriptEnd = inlineTemplate.indexOf(INLINE_SCRIPT_CLOSE, scriptStart + INLINE_SCRIPT_OPEN.length);
+  if (scriptStart < 0 || scriptEnd < 0) throw new Error('GameHub MCP widget module script is missing.');
+
+  const scriptTemplate = inlineTemplate.slice(scriptStart + INLINE_SCRIPT_OPEN.length, scriptEnd);
+  // The external bridge script is content-addressed independently so ChatGPT
+  // does not need to generate or cache a CSP hash for a large inline script.
+  const scriptSha256 = createHash('sha256').update(scriptTemplate, 'utf8').digest('hex');
+  const scriptRevision = scriptSha256.slice(0, 16);
+  const scriptPath = `/mcp-widget/${scriptRevision}/widget.js`;
+  const script = scriptTemplate.replaceAll(GAMEHUB_MCP_UI_REVISION_TOKEN, scriptRevision);
+  const externalScriptTag = `<script type="module" src="${new URL(scriptPath, origin).href}"></script>`;
+  const html = `${inlineTemplate.slice(0, scriptStart)}${externalScriptTag}${inlineTemplate.slice(scriptEnd + INLINE_SCRIPT_CLOSE.length)}`;
+  const sha256 = createHash('sha256').update(html, 'utf8').digest('hex');
   const revision = sha256.slice(0, 16);
   return Object.freeze({
     uri: resourceUri(revision),
     revision,
     sha256,
-    html: template.replaceAll(GAMEHUB_MCP_UI_REVISION_TOKEN, revision),
+    html,
+    script: Object.freeze({ path: scriptPath, revision: scriptRevision, sha256: scriptSha256, text: script }),
   });
 }
 
 export function describeGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {
-  const { uri, revision, sha256 } = createGameHubMcpWidget(siteOrigin);
-  return Object.freeze({ uri, revision, sha256 });
+  const { uri, revision, sha256, script } = createGameHubMcpWidget(siteOrigin);
+  return Object.freeze({ uri, revision, sha256, script: Object.freeze({ path: script.path, revision: script.revision, sha256: script.sha256 }) });
 }
 
 export function renderGameHubMcpWidget(siteOrigin = 'https://mooyu.fun') {

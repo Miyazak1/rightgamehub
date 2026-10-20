@@ -8,8 +8,9 @@ const { pathToFileURL } = require('node:url');
 const root = path.resolve(__dirname, '../..');
 
 test('GameHub MCP exposes catalog and official app tools with a content-addressed hosted UI', async t => {
-  const [{ createGameHubMcpServer }, { Client }, { InMemoryTransport }] = await Promise.all([
+  const [{ createGameHubMcpServer }, { createGameHubMcpWidget }, { Client }, { InMemoryTransport }] = await Promise.all([
     import(pathToFileURL(path.join(root, 'apps/api/src/gamehub-mcp-server.mjs'))),
+    import(pathToFileURL(path.join(root, 'apps/api/src/gamehub-mcp-widget.mjs'))),
     import(pathToFileURL(path.join(root, 'apps/api/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js'))),
     import(pathToFileURL(path.join(root, 'apps/api/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js'))),
   ]);
@@ -99,33 +100,36 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.match(spreadsheet.structuredContent.view.url, /gh_route=%2Ftools%2Fspreadsheet-audit/u);
 
   const resource = await client.readResource({ uri: mcpUiUri });
+  const widget = createGameHubMcpWidget('https://mooyu.fun');
   assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resource.contents[0].text, /<iframe id="gamehub-frame"/u);
-  assert.match(resource.contents[0].text, /ui\/request-display-mode/u);
-  assert.ok(resource.contents[0].text.includes(`gh_embed','${revision}'`));
+  const scriptSource = resource.contents[0].text.match(/<script type="module" src="([^"]+)"><\/script>/u)?.[1];
+  assert.equal(scriptSource, `https://mooyu.fun${widget.script.path}`);
+  assert.doesNotMatch(resource.contents[0].text, /<script type="module">/u);
   assert.doesNotMatch(resource.contents[0].text, /__GAMEHUB_MCP_UI_REVISION__/u);
-  const canonicalHtml = resource.contents[0].text.replaceAll(revision, '__GAMEHUB_MCP_UI_REVISION__');
-  assert.equal(createHash('sha256').update(canonicalHtml, 'utf8').digest('hex').slice(0, 16), revision);
-  assert.match(resource.contents[0].text, /searchParams\.set\('lang',locale\)/u);
-  assert.match(resource.contents[0].text, /gamehub\/navigation\.openExternal/u);
-  assert.match(resource.contents[0].text, /gamehub\/spreadsheet-audit\.submit/u);
-  assert.match(resource.contents[0].text, /gamehub\/pdf-reader\.context/u);
-  assert.match(resource.contents[0].text, /gamehub\/change-radar\.context/u);
-  assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.context/u);
-  assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.request-agent/u);
-  assert.match(resource.contents[0].text, /gamehub\/knowledge-map\.draft/u);
-  assert.match(resource.contents[0].text, /event\.origin===SITE_ORIGIN/u);
-  assert.match(resource.contents[0].text, /ui\/update-model-context/u);
-  assert.match(resource.contents[0].text, /ui\/message/u);
-  assert.match(resource.contents[0].text, /ordinaryCellValuesShared:false/u);
-  assert.match(resource.contents[0].text, /openai\?\.openExternal/u);
-  assert.ok(resource.contents[0].text.includes("new RegExp('^/works/([^/?#]+)/?$')"));
-  assert.doesNotMatch(resource.contents[0].text, /route\.match\(\/\^\/works\//u);
-  assert.match(resource.contents[0].text, /new URL\(work\?'\/w\/'\+work\[1\]:route,SITE_ORIGIN\)/u);
-  const moduleScript = resource.contents[0].text.match(/<script type="module">([\s\S]*?)<\/script>/u)?.[1];
-  assert.ok(moduleScript);
+  assert.equal(createHash('sha256').update(resource.contents[0].text, 'utf8').digest('hex').slice(0, 16), revision);
+  const canonicalScript = widget.script.text.replaceAll(widget.script.revision, '__GAMEHUB_MCP_UI_REVISION__');
+  assert.equal(createHash('sha256').update(canonicalScript, 'utf8').digest('hex'), widget.script.sha256);
+  assert.match(widget.script.text, /ui\/request-display-mode/u);
+  assert.ok(widget.script.text.includes(`gh_embed','${widget.script.revision}'`));
+  assert.match(widget.script.text, /searchParams\.set\('lang',locale\)/u);
+  assert.match(widget.script.text, /gamehub\/navigation\.openExternal/u);
+  assert.match(widget.script.text, /gamehub\/spreadsheet-audit\.submit/u);
+  assert.match(widget.script.text, /gamehub\/pdf-reader\.context/u);
+  assert.match(widget.script.text, /gamehub\/change-radar\.context/u);
+  assert.match(widget.script.text, /gamehub\/knowledge-map\.context/u);
+  assert.match(widget.script.text, /gamehub\/knowledge-map\.request-agent/u);
+  assert.match(widget.script.text, /gamehub\/knowledge-map\.draft/u);
+  assert.match(widget.script.text, /event\.origin===SITE_ORIGIN/u);
+  assert.match(widget.script.text, /ui\/update-model-context/u);
+  assert.match(widget.script.text, /ui\/message/u);
+  assert.match(widget.script.text, /ordinaryCellValuesShared:false/u);
+  assert.match(widget.script.text, /openai\?\.openExternal/u);
+  assert.ok(widget.script.text.includes("new RegExp('^/works/([^/?#]+)/?$')"));
+  assert.doesNotMatch(widget.script.text, /route\.match\(\/\^\/works\//u);
+  assert.match(widget.script.text, /new URL\(work\?'\/w\/'\+work\[1\]:route,SITE_ORIGIN\)/u);
   await assert.rejects(
-    import(`data:text/javascript,${encodeURIComponent(moduleScript)}`),
+    import(`data:text/javascript,${encodeURIComponent(widget.script.text)}`),
     error => error?.name === 'ReferenceError' && /document is not defined/u.test(error.message),
   );
   assert.deepEqual(resource.contents[0]._meta.ui.csp.frameDomains, ['https://mooyu.fun']);
@@ -149,6 +153,7 @@ test('portable plugin connects the remote MCP server and ships through the commo
   assert.match(build, /Promise\.all\(pluginRoots\.map\(listFiles\)\)/u);
   assert.match(build, /updateScope: 'all-marketplace-plugins'/u);
   assert.match(caddy, /handle \/mcp[\s\S]*reverse_proxy api:3090/u);
+  assert.match(caddy, /handle \/mcp-widget\/\*[\s\S]*reverse_proxy api:3090/u);
   assert.match(caddy, /handle \/\.well-known\/oauth-\*[\s\S]*reverse_proxy api:3090/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*frame-ancestors 'self' https:\/\/web-sandbox\.oaiusercontent\.com https:\/\/\*\.web-sandbox\.oaiusercontent\.com/u);
   assert.match(caddy, /handle \/mcp-app[\s\S]*codex-sandbox:/u);
@@ -178,4 +183,14 @@ test('GameHub MCP route accepts a real stateless Streamable HTTP client', async 
   const tools = await client.listTools();
   assert.equal(tools.tools.length, 9);
   assert.equal((await client.callTool({ name: 'search_games', arguments: {} })).structuredContent.games.length, 0);
+  const openGameHub = tools.tools.find(item => item.name === 'open_gamehub');
+  const resource = await client.readResource({ uri: openGameHub._meta.ui.resourceUri });
+  const scriptSource = resource.contents[0].text.match(/<script type="module" src="([^"]+)"><\/script>/u)?.[1];
+  assert.ok(scriptSource);
+  const scriptResponse = await fetch(`http://127.0.0.1:${port}${new URL(scriptSource).pathname}`);
+  assert.equal(scriptResponse.status, 200);
+  assert.equal(scriptResponse.headers.get('access-control-allow-origin'), '*');
+  assert.equal(scriptResponse.headers.get('cross-origin-resource-policy'), 'cross-origin');
+  assert.match(scriptResponse.headers.get('cache-control'), /immutable/u);
+  assert.match(await scriptResponse.text(), /ui\/initialize/u);
 });

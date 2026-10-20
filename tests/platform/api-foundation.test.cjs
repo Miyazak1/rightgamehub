@@ -392,6 +392,9 @@ test('ready returns success only when database and migrations are current', asyn
   assert.match(response.json().data.mcpUi.uri, /^ui:\/\/gamehub\/platform-[a-f0-9]{16}\.html$/u);
   assert.equal(response.json().data.mcpUi.revision.length, 16);
   assert.equal(response.json().data.mcpUi.sha256.length, 64);
+  assert.match(response.json().data.mcpUi.script.path, /^\/mcp-widget\/[a-f0-9]{16}\/widget\.js$/u);
+  assert.equal(response.json().data.mcpUi.script.revision.length, 16);
+  assert.equal(response.json().data.mcpUi.script.sha256.length, 64);
 });
 
 test('authenticated users can create no-store realtime connection tickets', async t => {

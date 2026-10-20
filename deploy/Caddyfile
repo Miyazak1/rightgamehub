@@ -11,7 +11,7 @@
   }
   encode zstd gzip
 
-  @private_routes path /account* /creator* /admin* /play/* /challenge/* /s/* /install* /mcp-app* /community/me* /community/bookmarks* /community/review*
+  @private_routes path /account* /creator* /admin* /play/* /challenge/* /s/* /install* /mcp-app* /mcp-widget/* /community/me* /community/bookmarks* /community/review*
   header @private_routes X-Robots-Tag "noindex, nofollow"
 
   handle /health {
@@ -22,6 +22,10 @@
   }
 
   handle /mcp {
+    reverse_proxy api:3090
+  }
+
+  handle /mcp-widget/* {
     reverse_proxy api:3090
   }
 
