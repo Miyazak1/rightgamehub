@@ -13,7 +13,7 @@ const migrationDir = path.join(root, 'apps/api/migrations');
 test('migration runner loads ordered immutable checksums and strips file transaction wrappers', async () => {
   const { loadMigrations } = await import(migrationUrl);
   const migrations = await loadMigrations(migrationDir);
-  assert.equal(migrations.length, 71);
+  assert.equal(migrations.length, 72);
   assert.equal(migrations[0].version, '0001');
   assert.equal(migrations[9].version, '0010');
   assert.equal(migrations[10].version, '0011');
@@ -43,7 +43,7 @@ test('migration runner loads ordered immutable checksums and strips file transac
   assert.equal(migrations[38].version, '0039');
   assert.equal(migrations[41].version, '0042');
   assert.equal(migrations[42].version, '0043');
-  assert.equal(migrations.at(-1).version, '0071');
+  assert.equal(migrations.at(-1).version, '0072');
   assert.equal(migrations[43].version, '0044');
   assert.equal(migrations[44].version, '0045');
   assert.equal(migrations[45].version, '0046');
@@ -89,11 +89,13 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
   const { createRuntimeEdgeApp } = await import(pathToFileURL(path.join(root, 'apps/api/src/runtime-edge-app.mjs')));
   const { PostgresSourceBuildRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/source-build-repository.mjs')));
   const { createSourceBuildService } = await import(pathToFileURL(path.join(root, 'apps/api/src/source-build-service.mjs')));
+  const { PostgresAnalyticsRepository } = await import(pathToFileURL(path.join(root, 'apps/api/src/analytics-repository.mjs')));
+  const { createAnalyticsService } = await import(pathToFileURL(path.join(root, 'apps/api/src/analytics-service.mjs')));
   const database = createDatabase({ databaseUrl: process.env.GAMEHUB_TEST_DATABASE_URL, databaseSsl: false });
   const pool = database.pool;
   try {
     const first = await applyMigrations(pool, migrationDir);
-    assert.equal(first.total, 67);
+    assert.equal(first.total, 72);
     const second = await applyMigrations(pool, migrationDir);
     assert.deepEqual(second.applied, []);
     assert.equal((await migrationStatus(pool, migrationDir)).ready, true);
@@ -146,17 +148,22 @@ test('real PostgreSQL migration and schema checks run when GAMEHUB_TEST_DATABASE
     const creatorFeedbackService = createCreatorFeedbackService({ repository: new PostgresCreatorFeedbackRepository(pool) });
     const sourceBuildRepository = new PostgresSourceBuildRepository(pool);
     const sourceBuildService = createSourceBuildService({ repository: sourceBuildRepository,enabled: true,builderImageDigest: `sha256:${'a'.repeat(64)}` });
+    const analyticsService = createAnalyticsService({ repository: new PostgresAnalyticsRepository(pool) });
     const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(pool), objectStore: new LocalRuntimeStore(runtimeRoot), runtimeDomain: publicConfig.runtimeDomain });
 
     const app = createApp({
       config: publicConfig,
       database: { ping: async () => (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1 },
-      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, sourceBuildService, uploadService, catalogService, moderationService, creatorFeedbackService,
+      migrations: { status: () => migrationStatus(pool, migrationDir) }, authService, workService, sourceBuildService, uploadService, catalogService, moderationService, creatorFeedbackService, analyticsService,
     });
     try {
       const ready = await app.inject({ url: '/ready' });
       assert.equal(ready.statusCode, 200);
       assert.equal(ready.json().data.status, 'ready');
+      const analyticsEvent = await app.inject({ method: 'POST', url: '/v1/analytics/events', payload: { events: [{
+        type: 'page_view', anonymousId: crypto.randomUUID(), sessionId: crypto.randomUUID(), hostKind: 'mcp-app', route: 'tools', occurredAt: new Date().toISOString(),
+      }] } });
+      assert.equal(analyticsEvent.statusCode, 202, analyticsEvent.body);
       const me = await app.inject({ url: '/v1/me', headers: { authorization: `Bearer ${authorAuth.accessToken}` } });
       assert.equal(me.statusCode, 200);
       assert.equal(me.json().data.canPublish, true);

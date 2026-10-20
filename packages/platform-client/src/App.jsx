@@ -42,6 +42,7 @@ import { resolveAuthClientKind } from './auth-client-kind.mjs';
 
 export { createBrowserHostAdapter };
 import { attributedWorkUrl, captureWorkAttribution, getWorkAttribution } from './analytics-attribution.mjs';
+import { enqueueAnalytics } from './analytics-delivery.mjs';
 const decodeRouteValue = value => { try { return decodeURIComponent(value||''); } catch { return value||''; } };
 
 import { playerRuntimeOptions } from './player-runtime-options.mjs';
@@ -87,7 +88,7 @@ const emitAnalytics = (api, hostKind, event, demo = false) => {
   const identity = analyticsIdentity();
   if (!identity.anonymousId || !identity.sessionId) return;
   const attribution = event.workId ? getWorkAttribution(event.workId) : {};
-  api.trackAnalytics([{ ...identity, hostKind: hostKind || 'unknown', occurredAt: new Date().toISOString(), ...attribution, ...event }]).catch(() => {});
+  void enqueueAnalytics(api, [{ ...identity, hostKind: hostKind || 'unknown', occurredAt: new Date().toISOString(), ...attribution, ...event }]);
 };
 
 function resolveHostIdentity(capabilities = {}) {

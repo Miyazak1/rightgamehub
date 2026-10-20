@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 71);
+  assert.equal(files.length, 72);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -25,6 +25,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const interactiveCourseware = fs.readFileSync(path.join(migrationDir, '0069_interactive_courseware_kind.sql'), 'utf8');
   const changeRadar = fs.readFileSync(path.join(migrationDir, '0070_official_change_radar.sql'), 'utf8');
   const changeRadarV2 = fs.readFileSync(path.join(migrationDir, '0071_change_radar_v2.sql'), 'utf8');
+  const analyticsMcpHost = fs.readFileSync(path.join(migrationDir, '0072_analytics_mcp_host.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -33,6 +34,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(changeRadarV2, /ADD COLUMN rule_type/);
   assert.match(changeRadarV2, /ADD COLUMN diff_json/);
   assert.match(changeRadarV2, /ADD COLUMN is_read/);
+  assert.match(analyticsMcpHost, /DROP CONSTRAINT analytics_events_host_kind_check/);
+  assert.match(analyticsMcpHost, /ADD CONSTRAINT analytics_events_host_kind_check/);
+  assert.match(analyticsMcpHost, /'mcp-app'/);
   assert.match(creatorGeneration, /prompt_version text NOT NULL/);
   assert.match(creatorGeneration, /one_active_per_draft/);
   assert.match(communityProjects, /CREATE TABLE community_projects/);
@@ -189,6 +193,32 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
     assert.match(migration.sql, /COMMIT;\s*$/);
     assert.doesNotMatch(migration.sql, /\b(DROP\s+(TABLE|COLUMN)|TRUNCATE)\b/i);
   }
+});
+
+test('analytics contract enums stay aligned with the final database constraints', async () => {
+  const { enums } = await import('../../packages/contracts/src/schema.mjs');
+  const foundation = fs.readFileSync(path.join(migrationDir, '0029_analytics_foundation.sql'), 'utf8');
+  const attribution = fs.readFileSync(path.join(migrationDir, '0064_discovery_campaigns.sql'), 'utf8');
+  const hostKinds = fs.readFileSync(path.join(migrationDir, '0072_analytics_mcp_host.sql'), 'utf8');
+  for (const eventType of enums.AnalyticsEventType) {
+    assert.ok(foundation.includes(`'${eventType}'`), `database constraint is missing analytics event type ${eventType}`);
+  }
+  for (const hostKind of enums.AnalyticsHostKind) {
+    assert.ok(hostKinds.includes(`'${hostKind}'`), `database constraint is missing analytics host kind ${hostKind}`);
+  }
+  for (const source of enums.AnalyticsAttributionSource) {
+    assert.ok(attribution.includes(`'${source}'`), `database constraint is missing analytics attribution source ${source}`);
+  }
+  const app = fs.readFileSync(path.resolve(__dirname, '../../apps/api/src/app.mjs'), 'utf8');
+  const service = fs.readFileSync(path.resolve(__dirname, '../../apps/api/src/analytics-service.mjs'), 'utf8');
+  assert.match(app, /enums\.AnalyticsEventType/);
+  assert.match(app, /enums\.AnalyticsHostKind/);
+  assert.match(app, /enums\.AnalyticsRoute/);
+  assert.match(app, /enums\.AnalyticsAttributionSource/);
+  assert.match(service, /new Set\(enums\.AnalyticsEventType\)/);
+  assert.match(service, /new Set\(enums\.AnalyticsHostKind\)/);
+  assert.match(service, /new Set\(enums\.AnalyticsRoute\)/);
+  assert.match(service, /new Set\(enums\.AnalyticsAttributionSource\)/);
 });
 
 test('migration baseline contains every M1 identity, work, upload and queue table', () => {

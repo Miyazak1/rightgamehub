@@ -48,6 +48,7 @@ import { describeGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
 import { ChangeRadarError } from './change-radar-service.mjs';
 import { registerChangeRadarRoutes } from './change-radar-routes.mjs';
 import { publicLocaleQuerySchema, resolvePublicLocale } from './public-locale.mjs';
+import { enums } from '@gamehub/contracts';
 
 const envelope = data => ({ data });
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/gu, character => ({
@@ -405,12 +406,12 @@ export function createApp(dependencies) {
   if (analyticsService) {
     const analyticsEvent = {
       type: 'object', additionalProperties: false, required: ['type','anonymousId','sessionId','hostKind','occurredAt'], properties: {
-        type: { type: 'string', enum: ['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end'] },
+        type: { type: 'string', enum: enums.AnalyticsEventType },
         anonymousId: { type: 'string', format: 'uuid' }, sessionId: { type: 'string', format: 'uuid' },
-        hostKind: { type: 'string', enum: ['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown'] },
-        route: { type: 'string', enum: ['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown'] },
+        hostKind: { type: 'string', enum: enums.AnalyticsHostKind },
+        route: { type: 'string', enum: enums.AnalyticsRoute },
         workId: workKeySchema, releaseId: { type: 'string', format: 'uuid' },
-        attributionSource: { type: 'string', enum: ['share_copy','share_system','readme','external','campaign'] },
+        attributionSource: { type: 'string', enum: enums.AnalyticsAttributionSource },
         campaignKey: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
         durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: { type: 'string', format: 'date-time' },
       },

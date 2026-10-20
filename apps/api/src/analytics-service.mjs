@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { enums } from '@gamehub/contracts';
 
 export class AnalyticsError extends Error {
   constructor(code, statusCode, message) {
@@ -6,10 +7,10 @@ export class AnalyticsError extends Error {
   }
 }
 
-const EVENT_TYPES = new Set(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']);
-const HOST_KINDS = new Set(['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown']);
-const ROUTES = new Set(['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown']);
-const ATTRIBUTION_SOURCES = new Set(['share_copy','share_system','readme','external','campaign']);
+const EVENT_TYPES = new Set(enums.AnalyticsEventType);
+const HOST_KINDS = new Set(enums.AnalyticsHostKind);
+const ROUTES = new Set(enums.AnalyticsRoute);
+const ATTRIBUTION_SOURCES = new Set(enums.AnalyticsAttributionSource);
 const CAMPAIGN_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
 const WORK_KEY = /^(?:gamehub-[a-z0-9-]{1,100}|[0-9a-fA-F-]{36})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

@@ -20,6 +20,10 @@ export const enums = Object.freeze({
   CreatorStudio: ['bingo', 'puzzle', 'story', 'world'],
   CreatorDraftStatus: ['active', 'archived', 'published'],
   ProjectClaimStatus: ['publisher','unclaimed','pending','verified','rejected','cancelled','disputed','suspended','revoked'],
+  AnalyticsEventType: ['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end'],
+  AnalyticsHostKind: ['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown'],
+  AnalyticsRoute: ['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown'],
+  AnalyticsAttributionSource: ['share_copy','share_system','readme','external','campaign'],
 });
 
 const id = { type: 'string', format: 'uuid' };
@@ -791,11 +795,11 @@ export const schemas = Object.freeze({
   }),
   AnalyticsEventsRequest: object({
     events: { type: 'array', minItems: 1, maxItems: 20, items: object({
-      type: stringEnum(['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end']),
+      type: stringEnum(enums.AnalyticsEventType),
       anonymousId: id, sessionId: id,
-      hostKind: stringEnum(['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown']),
-      route: stringEnum(['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown']),
-        workId: workKey, releaseId: id, attributionSource: stringEnum(['share_copy','share_system','readme','external','campaign']),
+      hostKind: stringEnum(enums.AnalyticsHostKind),
+      route: stringEnum(enums.AnalyticsRoute),
+        workId: workKey, releaseId: id, attributionSource: stringEnum(enums.AnalyticsAttributionSource),
         campaignKey: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
         durationMs: { type: 'integer', minimum: 0, maximum: 600000 }, occurredAt: dateTime,
     }, ['type','anonymousId','sessionId','hostKind','occurredAt']) },

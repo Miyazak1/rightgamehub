@@ -13,6 +13,10 @@ export type SourceBuildState = "queued" | "preparing" | "building" | "packaging"
 export type CreatorStudio = "bingo" | "puzzle" | "story" | "world";
 export type CreatorDraftStatus = "active" | "archived" | "published";
 export type ProjectClaimStatus = "publisher" | "unclaimed" | "pending" | "verified" | "rejected" | "cancelled" | "disputed" | "suspended" | "revoked";
+export type AnalyticsEventType = "page_view" | "session_ping" | "work_view" | "download_start" | "download_complete" | "game_start" | "game_end";
+export type AnalyticsHostKind = "browser" | "mcp-app" | "cursor" | "vscode" | "code" | "harness" | "codex" | "claude" | "opencode" | "unknown";
+export type AnalyticsRoute = "discover" | "learning" | "tools" | "library" | "social" | "creator" | "admin" | "work" | "play" | "auth" | "settings" | "profile" | "unknown";
+export type AnalyticsAttributionSource = "share_copy" | "share_system" | "readme" | "external" | "campaign";
 
 export type UIntString = `${number}`;
 export type UUID = string;
