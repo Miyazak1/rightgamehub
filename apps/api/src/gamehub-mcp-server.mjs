@@ -202,6 +202,29 @@ export function createGameHubMcpServer({ catalogService, siteOrigin = 'https://m
     };
   });
 
+  registerAppTool(server, 'open_spreadsheet_audit', {
+    title: 'Open MOOYU Spreadsheet Formula Audit',
+    description: 'Open the local MOOYU.FUN spreadsheet formula audit workspace for tracing formulas, finding structural anomalies, and comparing workbook versions. The user chooses XLSX or XLSM files inside the UI; never put workbook contents in tool arguments. Files stay on the user device and are not uploaded by this tool.',
+    inputSchema: {
+      mode: z.enum(['audit', 'compare']).default('audit'),
+    },
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: {
+      ui: { resourceUri: GAMEHUB_MCP_UI_URI, visibility: ['model', 'app'] },
+      'openai/outputTemplate': GAMEHUB_MCP_UI_URI,
+      'openai/toolInvocation/invoking': 'Opening the local spreadsheet audit workspace…',
+      'openai/toolInvocation/invoked': 'Spreadsheet audit workspace opened.',
+    },
+  }, async ({ mode = 'audit' }) => {
+    const path = `/tools/spreadsheet-audit?${new URLSearchParams({ mode })}`;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local spreadsheet formula audit workspace. Ask the user to choose the workbook there; do not request workbook contents as tool arguments.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   return server;
 }
 

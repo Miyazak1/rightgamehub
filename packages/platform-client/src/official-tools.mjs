@@ -17,6 +17,9 @@ export const officialTools=[
   Object.freeze({
     id:'document-compare',route:'/tools/document-compare',titleKey:'tools.documentCompare.title',descriptionKey:'tools.documentCompare.description',mark:'⇄',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['document.read','document.compare','document.diff.navigate','document.export'],load:()=>import('./DocumentCompareTool.jsx'),
   }),
+  Object.freeze({
+    id:'spreadsheet-audit',route:'/tools/spreadsheet-audit',titleKey:'tools.spreadsheetAudit.title',descriptionKey:'tools.spreadsheetAudit.description',mark:'ƒx',status:'available',runtime:'trusted-react',layouts:['sidebar','canvas'],capabilities:['spreadsheet.read','spreadsheet.audit','spreadsheet.compare','spreadsheet.trace','document.export'],load:()=>import('./SpreadsheetAuditTool.jsx'),
+  }),
 ];
 
 export function findOfficialTool(id){return officialTools.find(tool=>tool.id===id)??null;}
