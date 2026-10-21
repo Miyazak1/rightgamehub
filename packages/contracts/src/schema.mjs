@@ -556,7 +556,7 @@ export const schemas = Object.freeze({
   GuessBaikeDaily: object({ date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, schemaVersion: { type: 'integer', minimum: 1 }, generatedAt: dateTime, puzzle: { $ref: '#/components/schemas/GuessBaikePuzzle' } }),
   GuessBaikeAdminPuzzle: object({
     id: { type: 'string' }, title: { type: 'string' }, aliases: { type: 'array', items: { type: 'string' } }, category: { type: 'string' }, sourceKind: { type: 'string' }, sourceTitle: { type: 'string' }, sourceUrl: { type: 'string' }, sourceRevision: { type: 'integer' }, sourceUpdatedAt: dateTime, license: { type: 'string' }, introHanCount: { type: 'integer' }, content: { type: 'string' },
-    status: stringEnum(['ready','disabled']), qualityReason: { oneOf: [{ type: 'string' }, { type: 'null' }] }, scheduledDates: { type: 'array', items: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
+    status: stringEnum(['ready','disabled','rejected']), qualityReason: { oneOf: [{ type: 'string' }, { type: 'null' }] }, scheduledDates: { type: 'array', items: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
   }),
   GuessBaikePuzzleStatusRequest: object({ status: stringEnum(['ready','disabled']) }),
   GuessBaikeScheduleRequest: object({ date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, puzzleId: { type: 'string' } }),

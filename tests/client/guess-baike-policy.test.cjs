@@ -15,6 +15,21 @@ test('Guess Baike rejects leads below the configured Han-character floor', async
   assert.equal(long.eligible, true);
 });
 
+test('Guess Baike strict selection accepts only unambiguous popular Chinese topics', async () => {
+  const { evaluateGuessBaikeSelection } = await import('../../packages/platform-client/src/guess-baike-policy.mjs');
+  const content = '咖啡是一种世界各地都很常见的饮料，具有长期稳定的历史、文化和生活知识。'.repeat(20);
+  const pageviews = Object.fromEntries(Array.from({ length: 60 }, (_, index) => [`202610${String(index + 1).padStart(2, '0')}`, 100]));
+  const accepted = evaluateGuessBaikeSelection({ title: '咖啡', content, categories: ['Category:咖啡', 'Category:饮料'], pageviews });
+  assert.equal(accepted.eligible, true);
+  assert.equal(accepted.category, '生活');
+  assert.equal(accepted.signals.pageviews60Days, 6000);
+
+  assert.equal(evaluateGuessBaikeSelection({ title: 'Coffee咖啡', content, categories: ['Category:饮料'], pageviews }).reasonCode, 'TITLE_HAS_LATIN');
+  assert.equal(evaluateGuessBaikeSelection({ title: '年度选举', content, categories: ['Category:选举'], pageviews }).reasonCode, 'SENSITIVE_OR_UNSTABLE_TOPIC');
+  assert.equal(evaluateGuessBaikeSelection({ title: '咖啡', content, categories: ['Category:饮料'], pageviews: {} }).reasonCode, 'POPULARITY_DATA_MISSING');
+  assert.equal(evaluateGuessBaikeSelection({ title: '冷门器物', content, categories: ['Category:地方器物'], pageviews }).reasonCode, 'TOPIC_NOT_MAINSTREAM');
+});
+
 test('Guess Baike exposes punctuation and layout whitespace only', async () => {
   const { isVisibleGuessPunctuation, shouldMaskGuessCharacter } = await import('../../packages/platform-client/src/guess-baike-policy.mjs');
   for (const character of Array.from('，。！？（）：,;.!?\'"-—\n \t')) {
@@ -54,6 +69,8 @@ test('generated Guess Baike bank contains only complete eligible leads', async (
   assert.equal(bank.policy.section, 'lead');
   assert.equal(bank.policy.complete, true);
   assert.equal(bank.policy.minimumHan, 180);
+  assert.equal(bank.policy.selectionPolicyVersion, 2);
+  assert.equal(bank.policy.defaultReject, true);
   assert.ok(bank.puzzles.length >= 3);
   for (const puzzle of bank.puzzles) {
     assert.ok(puzzle.introHanCount >= bank.policy.minimumHan, puzzle.title);

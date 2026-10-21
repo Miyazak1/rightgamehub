@@ -8,7 +8,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 72);
+  assert.equal(files.length, 73);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -114,6 +114,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const automation = fs.readFileSync(path.join(migrationDir, '0026_guess_baike_automation.sql'), 'utf8');
   assert.match(automation, /CREATE TABLE guess_baike_automation_runs/);
   assert.match(automation, /ADD COLUMN origin/);
+  const strictSelection = fs.readFileSync(path.join(migrationDir, '0073_guess_baike_strict_selection.sql'), 'utf8');
+  assert.match(strictSelection, /'ready','disabled','rejected'/);
+  assert.match(strictSelection, /ADD COLUMN selection_signals jsonb/);
   const discovery = fs.readFileSync(path.join(migrationDir, '0027_community_discovery.sql'), 'utf8');
   assert.match(discovery, /ADD COLUMN estimated_minutes/);
   assert.match(discovery, /ADD COLUMN repository_url/);

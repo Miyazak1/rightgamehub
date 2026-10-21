@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { evaluateWikipediaIntro, MIN_WIKIPEDIA_INTRO_HAN } from '../packages/platform-client/src/guess-baike-policy.mjs';
+import { GUESS_BAIKE_SELECTION_POLICY_VERSION, evaluateGuessBaikeSelection, MIN_WIKIPEDIA_INTRO_HAN } from '../packages/platform-client/src/guess-baike-policy.mjs';
 
 const root = new URL('../', import.meta.url);
 const seedsUrl = new URL('packages/platform-client/src/guess-baike-seeds.json', root);
@@ -21,10 +21,11 @@ async function fetchLeads(inputSeeds) {
     formatversion: '2',
     converttitles: '1',
     redirects: '1',
-    prop: 'extracts|info',
+    prop: 'extracts|info|pageprops',
     exintro: '1',
     explaintext: '1',
     inprop: 'url',
+    ppprop: 'disambiguation',
     variant: 'zh-cn',
     titles: inputSeeds.map(seed => seed.title).join('|'),
   });
@@ -46,32 +47,33 @@ async function fetchLeads(inputSeeds) {
     const resolvedTitle = resolveTitle(seed.title);
     const page = pages.get(resolvedTitle);
     if (!page || page.missing) throw new Error(`${seed.title}: 词条不存在或标题转换失败`);
+    if (Object.hasOwn(page.pageprops ?? {}, 'disambiguation')) throw new Error(`${seed.title}: 消歧义条目不能进入题库`);
     return [seed, page];
   });
 }
 
 for (const [seed, page] of await fetchLeads(seeds)) {
   try {
-    const result = evaluateWikipediaIntro(page.extract, minimumHan);
-    if (!result.eligible) {
-      rejected.push({ title: seed.title, reason: result.reason });
+    const selection = evaluateGuessBaikeSelection({ title: seed.title, content: page.extract, curatedCategory: seed.category, requirePopularity: false, minimumHan });
+    if (!selection.eligible || selection.hanCount < minimumHan) {
+      rejected.push({ title: seed.title, reason: selection.reason ?? `导言只有 ${selection.hanCount} 个汉字，低于 ${minimumHan} 字门槛` });
       continue;
     }
     puzzles.push({
       id: `wikipedia-${page.pageid}`,
       title: seed.title,
       aliases: [...new Set([...(seed.aliases ?? []), ...(page.title !== seed.title ? [page.title] : [])])],
-      category: seed.category,
+      category: selection.category,
       sourceKind: 'wikipedia-lead',
       sourceTitle: page.title,
       sourceUrl: page.canonicalurl ?? page.fullurl,
       sourceRevision: page.lastrevid,
       sourceUpdatedAt: page.touched,
       license: 'CC BY-SA 4.0',
-      introHanCount: result.hanCount,
-      content: result.content,
+      introHanCount: selection.hanCount,
+      content: selection.content,
     });
-    process.stdout.write(`✓ ${seed.title}: ${result.hanCount} 个汉字\n`);
+    process.stdout.write(`✓ ${seed.title}: ${selection.hanCount} 个汉字\n`);
   } catch (error) { rejected.push({ title: seed.title, reason: error.message }); }
 }
 
@@ -80,7 +82,7 @@ if (!puzzles.length) throw new Error('没有词条通过完整导言长度检查
 const bank = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  policy: { section: 'lead', complete: true, minimumHan },
+  policy: { section: 'lead', complete: true, minimumHan, selectionPolicyVersion: GUESS_BAIKE_SELECTION_POLICY_VERSION, defaultReject: true },
   puzzles,
 };
 await writeFile(outputUrl, `${JSON.stringify(bank, null, 2)}\n`, 'utf8');

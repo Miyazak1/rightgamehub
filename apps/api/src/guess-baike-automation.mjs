@@ -1,25 +1,16 @@
 import crypto from 'node:crypto';
-import { evaluateWikipediaIntro, uniqueGuessCharacters } from '../../../packages/platform-client/src/guess-baike-policy.mjs';
+import { GUESS_BAIKE_SELECTION_POLICY_VERSION, countHan, evaluateGuessBaikeSelection, normalizeWikipediaIntro } from '../../../packages/platform-client/src/guess-baike-policy.mjs';
 
 const chinaDate = now => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 const addDays = (date, days) => { const value = new Date(`${date}T00:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0,10); };
 const dateOnly = value => value instanceof Date ? chinaDate(value) : String(value).slice(0,10);
 const unsuitableTitle = /(?:消歧义|列表|一览|索引|年表|清单|目录|人物表|作品列表)/u;
-const categoryRules = [
-  ['科技', /(?:科学|技术|计算机|软件|物理|化学|生物|工程|数学|互联网|人工智能)/u],
-  ['历史', /(?:历史|王朝|帝国|战争|世纪|古代|考古|政治)/u],
-  ['地理', /(?:国家|城市|地区|位于|地理|河流|山脉|岛屿|行政区)/u],
-  ['文化', /(?:文学|艺术|电影|音乐|语言|宗教|文化|小说|动画)/u],
-  ['体育', /(?:体育|比赛|运动|球员|球队|联赛|奥运)/u],
-  ['人物', /(?:出生|逝世|人物|作家|演员|科学家|政治家|运动员)/u],
-];
-const classify = (title, content) => categoryRules.find(([,pattern]) => pattern.test(`${title}\n${content}`))?.[0] ?? '百科';
 
 export function wikipediaCandidateUrl(batchSize) {
   const params = new URLSearchParams({
     action: 'query', format: 'json', formatversion: '2', generator: 'random', grnnamespace: '0', grnfilterredir: 'nonredirects',
-    grnlimit: String(batchSize), grnminsize: '2000', prop: 'extracts|info|pageprops', exintro: '1', explaintext: '1',
-    exlimit: 'max', inprop: 'url', ppprop: 'disambiguation', redirects: '1', variant: 'zh-cn', maxlag: '5',
+    grnlimit: String(batchSize), grnminsize: '2000', prop: 'extracts|info|pageprops|categories|pageviews', exintro: '1', explaintext: '1',
+    exlimit: 'max', inprop: 'url', ppprop: 'disambiguation', cllimit: 'max', clshow: '!hidden', pvipdays: '60', redirects: '1', variant: 'zh-cn', maxlag: '5',
   });
   return `https://zh.wikipedia.org/w/api.php?${params}`;
 }
@@ -42,17 +33,19 @@ export async function fetchWikipediaCandidates({ fetchImpl = fetch, batchSize = 
 export function evaluateCandidate(page) {
   if (!page || page.missing || page.ns !== 0) return { accepted: false, reason: '不是百科主名字空间条目' };
   if (Object.hasOwn(page.pageprops ?? {}, 'disambiguation') || unsuitableTitle.test(page.title ?? '')) return { accepted: false, reason: '消歧义、列表或索引条目' };
-  const titleUnits = uniqueGuessCharacters(page.title ?? '').length;
-  if (titleUnits < 2 || titleUnits > 10) return { accepted: false, reason: '标题不适合 2 至 10 字符猜题' };
-  const quality = evaluateWikipediaIntro(page.extract);
-  if (!quality.eligible) return { accepted: false, reason: quality.reason };
   const revision = page.revisions?.[0]; const revisionId = page.lastrevid ?? revision?.revid; const revisionTime = page.touched ?? revision?.timestamp;
   if (!Number.isInteger(page.pageid) || !Number.isInteger(revisionId) || !revisionTime || !page.canonicalurl) return { accepted: false, reason: '缺少可追溯修订信息' };
-  return { accepted: true, puzzle: {
-    id: `wikipedia-${page.pageid}`, title: page.title, aliases: [], category: classify(page.title, quality.content),
+  const categories = (page.categories ?? []).map(item => item?.title).filter(Boolean);
+  const content = normalizeWikipediaIntro(page.extract); const hanCount = countHan(content);
+  if (!hanCount) return { accepted: false, reason: '条目没有可用的中文导言' };
+  const selection = evaluateGuessBaikeSelection({ title: page.title, content, categories, pageviews: page.pageviews });
+  const accepted = selection.eligible;
+  return { accepted, reason: selection.reason, puzzle: {
+    id: `wikipedia-${page.pageid}`, title: page.title, aliases: [], category: selection.category ?? '规则拒绝',
     sourceKind: 'wikipedia-lead', sourceTitle: page.title, sourceUrl: page.canonicalurl, sourceRevision: revisionId,
-    sourceUpdatedAt: revisionTime, license: 'CC BY-SA 4.0', introHanCount: quality.hanCount, content: quality.content,
-    status: 'ready', qualityReason: null,
+    sourceUpdatedAt: revisionTime, license: 'CC BY-SA 4.0', introHanCount: selection.hanCount ?? hanCount, content: selection.content ?? content,
+    status: accepted ? 'ready' : 'rejected', qualityReason: selection.reason,
+    selectionSignals: { policyVersion: GUESS_BAIKE_SELECTION_POLICY_VERSION, ...(selection.signals ?? {}), categories: categories.slice(0, 80), reasonCode: selection.reasonCode },
   } };
 }
 
@@ -62,16 +55,19 @@ export function createGuessBaikeAutomation({ repository, fetchImpl = fetch, cloc
     const fromDate = chinaDate(now); const toDate = addDays(fromDate, scheduleDays - 1);
     const snapshot = await repository.automationSnapshot(fromDate,toDate);
     if (!snapshot.puzzles.length) return 0;
-    const scheduled = new Map(snapshot.schedules.map(item => [dateOnly(item.puzzle_date), item.puzzle_id]));
-    const recent = snapshot.schedules.map(item => item.puzzle_id).slice(-7); let inserted = 0;
+    const puzzleById = new Map(snapshot.puzzles.map(item => [item.id,item]));
+    const scheduled = new Map(snapshot.schedules.map(item => [dateOnly(item.puzzle_date), item]));
+    const recent = snapshot.schedules.map(item => ({ id:item.puzzle_id, category:item.category ?? puzzleById.get(item.puzzle_id)?.category })).slice(-7); let inserted = 0;
     for (let offset = 0; offset < scheduleDays; offset += 1) {
-      const date = addDays(fromDate,offset); if (scheduled.has(date)) { recent.push(scheduled.get(date)); continue; }
-      const avoid = new Set(recent.slice(-Math.min(7,Math.max(0,snapshot.puzzles.length - 1))));
-      const pool = snapshot.puzzles.filter(item => !avoid.has(item.id));
-      const candidates = pool.length ? pool : snapshot.puzzles;
+      const date = addDays(fromDate,offset); if (scheduled.has(date)) { const item=scheduled.get(date); recent.push({ id:item.puzzle_id,category:item.category ?? puzzleById.get(item.puzzle_id)?.category }); continue; }
+      const avoidIds = new Set(recent.slice(-Math.min(7,Math.max(0,snapshot.puzzles.length - 1))).map(item => item.id));
+      const avoidCategories = new Set(recent.slice(-2).map(item => item.category).filter(Boolean));
+      const balancedPool = snapshot.puzzles.filter(item => !avoidIds.has(item.id) && !avoidCategories.has(item.category));
+      const uniquePool = snapshot.puzzles.filter(item => !avoidIds.has(item.id));
+      const candidates = balancedPool.length ? balancedPool : uniquePool.length ? uniquePool : snapshot.puzzles;
       const seed = Array.from(date).reduce((sum,char) => sum + char.charCodeAt(0),0);
       const puzzle = candidates[seed % candidates.length];
-      if (await repository.insertAutomaticSchedule({ date, puzzleId: puzzle.id, now })) { inserted += 1; recent.push(puzzle.id); }
+      if (await repository.insertAutomaticSchedule({ date, puzzleId: puzzle.id, now })) { inserted += 1; recent.push(puzzle); }
     }
     return inserted;
   };
@@ -83,8 +79,8 @@ export function createGuessBaikeAutomation({ repository, fetchImpl = fetch, cloc
       const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15_000);
       let pages; try { pages = await fetchWikipediaCandidates({ fetchImpl,batchSize,userAgent,signal: controller.signal }); } finally { clearTimeout(timeout); }
       fetchedCount = pages.length;
-      const puzzles = pages.map(evaluateCandidate).filter(result => result.accepted).map(result => result.puzzle);
-      acceptedCount = puzzles.length;
+      const results = pages.map(evaluateCandidate); const puzzles = results.filter(result => result.puzzle).map(result => result.puzzle);
+      acceptedCount = results.filter(result => result.accepted).length;
       if (puzzles.length) await repository.seed(puzzles,clock());
       scheduledCount = await fillSchedule(clock());
       await repository.finishAutomationRun({ id,now: clock(),status: 'succeeded',fetchedCount,acceptedCount,scheduledCount });
