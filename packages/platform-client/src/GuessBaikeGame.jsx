@@ -38,6 +38,15 @@ function loadGame(key) {
   } catch { return null; }
 }
 
+function saveGame(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Embedded and privacy-restricted hosts may disable localStorage. The game
+    // must remain playable even when this optional local resume cache is absent.
+  }
+}
+
 const localDaily = () => {
   const dailyIndex = Math.abs(Math.floor((Date.now() - Date.UTC(2026, 8, 28)) / 86400000)) % puzzles.length;
   return { date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), puzzle: puzzles[dailyIndex] };
@@ -90,7 +99,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
 
   useEffect(() => {
     if(restoredKey!==storageKey)return;
-    localStorage.setItem(storageKey, JSON.stringify({ guessed: [...guessed], history, phase, hints, startedAt, completedElapsed }));
+    saveGame(storageKey, { guessed: [...guessed], history, phase, hints, startedAt, completedElapsed });
   }, [storageKey, restoredKey, guessed, history, phase, hints, startedAt, completedElapsed]);
 
   useEffect(() => {
@@ -220,7 +229,7 @@ export default function GuessBaikeGame({ api, demo = false, challengeCode = null
         </section>
 
         <form className={`guess-input-bar ${feedback ? `is-${feedback.kind}` : ''}`} onSubmit={submit}>
-          <div className="guess-input-wrap"><span aria-hidden="true">&gt;_</span><input ref={inputRef} value={input} maxLength={10} disabled={phase !== 'playing'} onChange={event => setInput(event.target.value)} placeholder={t('guess.inputPlaceholder')} autoComplete="off"/></div>
+          <div className="guess-input-wrap"><span aria-hidden="true">&gt;_</span><input ref={inputRef} value={input} maxLength={10} disabled={phase !== 'playing'} onChange={event => setInput(event.target.value)} placeholder={t('guess.inputPlaceholder')} aria-label={t('guess.inputPlaceholder')} autoComplete="off"/></div>
           <button type="submit" disabled={!input.trim() || phase !== 'playing'}>{t('guess.reveal')} <span>↵</span></button>
         </form>
         <div className="guess-feedback" aria-live="polite">{feedback ? <><i/>{feedback.text}</> : phase === 'won' ? t('guess.decoded') : t('guess.instructions')}{phase === 'won' && !showResult && <button className="guess-result-reopen" onClick={() => setShowResult(true)}>{t('guess.viewResult')}</button>}</div>
