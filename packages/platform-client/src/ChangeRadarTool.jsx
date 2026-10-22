@@ -321,7 +321,7 @@ function ResearchTopics({api,topics,watches,selectedTopic,onSelect,onReload,onAc
     {selectedTopic&&<QualitySummary api={api} topicId={selectedTopic.id} refreshKey={`${claims.map(item=>`${item.id}:${item.status}:${item.currentRevision}`).join('|')}::${metrics.map(item=>`${item.id}:${item.statistics.count}`).join('|')}::${claimSignals.map(item=>item.id).join('|')}`} locale={locale} t={t} onChanged={refreshTopicData}/>}
     {selectedTopic&&<ExternalBenchmark api={api} topicId={selectedTopic.id} events={researchEvents} refreshKey={researchEvents.map(item=>item.id).join('|')} locale={locale} t={t}/>}
     {selectedTopic&&<FactTimeline api={api} topicId={selectedTopic.id} claims={claims} locale={locale} t={t}/>}
-    <MetricPanel api={api} topicId={selectedTopic.id} series={metrics} locale={locale} t={t}/>
+    {selectedTopic&&<MetricPanel api={api} topicId={selectedTopic.id} series={metrics} locale={locale} t={t}/>}
     {selectedTopic&&<MetricComparison api={api} topicId={selectedTopic.id} series={metrics} t={t} locale={locale}/>}
     {selectedTopic&&<MetricMatrix api={api} topicId={selectedTopic.id} series={metrics} t={t}/>}
     {selectedTopic&&<DerivedMetrics api={api} topicId={selectedTopic.id} series={metrics} t={t}/>}
