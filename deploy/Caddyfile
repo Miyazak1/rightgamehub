@@ -63,6 +63,14 @@
     reverse_proxy api:3090
   }
 
+  # Vite filenames are content-addressed. Cache existing bundles permanently,
+  # but return a real 404 for a removed bundle instead of the SPA HTML shell.
+  handle /assets/* {
+    root * /srv/gamehub
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+
   # Dedicated shell used only by the MCP Apps widget. Keep the main site
   # protected from framing and allow only the known OpenAI sandbox surfaces.
   handle /mcp-app {
@@ -98,6 +106,7 @@
     root * /srv/gamehub
     try_files {path} /index.html
     header {
+      Cache-Control "no-store"
       Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src https://*.{$RUNTIME_DOMAIN}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' vscode-webview:"
       Referrer-Policy "no-referrer"
       X-Content-Type-Options "nosniff"

@@ -398,6 +398,8 @@ test('production edge sends stable public work links to the metadata route befor
   assert.match(caddy, /handle \/sitemap\.xml \{\s*reverse_proxy api:3090/u);
   assert.match(caddy, /@private_routes path [^\n]*\/creator\*[^\n]*\/play\/\*/u);
   assert.match(caddy, /header @private_routes X-Robots-Tag "noindex, nofollow"/u);
+  assert.match(caddy, /handle \/assets\/\* \{[\s\S]*Cache-Control "public, max-age=31536000, immutable"[\s\S]*file_server[\s\S]*\}/u);
+  assert.match(caddy, /handle \{[\s\S]*try_files \{path\} \/index\.html[\s\S]*Cache-Control "no-store"/u);
 });
 
 test('GitHub source routes authenticate creators and preserve raw webhook bytes', async t => {

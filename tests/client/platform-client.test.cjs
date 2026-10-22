@@ -309,6 +309,10 @@ test('web entry activates the complete platform client for the MCP App route', a
   assert.match(source, /createBrowserHostAdapter\(\{ host: 'mcp-app', surface: 'mcp-app', openExternal: openMcpExternal \}\)/u);
   assert.match(source, /gamehub\/navigation\.openExternal/u);
   assert.match(source, /routing=\{isMcpApp \? 'embedded' : 'history'\}/u);
+  assert.match(source, /vite:preloadError/u);
+  assert.match(source, /event\.preventDefault\(\)/u);
+  assert.match(source, /globalThis\.location\.reload\(\)/u);
+  assert.match(source, /页面版本已经更新/u);
 });
 
 test('MCP App authentication uses the supported browser client kind', async () => {
