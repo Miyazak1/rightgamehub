@@ -109,6 +109,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(researchCandidateEvaluationDatasets, /research candidate evaluation records are immutable/);
   assert.match(researchCandidateExternalEvaluationSets, /dataset_origin/);
   assert.match(researchCandidateExternalEvaluationSets, /coverage_report_json/);
+  assert.match(researchCandidateExternalEvaluationSets, /information_schema\.constraint_column_usage/);
+  assert.match(researchCandidateExternalEvaluationSets, /column_name='sample_strategy'/);
+  assert.doesNotMatch(researchCandidateExternalEvaluationSets, /DROP CONSTRAINT tool_research_candidate_evaluation_datasets_sample_strategy_check/);
   assert.match(researchCandidateExternalEvaluationSets, /CREATE TABLE tool_research_candidate_evaluation_external_assignments/);
   assert.match(researchCandidateExternalEvaluationSets, /external_case_key/);
   assert.match(researchCandidateExternalEvaluationSets, /'external-jsonl-v1'/);
