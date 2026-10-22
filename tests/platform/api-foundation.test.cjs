@@ -78,6 +78,14 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.equal(fetchConfig.deepSeekFetchTimeoutMs,11000);
   assert.equal(fetchConfig.deepSeekFetchPriceUsdMicrosPerRequest,900);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST: '-1' }), /DEEPSEEK_FETCH_PRICE/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_CANDIDATE_ASSESSMENT_ENABLED: 'true' }), /DEEPSEEK_API_KEY/);
+  const candidateAssessment = loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_CANDIDATE_ASSESSMENT_ENABLED: 'true', DEEPSEEK_API_KEY: 'test-key', RESEARCH_CANDIDATE_ASSESSMENT_MODEL: 'deepseek-chat', RESEARCH_CANDIDATE_ASSESSMENT_TIMEOUT_MS: '12000', RESEARCH_CANDIDATE_ASSESSMENT_PRICE_USD_MICROS_PER_REQUEST: '2500', RESEARCH_CANDIDATE_ASSESSMENT_MAX_PER_RUN: '4' });
+  assert.equal(candidateAssessment.researchCandidateAssessmentEnabled,true);
+  assert.equal(candidateAssessment.researchCandidateAssessmentModel,'deepseek-chat');
+  assert.equal(candidateAssessment.researchCandidateAssessmentTimeoutMs,12000);
+  assert.equal(candidateAssessment.researchCandidateAssessmentPriceUsdMicrosPerRequest,2500);
+  assert.equal(candidateAssessment.researchCandidateAssessmentMaxPerRun,4);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_CANDIDATE_ASSESSMENT_MAX_PER_RUN: '11' }), /RESEARCH_CANDIDATE_ASSESSMENT_MAX_PER_RUN/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true' }), /RESEARCHER_WORKER_TOKEN/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true', RESEARCHER_WORKER_TOKEN: 'short' }), /32 UTF-8 bytes/);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true', RESEARCHER_WORKER_TOKEN: 'r'.repeat(32), RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB: '0' }), /must be greater than zero/u);

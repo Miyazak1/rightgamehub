@@ -65,9 +65,9 @@ test('research news source catalog exposes auditable regional packs and determin
 });
 
 const createMemoryRepository=()=>{
-  const topics=new Map(),sources=new Map(),entities=new Map(),authorityReviews=[],sourceStatusReviews=[],entityStatusReviews=[],sourceRelationships=[],billingReconciliations=[],billingReviews=[],watches=new Map([[uuids[1],{id:uuids[1],userId:'user-1',title:'官方更新',url:'https://example.com',status:'active'}]]);
+  const topics=new Map(),sources=new Map(),entities=new Map(),discoveries=new Map(),candidateAssessments=[],candidateEvaluationDatasets=[],candidateEvaluationRuns=[],authorityReviews=[],sourceStatusReviews=[],entityStatusReviews=[],sourceRelationships=[],billingReconciliations=[],billingReviews=[],watches=new Map([[uuids[1],{id:uuids[1],userId:'user-1',title:'官方更新',url:'https://example.com',status:'active'}]]);
   return{
-    topics,sources,entities,authorityReviews,sourceStatusReviews,entityStatusReviews,sourceRelationships,billingReconciliations,billingReviews,watches,
+    topics,sources,entities,discoveries,candidateAssessments,candidateEvaluationDatasets,candidateEvaluationRuns,authorityReviews,sourceStatusReviews,entityStatusReviews,sourceRelationships,billingReconciliations,billingReviews,watches,
     count:async userId=>[...topics.values()].filter(item=>item.userId===userId&&item.status!=='archived').length,
     create:async input=>{const now=new Date().toISOString(),topic={...input,status:'active',currentContractVersion:1,lastRunAt:null,createdAt:now,updatedAt:now};topics.set(input.id,topic);return topic;},
     list:async userId=>[...topics.values()].filter(item=>item.userId===userId),
@@ -78,6 +78,17 @@ const createMemoryRepository=()=>{
     linkWatch:async(userId,topicId,watchId)=>{const watch=watches.get(watchId);if(!watch||watch.userId!==userId)return 'missing';if(watch.topicId&&watch.topicId!==topicId)return 'conflict';watch.topicId=topicId;return 'linked';},
     unlinkWatch:async(userId,topicId,watchId)=>{const watch=watches.get(watchId);if(!watch||watch.userId!==userId||watch.topicId!==topicId)return false;delete watch.topicId;return true;},
     listSources:async(userId,topicId)=>[...sources.values()].filter(item=>item.userId===userId&&item.topicId===topicId),
+    listDiscoveries:async(userId,topicId,query={})=>[...discoveries.values()].filter(item=>item.userId===userId&&item.topicId===topicId).map(item=>({...item,latestAssessment:candidateAssessments.filter(review=>review.discoveryId===item.id).at(-1)||null})).filter(item=>(!query.decision||(query.decision==='unassessed'?!item.latestAssessment:item.latestAssessment?.decision===query.decision))&&(!query.evaluatorKind||item.latestAssessment?.evaluatorKind===query.evaluatorKind)&&(!query.sourceStatus||item.sourceStatus===query.sourceStatus)&&(query.minTopicRelevance===null||query.minTopicRelevance===undefined||Number(item.latestAssessment?.dimensionScores?.topicRelevance)>=query.minTopicRelevance)).sort((left,right)=>query.sort==='priority'?Number(right.latestAssessment?.dimensionScores?.topicRelevance??-1)-Number(left.latestAssessment?.dimensionScores?.topicRelevance??-1):String(right.discoveredAt||'').localeCompare(String(left.discoveredAt||''))).slice(0,query.limit??50),
+    getDiscoveryStats:async(userId,topicId)=>{if(topics.get(topicId)?.userId!==userId)return null;const items=[...discoveries.values()].filter(item=>item.userId===userId&&item.topicId===topicId).map(item=>({...item,latestAssessment:candidateAssessments.filter(review=>review.discoveryId===item.id).at(-1)||null})),score=key=>{const values=items.map(item=>item.latestAssessment?.dimensionScores?.[key]).filter(value=>Number.isFinite(Number(value))).map(Number);return values.length?Math.round(values.reduce((sum,value)=>sum+value,0)/values.length*1000)/1000:null;};return{schemaVersion:'research-candidate-stats-v1',total:items.length,unassessed:items.filter(item=>!item.latestAssessment).length,decisions:{relevant:items.filter(item=>item.latestAssessment?.decision==='relevant').length,needsReview:items.filter(item=>item.latestAssessment?.decision==='needs-review').length,irrelevant:items.filter(item=>item.latestAssessment?.decision==='irrelevant').length},evaluatorKinds:{rule:items.filter(item=>item.latestAssessment?.evaluatorKind==='rule').length,model:items.filter(item=>item.latestAssessment?.evaluatorKind==='model').length,human:items.filter(item=>item.latestAssessment?.evaluatorKind==='human').length},sourceStatuses:{candidate:items.filter(item=>item.sourceStatus==='candidate').length,tracked:items.filter(item=>item.sourceStatus==='tracked').length,muted:items.filter(item=>item.sourceStatus==='muted').length,rejected:items.filter(item=>item.sourceStatus==='rejected').length},averageScores:{topicRelevance:score('topicRelevance'),novelty:score('novelty'),potentialImpact:score('potentialImpact'),evidenceability:score('evidenceability'),timelineValue:score('timelineValue')},latestDiscoveredAt:items.map(item=>item.discoveredAt).filter(Boolean).sort().at(-1)||null,caveats:['统计基于每条候选的最新评估。']};},
+    getCandidateEvaluationItems:async(userId,topicId,evaluationKey=null)=>{if(topics.get(topicId)?.userId!==userId)return null;const selected=evaluationKey||candidateAssessments.filter(item=>item.topicId===topicId&&item.evaluatorKind==='model').at(-1)?.evaluationKey||null;return{evaluationKey:selected,items:[...discoveries.values()].filter(item=>item.userId===userId&&item.topicId===topicId).map(item=>{const assessments=candidateAssessments.filter(review=>review.discoveryId===item.id),model=assessments.filter(review=>review.evaluatorKind==='model'&&review.evaluationKey===selected).at(-1),human=assessments.filter(review=>review.evaluatorKind==='human').at(-1);return{id:item.id,title:item.title,snippet:item.snippet||'',provider:item.provider||'test-provider',publisher:item.publisher||null,modelDecision:model?.decision||null,humanDecision:human?.decision||null};}).filter(item=>item.modelDecision||item.humanDecision)};},
+    getCandidateGoldCandidates:async(userId,topicId)=>{if(topics.get(topicId)?.userId!==userId)return null;return[...discoveries.values()].filter(item=>item.userId===userId&&item.topicId===topicId).map(item=>{const human=candidateAssessments.filter(review=>review.discoveryId===item.id&&review.evaluatorKind==='human'&&['relevant','irrelevant'].includes(review.decision)).at(-1),assigned=candidateEvaluationDatasets.flatMap(dataset=>dataset.cases).find(entry=>entry.discoveryId===item.id);return human?{id:item.id,title:item.title,snippet:item.snippet||'',provider:item.provider||'test-provider',publisher:item.publisher||null,humanAssessmentId:human.id,humanDecision:human.decision,assignedSplit:assigned?.datasetSplit||null}:null;}).filter(Boolean);},
+    createCandidateEvaluationDataset:async(userId,topicId,input)=>{if(topics.get(topicId)?.userId!==userId)return{status:'missing'};if(input.cases.some(item=>{const assigned=candidateEvaluationDatasets.flatMap(dataset=>dataset.cases).find(entry=>item.caseOrigin==='external-import'?entry.externalCaseKey===item.externalCaseKey:entry.discoveryId===item.discoveryId);return assigned&&assigned.datasetSplit!==input.split;}))return{status:'split-conflict'};const existing=candidateEvaluationDatasets.find(item=>item.topicId===topicId&&item.split===input.split&&item.contentSha256===input.contentSha256);if(existing)return{status:'ok',created:false,dataset:existing};const dataset={id:input.id,topicId,name:input.name,split:input.split,origin:input.origin,sampleStrategy:input.sampleStrategy,sampleLimit:input.sampleLimit,sampleCount:input.sampleCount,summary:input.summary,coverage:input.coverage,contentSha256:input.contentSha256,createdAt:new Date().toISOString(),cases:input.cases.map(item=>({...item,datasetSplit:input.split})),latestRun:null};candidateEvaluationDatasets.push(dataset);return{status:'ok',created:true,dataset};},
+    listCandidateEvaluationDatasets:async(userId,topicId)=>candidateEvaluationDatasets.filter(item=>item.topicId===topicId&&topics.get(topicId)?.userId===userId).map(dataset=>({...dataset,latestRun:candidateEvaluationRuns.filter(run=>run.datasetId===dataset.id).at(-1)||null})),
+    getCandidateEvaluationDatasetItems:async(userId,topicId,datasetId,evaluationKey=null)=>{const dataset=candidateEvaluationDatasets.find(item=>item.id===datasetId&&item.topicId===topicId&&topics.get(topicId)?.userId===userId);if(!dataset)return null;const selected=dataset.origin==='external-import'?null:evaluationKey||candidateAssessments.filter(item=>dataset.cases.some(entry=>entry.discoveryId===item.discoveryId)&&item.evaluatorKind==='model').at(-1)?.evaluationKey||null;return{dataset,evaluationKey:selected,items:dataset.cases.map(item=>{const model=candidateAssessments.filter(review=>review.discoveryId===item.discoveryId&&review.evaluatorKind==='model'&&review.evaluationKey===selected).at(-1);return{id:item.id,caseOrigin:item.caseOrigin,referenceUrl:item.referenceUrl,title:item.title,snippet:item.snippet,provider:item.provider,publisher:item.publisher,humanDecision:item.goldDecision,modelDecision:model?.decision||null};})};},
+    recordCandidateEvaluationRun:async(userId,topicId,datasetId,input)=>{const dataset=candidateEvaluationDatasets.find(item=>item.id===datasetId&&item.topicId===topicId&&topics.get(topicId)?.userId===userId);if(!dataset)return null;for(const prediction of input.predictions??[]){if(!dataset.predictions)dataset.predictions=[];if(!dataset.predictions.some(item=>item.caseId===prediction.caseId&&item.evaluationKey===input.evaluationKey))dataset.predictions.push({...prediction,evaluationKey:input.evaluationKey});}let run=candidateEvaluationRuns.find(item=>item.datasetId===datasetId&&item.evaluationKey===input.evaluationKey&&item.inputSha256===input.inputSha256),created=false;if(!run){created=true;run={id:input.id,datasetId,evaluationKey:input.evaluationKey,datasetSha256:dataset.contentSha256,report:input.report,thresholds:input.thresholds,inputSha256:input.inputSha256,createdAt:new Date().toISOString()};candidateEvaluationRuns.push(run);}return{created,run};},
+    listCandidateEvaluationRuns:async(userId,topicId,datasetId,limit=20)=>topics.get(topicId)?.userId===userId?candidateEvaluationRuns.filter(item=>item.datasetId===datasetId).slice(-limit).reverse():[],
+    listCandidateEvaluationPredictions:async(userId,topicId,datasetId,{evaluationKey=null,limit=500}={})=>topics.get(topicId)?.userId===userId?(candidateEvaluationDatasets.find(item=>item.id===datasetId)?.predictions??[]).filter(item=>!evaluationKey||item.evaluationKey===evaluationKey).slice(-limit).reverse():[],
+    reviewDiscovery:async(userId,topicId,discoveryId,input)=>{const discovery=discoveries.get(discoveryId);if(!discovery||discovery.userId!==userId||discovery.topicId!==topicId)return null;const existing=candidateAssessments.find(item=>item.discoveryId===discoveryId&&item.evaluationKey===input.evaluationKey&&item.inputSha256===input.inputSha256);if(existing)return existing;const review={...input,userId,topicId,discoveryId,createdAt:new Date().toISOString()};candidateAssessments.push(review);return review;},
     getSource:async(userId,topicId,sourceId)=>{const source=sources.get(sourceId);return source?.userId===userId&&source.topicId===topicId?source:null;},
     addSource:async(userId,topicId,input)=>{const existing=[...sources.values()].find(item=>item.userId===userId&&item.topicId===topicId&&item.url===input.url&&item.type===input.type);if(existing)return existing;const source={...input,userId,topicId,status:'candidate',authorityTier:'unknown',pinned:false,addedBy:'user',addedReason:'用户提交，等待确认'};sources.set(input.id,source);return source;},
     updateSource:async(userId,topicId,sourceId,status,input)=>{const source=sources.get(sourceId);if(!source||source.userId!==userId||source.topicId!==topicId)return null;if(source.status!==status){sourceStatusReviews.push({...input,userId,topicId,sourceId,previousStatus:source.status,decidedStatus:status,createdAt:new Date().toISOString()});Object.assign(source,{status});}return source;},
@@ -111,6 +122,22 @@ test('event cluster diagnostics collapse known-related sources without claiming 
   assert.equal(diagnostic.evidence.opposing,1);
   assert.equal(diagnostic.independenceVerified,false);
   assert.deepEqual(diagnostic.attentionReasons,['known-related-sources','unreviewed-source-pairs','opposition-present']);
+});
+
+test('tier 0 candidate prefilter emits deterministic auditable scores without accepting evidence',async()=>{
+  const {buildResearchCandidatePrefilter}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  const relevantInput={topicTitle:'人工智能监管',objective:'长期追踪欧盟人工智能法案实施变化',questions:['欧盟人工智能法案有哪些新规？'],candidate:{title:'欧盟发布人工智能法案实施指南',snippet:'欧盟委员会今天发布新的人工智能监管实施指南和执行时间表。',url:'https://example.com/ai-act',siteName:'Example',publishedAt:'2026-10-21T00:00:00Z',rerankScore:2.5,authority:3}};
+  const relevant=buildResearchCandidatePrefilter(relevantInput),repeated=buildResearchCandidatePrefilter(relevantInput),irrelevant=buildResearchCandidatePrefilter({topicTitle:'人工智能监管',objective:'长期追踪欧盟人工智能法案实施变化',questions:['欧盟人工智能法案有哪些新规？'],candidate:{title:'足球赛果',snippet:'主队获胜。',url:'https://example.com/sport',rerankScore:0.1,authority:0}});
+  assert.equal(relevant.stage,'prefilter');
+  assert.equal(relevant.evaluatorKind,'rule');
+  assert.equal(relevant.evaluationKey,'tier0-prefilter-v1');
+  assert.equal(relevant.decision,'relevant');
+  assert.equal(relevant.inputSha256,repeated.inputSha256);
+  assert.ok(relevant.dimensionScores.topicRelevance>=0.55);
+  assert.ok(relevant.reasonCodes.includes('topic-term-match'));
+  assert.match(relevant.rationale,/不代表内容真实/u);
+  assert.equal(irrelevant.decision,'irrelevant');
+  assert.ok(irrelevant.reasonCodes.includes('thin-candidate'));
 });
 
 test('metric period attribution compares only exact accepted series and preserves unknown periods',async()=>{
@@ -156,6 +183,117 @@ test('research topic service creates normalized versioned contracts and isolates
   assert.ok(new Date(resumed.nextRunAt)>new Date());
 });
 
+test('candidate evaluation gate measures model decisions against human labels and stays advisory',async()=>{
+  const {buildExternalResearchCandidateEvaluationDataset,buildResearchCandidateEvaluationDataset,buildResearchCandidateEvaluationReport,buildResearchCandidateCoverageReport,detectResearchCandidateLanguage}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  assert.equal(detectResearchCandidateLanguage('欧盟发布新的监管指南'),'zh');
+  assert.equal(detectResearchCandidateLanguage('OpenAI launches a new model'),'en');
+  assert.equal(detectResearchCandidateLanguage('OpenAI 发布 new model'),'mixed');
+  const items=Array.from({length:50},(_,index)=>({id:String(index),title:index%2?'欧盟人工智能法案更新':'AI regulation update',snippet:'A material policy change was published.',provider:'deepseek-search',publisher:index<30?'News A':'News B',humanDecision:index<30?'relevant':'irrelevant',modelDecision:index===0?'irrelevant':index===30?'relevant':'relevant'}));
+  for(let index=31;index<50;index+=1)items[index].modelDecision='irrelevant';
+  const report=buildResearchCandidateEvaluationReport({evaluationKey:'tier1-value-v1:deepseek-chat',items});
+  assert.equal(report.schemaVersion,'research-candidate-evaluation-v1');
+  assert.equal(report.mode,'shadow');
+  assert.equal(report.automationAllowed,false);
+  assert.equal(report.overall.labeledCount,50);
+  assert.equal(report.overall.confusion.truePositive,29);
+  assert.equal(report.overall.confusion.falsePositive,1);
+  assert.equal(report.overall.confusion.falseNegative,1);
+  assert.equal(report.status,'eligible-for-controlled-pilot');
+  assert.equal(report.bySource.length,2);
+  const insufficient=buildResearchCandidateEvaluationReport({items:items.slice(0,10)});
+  assert.equal(insufficient.status,'insufficient-data');
+  const frozen=buildResearchCandidateEvaluationDataset({topicId:uuids[0],name:'候选相关性开发集 v1',split:'development',sampleSize:4,candidates:[{id:uuids[1],humanAssessmentId:uuids[5],humanDecision:'relevant',title:'中文政策更新',snippet:'发布新的监管办法',provider:'search'},{id:uuids[2],humanAssessmentId:uuids[6],humanDecision:'irrelevant',title:'Football result',snippet:'The home team won.',provider:'search'},{id:uuids[3],humanAssessmentId:uuids[7],humanDecision:'relevant',title:'AI policy update',snippet:'A new regulation was published.',provider:'search'},{id:uuids[4],humanAssessmentId:uuids[8],humanDecision:'irrelevant',title:'娱乐新闻',snippet:'与专题无关',provider:'search'},{id:uuids[9],humanAssessmentId:uuids[10],humanDecision:'relevant',title:'已进入保留集',snippet:'不能进入开发集',provider:'search',assignedSplit:'holdout'}]});
+  assert.equal(frozen.sampleCount,4);
+  assert.equal(frozen.summary.labels.relevant,2);
+  assert.equal(frozen.summary.labels.irrelevant,2);
+  assert.equal(frozen.cases.some(item=>item.discoveryId===uuids[9]),false);
+  assert.match(frozen.contentSha256,/^[a-f0-9]{64}$/u);
+  const renamed=buildResearchCandidateEvaluationDataset({topicId:uuids[0],name:'同一冻结内容的显示名称',split:'development',sampleSize:4,candidates:[{id:uuids[1],humanAssessmentId:uuids[5],humanDecision:'relevant',title:'中文政策更新',snippet:'发布新的监管办法',provider:'search'},{id:uuids[2],humanAssessmentId:uuids[6],humanDecision:'irrelevant',title:'Football result',snippet:'The home team won.',provider:'search'},{id:uuids[3],humanAssessmentId:uuids[7],humanDecision:'relevant',title:'AI policy update',snippet:'A new regulation was published.',provider:'search'},{id:uuids[4],humanAssessmentId:uuids[8],humanDecision:'irrelevant',title:'娱乐新闻',snippet:'与专题无关',provider:'search'}]});
+  assert.deepEqual(renamed.cases,frozen.cases);
+  assert.equal(renamed.contentSha256,frozen.contentSha256);
+  const externalCases=Array.from({length:50},(_,index)=>({externalId:`audit-${index}`,title:index%2?`中文新闻 ${index}`:`English news ${index}`,snippet:index%2?'独立审计摘要内容':'Independent audit excerpt',provider:'external-audit',publisher:`Publisher ${index%5}`,goldDecision:index<25?'relevant':'irrelevant',language:index%2?'zh':'en',referenceUrl:`https://news.example/${index}`,provenanceNote:'Independent reviewer labeled this candidate from the cited source.'}));
+  const external=buildExternalResearchCandidateEvaluationDataset({topicId:uuids[0],name:'独立保留集',split:'holdout',cases:externalCases});
+  const externalReordered=buildExternalResearchCandidateEvaluationDataset({topicId:uuids[0],name:'重命名',split:'holdout',cases:externalCases.toReversed()});
+  assert.equal(external.origin,'external-import');
+  assert.equal(external.coverage.status,'coverage-balanced');
+  assert.equal(external.coverage.structuralCoveragePassed,true);
+  assert.equal(external.coverage.representative,false);
+  assert.equal(external.coverage.sourceCount,5);
+  assert.equal(external.contentSha256,externalReordered.contentSha256);
+  assert.deepEqual(external.cases,externalReordered.cases);
+  assert.equal(buildResearchCandidateCoverageReport({cases:external.cases.slice(0,10)}).status,'insufficient-samples');
+  assert.equal(buildResearchCandidateCoverageReport({cases:external.cases.map(item=>({...item,sourceLabel:'Only source'}))}).status,'review-required');
+});
+
+test('external candidate audit imports stay immutable across development and holdout splits',async()=>{
+  const {createResearchTopicService}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  const repository=createMemoryRepository();let counter=100;
+  const service=createResearchTopicService({repository,ids:()=>`00000000-0000-4000-8000-${String(counter++).padStart(12,'0')}`});
+  const topic=await service.create({userId:'user-1'},{title:'外部候选审计',objective:'用独立样本验证新闻候选相关性',contract:baseContract});
+  const cases=[{externalId:'audit-1',title:'Independent policy update',snippet:'A regulator published a material update.',provider:'external-audit',publisher:'Publisher A',goldDecision:'relevant',language:'en',referenceUrl:'https://news.example/a',provenanceNote:'Independent reviewer checked the cited publication.'},{externalId:'audit-2',title:'无关体育新闻',snippet:'比赛结果与专题无关。',provider:'external-audit',publisher:'Publisher B',goldDecision:'irrelevant',language:'zh',referenceUrl:'https://news.example/b',provenanceNote:'独立复核员依据所引用的公开页面完成标注。'}];
+  const imported=await service.importCandidateEvaluationDataset({userId:'user-1'},topic.id,{name:'外部开发集 v1',split:'development',cases});
+  assert.equal(imported.created,true);
+  assert.equal(imported.dataset.origin,'external-import');
+  assert.equal(imported.dataset.coverage.representative,false);
+  const evaluated=await service.runCandidateEvaluationDataset({userId:'user-1'},topic.id,imported.dataset.id,{});
+  assert.equal(evaluated.created,true);
+  assert.equal(evaluated.run.evaluationKey,'tier0-prefilter-v1');
+  assert.equal(evaluated.run.report.evaluatorKind,'rule');
+  assert.equal(evaluated.run.report.automationAllowed,false);
+  assert.equal(imported.dataset.predictions.length,2);
+  assert.equal((await service.listCandidateEvaluationPredictions({userId:'user-1'},topic.id,imported.dataset.id,{evaluationKey:'tier0-prefilter-v1'})).length,2);
+  assert.equal((await service.runCandidateEvaluationDataset({userId:'user-1'},topic.id,imported.dataset.id,{})).created,false);
+  await assert.rejects(service.runCandidateEvaluationDataset({userId:'user-1'},topic.id,imported.dataset.id,{evaluationKey:'tier1-value-v1:deepseek-chat'}),error=>error.code==='RESEARCH_CANDIDATE_EVALUATION_UNAVAILABLE');
+  await assert.rejects(service.importCandidateEvaluationDataset({userId:'user-1'},topic.id,{name:'泄漏保留集',split:'holdout',cases}),error=>error.code==='RESEARCH_CANDIDATE_DATASET_SPLIT_CONFLICT');
+  await assert.rejects(service.importCandidateEvaluationDataset({userId:'user-1'},topic.id,{name:'非法地址',split:'holdout',cases:[{...cases[0],externalId:'bad-url',referenceUrl:'file:///secret'}]}),error=>error.code==='RESEARCH_CANDIDATE_DATASET_IMPORT_INVALID');
+});
+
+test('research candidate reviews are append-only, idempotent and separate from source status',async()=>{
+  const {createResearchTopicService}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  const repository=createMemoryRepository();let index=0;
+  const service=createResearchTopicService({repository,ids:()=>uuids[index++]});
+  const topic=await service.create({userId:'user-1'},{title:'新闻候选评估',objective:'保留候选判断而不直接采信为事实',contract:baseContract});
+  const discoveryId=uuids[5];
+  repository.discoveries.set(discoveryId,{id:discoveryId,userId:'user-1',topicId:topic.id,sourceId:uuids[6],sourceStatus:'candidate',title:'候选报道',url:'https://example.com/news'});
+  const input={decision:'relevant',rationale:'该报道直接回答专题的长期观察问题，但仍需获取原文证据。'};
+  const first=await service.reviewDiscovery({userId:'user-1'},topic.id,discoveryId,input);
+  const repeated=await service.reviewDiscovery({userId:'user-1'},topic.id,discoveryId,input);
+  assert.equal(first.id,repeated.id);
+  assert.equal(first.decision,'relevant');
+  assert.equal(first.evaluatorKind,'human');
+  assert.equal(repository.candidateAssessments.length,1);
+  assert.equal(repository.discoveries.get(discoveryId).sourceStatus,'candidate','candidate relevance must not silently activate the whole source');
+  assert.equal((await service.listDiscoveries({userId:'user-1'},topic.id))[0].latestAssessment.decision,'relevant');
+  assert.equal((await service.listDiscoveries({userId:'user-1'},topic.id,{decision:'relevant',evaluatorKind:'human',sourceStatus:'candidate',sort:'priority'})).length,1);
+  assert.equal((await service.listDiscoveries({userId:'user-1'},topic.id,{decision:'irrelevant'})).length,0);
+  const stats=await service.getDiscoveryStats({userId:'user-1'},topic.id);
+  assert.equal(stats.schemaVersion,'research-candidate-stats-v1');
+  assert.equal(stats.total,1);
+  assert.equal(stats.decisions.relevant,1);
+  assert.equal(stats.evaluatorKinds.human,1);
+  assert.equal(stats.sourceStatuses.candidate,1);
+  const evaluation=await service.getCandidateEvaluation({userId:'user-1'},topic.id);
+  assert.equal(evaluation.schemaVersion,'research-candidate-evaluation-v1');
+  assert.equal(evaluation.status,'insufficient-data');
+  assert.equal(evaluation.automationAllowed,false);
+  repository.candidateAssessments.push({id:uuids[10],topicId:topic.id,discoveryId,evaluatorKind:'model',stage:'value',evaluationKey:'tier1-value-v1:deepseek-chat',decision:'relevant',dimensionScores:{topicRelevance:0.9},rationale:'模型认为该候选与专题直接相关，建议进入人工复核。'});
+  const createdDataset=await service.createCandidateEvaluationDataset({userId:'user-1'},topic.id,{name:'候选相关性开发集 v1',split:'development',sampleSize:10});
+  assert.equal(createdDataset.created,true);
+  assert.equal(createdDataset.dataset.sampleCount,1);
+  assert.equal(createdDataset.dataset.split,'development');
+  const evaluationRun=await service.runCandidateEvaluationDataset({userId:'user-1'},topic.id,createdDataset.dataset.id,{evaluationKey:'tier1-value-v1:deepseek-chat'});
+  assert.equal(evaluationRun.created,true);
+  assert.equal(evaluationRun.run.report.mode,'offline-development');
+  assert.equal(evaluationRun.run.report.automationAllowed,false);
+  assert.equal((await service.listCandidateEvaluationDatasets({userId:'user-1'},topic.id)).length,1);
+  assert.equal((await service.listCandidateEvaluationRuns({userId:'user-1'},topic.id,createdDataset.dataset.id)).length,1);
+  await assert.rejects(service.createCandidateEvaluationDataset({userId:'user-1'},topic.id,{name:'候选相关性保留集 v1',split:'holdout',sampleSize:10}),error=>error.code==='RESEARCH_CANDIDATE_DATASET_EMPTY');
+  await assert.rejects(service.listDiscoveries({userId:'user-1'},topic.id,{minTopicRelevance:2}),error=>error.code==='RESEARCH_CANDIDATE_FILTER_INVALID');
+  await assert.rejects(service.getCandidateEvaluation({userId:'user-1'},topic.id,{evaluationKey:'bad key'}),error=>error.code==='RESEARCH_CANDIDATE_EVALUATION_KEY_INVALID');
+  await assert.rejects(service.reviewDiscovery({userId:'user-1'},topic.id,discoveryId,{decision:'relevant',rationale:'太短'}),error=>error.code==='RESEARCH_CANDIDATE_REVIEW_INVALID');
+  await assert.rejects(service.reviewDiscovery({userId:'user-2'},topic.id,discoveryId,input),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
+});
+
 test('research topic service validates bounded contracts and links only owned watches',async()=>{
   const {createResearchTopicService}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
   const repository=createMemoryRepository();
@@ -199,6 +337,7 @@ test('research storage assessment is read-only, explicit about payload coverage,
   assert.equal(assessment.schemaVersion,'research-storage-assessment-v1');
   assert.equal(assessment.retention.previewOnly,true);
   assert.equal(assessment.inventory.metadataOnlyVersions,2);
+  assert.deepEqual(assessment.policy.candidateRawBody,{version:'discard-after-extraction-v1',persisted:false,ttlSeconds:0,maxEvidenceChars:1200});
   assert.match(assessment.caveats[0],/不会删除/u);
   await assert.rejects(service.getStorageAssessment({userId:'user-2'},topic.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
 });
@@ -306,7 +445,7 @@ test('research topic routes require authentication and expose versioned contract
     getOperationsSummary:async(_actor,_id,{days})=>({schemaVersion:'research-operations-summary-v1',window:{days},runs:{total:1}}),
     getStorageAssessment:async()=>({schemaVersion:'research-storage-assessment-v1',retention:{previewOnly:true},inventory:{versions:3}}),
     listBillingReconciliations:async()=>[{id:uuids[4],provider:'deepseek-search'}],createBillingReconciliation:async()=>({created:true,reconciliation:{id:uuids[4],provider:'deepseek-search'}}),reviewBillingReconciliation:async()=>({id:uuids[5],decision:'acknowledged'}),
-    listSources:async()=>[{id:uuids[1],url:'https://example.com'}],listSourceRelationships:async()=>[{id:uuids[4],relationship:'shared-origin'}],reviewSourceRelationship:async()=>({id:uuids[4],relationship:'shared-origin'}),listDiscoveries:async()=>[{id:uuids[2],sourceId:uuids[1],title:'候选页面'}],addSource:async()=>({id:uuids[1],status:'candidate'}),updateSource:async()=>({id:uuids[1],status:'tracked'}),listSourceStatusReviews:async()=>[{id:uuids[5],sourceId:uuids[1],previousStatus:'candidate',decidedStatus:'tracked'}],listSourceAuthorityReviews:async()=>[{id:uuids[4],sourceId:uuids[1],decidedTier:'official-primary'}],reviewSourceAuthority:async()=>({id:uuids[4],sourceId:uuids[1],decidedTier:'official-primary'}),inspectSource:async()=>({protocol:'syndication-preview-v1',entries:[{externalId:'release-1'}]}),listEntities:async()=>[{id:uuids[3],name:'openai/codex',status:'candidate'}],createEntity:async()=>({id:uuids[3],name:'openai/codex',status:'candidate'}),updateEntity:async()=>({id:uuids[3],name:'openai/codex',status:'tracked'}),listEntityStatusReviews:async()=>[{id:uuids[5],entityId:uuids[3],previousStatus:'candidate',decidedStatus:'tracked'}],listEvidence:async()=>[{id:uuids[2],quote:'变化'}],listEvents:async()=>[{id:uuids[2],title:'官方更新发生变化'}],listEventClusterDiagnostics:async()=>({schemaVersion:'research-event-cluster-diagnostics-v1',items:[{id:uuids[5],sourceCount:2,independenceVerified:false}]}),listReports:async()=>[{id:uuids[4],runId:uuids[2],kind:'run-summary'}],listNotifications:async()=>[{id:uuids[2],title:'官方更新发生变化',isRead:false}],markNotificationRead:async()=>({id:uuids[2],isRead:true}),linkEventEntity:async()=>({eventId:uuids[2],entityId:uuids[3]}),
+    listSources:async()=>[{id:uuids[1],url:'https://example.com'}],listSourceRelationships:async()=>[{id:uuids[4],relationship:'shared-origin'}],reviewSourceRelationship:async()=>({id:uuids[4],relationship:'shared-origin'}),listDiscoveries:async()=>[{id:uuids[2],sourceId:uuids[1],title:'候选页面'}],getDiscoveryStats:async()=>({schemaVersion:'research-candidate-stats-v1',total:1}),getCandidateEvaluation:async()=>({schemaVersion:'research-candidate-evaluation-v1',status:'insufficient-data',automationAllowed:false}),listCandidateEvaluationDatasets:async()=>[{id:uuids[3],split:'development',sampleCount:1}],createCandidateEvaluationDataset:async()=>({created:true,dataset:{id:uuids[3],split:'development',sampleCount:1}}),listCandidateEvaluationRuns:async()=>[{id:uuids[4],evaluationKey:'tier1-value-v1:deepseek-chat'}],runCandidateEvaluationDataset:async()=>({created:true,run:{id:uuids[4],report:{automationAllowed:false}}}),reviewDiscovery:async()=>({id:uuids[5],decision:'relevant',evaluatorKind:'human'}),addSource:async()=>({id:uuids[1],status:'candidate'}),updateSource:async()=>({id:uuids[1],status:'tracked'}),listSourceStatusReviews:async()=>[{id:uuids[5],sourceId:uuids[1],previousStatus:'candidate',decidedStatus:'tracked'}],listSourceAuthorityReviews:async()=>[{id:uuids[4],sourceId:uuids[1],decidedTier:'official-primary'}],reviewSourceAuthority:async()=>({id:uuids[4],sourceId:uuids[1],decidedTier:'official-primary'}),inspectSource:async()=>({protocol:'syndication-preview-v1',entries:[{externalId:'release-1'}]}),listEntities:async()=>[{id:uuids[3],name:'openai/codex',status:'candidate'}],createEntity:async()=>({id:uuids[3],name:'openai/codex',status:'candidate'}),updateEntity:async()=>({id:uuids[3],name:'openai/codex',status:'tracked'}),listEntityStatusReviews:async()=>[{id:uuids[5],entityId:uuids[3],previousStatus:'candidate',decidedStatus:'tracked'}],listEvidence:async()=>[{id:uuids[2],quote:'变化'}],listEvents:async()=>[{id:uuids[2],title:'官方更新发生变化'}],listEventClusterDiagnostics:async()=>({schemaVersion:'research-event-cluster-diagnostics-v1',items:[{id:uuids[5],sourceCount:2,independenceVerified:false}]}),listReports:async()=>[{id:uuids[4],runId:uuids[2],kind:'run-summary'}],listNotifications:async()=>[{id:uuids[2],title:'官方更新发生变化',isRead:false}],markNotificationRead:async()=>({id:uuids[2],isRead:true}),linkEventEntity:async()=>({eventId:uuids[2],entityId:uuids[3]}),
   };
   const requireAuth=async request=>{if(request.headers.authorization!=='Bearer ok'){const error=new Error('Authentication required.');error.statusCode=401;throw error;}request.actor={userId:'user-1'};};
   registerResearchTopicRoutes(app,{service,requireAuth});t.after(()=>app.close());
@@ -341,7 +480,14 @@ test('research topic routes require authentication and expose versioned contract
   const sources=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/sources`,headers:{authorization:'Bearer ok'}});
   const sourceRelationships=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/source-relationships`,headers:{authorization:'Bearer ok'}});
   const sourceRelationshipReviewed=await app.inject({method:'POST',url:`/v1/me/research-topics/${uuids[0]}/source-relationships`,headers:{authorization:'Bearer ok'},payload:{leftSourceId:uuids[1],rightSourceId:uuids[2],relationship:'shared-origin',rationale:'两处页面明确标注相同的原始发布来源。'}});
-  const discoveries=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/discoveries`,headers:{authorization:'Bearer ok'}});
+  const discoveries=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/discoveries?decision=relevant&evaluatorKind=human&sourceStatus=candidate&sort=priority&minTopicRelevance=0.5`,headers:{authorization:'Bearer ok'}});
+  const discoveryStats=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/discovery-stats`,headers:{authorization:'Bearer ok'}});
+  const candidateEvaluation=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/candidate-evaluation`,headers:{authorization:'Bearer ok'}});
+  const candidateDatasets=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/candidate-evaluation-datasets`,headers:{authorization:'Bearer ok'}});
+  const candidateDatasetCreated=await app.inject({method:'POST',url:`/v1/me/research-topics/${uuids[0]}/candidate-evaluation-datasets`,headers:{authorization:'Bearer ok'},payload:{name:'候选开发集 v1',split:'development',sampleSize:50}});
+  const candidateDatasetRuns=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/candidate-evaluation-datasets/${uuids[3]}/runs`,headers:{authorization:'Bearer ok'}});
+  const candidateDatasetRun=await app.inject({method:'POST',url:`/v1/me/research-topics/${uuids[0]}/candidate-evaluation-datasets/${uuids[3]}/runs`,headers:{authorization:'Bearer ok'},payload:{evaluationKey:'tier1-value-v1:deepseek-chat'}});
+  const discoveryReviewed=await app.inject({method:'POST',url:`/v1/me/research-topics/${uuids[0]}/discoveries/${uuids[2]}/reviews`,headers:{authorization:'Bearer ok'},payload:{decision:'relevant',rationale:'该候选直接回答专题问题，下一步需要获取原始页面。'}});
   const entities=await app.inject({method:'GET',url:`/v1/me/research-topics/${uuids[0]}/entities`,headers:{authorization:'Bearer ok'}});
   const entityAdded=await app.inject({method:'POST',url:`/v1/me/research-topics/${uuids[0]}/entities`,headers:{authorization:'Bearer ok'},payload:{type:'project',name:'openai/codex'}});
   const entityTracked=await app.inject({method:'PATCH',url:`/v1/me/research-topics/${uuids[0]}/entities/${uuids[3]}`,headers:{authorization:'Bearer ok'},payload:{status:'tracked'}});
@@ -365,6 +511,17 @@ test('research topic routes require authentication and expose versioned contract
   assert.equal(sourceRelationships.json().data[0].relationship,'shared-origin');
   assert.equal(sourceRelationshipReviewed.statusCode,201);
   assert.equal(discoveries.json().data[0].title,'候选页面');
+  assert.equal(discoveryStats.json().data.schemaVersion,'research-candidate-stats-v1');
+  assert.equal(discoveryStats.json().data.total,1);
+  assert.equal(candidateEvaluation.json().data.schemaVersion,'research-candidate-evaluation-v1');
+  assert.equal(candidateEvaluation.json().data.automationAllowed,false);
+  assert.equal(candidateDatasets.json().data[0].split,'development');
+  assert.equal(candidateDatasetCreated.statusCode,201);
+  assert.equal(candidateDatasetRuns.json().data[0].evaluationKey,'tier1-value-v1:deepseek-chat');
+  assert.equal(candidateDatasetRun.statusCode,201);
+  assert.equal(candidateDatasetRun.json().data.run.report.automationAllowed,false);
+  assert.equal(discoveryReviewed.statusCode,201);
+  assert.equal(discoveryReviewed.json().data.decision,'relevant');
   assert.equal(entities.json().data[0].name,'openai/codex');
   assert.equal(entityAdded.statusCode,201);
   assert.equal(entityTracked.json().data.status,'tracked');
@@ -407,7 +564,7 @@ test('research topic worker records bounded observation outcomes without claimin
   const results=await service.processDue({workerId:'test-worker'});
   assert.equal(reconciled,1);
   assert.equal(results[0].status,'completed');
-  assert.deepEqual(results[0].resultSummary,{schemaVersion:'radar-observation-v1',linkedWatches:2,activeWatches:2,erroredWatches:0,changeEvents:1,importantEvents:1,documentBudget:0,subscriptionSources:0,rssSources:0,githubSources:0,subscriptionSourcesSkippedByAuthority:0,subscriptionSourcesSkippedByType:0,rssSourcesSucceeded:0,rssSourcesErrored:0,rssEntries:0,rssVersionsArchived:0,rssEvidenceArchived:0,rssFailures:[],httpSources:0,httpSourcesSkippedByAuthority:0,httpSourcesSkippedByType:0,httpSourcesSucceeded:0,httpSourcesErrored:0,httpChanges:0,httpVersionsArchived:0,httpEvidenceArchived:0,httpBillableRequests:0,httpCostUsdMicros:0,httpFailures:[],searchConfigured:false,searchQueriesPlanned:0,searchQueriesSent:0,searchQueriesSucceeded:0,searchQueriesErrored:0,searchResultsSeen:0,searchCandidatesAdded:0,searchUnsafeResults:0,searchBillableRequests:0,searchCostUsdMicros:0,searchFailures:[],sourcesSkippedByAuthority:0,sourcesSkippedByType:0,sourcesSkippedAfterFreeze:0,evidenceArchived:0,versionsArchived:0,newsMaterialsArchived:0,usage:{searchQueries:0,documentsRead:0,deepResearchJobs:0,billableRequests:0,providerCostUsdMicros:0}});
+  assert.deepEqual(results[0].resultSummary,{schemaVersion:'radar-observation-v1',linkedWatches:2,activeWatches:2,erroredWatches:0,changeEvents:1,importantEvents:1,documentBudget:0,subscriptionSources:0,rssSources:0,githubSources:0,subscriptionSourcesSkippedByAuthority:0,subscriptionSourcesSkippedByType:0,rssSourcesSucceeded:0,rssSourcesErrored:0,rssEntries:0,rssVersionsArchived:0,rssEvidenceArchived:0,rssFailures:[],httpSources:0,httpSourcesSkippedByAuthority:0,httpSourcesSkippedByType:0,httpSourcesSucceeded:0,httpSourcesErrored:0,httpChanges:0,httpVersionsArchived:0,httpEvidenceArchived:0,httpBillableRequests:0,httpCostUsdMicros:0,httpFailures:[],searchConfigured:false,searchQueriesPlanned:0,searchQueriesSent:0,searchQueriesSucceeded:0,searchQueriesErrored:0,searchResultsSeen:0,searchCandidatesAdded:0,searchUnsafeResults:0,searchBillableRequests:0,searchCostUsdMicros:0,searchPrefilterRelevant:0,searchPrefilterNeedsReview:0,searchPrefilterIrrelevant:0,searchFailures:[],candidateAssessmentConfigured:false,candidateAssessmentConsidered:0,candidateAssessmentSucceeded:0,candidateAssessmentErrored:0,candidateAssessmentRelevant:0,candidateAssessmentNeedsReview:0,candidateAssessmentIrrelevant:0,candidateAssessmentBillableRequests:0,candidateAssessmentCostUsdMicros:0,candidateAssessmentFailures:[],sourcesSkippedByAuthority:0,sourcesSkippedByType:0,sourcesSkippedAfterFreeze:0,evidenceArchived:0,versionsArchived:0,newsMaterialsArchived:0,usage:{searchQueries:0,documentsRead:0,deepResearchJobs:0,billableRequests:0,providerCostUsdMicros:0}});
 });
 
 test('research topic scheduler reports local loop liveness without treating an empty queue as failure',async t=>{
@@ -494,6 +651,86 @@ test('DeepSeek search adapter sends bounded metadata-only requests and hides the
   assert.throws(()=>createDeepSeekSearchAdapter({apiKey:'key',priceUsdMicrosPerRequest:-1}),/non-negative integer/u);
 });
 
+test('DeepSeek candidate assessor sends metadata only and rejects incomplete or invalid model output',async()=>{
+  const {createDeepSeekCandidateAssessmentAdapter,validateResearchCandidateAssessments}=await import(moduleUrl('apps/api/src/research-candidate-assessment-adapter.mjs'));
+  const input={topicId:uuids[0],topicTitle:'人工智能监管',objective:'长期追踪欧盟人工智能法案实施变化',questions:['近期出现了哪些可验证的新变化？'],candidates:[{id:uuids[6],title:'欧盟发布实施时间表',snippet:'欧盟委员会公布了新的执行节点。',url:'https://example.com/should-not-leave-process',publisher:'Example News',publishedAt:'2026-10-21T00:00:00.000Z',provider:'deepseek-search',prefilter:{decision:'relevant',dimensionScores:{topicRelevance:0.9},reasonCodes:['topic-match']}}]};
+  let request;
+  const output={assessments:[{candidateId:uuids[6],decision:'relevant',reasonCodes:['high-topic-fit','verifiable-next-step'],dimensionScores:{topicRelevance:0.95,novelty:0.7,potentialImpact:0.8,evidenceability:0.85,timelineValue:0.9},rationale:'候选与专题直接相关，并包含可继续核验的明确时间节点。'}]};
+  const adapter=createDeepSeekCandidateAssessmentAdapter({apiKey:'candidate-secret',priceUsdMicrosPerRequest:2500,fetchImpl:async(url,init)=>{request={url:String(url),init};return new Response(JSON.stringify({model:'deepseek-chat',choices:[{finish_reason:'stop',message:{content:JSON.stringify(output)}}],usage:{prompt_tokens:100,completion_tokens:50,total_tokens:150}}),{status:200,headers:{'content-type':'application/json'}});}});
+  const result=await adapter.assess(input),body=JSON.parse(request.init.body),userPayload=JSON.parse(body.messages[1].content);
+  assert.equal(request.url,'https://api.deepseek.com/chat/completions');
+  assert.equal(request.init.headers.authorization,'Bearer candidate-secret');
+  assert.deepEqual(body.response_format,{type:'json_object'});
+  assert.equal(userPayload.candidates[0].title,'欧盟发布实施时间表');
+  assert.equal('url' in userPayload.candidates[0],false,'unconfirmed candidate URLs must not be sent to the model');
+  assert.equal(JSON.stringify(result).includes('candidate-secret'),false);
+  assert.equal(result.assessments[0].dimensionScores.topicRelevance,0.95);
+  assert.match(result.assessments[0].inputSha256,/^[a-f0-9]{64}$/u);
+  assert.deepEqual(result.billing,{currency:'USD',unitPriceMicros:2500,billableRequests:1,costUsdMicros:2500,priceSource:'runtime-config'});
+  assert.throws(()=>validateResearchCandidateAssessments(input,{assessments:[]}),error=>error.code==='RESEARCH_CANDIDATE_MODEL_OUTPUT_INVALID');
+  assert.throws(()=>validateResearchCandidateAssessments(input,{assessments:[{...output.assessments[0],dimensionScores:{...output.assessments[0].dimensionScores,novelty:1.1}}]}),error=>error.code==='RESEARCH_CANDIDATE_MODEL_OUTPUT_INVALID');
+});
+
+test('research topic worker records bounded Tier 1 candidate assessments in the action ledger',async()=>{
+  const {createResearchTopicService}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  let claimed=false,reservation,recorded,settlement,assessmentCalls=0;
+  const candidate={id:uuids[6],title:'欧盟发布实施时间表',snippet:'欧盟委员会公布了新的执行节点。',provider:'deepseek-search',publisher:'Example News',publishedAt:'2026-10-21T00:00:00.000Z',prefilter:{decision:'relevant',dimensionScores:{topicRelevance:0.9},reasonCodes:['topic-match']}};
+  const repository={
+    enqueueDue:async()=>[],
+    claimQueued:async()=>{if(claimed)return null;claimed=true;return{id:uuids[2],topicId:uuids[0],status:'observing'};},
+    observeRun:async()=>({linkedWatches:1,activeWatches:1,erroredWatches:0,changeEvents:0,importantEvents:0,versionsArchived:0,evidenceArchived:0}),
+    getCandidateAssessmentBatch:async(_runId,limit,evaluationKey)=>{assert.equal(limit,4);assert.equal(evaluationKey,'tier1-value-v1:deepseek-chat');return{topicId:uuids[0],topicTitle:'人工智能监管',objective:'长期追踪监管变化',questions:['近期出现了什么变化？'],candidates:[candidate]};},
+    reserveRunAction:async(_runId,sourceId,input)=>{reservation={sourceId,...input};return{shouldSend:true,action:{id:uuids[7],attemptId:input.attemptId,status:'reserved'}};},
+    markRunActionSent:async()=>({id:uuids[7],status:'sent'}),
+    recordCandidateAssessments:async(_runId,actionId,input)=>{recorded={actionId,...input};return{inserted:1,counts:{relevant:1,'needs-review':0,irrelevant:0}};},
+    settleRunAction:async(_id,_attempt,input)=>{settlement=input;return{id:uuids[7],...input};},
+    completeRun:async(_id,_worker,input)=>({id:uuids[2],...input}),
+  };
+  const candidateAssessmentAdapter={provider:'deepseek-candidate-assessor',evaluationKey:'tier1-value-v1:deepseek-chat',assess:async batch=>{assessmentCalls+=1;assert.equal(batch.candidates.length,1);return{protocol:'research-candidate-assessment-v1',model:'deepseek-chat',evaluationKey:'tier1-value-v1:deepseek-chat',finishReason:'stop',billable:true,billing:{unitPriceMicros:2500,priceSource:'test-price'},usage:{promptTokens:100,completionTokens:50,totalTokens:150},assessments:[{candidateId:uuids[6],decision:'relevant',reasonCodes:['high-topic-fit'],dimensionScores:{topicRelevance:0.95,novelty:0.7,potentialImpact:0.8,evidenceability:0.85,timelineValue:0.9},rationale:'候选与专题直接相关，值得进入后续证据获取。',inputSha256:'a'.repeat(64)}]};}};
+  const [result]=await createResearchTopicService({repository,candidateAssessmentAdapter,candidateAssessmentMaxPerRun:4,ids:()=>uuids[8]}).processDue({workerId:'candidate-assessment-worker'});
+  assert.equal(assessmentCalls,1);
+  assert.equal(reservation.sourceId,null);
+  assert.equal(reservation.kind,'candidate-assess');
+  assert.equal(reservation.provider,'deepseek-candidate-assessor');
+  assert.equal(recorded.actionId,uuids[7]);
+  assert.equal(recorded.assessments[0].candidateId,uuids[6]);
+  assert.equal(settlement.status,'completed');
+  assert.equal(settlement.actualUsage.billableRequests,1);
+  assert.equal(settlement.actualUsage.costUsdMicros,2500);
+  assert.equal(settlement.receipt.assessmentsRecorded,1);
+  assert.equal(result.resultSummary.candidateAssessmentConfigured,true);
+  assert.equal(result.resultSummary.candidateAssessmentSucceeded,1);
+  assert.equal(result.resultSummary.candidateAssessmentRelevant,1);
+  assert.equal(result.resultSummary.usage.billableRequests,1);
+  assert.equal(result.resultSummary.usage.providerCostUsdMicros,2500);
+  assert.equal(result.resultSummary.usage.deepResearchJobs,0);
+});
+
+test('research topic worker conservatively accounts for a sent Tier 1 request that fails validation',async()=>{
+  const {createResearchTopicService}=await import(moduleUrl('apps/api/src/research-topic-service.mjs'));
+  let claimed=false,settlement;
+  const repository={
+    enqueueDue:async()=>[],claimQueued:async()=>{if(claimed)return null;claimed=true;return{id:uuids[2],topicId:uuids[0],status:'observing'};},
+    observeRun:async()=>({linkedWatches:1,activeWatches:1,erroredWatches:0,changeEvents:0,importantEvents:0,versionsArchived:0,evidenceArchived:0}),
+    getCandidateAssessmentBatch:async()=>({topicId:uuids[0],topicTitle:'专题',objective:'长期观察',questions:[],candidates:[{id:uuids[6],title:'候选',snippet:'摘要'}]}),
+    reserveRunAction:async(_runId,_sourceId,input)=>({shouldSend:true,action:{id:uuids[7],attemptId:input.attemptId,status:'reserved'}}),
+    markRunActionSent:async()=>({id:uuids[7],status:'sent'}),
+    recordCandidateAssessments:async()=>{throw new Error('must not archive invalid output');},
+    settleRunAction:async(_id,_attempt,input)=>{settlement=input;return{id:uuids[7],...input};},
+    completeRun:async(_id,_worker,input)=>({id:uuids[2],...input}),
+  };
+  const invalid=new Error('invalid structured output');invalid.code='RESEARCH_CANDIDATE_MODEL_OUTPUT_INVALID';
+  const candidateAssessmentAdapter={provider:'deepseek-candidate-assessor',evaluationKey:'tier1-value-v1:deepseek-chat',billing:{unitPriceMicros:2500},assess:async()=>{throw invalid;}};
+  const [result]=await createResearchTopicService({repository,candidateAssessmentAdapter}).processDue({workerId:'candidate-assessment-failure-worker'});
+  assert.equal(settlement.status,'failed');
+  assert.equal(settlement.actualUsage.billableRequests,1);
+  assert.equal(settlement.actualUsage.costUsdMicros,2500);
+  assert.equal(result.status,'partial');
+  assert.equal(result.resultSummary.candidateAssessmentErrored,1);
+  assert.equal(result.resultSummary.usage.billableRequests,1);
+  assert.equal(result.resultSummary.usage.providerCostUsdMicros,2500);
+});
+
 test('DeepSeek fetch adapter reads one confirmed public URL as bounded Markdown without leaking the API key',async()=>{
   const {createDeepSeekFetchAdapter}=await import(moduleUrl('apps/api/src/deepseek-fetch-adapter.mjs'));
   let request,validated='';
@@ -533,7 +770,7 @@ test('research topic worker turns search results into candidates without treatin
     getSearchPlanForRun:async(_runId,limit)=>{assert.equal(limit,4);return{queries:[{query:'浏览器 Agent 更新 site:example.com after:2026-10-19',oriQuestion:'浏览器 Agent 更新',packId:'global-core',domains:['example.com']}],resultLimit:10,searchPacks:['global-core'],window:{after:'2026-10-19T00:00:00.000Z',before:'2026-10-21T00:00:00.000Z',searchAfterDate:'2026-10-19',overlapHours:24,initialLookbackDays:null}};},
     reserveRunAction:async(_runId,sourceId,input)=>{assert.equal(sourceId,null);assert.equal(input.kind,'search');return{shouldSend:true,action:{id:uuids[0],attemptId:input.attemptId,status:'reserved'}};},
     markRunActionSent:async()=>({id:uuids[0],status:'reserved'}),
-    archiveSearchResults:async(_runId,_actionId,input)=>{archived.push(input);return{resultsSeen:input.results.length,candidatesAdded:1,discoveryRecords:1,knownSourceResults:0};},
+    archiveSearchResults:async(_runId,_actionId,input)=>{archived.push(input);return{resultsSeen:input.results.length,candidatesAdded:1,discoveryRecords:1,knownSourceResults:0,prefilterCounts:{relevant:1,'needs-review':0,irrelevant:0}};},
     settleRunAction:async(_id,_attempt,input)=>{settled.push(input);return{id:uuids[0],...input};},
     completeRun:async(_id,_worker,input)=>({id:uuids[2],...input}),
   };
@@ -550,6 +787,9 @@ test('research topic worker turns search results into candidates without treatin
   assert.equal(settled[0].receipt.sourcePackId,'global-core');
   assert.equal(result.status,'completed');
   assert.equal(result.resultSummary.searchCandidatesAdded,1);
+  assert.equal(result.resultSummary.searchPrefilterRelevant,1);
+  assert.equal(result.resultSummary.searchPrefilterNeedsReview,0);
+  assert.equal(result.resultSummary.searchPrefilterIrrelevant,0);
   assert.equal(result.resultSummary.searchUnsafeResults,1);
   assert.equal(result.resultSummary.searchProviderResults,4);
   assert.equal(result.resultSummary.searchDuplicateResults,1);
@@ -633,6 +873,8 @@ test('research topic worker discloses and bills the configured DeepSeek fetch pr
   assert.equal(settlement.actualUsage.costUsdMicros,750);
   assert.equal(settlement.receipt.protocol,'deepseek-fetch-v1');
   assert.equal(settlement.receipt.provider,'deepseek-fetch');
+  assert.equal('bodyText' in settlement.receipt,false);
+  assert.equal(JSON.stringify(settlement).includes('# Release'),false);
   assert.equal(archivedPreview.provider,'deepseek-fetch');
   assert.equal(settlement.actualUsage.changesArchived,0);
   assert.equal(settlement.receipt.evidenceArchived,1);
@@ -737,11 +979,19 @@ test('platform API client exposes research topic and watch-link operations',asyn
   await client.reviewResearchTopicSourceRelationship(uuids[0],{leftSourceId:uuids[1],rightSourceId:uuids[2],relationship:'shared-origin',rationale:'verified common origin'});
   await client.listResearchTopicEventClusterDiagnostics(uuids[0]);
   await client.cancelResearcherJob(uuids[0],uuids[1]);
+  await client.reviewResearchTopicDiscovery(uuids[0],uuids[2],{decision:'relevant',rationale:'candidate directly answers the topic question'});
+  await client.listResearchTopicDiscoveries(uuids[0],{limit:20,decision:'needs-review',evaluatorKind:'rule',sourceStatus:'candidate',sort:'priority',minTopicRelevance:0.4});
+  await client.getResearchTopicDiscoveryStats(uuids[0]);
+  await client.getResearchTopicCandidateEvaluation(uuids[0],'tier1-value-v1:deepseek-chat');
+  await client.listResearchTopicCandidateEvaluationDatasets(uuids[0]);
+  await client.createResearchTopicCandidateEvaluationDataset(uuids[0],{name:'候选开发集 v1',split:'development',sampleSize:50});
+  await client.listResearchTopicCandidateEvaluationRuns(uuids[0],uuids[3]);
+  await client.runResearchTopicCandidateEvaluationDataset(uuids[0],uuids[3],{evaluationKey:'tier1-value-v1:deepseek-chat'});
   assert.match(requests[11].url,/\/status-reviews\?limit=50$/u);
   requests.splice(11,1);
   assert.match(requests[44].url,/\/entities\/00000000-0000-4000-8000-000000000004\/status-reviews\?limit=50$/u);
   requests.splice(44,1);
-  assert.deepEqual(requests.map(item=>item.method),['POST','POST','PUT','GET','POST','GET','GET','GET','POST','POST','PATCH','GET','POST','GET','GET','GET','GET','POST','POST','GET','GET','GET','POST','GET','GET','GET','GET','POST','DELETE','GET','GET','POST','POST','POST','GET','POST','GET','GET','POST','DELETE','POST','GET','POST','PATCH','PUT','GET','GET','GET','POST','GET','POST','GET','GET','GET','POST','POST','GET','POST','POST','GET','POST','GET','DELETE']);
+  assert.deepEqual(requests.map(item=>item.method),['POST','POST','PUT','GET','POST','GET','GET','GET','POST','POST','PATCH','GET','POST','GET','GET','GET','GET','POST','POST','GET','GET','GET','POST','GET','GET','GET','GET','POST','DELETE','GET','GET','POST','POST','POST','GET','POST','GET','GET','POST','DELETE','POST','GET','POST','PATCH','PUT','GET','GET','GET','POST','GET','POST','GET','GET','GET','POST','POST','GET','POST','POST','GET','POST','GET','DELETE','POST','GET','GET','GET','GET','POST','GET','POST']);
   assert.match(requests[0].url,/\/v1\/me\/research-topics$/u);
   assert.match(requests[1].url,/\/contracts$/u);
   assert.match(requests[2].url,/\/watches\/00000000-0000-4000-8000-000000000002$/u);
@@ -805,4 +1055,12 @@ test('platform API client exposes research topic and watch-link operations',asyn
   assert.match(requests[60].url,/\/source-relationships$/u);
   assert.match(requests[61].url,/\/event-cluster-diagnostics\?limit=50$/u);
   assert.match(requests[62].url,/\/researcher-jobs\/00000000-0000-4000-8000-000000000002$/u);
+  assert.match(requests[63].url,/\/discoveries\/00000000-0000-4000-8000-000000000003\/reviews$/u);
+  assert.match(requests[64].url,/\/discoveries\?limit=20&decision=needs-review&evaluatorKind=rule&sourceStatus=candidate&sort=priority&minTopicRelevance=0\.4$/u);
+  assert.match(requests[65].url,/\/discovery-stats$/u);
+  assert.match(requests[66].url,/\/candidate-evaluation\?evaluationKey=tier1-value-v1%3Adeepseek-chat$/u);
+  assert.match(requests[67].url,/\/candidate-evaluation-datasets$/u);
+  assert.match(requests[68].url,/\/candidate-evaluation-datasets$/u);
+  assert.match(requests[69].url,/\/candidate-evaluation-datasets\/00000000-0000-4000-8000-000000000004\/runs\?limit=20$/u);
+  assert.match(requests[70].url,/\/candidate-evaluation-datasets\/00000000-0000-4000-8000-000000000004\/runs$/u);
 });

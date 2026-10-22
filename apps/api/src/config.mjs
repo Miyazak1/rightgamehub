@@ -47,8 +47,11 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const githubSourceImportEnabled = boolean(env.GITHUB_SOURCE_IMPORT_ENABLED, false, 'GITHUB_SOURCE_IMPORT_ENABLED');
   const deepSeekSearchEnabled = boolean(env.DEEPSEEK_SEARCH_ENABLED, false, 'DEEPSEEK_SEARCH_ENABLED');
   const deepSeekFetchEnabled = boolean(env.DEEPSEEK_FETCH_ENABLED, false, 'DEEPSEEK_FETCH_ENABLED');
+  const researchCandidateAssessmentEnabled = boolean(env.RESEARCH_CANDIDATE_ASSESSMENT_ENABLED, false, 'RESEARCH_CANDIDATE_ASSESSMENT_ENABLED');
   const deepSeekApiKey = env.DEEPSEEK_API_KEY?.trim() || null;
-  if ((deepSeekSearchEnabled || deepSeekFetchEnabled) && !deepSeekApiKey) throw new Error('DEEPSEEK_API_KEY is required when DeepSeek search or fetch is enabled');
+  if ((deepSeekSearchEnabled || deepSeekFetchEnabled || researchCandidateAssessmentEnabled) && !deepSeekApiKey) throw new Error('DEEPSEEK_API_KEY is required when DeepSeek search, fetch, or candidate assessment is enabled');
+  const researchCandidateAssessmentModel = env.RESEARCH_CANDIDATE_ASSESSMENT_MODEL?.trim() || 'deepseek-chat';
+  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researchCandidateAssessmentModel)) throw new Error('RESEARCH_CANDIDATE_ASSESSMENT_MODEL must be a bounded model identifier');
   const researcherWorkerEnabled = boolean(env.RESEARCHER_WORKER_ENABLED, false, 'RESEARCHER_WORKER_ENABLED');
   const researcherWorkerToken = env.RESEARCHER_WORKER_TOKEN?.trim() || null;
   if (researcherWorkerEnabled && Buffer.byteLength(researcherWorkerToken ?? '', 'utf8') < 32) throw new Error('RESEARCHER_WORKER_TOKEN must contain at least 32 UTF-8 bytes when Researcher worker is enabled');
@@ -133,11 +136,16 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     githubSourceImportEnabled,
     deepSeekSearchEnabled,
     deepSeekFetchEnabled,
+    researchCandidateAssessmentEnabled,
     deepSeekApiKey,
     deepSeekSearchTimeoutMs: integer(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 12000, 'DEEPSEEK_SEARCH_TIMEOUT_MS', 3000, 30000),
     deepSeekFetchTimeoutMs: integer(env.DEEPSEEK_FETCH_TIMEOUT_MS, 15000, 'DEEPSEEK_FETCH_TIMEOUT_MS', 3000, 30000),
     deepSeekSearchPriceUsdMicrosPerRequest: integer(env.DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST, 750, 'DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST', 0, 1000000000),
     deepSeekFetchPriceUsdMicrosPerRequest: integer(env.DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST, 750, 'DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST', 0, 1000000000),
+    researchCandidateAssessmentModel,
+    researchCandidateAssessmentTimeoutMs: integer(env.RESEARCH_CANDIDATE_ASSESSMENT_TIMEOUT_MS, 45000, 'RESEARCH_CANDIDATE_ASSESSMENT_TIMEOUT_MS', 5000, 120000),
+    researchCandidateAssessmentPriceUsdMicrosPerRequest: integer(env.RESEARCH_CANDIDATE_ASSESSMENT_PRICE_USD_MICROS_PER_REQUEST, 3000, 'RESEARCH_CANDIDATE_ASSESSMENT_PRICE_USD_MICROS_PER_REQUEST', 0, 1000000000),
+    researchCandidateAssessmentMaxPerRun: integer(env.RESEARCH_CANDIDATE_ASSESSMENT_MAX_PER_RUN, 6, 'RESEARCH_CANDIDATE_ASSESSMENT_MAX_PER_RUN', 1, 10),
     researcherWorkerEnabled,
     researcherWorkerToken,
     researcherProvider,

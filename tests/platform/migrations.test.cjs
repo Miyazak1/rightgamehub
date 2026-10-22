@@ -9,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 107);
+  assert.equal(files.length, 112);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -62,6 +62,11 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const researchEntityStatusReviews = fs.readFileSync(path.join(migrationDir, '0105_research_entity_status_reviews.sql'), 'utf8');
   const researchNewsFacts = fs.readFileSync(path.join(migrationDir, '0106_research_news_facts.sql'), 'utf8');
   const researchDiscoveryClusters = fs.readFileSync(path.join(migrationDir, '0107_research_discovery_clusters.sql'), 'utf8');
+  const researchCandidateAssessments = fs.readFileSync(path.join(migrationDir, '0108_research_candidate_assessments.sql'), 'utf8');
+  const researchCandidateAssessmentActions = fs.readFileSync(path.join(migrationDir, '0109_research_candidate_assessment_actions.sql'), 'utf8');
+  const researchCandidateEvaluationDatasets = fs.readFileSync(path.join(migrationDir, '0110_research_candidate_evaluation_datasets.sql'), 'utf8');
+  const researchCandidateExternalEvaluationSets = fs.readFileSync(path.join(migrationDir, '0111_research_candidate_external_evaluation_sets.sql'), 'utf8');
+  const researchCandidateEvaluationPredictions = fs.readFileSync(path.join(migrationDir, '0112_research_candidate_evaluation_predictions.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -88,6 +93,29 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(researchDiscoveryClusters, /CREATE TABLE tool_research_discovery_clusters/);
   assert.match(researchDiscoveryClusters, /CREATE TABLE tool_research_discovery_cluster_members/);
   assert.match(researchDiscoveryClusters, /exact-normalized-title-day/);
+  assert.match(researchCandidateAssessments, /CREATE TABLE tool_research_candidate_assessments/);
+  assert.match(researchCandidateAssessments, /'prefilter','value','manual-review'/);
+  assert.match(researchCandidateAssessments, /'relevant','irrelevant','needs-review'/);
+  assert.match(researchCandidateAssessments, /tool_research_candidate_assessment_immutable_update/);
+  assert.match(researchCandidateAssessments, /tool_research_candidate_assessment_immutable_delete/);
+  assert.match(researchCandidateAssessmentActions, /DROP CONSTRAINT tool_research_run_actions_action_kind_check/);
+  assert.match(researchCandidateAssessmentActions, /'candidate-assess'/);
+  assert.match(researchCandidateEvaluationDatasets, /CREATE TABLE tool_research_candidate_evaluation_datasets/);
+  assert.match(researchCandidateEvaluationDatasets, /CREATE TABLE tool_research_candidate_evaluation_assignments/);
+  assert.match(researchCandidateEvaluationDatasets, /CREATE TABLE tool_research_candidate_evaluation_runs/);
+  assert.match(researchCandidateEvaluationDatasets, /FOREIGN KEY\(topic_id,discovery_id\)/);
+  assert.match(researchCandidateEvaluationDatasets, /FOREIGN KEY\(topic_id,discovery_id,human_assessment_id\)/);
+  assert.match(researchCandidateEvaluationDatasets, /research candidate evaluation records are immutable/);
+  assert.match(researchCandidateExternalEvaluationSets, /dataset_origin/);
+  assert.match(researchCandidateExternalEvaluationSets, /coverage_report_json/);
+  assert.match(researchCandidateExternalEvaluationSets, /CREATE TABLE tool_research_candidate_evaluation_external_assignments/);
+  assert.match(researchCandidateExternalEvaluationSets, /external_case_key/);
+  assert.match(researchCandidateExternalEvaluationSets, /'external-jsonl-v1'/);
+  assert.match(researchCandidateExternalEvaluationSets, /tool_research_candidate_evaluation_cases_dataset_external_unique/);
+  assert.match(researchCandidateExternalEvaluationSets, /tool_research_candidate_evaluation_external_assignments_no_update/);
+  assert.match(researchCandidateEvaluationPredictions, /CREATE TABLE tool_research_candidate_evaluation_predictions/);
+  assert.match(researchCandidateEvaluationPredictions, /UNIQUE\(dataset_id,case_id,evaluation_key\)/);
+  assert.match(researchCandidateEvaluationPredictions, /tool_research_candidate_evaluation_predictions_no_update/);
   assert.match(researchActionBudgetIndex, /tool_research_run_actions_monthly_budget_idx/);
   assert.match(researchProviderCircuits, /CREATE TABLE tool_research_provider_circuits/);
   assert.match(researchActionRecoveryIndex, /tool_research_run_actions_recovery_idx/);
