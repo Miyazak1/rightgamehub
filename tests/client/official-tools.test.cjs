@@ -11,4 +11,6 @@ test('change radar Agent analysis is bounded to accepted metric and structured-f
 
 test('change radar shows actual Researcher worker liveness instead of configuration alone',async()=>{const source=await fs.readFile('packages/platform-client/src/ChangeRadarTool.jsx','utf8');assert.match(source,/researcherRuntimeStatus/u);assert.match(source,/researcherLastSeen/u);assert.match(source,/workerRuntime/u);});
 
+test('change radar can initialize an empty research workspace without stale source-form setters',async()=>{const source=await fs.readFile('packages/platform-client/src/ChangeRadarTool.jsx','utf8');assert.doesNotMatch(source,/setSourceContentKind/u);assert.match(source,/\{selectedTopic&&<MetricPanel api=\{api\} topicId=\{selectedTopic\.id\}/u);});
+
 test('production hosts allow only same-origin workers and WebAssembly required by trusted OCR',async()=>{const caddy=await fs.readFile('deploy/Caddyfile','utf8');const policies=[...caddy.matchAll(/Content-Security-Policy "([^"]+)"/gu)].map(match=>match[1]);assert.ok(policies.some(policy=>policy.includes("script-src 'self' 'wasm-unsafe-eval'")&&policy.includes("worker-src 'self'")&&policy.includes("connect-src 'self'")&&!policy.includes("worker-src blob:")));});
