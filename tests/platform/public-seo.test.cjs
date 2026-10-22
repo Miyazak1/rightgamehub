@@ -11,9 +11,11 @@ test('public SEO renderers escape XML and script-breaking structured data', asyn
     siteOrigin: 'https://games.example',
     works: [{ id: 'gamehub-a&b', updatedAt: '2026-10-12T00:00:00Z' }],
     campaigns: [{ slug: 'weekly-open' }],
+    articles: [{ slug: 'agent-ready-platform', updatedAt: '2026-10-22T00:00:00Z' }],
   });
   assert.match(xml, /https:\/\/games\.example\/w\/gamehub-a%26b/u);
   assert.match(xml, /<lastmod>2026-10-12T00:00:00\.000Z<\/lastmod>/u);
+  assert.match(xml, /https:\/\/games\.example\/blog\/agent-ready-platform/u);
   assert.equal(serializeJsonLd({ title: '</script><script>alert(1)</script>' }).includes('</script>'), false);
   assert.equal(workStructuredData({ work: { id: 'gamehub-test', title: 'Test', kind: 'game' }, siteOrigin: 'https://games.example', shareCardUrl: 'https://games.example/card.png', locale: 'en' }).inLanguage, 'en');
 });

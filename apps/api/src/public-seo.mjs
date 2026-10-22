@@ -56,13 +56,15 @@ export const renderRobotsTxt = siteOrigin => [
   '',
 ].join('\n');
 
-export const renderSitemapXml = ({ siteOrigin, works = [], campaigns = [] }) => {
+export const renderSitemapXml = ({ siteOrigin, works = [], campaigns = [], articles = [] }) => {
   const entries = [
     { url: `${siteOrigin}/` },
     { url: `${siteOrigin}/discover` },
     { url: `${siteOrigin}/community` },
     ...works.map(work => ({ url: `${siteOrigin}/w/${encodeURIComponent(work.id)}`, modified: work.updatedAt || work.publishedAt || null })),
     ...campaigns.map(campaign => ({ url: `${siteOrigin}/discover/c/${encodeURIComponent(campaign.slug)}`, modified: campaign.updatedAt || campaign.publishedAt || null })),
+    { url: `${siteOrigin}/blog` },
+    ...articles.map(article => ({ url: `${siteOrigin}/blog/${encodeURIComponent(article.slug)}`, modified: article.updatedAt || article.publishedAt || null })),
   ];
   const unique = [...new Map(entries.map(entry => [entry.url, entry])).values()];
   const urls = unique.map(entry => {
@@ -85,7 +87,7 @@ const listAllWorks = async catalogService => {
   return [...new Map(works.map(work => [work.id, work])).values()];
 };
 
-export function registerPublicSeoRoutes(app, { siteOrigin, catalogService, campaignService }) {
+export function registerPublicSeoRoutes(app, { siteOrigin, catalogService, campaignService, blogService = null }) {
   app.get('/robots.txt', async (_request, reply) => {
     reply.header('Cache-Control', 'public, max-age=3600');
     reply.header('X-Content-Type-Options', 'nosniff');
@@ -93,12 +95,13 @@ export function registerPublicSeoRoutes(app, { siteOrigin, catalogService, campa
   });
 
   app.get('/sitemap.xml', async (_request, reply) => {
-    const [works, campaigns] = await Promise.all([
+    const [works, campaigns, articlePage] = await Promise.all([
       listAllWorks(catalogService),
       campaignService?.listPublic ? campaignService.listPublic({ limit: 12 }) : [],
+      blogService?.listPublic ? blogService.listPublic({ limit: 50 }) : { items: [] },
     ]);
     reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
     reply.header('X-Content-Type-Options', 'nosniff');
-    return reply.type('application/xml; charset=utf-8').send(renderSitemapXml({ siteOrigin, works, campaigns }));
+    return reply.type('application/xml; charset=utf-8').send(renderSitemapXml({ siteOrigin, works, campaigns, articles: articlePage.items }));
   });
 }

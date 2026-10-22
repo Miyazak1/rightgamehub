@@ -1,10 +1,10 @@
-# 平台博客基础架构（第一阶段）
+# 平台博客架构与实施状态
 
-状态：后端基础层已实现；管理界面、公开 SEO 页面与 Agent 读取适配待实施
+状态：核心链路已实现；真实 PostgreSQL 部署验证与分享卡生成待上线阶段完成
 
 负责会话：平台主线会话
 
-基线：`codex/change-radar-autonomous-research-design` 已推送提交 `367800800c4c51a3578c178911448188704e5525`
+基线：`codex/change-radar-autonomous-research-design` 已推送提交 `a6956fefee468405e12c487e6a05698d8f6460a7`
 
 ## 1. 为什么必须是独立领域
 
@@ -83,7 +83,7 @@ Change Radar 负责输出事实材料，不拥有博客发布权。约定的首�
 
 - `GET /v1/blog/articles`
 - `GET /v1/blog/articles/:slug`
-- `GET /blog/:slug`（SEO 页面，后续阶段）
+- `GET /blog/:slug`（带 CSP、规范链接与 Article JSON-LD 的服务端页面）
 
 作者管理：
 
@@ -115,9 +115,10 @@ Change Radar 已在提交 `a6956fefee468405e12c487e6a05698d8f6460a7` 正式落�
 
 1. 已完成：内容协议、服务边界、幂等/并发协议、研究草稿安全边界与单元测试。
 2. 已完成：在 Radar `a6956fef` 之后增加 `0113`、Postgres repository、路由、运行时注册和 API 集成测试。
-3. 管理界面：文章列表、编辑器、预览、发布确认、撤回与来源检查。
-4. 公开页面：SEO、结构化数据、站点地图、分享卡与缓存策略。
-5. Agent 适配：只读发现与读取文章；创建草稿需用户身份，发布仍需显式确认。
+3. 已完成：管理界面的文章列表、结构化区块/来源编辑器、发布确认与撤回。
+4. 已完成：公开列表与正文、SEO 服务端页面、Article 结构化数据、站点地图与缓存策略；独立分享卡仍待补充。
+5. 已完成：Agent 只读 `search_blog_articles` / `read_blog_article`；它们只返回已发布版本，不把文章伪装成可启动能力。
+6. 待部署验证：在真实 PostgreSQL 执行 `0113`，完成创建、修订、发布、撤回和研究草稿导入的端到端验收。
 
 ## 9. 明确不做
 

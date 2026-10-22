@@ -1,3 +1,6 @@
+import crypto from 'node:crypto';
+import { renderBlogArticleHtml } from './blog-seo.mjs';
+
 const citationSchema = {
   type: 'object', additionalProperties: false,
   required: ['id', 'label', 'title', 'url', 'publisher', 'publishedAt', 'accessedAt'],
@@ -34,12 +37,14 @@ const contentSchema = {
 };
 const articleParams = { type: 'object', additionalProperties: false, required: ['articleId'], properties: { articleId: { type: 'string', format: 'uuid' } } };
 const slugParams = { type: 'object', additionalProperties: false, required: ['slug'], properties: { slug: { type: 'string', pattern: '^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$' } } };
-const listQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: { type: 'string', maxLength: 800 }, locale: { type: 'string', enum: ['zh-CN', 'en'] } } };
+const cursorProperty = { type: 'string', maxLength: 800 };
+const publicListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, cursor: cursorProperty, locale: { type: 'string', enum: ['zh-CN', 'en'] }, q: { type: 'string', maxLength: 100 } } };
+const manageListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: cursorProperty } };
 
-export function registerBlogRoutes(app, { service, requireAuth }) {
+export function registerBlogRoutes(app, { service, requireAuth, siteOrigin = 'https://mooyu.fun' }) {
   const envelope = data => ({ data });
 
-  app.get('/v1/blog/articles', { schema: { querystring: listQuery } }, async (request, reply) => {
+  app.get('/v1/blog/articles', { schema: { querystring: publicListQuery } }, async (request, reply) => {
     reply.header('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
     return envelope(await service.listPublic(request.query));
   });
@@ -49,7 +54,18 @@ export function registerBlogRoutes(app, { service, requireAuth }) {
     reply.header('ETag', `"blog-${article.contentHash}"`);
     return envelope(article);
   });
-  app.get('/v1/me/blog/articles', { preHandler: requireAuth, schema: { querystring: listQuery } }, async (request, reply) => {
+  app.get('/blog/:slug', { schema: { params: slugParams } }, async (request, reply) => {
+    const article = await service.getPublic(request.params.slug);
+    const etag = `"blog-${article.contentHash}"`;
+    if (request.headers['if-none-match'] === etag) return reply.status(304).header('ETag', etag).send();
+    const nonce = crypto.randomBytes(18).toString('base64url');
+    reply.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    reply.header('ETag', etag);
+    reply.header('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'`);
+    reply.header('X-Content-Type-Options', 'nosniff');
+    return reply.type('text/html; charset=utf-8').send(renderBlogArticleHtml({ article, siteOrigin, nonce }));
+  });
+  app.get('/v1/me/blog/articles', { preHandler: requireAuth, schema: { querystring: manageListQuery } }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     return envelope(await service.listMine(request.actor, request.query));
   });

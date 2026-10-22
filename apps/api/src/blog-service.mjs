@@ -40,8 +40,10 @@ export function createBlogService({ repository, ids = () => crypto.randomUUID() 
     listPublic(query = {}) {
       const limit = Math.min(50, Math.max(1, Math.floor(Number(query.limit) || 20)));
       const locale = query.locale == null ? null : String(query.locale);
+      const search = String(query.q ?? '').trim();
       if (locale && !['zh-CN', 'en'].includes(locale)) fail('BLOG_QUERY_INVALID', 400, '文章语言筛选无效。');
-      return repository.listPublic({ limit, locale, cursor: query.cursor ?? null });
+      if (search.length > 100) fail('BLOG_QUERY_INVALID', 400, '文章搜索词过长。');
+      return repository.listPublic({ limit, locale, query: search || null, cursor: query.cursor ?? null });
     },
     getPublic(slug) {
       if (typeof slug !== 'string' || !/^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$/.test(slug)) fail('BLOG_ARTICLE_NOT_FOUND', 404, '文章不存在。');

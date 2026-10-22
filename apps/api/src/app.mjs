@@ -283,9 +283,9 @@ export function createApp(dependencies) {
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
   const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
-  registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService});
+  registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});
   if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin,getCover:workService?.getCover?id=>workService.getCover(id):null});
-  if (blogService) registerBlogRoutes(app,{service:blogService,requireAuth});
+  if (blogService) registerBlogRoutes(app,{service:blogService,requireAuth,siteOrigin});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (authorOutreachService) registerAuthorOutreachRoutes(app,{service:authorOutreachService,requireAuth});
   if (changeRadarService) registerChangeRadarRoutes(app,{service:changeRadarService,requireAuth});
@@ -495,7 +495,7 @@ export function createApp(dependencies) {
   registerGameHubMcpWidgetRoutes(app, { siteOrigin });
   registerChangeRadarMcpRoutes(app, { siteOrigin });
   if (catalogService) {
-    registerGameHubMcpRoutes(app, { catalogService, discoveryCampaignService, siteOrigin }, { registerWidget: false });
+    registerGameHubMcpRoutes(app, { catalogService, discoveryCampaignService, blogService, siteOrigin }, { registerWidget: false });
     app.get('/w/:workId', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },

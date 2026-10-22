@@ -177,15 +177,16 @@ async function verifyResearchProvenance(client, input) {
 export class PostgresBlogRepository {
   constructor(pool) { this.pool = pool; }
 
-  async listPublic({ limit, locale, cursor }) {
-    const scope = `public:${locale ?? '*'}`;
+  async listPublic({ limit, locale, query = null, cursor }) {
+    const scope = `public:${locale ?? '*'}:${query ?? ''}`;
     const position = readCursor(cursor, scope);
     const rows = (await this.pool.query(
       `SELECT ${publicColumns},a.last_published_at::text AS sort_at${publicJoins}
         WHERE a.publication_state='published' AND ($1::text IS NULL OR a.locale=$1)
-          AND ($2::timestamptz IS NULL OR (a.last_published_at,a.id)<($2::timestamptz,$3::uuid))
-        ORDER BY a.last_published_at DESC,a.id DESC LIMIT $4`,
-      [locale, position?.at ?? null, position?.id ?? null, limit + 1],
+          AND ($2::text IS NULL OR position(lower($2) in lower(r.title))>0 OR position(lower($2) in lower(r.summary))>0)
+          AND ($3::timestamptz IS NULL OR (a.last_published_at,a.id)<($3::timestamptz,$4::uuid))
+        ORDER BY a.last_published_at DESC,a.id DESC LIMIT $5`,
+      [locale, query, position?.at ?? null, position?.id ?? null, limit + 1],
     )).rows;
     const page = rows.slice(0, limit);
     return { items: page.map(publicView), nextCursor: rows.length > limit ? cursorFor(scope, page.at(-1)) : null };

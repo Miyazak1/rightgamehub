@@ -62,7 +62,7 @@ const createOfficialAppToolOptions = (tool, uiResourceUri) => ({
   },
 });
 
-export function createGameHubMcpServer({ catalogService, discoveryCampaignService = null, siteOrigin = 'https://mooyu.fun' }) {
+export function createGameHubMcpServer({ catalogService, discoveryCampaignService = null, blogService = null, siteOrigin = 'https://mooyu.fun' }) {
   const origin = new URL(siteOrigin).origin;
   const widget = createGameHubMcpWidget(origin);
   const uiResourceUri = widget.uri;
@@ -70,8 +70,56 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
   const capabilityService = createAgentCapabilityService({ catalogService, discoveryCampaignService, siteOrigin: origin });
   const server = new McpServer(
     { name: 'gamehub', title: '墨鱼工坊 MOOYU.FUN', version: '1.0.0' },
-    { instructions: 'Use search_capabilities, then get_capability, then launch_capability for general discovery. For a known official task, prefer its dedicated open_* tool because it preserves task-specific inputs. A launch result confirms navigation only, never completion. Never place private file contents or secrets in tool arguments.' },
+    { instructions: 'Use search_capabilities, then get_capability, then launch_capability for games, tools, courseware, and collections. Use search_blog_articles and read_blog_article for official published reading material; articles are content, not launchable capabilities. For a known official task, prefer its dedicated open_* tool because it preserves task-specific inputs. A launch result confirms navigation only, never completion. Never place private file contents or secrets in tool arguments.' },
   );
+
+  if (blogService?.listPublic && blogService?.getPublic) {
+    const articleSummarySchema = z.object({
+      slug: z.string().min(3).max(64), title: z.string().min(1).max(120), summary: z.string().max(360),
+      locale: localeSchema, author: z.string().min(1).max(120), publishedAt: z.string().datetime(), url: z.string().url(),
+    });
+    const articleBlockSchema = z.discriminatedUnion('type', [
+      z.object({ type: z.literal('paragraph'), text: z.string() }),
+      z.object({ type: z.literal('heading'), level: z.union([z.literal(2), z.literal(3)]), text: z.string() }),
+      z.object({ type: z.literal('quote'), text: z.string(), citationIds: z.array(z.string().uuid()) }),
+      z.object({ type: z.literal('list'), ordered: z.boolean(), items: z.array(z.string()) }),
+      z.object({ type: z.literal('code'), language: z.string(), text: z.string() }),
+    ]);
+    const citationOutputSchema = z.object({
+      id: z.string().uuid(), label: z.string(), title: z.string(), url: z.string().url(), publisher: z.string(),
+      publishedAt: z.string().datetime().nullable(), accessedAt: z.string().datetime(),
+    });
+    server.registerTool('search_blog_articles', {
+      title: 'Search MOOYU.FUN official articles',
+      description: 'Search currently published official MOOYU.FUN articles. Returns public summaries only and never exposes drafts, withdrawn revisions, or research workspace data.',
+      inputSchema: { query: z.string().trim().max(100).optional(), locale: localeSchema.optional(), limit: z.number().int().min(1).max(20).default(6) },
+      outputSchema: { articles: z.array(articleSummarySchema), nextCursor: z.string().nullable() },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    }, async ({ query = '', locale, limit = 6 }) => {
+      const result = await blogService.listPublic({ q: query, locale, limit });
+      const articles = result.items.map(article => ({
+        slug: article.slug, title: article.title, summary: article.summary, locale: article.locale,
+        author: article.author.displayName, publishedAt: article.publishedAt, url: new URL(`/blog/${article.slug}`, origin).href,
+      }));
+      return { content: [{ type: 'text', text: articles.length ? `Found ${articles.length} published MOOYU.FUN article${articles.length === 1 ? '' : 's'}.` : 'No matching published MOOYU.FUN articles were found.' }], structuredContent: { articles, nextCursor: result.nextCursor } };
+    });
+    server.registerTool('read_blog_article', {
+      title: 'Read a MOOYU.FUN official article',
+      description: 'Read one currently published official MOOYU.FUN article by its stable slug, including its bounded structured blocks and public citations. Drafts and withdrawn revisions are never returned.',
+      inputSchema: { slug: z.string().regex(/^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$/u) },
+      outputSchema: { article: articleSummarySchema.extend({ blocks: z.array(articleBlockSchema), citations: z.array(citationOutputSchema), updatedAt: z.string().datetime() }) },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    }, async ({ slug }) => {
+      try {
+        const article = await blogService.getPublic(slug);
+        const output = { slug: article.slug, title: article.title, summary: article.summary, locale: article.locale, author: article.author.displayName, publishedAt: article.publishedAt, updatedAt: article.updatedAt, url: new URL(`/blog/${article.slug}`, origin).href, blocks: article.blocks, citations: article.citations };
+        return { content: [{ type: 'text', text: `${article.title}\n\n${article.summary}` }], structuredContent: { article: output } };
+      } catch (error) {
+        if (error?.statusCode === 404) return toolError('That published MOOYU.FUN article was not found.');
+        throw error;
+      }
+    });
+  }
 
   server.registerTool('search_capabilities', {
     title: 'Search MOOYU.FUN capabilities',

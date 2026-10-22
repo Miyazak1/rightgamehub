@@ -120,6 +120,14 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
   }
   return {
     ...communityApi(request),
+    listBlogArticles: ({ limit = 20, cursor = null, locale = null, q = null } = {}, options) => request(`/v1/blog/articles?${new URLSearchParams(Object.fromEntries(Object.entries({ limit, cursor, locale, q }).filter(([, value]) => value != null && value !== '')))}`, options),
+    getBlogArticle: (slug, options) => request(`/v1/blog/articles/${encodeURIComponent(slug)}`, options),
+    listMyBlogArticles: ({ limit = 50, cursor = null } = {}, options) => request(`/v1/me/blog/articles?${new URLSearchParams(Object.fromEntries(Object.entries({ limit, cursor }).filter(([, value]) => value != null && value !== '')))}`, { ...options, auth: true }),
+    getMyBlogArticle: (articleId, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}`, { ...options, auth: true }),
+    createBlogDraft: (body, options) => request('/v1/me/blog/articles', { ...options, method: 'POST', body, auth: true, idempotent: true }),
+    updateBlogDraft: (articleId, version, body, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/draft`, { ...options, method: 'PUT', body, auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
+    publishBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/publish`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
+    withdrawBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/withdraw`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
     listChangeWatches: options => request('/v1/me/change-watches', { ...options, auth: true }),
     createChangeWatch: (body, options) => request('/v1/me/change-watches', { ...options, method: 'POST', body, auth: true }),
     getChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, auth: true }),
