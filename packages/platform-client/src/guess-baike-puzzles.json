@@ -4,7 +4,9 @@
   "policy": {
     "section": "lead",
     "complete": true,
-    "minimumHan": 180
+    "minimumHan": 180,
+    "selectionPolicyVersion": 2,
+    "defaultReject": true
   },
   "puzzles": [
     {

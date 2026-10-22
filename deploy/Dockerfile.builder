@@ -5,6 +5,7 @@ RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
+COPY packages/agent-capabilities/package.json packages/agent-capabilities/package.json
 COPY packages/creator-tools/package.json packages/creator-tools/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/multiplayer-protocol/package.json packages/multiplayer-protocol/package.json

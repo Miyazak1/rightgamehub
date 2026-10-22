@@ -491,7 +491,7 @@ export function createApp(dependencies) {
   registerGameHubMcpWidgetRoutes(app, { siteOrigin });
   registerChangeRadarMcpRoutes(app, { siteOrigin });
   if (catalogService) {
-    registerGameHubMcpRoutes(app, { catalogService, siteOrigin }, { registerWidget: false });
+    registerGameHubMcpRoutes(app, { catalogService, discoveryCampaignService, siteOrigin }, { registerWidget: false });
     app.get('/w/:workId', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },

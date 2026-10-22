@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -8,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 106);
+  assert.equal(files.length, 107);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -26,40 +27,41 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const changeRadar = fs.readFileSync(path.join(migrationDir, '0070_official_change_radar.sql'), 'utf8');
   const changeRadarV2 = fs.readFileSync(path.join(migrationDir, '0071_change_radar_v2.sql'), 'utf8');
   const analyticsMcpHost = fs.readFileSync(path.join(migrationDir, '0072_analytics_mcp_host.sql'), 'utf8');
-  const autonomousResearch = fs.readFileSync(path.join(migrationDir, '0073_autonomous_research_topics.sql'), 'utf8');
-  const researchEvidence = fs.readFileSync(path.join(migrationDir, '0074_research_evidence_archive.sql'), 'utf8');
-  const researchRunActions = fs.readFileSync(path.join(migrationDir, '0075_research_run_actions.sql'), 'utf8');
-  const researchDiscoveries = fs.readFileSync(path.join(migrationDir, '0076_research_source_discoveries.sql'), 'utf8');
-  const researcherCollaboration = fs.readFileSync(path.join(migrationDir, '0077_researcher_collaboration.sql'), 'utf8');
-  const researchClaimReview = fs.readFileSync(path.join(migrationDir, '0078_research_claim_review.sql'), 'utf8');
-  const researchMetricLedger = fs.readFileSync(path.join(migrationDir, '0079_research_metric_ledger.sql'), 'utf8');
-  const researchMetricViews = fs.readFileSync(path.join(migrationDir, '0080_research_metric_views.sql'), 'utf8');
-  const researchMethodTemplates = fs.readFileSync(path.join(migrationDir, '0081_research_method_templates.sql'), 'utf8');
-  const researchMetricMatrixViews = fs.readFileSync(path.join(migrationDir, '0082_research_metric_matrix_views.sql'), 'utf8');
-  const researchEntities = fs.readFileSync(path.join(migrationDir, '0083_research_entities_and_event_clusters.sql'), 'utf8');
-  const researchSourceAuthorityReviews = fs.readFileSync(path.join(migrationDir, '0084_research_source_authority_reviews.sql'), 'utf8');
-  const researchRunSourceAdmissions = fs.readFileSync(path.join(migrationDir, '0085_research_run_source_admissions.sql'), 'utf8');
-  const researchClaimEvidenceAuthority = fs.readFileSync(path.join(migrationDir, '0086_claim_evidence_authority_snapshot.sql'), 'utf8');
-  const researchReports = fs.readFileSync(path.join(migrationDir, '0087_research_reports_and_notifications.sql'), 'utf8');
-  const researchClaimReviewSignals = fs.readFileSync(path.join(migrationDir, '0088_research_claim_review_signals.sql'), 'utf8');
-  const researchMetricUnitProvenance = fs.readFileSync(path.join(migrationDir, '0089_research_metric_unit_provenance.sql'), 'utf8');
-  const researchDerivedMetrics = fs.readFileSync(path.join(migrationDir, '0090_research_derived_metrics.sql'), 'utf8');
-  const researchQualitySampling = fs.readFileSync(path.join(migrationDir, '0091_research_quality_sampling.sql'), 'utf8');
-  const researchQualityCorrections = fs.readFileSync(path.join(migrationDir, '0092_research_quality_correction_resolutions.sql'), 'utf8');
-  const researchQualityCoverage = fs.readFileSync(path.join(migrationDir, '0093_research_quality_coverage_sampling.sql'), 'utf8');
-  const researchActionBudgetIndex = fs.readFileSync(path.join(migrationDir, '0094_research_action_budget_index.sql'), 'utf8');
-  const researchProviderCircuits = fs.readFileSync(path.join(migrationDir, '0095_research_provider_circuits.sql'), 'utf8');
-  const researchActionRecoveryIndex = fs.readFileSync(path.join(migrationDir, '0096_research_action_recovery_index.sql'), 'utf8');
-  const researchProviderBillingReconciliation = fs.readFileSync(path.join(migrationDir, '0097_research_provider_billing_reconciliation.sql'), 'utf8');
-  const researchExternalBenchmark = fs.readFileSync(path.join(migrationDir, '0098_research_external_benchmark.sql'), 'utf8');
-  const researchSourceRelationships = fs.readFileSync(path.join(migrationDir, '0099_research_source_relationship_reviews.sql'), 'utf8');
-  const researchMetricTrendViews = fs.readFileSync(path.join(migrationDir, '0100_research_metric_trend_views.sql'), 'utf8');
-  const researcherProviderBudget = fs.readFileSync(path.join(migrationDir, '0101_researcher_provider_budget.sql'), 'utf8');
-  const researcherWorkerPresence = fs.readFileSync(path.join(migrationDir, '0102_researcher_worker_presence.sql'), 'utf8');
-  const researchSourceStatusReviews = fs.readFileSync(path.join(migrationDir, '0103_research_source_status_reviews.sql'), 'utf8');
-  const researchEntityStatusReviews = fs.readFileSync(path.join(migrationDir, '0104_research_entity_status_reviews.sql'), 'utf8');
-  const researchNewsFacts = fs.readFileSync(path.join(migrationDir, '0105_research_news_facts.sql'), 'utf8');
-  const researchDiscoveryClusters = fs.readFileSync(path.join(migrationDir, '0106_research_discovery_clusters.sql'), 'utf8');
+  const guessBaikeStrictSelection = fs.readFileSync(path.join(migrationDir, '0073_guess_baike_strict_selection.sql'), 'utf8');
+  const autonomousResearch = fs.readFileSync(path.join(migrationDir, '0074_autonomous_research_topics.sql'), 'utf8');
+  const researchEvidence = fs.readFileSync(path.join(migrationDir, '0075_research_evidence_archive.sql'), 'utf8');
+  const researchRunActions = fs.readFileSync(path.join(migrationDir, '0076_research_run_actions.sql'), 'utf8');
+  const researchDiscoveries = fs.readFileSync(path.join(migrationDir, '0077_research_source_discoveries.sql'), 'utf8');
+  const researcherCollaboration = fs.readFileSync(path.join(migrationDir, '0078_researcher_collaboration.sql'), 'utf8');
+  const researchClaimReview = fs.readFileSync(path.join(migrationDir, '0079_research_claim_review.sql'), 'utf8');
+  const researchMetricLedger = fs.readFileSync(path.join(migrationDir, '0080_research_metric_ledger.sql'), 'utf8');
+  const researchMetricViews = fs.readFileSync(path.join(migrationDir, '0081_research_metric_views.sql'), 'utf8');
+  const researchMethodTemplates = fs.readFileSync(path.join(migrationDir, '0082_research_method_templates.sql'), 'utf8');
+  const researchMetricMatrixViews = fs.readFileSync(path.join(migrationDir, '0083_research_metric_matrix_views.sql'), 'utf8');
+  const researchEntities = fs.readFileSync(path.join(migrationDir, '0084_research_entities_and_event_clusters.sql'), 'utf8');
+  const researchSourceAuthorityReviews = fs.readFileSync(path.join(migrationDir, '0085_research_source_authority_reviews.sql'), 'utf8');
+  const researchRunSourceAdmissions = fs.readFileSync(path.join(migrationDir, '0086_research_run_source_admissions.sql'), 'utf8');
+  const researchClaimEvidenceAuthority = fs.readFileSync(path.join(migrationDir, '0087_claim_evidence_authority_snapshot.sql'), 'utf8');
+  const researchReports = fs.readFileSync(path.join(migrationDir, '0088_research_reports_and_notifications.sql'), 'utf8');
+  const researchClaimReviewSignals = fs.readFileSync(path.join(migrationDir, '0089_research_claim_review_signals.sql'), 'utf8');
+  const researchMetricUnitProvenance = fs.readFileSync(path.join(migrationDir, '0090_research_metric_unit_provenance.sql'), 'utf8');
+  const researchDerivedMetrics = fs.readFileSync(path.join(migrationDir, '0091_research_derived_metrics.sql'), 'utf8');
+  const researchQualitySampling = fs.readFileSync(path.join(migrationDir, '0092_research_quality_sampling.sql'), 'utf8');
+  const researchQualityCorrections = fs.readFileSync(path.join(migrationDir, '0093_research_quality_correction_resolutions.sql'), 'utf8');
+  const researchQualityCoverage = fs.readFileSync(path.join(migrationDir, '0094_research_quality_coverage_sampling.sql'), 'utf8');
+  const researchActionBudgetIndex = fs.readFileSync(path.join(migrationDir, '0095_research_action_budget_index.sql'), 'utf8');
+  const researchProviderCircuits = fs.readFileSync(path.join(migrationDir, '0096_research_provider_circuits.sql'), 'utf8');
+  const researchActionRecoveryIndex = fs.readFileSync(path.join(migrationDir, '0097_research_action_recovery_index.sql'), 'utf8');
+  const researchProviderBillingReconciliation = fs.readFileSync(path.join(migrationDir, '0098_research_provider_billing_reconciliation.sql'), 'utf8');
+  const researchExternalBenchmark = fs.readFileSync(path.join(migrationDir, '0099_research_external_benchmark.sql'), 'utf8');
+  const researchSourceRelationships = fs.readFileSync(path.join(migrationDir, '0100_research_source_relationship_reviews.sql'), 'utf8');
+  const researchMetricTrendViews = fs.readFileSync(path.join(migrationDir, '0101_research_metric_trend_views.sql'), 'utf8');
+  const researcherProviderBudget = fs.readFileSync(path.join(migrationDir, '0102_researcher_provider_budget.sql'), 'utf8');
+  const researcherWorkerPresence = fs.readFileSync(path.join(migrationDir, '0103_researcher_worker_presence.sql'), 'utf8');
+  const researchSourceStatusReviews = fs.readFileSync(path.join(migrationDir, '0104_research_source_status_reviews.sql'), 'utf8');
+  const researchEntityStatusReviews = fs.readFileSync(path.join(migrationDir, '0105_research_entity_status_reviews.sql'), 'utf8');
+  const researchNewsFacts = fs.readFileSync(path.join(migrationDir, '0106_research_news_facts.sql'), 'utf8');
+  const researchDiscoveryClusters = fs.readFileSync(path.join(migrationDir, '0107_research_discovery_clusters.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -71,6 +73,12 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(analyticsMcpHost, /DROP CONSTRAINT analytics_events_host_kind_check/);
   assert.match(analyticsMcpHost, /ADD CONSTRAINT analytics_events_host_kind_check/);
   assert.match(analyticsMcpHost, /'mcp-app'/);
+  assert.match(guessBaikeStrictSelection, /guess_baike/);
+  assert.equal(
+    crypto.createHash('sha256').update(guessBaikeStrictSelection.replace(/\r\n/gu, '\n')).digest('hex'),
+    '7fd6aa9628c28b766fe223a3782d65a5b3fe8740c5776f974bd0c4656ad6236e',
+    'production-applied migration 0073 must remain byte-identical',
+  );
   assert.match(autonomousResearch, /CREATE TABLE tool_research_topics/);
   assert.match(autonomousResearch, /CREATE TABLE tool_research_topic_contracts/);
   assert.match(autonomousResearch, /CREATE TABLE tool_research_runs/);
@@ -270,6 +278,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const automation = fs.readFileSync(path.join(migrationDir, '0026_guess_baike_automation.sql'), 'utf8');
   assert.match(automation, /CREATE TABLE guess_baike_automation_runs/);
   assert.match(automation, /ADD COLUMN origin/);
+  const strictSelection = fs.readFileSync(path.join(migrationDir, '0073_guess_baike_strict_selection.sql'), 'utf8');
+  assert.match(strictSelection, /'ready','disabled','rejected'/);
+  assert.match(strictSelection, /ADD COLUMN selection_signals jsonb/);
   const discovery = fs.readFileSync(path.join(migrationDir, '0027_community_discovery.sql'), 'utf8');
   assert.match(discovery, /ADD COLUMN estimated_minutes/);
   assert.match(discovery, /ADD COLUMN repository_url/);

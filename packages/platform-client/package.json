@@ -10,6 +10,7 @@
     "./styles.css": "./src/styles.css"
   },
   "dependencies": {
+    "@gamehub/agent-capabilities": "workspace:*",
     "@gamehub/host-contract": "workspace:*",
     "@gamehub/multiplayer-protocol": "workspace:*",
     "@gamehub/platform-api-client": "workspace:*",

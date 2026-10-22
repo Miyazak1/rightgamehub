@@ -11,7 +11,8 @@ export async function loadMigrations(directory) {
     const match = migrationPattern.exec(name);
     assert.ok(match, `invalid migration file name: ${name}`);
     assert.equal(Number(match[1]), index + 1, `migration sequence gap at ${name}`);
-    const sql = await fs.readFile(path.join(directory, name), 'utf8');
+    const source = await fs.readFile(path.join(directory, name), 'utf8');
+    const sql = source.replace(/\r\n?/gu, '\n');
     assert.match(sql, /^BEGIN;\s*/i, `${name} must begin a transaction`);
     assert.match(sql, /\s*COMMIT;\s*$/i, `${name} must commit its transaction`);
     return {

@@ -5,10 +5,13 @@ export class PostgresGuessBaikeRepository {
     try {
       await client.query('BEGIN');
       for (const puzzle of puzzles) await client.query(
-        `INSERT INTO guess_baike_puzzles(id,title,aliases,category,source_kind,source_title,source_url,source_revision,source_updated_at,license,intro_han_count,content,status,quality_reason,imported_at,updated_at)
-         VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15)
-         ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,aliases=EXCLUDED.aliases,category=EXCLUDED.category,source_kind=EXCLUDED.source_kind,source_title=EXCLUDED.source_title,source_url=EXCLUDED.source_url,source_revision=EXCLUDED.source_revision,source_updated_at=EXCLUDED.source_updated_at,license=EXCLUDED.license,intro_han_count=EXCLUDED.intro_han_count,content=EXCLUDED.content,status=CASE WHEN guess_baike_puzzles.status='disabled' THEN 'disabled' ELSE EXCLUDED.status END,quality_reason=EXCLUDED.quality_reason,updated_at=EXCLUDED.updated_at`,
-        [puzzle.id,puzzle.title,JSON.stringify(puzzle.aliases),puzzle.category,puzzle.sourceKind,puzzle.sourceTitle,puzzle.sourceUrl,puzzle.sourceRevision,puzzle.sourceUpdatedAt,puzzle.license,puzzle.introHanCount,puzzle.content,puzzle.status,puzzle.qualityReason,now],
+        `INSERT INTO guess_baike_puzzles(id,title,aliases,category,source_kind,source_title,source_url,source_revision,source_updated_at,license,intro_han_count,content,status,quality_reason,selection_signals,imported_at,updated_at)
+         VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,$16,$16)
+         ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,aliases=EXCLUDED.aliases,category=EXCLUDED.category,source_kind=EXCLUDED.source_kind,source_title=EXCLUDED.source_title,source_url=EXCLUDED.source_url,source_revision=EXCLUDED.source_revision,source_updated_at=EXCLUDED.source_updated_at,license=EXCLUDED.license,intro_han_count=EXCLUDED.intro_han_count,content=EXCLUDED.content,status=CASE WHEN guess_baike_puzzles.status='disabled' THEN 'disabled' ELSE EXCLUDED.status END,quality_reason=EXCLUDED.quality_reason,selection_signals=EXCLUDED.selection_signals,updated_at=EXCLUDED.updated_at`,
+        [puzzle.id,puzzle.title,JSON.stringify(puzzle.aliases),puzzle.category,puzzle.sourceKind,puzzle.sourceTitle,puzzle.sourceUrl,puzzle.sourceRevision,puzzle.sourceUpdatedAt,puzzle.license,puzzle.introHanCount,puzzle.content,puzzle.status,puzzle.qualityReason,JSON.stringify(puzzle.selectionSignals ?? {}),now],
+      );
+      for (const puzzle of puzzles.filter(item => item.status === 'rejected')) await client.query(
+        "DELETE FROM guess_baike_schedule WHERE puzzle_id=$1 AND puzzle_date >= (($2::timestamptz AT TIME ZONE 'Asia/Shanghai')::date)", [puzzle.id,now],
       );
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
@@ -33,6 +36,24 @@ export class PostgresGuessBaikeRepository {
        WHERE id=$1 AND ($2='disabled' OR quality_reason IS NULL) RETURNING *`, [id,status,now],
     )).rows[0] ?? null;
   }
+  async rejectLegacyUnverified({ approvedIds, policyVersion, fromDate, now }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `UPDATE guess_baike_puzzles SET status='rejected',quality_reason='缺少当前严格选题规则所需的分类或大众度信号',updated_at=$3
+         WHERE status='ready' AND NOT (id=ANY($1::text[])) AND selection_signals->>'policyVersion' IS DISTINCT FROM $2::text`,
+        [approvedIds,policyVersion,now],
+      );
+      await client.query(
+        `DELETE FROM guess_baike_schedule s USING guess_baike_puzzles p
+         WHERE s.puzzle_id=p.id AND p.status='rejected' AND s.puzzle_date >= $1::date`,
+        [fromDate],
+      );
+      await client.query('COMMIT');
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
+  }
   async schedule(input) {
     return (await this.pool.query(
       `INSERT INTO guess_baike_schedule(puzzle_date,puzzle_id,created_by_user_id,created_at,origin)
@@ -44,7 +65,7 @@ export class PostgresGuessBaikeRepository {
   async automationSnapshot(fromDate, toDate) {
     const [puzzles, schedules] = await Promise.all([
       this.pool.query("SELECT id,category FROM guess_baike_puzzles WHERE status='ready' ORDER BY id"),
-      this.pool.query('SELECT puzzle_date,puzzle_id,origin FROM guess_baike_schedule WHERE puzzle_date BETWEEN $1 AND $2 ORDER BY puzzle_date', [fromDate,toDate]),
+      this.pool.query('SELECT s.puzzle_date,s.puzzle_id,s.origin,p.category FROM guess_baike_schedule s JOIN guess_baike_puzzles p ON p.id=s.puzzle_id WHERE s.puzzle_date BETWEEN $1 AND $2 ORDER BY s.puzzle_date', [fromDate,toDate]),
     ]);
     return { puzzles: puzzles.rows, schedules: schedules.rows };
   }

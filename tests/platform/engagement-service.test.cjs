@@ -46,9 +46,10 @@ test('daily Guess Baike selection is stable across the China calendar day', asyn
 
 test('Guess Baike content pipeline seeds only qualified intros and requires admin scheduling', async () => {
   const { createGuessBaikeService, GuessBaikeError } = await import(pathToFileURL(path.join(root, 'apps/api/src/guess-baike-service.mjs')));
-  let seeded;
+  let seeded; let legacyAudit;
   const repository = {
     seed: async puzzles => { seeded = puzzles; },
+    rejectLegacyUnverified: async input => { legacyAudit = input; },
     list: async () => [],
     schedule: async input => ({ puzzle_date: input.date, puzzle_id: input.puzzleId }),
   };
@@ -56,6 +57,8 @@ test('Guess Baike content pipeline seeds only qualified intros and requires admi
   await service.seedBuiltIns();
   assert.ok(seeded.length >= 6);
   assert.ok(seeded.every(item => item.introHanCount >= 180 && item.status === 'ready' && item.qualityReason === null));
+  assert.equal(legacyAudit.policyVersion,2);
+  assert.deepEqual(legacyAudit.approvedIds.sort(),seeded.map(item=>item.id).sort());
   await assert.rejects(service.listAdmin({ userId: 'member', role: 'user' }), error => error instanceof GuessBaikeError && error.code === 'FORBIDDEN');
   assert.deepEqual(await service.schedule({ userId: 'admin', role: 'admin' }, { date: '2026-09-30', puzzleId: seeded[0].id }), { date: '2026-09-30', puzzleId: seeded[0].id });
 });

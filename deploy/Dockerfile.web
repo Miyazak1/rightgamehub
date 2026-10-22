@@ -7,6 +7,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
 COPY extensions/harness/package.json extensions/harness/package.json
 COPY extensions/vscode/package.json extensions/vscode/package.json
+COPY packages/agent-capabilities/package.json packages/agent-capabilities/package.json
 COPY packages/platform-client/package.json packages/platform-client/package.json
 COPY packages/rules-sdk/package.json packages/rules-sdk/package.json
 COPY packages/web-game-sdk/package.json packages/web-game-sdk/package.json
@@ -18,6 +19,7 @@ COPY packages/creator-tools/package.json packages/creator-tools/package.json
 COPY packages/courseware-runtime/package.json packages/courseware-runtime/package.json
 RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin... --filter @gamehub/creator-tools...
 COPY apps/web apps/web
+COPY packages/agent-capabilities packages/agent-capabilities
 COPY packages/platform-client packages/platform-client
 COPY packages/rules-sdk packages/rules-sdk
 COPY packages/web-game-sdk packages/web-game-sdk

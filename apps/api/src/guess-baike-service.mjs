@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { evaluateWikipediaIntro } from '../../../packages/platform-client/src/guess-baike-policy.mjs';
+import { GUESS_BAIKE_SELECTION_POLICY_VERSION, evaluateGuessBaikeSelection } from '../../../packages/platform-client/src/guess-baike-policy.mjs';
 
 const puzzleBank = JSON.parse(readFileSync(new URL('../../../packages/platform-client/src/guess-baike-puzzles.json', import.meta.url), 'utf8'));
 const chinaDate = now => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -21,10 +21,12 @@ export function createGuessBaikeService({ repository, clock = () => new Date() }
     async seedBuiltIns() {
       if (!repository) return;
       const puzzles = puzzleBank.puzzles.map(puzzle => {
-        const quality = evaluateWikipediaIntro(puzzle.content);
+        const selection = evaluateGuessBaikeSelection({ title: puzzle.title, content: puzzle.content, curatedCategory: puzzle.category, requirePopularity: false });
         const validSource = puzzle.sourceKind === 'wikipedia-lead' && /^https:\/\/zh\.wikipedia\.org\/wiki\//.test(puzzle.sourceUrl) && puzzle.license === 'CC BY-SA 4.0';
-        return { ...puzzle, status: quality.eligible && validSource ? 'ready' : 'disabled', qualityReason: quality.reason ?? (validSource ? null : '来源或许可不符合官方题库规则') };
+        const eligible = selection.eligible && validSource;
+        return { ...puzzle, category: selection.category ?? puzzle.category, status: eligible ? 'ready' : 'rejected', qualityReason: selection.reason ?? (validSource ? null : '来源或许可不符合官方题库规则'), selectionSignals: { policyVersion: GUESS_BAIKE_SELECTION_POLICY_VERSION, source: 'official-curated', ...(selection.signals ?? {}) } };
       });
+      await repository.rejectLegacyUnverified?.({ approvedIds: puzzles.map(item => item.id), policyVersion: GUESS_BAIKE_SELECTION_POLICY_VERSION, fromDate: chinaDate(clock()), now: clock() });
       await repository.seed(puzzles, clock());
     },
     async daily(date = chinaDate(clock())) {

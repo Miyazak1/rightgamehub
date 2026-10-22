@@ -31692,7 +31692,8 @@
             "type": "string",
             "enum": [
               "ready",
-              "disabled"
+              "disabled",
+              "rejected"
             ]
           },
           "qualityReason": {
