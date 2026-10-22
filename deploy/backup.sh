@@ -27,7 +27,10 @@ if [ -n "$WORKER_ID" ]; then
 fi
 
 docker compose --env-file "$ENV_FILE" -f compose.prod.yml exec -T postgres \
-  pg_dump -U gamehub -d gamehub --format=custom > "$TARGET/database.dump"
+  pg_dump -U gamehub -d gamehub --format=custom > "$TARGET/database.dump.partial"
+docker compose --env-file "$ENV_FILE" -f compose.prod.yml exec -T postgres \
+  pg_restore --list < "$TARGET/database.dump.partial" > /dev/null
+mv -- "$TARGET/database.dump.partial" "$TARGET/database.dump"
 
 for volume in avatars covers runtime-assets community-media; do
   docker run --rm -v "gamehub-production_${volume}:/source:ro" -v "$(cd "$TARGET" && pwd):/backup" alpine:3.22 \

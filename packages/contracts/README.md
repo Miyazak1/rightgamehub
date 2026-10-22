@@ -2,11 +2,23 @@
 
 M1 的 HTTP、状态枚举与 OpenAPI 单一来源。
 
+长期研究协议位于 `research/`：任务必须冻结知识缺口、契约、来源版本和平台证据包；结果只能引用这些证据，并由服务端再次校验预算和来源身份。协议不携带模型供应商密钥。
+
 - `src/schema.mjs`：人工维护的严格 JSON Schema 与路由元数据。
 - `generated/openapi.json`：由根目录生成脚本产生并提交。
 - `generated/index.d.ts`：由同一 Schema 生成的 TypeScript 类型。
 
 修改 Schema 后运行 `npm run contracts:generate`，提交生成结果；CI 使用 `npm run contracts:check` 拒绝漂移。当前包是 M1 基线，不表示对应服务均已实现。
+
+## 长期研究协议
+
+`research/` 固化墨鱼变更雷达与独立深度研究引擎之间的异步边界：
+
+- `research-contract-v1.schema.json`：用户授权的长期问题、方法、来源、频率、预算、通知与保留策略。
+- `research-job-v1.schema.json`：控制面提交给研究引擎的有界任务信封，同时冻结专题当前启用的方法模板和已有指标定义，避免证据范围、必填维度或同一指标口径在不同运行中静默变化。
+- `research-result-v1.schema.json`：研究引擎返回的来源、证据绑定、发现、未解决问题与额度回执；`metric` 类发现必须携带直接观察型指标值、单位、时间、维度和任务中已冻结的方法版本。
+
+这三个协议不允许研究引擎直接写入雷达数据库；结果必须先通过协议校验，再由雷达控制面应用。
 
 ## 交互课件契约
 

@@ -140,7 +140,34 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
-    environment: *api-environment
+    environment:
+      <<: *api-environment
+      DEEPSEEK_SEARCH_ENABLED: ${DEEPSEEK_SEARCH_ENABLED:-false}
+      DEEPSEEK_FETCH_ENABLED: ${DEEPSEEK_FETCH_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_SEARCH_TIMEOUT_MS: ${DEEPSEEK_SEARCH_TIMEOUT_MS:-12000}
+      DEEPSEEK_FETCH_TIMEOUT_MS: ${DEEPSEEK_FETCH_TIMEOUT_MS:-15000}
+      DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST: ${DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST:-750}
+      DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST: ${DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST:-750}
+      RESEARCHER_WORKER_ENABLED: ${RESEARCHER_WORKER_ENABLED:-false}
+      RESEARCHER_WORKER_TOKEN: ${RESEARCHER_WORKER_TOKEN:-}
+      RESEARCHER_LEASE_SECONDS: ${RESEARCHER_LEASE_SECONDS:-120}
+      RESEARCHER_PROVIDER_ID: ${RESEARCHER_PROVIDER_ID:-deepseek-researcher}
+      RESEARCHER_PROVIDER_MODEL: ${RESEARCHER_PROVIDER_MODEL:-deepseek-chat}
+      RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB: ${RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB:-20000}
+      RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT: ${RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT:-1}
+      RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT: ${RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT:-1}
+      RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL: ${RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL:-1}
+      RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL: ${RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL:-1}
+      RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH: ${RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH:-100}
+      RESEARCH_MAX_PROVIDER_COST_USD_MICROS_PER_ACCOUNT_MONTH: ${RESEARCH_MAX_PROVIDER_COST_USD_MICROS_PER_ACCOUNT_MONTH:-1000000}
+      RESEARCH_MAX_BILLABLE_REQUESTS_GLOBAL_MONTH: ${RESEARCH_MAX_BILLABLE_REQUESTS_GLOBAL_MONTH:-1000}
+      RESEARCH_MAX_PROVIDER_COST_USD_MICROS_GLOBAL_MONTH: ${RESEARCH_MAX_PROVIDER_COST_USD_MICROS_GLOBAL_MONTH:-10000000}
+      RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD: ${RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD:-3}
+      RESEARCH_PROVIDER_CIRCUIT_WINDOW_SECONDS: ${RESEARCH_PROVIDER_CIRCUIT_WINDOW_SECONDS:-300}
+      RESEARCH_PROVIDER_CIRCUIT_COOLDOWN_SECONDS: ${RESEARCH_PROVIDER_CIRCUIT_COOLDOWN_SECONDS:-300}
+      RESEARCH_PROVIDER_CIRCUIT_PROBE_SECONDS: ${RESEARCH_PROVIDER_CIRCUIT_PROBE_SECONDS:-120}
+      RESEARCH_ACTION_RECOVERY_GRACE_SECONDS: ${RESEARCH_ACTION_RECOVERY_GRACE_SECONDS:-120}
     command: ["node", "apps/api/src/server.mjs"]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -161,6 +188,27 @@ services:
       retries: 12
     networks: [backend]
     mem_limit: 384m
+
+  research-soak:
+    <<: *service-defaults
+    profiles: ["research-acceptance"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=48
+    command: ["node", "scripts/run-research-soak.mjs", "--target", "http://api:3090", "--environment", "production-compose-internal", "--duration-hours", "336", "--interval-seconds", "60", "--output", "/data/research-soak"]
+    depends_on:
+      api: { condition: service_healthy }
+    volumes:
+      - research-soak-reports:/data/research-soak
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 64m
+    cpus: 0.05
 
   realtime:
     <<: *service-defaults
@@ -349,6 +397,51 @@ services:
     networks: [backend]
     mem_limit: 384m
 
+  # Technical preview. Enable only after setting RESEARCHER_WORKER_ENABLED=true,
+  # a shared 32+ byte token and the dedicated provider key, then use
+  # COMPOSE_PROFILES=researcher. It analyzes frozen evidence only.
+  researcher-worker:
+    <<: *service-defaults
+    profiles: [researcher]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "apps/api/src/researcher-worker-cli.mjs"]
+    environment:
+      NODE_ENV: production
+      RESEARCHER_PLATFORM_URL: http://api:3090
+      RESEARCHER_PLATFORM_TIMEOUT_MS: ${RESEARCHER_PLATFORM_TIMEOUT_MS:-15000}
+      RESEARCHER_WORKER_TOKEN: ${RESEARCHER_WORKER_TOKEN:-}
+      RESEARCHER_WORKER_ID: ${RESEARCHER_WORKER_ID:-researcher-worker-1}
+      RESEARCHER_PROVIDER_ID: ${RESEARCHER_PROVIDER_ID:-deepseek-researcher}
+      RESEARCHER_DEEPSEEK_API_KEY: ${RESEARCHER_DEEPSEEK_API_KEY:-}
+      RESEARCHER_DEEPSEEK_MODEL: ${RESEARCHER_PROVIDER_MODEL:-deepseek-chat}
+      RESEARCHER_DEEPSEEK_TIMEOUT_MS: ${RESEARCHER_DEEPSEEK_TIMEOUT_MS:-120000}
+      RESEARCHER_DEEPSEEK_MAX_TOKENS: ${RESEARCHER_DEEPSEEK_MAX_TOKENS:-6000}
+      RESEARCHER_WORKER_LEASE_SECONDS: ${RESEARCHER_WORKER_LEASE_SECONDS:-300}
+      RESEARCHER_WORKER_HEARTBEAT_SECONDS: ${RESEARCHER_WORKER_HEARTBEAT_SECONDS:-60}
+      RESEARCHER_WORKER_POLL_MS: ${RESEARCHER_WORKER_POLL_MS:-3000}
+      NODE_OPTIONS: --max-old-space-size=128
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "apps/api/src/researcher-worker-cli.mjs", "--health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: "0.50"
+    mem_limit: 192m
+    networks: [backend]
+
   rules-operator:
     <<: *service-defaults
     profiles: [rules-operations]
@@ -511,6 +604,7 @@ volumes:
   covers:
   quarantine:
   runtime-assets:
+  research-soak-reports:
   validator:
   source-builder:
   source-worker:

@@ -64,6 +64,14 @@ export const normalizeFetchedText = (body, contentType = '') => {
   return bytes.byteLength <= 500000 ? normalized : new TextDecoder().decode(bytes.slice(0, 500000)).replace(/\uFFFD$/u, '');
 };
 
+export const extractFetchedTitle = (body, contentType = '') => {
+  if (!/html|xhtml/iu.test(contentType)) return null;
+  const match = /<title\b[^>]*>([\s\S]*?)<\/title>/iu.exec(String(body ?? ''));
+  if (!match) return null;
+  const title = decodeEntities(match[1].replace(/<[^>]+>/gu, ' ')).replace(/\s+/gu, ' ').trim();
+  return title ? title.slice(0, 240) : null;
+};
+
 async function readBounded(response, limit = MAX_BYTES) {
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > limit) throw new ChangeRadarFetchError('CHANGE_RADAR_RESPONSE_TOO_LARGE', '网页内容超过 1 MB，暂时不能监控。', 422);
@@ -130,9 +138,9 @@ export function createChangeRadarFetcher({ fetchImpl, lookup = dns.lookup, timeo
       if(contentEncoding!=='identity')throw new ChangeRadarFetchError('CHANGE_RADAR_ENCODING_UNSUPPORTED','网页没有提供可直接读取的文字编码。',422);
       const contentType = (response.headers.get('content-type') || 'text/plain').split(';')[0].trim().toLowerCase();
       if (!ALLOWED_TYPES.some(type => contentType.startsWith(type))) throw new ChangeRadarFetchError('CHANGE_RADAR_TYPE_UNSUPPORTED', '当前仅支持网页、纯文本、XML 和 JSON 内容。', 422);
-      const bytes = response.bodyBytes??await readBounded(response), bodyText = normalizeFetchedText(new TextDecoder().decode(bytes), contentType);
+      const bytes = response.bodyBytes??await readBounded(response), rawText = new TextDecoder().decode(bytes), bodyText = normalizeFetchedText(rawText, contentType);
       if (!bodyText) throw new ChangeRadarFetchError('CHANGE_RADAR_EMPTY', '网页没有可监控的文字内容。', 422);
-      return { finalUrl: current.href, statusCode: response.status, contentType, bodyText, sha256: crypto.createHash('sha256').update(bodyText).digest('hex') };
+      return { finalUrl: current.href, statusCode: response.status, contentType, title: extractFetchedTitle(rawText, contentType), bodyText, sha256: crypto.createHash('sha256').update(bodyText).digest('hex') };
     }
     throw new ChangeRadarFetchError('CHANGE_RADAR_REDIRECT_FAILED', '网页重定向次数过多。', 422);
   };

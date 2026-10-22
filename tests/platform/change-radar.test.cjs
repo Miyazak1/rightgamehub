@@ -20,7 +20,7 @@ test('change radar builds readable diffs, suppresses volatile timestamps and eva
 });
 
 test('change radar rejects private targets and normalizes text safely',async()=>{
-  const {assertPublicHttpUrl,isPrivateAddress,normalizeFetchedText}=await import(moduleUrl('apps/api/src/change-radar-fetcher.mjs'));
+  const {assertPublicHttpUrl,extractFetchedTitle,isPrivateAddress,normalizeFetchedText}=await import(moduleUrl('apps/api/src/change-radar-fetcher.mjs'));
   assert.equal(isPrivateAddress('127.0.0.1'),true);
   assert.equal(isPrivateAddress('192.168.1.8'),true);
   assert.equal(isPrivateAddress('8.8.8.8'),false);
@@ -28,15 +28,18 @@ test('change radar rejects private targets and normalizes text safely',async()=>
   await assert.rejects(assertPublicHttpUrl('https://private.example',{lookup:async()=>[{address:'10.0.0.7'}]}),error=>error.code==='CHANGE_RADAR_URL_PRIVATE');
   const text=normalizeFetchedText('<style>hidden</style><h1>Hello &amp; 墨鱼</h1><script>bad()</script><p>Done</p>','text/html');
   assert.equal(text,'Hello & 墨鱼\nDone');
+  assert.equal(extractFetchedTitle('<title> Release &amp; Notes </title>','text/html'),'Release & Notes');
+  assert.equal(extractFetchedTitle('{"title":"not document metadata"}','application/json'),null);
   assert.ok(new TextEncoder().encode(normalizeFetchedText('鱼'.repeat(600000),'text/plain')).byteLength<=500000);
 });
 
 test('change radar fetcher validates redirects and hashes public text',async()=>{
   const {createChangeRadarFetcher}=await import(moduleUrl('apps/api/src/change-radar-fetcher.mjs'));
   const lookup=async()=>[{address:'93.184.216.34'}];
-  const fetcher=createChangeRadarFetcher({lookup,fetchImpl:async()=>new Response('<h1>Release 2</h1>',{status:200,headers:{'content-type':'text/html; charset=utf-8'}})});
+  const fetcher=createChangeRadarFetcher({lookup,fetchImpl:async()=>new Response('<title>Release 2 notes</title><h1>Release 2</h1>',{status:200,headers:{'content-type':'text/html; charset=utf-8'}})});
   const result=await fetcher('https://example.com/releases');
-  assert.equal(result.bodyText,'Release 2');
+  assert.equal(result.title,'Release 2 notes');
+  assert.equal(result.bodyText,'Release 2 notes Release 2');
   assert.match(result.sha256,/^[a-f0-9]{64}$/u);
   const redirecting=createChangeRadarFetcher({lookup,fetchImpl:async()=>new Response(null,{status:302,headers:{location:'http://127.0.0.1/private'}})});
   await assert.rejects(redirecting('https://example.com'),error=>error.code==='CHANGE_RADAR_URL_PRIVATE');

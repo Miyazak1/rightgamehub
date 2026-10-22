@@ -23,6 +23,28 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.deepEqual(config.rulesTrustedKeys, {});
   assert.deepEqual(config.corsOrigins, []);
   assert.equal(config.githubSourceImportEnabled, false);
+  assert.equal(config.deepSeekSearchEnabled, false);
+  assert.equal(config.deepSeekFetchEnabled, false);
+  assert.equal(config.deepSeekSearchPriceUsdMicrosPerRequest, 750);
+  assert.equal(config.deepSeekFetchPriceUsdMicrosPerRequest, 750);
+  assert.equal(config.researcherWorkerEnabled, false);
+  assert.equal(config.researcherWorkerToken, null);
+  assert.equal(config.researcherProvider, 'deepseek-researcher');
+  assert.equal(config.researcherProviderModel, 'deepseek-chat');
+  assert.equal(config.researcherEstimatedCostUsdMicrosPerJob, 20000);
+  assert.equal(config.researcherLeaseSeconds, 120);
+  assert.equal(config.researchTopicMaxActiveRunsPerAccount, 1);
+  assert.equal(config.researcherMaxActiveJobsPerAccount, 1);
+  assert.equal(config.researchTopicMaxActiveRunsGlobal, 1);
+  assert.equal(config.researcherMaxActiveJobsGlobal, 1);
+  assert.equal(config.researchMaxBillableRequestsPerAccountMonth, 100);
+  assert.equal(config.researchMaxProviderCostUsdMicrosPerAccountMonth, 1000000);
+  assert.equal(config.researchMaxBillableRequestsGlobalMonth, 1000);
+  assert.equal(config.researchMaxProviderCostUsdMicrosGlobalMonth, 10000000);
+  assert.equal(config.researchProviderCircuitFailureThreshold, 3);
+  assert.equal(config.researchProviderCircuitWindowSeconds, 300);
+  assert.equal(config.researchProviderCircuitCooldownSeconds, 300);
+  assert.equal(config.researchProviderCircuitProbeSeconds, 120);
   assert.equal(config.sourceBuildEnabled, false);
   assert.equal(config.sourceBuilderExecutionMode, 'local');
   assert.equal(config.ruleBuildEnabled, false);
@@ -46,6 +68,43 @@ test('configuration fails closed for missing database and weak OTP keys', async 
   assert.throws(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), REALTIME_PUBLIC_URL: 'wss://example.com/v1/realtime', RULES_ALLOW_UNSIGNED: 'true' }), /cannot be enabled/u);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RULES_TRUSTED_KEYS_JSON: '{bad' }), /valid JSON/u);
   assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_SOURCE_IMPORT_ENABLED: 'true' }), /GITHUB_APP_ID/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_SEARCH_ENABLED: 'true' }), /DEEPSEEK_API_KEY/);
+  const search = loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_SEARCH_ENABLED: 'true', DEEPSEEK_API_KEY: 'test-key', DEEPSEEK_SEARCH_TIMEOUT_MS: '9000' });
+  assert.equal(search.deepSeekSearchEnabled,true);
+  assert.equal(search.deepSeekSearchTimeoutMs,9000);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_FETCH_ENABLED: 'true' }), /DEEPSEEK_API_KEY/);
+  const fetchConfig = loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_FETCH_ENABLED: 'true', DEEPSEEK_API_KEY: 'test-key', DEEPSEEK_FETCH_TIMEOUT_MS: '11000', DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST: '900' });
+  assert.equal(fetchConfig.deepSeekFetchEnabled,true);
+  assert.equal(fetchConfig.deepSeekFetchTimeoutMs,11000);
+  assert.equal(fetchConfig.deepSeekFetchPriceUsdMicrosPerRequest,900);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST: '-1' }), /DEEPSEEK_FETCH_PRICE/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true' }), /RESEARCHER_WORKER_TOKEN/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true', RESEARCHER_WORKER_TOKEN: 'short' }), /32 UTF-8 bytes/);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true', RESEARCHER_WORKER_TOKEN: 'r'.repeat(32), RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB: '0' }), /must be greater than zero/u);
+  const researcher = loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_WORKER_ENABLED: 'true', RESEARCHER_WORKER_TOKEN: 'r'.repeat(32), RESEARCHER_LEASE_SECONDS: '90', RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT: '3', RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT: '2', RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL: '7', RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL: '5', RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH: '25', RESEARCH_MAX_PROVIDER_COST_USD_MICROS_PER_ACCOUNT_MONTH: '250000', RESEARCH_MAX_BILLABLE_REQUESTS_GLOBAL_MONTH: '250', RESEARCH_MAX_PROVIDER_COST_USD_MICROS_GLOBAL_MONTH: '2500000', RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD: '4', RESEARCH_PROVIDER_CIRCUIT_WINDOW_SECONDS: '600', RESEARCH_PROVIDER_CIRCUIT_COOLDOWN_SECONDS: '180', RESEARCH_PROVIDER_CIRCUIT_PROBE_SECONDS: '60', RESEARCH_ACTION_RECOVERY_GRACE_SECONDS: '180' });
+  assert.equal(researcher.researcherWorkerEnabled,true);
+  assert.equal(researcher.researcherEstimatedCostUsdMicrosPerJob,20000);
+  assert.equal(researcher.researcherLeaseSeconds,90);
+  assert.equal(researcher.researchTopicMaxActiveRunsPerAccount,3);
+  assert.equal(researcher.researcherMaxActiveJobsPerAccount,2);
+  assert.equal(researcher.researchTopicMaxActiveRunsGlobal,7);
+  assert.equal(researcher.researcherMaxActiveJobsGlobal,5);
+  assert.equal(researcher.researchMaxBillableRequestsPerAccountMonth,25);
+  assert.equal(researcher.researchMaxProviderCostUsdMicrosPerAccountMonth,250000);
+  assert.equal(researcher.researchMaxBillableRequestsGlobalMonth,250);
+  assert.equal(researcher.researchMaxProviderCostUsdMicrosGlobalMonth,2500000);
+  assert.equal(researcher.researchProviderCircuitFailureThreshold,4);
+  assert.equal(researcher.researchProviderCircuitWindowSeconds,600);
+  assert.equal(researcher.researchProviderCircuitCooldownSeconds,180);
+  assert.equal(researcher.researchProviderCircuitProbeSeconds,60);
+  assert.equal(researcher.researchActionRecoveryGraceSeconds,180);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT: '0' }), /RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT: '11' }), /RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL: '101' }), /RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL: '0' }), /RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH: '-1' }), /RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD: '0' }), /RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD/u);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), RESEARCH_ACTION_RECOVERY_GRACE_SECONDS: '10' }), /RESEARCH_ACTION_RECOVERY_GRACE_SECONDS/u);
   const privateKey = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' });
   const githubImport = loadConfig({
     NODE_ENV: 'test', DATABASE_URL: 'postgres://db/test', OTP_HMAC_KEY: 'x'.repeat(32), GITHUB_SOURCE_IMPORT_ENABLED: 'true',
@@ -450,6 +509,24 @@ test('ready returns success only when database and migrations are current', asyn
   assert.match(response.json().data.mcpUi.script.path, /^\/mcp-widget\/[a-f0-9]{16}\/widget\.js$/u);
   assert.equal(response.json().data.mcpUi.script.revision.length, 16);
   assert.equal(response.json().data.mcpUi.script.sha256.length, 64);
+});
+
+test('readiness exposes and gates the local autonomous research scheduler without failing on a live degraded loop',async t=>{
+  const {createApp}=await import(moduleUrl('app.mjs'));
+  let scheduler={healthy:false,status:'stale',lastTickCompletedAt:'2026-10-21T00:00:00.000Z'};
+  const app=createApp({
+    config:{requestBodyLimit:65536},database:{ping:async()=>true},migrations:{status:async()=>({ready:true})},
+    authService:{requestChallenge:async()=>({}),verifyChallenge:async()=>({})},
+    researchTopicWorker:{status:()=>scheduler},
+  });
+  t.after(()=>app.close());
+  const stale=await app.inject({url:'/ready'});
+  assert.equal(stale.statusCode,503);
+  assert.equal(stale.json().data.researchScheduler.status,'stale');
+  scheduler={healthy:true,status:'degraded',consecutiveErrors:1,lastErrorCode:'DB_UNAVAILABLE'};
+  const degraded=await app.inject({url:'/ready'});
+  assert.equal(degraded.statusCode,200);
+  assert.equal(degraded.json().data.researchScheduler.status,'degraded');
 });
 
 test('authenticated users can create no-store realtime connection tickets', async t => {

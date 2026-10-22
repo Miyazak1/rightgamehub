@@ -1,0 +1,44 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "change-radar",
+  "version": "0.1.0",
+  "description": "Track public information over time, retain evidence-linked facts, and compare changes from supported AI agents.",
+  "author": {
+    "name": "MOOYU.FUN / 墨鱼工坊",
+    "url": "https://mooyu.fun"
+  },
+  "homepage": "https://mooyu.fun/tools/change-radar",
+  "license": "UNLICENSED",
+  "keywords": [
+    "research",
+    "monitoring",
+    "news",
+    "agent",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Change Radar / 变更雷达",
+        "shortDescription": "Long-running, evidence-linked change tracking / 长期、可追溯的变化追踪",
+        "longDescription": "Create long-running monitoring topics, inspect evidence-linked facts, and compare change over time from an Agent sidebar. 长期追踪公开信息，在 Agent 侧栏中查看可追溯事实、趋势与时期对比。",
+        "developerName": "MOOYU.FUN",
+        "category": "Productivity",
+        "capabilities": [
+          "Create monitoring topics",
+          "Track public information over time",
+          "Inspect evidence-linked facts",
+          "Compare periods and trends",
+          "Open the Change Radar sidebar"
+        ],
+        "websiteURL": "https://mooyu.fun/tools/change-radar",
+        "defaultPrompt": [
+          "Open Change Radar and help me create a long-running monitoring topic. / 打开变更雷达，帮我创建一个长期追踪专题。",
+          "Show me the latest evidence-linked changes in my tracked topics. / 查看我的追踪专题中最近出现的可追溯变化。",
+          "Compare this topic across two time periods without treating missing data as zero. / 比较这个专题的两个时间段，不要把缺失数据当成零。"
+        ],
+        "brandColor": "#6250E7"
+      }
+    }
+  }
+}

@@ -10,6 +10,11 @@
       "name": "gamehub",
       "source": "./plugins/gamehub",
       "description": "Discover, create locally, validate and publish MOOYU.FUN games and interactive courseware with a safe browser fallback."
+    },
+    {
+      "name": "change-radar",
+      "source": "./plugins/change-radar",
+      "description": "Track public information over time and inspect evidence-linked changes in a dedicated Agent sidebar."
     }
   ]
 }

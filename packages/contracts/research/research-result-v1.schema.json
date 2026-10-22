@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/research/research-result-v1.schema.json",
+  "title": "MOOYU Research Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "jobId", "topicId", "contractVersion", "status", "finishedAt", "sources", "findings", "unresolvedQuestions", "usage"],
+  "properties": {
+    "protocol": { "const": "research-result-v1" },
+    "jobId": { "type": "string", "format": "uuid" },
+    "topicId": { "type": "string", "format": "uuid" },
+    "contractVersion": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["completed", "no_change", "partial", "budget_exhausted", "blocked"] },
+    "finishedAt": { "type": "string", "format": "date-time" },
+    "sources": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceId", "url", "contentHash", "fetchedAt", "authorityTier"],
+        "properties": {
+          "sourceId": { "type": "string", "format": "uuid" },
+          "url": { "type": "string", "format": "uri", "maxLength": 2048 },
+          "contentHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "fetchedAt": { "type": "string", "format": "date-time" },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "authorityTier": { "enum": ["official-primary", "official-implementation", "institutional", "independent-reputable", "community", "unknown"] }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["findingId", "kind", "title", "summary", "importance", "confidence", "evidence"],
+        "properties": {
+          "findingId": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "kind": { "enum": ["fact", "event", "metric", "claim", "contradiction"] },
+          "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "summary": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "importance": { "enum": ["routine", "important", "critical"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "contradictsFindingId": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "fact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subject", "dimensionKey", "dimensionLabel", "predicateKey", "predicateLabel", "valueType", "value", "unit", "occurredAt", "direction", "scope"],
+            "properties": {
+              "subject": { "type": "string", "minLength": 1, "maxLength": 240 },
+              "dimensionKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+              "dimensionLabel": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "predicateKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+              "predicateLabel": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "valueType": { "enum": ["number", "text"] },
+              "value": { "type": ["number", "string"] },
+              "unit": { "type": ["string", "null"], "maxLength": 40 },
+              "occurredAt": { "type": ["string", "null"], "format": "date-time" },
+              "direction": { "enum": ["increased", "decreased", "started", "stopped", "changed", "unchanged", "unknown"] },
+              "scope": {
+                "type": "object",
+                "maxProperties": 10,
+                "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$" },
+                "additionalProperties": { "type": ["string", "number", "boolean"] }
+              }
+            }
+          },
+          "metric": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metricKey", "label", "valueType", "value", "unit", "observedAt", "dimensions", "methodVersion"],
+            "properties": {
+              "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "valueType": { "enum": ["number", "text"] },
+              "value": { "type": ["number", "string"] },
+              "unit": { "type": "string", "minLength": 1, "maxLength": 40 },
+              "observedAt": { "type": "string", "format": "date-time" },
+              "dimensions": {
+                "type": "object",
+                "maxProperties": 10,
+                "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$" },
+                "additionalProperties": { "type": ["string", "number", "boolean"] }
+              },
+              "methodVersion": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sourceId", "locator", "quoteHash"],
+              "properties": {
+                "sourceId": { "type": "string", "format": "uuid" },
+                "locator": { "type": "string", "minLength": 1, "maxLength": 500 },
+                "quoteHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "fact" } }, "required": ["kind"] },
+            "then": { "required": ["fact"] },
+            "else": { "not": { "required": ["fact"] } }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "metric" } }, "required": ["kind"] },
+            "then": { "required": ["metric"] },
+            "else": { "not": { "required": ["metric"] } }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "contradiction" } }, "required": ["kind"] },
+            "then": { "required": ["contradictsFindingId"] },
+            "else": { "not": { "required": ["contradictsFindingId"] } }
+          }
+        ]
+      }
+    },
+    "unresolvedQuestions": { "type": "array", "maxItems": 50, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["searchQueries", "documentsRead", "deepResearchJobs"],
+      "properties": {
+        "searchQueries": { "type": "integer", "minimum": 0 },
+        "documentsRead": { "type": "integer", "minimum": 0 },
+        "deepResearchJobs": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

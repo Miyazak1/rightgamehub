@@ -53,6 +53,11 @@
     "knowledge-map:textbooks": "node scripts/generate-textbook-mappings.mjs",
     "courseware:briefs:check": "node scripts/validate-courseware-briefs.mjs",
     "courseware:ui-kit:sync": "node scripts/sync-courseware-ui-kit.mjs",
-    "courseware:ui-kit:check": "node scripts/sync-courseware-ui-kit.mjs --check"
+    "courseware:ui-kit:check": "node scripts/sync-courseware-ui-kit.mjs --check",
+    "research:restore-rehearsal": "node scripts/rehearse-research-database-restore.mjs",
+    "research:capacity": "node scripts/run-research-capacity.mjs",
+    "research:capacity:smoke": "node scripts/run-research-capacity.mjs --smoke",
+    "research:soak": "node scripts/run-research-soak.mjs",
+    "research:worker": "node apps/api/src/researcher-worker-cli.mjs"
   }
 }

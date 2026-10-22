@@ -84,6 +84,12 @@ import { PostgresDiscoveryCampaignRepository, createDiscoveryCampaignService } f
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
+import { PostgresResearchTopicRepository, createResearchTopicService, createResearchTopicWorker } from './research-topic-service.mjs';
+import { createResearchFeedAdapter } from './research-feed-adapter.mjs';
+import { createGitHubReleaseAdapter } from './research-github-adapter.mjs';
+import { createDeepSeekSearchAdapter } from './deepseek-search-adapter.mjs';
+import { createDeepSeekFetchAdapter } from './deepseek-fetch-adapter.mjs';
+import { PostgresResearcherCollaborationRepository, createResearcherCollaborationService } from './researcher-collaboration-service.mjs';
 
 export const migrationDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
@@ -129,6 +135,16 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const authorOutreachService = createAuthorOutreachService({ repository: new PostgresAuthorOutreachRepository(database.pool),siteOrigin:config.gameShareSiteOrigin });
   const changeRadarService=createChangeRadarService({repository:new PostgresChangeRadarRepository(database.pool),fetchPage:createChangeRadarFetcher()});
   const changeRadarWorker=createChangeRadarWorker({service:changeRadarService});
+  const researchHttpAdapter=createChangeRadarFetcher();
+  const researchFeedAdapter=createResearchFeedAdapter({fetchText:researchHttpAdapter});
+  const researchSearchAdapter=config.deepSeekSearchEnabled?createDeepSeekSearchAdapter({apiKey:config.deepSeekApiKey,timeoutMs:config.deepSeekSearchTimeoutMs,priceUsdMicrosPerRequest:config.deepSeekSearchPriceUsdMicrosPerRequest}):null;
+  const researchPageAdapter=config.deepSeekFetchEnabled?createDeepSeekFetchAdapter({apiKey:config.deepSeekApiKey,timeoutMs:config.deepSeekFetchTimeoutMs,priceUsdMicrosPerRequest:config.deepSeekFetchPriceUsdMicrosPerRequest}):{provider:'direct-http',fetch:researchHttpAdapter};
+  const researchBudgetLimits={accountBillableRequests:config.researchMaxBillableRequestsPerAccountMonth,accountCostUsdMicros:config.researchMaxProviderCostUsdMicrosPerAccountMonth,globalBillableRequests:config.researchMaxBillableRequestsGlobalMonth,globalCostUsdMicros:config.researchMaxProviderCostUsdMicrosGlobalMonth};
+  const researchProviderPrices={'deepseek-search':config.deepSeekSearchPriceUsdMicrosPerRequest,'deepseek-fetch':config.deepSeekFetchPriceUsdMicrosPerRequest};
+  const researchProviderCircuit={failureThreshold:config.researchProviderCircuitFailureThreshold,windowSeconds:config.researchProviderCircuitWindowSeconds,cooldownSeconds:config.researchProviderCircuitCooldownSeconds,probeSeconds:config.researchProviderCircuitProbeSeconds};
+  const researcherCollaborationService=createResearcherCollaborationService({repository:new PostgresResearcherCollaborationRepository(database.pool,{monthlyBudget:researchBudgetLimits,provider:config.researcherProvider,providerModel:config.researcherProviderModel,estimatedCostUsdMicrosPerJob:config.researcherEstimatedCostUsdMicrosPerJob,providerCircuit:researchProviderCircuit}),workerEnabled:config.researcherWorkerEnabled,defaultLeaseSeconds:config.researcherLeaseSeconds,maxActiveJobsPerAccount:config.researcherMaxActiveJobsPerAccount,maxActiveJobsGlobal:config.researcherMaxActiveJobsGlobal});
+  const researchTopicService=createResearchTopicService({repository:new PostgresResearchTopicRepository(database.pool,{monthlyBudget:researchBudgetLimits,providerPrices:researchProviderPrices,providerCircuit:researchProviderCircuit,actionRecoveryGraceSeconds:config.researchActionRecoveryGraceSeconds}),feedAdapter:researchFeedAdapter,githubAdapter:createGitHubReleaseAdapter({feedAdapter:researchFeedAdapter}),searchAdapter:researchSearchAdapter,httpAdapter:researchPageAdapter,analysisDispatcher:runId=>researcherCollaborationService.queueAutomaticRunAnalysis(runId),maxActiveRunsPerAccount:config.researchTopicMaxActiveRunsPerAccount,maxActiveRunsGlobal:config.researchTopicMaxActiveRunsGlobal});
+  const researchTopicWorker=createResearchTopicWorker({service:researchTopicService});
   const quarantineStore = new LocalQuarantineStore(config.quarantineRoot);
   const storageLogger = {
     info: event => process.stdout.write(`${JSON.stringify({ service: 'storage-capacity', ...event })}\n`),
@@ -234,6 +250,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     projectClaimService,
     authorOutreachService,
     changeRadarService,
+    researchTopicService,
+    researchTopicWorker,
+    researcherCollaborationService,
     sourceBuildService,
     uploadService,
     catalogService,
@@ -260,7 +279,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { changeRadarWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return {
     config,
     database,
@@ -275,6 +294,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     authorOutreachService,
     changeRadarService,
     changeRadarWorker,
+    researchTopicService,
+    researchTopicWorker,
+    researcherCollaborationService,
     sourceBuildService,
     sourceBuildWorker,
     multiplayerRuleBuildWorker,

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooyu.fun/schemas/research/research-contract-v1.schema.json",
+  "title": "MOOYU Research Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "questions", "methods", "sourcePolicy", "schedule", "budget", "notifications", "reviewPolicy", "retention"],
+  "properties": {
+    "schemaVersion": { "const": "research-contract-v1" },
+    "questions": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "methods": { "type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": { "enum": ["trend-v1", "comparison-v1", "before-after-v1", "triangulation-v1"] } },
+    "sourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowedTypes", "minAuthorityTier", "requirePrimaryForCritical"],
+      "properties": {
+        "allowedTypes": { "type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": { "enum": ["http", "rss", "github", "search", "pdf", "api"] } },
+        "searchPacks": { "type": "array", "maxItems": 4, "uniqueItems": true, "items": { "enum": ["global-core", "europe", "americas", "asia"] } },
+        "minAuthorityTier": { "enum": ["official-primary", "official-implementation", "institutional", "independent-reputable", "community", "unknown"] },
+        "requirePrimaryForCritical": { "type": "boolean" }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cadence", "timezone"],
+      "properties": {
+        "cadence": { "enum": ["manual", "daily", "weekly"] },
+        "timezone": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "localTime": { "type": "string", "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
+        "weekday": { "type": "integer", "minimum": 1, "maximum": 7 }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxSearchQueriesPerRun", "maxDocumentsPerRun", "maxDeepResearchJobsPerRun", "maxBillableRequestsPerMonth", "maxProviderCostUsdMicrosPerMonth"],
+      "properties": {
+        "maxSearchQueriesPerRun": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maxDocumentsPerRun": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "maxDeepResearchJobsPerRun": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "maxBillableRequestsPerMonth": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "maxProviderCostUsdMicrosPerMonth": { "type": "integer", "minimum": 0, "maximum": 9000000000000 }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumImportance"],
+      "properties": { "minimumImportance": { "enum": ["routine", "important", "critical"] } }
+    },
+    "reviewPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxAcceptedAgeDays"],
+      "properties": { "maxAcceptedAgeDays": { "type": "integer", "minimum": 7, "maximum": 3650 } }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceVersionsDays"],
+      "properties": { "sourceVersionsDays": { "type": "integer", "minimum": 30, "maximum": 3650 } }
+    }
+  }
+}

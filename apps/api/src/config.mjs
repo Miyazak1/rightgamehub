@@ -45,6 +45,19 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('GITHUB_CALLBACK_URL must be a valid HTTP URL');
   }
   const githubSourceImportEnabled = boolean(env.GITHUB_SOURCE_IMPORT_ENABLED, false, 'GITHUB_SOURCE_IMPORT_ENABLED');
+  const deepSeekSearchEnabled = boolean(env.DEEPSEEK_SEARCH_ENABLED, false, 'DEEPSEEK_SEARCH_ENABLED');
+  const deepSeekFetchEnabled = boolean(env.DEEPSEEK_FETCH_ENABLED, false, 'DEEPSEEK_FETCH_ENABLED');
+  const deepSeekApiKey = env.DEEPSEEK_API_KEY?.trim() || null;
+  if ((deepSeekSearchEnabled || deepSeekFetchEnabled) && !deepSeekApiKey) throw new Error('DEEPSEEK_API_KEY is required when DeepSeek search or fetch is enabled');
+  const researcherWorkerEnabled = boolean(env.RESEARCHER_WORKER_ENABLED, false, 'RESEARCHER_WORKER_ENABLED');
+  const researcherWorkerToken = env.RESEARCHER_WORKER_TOKEN?.trim() || null;
+  if (researcherWorkerEnabled && Buffer.byteLength(researcherWorkerToken ?? '', 'utf8') < 32) throw new Error('RESEARCHER_WORKER_TOKEN must contain at least 32 UTF-8 bytes when Researcher worker is enabled');
+  const researcherProvider = env.RESEARCHER_PROVIDER_ID?.trim() || 'deepseek-researcher';
+  const researcherProviderModel = env.RESEARCHER_PROVIDER_MODEL?.trim() || 'deepseek-chat';
+  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researcherProvider)) throw new Error('RESEARCHER_PROVIDER_ID must be a bounded provider identifier');
+  if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researcherProviderModel)) throw new Error('RESEARCHER_PROVIDER_MODEL must be a bounded model identifier');
+  const researcherEstimatedCostUsdMicrosPerJob = integer(env.RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB, 20000, 'RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB', 0, 1000000000);
+  if (researcherWorkerEnabled && researcherEstimatedCostUsdMicrosPerJob < 1) throw new Error('RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB must be greater than zero when Researcher worker is enabled');
   const githubAppId = env.GITHUB_APP_ID?.trim() || null;
   const githubAppPrivateKey = env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, '\n').trim() || null;
   const githubAppWebhookSecret = env.GITHUB_APP_WEBHOOK_SECRET ?? '';
@@ -118,6 +131,32 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     githubClientSecret,
     githubCallbackUrl,
     githubSourceImportEnabled,
+    deepSeekSearchEnabled,
+    deepSeekFetchEnabled,
+    deepSeekApiKey,
+    deepSeekSearchTimeoutMs: integer(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 12000, 'DEEPSEEK_SEARCH_TIMEOUT_MS', 3000, 30000),
+    deepSeekFetchTimeoutMs: integer(env.DEEPSEEK_FETCH_TIMEOUT_MS, 15000, 'DEEPSEEK_FETCH_TIMEOUT_MS', 3000, 30000),
+    deepSeekSearchPriceUsdMicrosPerRequest: integer(env.DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST, 750, 'DEEPSEEK_SEARCH_PRICE_USD_MICROS_PER_REQUEST', 0, 1000000000),
+    deepSeekFetchPriceUsdMicrosPerRequest: integer(env.DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST, 750, 'DEEPSEEK_FETCH_PRICE_USD_MICROS_PER_REQUEST', 0, 1000000000),
+    researcherWorkerEnabled,
+    researcherWorkerToken,
+    researcherProvider,
+    researcherProviderModel,
+    researcherEstimatedCostUsdMicrosPerJob,
+    researcherLeaseSeconds: integer(env.RESEARCHER_LEASE_SECONDS, 120, 'RESEARCHER_LEASE_SECONDS', 30, 600),
+    researchTopicMaxActiveRunsPerAccount: integer(env.RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT, 1, 'RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT', 1, 20),
+    researcherMaxActiveJobsPerAccount: integer(env.RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT, 1, 'RESEARCHER_MAX_ACTIVE_JOBS_PER_ACCOUNT', 1, 10),
+    researchTopicMaxActiveRunsGlobal: integer(env.RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL, 1, 'RESEARCH_TOPIC_MAX_ACTIVE_RUNS_GLOBAL', 1, 100),
+    researcherMaxActiveJobsGlobal: integer(env.RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL, 1, 'RESEARCHER_MAX_ACTIVE_JOBS_GLOBAL', 1, 100),
+    researchMaxBillableRequestsPerAccountMonth: integer(env.RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH, 100, 'RESEARCH_MAX_BILLABLE_REQUESTS_PER_ACCOUNT_MONTH', 0, 1000000),
+    researchMaxProviderCostUsdMicrosPerAccountMonth: integer(env.RESEARCH_MAX_PROVIDER_COST_USD_MICROS_PER_ACCOUNT_MONTH, 1000000, 'RESEARCH_MAX_PROVIDER_COST_USD_MICROS_PER_ACCOUNT_MONTH', 0, 9000000000000),
+    researchMaxBillableRequestsGlobalMonth: integer(env.RESEARCH_MAX_BILLABLE_REQUESTS_GLOBAL_MONTH, 1000, 'RESEARCH_MAX_BILLABLE_REQUESTS_GLOBAL_MONTH', 0, 10000000),
+    researchMaxProviderCostUsdMicrosGlobalMonth: integer(env.RESEARCH_MAX_PROVIDER_COST_USD_MICROS_GLOBAL_MONTH, 10000000, 'RESEARCH_MAX_PROVIDER_COST_USD_MICROS_GLOBAL_MONTH', 0, 90000000000000),
+    researchProviderCircuitFailureThreshold: integer(env.RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD, 3, 'RESEARCH_PROVIDER_CIRCUIT_FAILURE_THRESHOLD', 1, 100),
+    researchProviderCircuitWindowSeconds: integer(env.RESEARCH_PROVIDER_CIRCUIT_WINDOW_SECONDS, 300, 'RESEARCH_PROVIDER_CIRCUIT_WINDOW_SECONDS', 30, 3600),
+    researchProviderCircuitCooldownSeconds: integer(env.RESEARCH_PROVIDER_CIRCUIT_COOLDOWN_SECONDS, 300, 'RESEARCH_PROVIDER_CIRCUIT_COOLDOWN_SECONDS', 30, 3600),
+    researchProviderCircuitProbeSeconds: integer(env.RESEARCH_PROVIDER_CIRCUIT_PROBE_SECONDS, 120, 'RESEARCH_PROVIDER_CIRCUIT_PROBE_SECONDS', 30, 600),
+    researchActionRecoveryGraceSeconds: integer(env.RESEARCH_ACTION_RECOVERY_GRACE_SECONDS, 120, 'RESEARCH_ACTION_RECOVERY_GRACE_SECONDS', 30, 3600),
     githubAppId,
     githubAppPrivateKey,
     githubAppWebhookSecret: githubAppWebhookSecret || null,

@@ -26,6 +26,8 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [墨鱼变更雷达：自主长期研究系统设计](./change-radar-autonomous-research-design.zh-CN.md) | **将变更雷达升级为服务端长期运行的专题研究系统：自主发现、证据版本、事件指标、结论账本、Researcher 异步边界、统计比较、Agent 接口、预算安全与 R0—R5 验收路线** |
+| [墨鱼变更雷达：数据库备份与恢复演练](./change-radar-recovery-runbook.zh-CN.md) | **研究账本备份、仅限本机测试库的空库恢复工具、指纹与不变量校验、生产恢复顺序及 RPO/RTO 证据边界** |
 | [79 结构化课件模块运行时与可控热插拔契约](./79-modular-courseware-runtime.zh-CN.md) | **统一 Runtime Kernel、八类可选模块、能力依赖、状态所有权、生命周期、热插拔等级、固定 Release 边界与当前实现证据** |
 | [78 互动科学、数学课件与虚拟实验产品调研](./78-interactive-learning-products-benchmark.zh-CN.md) | **中国与海外近 20 个平台对标、自由实验/场景玩法/作者工具/嵌入协议矩阵，以及墨鱼工坊三科运行时与 B0—B4 路线调整** |
 | [77 好奇心驱动的情境化互动课件架构](./77-curiosity-driven-scenario-courseware-architecture.zh-CN.md) | **科学引擎与场景体验分离、F2/F3 建构式自由实验、科学状态驱动的挑战玩法、兴趣假设、试玩门禁和三科路线** |

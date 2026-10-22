@@ -43,10 +43,14 @@ import { registerPublicSeoRoutes, serializeJsonLd, workStructuredData } from './
 import { growthContentSlides, renderWorkXhsSlide } from './growth-content-renderer.mjs';
 import { AuthorOutreachError } from './author-outreach-service.mjs';
 import { registerAuthorOutreachRoutes } from './author-outreach-routes.mjs';
-import { registerGameHubMcpRoutes } from './gamehub-mcp-server.mjs';
+import { registerGameHubMcpRoutes, registerGameHubMcpWidgetRoutes } from './gamehub-mcp-server.mjs';
+import { registerChangeRadarMcpRoutes } from './change-radar-mcp-server.mjs';
 import { describeGameHubMcpWidget } from './gamehub-mcp-widget.mjs';
 import { ChangeRadarError } from './change-radar-service.mjs';
 import { registerChangeRadarRoutes } from './change-radar-routes.mjs';
+import { ResearchTopicError } from './research-topic-service.mjs';
+import { registerResearchTopicRoutes } from './research-topic-routes.mjs';
+import { registerResearcherCollaborationRoutes } from './researcher-collaboration-routes.mjs';
 import { publicLocaleQuerySchema, resolvePublicLocale } from './public-locale.mjs';
 import { enums } from '@gamehub/contracts';
 
@@ -123,6 +127,9 @@ export function createApp(dependencies) {
     projectClaimService,
     authorOutreachService,
     changeRadarService,
+    researchTopicService,
+    researchTopicWorker,
+    researcherCollaborationService,
     storageCapacityService,
     realtimeTicketService,
     gameSessionService,
@@ -168,7 +175,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof ResearchTopicError || error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -179,9 +186,11 @@ export function createApp(dependencies) {
   app.get('/ready', async (_request, reply) => {
     try {
       const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
-      if (!databaseOk || !migration.ready || !realtimeOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk }));
+      const researchScheduler=researchTopicWorker?.status?.()??null;
+      const researchSchedulerOk=researchScheduler?.healthy??true;
+      if (!databaseOk || !migration.ready || !realtimeOk || !researchSchedulerOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk, researchScheduler }));
       const mcpUi = describeGameHubMcpWidget(config.gameShareSiteOrigin || 'https://mooyu.fun');
-      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null, mcpUi, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
+      return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, researchScheduler, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null, mcpUi, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
     } catch {
       return reply.status(503).send(envelope({ status: 'not-ready', database: false }));
     }
@@ -276,6 +285,8 @@ export function createApp(dependencies) {
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (authorOutreachService) registerAuthorOutreachRoutes(app,{service:authorOutreachService,requireAuth});
   if (changeRadarService) registerChangeRadarRoutes(app,{service:changeRadarService,requireAuth});
+  if (researchTopicService) registerResearchTopicRoutes(app,{service:researchTopicService,requireAuth});
+  if (researcherCollaborationService) registerResearcherCollaborationRoutes(app,{service:researcherCollaborationService,requireAuth,workerToken:config.researcherWorkerEnabled?config.researcherWorkerToken:null});
   if (communityService) registerCommunityRoutes(app,{service:communityService,media:communityMediaService,requireAuth});
   if (config.cloudSaveEnabled === true && saveOperationsService) registerSaveOperationsRoutes(app,{service:saveOperationsService,requireAuth});
   if (config.cloudSaveEnabled === true && saveLibraryService) registerSaveLibraryRoutes(app, { service: saveLibraryService, requireAuth });
@@ -477,8 +488,10 @@ export function createApp(dependencies) {
       return envelope(await guessBaikeService.daily());
     });
   }
+  registerGameHubMcpWidgetRoutes(app, { siteOrigin });
+  registerChangeRadarMcpRoutes(app, { siteOrigin });
   if (catalogService) {
-    registerGameHubMcpRoutes(app, { catalogService, siteOrigin });
+    registerGameHubMcpRoutes(app, { catalogService, siteOrigin }, { registerWidget: false });
     app.get('/w/:workId', {
       schema: {
         params: { type: 'object', additionalProperties: false, required: ['workId'], properties: { workId: workKeySchema } },

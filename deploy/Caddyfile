@@ -25,6 +25,10 @@
     reverse_proxy api:3090
   }
 
+  handle /mcp/change-radar {
+    reverse_proxy api:3090
+  }
+
   handle /mcp-widget/* {
     reverse_proxy api:3090
   }

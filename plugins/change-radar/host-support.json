@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "feature": "change-radar",
+  "updatedAt": "2026-10-22",
+  "service": {
+    "kind": "hosted",
+    "mcpEndpoint": "https://mooyu.fun/mcp/change-radar",
+    "keepsRunningWhenAgentCloses": true
+  },
+  "permissions": [
+    "open-hosted-change-radar",
+    "read-user-approved-radar-context",
+    "prepare-public-page-monitoring-task"
+  ],
+  "hosts": {
+    "codex": {
+      "status": "implemented",
+      "interface": "mcp-app-sidebar",
+      "privateTopicAccess": "authenticated-hosted-ui"
+    },
+    "claude": {
+      "status": "implemented-unverified",
+      "interface": "mcp-app-or-browser-fallback",
+      "privateTopicAccess": "authenticated-hosted-ui"
+    },
+    "vscode": {
+      "status": "planned",
+      "interface": "mcp-client"
+    },
+    "cursor": {
+      "status": "planned",
+      "interface": "mcp-client"
+    }
+  }
+}

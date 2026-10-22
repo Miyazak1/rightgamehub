@@ -1,0 +1,19 @@
+{
+  "name": "change-radar",
+  "displayName": "Change Radar / 变更雷达",
+  "version": "0.1.0",
+  "description": "Long-running, evidence-linked public-information monitoring from Claude Code.",
+  "author": {
+    "name": "MOOYU.FUN",
+    "url": "https://mooyu.fun"
+  },
+  "homepage": "https://mooyu.fun/tools/change-radar",
+  "license": "UNLICENSED",
+  "keywords": [
+    "research",
+    "monitoring",
+    "news",
+    "change-radar"
+  ],
+  "defaultEnabled": true
+}
