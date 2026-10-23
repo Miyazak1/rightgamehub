@@ -88,6 +88,7 @@ import {createAgentAccountService} from './agent-account-service.mjs';
 import {createAgentSecretVault} from './agent-secret-vault.mjs';
 import {createDeepSeekAgentBlogWriter} from './agent-blog-writer.mjs';
 import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from './agent-blog-automation.mjs';
+import {PostgresAgentBlogFollowUpRepository,createAgentBlogFollowUpService} from './agent-blog-follow-up.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
@@ -215,7 +216,10 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   });
   const blogService = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
   const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
-  const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:createAgentSecretVault({masterKey:config.agentSecretEncryptionKey}),writer:createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs}),pollMs:config.agentBlogPollSeconds*1000});
+  const agentSecretVault=createAgentSecretVault({masterKey:config.agentSecretEncryptionKey});
+  const agentBlogWriter=createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs});
+  const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter,pollMs:config.agentBlogPollSeconds*1000});
+  const agentBlogFollowUpService=createAgentBlogFollowUpService({repository:new PostgresAgentBlogFollowUpRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter});
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -284,6 +288,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     blogService,
     agentAccountService,
     agentBlogAutomation,
+    agentBlogFollowUpService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),

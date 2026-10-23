@@ -44,7 +44,7 @@ const cursorProperty = { type: 'string', maxLength: 800 };
 const publicListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, cursor: cursorProperty, locale: { type: 'string', enum: ['zh-CN', 'en'] }, q: { type: 'string', maxLength: 100 }, author: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' } } };
 const manageListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: cursorProperty } };
 
-export function registerBlogRoutes(app, { service, requireAuth, siteOrigin = 'https://mooyu.fun' }) {
+export function registerBlogRoutes(app, { service, followUpService = null, requireAuth, siteOrigin = 'https://mooyu.fun' }) {
   const envelope = data => ({ data });
 
   app.get('/v1/blog/articles', { schema: { querystring: publicListQuery } }, async (request, reply) => {
@@ -56,6 +56,23 @@ export function registerBlogRoutes(app, { service, requireAuth, siteOrigin = 'ht
     reply.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     reply.header('ETag', `"blog-${article.contentHash}"`);
     return envelope(article);
+  });
+  if (followUpService) app.post('/v1/blog/articles/:slug/questions', {
+    preHandler: requireAuth,
+    schema: {
+      params: slugParams,
+      body: {
+        type: 'object', additionalProperties: false, required: ['question'],
+        properties: {
+          question: { type: 'string', minLength: 2, maxLength: 500 },
+          parentQuestionId: { anyOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }] },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const result = await followUpService.ask(request.actor, request.params.slug, request.body, request.headers['idempotency-key']);
+    reply.status(201).header('Cache-Control', 'no-store');
+    return envelope(result);
   });
   app.get('/blog/:slug', { schema: { params: slugParams } }, async (request, reply) => {
     const article = await service.getPublic(request.params.slug);

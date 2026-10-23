@@ -25,7 +25,8 @@ test('blog routes keep public reads cacheable and mutations authenticated with c
     importResearchDraft: async (viewer, body, key) => (calls.push(['import', viewer, body, key]), { article, etag: `"article-${articleId}-1"` }),
   };
   const app = Fastify({ ajv: { customOptions: { removeAdditional: false } } });
-  registerBlogRoutes(app, { service, requireAuth: async request => {
+  const followUpService={ask:async(viewer,slug,body,key)=>(calls.push(['ask',viewer,slug,body,key]),{id:crypto.randomUUID(),question:body.question,answer:'依据本文回答。',citationIds:[],status:'completed'})};
+  registerBlogRoutes(app, { service, followUpService, requireAuth: async request => {
     if (!request.headers.authorization) return request.server.httpErrors?.unauthorized?.() ?? Promise.reject(Object.assign(new Error('unauthorized'), { statusCode: 401 }));
     request.actor = actor;
   } });
@@ -43,6 +44,12 @@ test('blog routes keep public reads cacheable and mutations authenticated with c
   assert.equal(published.headers.etag, `"article-${articleId}-3"`);
   assert.deepEqual(calls.at(-1).slice(0, 2), ['publish', actor]);
   assert.equal(calls.at(-1)[4], `"article-${articleId}-2"`);
+  const deniedQuestion=await app.inject({method:'POST',url:'/v1/blog/articles/platform-architecture/questions',payload:{question:'请解释本文结论'}});
+  assert.equal(deniedQuestion.statusCode,401);
+  const asked=await app.inject({method:'POST',url:'/v1/blog/articles/platform-architecture/questions',headers:{authorization:'Bearer valid','idempotency-key':'question-request-0001'},payload:{question:'请解释本文结论',parentQuestionId:null}});
+  assert.equal(asked.statusCode,201);assert.equal(asked.headers['cache-control'],'no-store');assert.equal(calls.at(-1)[0],'ask');assert.equal(calls.at(-1)[4],'question-request-0001');
+  const injected=await app.inject({method:'POST',url:'/v1/blog/articles/platform-architecture/questions',headers:{authorization:'Bearer valid','idempotency-key':'question-request-0002'},payload:{question:'请解释本文结论',agentUserId:crypto.randomUUID()}});
+  assert.equal(injected.statusCode,400);
 });
 
 test('published blog route renders escaped standalone HTML with structured metadata', async t => {
@@ -79,4 +86,6 @@ test('blog API client sends article ETags and idempotency keys for explicit publ
   assert.equal(requests[0].init.headers['If-Match'], `"article-${articleId}-3"`);
   assert.match(requests[0].init.headers['Idempotency-Key'], /\S/u);
   assert.equal(requests[0].init.headers.Authorization, 'Bearer admin-token');
+  await client.askBlogQuestion('platform-architecture',{question:'请解释本文结论',parentQuestionId:null},{headers:{'Idempotency-Key':'stable-question-key'}});
+  assert.equal(requests[1].init.headers['Idempotency-Key'],'stable-question-key');assert.equal(requests[1].init.headers.Authorization,'Bearer admin-token');
 });
