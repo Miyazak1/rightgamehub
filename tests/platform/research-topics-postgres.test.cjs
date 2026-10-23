@@ -17,6 +17,16 @@ const contract={
   retention:{sourceVersionsDays:365},
 };
 
+async function bindLocalResearcher(service,userId,label='postgres local node'){
+  const enrollment=await service.createLocalNode({userId},{label}),node=await service.authenticateLocalNode(`Bearer ${enrollment.enrollmentToken}`);
+  service.claimNext=async(_legacyWorkerId,body)=>service.claimNextLocal(node,body);
+  service.heartbeat=async(jobId,body)=>service.heartbeatLocal(node,jobId,body);
+  service.markSent=async(jobId,body)=>service.markSentLocal(node,jobId,body);
+  service.complete=async(jobId,body)=>service.completeLocal(node,jobId,body);
+  service.fail=async(jobId,body)=>service.failLocal(node,jobId,body);
+  return node;
+}
+
 test('research PostgreSQL archive is isolated, idempotent, leased and evidence-backed',{skip:!databaseUrl,timeout:240000},async t=>{
   const {createCommunityTestDatabase}=require('../community-database.cjs');
   const [{applyMigrations},{PostgresResearchTopicRepository,createResearchTopicService},{PostgresResearcherCollaborationRepository,createResearcherCollaborationService}]=await Promise.all([
@@ -455,6 +465,7 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await assert.rejects(service.linkEventEntity({userId:otherUserId},topic.id,events[0].id,githubEntity.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
   const collaborationRepository=new PostgresResearcherCollaborationRepository(pool);
   const collaboration=createResearcherCollaborationService({repository:collaborationRepository,workerEnabled:true,validateSourceUrl:async value=>new URL(value)});
+  const collaborationNode=await bindLocalResearcher(collaboration,userId);
   const completeResearcher=collaboration.complete.bind(collaboration),sentResearcherJobs=new Set();
   collaboration.complete=async(jobId,body)=>{if(!sentResearcherJobs.has(jobId)){await collaboration.markSent(jobId,{attemptId:body.attemptId});sentResearcherJobs.add(jobId);}return completeResearcher(jobId,{...body,providerReceipt:{model:'deepseek-chat',promptTokens:100,completionTokens:50,totalTokens:150,finishReason:'stop'}});};
   const gaps=await collaboration.listGaps({userId},topic.id);
@@ -463,14 +474,10 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   const researcherJob=await collaboration.queueJob({userId},topic.id,gaps[0].id);
   const leasedJob=await collaboration.claimNext('postgres-researcher',{leaseSeconds:120});
   assert.equal(leasedJob.id,researcherJob.id);
-  assert.equal((await collaborationRepository.getWorkerHealth('postgres-researcher',{provider:'deepseek-researcher',model:'deepseek-chat',staleAfterSeconds:240})).status,'online');
-  assert.equal((await collaborationRepository.getWorkerHealth('postgres-researcher',{provider:'deepseek-researcher',model:'wrong-model',staleAfterSeconds:240})).status,'misconfigured');
   assert.equal((await collaboration.capabilities({userId},topic.id)).workerRuntime.status,'online');
-  await pool.query(`UPDATE tool_researcher_worker_presence SET last_seen_at=now()-interval '10 minutes' WHERE worker_id='postgres-researcher'`);
-  assert.equal((await collaborationRepository.getWorkerHealth('postgres-researcher',{provider:'deepseek-researcher',model:'deepseek-chat',staleAfterSeconds:240})).status,'stale');
+  await pool.query(`UPDATE tool_research_local_nodes SET last_seen_at=now()-interval '10 minutes' WHERE id=$1`,[collaborationNode.id]);
   assert.equal((await collaboration.capabilities({userId},topic.id)).workerRuntime.status,'stale');
   await collaboration.heartbeat(leasedJob.id,{attemptId:leasedJob.attemptId,leaseSeconds:120});
-  assert.equal((await collaborationRepository.getWorkerHealth('postgres-researcher',{provider:'deepseek-researcher',model:'deepseek-chat',staleAfterSeconds:240})).status,'online');
   assert.equal((await collaboration.capabilities({userId},topic.id)).workerRuntime.status,'online');
   assert.equal(leasedJob.request.gap.gapId,gaps[0].id);
   assert.ok(leasedJob.request.evidence.length>0);
@@ -512,6 +519,7 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await service.update({userId},topic.id,{status:'active'});
   const researcherCircuitRepository=new PostgresResearcherCollaborationRepository(pool,{provider:'researcher-circuit-test',providerModel:'deepseek-chat',estimatedCostUsdMicrosPerJob:0,monthlyBudget:{accountBillableRequests:1000,accountCostUsdMicros:100000000,globalBillableRequests:10000,globalCostUsdMicros:1000000000},providerCircuit:{failureThreshold:1,windowSeconds:300,cooldownSeconds:300,probeSeconds:120}});
   const circuitCollaboration=createResearcherCollaborationService({repository:researcherCircuitRepository,workerEnabled:true,validateSourceUrl:async value=>new URL(value)});
+  await bindLocalResearcher(circuitCollaboration,userId,'postgres circuit node');
   const circuitGap=await circuitCollaboration.createGap({userId},topic.id,{question:'供应商熔断验收是否阻止后续模型调用？',reason:'验证跨实例共享的 Researcher 供应商故障保护。',priority:'important'});
   const circuitJob=await circuitCollaboration.queueJob({userId},topic.id,circuitGap.id),circuitLease=await circuitCollaboration.claimNext('postgres-circuit-researcher',{leaseSeconds:120});
   assert.equal(circuitLease.id,circuitJob.id);
@@ -806,19 +814,22 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await pool.query(`UPDATE tool_research_gaps SET status='queued',updated_at=now() WHERE id=ANY($1::uuid[])`,[[fairUserGap.id,fairUserGapTwo.id,fairOtherGap.id]]);
   await pool.query(`INSERT INTO tool_researcher_jobs(id,topic_id,gap_id,contract_version,request_json,request_sha256,queued_at) VALUES($1,$2,$3,$4,$12,$13,$5::timestamptz),($6,$7,$8,$4,$12,$13,$9::timestamptz),($10,$11,$14,$4,$12,$13,$15::timestamptz)`,[fairUserJob.id,topic.id,fairUserGap.id,topic.currentContractVersion,'2026-10-21T00:00:00.000Z',fairUserJobTwo.id,secondTopic.id,fairUserGapTwo.id,'2026-10-21T00:00:30.000Z',fairOtherJob.id,fairOtherTopic.id,fairRequest,fairRequestHash,fairOtherGap.id,'2026-10-21T00:01:00.000Z']);
   const globalJobClaims=await Promise.all([collaboration.claimNext('postgres-fair-researcher-1',{leaseSeconds:120}),collaboration.claimNext('postgres-fair-researcher-1b',{leaseSeconds:120})]),globalLeasedJobs=globalJobClaims.filter(Boolean);
-  assert.equal(globalLeasedJobs.length,1,'the Researcher global advisory lock must enforce the deployment cap');
+  assert.equal(globalLeasedJobs.length,1,'the local-node account lock must enforce the configured per-account cap');
   const fairJobLeaseOne=globalLeasedJobs[0];
-  assert.equal(fairJobLeaseOne.id,fairOtherJob.id,'Researcher claims should prefer the least recently served account');
+  assert.equal(fairJobLeaseOne.id,fairUserJob.id,'a local node must claim only the oldest job owned by its account');
   await collaboration.fail(fairJobLeaseOne.id,{attemptId:fairJobLeaseOne.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成公平队列验收。'});
   const capacityCollaboration=createResearcherCollaborationService({repository:collaborationRepository,workerEnabled:true,maxActiveJobsPerAccount:1,maxActiveJobsGlobal:2});
+  await bindLocalResearcher(capacityCollaboration,userId,'postgres capacity node');
   const simultaneousJobClaims=await Promise.all([capacityCollaboration.claimNext('postgres-fair-researcher-2',{leaseSeconds:120}),capacityCollaboration.claimNext('postgres-fair-researcher-2b',{leaseSeconds:120})]),leasedJobs=simultaneousJobClaims.filter(Boolean);
   assert.equal(leasedJobs.length,1,'Researcher account locking must make the configured cap race-safe');
   const fairJobLeaseTwo=leasedJobs[0];
-  assert.equal(fairJobLeaseTwo.id,fairUserJob.id);
-  await collaboration.fail(fairJobLeaseTwo.id,{attemptId:fairJobLeaseTwo.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成公平队列验收。'});
-  const fairJobLeaseThree=await collaboration.claimNext('postgres-fair-researcher-3',{leaseSeconds:120});
-  assert.equal(fairJobLeaseThree.id,fairUserJobTwo.id);
-  await collaboration.fail(fairJobLeaseThree.id,{attemptId:fairJobLeaseThree.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成并发上限验收。'});
+  assert.equal(fairJobLeaseTwo.id,fairUserJobTwo.id);
+  await capacityCollaboration.fail(fairJobLeaseTwo.id,{attemptId:fairJobLeaseTwo.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成公平队列验收。'});
+  const otherAccountCollaboration=createResearcherCollaborationService({repository:collaborationRepository,maxActiveJobsPerAccount:1});
+  await bindLocalResearcher(otherAccountCollaboration,otherUserId,'postgres other account node');
+  const fairOtherLease=await otherAccountCollaboration.claimNext('ignored',{leaseSeconds:120});
+  assert.equal(fairOtherLease.id,fairOtherJob,'the other account job must remain invisible until that account node claims it');
+  await otherAccountCollaboration.fail(fairOtherLease.id,{attemptId:fairOtherLease.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成账号隔离验收。'});
   await assert.rejects(service.listEvidence({userId:otherUserId},topic.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
   const replay=await repository.observeRun(claimed.id);
   assert.equal(replay.versionsArchived,0);
@@ -857,6 +868,7 @@ test('completed news run automatically queues only its frozen evidence and persi
   await repository.completeRun(run.id,'postgres-auto-analysis-observer',{status:'completed',resultSummary:{schemaVersion:'radar-observation-v1',newsMaterialsArchived:1,evidenceArchived:1}});
   const collaborationRepository=new PostgresResearcherCollaborationRepository(pool,{estimatedCostUsdMicrosPerJob:0,monthlyBudget:{accountBillableRequests:10,accountCostUsdMicros:1000000,globalBillableRequests:10,globalCostUsdMicros:1000000}});
   const collaboration=createResearcherCollaborationService({repository:collaborationRepository,workerEnabled:true});
+  await bindLocalResearcher(collaboration,userId,'postgres automatic analysis node');
   const queued=await collaboration.queueAutomaticRunAnalysis(run.id);
   assert.equal(queued.status,'queued');
   assert.equal((await collaboration.queueAutomaticRunAnalysis(run.id)).status,'already_processed','one observation run must not create duplicate automatic jobs');

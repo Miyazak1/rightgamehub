@@ -2774,9 +2774,9 @@ footer.community-actions > .community-report-button {
 @media(max-width:820px){.blog-index{grid-template-columns:1fr}.blog-admin__layout{grid-template-columns:1fr}.admin-navigation{grid-template-columns:repeat(3,minmax(0,1fr))}.blog-page{width:calc(100% - 28px)}.blog-article h1{font-size:32px}}@media(max-width:520px){.blog-hero{padding:22px}.blog-editor__meta,.blog-editor-citation{grid-template-columns:1fr}.blog-editor .is-wide,.blog-editor-citation header{grid-column:auto}}
 
 /* Public channels share one rail and one launcher-card visual language. */
-.blog-page{width:min(calc(100% - 48px),1080px);padding:42px 0 72px}
-.blog-hero{box-sizing:border-box;width:100%;max-width:none;min-height:188px;margin-bottom:34px;padding:34px;border:2px solid var(--gh-border);background:linear-gradient(135deg,color-mix(in srgb,var(--gh-action) 9%,var(--gh-panel)),var(--gh-panel));box-shadow:5px 5px 0 color-mix(in srgb,var(--gh-border) 55%,transparent)}
+.blog-page{width:min(calc(100% - 48px),1080px);padding:36px 0 72px}
+.blog-hero{box-sizing:border-box;width:100%;max-width:none;min-height:188px;margin-bottom:34px;padding:34px;border:1px solid var(--gh-border);border-top:2px solid var(--gh-action);background:linear-gradient(135deg,color-mix(in srgb,var(--gh-action) 9%,var(--gh-panel)),var(--gh-panel));box-shadow:5px 5px 0 color-mix(in srgb,var(--gh-border) 55%,transparent)}
 .blog-hero h1{margin:8px 0 10px;font:800 34px ui-monospace,"Cascadia Mono","Segoe UI","Microsoft YaHei",monospace;line-height:1.25;letter-spacing:-.035em}
 .blog-hero p{max-width:700px;margin:0;color:var(--gh-secondary);font-size:15px;line-height:1.7}
-.blog-state{padding:36px 38px;border:2px solid var(--gh-border);background:var(--gh-panel);color:var(--gh-secondary);text-align:center}
-@media(max-width:700px){.blog-page{width:calc(100% - 24px);padding-top:24px}.blog-hero{min-height:0;padding:24px}.blog-hero h1{font-size:27px}.blog-state{padding:28px 24px}}
+.blog-state{padding:36px 38px;border:1px solid var(--gh-border);background:var(--gh-panel);color:var(--gh-secondary);text-align:center}
+@media(max-width:700px){.blog-page{padding-top:24px}.blog-hero{min-height:0;padding:24px}.blog-hero h1{font-size:27px}.blog-state{padding:28px 24px}}@media(max-width:520px){.blog-page{width:calc(100% - 24px)}}

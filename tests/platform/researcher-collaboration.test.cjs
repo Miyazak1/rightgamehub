@@ -39,7 +39,7 @@ function repository(){
     revokeLocalNode:async function(_user,nodeId){const node=this.localNodes.find(item=>item.id===nodeId);if(!node)return{status:'missing'};node.status='revoked';return{status:'revoked',node};},
     authenticateLocalNode:async function(tokenHash){const node=this.localNodes.find(item=>item.tokenHash===tokenHash&&item.status==='active');return node?{...node,userId:'user'}:null;},
     touchLocalNode:async function(nodeId){const node=this.localNodes.find(item=>item.id===nodeId&&item.status==='active');if(!node)return null;node.lastSeenAt='2026-10-21T00:01:00.000Z';return node;},
-    assertLocalLease:async()=>true,claimNextLocalNode:async()=>null,
+    assertLocalLease:async()=>true,assertLocalAttempt:async()=>true,claimNextLocalNode:async()=>null,
     cancelQueuedJob:async()=>({status:'cancelled',job:{id:jobId,status:'cancelled',providerCall:{status:'skipped'}}}),
     listJobs:async()=>[],listClaims:async()=>[],listFactRows:async()=>[],claimNext:async()=>null,heartbeat:async()=>null,failJob:async()=>null,getWorkerRuntime:async()=>({status:'online',lastSeenAt:'2026-10-21T00:00:00.000Z',staleAfterSeconds:240}),
     getClaimDetail:async()=>({id:claimId,topicId,status:'accepted',currentRevision:2,revisions:[],reviews:[]}),listClaimReviewSignals:async()=>[{id:attemptId,topicId,claimId,revision:2,type:'stale',severity:'important',reason:'超过复核周期。',claimTitle:'价格发生变化',relatedClaimId:null,relatedClaimTitle:null,detectedAt:'2026-10-21T00:00:00.000Z',resolution:null}],resolveClaimReviewSignal:async function(_user,_signal,input){this.signalResolution=input;return{status:'resolved'};},listMetricSeries:async()=>[],
