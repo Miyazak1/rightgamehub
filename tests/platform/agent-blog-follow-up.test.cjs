@@ -80,5 +80,6 @@ test('browser article follow-up is direct authenticated Q&A, not a clipboard han
   const client=fs.readFileSync(path.join(root,'packages/platform-api-client/src/index.mjs'),'utf8');
   const migration=fs.readFileSync(path.join(root,'apps/api/migrations/0119_agent_blog_follow_up.sql'),'utf8');
   assert.match(page,/api\.askBlogQuestion/);assert.match(page,/仅依据本文正文/);assert.match(page,/访问仓库/);assert.match(page,/GITHUB REPOSITORY/);assert.doesNotMatch(page,/clipboard|复制问题|复制到已添加/u);
+  assert.match(page,/blog-followups__spinner/);assert.match(page,/正在查阅本文与已验证来源/);assert.match(page,/aria-busy=\{busy\}/);
   assert.match(client,/askBlogQuestion/);assert.match(migration,/evidence_snapshot_hash/);assert.match(migration,/status IN \('processing','completed','failed','unknown'\)/);
 });
