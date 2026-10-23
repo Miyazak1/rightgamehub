@@ -9,13 +9,29 @@ test('Agent provider keys are encrypted with authenticated per-agent binding and
  assert.throws(()=>vault.decrypt(b,'deepseek',encrypted),error=>error.code==='AGENT_PROVIDER_KEY_DECRYPT_FAILED');
 });
 
+test('Agent behavior profiles are general, strict, and safe to extend through modules',async()=>{
+ const {defaultAgentBehaviorProfile,normalizeAgentBehaviorProfile}=await import(url('agent-behavior-profile.mjs')),profile=defaultAgentBehaviorProfile(),normalized=normalizeAgentBehaviorProfile(profile);
+ assert.equal(normalized.schemaVersion,'agent-behavior-v1');assert.match(normalized.core.mission,/开放项目/);assert.equal(normalized.modules.editorial.comparisonEnabled,true);assert.ok(normalized.modules.editorial.interestSignals.includes('实现方式有创意'));
+ assert.throws(()=>normalizeAgentBehaviorProfile({...profile,permissions:{publish:true}}),/Invalid Agent behavior profile/);
+ assert.throws(()=>normalizeAgentBehaviorProfile({...profile,modules:{editorial:{...profile.modules.editorial,interestSignals:['重复信号','重复信号']}}}),/Invalid Agent behavior profile size/);
+});
+
 test('Agent writer performs generation and an independent automatic publication review',async()=>{
  const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let calls=0;
  const generated={title:'为什么地图会改变我们理解世界的方式',summary:'地图不只是地点的缩影，也是一套选择信息、组织空间并帮助人们形成共同理解的方法。',blocks:[{type:'heading',level:2,text:'地图从来不是简单复制'},{type:'paragraph',text:'地图会主动选择比例、方向和符号。'.repeat(90),citationIndexes:[1]},{type:'heading',level:2,text:'比例决定看见什么'},{type:'paragraph',text:'当观察尺度改变，重要的信息也会随之改变。'.repeat(70),citationIndexes:[1]},{type:'list',ordered:false,items:['先确认地图服务的目的','再理解符号和比例','最后比较不同地图的取舍'],citationIndexes:[1]},{type:'paragraph',text:'理解这些选择，可以帮助我们更清楚地阅读空间信息，也能提醒我们保持必要的判断。'.repeat(35),citationIndexes:[1]}],followUpQuestions:['地图项目如何选择投影方式？','开源地图工具怎样验证数据来源？','普通用户应当怎样比较两张地图？']};
- const requests=[],fetchImpl=async(url,options)=>{if(String(url).endsWith('/models'))return{ok:true,status:200,json:async()=>({data:[{id:'deepseek-v4-pro',name:'DeepSeek-V4.1-Pro'},{id:'deepseek-flash',name:'DeepSeek-V4.1-Flash-1017',context_window:128000,max_output_tokens:8192}]})};requests.push(JSON.parse(options.body));calls++;const content=calls===1?`\`\`\`json\n${JSON.stringify(generated)}\n\`\`\``:JSON.stringify({approved:true,qualityScore:.91,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]});return{ok:true,status:200,headers:{get:()=>`req-${calls}`},json:async()=>({choices:[{finish_reason:'stop',message:{content}}],usage:{prompt_tokens:10,completion_tokens:20,total_tokens:30}})};};
+ const requests=[],fetchImpl=async(url,options)=>{if(String(url).endsWith('/models'))return{ok:true,status:200,json:async()=>({data:[{id:'deepseek-v4-pro',name:'DeepSeek-V4.1-Pro'},{id:'deepseek-flash',name:'DeepSeek-V4.1-Flash-1017',context_window:128000,max_output_tokens:8192}]})};requests.push(JSON.parse(options.body));calls++;const content=calls===1?JSON.stringify({mode:'single',selectedIndexes:[1],angle:'从普通用户可以理解的地图协作价值切入',rationale:'这个项目资料完整、用途明确，并且能够让普通读者理解开放地图如何通过协作持续改进。',interestSignals:['适合学习和探索'],comparisonAxes:[]}):calls===2?`\`\`\`json\n${JSON.stringify(generated)}\n\`\`\``:JSON.stringify({approved:true,qualityScore:.91,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]});return{ok:true,status:200,headers:{get:()=>`req-${calls}`},json:async()=>({choices:[{finish_reason:'stop',message:{content}}],usage:{prompt_tokens:10,completion_tokens:20,total_tokens:30}})};};
  const researcher=async()=>({sources:[{sourceIndex:1,title:'OpenStreetMap',url:'https://github.com/openstreetmap/openstreetmap-website',repositoryUrl:'https://github.com/openstreetmap/openstreetmap-website',publisher:'openstreetmap/openstreetmap-website',excerpt:'这是从项目 README 中提取并经过服务器验证的原文片段，用于测试自动文章的证据绑定和来源展示。'.repeat(3),locator:'仓库 README',accessedAt:'2026-10-23T00:00:00.000Z',contentHash:'a'.repeat(64)}],usage:{searchQueries:1,documentsFetched:1}});
  const writer=createDeepSeekAgentBlogWriter({fetchImpl,timeoutMs:1000,researcher}),validation=await writer.testKey('sk-valid-key-for-test');assert.deepEqual(validation.models.map(model=>model.id),['deepseek-flash','deepseek-v4-pro']);const result=await writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'人文历史地理科学中的大众知识'});
- assert.equal(result.review.approved,true);assert.equal(result.content.locale,'zh-CN');assert.match(result.content.slug,/^agent-/);assert.equal(result.content.citations[0].repositoryUrl,'https://github.com/openstreetmap/openstreetmap-website');assert.equal(result.content.blocks.at(-2).text,'继续追问');assert.deepEqual(result.providerRequestIds,['req-1','req-2']);assert.ok(requests.every(request=>request.thinking?.type==='disabled'&&request.reasoning_effort==='none'));assert.equal(calls,2);
+ assert.equal(result.review.approved,true);assert.equal(result.selection.mode,'single');assert.deepEqual(result.selection.repositories,['openstreetmap/openstreetmap-website']);assert.equal(result.content.locale,'zh-CN');assert.match(result.content.slug,/^agent-/);assert.equal(result.content.citations[0].repositoryUrl,'https://github.com/openstreetmap/openstreetmap-website');assert.equal(result.content.blocks.at(-2).text,'继续追问');assert.deepEqual(result.providerRequestIds,['req-1','req-2','req-3']);assert.ok(requests.every(request=>request.thinking?.type==='disabled'&&request.reasoning_effort==='none'));assert.equal(calls,3);
+});
+
+test('Agent editorial competition may choose a sourced comparison and must cite every selected repository',async()=>{
+ const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let call=0;
+ const sources=['owner/alpha','owner/beta'].map((publisher,index)=>({sourceIndex:index+1,title:publisher,url:`https://github.com/${publisher}`,repositoryUrl:`https://github.com/${publisher}`,publisher,excerpt:`${publisher} 的公开说明包含安装、使用示例和可以核对的项目能力，足以支持对比文章中的具体判断。`.repeat(3),locator:'仓库 README',accessedAt:'2026-10-23T00:00:00.000Z',contentHash:String(index+1).repeat(64)}));
+ const generated={title:'两个创作工具应该怎样选择',summary:'两个项目面向相近的创作任务，但上手方式和适用对象不同，可以依据公开资料作出有边界的比较。',blocks:[{type:'heading',level:2,text:'为什么值得放在一起比较'},{type:'paragraph',text:'甲项目提供了清楚的使用入口。'.repeat(40),citationIndexes:[1]},{type:'heading',level:2,text:'另一个项目的取舍'},{type:'paragraph',text:'乙项目采用了不同的体验方式。'.repeat(40),citationIndexes:[2]},{type:'list',ordered:false,items:['先确认自己的使用目的','再比较上手方式'],citationIndexes:[1,2]},{type:'paragraph',text:'选择应该依据实际需求和公开说明。'.repeat(40),citationIndexes:[1,2]}],followUpQuestions:['哪个更适合第一次尝试？','两者的上手方式有什么不同？','应该怎样核对项目最新状态？']};
+ const fetchImpl=async()=>{call++;const content=call===1?JSON.stringify({mode:'comparison',selectedIndexes:[1,2],angle:'比较两个同类创作工具的上手路径',rationale:'两个项目解决相近任务，资料都足以支持对上手方式和适用对象进行直接比较。',interestSignals:['可以快速体验'],comparisonAxes:['上手方式','适用对象']}):call===2?JSON.stringify(generated):JSON.stringify({approved:true,qualityScore:.9,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]});return{ok:true,status:200,headers:{get:()=>`compare-${call}`},json:async()=>({choices:[{finish_reason:'stop',message:{content}}],usage:{}})};};
+ const writer=createDeepSeekAgentBlogWriter({fetchImpl,researcher:async()=>({sources,usage:{}})}),result=await writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'有趣的开源创作工具'});
+ assert.equal(result.selection.mode,'comparison');assert.deepEqual(result.selection.repositories,['owner/alpha','owner/beta']);assert.equal(result.content.citations.length,2);assert.ok(result.content.citations.every(citation=>result.content.blocks.some(block=>block.citationIds?.includes(citation.id))));
 });
 
 test('Agent writer fails closed before generation when no GitHub source can be verified',async()=>{
@@ -46,7 +62,10 @@ test('Production secret root is scoped to the API and the admin surface is fully
  const compose=fs.readFileSync(path.join(root,'deploy/compose.prod.yml'),'utf8'),routes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8'),admin=fs.readFileSync(path.join(root,'packages/platform-client/src/AgentAdmin.jsx'),'utf8');
  assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,1);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
+ assert.match(routes,/behavior-profile/);
  assert.match(admin,/不进入人工编辑流程/);
+ assert.match(admin,/人格与行为/);
+ assert.match(admin,/选题编辑人格/);
  assert.match(admin,/每月运行上限/);
  assert.match(admin,/listAdminAgentProviderModels/);
  assert.match(admin,/deepseek-flash/);

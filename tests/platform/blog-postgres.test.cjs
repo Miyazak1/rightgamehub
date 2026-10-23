@@ -22,7 +22,7 @@ test('blog PostgreSQL lifecycle keeps the published revision isolated from edits
   ]);
   const database = await createCommunityTestDatabase(databaseUrl);
   t.after(() => database.close());
-  assert.equal((await applyMigrations(database.pool, path.join(root, 'apps/api/migrations'))).total, 119);
+  assert.equal((await applyMigrations(database.pool, path.join(root, 'apps/api/migrations'))).total, 120);
   await database.pool.query("INSERT INTO users(id,display_name,role,can_publish) VALUES($1,'平台编辑','admin',true)", [actor.userId]);
   const service = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
 
