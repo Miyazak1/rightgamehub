@@ -147,12 +147,15 @@ namespace Mooyu.ChangeRadar {
       ConfigureInput(platform); ConfigureInput(nodeToken); ConfigureInput(apiKey); ConfigureInput(model);
       nodeToken.UseSystemPasswordChar = true; apiKey.UseSystemPasswordChar = true;
       AddField(grid, 0, "平台地址", platform, "只接受 HTTPS/HTTP 的站点根地址");
-      AddField(grid, 1, "节点密钥", nodeToken, "在变更雷达页面创建节点后只显示一次");
+      AddField(grid, 1, "节点密钥", nodeToken, "在雷达控制台创建节点后只显示一次");
       AddField(grid, 2, "DeepSeek API Key", apiKey, "使用你自己的账号，仅加密保存在当前 Windows 用户下");
       AddField(grid, 3, "模型", model, "默认 deepseek-chat");
       CheckBox reveal = new CheckBox { Text = "显示密钥", AutoSize = true, ForeColor = Muted, Padding = new Padding(0, 6, 0, 0) };
       reveal.CheckedChanged += delegate { nodeToken.UseSystemPasswordChar = !reveal.Checked; apiKey.UseSystemPasswordChar = !reveal.Checked; };
-      grid.Controls.Add(reveal, 1, 4); panel.Controls.Add(grid); return panel;
+      Button console = MakeButton("打开雷达控制台", false); console.Click += delegate { OpenConsole(); };
+      FlowLayoutPanel extras = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+      extras.Controls.Add(reveal); extras.Controls.Add(console);
+      grid.Controls.Add(extras, 1, 4); panel.Controls.Add(grid); return panel;
     }
 
     void ConfigureInput(TextBox box) { box.Dock = DockStyle.Top; box.Height = 30; box.BorderStyle = BorderStyle.FixedSingle; box.Font = new Font(Font.FontFamily, 10F); }
@@ -176,6 +179,13 @@ namespace Mooyu.ChangeRadar {
     }
 
     NodeConfig SaveConfig(bool notify) { NodeConfig value = ReadConfig(); LocalConfigStore.Save(value); if (notify) Append("配置已用 Windows 当前用户密钥加密保存。"); return value; }
+    void OpenConsole() {
+      try {
+        Uri origin; string url = platform.Text.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(url, UriKind.Absolute, out origin) || (origin.Scheme != "https" && origin.Scheme != "http")) throw new InvalidOperationException("请先填写有效的平台地址。");
+        Process.Start(new ProcessStartInfo(origin.GetLeftPart(UriPartial.Authority) + "/apps/change-radar") { UseShellExecute = true });
+      } catch (Exception error) { Append("无法打开控制台：" + error.Message); }
+    }
     ProcessStartInfo CreateStartInfo(NodeConfig value, bool health) {
       EmbeddedRuntime.Ensure();
       ProcessStartInfo info = new ProcessStartInfo(EmbeddedRuntime.NodePath, "\"" + EmbeddedRuntime.WorkerPath + "\"" + (health ? " --health" : ""));

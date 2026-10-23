@@ -424,7 +424,8 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
       if (from) query.set('from', from);
       if (to) query.set('to', to);
     }
-    const path = query.size ? `${changeRadarTool.route}?${query}` : changeRadarTool.route;
+    const radarAppRoute = '/apps/change-radar';
+    const path = query.size ? `${radarAppRoute}?${query}` : radarAppRoute;
     const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
     return {
       content: [{ type: 'text', text: watchedUrl ? 'The monitoring task is prepared. Ask the user to review and confirm it in the MOOYU.FUN sidebar.' : analysisType ? 'The authenticated MOOYU.FUN sidebar is opening the requested research topic and running the bounded read-only analysis. Use only the evidence-linked result returned by the sidebar; missing values are unknown, not zero, and the analysis does not prove causation.' : topicId ? 'The authenticated MOOYU.FUN sidebar is opening the requested research topic. Private topic data is resolved in the sidebar and is not read by this public MCP endpoint.' : 'The authenticated MOOYU.FUN sidebar is opening Change Radar. The public MCP endpoint does not read private topics; bounded topic summaries are supplied only by the signed-in sidebar.' }],

@@ -433,7 +433,7 @@ interface NewsSourceAdapter {
 
 完成定义：
 
-- 新账号直接打开 `/tools/change-radar` 无控制台异常；
+- 新账号直接打开独立控制台 `/apps/change-radar` 无控制台异常；旧地址 `/tools/change-radar` 仅负责兼容跳转；
 - 不输入网址也能创建新闻观察专题；
 - 本地、测试和生产构建均通过同一冒烟流程；
 - 评测脚本可在零外部提供商下复现固定结果。

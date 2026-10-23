@@ -82,12 +82,12 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.equal(radarTool.annotations.readOnlyHint, true);
   assert.equal(radarTool.annotations.destructiveHint, false);
   const radarDirectory = await client.callTool({ name: 'open_change_radar', arguments: {} });
-  assert.equal(radarDirectory.structuredContent.view.path, '/tools/change-radar');
+  assert.equal(radarDirectory.structuredContent.view.path, '/apps/change-radar');
   assert.match(radarDirectory.content[0].text, /signed-in sidebar/iu);
   const radar = await client.callTool({ name: 'open_change_radar', arguments: { url: 'https://example.com/pricing', title: 'Pricing', condition: 'Price drops', intervalMinutes: 60 } });
-  assert.match(radar.structuredContent.view.path, /^\/tools\/change-radar\?/u);
+  assert.match(radar.structuredContent.view.path, /^\/apps\/change-radar\?/u);
   assert.match(radar.structuredContent.view.path, /condition=Price\+drops/u);
-  assert.match(radar.structuredContent.view.url, /gh_route=%2Ftools%2Fchange-radar/u);
+  assert.match(radar.structuredContent.view.url, /gh_route=%2Fapps%2Fchange-radar/u);
   const radarAnalysis = await client.callTool({ name: 'open_change_radar', arguments: { topicId: '00000000-0000-4000-8000-000000000001', analysisType: 'metric-trend', metricKey: 'plan.price', methodVersion: 'direct-observation-v1', dimensionKey: 'plan', dimensionValue: 'pro', trendInterval: 'month' } });
   assert.match(radarAnalysis.structuredContent.view.path, /topicId=00000000-0000-4000-8000-000000000001/u);
   assert.match(radarAnalysis.structuredContent.view.path, /analysis=metric-trend/u);

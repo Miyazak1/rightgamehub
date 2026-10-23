@@ -15,6 +15,8 @@ test('Change Radar native node keeps secrets local and launches a fixed embedded
   assert.match(source, /UseShellExecute = false/);
   assert.match(source, /CreateNoWindow = true/);
   assert.match(source, /EmbeddedRuntime\.WorkerPath/);
+  assert.match(source, /\/apps\/change-radar/);
+  assert.match(source, /UseShellExecute = true/);
   assert.doesNotMatch(source, /ProcessStartInfo\([^,]+,\s*(nodeToken|apiKey)/);
   assert.match(manifest, /requestedExecutionLevel level="asInvoker"/);
 });

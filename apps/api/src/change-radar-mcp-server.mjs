@@ -78,7 +78,7 @@ function buildRadarView(origin,args){
     if(from)query.set('from',from);
     if(to)query.set('to',to);
   }
-  const path=query.size?`/tools/change-radar?${query}`:'/tools/change-radar';
+  const path=query.size?`/apps/change-radar?${query}`:'/apps/change-radar';
   const url=new URL('/mcp-app',origin);url.searchParams.set('gh_route',path);url.searchParams.set('gh_host','mcp-app');
   return{
     content:[{type:'text',text:watchedUrl?'The monitoring task is prepared. Ask the user to review and confirm it in the Change Radar sidebar.':analysisType?'The authenticated Change Radar sidebar is opening the requested topic and running a bounded read-only analysis. Use only evidence-linked results; missing values are unknown, not zero, and the analysis does not prove causation.':topicId?'The authenticated Change Radar sidebar is opening the requested private topic.':'The authenticated Change Radar sidebar is opening. Private research data is resolved only after the user signs in.'}],

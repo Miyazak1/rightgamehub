@@ -6,13 +6,15 @@ export const TOOL_DOCUMENT_SCHEMA_VERSION=1;
 const toolLoaders=Object.freeze({
   'knowledge-map':()=>import('./KnowledgeMapTool.jsx'),
   'pdf-reader':()=>import('./PdfReaderTool.jsx'),
-  'change-radar':()=>import('./ChangeRadarTool.jsx'),
   'privacy-redactor':()=>import('./PrivacyRedactorTool.jsx'),
   'document-compare':()=>import('./DocumentCompareTool.jsx'),
   'spreadsheet-audit':()=>import('./SpreadsheetAuditTool.jsx'),
 });
 
-export const officialTools=Object.freeze(officialToolCapabilities.map(capability=>Object.freeze({
+// Change Radar is a standalone installable application. Its Agent capability
+// remains in the shared registry, but it must not appear in the browser Tools
+// catalog or inherit the official-tool document host.
+export const officialTools=Object.freeze(officialToolCapabilities.filter(capability=>capability.toolId!=='change-radar').map(capability=>Object.freeze({
   ...toOfficialToolClientMetadata(capability),
   load:toolLoaders[capability.toolId],
 })));

@@ -27,7 +27,7 @@ test('standalone Change Radar MCP exposes only its bounded sidebar tool', async 
   assert.match(tool.description, /user reviews and confirms/iu);
 
   const directory = await client.callTool({ name: 'open_change_radar', arguments: {} });
-  assert.equal(directory.structuredContent.view.path, '/tools/change-radar');
+  assert.equal(directory.structuredContent.view.path, '/apps/change-radar');
   assert.match(directory.content[0].text, /signs in/iu);
 
   const preparedWatch = await client.callTool({
@@ -39,7 +39,7 @@ test('standalone Change Radar MCP exposes only its bounded sidebar tool', async 
       intervalMinutes: 60,
     },
   });
-  assert.match(preparedWatch.structuredContent.view.path, /^\/tools\/change-radar\?/u);
+  assert.match(preparedWatch.structuredContent.view.path, /^\/apps\/change-radar\?/u);
   assert.match(preparedWatch.structuredContent.view.path, /condition=Enterprise\+price\+changes/u);
   assert.match(preparedWatch.content[0].text, /review and confirm/iu);
 
@@ -125,7 +125,7 @@ test('standalone Change Radar endpoint works without a game catalog', async t =>
   const tools = await client.listTools();
   assert.deepEqual(tools.tools.map(item => item.name), ['open_change_radar']);
   const opened = await client.callTool({ name: 'open_change_radar', arguments: {} });
-  assert.equal(opened.structuredContent.view.path, '/tools/change-radar');
+  assert.equal(opened.structuredContent.view.path, '/apps/change-radar');
 
   const resource = await client.readResource({ uri: tools.tools[0]._meta.ui.resourceUri });
   const scriptUrl = resource.contents[0].text.match(/<script type="module" src="([^"]+)"><\/script>/u)?.[1];

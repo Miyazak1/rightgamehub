@@ -25,6 +25,7 @@ import CommunityParticipation from './CommunityParticipation.jsx';
 import DiscoverPage from './DiscoverPage.jsx';
 import LearningPage from './LearningPage.jsx';
 import {OfficialToolHost,ToolsPage} from './ToolsPage.jsx';
+import ChangeRadarAppPage from './ChangeRadarAppPage.jsx';
 import WorkLeaderboard from './WorkLeaderboard.jsx';
 import CompetitionDeveloperCenter from './CompetitionDeveloperCenter.jsx';
 import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
@@ -83,8 +84,16 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', blog: 'blog', learn: 'learning', tools: 'tools', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
+  return ({ discover: 'discover', blog: 'blog', learn: 'learning', tools: 'tools', apps: 'work', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
+function LegacyChangeRadarRedirect({go}){
+  useEffect(()=>{
+    const search=String(globalThis.location?.search||''),outer=new URLSearchParams(search.replace(/^\?/u,'')),embedded=outer.get('gh_route')||'',queryAt=embedded.indexOf('?');
+    const preserved=queryAt>=0?`?${embedded.slice(queryAt+1)}`:outer.has('gh_route')?'':search;
+    go(`/apps/change-radar${preserved}`);
+  },[go]);
+  return null;
+}
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
   const identity = analyticsIdentity();
@@ -1952,6 +1961,8 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art}/>;
+  else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;
+  else if (route === '/tools/change-radar') content = <LegacyChangeRadarRedirect go={go}/>;
   else if (route === '/tools') content = <ToolsPage go={go}/>;
   else if (parts[0] === 'tools' && parts[1]) content = <OfficialToolHost toolId={parts[1]} go={go} api={api} accountProfile={accountProfile}/>;
   else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
