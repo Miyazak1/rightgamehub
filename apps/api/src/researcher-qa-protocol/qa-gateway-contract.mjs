@@ -2,23 +2,23 @@ import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
 import {stableJson,stableHash,STABLE_JSON_VERSION} from './stable-json.mjs';
 import {parseWholeJson} from './model-json.mjs';
 import {reliableUsage} from './usage-receipt.mjs';
-                                                             
+
 
 // Pure protocol only: no HTTP, disk, authorization policy, execution or money ledger.
 export const QA_GATEWAY_VERSION='mooyu-research-qa-v1'         ;
 export const QA_GATEWAY_MAX_QUESTION_TOKENS=80000;
 export const QA_GATEWAY_DOMAIN='mooyu-research-qa-v1.';
 export const QA_GATEWAY_ROUTES=Object.freeze({submit:'/internal/research-qa/v1/submit',inspect:'/internal/research-qa/v1/inspect',recover:'/internal/research-qa/v1/recover',accepted:'/internal/research-qa/v1/accepted',usage:'/internal/research-qa/v1/usage'}         );
-                                                         
-                                                                                                                                                                     
-                                                                                                                                                                                                                                                     
-                                                                                  
-                                                                                                                                                                                                                                                                                                                                                           
-                                                                               
-                                                                                                                                                              
-                                                                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                        
-                                                                                                                     
+
+
+
+
+
+
+
+
+
+
 function fail(code='QA_GATEWAY_CONTRACT')      {throw Error(code);}
 function exact(v    ,keys         ){if(!v||Array.isArray(v)||typeof v!=='object'||Object.keys(v).sort().join(',')!==[...keys].sort().join(','))fail();}
 function text(v    ,max=160){if(typeof v!=='string'||!v.trim()||v!==v.trim()||v.length>max||/[\x00-\x1f\x7f]/.test(v)||Buffer.from(v,'utf8').toString('utf8')!==v)fail();}
