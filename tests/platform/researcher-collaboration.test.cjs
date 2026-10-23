@@ -20,7 +20,7 @@ function repository(){
   const gap={id:gapId,topicId,question:'竞争对手的定价是否变化？',reason:'现有证据只有发布说明。',priority:'important',status:'open',origin:'user'};
   const contract={questions:['竞争对手的定价是否变化？'],budget:{maxSearchQueriesPerRun:3,maxDocumentsPerRun:10,maxDeepResearchJobsPerRun:1}};
   return{
-    queued:null,applied:null,benchmarkCases:[],
+    provider:'deepseek-researcher',providerModel:'deepseek-chat',queued:null,applied:null,benchmarkCases:[],
     topicContext:async()=>({id:topicId,current_contract_version:2,contract_json:contract}),
     ensureContractGaps:async()=>true,
     listGaps:async()=>[gap],
@@ -32,6 +32,14 @@ function repository(){
     createMethodTemplate:async function(_user,_topic,input){this.methodTemplate=input;return{...input,topicId,status:'active'};},retireMethodTemplate:async()=>({status:'retired',method:{id:attemptId,status:'retired'}}),
     metricDefinitions:async()=>[],getMetricDefinition:async()=>null,
     queueJob:async function(_user,_topic,_gap,input){this.queued=input;return{status:'queued',job:{id:input.id,status:'queued'}};},
+    localNodes:[{id:attemptId,label:'test node',provider:'deepseek-researcher',model:'deepseek-chat',status:'active',firstSeenAt:null,lastSeenAt:null,createdAt:'2026-10-21T00:00:00.000Z',updatedAt:'2026-10-21T00:00:00.000Z'}],
+    hasActiveLocalNode:async function(){return this.localNodes.some(item=>item.status==='active');},
+    listLocalNodes:async function(){return this.localNodes;},
+    createLocalNode:async function(_user,input){const node={id:input.id,label:input.label,provider:input.provider,model:input.model,status:'active',firstSeenAt:null,lastSeenAt:null,createdAt:'2026-10-21T00:00:00.000Z',updatedAt:'2026-10-21T00:00:00.000Z',tokenHash:input.tokenHash};this.localNodes.unshift(node);return node;},
+    revokeLocalNode:async function(_user,nodeId){const node=this.localNodes.find(item=>item.id===nodeId);if(!node)return{status:'missing'};node.status='revoked';return{status:'revoked',node};},
+    authenticateLocalNode:async function(tokenHash){const node=this.localNodes.find(item=>item.tokenHash===tokenHash&&item.status==='active');return node?{...node,userId:'user'}:null;},
+    touchLocalNode:async function(nodeId){const node=this.localNodes.find(item=>item.id===nodeId&&item.status==='active');if(!node)return null;node.lastSeenAt='2026-10-21T00:01:00.000Z';return node;},
+    assertLocalLease:async()=>true,claimNextLocalNode:async()=>null,
     cancelQueuedJob:async()=>({status:'cancelled',job:{id:jobId,status:'cancelled',providerCall:{status:'skipped'}}}),
     listJobs:async()=>[],listClaims:async()=>[],listFactRows:async()=>[],claimNext:async()=>null,heartbeat:async()=>null,failJob:async()=>null,getWorkerRuntime:async()=>({status:'online',lastSeenAt:'2026-10-21T00:00:00.000Z',staleAfterSeconds:240}),
     getClaimDetail:async()=>({id:claimId,topicId,status:'accepted',currentRevision:2,revisions:[],reviews:[]}),listClaimReviewSignals:async()=>[{id:attemptId,topicId,claimId,revision:2,type:'stale',severity:'important',reason:'超过复核周期。',claimTitle:'价格发生变化',relatedClaimId:null,relatedClaimTitle:null,detectedAt:'2026-10-21T00:00:00.000Z',resolution:null}],resolveClaimReviewSignal:async function(_user,_signal,input){this.signalResolution=input;return{status:'resolved'};},listMetricSeries:async()=>[],
@@ -44,22 +52,36 @@ function repository(){
 
 test('Researcher remains fail-closed until a compatible worker is configured',async()=>{
   const {createResearcherCollaborationService}=await import(moduleUrl('researcher-collaboration-service.mjs'));
-  const repo=repository();repo.accountCapacity=async()=>({queued:3,active:1});
+  const repo=repository();repo.localNodes=[];repo.accountCapacity=async()=>({queued:3,active:1});
   const service=createResearcherCollaborationService({repository:repo,ids:()=>jobId,maxActiveJobsPerAccount:2});
   const capabilities=await service.capabilities({userId:'user'},topicId);
   assert.equal(capabilities.workerAvailable,false);
   assert.deepEqual(capabilities.workerRuntime,{configured:false,status:'disabled',lastSeenAt:null,staleAfterSeconds:240});
   assert.deepEqual(capabilities.queueCapacity,{scope:'account',queued:3,active:1,maxActive:2,availableSlots:1});
-  await assert.rejects(()=>service.queueJob({userId:'user'},topicId,gapId),error=>error.code==='RESEARCHER_NOT_CONFIGURED'&&error.statusCode===409);
+  await assert.rejects(()=>service.queueJob({userId:'user'},topicId,gapId),error=>error.code==='RESEARCHER_LOCAL_NODE_REQUIRED'&&error.statusCode===409);
 });
 
-test('Researcher capability distinguishes worker configuration from recent runtime presence',async()=>{
+test('Researcher capability distinguishes local-node enrollment from recent runtime presence',async()=>{
   const {createResearcherCollaborationService}=await import(moduleUrl('researcher-collaboration-service.mjs'));
-  const repo=repository();repo.accountCapacity=async()=>({queued:0,active:0});repo.getWorkerRuntime=async()=>({status:'stale',lastSeenAt:'2026-10-20T23:50:00.000Z',staleAfterSeconds:240});
-  const capabilities=await createResearcherCollaborationService({repository:repo,workerEnabled:true}).capabilities({userId:'user'},topicId);
+  const repo=repository();repo.accountCapacity=async()=>({queued:0,active:0});repo.localNodes[0].lastSeenAt='2020-10-20T23:50:00.000Z';
+  const capabilities=await createResearcherCollaborationService({repository:repo}).capabilities({userId:'user'},topicId);
   assert.equal(capabilities.workerAvailable,true);
-  assert.deepEqual(capabilities.workerRuntime,{configured:true,status:'stale',lastSeenAt:'2026-10-20T23:50:00.000Z',staleAfterSeconds:240});
-  assert.match(capabilities.disclaimer,/最近心跳已过期/u);
+  assert.deepEqual(capabilities.workerRuntime,{configured:true,status:'stale',lastSeenAt:'2020-10-20T23:50:00.000Z',staleAfterSeconds:240});
+  assert.match(capabilities.disclaimer,/本地节点已离线/u);
+});
+
+test('Local Researcher node reveals its secret once and authenticates by digest',async()=>{
+  const {createResearcherCollaborationService}=await import(moduleUrl('researcher-collaboration-service.mjs'));
+  const repo=repository();repo.localNodes=[];
+  const service=createResearcherCollaborationService({repository:repo,ids:()=>jobId});
+  const created=await service.createLocalNode({userId:'user'},{label:'study PC'});
+  assert.match(created.enrollmentToken,/^mrn_[A-Za-z0-9_-]{40,}$/u);
+  assert.equal(repo.localNodes[0].tokenHash,crypto.createHash('sha256').update(created.enrollmentToken).digest('hex'));
+  const authenticated=await service.authenticateLocalNode(`Bearer ${created.enrollmentToken}`);
+  assert.equal(authenticated.userId,'user');
+  assert.equal((await service.localNodeHealth(authenticated)).status,'online');
+  await service.revokeLocalNode({userId:'user'},created.id);
+  await assert.rejects(()=>service.authenticateLocalNode(`Bearer ${created.enrollmentToken}`),error=>error.code==='RESEARCHER_LOCAL_NODE_AUTH_REQUIRED');
 });
 
 test('Researcher instance health is read-only, provider-bound and does not refresh presence',async()=>{
@@ -554,4 +576,25 @@ test('Researcher worker health endpoint is authenticated and returns a failing s
   assert.equal(stale.statusCode,503);
   assert.equal(stale.json().data.status,'stale');
   assert.equal(checks,1);
+});
+
+test('Local Researcher node routes separate account enrollment from node-token execution',async t=>{
+  const {createApp}=await import(moduleUrl('app.mjs'));let claimedNode=null;
+  const node={id:attemptId,userId:'user',label:'study PC',provider:'deepseek-researcher',model:'deepseek-chat',status:'active'};
+  const service={
+    listLocalNodes:async()=>[node],createLocalNode:async(_actor,body)=>({...node,label:body.label,enrollmentToken:`mrn_${'n'.repeat(43)}`}),revokeLocalNode:async()=>({...node,status:'revoked'}),
+    authenticateLocalNode:async authorization=>{if(authorization!==`Bearer mrn_${'n'.repeat(43)}`){const error=new Error('node auth required');error.statusCode=401;throw error;}return node;},
+    localNodeHealth:async value=>({healthy:true,status:'online',node:value}),claimNextLocal:async value=>{claimedNode=value;return null;},
+    heartbeatLocal:async()=>({status:'leased'}),markSentLocal:async()=>({status:'leased'}),completeLocal:async()=>({status:'completed'}),failLocal:async()=>({status:'failed'}),
+  };
+  const app=createApp({config:{requestBodyLimit:65536,researcherWorkerEnabled:false},database:{ping:async()=>true},migrations:{status:async()=>({ready:true})},authService:{authenticateBearer:async()=>({userId:'user'})},researcherCollaborationService:service});
+  t.after(()=>app.close());
+  const created=await app.inject({method:'POST',url:'/v1/me/researcher-nodes',headers:{authorization:'Bearer user-session'},payload:{label:'study PC'}});
+  assert.equal(created.statusCode,201);
+  assert.match(created.json().data.enrollmentToken,/^mrn_/u);
+  assert.equal((await app.inject({method:'POST',url:'/v1/researcher-node/health'})).statusCode,401);
+  const headers={authorization:`Bearer mrn_${'n'.repeat(43)}`};
+  assert.equal((await app.inject({method:'POST',url:'/v1/researcher-node/health',headers,payload:{}})).statusCode,200);
+  assert.equal((await app.inject({method:'POST',url:'/v1/researcher-node/jobs/claim',headers,payload:{leaseSeconds:90}})).statusCode,204);
+  assert.equal(claimedNode.userId,'user');
 });

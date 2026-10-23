@@ -38,6 +38,21 @@ test('Researcher worker config separates model credentials and rejects an unsafe
   assert.throws(()=>loadResearcherWorkerConfig({RESEARCHER_PLATFORM_URL:'http://api:3090',RESEARCHER_WORKER_TOKEN:'w'.repeat(32),RESEARCHER_DEEPSEEK_API_KEY:'key',RESEARCHER_WORKER_LEASE_SECONDS:'60',RESEARCHER_WORKER_HEARTBEAT_SECONDS:'60'}),/must be lower/u);
 });
 
+test('Local Researcher node prefers its scoped token and uses local-node routes',async()=>{
+  const {loadResearcherWorkerConfig,checkResearcherWorkerHealth,createResearcherWorker}=await import(workerUrl),calls=[];
+  const config=loadResearcherWorkerConfig({RESEARCHER_PLATFORM_URL:'https://mooyu.fun',RESEARCHER_NODE_TOKEN:`mrn_${'n'.repeat(43)}`,RESEARCHER_WORKER_TOKEN:'w'.repeat(32),RESEARCHER_DEEPSEEK_API_KEY:'local-only-key'});
+  assert.equal(config.localMode,true);
+  assert.match(config.workerToken,/^mrn_/u);
+  await checkResearcherWorkerHealth(config,{fetchImpl:async(url,options)=>{calls.push({url,options});return response(200,{data:{healthy:true,status:'online',lastSeenAt:'2026-10-21T00:00:00.000Z'}});}});
+  assert.match(calls[0].url,/\/v1\/researcher-node\/health$/u);
+  assert.deepEqual(JSON.parse(calls[0].options.body),{});
+  const workerCalls=[],worker=createResearcherWorker({config,fetchImpl:async(url,options)=>{workerCalls.push({url,options});return response(204,null);},provider:{analyze:async()=>{throw new Error('must not run');}}});
+  assert.equal(await worker.runOnce(),null);
+  assert.match(workerCalls[0].url,/\/v1\/researcher-node\/jobs\/claim$/u);
+  assert.doesNotMatch(workerCalls[0].url,/\/internal\//u);
+  assert.deepEqual(JSON.parse(workerCalls[0].options.body),{leaseSeconds:300});
+});
+
 test('Researcher worker health probe is read-only, instance-specific and fails closed',async()=>{
   const {checkResearcherWorkerHealth}=await import(workerUrl),calls=[];
   const config={platformUrl:'http://api:3090',platformTimeoutMs:15000,workerToken:'w'.repeat(32),workerId:'researcher-worker-1',providerId:'deepseek-researcher',model:'deepseek-chat',heartbeatSeconds:60};

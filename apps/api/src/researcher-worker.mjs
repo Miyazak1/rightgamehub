@@ -26,8 +26,8 @@ const sleep=(milliseconds,signal)=>new Promise(resolve=>{const timer=setTimeout(
 export function loadResearcherWorkerConfig(env=process.env){
   const platformUrl=new URL(env.RESEARCHER_PLATFORM_URL?.trim()||'http://127.0.0.1:3090');
   if(!['http:','https:'].includes(platformUrl.protocol)||platformUrl.username||platformUrl.password||platformUrl.pathname!=='/'||platformUrl.search||platformUrl.hash)throw new Error('RESEARCHER_PLATFORM_URL must be an HTTP origin without credentials, path, query or fragment');
-  const workerToken=env.RESEARCHER_WORKER_TOKEN?.trim()||'';
-  if(Buffer.byteLength(workerToken,'utf8')<32)throw new Error('RESEARCHER_WORKER_TOKEN must contain at least 32 UTF-8 bytes');
+  const nodeToken=env.RESEARCHER_NODE_TOKEN?.trim()||'',workerToken=env.RESEARCHER_WORKER_TOKEN?.trim()||'',localMode=Boolean(nodeToken),platformToken=localMode?nodeToken:workerToken;
+  if(Buffer.byteLength(platformToken,'utf8')<32)throw new Error('RESEARCHER_NODE_TOKEN must contain the one-time local node token (legacy server workers may use RESEARCHER_WORKER_TOKEN)');
   const apiKey=env.RESEARCHER_DEEPSEEK_API_KEY?.trim()||'';
   if(!apiKey)throw new Error('RESEARCHER_DEEPSEEK_API_KEY is required');
   const leaseSeconds=integer(env.RESEARCHER_WORKER_LEASE_SECONDS,300,'RESEARCHER_WORKER_LEASE_SECONDS',60,600),heartbeatSeconds=integer(env.RESEARCHER_WORKER_HEARTBEAT_SECONDS,60,'RESEARCHER_WORKER_HEARTBEAT_SECONDS',10,240);
@@ -36,7 +36,8 @@ export function loadResearcherWorkerConfig(env=process.env){
   const providerId=clean(env.RESEARCHER_PROVIDER_ID||'deepseek-researcher',80);if(!/^[a-z0-9][a-z0-9._-]{0,79}$/iu.test(providerId))throw new Error('RESEARCHER_PROVIDER_ID must be a bounded provider identifier');
   return Object.freeze({
     platformUrl:platformUrl.origin,
-    workerToken,
+    workerToken:platformToken,
+    localMode,
     apiKey,
     providerId,
     model,
@@ -167,7 +168,7 @@ export async function checkResearcherWorkerHealth(config,{fetchImpl=globalThis.f
   if(!config||typeof fetchImpl!=='function')throw new Error('Researcher worker health config and fetch implementation are required');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(10000,Math.max(1000,Number(config.platformTimeoutMs)||10000))),staleAfterSeconds=Math.min(600,Math.max(60,Number(config.heartbeatSeconds||60)*3));
   let response;
-  try{response=await fetchImpl(`${config.platformUrl}/v1/internal/researcher/workers/health`,{method:'POST',signal:controller.signal,headers:{authorization:`Bearer ${config.workerToken}`,'content-type':'application/json'},body:JSON.stringify({workerId:config.workerId,provider:config.providerId,model:config.model,staleAfterSeconds})});}
+  try{response=await fetchImpl(`${config.platformUrl}${config.localMode?'/v1/researcher-node/health':'/v1/internal/researcher/workers/health'}`,{method:'POST',signal:controller.signal,headers:{authorization:`Bearer ${config.workerToken}`,'content-type':'application/json'},body:JSON.stringify(config.localMode?{}:{workerId:config.workerId,provider:config.providerId,model:config.model,staleAfterSeconds})});}
   catch(error){workerError(error?.name==='AbortError'||controller.signal.aborted?'RESEARCHER_WORKER_HEALTH_TIMEOUT':'RESEARCHER_WORKER_HEALTH_UNAVAILABLE',error?.name==='AbortError'||controller.signal.aborted?'Worker 健康检查请求超时。':'无法连接 Worker 健康检查接口。',{retryable:true,statusCode:error?.name==='AbortError'||controller.signal.aborted?504:502});}
   finally{clearTimeout(timer);}
   const payload=await parseJson(response,'RESEARCHER_WORKER_HEALTH_INVALID'),health=payload?.data;
@@ -177,6 +178,7 @@ export async function checkResearcherWorkerHealth(config,{fetchImpl=globalThis.f
 
 export function createResearcherWorker({config,fetchImpl=globalThis.fetch,provider=createDeepSeekResearcher({apiKey:config.apiKey,model:config.model,fetchImpl,timeoutMs:config.providerTimeoutMs,maxTokens:config.maxTokens}),now=()=>new Date()}={}){
   if(!config)throw new Error('Researcher worker config is required');
+  const route=path=>config.localMode?`/v1/researcher-node${path}`:`/v1/internal/researcher${path}`;
   const platform=async(path,{method='GET',body,allowEmpty=false}={})=>{
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.platformTimeoutMs??15000);
     let response;try{response=await fetchImpl(`${config.platformUrl}${path}`,{method,signal:controller.signal,headers:{authorization:`Bearer ${config.workerToken}`,...(body===undefined?{}:{'content-type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body)});}catch(error){workerError(error?.name==='AbortError'?'RESEARCHER_PLATFORM_TIMEOUT':'RESEARCHER_PLATFORM_UNAVAILABLE',error?.name==='AbortError'?'研究平台响应超时。':'无法连接研究平台。',{retryable:true,statusCode:error?.name==='AbortError'?504:502});}finally{clearTimeout(timer);}
@@ -184,25 +186,25 @@ export function createResearcherWorker({config,fetchImpl=globalThis.fetch,provid
     if(!response.ok){let detail='';try{const payload=await response.json();detail=clean(payload?.error?.message??payload?.message,300);}catch{}workerError(`RESEARCHER_PLATFORM_HTTP_${response.status}`,detail||`研究平台返回 HTTP ${response.status}。`,{retryable:response.status>=500,statusCode:response.status});}
     const payload=await parseJson(response,'RESEARCHER_PLATFORM_RESPONSE_INVALID');return payload?.data;
   };
-  const failJob=async(job,error)=>{try{await platform(`/v1/internal/researcher/jobs/${job.id}/fail`,{method:'POST',body:{attemptId:job.attemptId,code:clean(error?.code||'RESEARCHER_WORKER_FAILED',120),message:clean(error?.message||'Researcher 未完成任务。',500),retryable:Boolean(error?.retryable)}});}catch(failError){if(failError.code!=='RESEARCHER_PLATFORM_HTTP_409')throw failError;}};
+  const failJob=async(job,error)=>{try{await platform(route(`/jobs/${job.id}/fail`),{method:'POST',body:{attemptId:job.attemptId,code:clean(error?.code||'RESEARCHER_WORKER_FAILED',120),message:clean(error?.message||'Researcher 未完成任务。',500),retryable:Boolean(error?.retryable)}});}catch(failError){if(failError.code!=='RESEARCHER_PLATFORM_HTTP_409')throw failError;}};
   const processJob=async job=>{
     const controller=new AbortController();let stopped=false,leaseError=null;
-    const heartbeat=async()=>{while(!stopped){await sleep(config.heartbeatSeconds*1000,controller.signal);if(stopped||controller.signal.aborted)return;try{await platform(`/v1/internal/researcher/jobs/${job.id}/heartbeat`,{method:'POST',body:{attemptId:job.attemptId,leaseSeconds:config.leaseSeconds}});}catch(error){leaseError=error;controller.abort(error);return;}}};
+    const heartbeat=async()=>{while(!stopped){await sleep(config.heartbeatSeconds*1000,controller.signal);if(stopped||controller.signal.aborted)return;try{await platform(route(`/jobs/${job.id}/heartbeat`),{method:'POST',body:{attemptId:job.attemptId,leaseSeconds:config.leaseSeconds}});}catch(error){leaseError=error;controller.abort(error);return;}}};
     const heartbeatPromise=heartbeat();
     try{
       buildResearcherMessages(job.request);
       if(job.providerCall?.provider!==config.providerId||job.providerCall?.model!==config.model||job.providerCall?.status!=='reserved')workerError('RESEARCHER_PROVIDER_RESERVATION_INVALID','任务的模型供应商、模型或预算预约与 Worker 配置不一致。',{statusCode:409});
-      await platform(`/v1/internal/researcher/jobs/${job.id}/sent`,{method:'POST',body:{attemptId:job.attemptId}});
+      await platform(route(`/jobs/${job.id}/sent`),{method:'POST',body:{attemptId:job.attemptId}});
       const analyzed=await provider.analyze(job.request,{signal:controller.signal});if(leaseError)throw leaseError;
       const result=materializeResearchResult(job.request,analyzed.output,{now});
-      await platform(`/v1/internal/researcher/jobs/${job.id}/complete`,{method:'POST',body:{attemptId:job.attemptId,result,providerReceipt:analyzed.receipt}});
+      await platform(route(`/jobs/${job.id}/complete`),{method:'POST',body:{attemptId:job.attemptId,result,providerReceipt:analyzed.receipt}});
       return{status:'completed',jobId:job.id,result};
     }
     catch(error){await failJob(job,error);return{status:'failed',jobId:job.id,error};}
     finally{stopped=true;controller.abort();await heartbeatPromise;}
   };
   return{
-    async runOnce(){const job=await platform('/v1/internal/researcher/jobs/claim',{method:'POST',body:{workerId:config.workerId,leaseSeconds:config.leaseSeconds},allowEmpty:true});return job?processJob(job):null;},
+    async runOnce(){const job=await platform(route('/jobs/claim'),{method:'POST',body:config.localMode?{leaseSeconds:config.leaseSeconds}:{workerId:config.workerId,leaseSeconds:config.leaseSeconds},allowEmpty:true});return job?processJob(job):null;},
     processJob,
   };
 }
