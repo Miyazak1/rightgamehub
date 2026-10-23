@@ -1,0 +1,262 @@
+{
+  "version": "mooyu-research-qa-control-v1",
+  "fixtureOnly": true,
+  "baseFixtureSha256": "b202a305ee620580739042dcc6f5dc867aec17888cb3b787fc83437de84544e1",
+  "vectors": [
+    {
+      "action": "authorize",
+      "path": "/internal/research-qa/control/v1/authorize",
+      "direction": "researcher-to-platform",
+      "keyHex": "4141414141414141414141414141414141414141414141414141414141414141",
+      "kid": "control-fixture-researcher",
+      "issuer": "researcher-test",
+      "audience": "mooyu-platform-test",
+      "requestId": "88888888-8888-4888-8888-000000000002",
+      "body": {
+        "scope": {
+          "binding": {
+            "questionId": "22222222-2222-4222-8222-222222222222",
+            "reservationId": "33333333-3333-4333-8333-333333333333",
+            "subject": "11111111-1111-4111-8111-111111111111",
+            "idempotencyKey": "offline-question-key-1",
+            "article": {
+              "platformArticleId": "55555555-5555-4555-8555-555555555555",
+              "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+              "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+              "researcherArticleId": "offline-article-tiny-map",
+              "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+            "tokenLimit": 80000,
+            "agentAccountId": "77777777-7777-4777-8777-777777777777",
+            "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+            "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+          },
+          "originGrantId": "88888888-8888-4888-8888-000000000001",
+          "accessEpoch": 1,
+          "submissionRequestId": "44444444-4444-4444-8444-444444444444",
+          "submissionDigest": "c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff"
+        },
+        "link": {
+          "binding": {
+            "questionId": "22222222-2222-4222-8222-222222222222",
+            "reservationId": "33333333-3333-4333-8333-333333333333",
+            "subject": "11111111-1111-4111-8111-111111111111",
+            "idempotencyKey": "offline-question-key-1",
+            "article": {
+              "platformArticleId": "55555555-5555-4555-8555-555555555555",
+              "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+              "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+              "researcherArticleId": "offline-article-tiny-map",
+              "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+            "tokenLimit": 80000,
+            "agentAccountId": "77777777-7777-4777-8777-777777777777",
+            "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+            "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+          },
+          "taskId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "requestId": "44444444-4444-4444-8444-444444444444"
+        },
+        "kind": "model",
+        "actionDigest": "48d1b4e6e76bfa991fc87f0cefabfafcc7d74953fee4032ba25e0842098dbf97",
+        "callIndex": 0
+      },
+      "canonicalBody": "{\"actionDigest\":\"48d1b4e6e76bfa991fc87f0cefabfafcc7d74953fee4032ba25e0842098dbf97\",\"callIndex\":0,\"kind\":\"model\",\"link\":{\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"requestId\":\"44444444-4444-4444-8444-444444444444\",\"taskId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"scope\":{\"accessEpoch\":1,\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"originGrantId\":\"88888888-8888-4888-8888-000000000001\",\"submissionDigest\":\"c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff\",\"submissionRequestId\":\"44444444-4444-4444-8444-444444444444\"}}",
+      "requestDigest": "a9b3240966686256db7ec8531b048bf5a61abe6aee83f36867471d6033de7fec",
+      "canonicalClaims": "{\"action\":\"authorize\",\"alg\":\"HS256\",\"aud\":\"mooyu-platform-test\",\"contractVersion\":\"mooyu-research-qa-control-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"researcher-test\",\"kid\":\"control-fixture-researcher\",\"method\":\"POST\",\"path\":\"/internal/research-qa/control/v1/authorize\",\"requestDigest\":\"a9b3240966686256db7ec8531b048bf5a61abe6aee83f36867471d6033de7fec\",\"requestId\":\"88888888-8888-4888-8888-000000000002\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+      "token": "eyJhY3Rpb24iOiJhdXRob3JpemUiLCJhbGciOiJIUzI1NiIsImF1ZCI6Im1vb3l1LXBsYXRmb3JtLXRlc3QiLCJjb250cmFjdFZlcnNpb24iOiJtb295dS1yZXNlYXJjaC1xYS1jb250cm9sLXYxIiwiZXhwIjoxMDYwLCJpYXQiOjEwMDAsImlzcyI6InJlc2VhcmNoZXItdGVzdCIsImtpZCI6ImNvbnRyb2wtZml4dHVyZS1yZXNlYXJjaGVyIiwibWV0aG9kIjoiUE9TVCIsInBhdGgiOiIvaW50ZXJuYWwvcmVzZWFyY2gtcWEvY29udHJvbC92MS9hdXRob3JpemUiLCJyZXF1ZXN0RGlnZXN0IjoiYTliMzI0MDk2NjY4NjI1NmRiN2VjODUzMWIwNDhiZjVhNjFhYmU2YWVlODNmMzY4Njc0NzFkNjAzM2RlN2ZlYyIsInJlcXVlc3RJZCI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTAwMDAwMDAwMDAwMiIsInNlcmlhbGl6ZXIiOiJzdGFibGUtanNvbi12MSIsInN1YiI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9.y5L_E3pUkAqnG350HFecRSiPKgwUhOUUe7wq4gcb4ds"
+    },
+    {
+      "action": "permit",
+      "path": "/internal/research-qa/control/v1/permit",
+      "direction": "platform-to-researcher",
+      "keyHex": "4040404040404040404040404040404040404040404040404040404040404040",
+      "kid": "control-fixture-platform",
+      "issuer": "mooyu-platform-test",
+      "audience": "researcher-test",
+      "requestId": "88888888-8888-4888-8888-000000000005",
+      "body": {
+        "request": {
+          "scope": {
+            "binding": {
+              "questionId": "22222222-2222-4222-8222-222222222222",
+              "reservationId": "33333333-3333-4333-8333-333333333333",
+              "subject": "11111111-1111-4111-8111-111111111111",
+              "idempotencyKey": "offline-question-key-1",
+              "article": {
+                "platformArticleId": "55555555-5555-4555-8555-555555555555",
+                "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+                "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+                "researcherArticleId": "offline-article-tiny-map",
+                "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+              "tokenLimit": 80000,
+              "agentAccountId": "77777777-7777-4777-8777-777777777777",
+              "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+              "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+            },
+            "originGrantId": "88888888-8888-4888-8888-000000000001",
+            "accessEpoch": 1,
+            "submissionRequestId": "44444444-4444-4444-8444-444444444444",
+            "submissionDigest": "c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff"
+          },
+          "link": {
+            "binding": {
+              "questionId": "22222222-2222-4222-8222-222222222222",
+              "reservationId": "33333333-3333-4333-8333-333333333333",
+              "subject": "11111111-1111-4111-8111-111111111111",
+              "idempotencyKey": "offline-question-key-1",
+              "article": {
+                "platformArticleId": "55555555-5555-4555-8555-555555555555",
+                "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+                "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+                "researcherArticleId": "offline-article-tiny-map",
+                "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+              "tokenLimit": 80000,
+              "agentAccountId": "77777777-7777-4777-8777-777777777777",
+              "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+              "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+            },
+            "taskId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "requestId": "44444444-4444-4444-8444-444444444444"
+          },
+          "kind": "model",
+          "actionDigest": "48d1b4e6e76bfa991fc87f0cefabfafcc7d74953fee4032ba25e0842098dbf97",
+          "callIndex": 0
+        },
+        "inReplyTo": "88888888-8888-4888-8888-000000000002",
+        "decision": "allow",
+        "permitId": "88888888-8888-4888-8888-000000000003",
+        "expiresAt": 1030,
+        "tokenLimit": 1000
+      },
+      "canonicalBody": "{\"decision\":\"allow\",\"expiresAt\":1030,\"inReplyTo\":\"88888888-8888-4888-8888-000000000002\",\"permitId\":\"88888888-8888-4888-8888-000000000003\",\"request\":{\"actionDigest\":\"48d1b4e6e76bfa991fc87f0cefabfafcc7d74953fee4032ba25e0842098dbf97\",\"callIndex\":0,\"kind\":\"model\",\"link\":{\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"requestId\":\"44444444-4444-4444-8444-444444444444\",\"taskId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"scope\":{\"accessEpoch\":1,\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"originGrantId\":\"88888888-8888-4888-8888-000000000001\",\"submissionDigest\":\"c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff\",\"submissionRequestId\":\"44444444-4444-4444-8444-444444444444\"}},\"tokenLimit\":1000}",
+      "requestDigest": "b06c7cc8441ce15a5143700a244e15a64bd955b0fd1bdbb4a457b5e17403a9d6",
+      "canonicalClaims": "{\"action\":\"permit\",\"alg\":\"HS256\",\"aud\":\"researcher-test\",\"contractVersion\":\"mooyu-research-qa-control-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"mooyu-platform-test\",\"kid\":\"control-fixture-platform\",\"method\":\"POST\",\"path\":\"/internal/research-qa/control/v1/permit\",\"requestDigest\":\"b06c7cc8441ce15a5143700a244e15a64bd955b0fd1bdbb4a457b5e17403a9d6\",\"requestId\":\"88888888-8888-4888-8888-000000000005\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+      "token": "eyJhY3Rpb24iOiJwZXJtaXQiLCJhbGciOiJIUzI1NiIsImF1ZCI6InJlc2VhcmNoZXItdGVzdCIsImNvbnRyYWN0VmVyc2lvbiI6Im1vb3l1LXJlc2VhcmNoLXFhLWNvbnRyb2wtdjEiLCJleHAiOjEwNjAsImlhdCI6MTAwMCwiaXNzIjoibW9veXUtcGxhdGZvcm0tdGVzdCIsImtpZCI6ImNvbnRyb2wtZml4dHVyZS1wbGF0Zm9ybSIsIm1ldGhvZCI6IlBPU1QiLCJwYXRoIjoiL2ludGVybmFsL3Jlc2VhcmNoLXFhL2NvbnRyb2wvdjEvcGVybWl0IiwicmVxdWVzdERpZ2VzdCI6ImIwNmM3Y2M4NDQxY2UxNWE1MTQzNzAwYTI0NGUxNWE2NGJkOTU1YjBmZDFiZGJiNGE0NTdiNWUxNzQwM2E5ZDYiLCJyZXF1ZXN0SWQiOiI4ODg4ODg4OC04ODg4LTQ4ODgtODg4OC0wMDAwMDAwMDAwMDUiLCJzZXJpYWxpemVyIjoic3RhYmxlLWpzb24tdjEiLCJzdWIiOiIxMTExMTExMS0xMTExLTQxMTEtODExMS0xMTExMTExMTExMTEifQ.qDnZ4ymTWprgLyzm9LdLwwiRQpPdMDgBvX-ObmEVCkQ"
+    },
+    {
+      "action": "inspect",
+      "path": "/internal/research-qa/control/v1/inspect",
+      "direction": "platform-to-researcher",
+      "keyHex": "4040404040404040404040404040404040404040404040404040404040404040",
+      "kid": "control-fixture-platform",
+      "issuer": "mooyu-platform-test",
+      "audience": "researcher-test",
+      "requestId": "88888888-8888-4888-8888-000000000004",
+      "body": {
+        "scope": {
+          "binding": {
+            "questionId": "22222222-2222-4222-8222-222222222222",
+            "reservationId": "33333333-3333-4333-8333-333333333333",
+            "subject": "11111111-1111-4111-8111-111111111111",
+            "idempotencyKey": "offline-question-key-1",
+            "article": {
+              "platformArticleId": "55555555-5555-4555-8555-555555555555",
+              "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+              "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+              "researcherArticleId": "offline-article-tiny-map",
+              "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+            "tokenLimit": 80000,
+            "agentAccountId": "77777777-7777-4777-8777-777777777777",
+            "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+            "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+          },
+          "originGrantId": "88888888-8888-4888-8888-000000000001",
+          "accessEpoch": 1,
+          "submissionRequestId": "44444444-4444-4444-8444-444444444444",
+          "submissionDigest": "c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff"
+        },
+        "link": null
+      },
+      "canonicalBody": "{\"link\":null,\"scope\":{\"accessEpoch\":1,\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"originGrantId\":\"88888888-8888-4888-8888-000000000001\",\"submissionDigest\":\"c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff\",\"submissionRequestId\":\"44444444-4444-4444-8444-444444444444\"}}",
+      "requestDigest": "4cd56596fffe97fce3fdd7c40f7b96751de75a82d42011314959bb581d1e788b",
+      "canonicalClaims": "{\"action\":\"inspect\",\"alg\":\"HS256\",\"aud\":\"researcher-test\",\"contractVersion\":\"mooyu-research-qa-control-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"mooyu-platform-test\",\"kid\":\"control-fixture-platform\",\"method\":\"POST\",\"path\":\"/internal/research-qa/control/v1/inspect\",\"requestDigest\":\"4cd56596fffe97fce3fdd7c40f7b96751de75a82d42011314959bb581d1e788b\",\"requestId\":\"88888888-8888-4888-8888-000000000004\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+      "token": "eyJhY3Rpb24iOiJpbnNwZWN0IiwiYWxnIjoiSFMyNTYiLCJhdWQiOiJyZXNlYXJjaGVyLXRlc3QiLCJjb250cmFjdFZlcnNpb24iOiJtb295dS1yZXNlYXJjaC1xYS1jb250cm9sLXYxIiwiZXhwIjoxMDYwLCJpYXQiOjEwMDAsImlzcyI6Im1vb3l1LXBsYXRmb3JtLXRlc3QiLCJraWQiOiJjb250cm9sLWZpeHR1cmUtcGxhdGZvcm0iLCJtZXRob2QiOiJQT1NUIiwicGF0aCI6Ii9pbnRlcm5hbC9yZXNlYXJjaC1xYS9jb250cm9sL3YxL2luc3BlY3QiLCJyZXF1ZXN0RGlnZXN0IjoiNGNkNTY1OTZmZmZlOTdmY2UzZmRkN2M0MGY3Yjk2NzUxZGU3NWE4MmQ0MjAxMTMxNDk1OWJiNTgxZDFlNzg4YiIsInJlcXVlc3RJZCI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTAwMDAwMDAwMDAwNCIsInNlcmlhbGl6ZXIiOiJzdGFibGUtanNvbi12MSIsInN1YiI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9.oiVyGpg6A0KumyPjmx2gf9azYkitNH8neeSeF9S98OY"
+    },
+    {
+      "action": "status",
+      "path": "/internal/research-qa/control/v1/status",
+      "direction": "researcher-to-platform",
+      "keyHex": "4141414141414141414141414141414141414141414141414141414141414141",
+      "kid": "control-fixture-researcher",
+      "issuer": "researcher-test",
+      "audience": "mooyu-platform-test",
+      "requestId": "88888888-8888-4888-8888-000000000006",
+      "body": {
+        "scope": {
+          "binding": {
+            "questionId": "22222222-2222-4222-8222-222222222222",
+            "reservationId": "33333333-3333-4333-8333-333333333333",
+            "subject": "11111111-1111-4111-8111-111111111111",
+            "idempotencyKey": "offline-question-key-1",
+            "article": {
+              "platformArticleId": "55555555-5555-4555-8555-555555555555",
+              "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+              "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+              "researcherArticleId": "offline-article-tiny-map",
+              "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+            "tokenLimit": 80000,
+            "agentAccountId": "77777777-7777-4777-8777-777777777777",
+            "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+            "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+          },
+          "originGrantId": "88888888-8888-4888-8888-000000000001",
+          "accessEpoch": 1,
+          "submissionRequestId": "44444444-4444-4444-8444-444444444444",
+          "submissionDigest": "c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff"
+        },
+        "inReplyTo": "88888888-8888-4888-8888-000000000004",
+        "link": {
+          "binding": {
+            "questionId": "22222222-2222-4222-8222-222222222222",
+            "reservationId": "33333333-3333-4333-8333-333333333333",
+            "subject": "11111111-1111-4111-8111-111111111111",
+            "idempotencyKey": "offline-question-key-1",
+            "article": {
+              "platformArticleId": "55555555-5555-4555-8555-555555555555",
+              "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+              "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+              "researcherArticleId": "offline-article-tiny-map",
+              "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+            "tokenLimit": 80000,
+            "agentAccountId": "77777777-7777-4777-8777-777777777777",
+            "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+            "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+          },
+          "taskId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "requestId": "44444444-4444-4444-8444-444444444444"
+        },
+        "statusVersion": 1,
+        "state": "completed",
+        "executionClosed": true,
+        "slots": [
+          {
+            "kind": "model",
+            "state": "known",
+            "proofHash": "c53c2dbde7cb60ee1461d6510798e1cccc1c0f968e96fb6eb61b17f3ca4bbb4a",
+            "callIndex": 0
+          }
+        ],
+        "checkpointHash": "a0c55e92322c379f009f7e846a51407c3e47e68a3b3223e0d43882f61d873ea1",
+        "resultHash": "df615b1bfb6da6580ba645b773eb825e1cd5d9ef08b3ef81bd8d7b3961925f98",
+        "generatedAt": 1000
+      },
+      "canonicalBody": "{\"checkpointHash\":\"a0c55e92322c379f009f7e846a51407c3e47e68a3b3223e0d43882f61d873ea1\",\"executionClosed\":true,\"generatedAt\":1000,\"inReplyTo\":\"88888888-8888-4888-8888-000000000004\",\"link\":{\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"requestId\":\"44444444-4444-4444-8444-444444444444\",\"taskId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"resultHash\":\"df615b1bfb6da6580ba645b773eb825e1cd5d9ef08b3ef81bd8d7b3961925f98\",\"scope\":{\"accessEpoch\":1,\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"originGrantId\":\"88888888-8888-4888-8888-000000000001\",\"submissionDigest\":\"c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff\",\"submissionRequestId\":\"44444444-4444-4444-8444-444444444444\"},\"slots\":[{\"callIndex\":0,\"kind\":\"model\",\"proofHash\":\"c53c2dbde7cb60ee1461d6510798e1cccc1c0f968e96fb6eb61b17f3ca4bbb4a\",\"state\":\"known\"}],\"state\":\"completed\",\"statusVersion\":1}",
+      "requestDigest": "94851f9069273890580ac97fdc557731882e045ebe22c39f70a50671529730e5",
+      "canonicalClaims": "{\"action\":\"status\",\"alg\":\"HS256\",\"aud\":\"mooyu-platform-test\",\"contractVersion\":\"mooyu-research-qa-control-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"researcher-test\",\"kid\":\"control-fixture-researcher\",\"method\":\"POST\",\"path\":\"/internal/research-qa/control/v1/status\",\"requestDigest\":\"94851f9069273890580ac97fdc557731882e045ebe22c39f70a50671529730e5\",\"requestId\":\"88888888-8888-4888-8888-000000000006\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+      "token": "eyJhY3Rpb24iOiJzdGF0dXMiLCJhbGciOiJIUzI1NiIsImF1ZCI6Im1vb3l1LXBsYXRmb3JtLXRlc3QiLCJjb250cmFjdFZlcnNpb24iOiJtb295dS1yZXNlYXJjaC1xYS1jb250cm9sLXYxIiwiZXhwIjoxMDYwLCJpYXQiOjEwMDAsImlzcyI6InJlc2VhcmNoZXItdGVzdCIsImtpZCI6ImNvbnRyb2wtZml4dHVyZS1yZXNlYXJjaGVyIiwibWV0aG9kIjoiUE9TVCIsInBhdGgiOiIvaW50ZXJuYWwvcmVzZWFyY2gtcWEvY29udHJvbC92MS9zdGF0dXMiLCJyZXF1ZXN0RGlnZXN0IjoiOTQ4NTFmOTA2OTI3Mzg5MDU4MGFjOTdmZGM1NTc3MzE4ODJlMDQ1ZWJlMjJjMzlmNzBhNTA2NzE1Mjk3MzBlNSIsInJlcXVlc3RJZCI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTAwMDAwMDAwMDAwNiIsInNlcmlhbGl6ZXIiOiJzdGFibGUtanNvbi12MSIsInN1YiI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9.aGMTyvIzVJteMEa7onbbFxm7H-Q-dDoNnGD86ok_Nfk"
+    }
+  ]
+}

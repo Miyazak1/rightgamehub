@@ -63,6 +63,7 @@
     "research:soak": "node scripts/run-research-soak.mjs",
     "research:worker": "node apps/api/src/researcher-worker-cli.mjs",
     "research:local-node": "node apps/api/src/researcher-worker-cli.mjs",
-    "build:change-radar-native": "node scripts/build-change-radar-native.mjs"
+    "build:change-radar-native": "node scripts/build-change-radar-native.mjs",
+    "research:qa:test:db": "node scripts/test-researcher-qa-db.mjs"
   }
 }
