@@ -6,12 +6,31 @@
 
 当前是第一阶段：**深度模型分析在本地运行**。新闻搜索、网页抓取、正文提取、证据归档和定时调度仍由平台执行，因此它已经降低模型算力、调用费用和密钥托管压力，但还不是“全部计算都在本地”。第二阶段再把搜索与抓取迁移为本地观察节点。
 
+本仓库现在同时提供命令行节点和 Windows 原生节点。Windows 版是单文件 `windows_standalone_exe`：内含固定版本的 Node 运行时与 Researcher Worker，用户不需要下载仓库、安装 Node 或打开 PowerShell。程序不申请管理员权限、不开放入站端口；节点密钥和 DeepSeek API Key 使用 Windows DPAPI 按当前用户加密保存在本机。
+
 ## 使用方式
+
+### Windows 原生包（推荐）
 
 1. 登录墨鱼，打开“墨鱼变更雷达”和一个研究专题。
 2. 在“本地 Researcher 节点”中填写电脑名称并创建节点。
-3. 立即保存页面只展示一次的节点密钥，或复制页面生成的 PowerShell 命令。
-4. 在包含本项目代码与依赖的本机 PowerShell 中设置变量并启动：
+3. 立即保存页面只展示一次的节点密钥。
+4. 下载并打开 `MOOYU-Change-Radar.exe`，填写平台地址、节点密钥、自己的 DeepSeek API Key 和模型名称。
+5. 先点击“测试连接”，成功后点击“启动本地节点”。关闭窗口会停止节点。
+
+原生包不会把密钥放入命令行参数、日志或平台请求。配置文件位于当前用户的 `%LOCALAPPDATA%\MOOYU\ChangeRadar`，离开该 Windows 用户后不能解密。撤销平台节点后，即使本机仍有旧配置也不能再领取任务。
+
+开发者可在仓库根目录构建：
+
+```powershell
+npm run build:change-radar-native
+```
+
+输出位于 `artifacts/change-radar-native/MOOYU-Change-Radar.exe`，并附带记录 SHA-256、包类型、架构和权限声明的 `build-report.json`。公开分发前仍需完成代码签名、恶意软件扫描和真实 Windows 安装/卸载体验验收；开发构建成功不等于平台批准发布。
+
+### 命令行方式
+
+在包含本项目代码与依赖的本机 PowerShell 中设置变量并启动：
 
 ```powershell
 $env:RESEARCHER_PLATFORM_URL='https://mooyu.fun'
@@ -26,7 +45,7 @@ npm run research:local-node
 node --env-file='D:\private\radar-node.env' apps/api/src/researcher-worker-cli.mjs
 ```
 
-节点启动后会先向平台报告心跳，再轮询本账号的任务。没有任务时只做轻量轮询；领取任务后才调用用户自己的 DeepSeek 账号。
+两种方式使用同一个受限节点协议。节点启动后会先向平台报告心跳，再轮询本账号的任务。没有任务时只做轻量轮询；领取任务后才调用用户自己的 DeepSeek 账号。
 
 ## 安全模型
 
@@ -40,7 +59,7 @@ node --env-file='D:\private\radar-node.env' apps/api/src/researcher-worker-cli.m
 
 - 把本地节点作为开机自启的普通用户进程运行，不要使用管理员权限。
 - 一台电脑创建一个节点；电脑遗失或密钥泄露时立即在页面撤销节点并创建新节点。
-- 首次运行先保持终端可见，确认出现健康检查成功和轮询日志。
+- 首次运行先执行“测试连接”，并保持窗口可见以观察运行记录。
 - 本地节点离线不会丢任务；任务会在平台排队，节点恢复后继续领取。
 
 ## 后续阶段
