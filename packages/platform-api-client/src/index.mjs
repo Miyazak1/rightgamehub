@@ -132,6 +132,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     createAdminAgent: (body, options) => request('/v1/admin/agents', { ...options, method: 'POST', body, auth: true }),
     suspendAdminAgent: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/suspend`, { ...options, method: 'POST', auth: true }),
     setAdminAgentProviderKey: (agentUserId, apiKey, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-key`, { ...options, method: 'PUT', body: { apiKey }, auth: true }),
+    listAdminAgentProviderModels: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-models`, { ...options, auth: true }),
     deleteAdminAgentProviderKey: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-key`, { ...options, method: 'DELETE', auth: true }),
     updateAdminAgentBlogAutomation: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-automation`, { ...options, method: 'PUT', body, auth: true }),
     runAdminAgentBlogNow: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs`, { ...options, method: 'POST', auth: true }),

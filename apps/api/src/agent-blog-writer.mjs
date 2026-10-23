@@ -11,6 +11,13 @@ const wholeJson=value=>{if(typeof value!=='string'||Buffer.byteLength(value)>262
 const exact=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>keys.includes(key));
 const cleanUsage=usage=>({promptTokens:Math.max(0,Number(usage?.prompt_tokens)||0),completionTokens:Math.max(0,Number(usage?.completion_tokens)||0),totalTokens:Math.max(0,Number(usage?.total_tokens)||0)});
 const responseText=payload=>payload?.choices?.[0]?.message?.content;
+const modelView=model=>{
+  const id=String(model?.id??'').trim();
+  if(!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(id))return null;
+  const name=String(model?.name??id).replace(/[\r\n\t]+/g,' ').trim().slice(0,120)||id;
+  return{id,name,contextWindow:Math.max(0,Number(model?.context_window)||0)||null,maxOutputTokens:Math.max(0,Number(model?.max_output_tokens)||0)||null};
+};
+const modelOrder=model=>model.id==='deepseek-flash'?0:model.id==='deepseek-v4-pro'?1:2;
 
 async function providerRequest({apiKey,model,messages,fetchImpl,timeoutMs,maxTokens=5000}){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
@@ -40,8 +47,10 @@ const reviewSystem=`你是独立发布守门员。只输出 JSON，不要输出�
 
 export function createDeepSeekAgentBlogWriter({fetchImpl=globalThis.fetch,timeoutMs=120000}={}){
   if(typeof fetchImpl!=='function')throw new Error('A fetch implementation is required');
+  const listModels=async apiKey=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(timeoutMs,15000));try{const response=await fetchImpl(modelsEndpoint,{signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,Accept:'application/json'}});const payload=await response.json().catch(()=>null);if(response.status===401||response.status===403)fail('AGENT_PROVIDER_KEY_REJECTED',401,'模型供应商拒绝了当前 Key。');if(!response.ok)fail('AGENT_PROVIDER_FAILED',502,'暂时无法读取模型供应商的可用模型。',{retryable:true});const models=Array.isArray(payload?.data)?payload.data.map(modelView).filter(Boolean).filter((model,index,items)=>items.findIndex(item=>item.id===model.id)===index).sort((a,b)=>modelOrder(a)-modelOrder(b)||a.id.localeCompare(b.id)).slice(0,50):[];if(!models.length)fail('AGENT_PROVIDER_MODELS_INVALID',502,'模型供应商没有返回可用模型。',{retryable:true});return models;}catch(error){if(error instanceof AgentBlogAutomationError)throw error;if(error?.name==='AbortError')fail('AGENT_PROVIDER_TIMEOUT',504,'读取模型供应商可用模型超时。',{retryable:true});fail('AGENT_PROVIDER_FAILED',502,'无法连接模型供应商。',{retryable:true});}finally{clearTimeout(timer);}};
   return{
-    async testKey(apiKey){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(timeoutMs,15000));try{const response=await fetchImpl(modelsEndpoint,{signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,Accept:'application/json'}});if(response.status===401||response.status===403)fail('AGENT_PROVIDER_KEY_REJECTED',401,'模型供应商拒绝了当前 Key。');if(!response.ok)fail('AGENT_PROVIDER_FAILED',502,'暂时无法验证模型供应商 Key。',{retryable:true});return{ok:true};}catch(error){if(error instanceof AgentBlogAutomationError)throw error;if(error?.name==='AbortError')fail('AGENT_PROVIDER_TIMEOUT',504,'验证模型供应商 Key 超时。',{retryable:true});fail('AGENT_PROVIDER_FAILED',502,'无法连接模型供应商。',{retryable:true});}finally{clearTimeout(timer);}},
+    listModels,
+    async testKey(apiKey){return{ok:true,models:await listModels(apiKey)};},
     async generate({apiKey,model,topicScope,recentTitles=[]}){
       const generated=await providerRequest({apiKey,model,fetchImpl,timeoutMs,messages:[{role:'system',content:generationSystem},{role:'user',content:JSON.stringify({topicScope,recentTitles:recentTitles.slice(0,30)})}]});
       if(!exact(generated.json,['title','summary','blocks'])||!Array.isArray(generated.json.blocks))fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的文章结构不符合要求。');
