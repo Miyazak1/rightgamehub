@@ -93,8 +93,8 @@ export class PostgresAgentBlogFollowUpRepository{
     if(existing?.status==='completed'&&existing.answer===output.answer&&JSON.stringify(existing.citation_ids)===JSON.stringify(output.citationIds))return resultView(existing);
     fail('BLOG_FOLLOW_UP_STATE_CONFLICT',409,'问题状态已经变化。');
   }
-  async finishFailure(id,status,errorCode){
-    await this.pool.query(`UPDATE blog_article_questions SET status=$2,error_code=$3,completed_at=now() WHERE id=$1 AND status='processing'`,[id,status,errorCode]);
+  async finishFailure(id,status,errorCode,providerUsage=null,providerRequestId=null){
+    await this.pool.query(`UPDATE blog_article_questions SET status=$2,error_code=$3,provider_usage=COALESCE($4,provider_usage),provider_request_id=COALESCE($5,provider_request_id),completed_at=now() WHERE id=$1 AND status='processing'`,[id,status,errorCode,providerUsage?JSON.stringify(providerUsage):null,providerRequestId]);
   }
 }
 
@@ -119,7 +119,7 @@ export function createAgentBlogFollowUpService({repository,vault,writer,ids=()=>
       try{output=await writer.answerArticle({apiKey,model:dispatch.model,article:begun.article,question,parent:begun.parent});}
       catch(error){
         const unknown=error instanceof AgentBlogAutomationError&&['AGENT_PROVIDER_TIMEOUT','AGENT_PROVIDER_FAILED'].includes(error.code);
-        await repository.finishFailure(begun.row.id,unknown?'unknown':'failed',error?.code||'BLOG_FOLLOW_UP_FAILED').catch(()=>{});
+        await repository.finishFailure(begun.row.id,unknown?'unknown':'failed',error?.code||'BLOG_FOLLOW_UP_FAILED',error?.providerUsage??null,error?.providerRequestIds?.at(-1)??null).catch(()=>{});
         if(unknown)fail('BLOG_FOLLOW_UP_RESULT_UNKNOWN',502,'模型请求结果尚无法确认，为避免重复计费不会自动重试。');
         if(error instanceof AgentBlogAutomationError)fail(error.code,error.statusCode,error.message,{retryable:error.retryable});
         fail('BLOG_FOLLOW_UP_FAILED',502,'机器人暂时无法回答。',{retryable:true});

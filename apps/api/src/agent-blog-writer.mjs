@@ -2,16 +2,23 @@ import crypto from 'node:crypto';
 import {normalizeBlogContent} from './blog-contract.mjs';
 import {createDeepSeekSearchAdapter} from './deepseek-search-adapter.mjs';
 import {createDeepSeekFetchAdapter} from './deepseek-fetch-adapter.mjs';
+import {parseWholeJson} from './researcher-qa-protocol/model-json.mjs';
 
 const endpoint='https://api.deepseek.com/chat/completions';
 const modelsEndpoint='https://api.deepseek.com/models';
 export class AgentBlogAutomationError extends Error{
-  constructor(code,statusCode,message,{retryable=false}={}){super(message);this.name='AgentBlogAutomationError';this.code=code;this.statusCode=statusCode;this.retryable=retryable;}
+  constructor(code,statusCode,message,{retryable=false,providerUsage=null,providerRequestIds=[]}={}){super(message);this.name='AgentBlogAutomationError';this.code=code;this.statusCode=statusCode;this.retryable=retryable;this.providerUsage=providerUsage;this.providerRequestIds=providerRequestIds;}
 }
 const fail=(code,status,message,options)=>{throw new AgentBlogAutomationError(code,status,message,options);};
-const wholeJson=value=>{if(typeof value!=='string'||Buffer.byteLength(value)>262144)fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回了无效内容。');try{const parsed=JSON.parse(value);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error();return parsed;}catch{fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型没有返回有效的结构化文章。');}};
+const wholeJson=value=>{
+  if(typeof value!=='string'||!value.trim()||Buffer.byteLength(value)>262144)throw new Error('EMPTY_OR_OVERSIZED_JSON');
+  const trimmed=value.trim(),fence=/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(trimmed),parsed=parseWholeJson(fence?fence[1]:trimmed);
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('JSON_OBJECT_REQUIRED');
+  return parsed;
+};
 const exact=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>keys.includes(key));
 const cleanUsage=usage=>({promptTokens:Math.max(0,Number(usage?.prompt_tokens)||0),completionTokens:Math.max(0,Number(usage?.completion_tokens)||0),totalTokens:Math.max(0,Number(usage?.total_tokens)||0)});
+const addUsage=(total,next)=>({promptTokens:total.promptTokens+next.promptTokens,completionTokens:total.completionTokens+next.completionTokens,totalTokens:total.totalTokens+next.totalTokens,requests:total.requests+1});
 const responseText=payload=>payload?.choices?.[0]?.message?.content;
 const modelView=model=>{
   const id=String(model?.id??'').trim();
@@ -58,15 +65,46 @@ async function researchGitHubSources({apiKey,topicScope,fetchImpl,timeoutMs}){
   return{sources,usage:{searchQueries:1,searchResults:preview.results.length,documentsFetched:sources.length},provider:'deepseek-search+fetch'};
 }
 
-async function providerRequest({apiKey,model,messages,fetchImpl,timeoutMs,maxTokens=5000}){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
-  try{
-    const response=await fetchImpl(endpoint,{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({model,messages,temperature:0.45,max_tokens:maxTokens,response_format:{type:'json_object'},stream:false})});
-    const payload=await response.json().catch(()=>null);
-    if(!response.ok){const status=response.status===401||response.status===403?401:response.status===429?429:502;fail(status===401?'AGENT_PROVIDER_KEY_REJECTED':status===429?'AGENT_PROVIDER_RATE_LIMITED':'AGENT_PROVIDER_FAILED',status,status===401?'模型供应商拒绝了当前 Key。':status===429?'模型供应商限流，请稍后重试。':'模型供应商暂时不可用。',{retryable:status!==401});}
-    return{json:wholeJson(responseText(payload)),usage:cleanUsage(payload?.usage),requestId:response.headers?.get?.('x-request-id')??null};
-  }catch(error){if(error instanceof AgentBlogAutomationError)throw error;if(error?.name==='AbortError')fail('AGENT_PROVIDER_TIMEOUT',504,'模型生成超时。',{retryable:true});fail('AGENT_PROVIDER_FAILED',502,'无法连接模型供应商。',{retryable:true});}
-  finally{clearTimeout(timer);}
+function verifiedGitHubSources(value){
+  if(!Array.isArray(value)||!value.length)fail('AGENT_BLOG_RESEARCH_EMPTY',422,'没有可验证的 GitHub 仓库，本次不会发布。');
+  const repositories=new Set();
+  return value.map((source,index)=>{
+    const repositoryUrl=githubRepositoryUrl(source?.repositoryUrl??source?.url),excerpt=compact(source?.excerpt,900);
+    if(source?.sourceIndex!==index+1||!repositoryUrl||repositories.has(repositoryUrl)||excerpt.length<80||Number.isNaN(Date.parse(source?.accessedAt)))fail('AGENT_BLOG_RESEARCH_INVALID',422,'研究结果缺少唯一、可验证的 GitHub 仓库，本次不会发布。');
+    repositories.add(repositoryUrl);
+    return{...source,sourceIndex:index+1,url:repositoryUrl,repositoryUrl,excerpt};
+  });
+}
+
+async function providerRequest({apiKey,model,messages,fetchImpl,timeoutMs,maxTokens=5000,outputName='内容'}){
+  let usage={promptTokens:0,completionTokens:0,totalTokens:0,requests:0},attemptMessages=messages;
+  const requestIds=[];
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const outputTokens=attempt===0?maxTokens:Math.min(8192,Math.max(maxTokens,Math.ceil(maxTokens*1.35)));
+      const response=await fetchImpl(endpoint,{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({model,messages:attemptMessages,temperature:attempt===0?0.45:0.2,max_tokens:outputTokens,response_format:{type:'json_object'},stream:false})});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok){const status=response.status===401||response.status===403?401:response.status===429?429:502;fail(status===401?'AGENT_PROVIDER_KEY_REJECTED':status===429?'AGENT_PROVIDER_RATE_LIMITED':'AGENT_PROVIDER_FAILED',status,status===401?'模型供应商拒绝了当前 Key。':status===429?'模型供应商限流，请稍后重试。':'模型供应商暂时不可用。',{retryable:status!==401});}
+      const requestId=response.headers?.get?.('x-ds-request-id')??response.headers?.get?.('x-request-id')??null;
+      if(requestId)requestIds.push(requestId);
+      usage=addUsage(usage,cleanUsage(payload?.usage));
+      const finishReason=payload?.choices?.[0]?.finish_reason??null;
+      try{
+        return{json:wholeJson(responseText(payload)),usage,requestId,requestIds,finishReason};
+      }catch{
+        if(attempt===0&&[null,'stop','length'].includes(finishReason)){
+          const retryReminder='上一次响应为空、被截断或不是完整 JSON。请重新完成任务，只返回一个完整 JSON 对象；不要使用 Markdown 代码围栏，不要添加解释。';
+          attemptMessages=messages.map((message,index)=>index===0&&message.role==='system'?{...message,content:`${message.content}\n\n${retryReminder}`} : message);
+          continue;
+        }
+        const providerUsage={...usage,requestIds:[...requestIds]};
+        fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,attempt===0?`模型未返回有效的结构化${outputName}，本次未写入或发布。`:`模型连续两次没有返回有效的结构化${outputName}，本次未写入或发布。`,{retryable:finishReason!=='content_filter',providerUsage,providerRequestIds:[...requestIds]});
+      }
+    }catch(error){if(error instanceof AgentBlogAutomationError)throw error;if(error?.name==='AbortError')fail('AGENT_PROVIDER_TIMEOUT',504,'模型生成超时；为避免重复计费，本次不会自动重试。',{retryable:true});fail('AGENT_PROVIDER_FAILED',502,'无法连接模型供应商；为避免重复计费，本次不会自动重试。',{retryable:true});}
+    finally{clearTimeout(timer);}
+  }
+  fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,`模型没有返回有效的结构化${outputName}。`,{retryable:true});
 }
 
 const generationSystem=`你是墨鱼工坊的官方机器人作者。只输出 JSON，不要输出 Markdown 代码围栏。
@@ -122,40 +160,42 @@ export function createDeepSeekAgentBlogWriter({fetchImpl=globalThis.fetch,timeou
     async testKey(apiKey){return{ok:true,models:await listModels(apiKey)};},
     async answerArticle({apiKey,model,article,question,parent=null}){
       const context=answerPackage(article);
-      const response=await providerRequest({apiKey,model,fetchImpl,timeoutMs,maxTokens:1600,messages:[{role:'system',content:answerSystem},{role:'user',content:JSON.stringify({question:compact(question,500),previousExchange:parent?{question:compact(parent.question,500),answer:compact(parent.answer,2000)}:null,publishedArticle:context.publishedArticle,verifiedSources:context.verifiedSources})}]});
+      const response=await providerRequest({apiKey,model,fetchImpl,timeoutMs,maxTokens:2400,outputName:'回答',messages:[{role:'system',content:answerSystem},{role:'user',content:JSON.stringify({question:compact(question,500),previousExchange:parent?{question:compact(parent.question,500),answer:compact(parent.answer,2000)}:null,publishedArticle:context.publishedArticle,verifiedSources:context.verifiedSources})}]});
       const output=response.json;
-      if(!exact(output,['answer','citationIndexes'])||typeof output.answer!=='string'||!Array.isArray(output.citationIndexes))fail('AGENT_BLOG_ANSWER_INVALID',502,'模型返回的回答结构不符合要求。');
+      const invalidAnswer=message=>fail('AGENT_BLOG_ANSWER_INVALID',502,message,{retryable:true,providerUsage:{...response.usage,requestIds:response.requestIds},providerRequestIds:response.requestIds});
+      if(!exact(output,['answer','citationIndexes'])||typeof output.answer!=='string'||!Array.isArray(output.citationIndexes))invalidAnswer('模型返回的回答结构不符合要求。');
       const answer=String(output.answer).trim();
-      if(answer.length<10||answer.length>4000)fail('AGENT_BLOG_ANSWER_INVALID',502,'模型返回的回答长度无效。');
-      if(output.citationIndexes.some(index=>!Number.isInteger(index)||index<1||index>context.citationIds.length))fail('AGENT_BLOG_ANSWER_INVALID',502,'模型返回了不属于本文的引用。');
+      if(answer.length<10||answer.length>4000)invalidAnswer('模型返回的回答长度无效。');
+      if(output.citationIndexes.some(index=>!Number.isInteger(index)||index<1||index>context.citationIds.length))invalidAnswer('模型返回了不属于本文的引用。');
       const citationIds=[...new Set(output.citationIndexes.map(index=>context.citationIds[index-1]))];
-      if(citationIds.length>20)fail('AGENT_BLOG_ANSWER_INVALID',502,'模型返回的引用数量过多。');
-      if(context.citationIds.length&&citationIds.length===0)fail('AGENT_BLOG_ANSWER_INVALID',502,'模型回答缺少本文来源引用。');
+      if(citationIds.length>20)invalidAnswer('模型返回的引用数量过多。');
+      if(context.citationIds.length&&citationIds.length===0)invalidAnswer('模型回答缺少本文来源引用。');
       return{answer,citationIds,usage:response.usage,requestId:response.requestId};
     },
     async generate({apiKey,model,topicScope,recentTitles=[]}){
       const research=await researcher({apiKey,topicScope,fetchImpl,timeoutMs});
-      if(!Array.isArray(research?.sources)||!research.sources.length)fail('AGENT_BLOG_RESEARCH_EMPTY',422,'没有可验证的文章来源，本次不会发布。');
-      const generated=await providerRequest({apiKey,model,fetchImpl,timeoutMs,messages:[{role:'system',content:generationSystem},{role:'user',content:JSON.stringify({topicScope,recentTitles:recentTitles.slice(0,30),verifiedSources:research.sources.map(({contentHash,...source})=>source)})}]});
-      if(!exact(generated.json,['title','summary','blocks','followUpQuestions'])||!Array.isArray(generated.json.blocks)||!Array.isArray(generated.json.followUpQuestions)||generated.json.followUpQuestions.length!==3)fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的文章结构不符合要求。');
-      const citationByIndex=new Map(),citations=research.sources.map(source=>{const id=crypto.randomUUID();citationByIndex.set(source.sourceIndex,id);return{id,label:`GitHub · ${source.publisher}`,title:source.title,url:source.url,publisher:source.publisher,publishedAt:null,accessedAt:source.accessedAt,excerpt:source.excerpt,locator:source.locator,repositoryUrl:source.repositoryUrl};});
+      const verifiedSources=verifiedGitHubSources(research?.sources);
+      const generated=await providerRequest({apiKey,model,fetchImpl,timeoutMs,maxTokens:6000,outputName:'文章',messages:[{role:'system',content:generationSystem},{role:'user',content:JSON.stringify({topicScope,recentTitles:recentTitles.slice(0,30),verifiedSources:verifiedSources.map(({contentHash,...source})=>source)})}]});
+      const invalidGeneration=message=>fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,message,{retryable:true,providerUsage:{research:research.usage??null,generation:{...generated.usage,requestIds:generated.requestIds}},providerRequestIds:generated.requestIds});
+      if(!exact(generated.json,['title','summary','blocks','followUpQuestions'])||!Array.isArray(generated.json.blocks)||!Array.isArray(generated.json.followUpQuestions)||generated.json.followUpQuestions.length!==3)invalidGeneration('模型返回的文章结构不符合要求。');
+      const citationByIndex=new Map(),citations=verifiedSources.map(source=>{const id=crypto.randomUUID();citationByIndex.set(source.sourceIndex,id);return{id,label:`GitHub · ${source.publisher}`,title:source.title,url:source.url,publisher:source.publisher,publishedAt:null,accessedAt:source.accessedAt,excerpt:source.excerpt,locator:source.locator,repositoryUrl:source.repositoryUrl};});
       const blocks=generated.json.blocks.map(block=>{
-        if(!block||typeof block!=='object'||Array.isArray(block))fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的正文区块无效。');
-        if(block.type==='heading'){if(!exact(block,['type','level','text']))fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的标题区块无效。');return block;}
-        if(!['paragraph','list'].includes(block.type)||!exact(block,block.type==='list'?['type','ordered','items','citationIndexes']:['type','text','citationIndexes'])||!Array.isArray(block.citationIndexes))fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的引用标注无效。');
+        if(!block||typeof block!=='object'||Array.isArray(block))invalidGeneration('模型返回的正文区块无效。');
+        if(block.type==='heading'){if(!exact(block,['type','level','text']))invalidGeneration('模型返回的标题区块无效。');return block;}
+        if(!['paragraph','list'].includes(block.type)||!exact(block,block.type==='list'?['type','ordered','items','citationIndexes']:['type','text','citationIndexes'])||!Array.isArray(block.citationIndexes))invalidGeneration('模型返回的引用标注无效。');
         const citationIds=[...new Set(block.citationIndexes.map(index=>citationByIndex.get(Number(index))).filter(Boolean))];
-        if(!citationIds.length)fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'事实性正文缺少可验证引用。');
+        if(!citationIds.length)invalidGeneration('事实性正文缺少可验证引用。');
         const {citationIndexes,...rest}=block;return{...rest,citationIds};
       });
       const followUpQuestions=generated.json.followUpQuestions.map(question=>compact(question,180));
-      if(followUpQuestions.some(question=>question.length<5))fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID',502,'模型返回的追问建议无效。');
+      if(followUpQuestions.some(question=>question.length<5))invalidGeneration('模型返回的追问建议无效。');
       blocks.push({type:'heading',level:2,text:'继续追问'},{type:'list',ordered:false,items:followUpQuestions});
       const seed=`${generated.json.title}\0${Date.now()}\0${crypto.randomUUID()}`,slug=`agent-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${crypto.createHash('sha256').update(seed).digest('hex').slice(0,10)}`;
       const content=normalizeBlogContent({slug,locale:'zh-CN',title:generated.json.title,summary:generated.json.summary,blocks,citations});
-      const reviewed=await providerRequest({apiKey,model,fetchImpl,timeoutMs,maxTokens:800,messages:[{role:'system',content:reviewSystem},{role:'user',content:JSON.stringify(content)}]});
-      const review=reviewed.json;if(!exact(review,['approved','qualityScore','sensitiveRisk','factualRisk','reasonCodes'])||typeof review.approved!=='boolean'||!Number.isFinite(review.qualityScore)||!['low','medium','high'].includes(review.sensitiveRisk)||!['low','medium','high'].includes(review.factualRisk)||!Array.isArray(review.reasonCodes))fail('AGENT_BLOG_REVIEW_INVALID',502,'模型审核结果无效。');
+      const reviewed=await providerRequest({apiKey,model,fetchImpl,timeoutMs,maxTokens:1200,outputName:'审核结果',messages:[{role:'system',content:reviewSystem},{role:'user',content:JSON.stringify(content)}]});
+      const review=reviewed.json;if(!exact(review,['approved','qualityScore','sensitiveRisk','factualRisk','reasonCodes'])||typeof review.approved!=='boolean'||!Number.isFinite(review.qualityScore)||!['low','medium','high'].includes(review.sensitiveRisk)||!['low','medium','high'].includes(review.factualRisk)||!Array.isArray(review.reasonCodes))fail('AGENT_BLOG_REVIEW_INVALID',502,'模型审核结果无效。',{retryable:true,providerUsage:{research:research.usage??null,generation:generated.usage,review:{...reviewed.usage,requestIds:reviewed.requestIds}},providerRequestIds:[...generated.requestIds,...reviewed.requestIds]});
       const approved=review.approved===true&&review.qualityScore>=0.78&&review.sensitiveRisk==='low'&&review.factualRisk==='low';
-      return{content,review:{approved,qualityScore:Math.max(0,Math.min(1,review.qualityScore)),sensitiveRisk:review.sensitiveRisk,factualRisk:review.factualRisk,reasonCodes:review.reasonCodes.filter(code=>typeof code==='string'&&/^[A-Z0-9_]{2,64}$/.test(code)).slice(0,8)},usage:{research:research.usage??null,generation:generated.usage,review:reviewed.usage},providerRequestIds:[generated.requestId,reviewed.requestId].filter(Boolean)};
+      return{content,review:{approved,qualityScore:Math.max(0,Math.min(1,review.qualityScore)),sensitiveRisk:review.sensitiveRisk,factualRisk:review.factualRisk,reasonCodes:review.reasonCodes.filter(code=>typeof code==='string'&&/^[A-Z0-9_]{2,64}$/.test(code)).slice(0,8)},usage:{research:research.usage??null,generation:generated.usage,review:reviewed.usage},providerRequestIds:[...generated.requestIds,...reviewed.requestIds]};
     },
   };
 }

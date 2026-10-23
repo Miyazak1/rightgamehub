@@ -12,16 +12,23 @@ test('Agent provider keys are encrypted with authenticated per-agent binding and
 test('Agent writer performs generation and an independent automatic publication review',async()=>{
  const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let calls=0;
  const generated={title:'为什么地图会改变我们理解世界的方式',summary:'地图不只是地点的缩影，也是一套选择信息、组织空间并帮助人们形成共同理解的方法。',blocks:[{type:'heading',level:2,text:'地图从来不是简单复制'},{type:'paragraph',text:'地图会主动选择比例、方向和符号。'.repeat(90),citationIndexes:[1]},{type:'heading',level:2,text:'比例决定看见什么'},{type:'paragraph',text:'当观察尺度改变，重要的信息也会随之改变。'.repeat(70),citationIndexes:[1]},{type:'list',ordered:false,items:['先确认地图服务的目的','再理解符号和比例','最后比较不同地图的取舍'],citationIndexes:[1]},{type:'paragraph',text:'理解这些选择，可以帮助我们更清楚地阅读空间信息，也能提醒我们保持必要的判断。'.repeat(35),citationIndexes:[1]}],followUpQuestions:['地图项目如何选择投影方式？','开源地图工具怎样验证数据来源？','普通用户应当怎样比较两张地图？']};
- const fetchImpl=async url=>{if(String(url).endsWith('/models'))return{ok:true,status:200,json:async()=>({data:[{id:'deepseek-v4-pro',name:'DeepSeek-V4.1-Pro'},{id:'deepseek-flash',name:'DeepSeek-V4.1-Flash-1017',context_window:128000,max_output_tokens:8192}]})};calls++;const content=calls===1?generated:{approved:true,qualityScore:.91,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]};return{ok:true,status:200,headers:{get:()=>`req-${calls}`},json:async()=>({choices:[{message:{content:JSON.stringify(content)}}],usage:{prompt_tokens:10,completion_tokens:20,total_tokens:30}})};};
+ const fetchImpl=async url=>{if(String(url).endsWith('/models'))return{ok:true,status:200,json:async()=>({data:[{id:'deepseek-v4-pro',name:'DeepSeek-V4.1-Pro'},{id:'deepseek-flash',name:'DeepSeek-V4.1-Flash-1017',context_window:128000,max_output_tokens:8192}]})};calls++;const content=calls===1?`\`\`\`json\n${JSON.stringify(generated)}\n\`\`\``:JSON.stringify({approved:true,qualityScore:.91,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]});return{ok:true,status:200,headers:{get:()=>`req-${calls}`},json:async()=>({choices:[{finish_reason:'stop',message:{content}}],usage:{prompt_tokens:10,completion_tokens:20,total_tokens:30}})};};
  const researcher=async()=>({sources:[{sourceIndex:1,title:'OpenStreetMap',url:'https://github.com/openstreetmap/openstreetmap-website',repositoryUrl:'https://github.com/openstreetmap/openstreetmap-website',publisher:'openstreetmap/openstreetmap-website',excerpt:'这是从项目 README 中提取并经过服务器验证的原文片段，用于测试自动文章的证据绑定和来源展示。'.repeat(3),locator:'仓库 README',accessedAt:'2026-10-23T00:00:00.000Z',contentHash:'a'.repeat(64)}],usage:{searchQueries:1,documentsFetched:1}});
  const writer=createDeepSeekAgentBlogWriter({fetchImpl,timeoutMs:1000,researcher}),validation=await writer.testKey('sk-valid-key-for-test');assert.deepEqual(validation.models.map(model=>model.id),['deepseek-flash','deepseek-v4-pro']);const result=await writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'人文历史地理科学中的大众知识'});
- assert.equal(result.review.approved,true);assert.equal(result.content.locale,'zh-CN');assert.match(result.content.slug,/^agent-/);assert.equal(result.content.citations[0].repositoryUrl,'https://github.com/openstreetmap/openstreetmap-website');assert.equal(result.content.blocks.at(-2).text,'继续追问');assert.equal(calls,2);
+ assert.equal(result.review.approved,true);assert.equal(result.content.locale,'zh-CN');assert.match(result.content.slug,/^agent-/);assert.equal(result.content.citations[0].repositoryUrl,'https://github.com/openstreetmap/openstreetmap-website');assert.equal(result.content.blocks.at(-2).text,'继续追问');assert.deepEqual(result.providerRequestIds,['req-1','req-2']);assert.equal(calls,2);
 });
 
 test('Agent writer fails closed before generation when no GitHub source can be verified',async()=>{
  const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let providerCalls=0;
  const writer=createDeepSeekAgentBlogWriter({fetchImpl:async()=>{providerCalls++;throw new Error('must not call provider');},researcher:async()=>({sources:[],usage:{searchQueries:1,documentsFetched:0}})});
  await assert.rejects(()=>writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'开源人工智能工具'}),error=>error.code==='AGENT_BLOG_RESEARCH_EMPTY');
+ assert.equal(providerCalls,0);
+});
+
+test('Agent writer rejects a research result whose claimed repository is not GitHub',async()=>{
+ const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let providerCalls=0;
+ const writer=createDeepSeekAgentBlogWriter({fetchImpl:async()=>{providerCalls++;throw new Error('must not call provider');},researcher:async()=>({sources:[{sourceIndex:1,title:'伪来源',url:'https://example.com/repository',repositoryUrl:'https://example.com/repository',publisher:'example/repository',excerpt:'这是一段长度足够但并不来自公开代码仓库的来源文字，因此必须在调用写作模型以前被服务端拒绝。',locator:'README',accessedAt:'2026-10-23T00:00:00.000Z'}]})});
+ await assert.rejects(()=>writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'开源人工智能工具'}),error=>error.code==='AGENT_BLOG_RESEARCH_INVALID');
  assert.equal(providerCalls,0);
 });
 
