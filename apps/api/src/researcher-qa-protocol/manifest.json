@@ -1,0 +1,17 @@
+{
+  "purpose": "Frozen protocol-only snapshot; no model/execution code",
+  "sources": {
+    "stable-json.ts": "e159acc7a37e3af059b9725e0d64e3a79b87da1ce7e9d389a05728533ca45eee",
+    "model-json.ts": "844bf2da7ae93b26b6e3dc396af49d4c9eff38fe53c645711be1d05ba33b7e8c",
+    "qa-gateway-contract.ts": "e4dba4734816ba5690551126013ac0c11cdab3165c89307a509c03f6200de62c",
+    "qa-gateway-control-contract.ts": "679269ac1d358cd6bd4b165dadae92d1aff84a0ed194ffd2f87c782a5ed7393a",
+    "reliableUsage.ts-fragment": "a6d56fc19621da8d1c353d3776940a15f8442539a99e22cb00319d4bce6dab4f"
+  },
+  "outputs": {
+    "stable-json.mjs": "2a0bf48712a71a89ba37e8b14f7363523d95150c0777efb628a07821cc69a071",
+    "model-json.mjs": "94f740558cb1a0fd611e2fd37c95eaa04f2175d58a87974fbf1e288335828eda",
+    "qa-gateway-contract.mjs": "b1b390af8895cc4069aef8e97460d149ddfc9ee263b9a28a9c4439c313d034c3",
+    "qa-gateway-control-contract.mjs": "f45fc3fabb346e65486086bbb15aee963f59aa8a29d23a1e70f4c604b631ba5b",
+    "usage-receipt.mjs": "9e94c46201a51caa74af9ce1054f367018b3cd702c6cc73a55544590da7ccd81"
+  }
+}

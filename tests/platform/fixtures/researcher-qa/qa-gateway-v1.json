@@ -1,0 +1,121 @@
+{
+  "notice": "PUBLIC OFFLINE TEST KEY ONLY. Never configure in a deployed gateway.",
+  "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "kid": "offline-fixture-key-1",
+  "issuer": "mooyu-platform-test",
+  "audience": "researcher-test",
+  "subject": "11111111-1111-4111-8111-111111111111",
+  "requestId": "44444444-4444-4444-8444-444444444444",
+  "iat": 1000,
+  "exp": 1060,
+  "method": "POST",
+  "path": "/internal/research-qa/v1/submit",
+  "normalizedBlogContent": {
+    "slug": "tiny-map",
+    "locale": "zh-CN",
+    "title": "小地图入门",
+    "summary": "用短示例了解地图工具的用途与限制。",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "适合快速展示路线。"
+      }
+    ],
+    "citations": []
+  },
+  "normalizedBlogCanonical": "{\"blocks\":[{\"text\":\"适合快速展示路线。\",\"type\":\"paragraph\"}],\"citations\":[],\"locale\":\"zh-CN\",\"slug\":\"tiny-map\",\"summary\":\"用短示例了解地图工具的用途与限制。\",\"title\":\"小地图入门\"}",
+  "body": {
+    "binding": {
+      "questionId": "22222222-2222-4222-8222-222222222222",
+      "reservationId": "33333333-3333-4333-8333-333333333333",
+      "subject": "11111111-1111-4111-8111-111111111111",
+      "idempotencyKey": "offline-question-key-1",
+      "article": {
+        "platformArticleId": "55555555-5555-4555-8555-555555555555",
+        "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+        "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+        "researcherArticleId": "offline-article-tiny-map",
+        "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+      "tokenLimit": 80000,
+      "agentAccountId": "77777777-7777-4777-8777-777777777777",
+      "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+      "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+    },
+    "question": "这个项目适合怎样的使用场景？"
+  },
+  "canonicalBody": "{\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"question\":\"这个项目适合怎样的使用场景？\"}",
+  "requestDigest": "c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff",
+  "canonicalClaims": "{\"action\":\"submit\",\"alg\":\"HS256\",\"aud\":\"researcher-test\",\"contractVersion\":\"mooyu-research-qa-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"mooyu-platform-test\",\"kid\":\"offline-fixture-key-1\",\"method\":\"POST\",\"path\":\"/internal/research-qa/v1/submit\",\"requestDigest\":\"c9a8789d374af780d83468b5debdbff31e3001b4d7b675f65b8ded42a39d20ff\",\"requestId\":\"44444444-4444-4444-8444-444444444444\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+  "token": "eyJhY3Rpb24iOiJzdWJtaXQiLCJhbGciOiJIUzI1NiIsImF1ZCI6InJlc2VhcmNoZXItdGVzdCIsImNvbnRyYWN0VmVyc2lvbiI6Im1vb3l1LXJlc2VhcmNoLXFhLXYxIiwiZXhwIjoxMDYwLCJpYXQiOjEwMDAsImlzcyI6Im1vb3l1LXBsYXRmb3JtLXRlc3QiLCJraWQiOiJvZmZsaW5lLWZpeHR1cmUta2V5LTEiLCJtZXRob2QiOiJQT1NUIiwicGF0aCI6Ii9pbnRlcm5hbC9yZXNlYXJjaC1xYS92MS9zdWJtaXQiLCJyZXF1ZXN0RGlnZXN0IjoiYzlhODc4OWQzNzRhZjc4MGQ4MzQ2OGI1ZGViZGJmZjMxZTMwMDFiNGQ3YjY3NWY2NWI4ZGVkNDJhMzlkMjBmZiIsInJlcXVlc3RJZCI6IjQ0NDQ0NDQ0LTQ0NDQtNDQ0NC04NDQ0LTQ0NDQ0NDQ0NDQ0NCIsInNlcmlhbGl6ZXIiOiJzdGFibGUtanNvbi12MSIsInN1YiI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9.mZt4HTjoi9h9LltXq0QGJadovioWXwwNCmvQ3kwYolM",
+  "agentAccountId": "77777777-7777-4777-8777-777777777777",
+  "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+  "responseVector": {
+    "keyHex": "5151515151515151515151515151515151515151515151515151515151515151",
+    "issuer": "researcher-test",
+    "audience": "mooyu-platform-test",
+    "requestId": "99999999-9999-4999-8999-000000000012",
+    "body": {
+      "link": {
+        "binding": {
+          "questionId": "22222222-2222-4222-8222-222222222222",
+          "reservationId": "33333333-3333-4333-8333-333333333333",
+          "subject": "11111111-1111-4111-8111-111111111111",
+          "idempotencyKey": "offline-question-key-1",
+          "article": {
+            "platformArticleId": "55555555-5555-4555-8555-555555555555",
+            "platformRevisionId": "66666666-6666-4666-8666-666666666666",
+            "platformContentHash": "6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316",
+            "researcherArticleId": "offline-article-tiny-map",
+            "evidencePackageHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "questionHash": "c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f",
+          "tokenLimit": 80000,
+          "agentAccountId": "77777777-7777-4777-8777-777777777777",
+          "executionPrincipalId": "88888888-8888-4888-8888-888888888888",
+          "billingSubjectId": "11111111-1111-4111-8111-111111111111"
+        },
+        "taskId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "requestId": "44444444-4444-4444-8444-444444444444"
+      },
+      "receipt": {
+        "receiptId": "0378264944d0399ab047436b000f8cc10dd916ef3f1f06db71ac9a5eb2f91826",
+        "bindingHash": "cce71ec021d6f4b80b3018a95a1530194b20734cb7d1d516c7ae5a8df6666d66",
+        "questionId": "22222222-2222-4222-8222-222222222222",
+        "reservationId": "33333333-3333-4333-8333-333333333333",
+        "taskId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "callIndex": 0,
+        "provider": "deepseek",
+        "model": "deepseek-test",
+        "providerRequestId": "offline-provider-request",
+        "rawSha256": "1c57e965f170020260f3abc82524c9ae15c7f9fdbf3cb531946a46fb85918c5b",
+        "state": "known",
+        "usage": {
+          "inputTokens": 10,
+          "outputTokens": 5,
+          "totalTokens": 15,
+          "cachedInputTokens": 3
+        }
+      }
+    },
+    "raw": {
+      "status": 200,
+      "headers": {
+        "x-request-id": "offline-provider-request"
+      },
+      "bodyBase64": "eyJtb2RlbCI6ImRlZXBzZWVrLXRlc3QiLCJ1c2FnZSI6eyJwcm9tcHRfdG9rZW5zIjoxMCwiY29tcGxldGlvbl90b2tlbnMiOjUsInRvdGFsX3Rva2VucyI6MTUsInByb21wdF9jYWNoZV9oaXRfdG9rZW5zIjozfSwiY2hvaWNlcyI6W119",
+      "sha256": "1c57e965f170020260f3abc82524c9ae15c7f9fdbf3cb531946a46fb85918c5b",
+      "bytes": 135,
+      "complete": true,
+      "receivedAt": "2026-10-23T00:00:00Z"
+    },
+    "canonicalBody": "{\"link\":{\"binding\":{\"agentAccountId\":\"77777777-7777-4777-8777-777777777777\",\"article\":{\"evidencePackageHash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"platformArticleId\":\"55555555-5555-4555-8555-555555555555\",\"platformContentHash\":\"6afcc2a866ad344bb63f476406cdb6cd747b93e14d8d4255f05a843b73151316\",\"platformRevisionId\":\"66666666-6666-4666-8666-666666666666\",\"researcherArticleId\":\"offline-article-tiny-map\"},\"billingSubjectId\":\"11111111-1111-4111-8111-111111111111\",\"executionPrincipalId\":\"88888888-8888-4888-8888-888888888888\",\"idempotencyKey\":\"offline-question-key-1\",\"questionHash\":\"c0d390ef439d5ddcb16b1a9af65df23bc421ac4230587c910a8bf775e297c17f\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"subject\":\"11111111-1111-4111-8111-111111111111\",\"tokenLimit\":80000},\"requestId\":\"44444444-4444-4444-8444-444444444444\",\"taskId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"receipt\":{\"bindingHash\":\"cce71ec021d6f4b80b3018a95a1530194b20734cb7d1d516c7ae5a8df6666d66\",\"callIndex\":0,\"model\":\"deepseek-test\",\"provider\":\"deepseek\",\"providerRequestId\":\"offline-provider-request\",\"questionId\":\"22222222-2222-4222-8222-222222222222\",\"rawSha256\":\"1c57e965f170020260f3abc82524c9ae15c7f9fdbf3cb531946a46fb85918c5b\",\"receiptId\":\"0378264944d0399ab047436b000f8cc10dd916ef3f1f06db71ac9a5eb2f91826\",\"reservationId\":\"33333333-3333-4333-8333-333333333333\",\"state\":\"known\",\"taskId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"usage\":{\"cachedInputTokens\":3,\"inputTokens\":10,\"outputTokens\":5,\"totalTokens\":15}}}",
+    "requestDigest": "c4b0fadd8748ece7703d71ac722de92a8ed7a239c70769271a850d85a3265b49",
+    "canonicalClaims": "{\"action\":\"usage\",\"alg\":\"HS256\",\"aud\":\"mooyu-platform-test\",\"contractVersion\":\"mooyu-research-qa-v1\",\"exp\":1060,\"iat\":1000,\"iss\":\"researcher-test\",\"kid\":\"offline-response-key-1\",\"method\":\"POST\",\"path\":\"/internal/research-qa/v1/usage\",\"requestDigest\":\"c4b0fadd8748ece7703d71ac722de92a8ed7a239c70769271a850d85a3265b49\",\"requestId\":\"99999999-9999-4999-8999-000000000012\",\"serializer\":\"stable-json-v1\",\"sub\":\"11111111-1111-4111-8111-111111111111\"}",
+    "token": "eyJhY3Rpb24iOiJ1c2FnZSIsImFsZyI6IkhTMjU2IiwiYXVkIjoibW9veXUtcGxhdGZvcm0tdGVzdCIsImNvbnRyYWN0VmVyc2lvbiI6Im1vb3l1LXJlc2VhcmNoLXFhLXYxIiwiZXhwIjoxMDYwLCJpYXQiOjEwMDAsImlzcyI6InJlc2VhcmNoZXItdGVzdCIsImtpZCI6Im9mZmxpbmUtcmVzcG9uc2Uta2V5LTEiLCJtZXRob2QiOiJQT1NUIiwicGF0aCI6Ii9pbnRlcm5hbC9yZXNlYXJjaC1xYS92MS91c2FnZSIsInJlcXVlc3REaWdlc3QiOiJjNGIwZmFkZDg3NDhlY2U3NzAzZDcxYWM3MjJkZTkyYThlZDdhMjM5YzcwNzY5MjcxYTg1MGQ4NWEzMjY1YjQ5IiwicmVxdWVzdElkIjoiOTk5OTk5OTktOTk5OS00OTk5LTg5OTktMDAwMDAwMDAwMDEyIiwic2VyaWFsaXplciI6InN0YWJsZS1qc29uLXYxIiwic3ViIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIn0.SjAZZZnXIGERUyI-n54QlWGZKH6nglOYuLMKcq2JXUI",
+    "kid": "offline-response-key-1",
+    "direction": "researcher-to-platform"
+  },
+  "direction": "platform-to-researcher"
+}

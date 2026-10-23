@@ -26,7 +26,7 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   ]);
   const database=await createCommunityTestDatabase(databaseUrl),pool=database.pool;
   t.after(()=>database.close());
-  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,113);
+  assert.equal((await applyMigrations(pool,path.join(root,'apps/api/migrations'))).total,114);
   const userId=key(),otherUserId=key(),budgetUserId=key(),circuitUserId=key(),recoveryUserId=key(),watchId=key(),snapshotId=key();
   await pool.query(`INSERT INTO users(id,display_name) VALUES($1,'研究者一'),($2,'研究者二'),($3,'预算验收账号'),($4,'熔断验收账号'),($5,'行动恢复验收账号')`,[userId,otherUserId,budgetUserId,circuitUserId,recoveryUserId]);
   const repository=new PostgresResearchTopicRepository(pool,{monthlyBudget:{accountBillableRequests:1,accountCostUsdMicros:750,globalBillableRequests:1,globalCostUsdMicros:750},providerPrices:{'deepseek-search':750,'deepseek-fetch':750}});

@@ -1,0 +1,3 @@
+import {parseWholeJson} from './model-json.mjs';
+const integer=(v        )=>Number.isSafeInteger(v)&&Number(v)>=0;
+export function reliableUsage(receipt           ){if(!receipt.complete||receipt.status!==200)return;try{const raw=parseWholeJson(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(receipt.bodyBase64,'base64'))),u=raw.usage;if(!u||![u.prompt_tokens,u.completion_tokens,u.total_tokens].every(integer)||u.total_tokens!==u.prompt_tokens+u.completion_tokens)return;return {prompt:u.prompt_tokens,completion:u.completion_tokens,total:u.total_tokens};}catch{return;}}

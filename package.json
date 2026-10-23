@@ -58,6 +58,7 @@
     "research:capacity": "node scripts/run-research-capacity.mjs",
     "research:capacity:smoke": "node scripts/run-research-capacity.mjs --smoke",
     "research:soak": "node scripts/run-research-soak.mjs",
-    "research:worker": "node apps/api/src/researcher-worker-cli.mjs"
+    "research:worker": "node apps/api/src/researcher-worker-cli.mjs",
+    "research:qa:test:db": "node scripts/test-researcher-qa-db.mjs"
   }
 }
