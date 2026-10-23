@@ -114,3 +114,22 @@ finally先检查容器唯一身份、label和仅tmpfs挂载，再删除这个精
 平台只读审查后补齐相邻中断窗口：after_admit/before_claim中断可由同key显式续接，保留同一question/reservation/预算，并由唯一pending→dispatching的claim获得者使用原body、原requestId和新的短期签名时间发送；原签名过期也不改变stored claims/digest。反例使用新的重复投递ID并将时钟推进至原签名过期后，仍只远端submit一次。
 
 若after_claim_before_send进程退出，故障点在send的try/catch之外，不假装执行了recoverDelivery。重启后重复submit明确409+QA_HTTP_DELIVERY_UNRESOLVED，只能inspect；可信not_found后GET/reconcile明确unresolved:true、resolution:inspect-only、released:false、held不变，不把dispatching回pending。重复显式inspect各留一条inspection/status_held审计，不新增预留、结算或释放，不产生后台恢复循环。已有远端任务则仍可由签名状态接回accepted。这一未决状态的安全取消/重试需要vNext持久delivery owner/attempt/lease或tombstone，目前不支持；没有用临时全局锁掩盖它，也没有宣称全部失败都能继续执行。
+
+## 2026-10-23 本地 HTTP 网关再次审查
+
+修复两处边界，未改冻结协议或迁移：
+
+1. 先前usage/status在验证回调前就调用可信日志端口。现在以惰性的服务端只读resolver交给账本，在签名、用户/任务/修订绑定、原查询关联和投递重放检查之后才读取；usage还要求槽位已派发，closed status还要求满足闭合前置条件。相同原投递直接返回已提交结果，不再触发日志读取；unknown/not_found不读不需要的证明。原有直接传proof/journal对象的调用保持兼容。
+2. 网关在异步端口调用前固定actor与输入快照，给prepareSubmission和resolveGrant分别传副本。get固定已认证subject，refresh固定actor；可信端口或共享actor对象的异步变化不能换掉当前调用的身份、问题或文章输入。
+
+同时收窄路径集合：模拟Researcher receiver只接submit/control inspect，平台callback只接accepted/usage/authorize/status，网关outbound也只允许submit/inspect。底层本机测试sender仅覆盖这两组路径，不再包含未使用的recover/permit路由。所有集合来自原冻结常量，无协议改写。
+
+惰性resolver在单题事务内执行，必须是可信、只读、有界的本地日志读取；禁止网络、模型调用、派发或重入账本。这样不增加一次验证/一次结算之间的数据库竞态，也不引入全局锁。resolver失败会回滚该次用量/状态/预算/审计更新；后续只显式重投原可靠回执或原状态对账，不自动执行模型。
+
+独立测试中的文章授权也补齐完整绑定对照：实际DB修订content hash与可信fixture目录中的整份ArticleBinding同时匹配，包含Researcher文章ID和evidence package hash。此为测试端口加强，不表示生产文章/证据目录已启用。新增错subject、错原grant、错revision、错content hash、错package hash五类反例，均无预留、无远端submit、无模型执行；另验证坏签名不读日志、同投递并发重放只结算一次、用量/闭合日志故障全部回滚后显式恢复。
+
+结果：独立PG17与模拟模型/本机HTTP共61项全部通过（0跳过）；本地HTTP无DB测试8/8通过。定向API/迁移回归另见本轮日志。日志为researcher-qa-http-audit-db.log、researcher-qa-http-audit-static.log、researcher-qa-http-audit-targeted.log（系统临时目录）。旧任务、线上账号、付费请求、真实执行与发布均未涉及。
+
+保留既有安全停止边界：无持久owner证明的dispatching/uncertain加not_found仍保持held，明确unresolved，不回pending、不重发、不释放；安全取消/重试继续留给vNext。本轮没有把该未决状态改成“可自动恢复”。
+
+补充：错误task、未派发用量槽以及closed status的错槽/漏槽均在日志读取前拒绝；冻结的完整release证明校验仍保留，不因前置检查而放宽。完整定向回归45项中42通过、3独立DB门控跳过，0失败。
