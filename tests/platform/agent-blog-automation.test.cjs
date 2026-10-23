@@ -72,4 +72,6 @@ test('Production secret root is scoped to the API and the admin surface is fully
  assert.doesNotMatch(admin,/博客编辑器|保存私有草稿|人工审核/);
  const styles=fs.readFileSync(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
  assert.match(styles,/agent-control-card[^\n]*var\(--gh-border\)/);
+ assert.match(styles,/agent-switch input\[type="checkbox"\][^\n]*width:16px/);
+ assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
 });
