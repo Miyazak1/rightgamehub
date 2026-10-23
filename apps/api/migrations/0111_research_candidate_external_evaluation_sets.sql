@@ -1,7 +1,29 @@
 BEGIN;
 
+DO $$
+DECLARE
+  sample_strategy_constraint name;
+BEGIN
+  SELECT constraint_name INTO sample_strategy_constraint
+  FROM information_schema.constraint_column_usage
+  WHERE table_schema='public'
+    AND table_name='tool_research_candidate_evaluation_datasets'
+    AND column_name='sample_strategy'
+  ORDER BY constraint_name
+  LIMIT 1;
+
+  IF sample_strategy_constraint IS NULL THEN
+    RAISE EXCEPTION 'sample_strategy check constraint is missing';
+  END IF;
+
+  EXECUTE format(
+    'ALTER TABLE tool_research_candidate_evaluation_datasets DROP CONSTRAINT %I',
+    sample_strategy_constraint
+  );
+END;
+$$;
+
 ALTER TABLE tool_research_candidate_evaluation_datasets
-  DROP CONSTRAINT tool_research_candidate_evaluation_datasets_sample_strategy_check,
   ADD COLUMN dataset_origin text NOT NULL DEFAULT 'internal-review'
     CHECK (dataset_origin IN ('internal-review','external-import')),
   ADD COLUMN coverage_report_json jsonb NOT NULL DEFAULT '{}'::jsonb

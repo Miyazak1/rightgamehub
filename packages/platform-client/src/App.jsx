@@ -31,6 +31,7 @@ import CreatorAiTaskPage from './CreatorAiTaskPage.jsx';
 import WorkEditPage from './WorkEditPage.jsx';
 import DevelopmentLogPage from './DevelopmentLogPage.jsx';
 import {DiscoveryCampaignAdmin,DiscoveryCampaignPage} from './DiscoveryCampaigns.jsx';
+import { BlogAdmin, BlogArticlePage, BlogIndexPage } from './BlogPages.jsx';
 import GrowthContentStudio from './GrowthContentStudio.jsx';
 import AuthorOutreachQueue from './AuthorOutreachQueue.jsx';
 import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
@@ -82,7 +83,7 @@ const analyticsIdentity = () => ({
 });
 const routeCategory = route => {
   const head = String(route || '').split('/').filter(Boolean)[0];
-  return ({ discover: 'discover', learn: 'learning', tools: 'tools', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
+  return ({ discover: 'discover', blog: 'blog', learn: 'learning', tools: 'tools', library: 'library', social: 'social', community: 'social', contribute: 'social', creator: 'creator', admin: 'admin', works: 'work', play: 'play', account: 'auth', install: 'settings', u: 'profile' })[head] ?? 'unknown';
 };
 const emitAnalytics = (api, hostKind, event, demo = false) => {
   if (demo || !api?.trackAnalytics) return;
@@ -1722,7 +1723,7 @@ export function AdminClaimManager({claims,api,demo,onChanged}) {
   return <section className="admin-queue claim-review-queue"><div className="puzzle-ops__head"><div><span className="kicker">GAME CLAIM GOVERNANCE</span><h2>作者与维护者认领</h2><p>审核新申请，并持续处理已经确认的认领关系、争议、暂停和撤销。</p></div><span>{claims.length} 份记录</span></div><div className="claim-status-tabs" role="group" aria-label="认领状态筛选">{filters.map(([value,label])=><button type="button" aria-pressed={filter===value} onClick={()=>setFilter(value)} key={value}>{label} <span>{value==='all'?claims.length:claims.filter(claim=>claim.status===value).length}</span></button>)}</div>{error&&<p className="form-error" role="alert">{error}</p>}{message&&<p className="admin-notice" role="status">{message}</p>}{visible.length?visible.map(claim=>{const history=audit[claim.id];return <article className={`report-card claim-governance-card is-${claim.status}`} key={claim.id}><div className="report-card__head"><div><span>{claim.relationship==='owner'?'作者 / 权利人':'维护者'} · {claim.evidenceType}</span><h3>{claim.workTitle}</h3></div><em>{projectClaimStatusLabels[claim.status]||claim.status}</em></div><p><strong>{claim.claimantDisplayName}</strong>{claim.claimantHandle?`（@${claim.claimantHandle}）`:''}</p>{(claim.repositoryUrl||claim.evidenceUrl)&&<a href={claim.repositoryUrl||claim.evidenceUrl} target="_blank" rel="noreferrer">核对公开证明 ↗</a>}{claim.applicantNote&&<p>{claim.applicantNote}</p>}{claim.decisionNote&&<p className="claim-decision-note">最近决定：{claim.decisionNote}</p>}<details className="governance-audit" onToggle={event=>{if(event.currentTarget.open)loadAudit(claim);}}><summary>审核与权限历史</summary>{!history||history.status==='loading'?<p>正在读取审计记录…</p>:history.status==='error'?<p>审计记录暂时无法读取。</p>:history.items.length?<ol>{history.items.map(event=><li key={event.id}><div><strong>{projectClaimActionLabels[event.action]||event.action}</strong><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></div><p>{event.details?.note||event.actorDisplayName}</p></li>)}</ol>:<p>还没有审计事件。</p>}</details>{actions(claim).length>0&&<><label>审核或治理说明<textarea maxLength="2000" value={notes[claim.id]||''} onChange={event=>setNotes(current=>({...current,[claim.id]:event.target.value}))} placeholder="记录身份核验、争议依据或权限变更原因。"/></label><div className="dialog-actions">{actions(claim).map(([action,label])=>action==='revoke'?<button className="danger-button" type="button" disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{label}</button>:<Button kind={action==='approve'||action==='restore'?undefined:'secondary'} disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{busy===claim.id?'处理中…':label}</Button>)}</div></>}</article>;}):<div className="admin-empty"><span>✓</span><strong>这个状态没有认领记录</strong><p>可切换其他状态查看完整治理历史。</p></div>}</section>;
 }
 
-const adminPanelIds = new Set(['overview','growth','works','governance','official']);
+const adminPanelIds = new Set(['overview','growth','blog','works','governance','official']);
 const readAdminPanel = () => {
   const outer = new URLSearchParams(String(globalThis.location?.search || '').replace(/^\?/u,''));
   const embeddedRoute = outer.get('gh_route');
@@ -1823,6 +1824,7 @@ function AdminPage({ api, demo, go }) {
   const panels = [
     { id: 'overview', label: '概览', eyebrow: 'OVERVIEW', note: '数据与异常', badge: overviewWarning ? '!' : null },
     { id: 'growth', label: '增长运营', eyebrow: 'GROWTH', note: '传播与专题' },
+    { id: 'blog', label: '官方文章', eyebrow: 'JOURNAL', note: '草稿与发布' },
     { id: 'works', label: '作品与来源', eyebrow: 'WORKS', note: '导入、来源、认领', badge: pendingClaims || null },
     { id: 'governance', label: '内容与权限', eyebrow: 'GOVERNANCE', note: '审核与举报', badge: governanceCount || null },
     { id: 'official', label: '官方内容', eyebrow: 'OFFICIAL', note: '题库与供给', badge: officialWarning ? '!' : null },
@@ -1837,6 +1839,7 @@ function AdminPage({ api, demo, go }) {
     {firstLoad ? <LoadingCards/> : <>
     {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
     {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
+    {panel === 'blog' && <BlogAdmin api={api} demo={demo}/>}
     {panel === 'works' && <>
     {state.sourceOverview && <section className="source-operations"><div className="puzzle-ops__head"><div><span className="kicker">GITHUB SOURCE CONTROL</span><h2>GitHub 只读导入</h2><p>连接、授权仓库、近 24 小时导入与 Webhook 故障；此面板不提供源码执行能力。</p></div><span>{state.sourceOverview.activeConnections} 个活动连接</span></div><div className="source-operation-kpis"><article><span>授权仓库</span><strong>{state.sourceOverview.activeRepositories}</strong></article><article><span>24h 导入</span><strong>{state.sourceOverview.imports24h}</strong></article><article className={state.sourceOverview.failedWebhooks24h ? 'is-warning' : ''}><span>24h Webhook 失败</span><strong>{state.sourceOverview.failedWebhooks24h}</strong></article></div><details><summary>最近来源审计</summary>{state.sourceAudit.length ? <ol>{state.sourceAudit.slice(0,20).map(event => <li key={event.id}><strong>{event.action}</strong><code>{event.details?.commitSha?.slice(0,12) || event.connectionId || '—'}</code><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p>暂无来源事件。</p>}</details></section>}
     <AdminProvenanceManager items={state.provenance} api={api} demo={demo} onSaved={next=>setState(current=>({...current,provenance:current.provenance.map(item=>item.workId===next.workId?next:item)}))}/>
@@ -1894,7 +1897,9 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   }, [api, hostIdentity.id, hostReady, accountStatus, route, demo]);
   const setThemeMode = mode => host.theme.setPreference?.(mode);
   let content; const parts = route.split('/').filter(Boolean);
-  if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;
+  if (parts[0] === 'blog' && parts[1]) content = <BlogArticlePage key={parts[1]} slug={decodeRouteValue(parts[1])} api={api} go={go}/>;
+  else if (route === '/blog') content = <BlogIndexPage api={api} go={go}/>;
+  else if (parts[0] === 'works' && parts[1]) content = <DetailPage key={parts[1]} workId={parts[1]} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard={parts[2]==='leaderboard'} boardDate={parts[2]==='leaderboard'?decodeRouteValue(parts[3]):null} boardPuzzleId={parts[2]==='leaderboard'?decodeRouteValue(parts[4])||undefined:undefined}/>;
   else if (parts[0] === 'discover' && parts[1] === 'c' && parts[2]) content = <DiscoveryCampaignPage slug={decodeRouteValue(parts[2])} api={api} go={go} Art={Art}/>;
   else if (parts[0] === 'u' && parts[1]) content = <PublicProfilePage handle={decodeURIComponent(parts[1])} api={api} demo={demo} go={go} onProfileChange={setAccountProfile}/>;
   else if (parts[0] === 's' && parts[1]) content = <GameSharePage key={parts[1]} code={parts[1]} api={api} renderPlayer={share=><PlayerPage workId={share.workId} releaseId={share.releaseId} initialShareCode={share.code} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={false} go={go}/>}/>;

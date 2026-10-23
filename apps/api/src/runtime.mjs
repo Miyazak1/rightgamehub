@@ -81,6 +81,8 @@ import { createCreatorDraftService } from './creator-draft-service.mjs';
 import { PostgresProjectClaimRepository, createProjectClaimService } from './project-claim-service.mjs';
 import { PostgresDevelopmentLogRepository, createDevelopmentLogService } from './development-log-service.mjs';
 import { PostgresDiscoveryCampaignRepository, createDiscoveryCampaignService } from './discovery-campaign-service.mjs';
+import { PostgresBlogRepository } from './blog-repository.mjs';
+import { createBlogService } from './blog-service.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
@@ -206,6 +208,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const discoveryCampaignService = createDiscoveryCampaignService({
     repository: new PostgresDiscoveryCampaignRepository(database.pool), catalogService, siteOrigin: config.gameShareSiteOrigin,
   });
+  const blogService = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -271,6 +274,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     contributionTaskService,
     developmentLogService,
     discoveryCampaignService,
+    blogService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
@@ -319,6 +323,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     contributionTaskService,
     developmentLogService,
     discoveryCampaignService,
+    blogService,
     storageCapacityService,
     realtimeTicketService,
     rulesRegistry,

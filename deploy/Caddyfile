@@ -63,6 +63,10 @@
     reverse_proxy api:3090
   }
 
+  handle /blog/* {
+    reverse_proxy api:3090
+  }
+
   # Vite filenames are content-addressed. Cache existing bundles permanently,
   # but return a real 404 for a removed bundle instead of the SPA HTML shell.
   handle /assets/* {

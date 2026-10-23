@@ -9,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 113);
+  assert.equal(files.length, 114);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -67,6 +67,7 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const researchCandidateEvaluationDatasets = fs.readFileSync(path.join(migrationDir, '0110_research_candidate_evaluation_datasets.sql'), 'utf8');
   const researchCandidateExternalEvaluationSets = fs.readFileSync(path.join(migrationDir, '0111_research_candidate_external_evaluation_sets.sql'), 'utf8');
   const researchCandidateEvaluationPredictions = fs.readFileSync(path.join(migrationDir, '0112_research_candidate_evaluation_predictions.sql'), 'utf8');
+  const platformBlog = fs.readFileSync(path.join(migrationDir, '0113_platform_blog_foundation.sql'), 'utf8');
   const researchLocalNodes = fs.readFileSync(path.join(migrationDir, '0114_research_local_nodes.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
@@ -109,6 +110,9 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(researchCandidateEvaluationDatasets, /research candidate evaluation records are immutable/);
   assert.match(researchCandidateExternalEvaluationSets, /dataset_origin/);
   assert.match(researchCandidateExternalEvaluationSets, /coverage_report_json/);
+  assert.match(researchCandidateExternalEvaluationSets, /information_schema\.constraint_column_usage/);
+  assert.match(researchCandidateExternalEvaluationSets, /column_name='sample_strategy'/);
+  assert.doesNotMatch(researchCandidateExternalEvaluationSets, /DROP CONSTRAINT tool_research_candidate_evaluation_datasets_sample_strategy_check/);
   assert.match(researchCandidateExternalEvaluationSets, /CREATE TABLE tool_research_candidate_evaluation_external_assignments/);
   assert.match(researchCandidateExternalEvaluationSets, /external_case_key/);
   assert.match(researchCandidateExternalEvaluationSets, /'external-jsonl-v1'/);
@@ -117,6 +121,13 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(researchCandidateEvaluationPredictions, /CREATE TABLE tool_research_candidate_evaluation_predictions/);
   assert.match(researchCandidateEvaluationPredictions, /UNIQUE\(dataset_id,case_id,evaluation_key\)/);
   assert.match(researchCandidateEvaluationPredictions, /tool_research_candidate_evaluation_predictions_no_update/);
+  assert.match(platformBlog, /CREATE TABLE blog_articles/);
+  assert.match(platformBlog, /CREATE TABLE blog_article_revisions/);
+  assert.match(platformBlog, /CREATE TABLE blog_revision_research_provenance/);
+  assert.match(platformBlog, /CREATE TABLE blog_article_events/);
+  assert.match(platformBlog, /DEFERRABLE INITIALLY DEFERRED/);
+  assert.match(platformBlog, /blog revision content is immutable/);
+  assert.match(platformBlog, /blog audit records are append-only/);
   assert.match(researchLocalNodes, /CREATE TABLE tool_research_local_nodes/);
   assert.match(researchLocalNodes, /token_sha256 text NOT NULL UNIQUE/);
   assert.match(researchLocalNodes, /ADD COLUMN executor_kind/);

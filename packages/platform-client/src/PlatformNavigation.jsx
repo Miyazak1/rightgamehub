@@ -4,6 +4,7 @@ import { useI18n } from './I18n.jsx';
 
 const playerLinks = [
   ['/discover', 'navigation.discover', '✦', route => route === '/discover' || route.startsWith('/works/')],
+  ['/blog', 'navigation.blog', '▤', route => route === '/blog' || route.startsWith('/blog/')],
   ['/learn', 'navigation.learning', '◈', route => route === '/learn'],
   ['/tools', 'navigation.tools', '◇', route => route === '/tools' || route.startsWith('/tools/')],
   ...(COMMUNITY_ENABLED ? [['/community', 'navigation.community', '✣', route => route === '/social' || route.startsWith('/community') || route.startsWith('/contribute')]] : []),
