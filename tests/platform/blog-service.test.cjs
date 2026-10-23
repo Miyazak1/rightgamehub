@@ -15,10 +15,10 @@ const content = () => ({
   summary: '说明平台如何隔离文章草稿、公开版本和自动研究导入，避免未经确认的内容直接发布。',
   blocks: [
     { type: 'heading', level: 2, text: '设计目标' },
-    { type: 'paragraph', text: '公开页面始终读取已经发布的不可变修订，新的编辑只形成私有工作版本。' },
+    { type: 'paragraph', text: '公开页面始终读取已经发布的不可变修订，新的编辑只形成私有工作版本。', citationIds: [citationId] },
     { type: 'quote', text: '研究系统只负责形成草稿，不拥有发布权限。', citationIds: [citationId] },
   ],
-  citations: [{ id: citationId, label: '设计依据', title: '平台发布边界', url: 'https://docs.example.com/platform-boundary', publisher: 'MOOYU.FUN', publishedAt: null, accessedAt: '2026-10-22T02:00:00.000Z' }],
+  citations: [{ id: citationId, label: '设计依据', title: '平台发布边界', url: 'https://docs.example.com/platform-boundary', publisher: 'MOOYU.FUN', publishedAt: null, accessedAt: '2026-10-22T02:00:00.000Z', excerpt: '公开版本必须绑定不可变修订，并保留可以核对的来源上下文。', locator: '发布边界', repositoryUrl: 'https://github.com/example/platform' }],
 });
 
 test('blog content is structured, bounded, and rejects executable or private links', async () => {
@@ -26,6 +26,8 @@ test('blog content is structured, bounded, and rejects executable or private lin
   const normalized = normalizeBlogContent(content());
   assert.equal(normalized.title, '墨鱼工坊平台架构说明');
   assert.equal(normalized.blocks[2].citationIds[0], citationId);
+  assert.equal(normalized.blocks[1].citationIds[0], citationId);
+  assert.equal(normalized.citations[0].repositoryUrl, 'https://github.com/example/platform');
   assert.throws(() => normalizeBlogContent({ ...content(), blocks: [{ type: 'html', html: '<script>alert(1)</script>' }] }), error => error instanceof BlogArticleError && error.code === 'BLOG_CONTENT_INVALID');
   const local = content();
   local.citations[0].url = 'https://127.0.0.1/private';

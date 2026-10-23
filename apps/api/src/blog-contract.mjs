@@ -9,6 +9,8 @@ export const BLOG_LIMITS = Object.freeze({
   citations: 80,
   citationLabel: 180,
   citationTitle: 300,
+  citationExcerpt: 900,
+  citationLocator: 180,
   code: 24000,
   listItems: 40,
   inputBytes: 131072,
@@ -82,8 +84,9 @@ export function safeBlogUrl(value) {
 
 function normalizeBlock(block) {
   if (block?.type === 'paragraph') {
-    if (!objectWithOnly(block, ['type', 'text'])) fail('BLOG_CONTENT_INVALID', 400, '正文块格式无效。');
-    return { type: 'paragraph', text: text(block.text, 1, 8000, '段落内容无效。') };
+    if (!objectWithOnly(block, ['type', 'text', 'citationIds'])) fail('BLOG_CONTENT_INVALID', 400, '正文块格式无效。');
+    const citationIds = block.citationIds == null ? [] : normalizeCitationIds(block.citationIds);
+    return { type: 'paragraph', text: text(block.text, 1, 8000, '段落内容无效。'), ...(citationIds.length ? { citationIds } : {}) };
   }
   if (block?.type === 'heading') {
     if (!objectWithOnly(block, ['type', 'level', 'text']) || ![2, 3].includes(block.level)) fail('BLOG_CONTENT_INVALID', 400, '标题块格式无效。');
@@ -97,9 +100,10 @@ function normalizeBlock(block) {
     return { type: 'quote', text: text(block.text, 1, 3000, '引用内容无效。'), citationIds };
   }
   if (block?.type === 'list') {
-    if (!objectWithOnly(block, ['type', 'ordered', 'items']) || typeof block.ordered !== 'boolean'
+    if (!objectWithOnly(block, ['type', 'ordered', 'items', 'citationIds']) || typeof block.ordered !== 'boolean'
       || !Array.isArray(block.items) || block.items.length < 1 || block.items.length > BLOG_LIMITS.listItems) fail('BLOG_CONTENT_INVALID', 400, '列表块格式无效。');
-    return { type: 'list', ordered: block.ordered, items: block.items.map(item => text(item, 1, 1000, '列表项内容无效。')) };
+    const citationIds = block.citationIds == null ? [] : normalizeCitationIds(block.citationIds);
+    return { type: 'list', ordered: block.ordered, items: block.items.map(item => text(item, 1, 1000, '列表项内容无效。')), ...(citationIds.length ? { citationIds } : {}) };
   }
   if (block?.type === 'code') {
     if (!objectWithOnly(block, ['type', 'language', 'text']) || !languagePattern.test(block.language ?? '')) fail('BLOG_CONTENT_INVALID', 400, '代码块格式无效。');
@@ -108,8 +112,13 @@ function normalizeBlock(block) {
   fail('BLOG_CONTENT_INVALID', 400, '正文包含不支持的内容块。');
 }
 
+function normalizeCitationIds(value) {
+  if (!Array.isArray(value) || value.length > 8 || value.some(id => !uuid(id)) || new Set(value).size !== value.length) fail('BLOG_CONTENT_INVALID', 400, '正文引用格式无效。');
+  return [...value];
+}
+
 function normalizeCitation(citation) {
-  if (!objectWithOnly(citation, ['id', 'label', 'title', 'url', 'publisher', 'publishedAt', 'accessedAt'])) fail('BLOG_CONTENT_INVALID', 400, '引用来源格式无效。');
+  if (!objectWithOnly(citation, ['id', 'label', 'title', 'url', 'publisher', 'publishedAt', 'accessedAt', 'excerpt', 'locator', 'repositoryUrl'])) fail('BLOG_CONTENT_INVALID', 400, '引用来源格式无效。');
   const publishedAt = citation.publishedAt == null ? null : new Date(citation.publishedAt);
   const accessedAt = new Date(citation.accessedAt);
   if ((publishedAt && Number.isNaN(publishedAt.getTime())) || Number.isNaN(accessedAt.getTime())) fail('BLOG_CONTENT_INVALID', 400, '引用来源时间无效。');
@@ -121,6 +130,9 @@ function normalizeCitation(citation) {
     publisher: text(citation.publisher, 1, 160, '引用发布者无效。'),
     publishedAt: publishedAt?.toISOString() ?? null,
     accessedAt: accessedAt.toISOString(),
+    ...(citation.excerpt == null ? {} : { excerpt: text(citation.excerpt, 1, BLOG_LIMITS.citationExcerpt, '引用原文片段无效。') }),
+    ...(citation.locator == null ? {} : { locator: text(citation.locator, 1, BLOG_LIMITS.citationLocator, '引用位置无效。') }),
+    ...(citation.repositoryUrl == null ? {} : { repositoryUrl: safeBlogUrl(citation.repositoryUrl) }),
   };
 }
 
@@ -134,7 +146,7 @@ export function normalizeBlogContent(input) {
   const citationIds = new Set(citations.map(item => item.id));
   if (citationIds.size !== citations.length) fail('BLOG_CONTENT_INVALID', 400, '文章含有重复引用来源。');
   const blocks = input.blocks.map(normalizeBlock);
-  const referenced = blocks.flatMap(block => block.type === 'quote' ? block.citationIds : []);
+  const referenced = blocks.flatMap(block => block.citationIds ?? []);
   if (referenced.some(id => !citationIds.has(id))) fail('BLOG_CONTENT_INVALID', 400, '正文引用了不存在的来源。');
   const totalText = blocks.reduce((sum, block) => sum + (block.text ? scalarLength(block.text) : block.items?.reduce((n, item) => n + scalarLength(item), 0) ?? 0), 0);
   if (totalText > BLOG_LIMITS.text) fail('BLOG_CONTENT_INVALID', 400, '文章正文过长。');

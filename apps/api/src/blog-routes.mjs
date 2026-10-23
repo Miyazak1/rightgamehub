@@ -12,14 +12,17 @@ const citationSchema = {
     publisher: { type: 'string', minLength: 1, maxLength: 160 },
     publishedAt: { anyOf: [{ type: 'string', format: 'date-time' }, { type: 'null' }] },
     accessedAt: { type: 'string', format: 'date-time' },
+    excerpt: { type: 'string', minLength: 1, maxLength: 900 },
+    locator: { type: 'string', minLength: 1, maxLength: 180 },
+    repositoryUrl: { type: 'string', format: 'uri', maxLength: 2048 },
   },
 };
 const blockSchema = {
   oneOf: [
-    { type: 'object', additionalProperties: false, required: ['type', 'text'], properties: { type: { const: 'paragraph' }, text: { type: 'string', minLength: 1, maxLength: 8000 } } },
+    { type: 'object', additionalProperties: false, required: ['type', 'text'], properties: { type: { const: 'paragraph' }, text: { type: 'string', minLength: 1, maxLength: 8000 }, citationIds: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', format: 'uuid' } } } },
     { type: 'object', additionalProperties: false, required: ['type', 'level', 'text'], properties: { type: { const: 'heading' }, level: { type: 'integer', enum: [2, 3] }, text: { type: 'string', minLength: 1, maxLength: 180 } } },
     { type: 'object', additionalProperties: false, required: ['type', 'text', 'citationIds'], properties: { type: { const: 'quote' }, text: { type: 'string', minLength: 1, maxLength: 3000 }, citationIds: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', format: 'uuid' } } } },
-    { type: 'object', additionalProperties: false, required: ['type', 'ordered', 'items'], properties: { type: { const: 'list' }, ordered: { type: 'boolean' }, items: { type: 'array', minItems: 1, maxItems: 40, items: { type: 'string', minLength: 1, maxLength: 1000 } } } },
+    { type: 'object', additionalProperties: false, required: ['type', 'ordered', 'items'], properties: { type: { const: 'list' }, ordered: { type: 'boolean' }, items: { type: 'array', minItems: 1, maxItems: 40, items: { type: 'string', minLength: 1, maxLength: 1000 } }, citationIds: { type: 'array', maxItems: 8, uniqueItems: true, items: { type: 'string', format: 'uuid' } } } },
     { type: 'object', additionalProperties: false, required: ['type', 'language', 'text'], properties: { type: { const: 'code' }, language: { type: 'string', pattern: '^[a-zA-Z0-9+#._-]{1,32}$' }, text: { type: 'string', minLength: 1, maxLength: 24000 } } },
   ],
 };

@@ -79,15 +79,16 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
       locale: localeSchema, author: z.string().min(1).max(120), publishedAt: z.string().datetime(), url: z.string().url(),
     });
     const articleBlockSchema = z.discriminatedUnion('type', [
-      z.object({ type: z.literal('paragraph'), text: z.string() }),
+      z.object({ type: z.literal('paragraph'), text: z.string(), citationIds: z.array(z.string().uuid()).optional() }),
       z.object({ type: z.literal('heading'), level: z.union([z.literal(2), z.literal(3)]), text: z.string() }),
       z.object({ type: z.literal('quote'), text: z.string(), citationIds: z.array(z.string().uuid()) }),
-      z.object({ type: z.literal('list'), ordered: z.boolean(), items: z.array(z.string()) }),
+      z.object({ type: z.literal('list'), ordered: z.boolean(), items: z.array(z.string()), citationIds: z.array(z.string().uuid()).optional() }),
       z.object({ type: z.literal('code'), language: z.string(), text: z.string() }),
     ]);
     const citationOutputSchema = z.object({
       id: z.string().uuid(), label: z.string(), title: z.string(), url: z.string().url(), publisher: z.string(),
       publishedAt: z.string().datetime().nullable(), accessedAt: z.string().datetime(),
+      excerpt: z.string().optional(), locator: z.string().optional(), repositoryUrl: z.string().url().optional(),
     });
     server.registerTool('search_blog_articles', {
       title: 'Search MOOYU.FUN official articles',
