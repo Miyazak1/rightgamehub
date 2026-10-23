@@ -51,7 +51,14 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
     const data={id:'restored-'+(++sequence),workId,state,publicationOutcome,targetKey:'web',actualBytes:'24',declaredBytes:'24',...extra};jobs.set(data.id,data);
     await page.evaluate(({workId,id})=>sessionStorage.setItem('gamehub-upload:'+workId,id),{workId,id:data.id});await page.reload();return data;
   };
-  await page.goto(base+route);await page.locator('.upload-form input[type=file]').setInputFiles({name:'sample.zip',mimeType:'application/zip',buffer:Buffer.from('local fixture bytes')});
+  await page.goto(base+route);
+  await page.getByRole('radio',{name:/Windows x64/}).check();
+  await page.getByRole('heading',{name:'上传 Windows 版本',exact:true}).waitFor();
+  await page.locator('.native-package-note').getByText('这是可下载的原生程序',{exact:true}).waitFor();
+  assert.match(await page.locator('.upload-page').getAttribute('class'),/upload-page--native/);
+  await page.getByRole('radio',{name:/Web ·/}).check();
+  assert.match(await page.locator('.upload-page').getAttribute('class'),/upload-page--web/);
+  await page.locator('.upload-form input[type=file]').setInputFiles({name:'sample.zip',mimeType:'application/zip',buffer:Buffer.from('local fixture bytes')});
   await page.getByRole('button',{name:'开始上传',exact:true}).click();
   await timeline.getByRole('status').getByText('结构校验中',{exact:true}).waitFor();
   assert.equal(await timeline.locator('[data-upload-step=validating]').getAttribute('aria-current'),'step');assert.equal(await published.getAttribute('class'),'');

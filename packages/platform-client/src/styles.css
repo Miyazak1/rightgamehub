@@ -2780,3 +2780,42 @@ footer.community-actions > .community-report-button {
 .blog-hero p{max-width:700px;margin:0;color:var(--gh-secondary);font-size:15px;line-height:1.7}
 .blog-state{padding:36px 38px;border:1px solid var(--gh-border);background:var(--gh-panel);color:var(--gh-secondary);text-align:center}
 @media(max-width:700px){.blog-page{padding-top:24px}.blog-hero{min-height:0;padding:24px}.blog-hero h1{font-size:27px}.blog-state{padding:28px 24px}}@media(max-width:520px){.blog-page{width:calc(100% - 24px)}}
+
+/* Release upload: keep web and downloadable-native packages visually distinct. */
+.upload-page{box-sizing:border-box;width:min(calc(100% - 48px),1120px);padding:36px 0 72px}
+.upload-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;align-items:start;gap:16px}
+.upload-form{display:grid;gap:18px;min-width:0;padding:22px}
+.upload-timeline{position:sticky;top:72px;min-width:0}
+.release-target-picker{min-width:0;margin:0;padding:0;border:0}
+.release-target-picker>legend,.release-version-field{color:var(--gh-secondary);font-size:11px;font-weight:800;letter-spacing:.02em}
+.release-target-picker>legend{margin-bottom:8px}
+.release-target-picker>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.release-target-picker label{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr) 20px;align-items:center;gap:11px;min-height:74px;padding:12px;border:1px solid var(--gh-border);background:var(--gh-surface);color:var(--gh-primary);cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease}
+.release-target-picker label:hover{border-color:color-mix(in srgb,var(--gh-action) 58%,var(--gh-border));transform:translateY(-1px)}
+.release-target-picker label.is-active{border-color:var(--gh-action);background:color-mix(in srgb,var(--gh-action) 7%,var(--gh-surface));box-shadow:inset 0 -3px var(--gh-action)}
+.release-target-picker input{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+.release-target-picker input:focus-visible+b{outline:3px solid color-mix(in srgb,var(--gh-action) 42%,transparent);outline-offset:3px}
+.release-target-picker b{display:grid;place-items:center;width:40px;height:36px;border:1px solid color-mix(in srgb,var(--gh-action) 45%,var(--gh-border));background:var(--gh-raised);color:var(--gh-action);font:900 10px ui-monospace,"Cascadia Mono",monospace;letter-spacing:.06em}
+.release-target-picker span,.release-target-picker strong,.release-target-picker small{display:block;min-width:0}
+.release-target-picker strong{font-size:12px;line-height:1.35}
+.release-target-picker small{margin-top:4px;color:var(--gh-secondary);font-size:9px;line-height:1.5}
+.release-target-picker em{color:var(--gh-action);font-size:15px;font-style:normal;font-weight:900;text-align:center}
+.release-target-picker:disabled label{cursor:default;opacity:.82;transform:none}
+.release-version-field{display:grid;grid-template-columns:minmax(110px,160px);gap:7px}
+.release-version-field input{box-sizing:border-box;width:100%;min-height:40px;padding:9px 11px;border:1px solid var(--gh-border);border-radius:0;background:var(--gh-raised);color:var(--gh-primary);font:700 12px ui-monospace,"Cascadia Mono",monospace}
+.release-version-field input:focus{border-color:var(--gh-action);outline:3px solid color-mix(in srgb,var(--gh-action) 14%,transparent)}
+.native-package-note{display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:12px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--gh-action) 38%,var(--gh-border));border-left:4px solid var(--gh-action);background:color-mix(in srgb,var(--gh-action) 6%,var(--gh-raised))}
+.native-package-note>b{display:grid;place-items:center;width:42px;height:38px;background:var(--gh-action);color:var(--gh-onAction);font:900 10px ui-monospace,"Cascadia Mono",monospace;letter-spacing:.08em}
+.native-package-note span,.native-package-note strong,.native-package-note small{display:block;min-width:0}
+.native-package-note strong{font-size:12px}
+.native-package-note small{margin-top:4px;color:var(--gh-secondary);font-size:10px;line-height:1.55}
+.upload-page .file-drop{box-sizing:border-box;width:100%;min-height:154px;margin:0}
+.upload-page--native .file-drop{border-style:solid;border-color:color-mix(in srgb,var(--gh-action) 50%,var(--gh-border));background-image:linear-gradient(135deg,color-mix(in srgb,var(--gh-action) 7%,transparent),transparent 55%)}
+.upload-page--native .file-icon{width:auto;min-width:42px;padding:0 6px;font:900 9px ui-monospace,"Cascadia Mono",monospace;letter-spacing:.06em}
+.upload-page .check-row input{box-sizing:border-box;flex:0 0 18px;width:18px;height:18px;margin:1px 0 0;appearance:none;border:1px solid var(--gh-border);border-radius:0;background:var(--gh-surface);display:grid;place-items:center}
+.upload-page .check-row input:checked{border-color:var(--gh-action);background:var(--gh-action)}
+.upload-page .check-row input:checked::after{content:'✓';color:var(--gh-onAction);font-size:12px;font-weight:900}
+.upload-page .check-row input:disabled{opacity:1}
+.discovery-filter-selects select,.form-grid select{appearance:none;border-radius:0;background-color:var(--gh-panel);background-image:linear-gradient(45deg,transparent 50%,var(--gh-secondary) 50%),linear-gradient(135deg,var(--gh-secondary) 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 9px) 50%;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+@media(max-width:820px){.upload-page{width:calc(100% - 32px);padding-top:24px}.upload-layout{grid-template-columns:1fr}.upload-timeline{position:static;order:initial}.upload-page .timeline{order:initial}.release-target-picker>div{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.upload-page{width:calc(100% - 24px)}.upload-form{padding:16px}.release-target-picker>div{grid-template-columns:1fr}.release-target-picker label{min-height:68px}.release-version-field{grid-template-columns:1fr}.upload-page .timeline ol{grid-template-columns:repeat(2,minmax(0,1fr))}.upload-page .file-drop{min-height:138px}.native-package-note{grid-template-columns:38px minmax(0,1fr);padding:11px}.native-package-note>b{width:36px;height:34px}}
