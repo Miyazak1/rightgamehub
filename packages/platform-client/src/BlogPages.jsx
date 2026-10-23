@@ -6,6 +6,39 @@ const emptyDraft = () => ({ slug: '', locale: 'zh-CN', title: '', summary: '', b
 const formatDate = value => value ? new Date(value).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 const randomId = () => globalThis.crypto?.randomUUID?.() ?? `00000000-0000-4000-8000-${String(Date.now()).slice(-12)}`;
 
+function useArticleNavigation(headings, slug) {
+  const [state, setState] = useState({activeId: headings[0]?.id ?? '', progress: 0});
+  const headingKey = headings.map(heading => heading.id).join('|');
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const article = globalThis.document?.querySelector('.blog-article');
+      if (!article) return;
+      const scrollY = globalThis.scrollY ?? 0;
+      const articleTop = scrollY + article.getBoundingClientRect().top;
+      const travel = Math.max(1, article.scrollHeight - (globalThis.innerHeight ?? 0));
+      const progress = Math.max(0, Math.min(100, ((scrollY - articleTop + 120) / travel) * 100));
+      const threshold = 150;
+      const active = headings.map(heading => globalThis.document?.getElementById(heading.id)).filter(Boolean).filter(element => element.getBoundingClientRect().top <= threshold).at(-1)?.id ?? headings[0]?.id ?? '';
+      setState(current => current.activeId === active && Math.abs(current.progress - progress) < .25 ? current : {activeId: active, progress});
+    };
+    const schedule = () => { if (!frame) frame = globalThis.requestAnimationFrame?.(update) ?? globalThis.setTimeout?.(update, 16); };
+    update();
+    globalThis.addEventListener?.('scroll', schedule, {passive: true});
+    globalThis.addEventListener?.('resize', schedule);
+    return () => { globalThis.removeEventListener?.('scroll', schedule); globalThis.removeEventListener?.('resize', schedule); if (frame) (globalThis.cancelAnimationFrame?.(frame) ?? globalThis.clearTimeout?.(frame)); };
+  }, [headingKey, slug]);
+  return state;
+}
+
+function ArticleNavigation({headings, activeId, progress, mobile = false}) {
+  if (headings.length < 2) return null;
+  const links = headings.map(heading => <a className={`${heading.level === 3 ? 'is-sub ' : ''}${activeId === heading.id ? 'is-active' : ''}`.trim()} key={heading.id} href={`#${heading.id}`} aria-current={activeId === heading.id ? 'location' : undefined}>{heading.text}</a>);
+  if (mobile) return <details className="blog-mobile-toc"><summary><span>本文目录</span><b>{Math.round(progress)}%</b></summary><div className="blog-toc__meter" aria-hidden="true"><i style={{width:`${progress}%`}}/></div><nav>{links}</nav></details>;
+  return <aside className="blog-toc" aria-label="本文目录"><header><span>本文目录</span><b>{Math.round(progress)}%</b></header><div className="blog-toc__meter" aria-hidden="true"><i style={{width:`${progress}%`}}/></div><nav>{links}</nav></aside>;
+}
+
 function CitationMarks({ ids = [], citations = [] }) {
   const found = ids.map(id => citations.find(item => item.id === id)).filter(Boolean);
   return found.length ? <span className="blog-citation-marks" aria-label="本段引用来源">{found.map(citation => <a key={citation.id} href={`#source-${citation.id}`} title={citation.title}>[{citations.findIndex(item => item.id === citation.id) + 1}]</a>)}</span> : null;
@@ -70,16 +103,17 @@ export function BlogIndexPage({ api, go }) {
 export function BlogArticlePage({ slug, api, go }) {
   const [state, setState] = useState({ status: 'loading', article: null, error: '' });
   useEffect(() => { let live = true; api.getBlogArticle(slug).then(({ data }) => live && setState({ status: 'ready', article: data, error: '' })).catch(error => live && setState({ status: 'error', article: null, error: error.message })); return () => { live = false; }; }, [api, slug]);
+  const article = state.article;
+  const agentAuthored = article?.author?.accountType === 'agent';
+  const headings = (article?.blocks ?? []).map((block, index) => block.type === 'heading' && (block.text !== '继续追问' || !agentAuthored) ? { index, text: block.text, level: block.level, id: `section-${index}` } : null).filter(Boolean);
+  const navigation = useArticleNavigation(headings, slug);
   if (state.status === 'loading') return <main className="page blog-page"><p className="blog-state">正在打开文章…</p></main>;
   if (state.status === 'error') return <main className="page blog-page"><p className="form-error">{state.error}</p><button className="button button--secondary" onClick={() => go('/blog')}>返回文章列表</button></main>;
-  const article = state.article;
-  const agentAuthored = article.author.accountType === 'agent';
-  const headings = article.blocks.map((block, index) => block.type === 'heading' && (block.text !== '继续追问' || !agentAuthored) ? { index, text: block.text, level: block.level, id: `section-${index}` } : null).filter(Boolean);
   const followIndex = agentAuthored ? article.blocks.findIndex(block => block.type === 'heading' && block.text === '继续追问') : -1;
   const followQuestions = followIndex >= 0 && article.blocks[followIndex + 1]?.type === 'list' ? article.blocks[followIndex + 1].items : [];
   const bodyBlocks = followIndex >= 0 ? article.blocks.filter((_, index) => index !== followIndex && index !== followIndex + 1) : article.blocks;
   const repositories = [...new Map(article.citations.map(citation => [githubRepository(citation), citation]).filter(([url]) => url)).values()];
-  return <main className="page blog-page blog-page--article"><div className="blog-article-shell">{headings.length > 1 && <aside className="blog-toc"><span>本文目录</span><nav>{headings.map(heading => <a className={heading.level === 3 ? 'is-sub' : ''} key={heading.id} href={`#${heading.id}`}>{heading.text}</a>)}</nav></aside>}<article className="blog-article"><header><button type="button" onClick={() => go('/blog')}>← 墨鱼日志</button><span className="kicker">{article.locale === 'en' ? 'MOOYU JOURNAL' : '官方文章'}</span><h1>{article.title}</h1><p>{article.summary}</p><div className="blog-article__meta"><button type="button" className="blog-author-identity" onClick={()=>article.author.handle&&go(`/u/${article.author.handle}`)} disabled={!article.author.handle}><AvatarView avatar={article.author.avatar} api={api} alt={`${article.author.displayName}的头像`}/><span><strong>{article.author.displayName}</strong>{article.author.handle&&<small>@{article.author.handle}</small>}</span></button><AgentDisclosure profile={article.author}/><time>{formatDate(article.publishedAt)}</time><span>{readMinutes(article.blocks)} 分钟阅读</span><span>{article.citations.length} 个来源</span></div></header>{repositories.length > 0 && <section className="blog-repositories" aria-label={repositories.length===1?'本期项目 GitHub 仓库':'本期对比项目 GitHub 仓库'}><header><div><span className="kicker">OPEN SOURCE</span><h2>{repositories.length===1?'本期项目':'本期对比'}</h2></div><p>{repositories.length===1?'本文围绕这个已验证的公开仓库展开，点击卡片可直接访问项目。':'这些仓库均在正文中被实际引用，并围绕同一问题进行比较。'}</p></header><div>{repositories.map(citation => <a key={citation.id} href={githubRepository(citation)} target="_blank" rel="noreferrer" aria-label={`打开 GitHub 仓库 ${repositoryName(citation)}`}><span className="blog-repositories__mark" aria-hidden="true">GH</span><span className="blog-repositories__identity"><small>GITHUB REPOSITORY</small><strong>{repositoryName(citation)}</strong><code>{githubRepository(citation)}</code></span><em>访问仓库 <b aria-hidden="true">↗</b></em></a>)}</div></section>}<section className="blog-article__body">{bodyBlocks.map(block => { const originalIndex = article.blocks.indexOf(block); return <BlogBlock key={`${block.type}-${originalIndex}`} block={block} citations={article.citations} headingId={block.type === 'heading' ? `section-${originalIndex}` : null}/>; })}</section>{article.citations.length > 0 && <footer className="blog-citations"><span className="kicker">SOURCES</span><h2>资料来源与原文片段</h2><p>引用片段来自发布前抓取的公开页面；点击仓库地址可核对最新原文。</p><ol>{article.citations.map((citation, index) => <li id={`source-${citation.id}`} key={citation.id}><header><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{citation.label}</strong><small>{citation.publisher}{citation.locator ? ` · ${citation.locator}` : ''}</small></div><a href={citation.url} target="_blank" rel="noreferrer">查看原文 ↗</a></header><h3>{citation.title}</h3>{citation.excerpt && <details><summary>查看引用的原文片段</summary><blockquote>{citation.excerpt}</blockquote></details>}{githubRepository(citation) && <a className="blog-citation__repo" href={githubRepository(citation)} target="_blank" rel="noreferrer"><span>GitHub 仓库</span><strong>{repositoryName(citation)}</strong><em>访问 ↗</em></a>}<time>访问于 {formatDate(citation.accessedAt)}</time></li>)}</ol></footer>}{agentAuthored && <FollowUpPanel article={article} questions={followQuestions} api={api} go={go}/>}</article></div></main>;
+  return <main className="page blog-page blog-page--article"><div className="blog-article-shell"><ArticleNavigation headings={headings} {...navigation}/><article className="blog-article"><header><button type="button" onClick={() => go('/blog')}>← 墨鱼日志</button><span className="kicker">{article.locale === 'en' ? 'MOOYU JOURNAL' : '官方文章'}</span><h1>{article.title}</h1><p>{article.summary}</p><div className="blog-article__meta"><button type="button" className="blog-author-identity" onClick={()=>article.author.handle&&go(`/u/${article.author.handle}`)} disabled={!article.author.handle}><AvatarView avatar={article.author.avatar} api={api} alt={`${article.author.displayName}的头像`}/><span><strong>{article.author.displayName}</strong>{article.author.handle&&<small>@{article.author.handle}</small>}</span></button><AgentDisclosure profile={article.author}/><time>{formatDate(article.publishedAt)}</time><span>{readMinutes(article.blocks)} 分钟阅读</span><span>{article.citations.length} 个来源</span></div></header><ArticleNavigation headings={headings} {...navigation} mobile/>{repositories.length > 0 && <section className="blog-repositories" aria-label={repositories.length===1?'本期项目 GitHub 仓库':'本期对比项目 GitHub 仓库'}><header><div><span className="kicker">OPEN SOURCE</span><h2>{repositories.length===1?'本期项目':'本期对比'}</h2></div><p>{repositories.length===1?'本文围绕这个已验证的公开仓库展开，点击卡片可直接访问项目。':'这些仓库均在正文中被实际引用，并围绕同一问题进行比较。'}</p></header><div>{repositories.map(citation => <a key={citation.id} href={githubRepository(citation)} target="_blank" rel="noreferrer" aria-label={`打开 GitHub 仓库 ${repositoryName(citation)}`}><span className="blog-repositories__mark" aria-hidden="true">GH</span><span className="blog-repositories__identity"><small>GITHUB REPOSITORY</small><strong>{repositoryName(citation)}</strong><code>{githubRepository(citation)}</code></span><em>访问仓库 <b aria-hidden="true">↗</b></em></a>)}</div></section>}<section className="blog-article__body">{bodyBlocks.map(block => { const originalIndex = article.blocks.indexOf(block); return <BlogBlock key={`${block.type}-${originalIndex}`} block={block} citations={article.citations} headingId={block.type === 'heading' ? `section-${originalIndex}` : null}/>; })}</section>{article.citations.length > 0 && <footer className="blog-citations"><span className="kicker">SOURCES</span><h2>资料来源与原文片段</h2><p>引用片段来自发布前抓取的公开页面；点击仓库地址可核对最新原文。</p><ol>{article.citations.map((citation, index) => <li id={`source-${citation.id}`} key={citation.id}><header><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{citation.label}</strong><small>{citation.publisher}{citation.locator ? ` · ${citation.locator}` : ''}</small></div><a href={citation.url} target="_blank" rel="noreferrer">查看原文 ↗</a></header><h3>{citation.title}</h3>{citation.excerpt && <details><summary>查看引用的原文片段</summary><blockquote>{citation.excerpt}</blockquote></details>}{githubRepository(citation) && <a className="blog-citation__repo" href={githubRepository(citation)} target="_blank" rel="noreferrer"><span>GitHub 仓库</span><strong>{repositoryName(citation)}</strong><em>访问 ↗</em></a>}<time>访问于 {formatDate(citation.accessedAt)}</time></li>)}</ol></footer>}{agentAuthored && <FollowUpPanel article={article} questions={followQuestions} api={api} go={go}/>}</article></div></main>;
 }
 
 const blockLabel = { paragraph: '段落', heading: '标题', quote: '引用', list: '列表', code: '代码' };
