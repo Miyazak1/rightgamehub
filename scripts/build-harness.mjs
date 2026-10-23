@@ -18,7 +18,7 @@ const result = await build({
   format: 'cjs',
   platform: 'browser',
   target: ['chrome110'],
-  loader: { '.png': 'dataurl' },
+  loader: { '.png': 'dataurl', '.webp': 'dataurl' },
   external: ['react'],
   plugins: [inlineImportedAssets, inlineComponentCss],
   write: false,

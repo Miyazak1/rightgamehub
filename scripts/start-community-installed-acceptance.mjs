@@ -45,7 +45,7 @@ try{
   }
   const require=createRequire(new URL('../extensions/harness/package.json',import.meta.url)),{build}=require('esbuild');
   const web=path.join(stateRoot,'web');await fs.mkdir(web,{recursive:true});
-  await build({absWorkingDir:root,entryPoints:['apps/web/src/main.jsx'],outfile:path.join(web,'app.js'),bundle:true,format:'iife',platform:'browser',target:['chrome110'],loader:{'.png':'dataurl'},nodePaths:[path.join(root,'extensions/harness/node_modules'),path.join(root,'packages/platform-client/node_modules')],define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
+  await build({absWorkingDir:root,entryPoints:['apps/web/src/main.jsx'],outfile:path.join(web,'app.js'),bundle:true,format:'iife',platform:'browser',target:['chrome110'],loader:{'.png':'dataurl','.webp':'dataurl'},nodePaths:[path.join(root,'extensions/harness/node_modules'),path.join(root,'packages/platform-client/node_modules')],define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   runtime.app.get('/',async(request,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameHub 分享安装版验收</title><link rel="stylesheet" href="/app.css"><div id="root"></div><script src="/app.js"></script></html>'));
   for(const [name,type] of [['app.js','text/javascript'],['app.css','text/css']]){
     const bytes=await fs.readFile(path.join(web,name));runtime.app.get('/'+name,async(request,reply)=>reply.type(type).send(bytes));

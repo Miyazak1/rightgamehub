@@ -9,7 +9,7 @@ import { GameSharePage } from './GameSharePage.jsx';
 import { PlayerCore } from '@gamehub/player-core';
 import { demoUploads, demoWorks } from './demo.mjs';
 import pixelCoverAtlas from './assets/game-covers-pixel-v1-optimized.png';
-import avatarAtlas from './assets/avatar-atlas-pixel-v1.png';
+import AvatarView from './AvatarView.jsx';
 import GuessBaikeGame from './GuessBaikeGame.jsx';
 import { formatBytes, isUploadTerminalState, uploadDisplay } from './upload-display.mjs';
 import { UploadStatusNote, UploadTimeline } from './UploadStatus.jsx';
@@ -156,18 +156,6 @@ function LinkIcon() {
 
 function ImageIcon() {
   return <svg className="gamehub-action-icon" viewBox="0 0 16 16" aria-hidden="true" shapeRendering="crispEdges"><path fill="currentColor" d="M1 2h14v12H1zm2 2v7l3-3 2 2 2-3 3 4V4z"/><path fill="var(--gh-raised)" d="M10 5h2v2h-2z"/></svg>;
-}
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(() => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
-  useEffect(() => { const query = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)'); if (!query) return undefined; const change = event => setReduced(event.matches); query.addEventListener?.('change', change); return () => query.removeEventListener?.('change', change); }, []);
-  return reduced;
-}
-
-function AvatarView({ avatar, api, alt = '', className = '' }) {
-  const reducedMotion = useReducedMotion();
-  if (avatar?.kind === 'upload') return <img className={`avatar-image ${className}`} src={avatar.previewUrl || api?.avatarUrl?.(avatar, reducedMotion && avatar.staticUrl ? 'static' : 'animated')} alt={alt}/>;
-  return <span className={`avatar-sprite avatar-sprite--${avatar?.presetKey || 'cat'} ${className}`} style={{ backgroundImage: `url(${avatarAtlas})` }} role={alt ? 'img' : undefined} aria-label={alt || undefined}/>;
 }
 
 function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, accountProfile, accountStatus, api }) {

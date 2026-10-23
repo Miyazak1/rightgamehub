@@ -22,7 +22,7 @@ test('blog PostgreSQL lifecycle keeps the published revision isolated from edits
   ]);
   const database = await createCommunityTestDatabase(databaseUrl);
   t.after(() => database.close());
-  assert.equal((await applyMigrations(database.pool, path.join(root, 'apps/api/migrations'))).total, 120);
+  assert.equal((await applyMigrations(database.pool, path.join(root, 'apps/api/migrations'))).total, 121);
   await database.pool.query("INSERT INTO users(id,display_name,role,can_publish) VALUES($1,'平台编辑','admin',true)", [actor.userId]);
   const service = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
 
@@ -32,7 +32,9 @@ test('blog PostgreSQL lifecycle keeps the published revision isolated from edits
 
   const published = await service.publish(actor, created.article.id, 'blog-publish-postgres-0001', created.etag);
   assert.equal(published.article.publicationState, 'published');
-  assert.equal((await service.getPublic('platform-architecture')).title, '平台架构第一版');
+  const firstPublic = await service.getPublic('platform-architecture');
+  assert.equal(firstPublic.title, '平台架构第一版');
+  assert.deepEqual(firstPublic.author.avatar, {kind:'preset',presetKey:'cat',url:null,staticUrl:null,mediaType:null,animated:false});
 
   const revised = await service.reviseDraft(actor, created.article.id, content('平台架构第二版'), 'blog-revise-postgres-0001', published.etag);
   assert.equal(revised.article.title, '平台架构第二版');

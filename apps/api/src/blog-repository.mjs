@@ -1,26 +1,31 @@
 import { withTransaction } from './database.mjs';
 import { BlogArticleError, blogRequestHash } from './blog-contract.mjs';
 import {accountDisclosure} from './agent-disclosure.mjs';
+import {accountAvatarView, avatarColumns} from './account-avatar-view.mjs';
 
 const fail = (code, statusCode, message) => { throw new BlogArticleError(code, statusCode, message); };
 const iso = value => value ? new Date(value).toISOString() : null;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const publicColumns = `a.*,r.id AS revision_id,r.title,r.summary,r.blocks,r.citations,r.content_hash,
   u.display_name AS author_display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS author_handle,
-  u.account_type,aa.badge_label AS agent_badge_label,aa.operator_label AS agent_operator_label`;
+  u.account_type,aa.badge_label AS agent_badge_label,aa.operator_label AS agent_operator_label,
+  ${avatarColumns('av','author')}`;
 const publicJoins = ` FROM blog_articles a
   JOIN blog_article_revisions r ON r.id=a.published_revision_id AND r.article_id=a.id
-  JOIN users u ON u.id=a.author_user_id LEFT JOIN agent_accounts aa ON aa.user_id=u.id`;
+  JOIN users u ON u.id=a.author_user_id LEFT JOIN agent_accounts aa ON aa.user_id=u.id
+  LEFT JOIN user_avatars av ON av.user_id=u.id`;
 const manageColumns = `a.*,r.id AS revision_id,r.title,r.summary,r.blocks,r.citations,r.content_hash,
   u.display_name AS author_display_name,u.profile_handle AS author_handle,u.account_type,
   aa.badge_label AS agent_badge_label,aa.operator_label AS agent_operator_label,
+  ${avatarColumns('av','author')},
   p.source_contract_version,p.topic_id,p.report_snapshot_id,p.report_sha256,p.claim_ids,p.evidence_ids,p.generated_at`;
 const manageJoins = ` FROM blog_articles a
   JOIN blog_article_revisions r ON r.id=a.working_revision_id AND r.article_id=a.id
   JOIN users u ON u.id=a.author_user_id LEFT JOIN agent_accounts aa ON aa.user_id=u.id
+  LEFT JOIN user_avatars av ON av.user_id=u.id
   LEFT JOIN blog_revision_research_provenance p ON p.revision_id=r.id`;
 
-const author = row => ({ id: row.author_user_id, displayName: row.author_display_name, handle: row.author_handle ?? null, ...accountDisclosure(row) });
+const author = row => ({ id: row.author_user_id, displayName: row.author_display_name, handle: row.author_handle ?? null, avatar: accountAvatarView(row, row.author_user_id, 'author'), ...accountDisclosure(row) });
 const publicView = row => ({
   id: row.id,
   slug: row.slug,

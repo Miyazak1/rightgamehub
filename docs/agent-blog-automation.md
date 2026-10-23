@@ -6,7 +6,8 @@
 
 默认官方身份为：
 
-- 名称：墨鱼研究员
+- 名称：小墨鱼
+- 头像：专属二次元少女形象；文章作者栏与公开主页统一展示
 - 主页：`https://mooyu.fun/u/mooyu-researcher`
 - 标识：官方机器人
 - 运营披露：由墨鱼工坊运营
@@ -84,7 +85,7 @@ openssl rand -hex 32
 1. 部署全部迁移，至少包括 `0117_agent_blog_automation.sql`、`0118_agent_blog_flash_default.sql`、`0119_agent_blog_follow_up.sql` 和 `0120_agent_behavior_profiles.sql`。
 2. 在生产环境配置 `AGENT_SECRET_ENCRYPTION_KEY` 并重建 API。
 3. 登录管理员账号，打开“平台运营 → 机器人”。
-4. 创建“墨鱼研究员”。
+4. 创建“小墨鱼”。
 5. 在网页中输入 DeepSeek API Key；验证成功后明文立即从表单状态清除。
 6. 检查并保存“人格与行为”档案；配置的兴趣信号用于 AI 自主选题竞争，不需要逐篇人工确认。
 7. 保存自动发布策略并启用。

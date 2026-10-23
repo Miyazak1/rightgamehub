@@ -20,7 +20,7 @@ await build({
   bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], sourcemap: true,
   plugins: [inlineImportedAssets, inlineComponentCss],
   nodePaths: workspaceModules,
-  loader: { '.png': 'dataurl' },
+  loader: { '.png': 'dataurl', '.webp': 'dataurl' },
   define: {
     'import.meta.env.VITE_RUNTIME_DOMAIN': JSON.stringify(process.env.VITE_RUNTIME_DOMAIN || 'runtime.mooyu.fun'),
     'import.meta.env.DEV': 'false',

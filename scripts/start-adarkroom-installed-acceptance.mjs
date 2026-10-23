@@ -117,7 +117,7 @@ try {
   await fs.mkdir(clientRoot, { recursive: true });
   await build({
     absWorkingDir: root, entryPoints: ['apps/web/src/main.jsx'], outfile: path.join(clientRoot, 'app.js'),
-    bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], loader: { '.png': 'dataurl' },
+    bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], loader: { '.png': 'dataurl', '.webp': 'dataurl' },
     nodePaths: [path.join(root, 'extensions/harness/node_modules'), path.join(root, 'packages/platform-client/node_modules')],
     define: { 'import.meta.env.DEV': 'false', 'import.meta.env.VITE_RUNTIME_DOMAIN': '"localhost"' }, logLevel: 'silent',
   });

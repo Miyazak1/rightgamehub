@@ -69,9 +69,12 @@ test('Production secret root is scoped to the API and the admin surface is fully
  assert.match(admin,/每月运行上限/);
  assert.match(admin,/listAdminAgentProviderModels/);
  assert.match(admin,/deepseek-flash/);
+ assert.match(admin,/displayName:'小墨鱼'/);
  assert.doesNotMatch(admin,/博客编辑器|保存私有草稿|人工审核/);
  const styles=fs.readFileSync(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
  assert.match(styles,/agent-control-card[^\n]*var\(--gh-border\)/);
  assert.match(styles,/agent-switch input\[type="checkbox"\][^\n]*width:16px/);
  assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
+ const blog=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8'),avatar=fs.readFileSync(path.join(root,'packages/platform-client/src/AvatarView.jsx'),'utf8');
+ assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);
 });
