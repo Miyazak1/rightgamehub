@@ -1,22 +1,22 @@
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import {stableHash,stableJson} from './stable-json.mjs';import {parseWholeJson} from './model-json.mjs';
 import {validateQuestionBinding,validateTaskLink,assertBoundTask,assertAcceptedSubmission,validateGatewayBody} from './qa-gateway-contract.mjs';
-                                                                                                             
+
 import {validateUsageReceipt} from './qa-gateway-contract.mjs';
 // Pure, opt-in control extension. No transport, policy lookup, database or execution.
 export const CONTROL_VERSION='mooyu-research-qa-control-v1';
 export const CONTROL_DOMAIN=CONTROL_VERSION+'.';
 export const CONTROL_ROUTES=Object.freeze({authorize:'/internal/research-qa/control/v1/authorize',permit:'/internal/research-qa/control/v1/permit',inspect:'/internal/research-qa/control/v1/inspect',status:'/internal/research-qa/control/v1/status'}         );
-                                                      
-                                                                                                                                                  
-                                                                                      
-                                                                                              
-                                                                                                                                                
-                                                                       
-                                                                                                                       
-                                                                                                                                                                                                                                                                                     
-                                                                                                                                                                                                                                                                      
-                                                                                                                                                                                                                                                       
+
+
+
+
+
+
+
+
+
+
 function fail(code='QA_CONTROL_CONTRACT')      {throw Error(code);}
 const equal=(a        ,b        )=>stableHash(a)===stableHash(b);
 function exact(v    ,keys         ){if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).sort().join(',')!==[...keys].sort().join(','))fail();}
