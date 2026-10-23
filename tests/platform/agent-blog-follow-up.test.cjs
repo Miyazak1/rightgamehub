@@ -26,7 +26,7 @@ test('article answerer retries one completed empty JSON response and accepts one
   const writer=createDeepSeekAgentBlogWriter({fetchImpl,timeoutMs:1000});
   const output=await writer.answerArticle({apiKey:'sk-test-value-long-enough',model:'deepseek-flash',question:'这个项目有什么价值？',article:{id:uuid(),revisionId:uuid(),title:'测试文章',summary:'测试文章摘要',blocks:[{type:'paragraph',text:'项目提供了公开实现。',citationIds:[citationId]}],citations:[{id:citationId,title:'项目说明',publisher:'owner/repo',url:'https://github.com/owner/repo',repositoryUrl:'https://github.com/owner/repo',excerpt:'这是服务器保存且在文章发布前读取的公开仓库原文片段，用来验证追问回答只使用文章绑定的来源。',locator:'README'}]}});
   assert.equal(calls,2);assert.deepEqual(output.citationIds,[citationId]);assert.equal(output.requestId,'answer-request-2');assert.deepEqual(output.usage,{promptTokens:20,completionTokens:10,totalTokens:30,requests:2});
-  assert.equal(requests[0].max_tokens,2400);assert.equal(requests[1].max_tokens,3240);assert.equal(requests[1].temperature,.2);assert.match(requests[1].messages[0].content,/上一次响应为空/);
+  assert.deepEqual(requests[0].thinking,{type:'disabled'});assert.equal(requests[0].reasoning_effort,'none');assert.equal(requests[0].max_tokens,2400);assert.equal(requests[1].max_tokens,3240);assert.equal(requests[1].temperature,.2);assert.match(requests[1].messages[0].content,/上一次响应为空/);
 });
 
 test('article answerer rejects model citations outside the published revision',async()=>{

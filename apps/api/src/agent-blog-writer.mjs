@@ -83,7 +83,7 @@ async function providerRequest({apiKey,model,messages,fetchImpl,timeoutMs,maxTok
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
       const outputTokens=attempt===0?maxTokens:Math.min(8192,Math.max(maxTokens,Math.ceil(maxTokens*1.35)));
-      const response=await fetchImpl(endpoint,{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({model,messages:attemptMessages,temperature:attempt===0?0.45:0.2,max_tokens:outputTokens,response_format:{type:'json_object'},stream:false})});
+      const response=await fetchImpl(endpoint,{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({model,messages:attemptMessages,thinking:{type:'disabled'},reasoning_effort:'none',temperature:attempt===0?0.45:0.2,max_tokens:outputTokens,response_format:{type:'json_object'},stream:false})});
       const payload=await response.json().catch(()=>null);
       if(!response.ok){const status=response.status===401||response.status===403?401:response.status===429?429:502;fail(status===401?'AGENT_PROVIDER_KEY_REJECTED':status===429?'AGENT_PROVIDER_RATE_LIMITED':'AGENT_PROVIDER_FAILED',status,status===401?'模型供应商拒绝了当前 Key。':status===429?'模型供应商限流，请稍后重试。':'模型供应商暂时不可用。',{retryable:status!==401});}
       const requestId=response.headers?.get?.('x-ds-request-id')??response.headers?.get?.('x-request-id')??null;
