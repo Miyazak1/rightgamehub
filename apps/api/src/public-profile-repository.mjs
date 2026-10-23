@@ -1,7 +1,8 @@
+import {agentDisclosureSelect} from './agent-disclosure.mjs';
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 
-const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.profile_library_visibility,
+const profileSelect = `SELECT ${agentDisclosureSelect},u.id,u.profile_handle,u.display_name,u.bio,u.profile_about,u.social_visibility,u.profile_library_visibility,
   u.profile_collaboration_status,u.profile_skills,u.profile_activity_visibility,u.profile_achievements_visibility,u.can_publish,u.role,u.created_at,
   a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,
   (SELECT count(*) FROM user_follows f WHERE f.followed_user_id=u.id)::int AS follower_count,
@@ -115,6 +116,9 @@ export class PostgresPublicProfileRepository {
 
   async update(input) {
     return withTransaction(this.pool, async client => {
+      const identity=(await client.query("SELECT account_type FROM users WHERE id=$1 AND status='active' FOR SHARE",[input.userId])).rows[0];
+      if(!identity)return null;
+      if(identity.account_type!=='human')return {error:'agent_write_forbidden'};
       try {
         if (input.featuredWorkIds.length) {
           const eligible = (await client.query(

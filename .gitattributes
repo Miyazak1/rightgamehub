@@ -8,3 +8,7 @@ rules/**/*.cjs -text
 packages/courseware-domain-packs/** text eol=lf
 templates/courseware/** text eol=lf
 plugins/gamehub/templates/courseware/** text eol=lf
+
+# QA protocol snapshots and fixtures are hashed as byte-exact cross-platform artifacts.
+apps/api/src/researcher-qa-protocol/** text eol=lf
+tests/platform/fixtures/researcher-qa/** text eol=lf

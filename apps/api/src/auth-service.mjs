@@ -49,7 +49,8 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       accessTokenHash: tokenHash(accessToken), refreshTokenId: ids(), refreshTokenHash: tokenHash(refreshToken), familyId: ids(),
     };
   };
-  const publicTokens = (material, result) => ({
+  const requireHumanAuthorization = result => {if(result?.accountType==='agent'||result?.profile?.accountType==='agent')throw new AuthError('AGENT_INTERACTIVE_LOGIN_DENIED',401,'Agent accounts cannot use interactive login.');};
+  const publicTokens = (material, result) => (requireHumanAuthorization(result),{
     accessToken: material.accessToken, accessExpiresAt: material.accessExpiresAt.toISOString(),
     refreshToken: material.refreshToken, refreshExpiresAt: material.refreshExpiresAt.toISOString(),
     grantId: result.grantId, profile: result.profile,
@@ -299,6 +300,7 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       catch { throw new AuthError('GITHUB_UPSTREAM_ERROR', 502, '暂时无法读取 GitHub 账号信息。', true); }
       const material = grantMaterial(now);
       const result = await repository.completeGitHubDeviceAndAuthorize({ challengeId, subject: identity.subject, displayName: (identity.name || identity.login).slice(0, 120), ...storedGrant(material), now });
+      requireHumanAuthorization(result);
       if (!result.ok) throw new AuthError(result.code, 401, result.message);
       return { status: 'complete', retryAfter: 0, tokens: publicTokens(material, result) };
     },
@@ -322,7 +324,7 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       const match = /^Bearer ([A-Za-z0-9_-]{32,})$/.exec(header ?? '');
       if (!match) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication is required.');
       const result = await repository.authenticateAccessToken({ tokenHash: tokenHash(match[1]), now: clock() });
-      if (!result) throw new AuthError('AUTH_REQUIRED', 401, 'Authentication is required.');
+      if (!result || result.accountType==='agent' || result.profile?.accountType==='agent') throw new AuthError('AUTH_REQUIRED', 401, 'Authentication is required.');
       return result;
     },
     async getProfile(actor) {

@@ -57,7 +57,7 @@ export class PostgresAuthRepository {
       await client.query('UPDATE email_challenges SET consumed_at=$2 WHERE id=$1', [input.challengeId, input.now]);
 
       let identity = (await client.query(
-        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status
+        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status,u.account_type
            FROM auth_identities i JOIN users u ON u.id=i.user_id
           WHERE i.provider='email' AND i.subject=$1 FOR UPDATE OF u`, [challenge.email_normalized],
       )).rows[0];
@@ -68,8 +68,9 @@ export class PostgresAuthRepository {
         await client.query("INSERT INTO user_avatars(user_id,kind,preset_key) VALUES ($1,'preset',$2)", [userId, randomAvatarKey()]);
         await client.query(`INSERT INTO auth_identities(id,user_id,provider,subject) VALUES ($1,$2,'email',$3)`, [crypto.randomUUID(), userId, challenge.email_normalized]);
         await client.query('INSERT INTO creator_usage(user_id) VALUES ($1)', [userId]);
-        identity = { id: userId, display_name: displayName, role: 'user', can_publish: false, status: 'active' };
+        identity = { id: userId, display_name: displayName, role: 'user', can_publish: false, status: 'active', account_type: 'human' };
       }
+      if (identity.account_type !== 'human') return { ok:false,code:'AGENT_INTERACTIVE_LOGIN_DENIED',message:'Agent accounts cannot use interactive login.' };
       if (identity.status !== 'active') return { ok: false, code: 'ACCOUNT_SUSPENDED', message: 'This account is suspended.' };
 
       await client.query(
@@ -114,7 +115,7 @@ export class PostgresAuthRepository {
   async authorizeGitHubWebIdentity(input) {
     return withTransaction(this.pool, async client => {
       let identity = (await client.query(
-        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status
+        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status,u.account_type
            FROM auth_identities i JOIN users u ON u.id=i.user_id
           WHERE i.provider='github' AND i.subject=$1 FOR UPDATE OF u`, [input.subject],
       )).rows[0];
@@ -124,8 +125,9 @@ export class PostgresAuthRepository {
         await client.query("INSERT INTO user_avatars(user_id,kind,preset_key) VALUES ($1,'preset',$2)", [userId, randomAvatarKey()]);
         await client.query(`INSERT INTO auth_identities(id,user_id,provider,subject) VALUES ($1,$2,'github',$3)`, [crypto.randomUUID(), userId, input.subject]);
         await client.query('INSERT INTO creator_usage(user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [userId]);
-        identity = { id: userId, display_name: input.displayName, role: 'user', can_publish: false, status: 'active' };
+        identity = { id: userId, display_name: input.displayName, role: 'user', can_publish: false, status: 'active', account_type: 'human' };
       }
+      if (identity.account_type !== 'human') return { ok:false,code:'AGENT_INTERACTIVE_LOGIN_DENIED',message:'Agent accounts cannot use interactive login.' };
       if (identity.status !== 'active') return { ok: false, code: 'ACCOUNT_SUSPENDED', message: 'This account is suspended.' };
       await client.query(
         `INSERT INTO device_grants(id,user_id,device_label,client_kind,scopes,authenticated_at,expires_at)
@@ -206,7 +208,7 @@ export class PostgresAuthRepository {
       )).rows[0];
       if (!challenge || challenge.consumed_at || new Date(challenge.expires_at) <= input.now) return { ok: false, code: 'GITHUB_CHALLENGE_INVALID', message: 'GitHub login code is invalid or expired.' };
       let identity = (await client.query(
-        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status
+        `SELECT u.id,u.display_name,u.role,u.can_publish,u.status,u.account_type
            FROM auth_identities i JOIN users u ON u.id=i.user_id
           WHERE i.provider='github' AND i.subject=$1 FOR UPDATE OF u`, [input.subject],
       )).rows[0];
@@ -216,8 +218,9 @@ export class PostgresAuthRepository {
         await client.query("INSERT INTO user_avatars(user_id,kind,preset_key) VALUES ($1,'preset',$2)", [userId, randomAvatarKey()]);
         await client.query(`INSERT INTO auth_identities(id,user_id,provider,subject) VALUES ($1,$2,'github',$3)`, [crypto.randomUUID(), userId, input.subject]);
         await client.query('INSERT INTO creator_usage(user_id) VALUES ($1)', [userId]);
-        identity = { id: userId, display_name: input.displayName, role: 'user', can_publish: false, status: 'active' };
+        identity = { id: userId, display_name: input.displayName, role: 'user', can_publish: false, status: 'active', account_type: 'human' };
       }
+      if (identity.account_type !== 'human') return { ok:false,code:'AGENT_INTERACTIVE_LOGIN_DENIED',message:'Agent accounts cannot use interactive login.' };
       if (identity.status !== 'active') return { ok: false, code: 'ACCOUNT_SUSPENDED', message: 'This account is suspended.' };
       await client.query('UPDATE github_device_challenges SET consumed_at=$2,device_code=$3 WHERE id=$1', [input.challengeId, input.now, `consumed:${input.challengeId}`]);
       await client.query(
@@ -242,10 +245,11 @@ export class PostgresAuthRepository {
       const token = (await client.query(
         `SELECT r.id,r.grant_id,r.family_id,r.generation,r.expires_at,r.used_at,r.revoked_at,
                 g.expires_at AS grant_expires_at,g.revoked_at AS grant_revoked_at,
-                u.id AS user_id,u.display_name,u.role,u.can_publish,u.status
+                u.id AS user_id,u.display_name,u.role,u.can_publish,u.status,u.account_type
            FROM refresh_tokens r JOIN device_grants g ON g.id=r.grant_id JOIN users u ON u.id=g.user_id
           WHERE r.token_hash=$1 FOR UPDATE OF r,g,u`, [input.currentTokenHash],
       )).rows[0];
+      if (token?.account_type !== 'human') return {ok:false,code:'REFRESH_INVALID',message:'Refresh token is invalid.'};
       if (!token) return { ok: false, code: 'REFRESH_INVALID', message: 'Refresh token is invalid.' };
       if (token.used_at || token.revoked_at) {
         await client.query('UPDATE refresh_tokens SET revoked_at=COALESCE(revoked_at,$2) WHERE family_id=$1', [token.family_id, input.now]);
@@ -271,17 +275,17 @@ export class PostgresAuthRepository {
 
   async authenticateAccessToken(input) {
     const row = (await this.pool.query(
-      `SELECT g.id AS grant_id,g.scopes,g.last_seen_at,u.id,u.display_name,u.role,u.can_publish
+      `SELECT g.id AS grant_id,g.scopes,g.last_seen_at,u.id,u.display_name,u.role,u.can_publish,u.account_type
          FROM access_tokens a JOIN device_grants g ON g.id=a.grant_id JOIN users u ON u.id=g.user_id
         WHERE a.token_hash=$1 AND a.revoked_at IS NULL AND a.expires_at>$2
-          AND g.revoked_at IS NULL AND g.expires_at>$2 AND u.status='active'`,
+          AND g.revoked_at IS NULL AND g.expires_at>$2 AND u.status='active' AND u.account_type='human'`,
       [input.tokenHash, input.now],
     )).rows[0];
-    if (!row) return null;
+    if (!row || row.account_type!=='human') return null;
     if (input.now.getTime() - new Date(row.last_seen_at).getTime() >= 5 * 60_000) {
       await this.pool.query('UPDATE device_grants SET last_seen_at=$2 WHERE id=$1 AND last_seen_at<$2', [row.grant_id, input.now]);
     }
-    return { grantId: row.grant_id, userId: row.id, scopes: row.scopes, profile: { id: row.id, displayName: row.display_name, role: row.role, canPublish: row.can_publish } };
+    return { accountType:'human',grantId: row.grant_id, userId: row.id, scopes: row.scopes, profile: { id: row.id, displayName: row.display_name, role: row.role, canPublish: row.can_publish } };
   }
 
   async getAccountProfile(userId) {
@@ -289,7 +293,7 @@ export class PostgresAuthRepository {
       `SELECT u.id,u.profile_handle,u.display_name,u.role,u.can_publish,u.created_at,
               a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key
          FROM users u LEFT JOIN user_avatars a ON a.user_id=u.id
-        WHERE u.id=$1 AND u.status='active'`,
+        WHERE u.id=$1 AND u.status='active' AND u.account_type='human'`,
       [userId],
     )).rows[0];
     if (!user) return null;
@@ -319,13 +323,16 @@ export class PostgresAuthRepository {
 
   async updateAccountProfile(input) {
     await this.pool.query(
-      'UPDATE users SET display_name=$2,updated_at=$3 WHERE id=$1 AND status=\'active\'',
+      'UPDATE users SET display_name=$2,updated_at=$3 WHERE id=$1 AND status=\'active\' AND account_type=\'human\'',
       [input.userId, input.displayName, input.now],
     );
     return this.getAccountProfile(input.userId);
   }
 
+  async isHuman(userId){return (await this.pool.query("SELECT 1 FROM users WHERE id=$1 AND account_type='human' AND status='active'",[userId])).rowCount===1;}
+
   async setPresetAvatar(input) {
+    if(!await this.isHuman(input.userId))return null;
     const previous = await withTransaction(this.pool, async client => {
       const row = (await client.query('SELECT body_key,poster_key FROM user_avatars WHERE user_id=$1 FOR UPDATE', [input.userId])).rows[0];
       await client.query(
@@ -341,6 +348,7 @@ export class PostgresAuthRepository {
   }
 
   async setUploadedAvatar(input) {
+    if(!await this.isHuman(input.userId))return null;
     let bodyKey = null; let posterKey = null;
     if (this.avatarStore) {
       bodyKey = await this.avatarStore.put({ userId: input.userId, variant: 'animated', body: input.body, sha256: input.sha256 });
@@ -395,7 +403,7 @@ export class PostgresAuthRepository {
   async createCreatorApplication(input) {
     return withTransaction(this.pool, async client => {
       const user = (await client.query(
-        "SELECT id,display_name,can_publish FROM users WHERE id=$1 AND status='active' FOR UPDATE",
+        "SELECT id,display_name,can_publish FROM users WHERE id=$1 AND status='active' AND account_type='human' FOR UPDATE",
         [input.userId],
       )).rows[0];
       if (!user) return null;

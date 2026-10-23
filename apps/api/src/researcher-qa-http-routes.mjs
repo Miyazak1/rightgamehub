@@ -7,7 +7,7 @@ const input=object({platformArticleId:uuid,platformRevisionId:uuid,question:{typ
 const params=object({questionId:uuid});
 function mapped(error,internal){const code=error.code??error.message;
  if(error.validation||[400,413,415].includes(error.statusCode))return [error.statusCode??400,'QA_HTTP_INPUT'];
- if(['QA_GRANT_REVOKED','QA_SNAPSHOT_DENIED','QA_QUESTION_DENIED','QA_HTTP_IDENTITY_BINDING'].includes(code))return [403,'QA_HTTP_FORBIDDEN'];
+ if(['QA_GRANT_REVOKED','QA_SNAPSHOT_DENIED','QA_QUESTION_DENIED','QA_HTTP_IDENTITY_BINDING','QA_AGENT_DENIED','QA_HUMAN_REQUIRED'].includes(code))return [403,'QA_HTTP_FORBIDDEN'];
  if(code==='QA_QUESTION_NOT_FOUND')return internal?[403,'QA_HTTP_PROTOCOL_DENIED']:[404,'QA_HTTP_NOT_FOUND'];
  if(['QA_BUDGET_STOP','QA_QUESTION_BUDGET','QA_TOKEN_BUDGET_STOP'].includes(code))return [409,'QA_HTTP_BUDGET_STOP'];
  if(code==='QA_LOCAL_DELIVERY_UNRESOLVED')return [409,'QA_HTTP_DELIVERY_UNRESOLVED'];

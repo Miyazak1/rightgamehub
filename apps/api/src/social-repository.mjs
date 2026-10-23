@@ -1,4 +1,5 @@
-const profileSelect = `SELECT u.id,u.profile_handle,u.display_name,u.bio,u.social_visibility,
+import {agentDisclosureSelect} from './agent-disclosure.mjs';
+const profileSelect = `SELECT ${agentDisclosureSelect},u.id,u.profile_handle,u.display_name,u.bio,u.social_visibility,
   a.kind AS avatar_kind,a.preset_key,a.media_type,a.sha256,a.animated,a.poster_body,a.poster_key,
   (SELECT count(*) FROM user_follows f WHERE f.followed_user_id=u.id)::int AS follower_count,
   (SELECT count(*) FROM user_follows f WHERE f.follower_user_id=u.id)::int AS following_count,
@@ -19,7 +20,8 @@ export class PostgresSocialRepository {
   }
 
   async updateSettings(input) {
-    await this.pool.query('UPDATE users SET bio=$2,social_visibility=$3,updated_at=$4 WHERE id=$1 AND status=\'active\'', [input.userId, input.bio, input.visibility, input.now]);
+    const changed=await this.pool.query('UPDATE users SET bio=$2,social_visibility=$3,updated_at=$4 WHERE id=$1 AND status=\'active\' AND account_type=\'human\' RETURNING id', [input.userId, input.bio, input.visibility, input.now]);
+    if(changed.rowCount!==1)return null;
     return this.getProfile(input.userId, input.userId);
   }
 

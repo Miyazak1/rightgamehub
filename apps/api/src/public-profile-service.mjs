@@ -1,3 +1,4 @@
+import {accountDisclosure} from './agent-disclosure.mjs';
 const HANDLE = /^[a-z][a-z0-9-]{2,31}$/;
 const KINDS = new Set(['github','website','portfolio','bilibili','other']);
 const RESERVED = new Set(['admin','api','account','creator','discover','install','library','login','me','play','profile','settings','social','support','works']);
@@ -63,7 +64,7 @@ const view = result => {
   const workById = new Map(works.map(work => [work.id, work]));
   const row = result.profile;
   return {
-    id: row.id, handle: row.profile_handle, displayName: row.display_name, headline: row.bio, about: row.profile_about,
+    ...accountDisclosure(row),id: row.id, handle: row.profile_handle, displayName: row.display_name, headline: row.bio, about: row.profile_about,
     visibility: row.social_visibility, libraryVisibility: row.profile_library_visibility ?? 'private', libraryVisible: Boolean(result.libraryVisible),
     collaborationStatus: row.profile_collaboration_status ?? 'not_looking', skills: row.profile_skills ?? [],
     activityVisibility: row.profile_activity_visibility ?? 'private', activityVisible: Boolean(result.activityVisible),
@@ -117,6 +118,7 @@ export function createPublicProfileService({ repository, builtInWorks = [], cloc
       const links = input.links.map(validateLink);
       if (new Set(links.map(link => link.url)).size !== links.length) throw new PublicProfileError('SCHEMA_INVALID', 400, '主页链接不能重复。');
       const result = await repository.update({ userId: actor.userId, handle, headline, about, visibility: input.visibility, libraryVisibility, collaborationStatus, skills, activityVisibility, achievementsVisibility, links, featuredWorkIds: input.featuredWorkIds, githubRepositoryIds, now: clock() });
+      if(result?.error==='agent_write_forbidden')throw new PublicProfileError('AGENT_WRITE_DENIED',403,'Agent accounts cannot edit profiles.');
       if (result?.error === 'handle_taken') throw new PublicProfileError('HANDLE_TAKEN', 409, '这个主页地址已经被使用。');
       if (result?.error === 'featured_work_invalid') throw new PublicProfileError('FEATURED_WORK_INVALID', 400, '精选作品必须是你已公开发布且当前可用的作品。');
       if (result?.error === 'github_repository_invalid') throw new PublicProfileError('GITHUB_REPOSITORY_INVALID', 400, '只能展示当前 GitHub 授权中仍然公开的仓库。');

@@ -4,7 +4,7 @@
 
 ## 内容与边界
 
-- 向前迁移 `0114_researcher_qa_ledger.sql`：专用 budgets/questions/reservations/actions/receipts/seen_requests/events。只新增QA对象，不修改0001–0113；仅以FK引用平台既有用户、设备授权和文章修订。触发器保护绑定、价格、已确认回执、动作状态和审计记录，不复用博客触发器函数。
+- 向前迁移 `0115_researcher_qa_ledger.sql`：位于已部署的研究雷达 `0114_research_local_nodes.sql` 之后，新增专用 budgets/questions/reservations/actions/receipts/seen_requests/events，不修改0001–0114；仅以FK引用平台既有用户、设备授权和文章修订。触发器保护绑定、价格、已确认回执、动作状态和审计记录，不复用博客触发器函数。
 - `ResearchQaLedger`：预算配置/准入、持久派发意图、显式不重发恢复、受理、许可发放/单次消费、用量对账、状态查询准备及可信闭合后的剩余额度释放。没有外部执行器或网络传输。
 - `researcher-qa-protocol/`：已冻结的原v1及control-v1纯协议JS快照；仅剥离类型/更改相对扩展名，原始协议源与本地输出hash在manifest。用量解析只含原reliableUsage纯函数，无ModelGateway/配置/模型运行代码。固定向量随测试保存，运行不依赖Researcher目录或.env。
 - 用户问答、人设、AI身份注册、文章/evidence ACL映射真实适配、未受理取消tombstone和付费provider均不在本阶段。`authorizeSnapshot`是必填的可信平台本地数据库权限端口，必须核对当前文章/证据scope与accessEpoch；测试注入返回值不表示生产ACL已实现。不能让请求体或浏览器实现此端口。

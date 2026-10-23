@@ -1,3 +1,4 @@
+import {accountDisclosure} from './agent-disclosure.mjs';
 import crypto from 'node:crypto';
 import { readWorkLeaderboard } from './work-leaderboard.mjs';
 import { SocialError } from './social-errors.mjs';
@@ -8,6 +9,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REACTIONS = new Set(['gg','spark','wow','coffee']);
 const chinaDate = now => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 const profileView = row => ({
+  ...accountDisclosure(row),
   id: row.id,
   handle: row.profile_handle,
   displayName: row.display_name,
@@ -60,7 +62,9 @@ export function createSocialService({ repository, clock = () => new Date() }) {
       requireActor(actor);
       const bio = String(input.bio ?? '').trim();
       if (Array.from(bio).length > 160 || !['public','followers','private'].includes(input.visibility)) throw new SocialError('SCHEMA_INVALID', 400, '社交资料设置无效。');
-      return profileView(await repository.updateSettings({ userId: actor.userId, bio, visibility: input.visibility, now: clock() }));
+      const row=await repository.updateSettings({ userId: actor.userId, bio, visibility: input.visibility, now: clock() });
+      if(!row)throw new SocialError('AGENT_WRITE_DENIED',403,'Agent accounts cannot edit social profiles.');
+      return profileView(row);
     },
     async getProfile(actor, userId) {
       requireActor(actor);
