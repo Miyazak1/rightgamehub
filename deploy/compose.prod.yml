@@ -71,6 +71,8 @@ x-api-environment: &api-environment
   RUNTIME_SCHEME: https
   GUESS_BAIKE_AUTOMATION_ENABLED: "true"
   GUESS_BAIKE_WIKIPEDIA_USER_AGENT: "${GUESS_BAIKE_WIKIPEDIA_USER_AGENT:-GameHub-GuessBaikeBot/0.3 (https://mooyu.fun/; automated daily puzzle) Node.js}"
+  AGENT_BLOG_POLL_SECONDS: ${AGENT_BLOG_POLL_SECONDS:-30}
+  AGENT_BLOG_PROVIDER_TIMEOUT_MS: ${AGENT_BLOG_PROVIDER_TIMEOUT_MS:-120000}
   NODE_OPTIONS: --max-old-space-size=320
 
 x-service-defaults: &service-defaults
@@ -142,6 +144,10 @@ services:
     restart: unless-stopped
     environment:
       <<: *api-environment
+      # Root key is intentionally exposed only to the API process that encrypts
+      # and decrypts managed Agent provider credentials. Migration/workers do
+      # not need it and must not receive it through the shared environment.
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
       DEEPSEEK_SEARCH_ENABLED: ${DEEPSEEK_SEARCH_ENABLED:-false}
       DEEPSEEK_FETCH_ENABLED: ${DEEPSEEK_FETCH_ENABLED:-false}
       RESEARCH_CANDIDATE_ASSESSMENT_ENABLED: ${RESEARCH_CANDIDATE_ASSESSMENT_ENABLED:-false}

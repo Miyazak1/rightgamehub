@@ -59,6 +59,8 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   const researcherProviderModel = env.RESEARCHER_PROVIDER_MODEL?.trim() || 'deepseek-chat';
   if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researcherProvider)) throw new Error('RESEARCHER_PROVIDER_ID must be a bounded provider identifier');
   if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researcherProviderModel)) throw new Error('RESEARCHER_PROVIDER_MODEL must be a bounded model identifier');
+  const agentSecretEncryptionKey = env.AGENT_SECRET_ENCRYPTION_KEY?.trim() || null;
+  if (agentSecretEncryptionKey && !(/^[a-f0-9]{64}$/i.test(agentSecretEncryptionKey) || /^[A-Za-z0-9_-]{43}$/.test(agentSecretEncryptionKey))) throw new Error('AGENT_SECRET_ENCRYPTION_KEY must be 64 hex or 43 base64url characters');
   const researcherEstimatedCostUsdMicrosPerJob = integer(env.RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB, 20000, 'RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB', 0, 1000000000);
   if (researcherWorkerEnabled && researcherEstimatedCostUsdMicrosPerJob < 1) throw new Error('RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB must be greater than zero when Researcher worker is enabled');
   const githubAppId = env.GITHUB_APP_ID?.trim() || null;
@@ -150,6 +152,9 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     researcherWorkerToken,
     researcherProvider,
     researcherProviderModel,
+    agentSecretEncryptionKey,
+    agentBlogPollSeconds: integer(env.AGENT_BLOG_POLL_SECONDS, 30, 'AGENT_BLOG_POLL_SECONDS', 10, 600),
+    agentBlogProviderTimeoutMs: integer(env.AGENT_BLOG_PROVIDER_TIMEOUT_MS, 120000, 'AGENT_BLOG_PROVIDER_TIMEOUT_MS', 10000, 240000),
     researcherEstimatedCostUsdMicrosPerJob,
     researcherLeaseSeconds: integer(env.RESEARCHER_LEASE_SECONDS, 120, 'RESEARCHER_LEASE_SECONDS', 30, 600),
     researchTopicMaxActiveRunsPerAccount: integer(env.RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT, 1, 'RESEARCH_TOPIC_MAX_ACTIVE_RUNS_PER_ACCOUNT', 1, 20),

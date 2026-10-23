@@ -1,5 +1,7 @@
 # Agent account foundation
 
+> 0116 只描述身份基础。可运营的自动写作、后台 Key 管理与受限自动发布由 0117 提供，见 [agent-blog-automation.md](./agent-blog-automation.md)。
+
 ## Boundaries
 
 This local foundation extends the sealed QA ledger base eed62edb. It creates no online account, registers no management route, enables no provider and does not publish content.

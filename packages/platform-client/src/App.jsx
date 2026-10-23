@@ -34,6 +34,7 @@ import WorkEditPage from './WorkEditPage.jsx';
 import DevelopmentLogPage from './DevelopmentLogPage.jsx';
 import {DiscoveryCampaignAdmin,DiscoveryCampaignPage} from './DiscoveryCampaigns.jsx';
 import { BlogAdmin, BlogArticlePage, BlogIndexPage } from './BlogPages.jsx';
+import AgentAdmin from './AgentAdmin.jsx';
 import GrowthContentStudio from './GrowthContentStudio.jsx';
 import AuthorOutreachQueue from './AuthorOutreachQueue.jsx';
 import { AccountMenu, CreatorWorkspace, PlayerNavigation } from './PlatformNavigation.jsx';
@@ -1350,7 +1351,7 @@ const achievementBadgeIcon = key => key?.includes('streak') ? 'flame' : key === 
 
 function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
   const { t, date } = useI18n();
-  const [state, setState] = useState({ status: 'loading', profile: null });
+  const [state, setState] = useState({ status: 'loading', profile: null, articles: [] });
   const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(null);
   const [githubRepositoryOptions, setGitHubRepositoryOptions] = useState([]); const [githubOptionsLoading, setGitHubOptionsLoading] = useState(false);
   const [busy, setBusy] = useState(''); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
@@ -1358,9 +1359,10 @@ function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
     setState(current => ({ ...current, status: 'loading' })); setError('');
     try {
       const profile = demo ? demoPublicProfile(handle) : (await api.getPublicUserProfile(handle)).data;
-      setState({ status: 'ready', profile });
+      const articles=demo?[]:await api.listBlogArticles({author:profile.handle,limit:20}).then(response=>response.data.items).catch(()=>[]);
+      setState({ status: 'ready', profile, articles });
       setDraft(profileDraft(profile));
-    } catch (caught) { setState({ status: caught.status === 404 ? 'missing' : 'error', profile: null }); }
+    } catch (caught) { setState({ status: caught.status === 404 ? 'missing' : 'error', profile: null, articles: [] }); }
   };
   useEffect(() => { load(); }, [handle, api, demo]);
   useEffect(() => { globalThis.scrollTo?.({ top: 0, behavior: 'smooth' }); }, [editing]);
@@ -1383,7 +1385,7 @@ function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
     try {
       const { skillsText: _skillsText, ...payload } = draft;
       const profile = demo ? { ...state.profile, ...payload, links: draft.links, featuredWorks: state.profile.works.filter(work => draft.featuredWorkIds.includes(work.id)) } : (await api.updatePublicUserProfile(payload)).data;
-      setState({ status: 'ready', profile }); setDraft(profileDraft(profile));
+      setState(current=>({ status: 'ready', profile, articles:current.articles??[] })); setDraft(profileDraft(profile));
       onProfileChange?.(current => current ? { ...current, profileHandle: profile.handle } : current);
       setEditing(false); setNotice(t('profile.saved')); if (profile.handle !== handle) go(`/u/${profile.handle}`);
     } catch (caught) { setError(caught.message || t('profile.error.save')); }
@@ -1422,6 +1424,7 @@ function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
     {!!profile.contributions?.length && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">OPEN SOURCE CONTRIBUTIONS</span><h2>{t('profile.contributionsTitle')}</h2><p>{t('profile.contributionsLead')}</p></div></div><div className="profile-contribution-grid">{profile.contributions.map(item => <article key={item.taskId}><span>{item.workTitle}</span><h3>{item.title}</h3><time>{date(item.completedAt,{dateStyle:'medium'})}</time><div>{item.issueUrl && <a href={item.issueUrl} target="_blank" rel="noopener noreferrer">Issue ↗</a>}<a href={item.submissionUrl} target="_blank" rel="noopener noreferrer">{t('profile.viewOutcome')} ↗</a></div></article>)}</div></section>}
     {!!profile.githubRepositories.length && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">OPEN SOURCE</span><h2>{t('profile.repositoriesTitle')}</h2><p>{t('profile.repositoriesLead')}</p></div></div><div className="profile-repository-grid">{profile.githubRepositories.map(repository => <a key={repository.id} href={repository.url} target="_blank" rel="noopener noreferrer"><GitHubLogo/><span><strong>{repository.owner}/{repository.name}</strong><small>{t('profile.publicRepository')} ↗</small></span></a>)}</div></section>}
     {!!profile.featuredWorks.length && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">FEATURED WORK</span><h2>{t('profile.featuredTitle')}</h2><p>{t('profile.featuredLead')}</p></div></div><div className="work-grid">{profile.featuredWorks.map(work => <WorkCard key={work.id} work={work} go={go}/>)}</div></section>}
+    {!!state.articles?.length && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">JOURNAL</span><h2>公开文章</h2><p>{profile.accountType==='agent'?'由该机器人自动生成、检查并发布的文章。':'该账号发布的官方文章。'}</p></div></div><div className="profile-article-grid">{state.articles.map(article=><button type="button" key={article.id} onClick={()=>go(`/blog/${article.slug}`)}><time>{new Date(article.publishedAt).toLocaleDateString('zh-CN')}</time><h3>{article.title}</h3><p>{article.summary}</p><span>阅读全文 →</span></button>)}</div></section>}
     <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">PUBLIC WORKS</span><h2>{t('profile.publicWorksTitle')}</h2><p>{t('profile.publicWorksLead')}</p></div></div>{remaining.length ? <div className="work-grid">{remaining.map(work => <WorkCard key={work.id} work={work} go={go}/>)}</div> : !profile.works.length ? <StatePanel title={t('profile.noWorks')} body={t('profile.noWorksLead')}/> : <p className="quiet-all-seen">{t('profile.allFeatured')}</p>}</section>
     {profile.libraryVisible && <section className="profile-work-section"><div className="section-heading"><div><span className="kicker">GAME LIBRARY</span><h2>{t('profile.libraryTitle')}</h2><p>{t(profile.isMe ? 'profile.libraryOwnLead' : 'profile.libraryOtherLead',{name:profile.displayName})}</p></div></div>{profile.library.length ? <div className="work-grid">{profile.library.map(work => <WorkCard key={work.id} work={work} go={go}/>)}</div> : <StatePanel title={t('profile.libraryEmpty')} body={t('profile.libraryEmptyLead')}/>}</section>}
   </main>;
@@ -1759,7 +1762,7 @@ export function AdminClaimManager({claims,api,demo,onChanged}) {
   return <section className="admin-queue claim-review-queue"><div className="puzzle-ops__head"><div><span className="kicker">GAME CLAIM GOVERNANCE</span><h2>作者与维护者认领</h2><p>审核新申请，并持续处理已经确认的认领关系、争议、暂停和撤销。</p></div><span>{claims.length} 份记录</span></div><div className="claim-status-tabs" role="group" aria-label="认领状态筛选">{filters.map(([value,label])=><button type="button" aria-pressed={filter===value} onClick={()=>setFilter(value)} key={value}>{label} <span>{value==='all'?claims.length:claims.filter(claim=>claim.status===value).length}</span></button>)}</div>{error&&<p className="form-error" role="alert">{error}</p>}{message&&<p className="admin-notice" role="status">{message}</p>}{visible.length?visible.map(claim=>{const history=audit[claim.id];return <article className={`report-card claim-governance-card is-${claim.status}`} key={claim.id}><div className="report-card__head"><div><span>{claim.relationship==='owner'?'作者 / 权利人':'维护者'} · {claim.evidenceType}</span><h3>{claim.workTitle}</h3></div><em>{projectClaimStatusLabels[claim.status]||claim.status}</em></div><p><strong>{claim.claimantDisplayName}</strong>{claim.claimantHandle?`（@${claim.claimantHandle}）`:''}</p>{(claim.repositoryUrl||claim.evidenceUrl)&&<a href={claim.repositoryUrl||claim.evidenceUrl} target="_blank" rel="noreferrer">核对公开证明 ↗</a>}{claim.applicantNote&&<p>{claim.applicantNote}</p>}{claim.decisionNote&&<p className="claim-decision-note">最近决定：{claim.decisionNote}</p>}<details className="governance-audit" onToggle={event=>{if(event.currentTarget.open)loadAudit(claim);}}><summary>审核与权限历史</summary>{!history||history.status==='loading'?<p>正在读取审计记录…</p>:history.status==='error'?<p>审计记录暂时无法读取。</p>:history.items.length?<ol>{history.items.map(event=><li key={event.id}><div><strong>{projectClaimActionLabels[event.action]||event.action}</strong><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></div><p>{event.details?.note||event.actorDisplayName}</p></li>)}</ol>:<p>还没有审计事件。</p>}</details>{actions(claim).length>0&&<><label>审核或治理说明<textarea maxLength="2000" value={notes[claim.id]||''} onChange={event=>setNotes(current=>({...current,[claim.id]:event.target.value}))} placeholder="记录身份核验、争议依据或权限变更原因。"/></label><div className="dialog-actions">{actions(claim).map(([action,label])=>action==='revoke'?<button className="danger-button" type="button" disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{label}</button>:<Button kind={action==='approve'||action==='restore'?undefined:'secondary'} disabled={busy===claim.id} onClick={()=>decide(claim,action)} key={action}>{busy===claim.id?'处理中…':label}</Button>)}</div></>}</article>;}):<div className="admin-empty"><span>✓</span><strong>这个状态没有认领记录</strong><p>可切换其他状态查看完整治理历史。</p></div>}</section>;
 }
 
-const adminPanelIds = new Set(['overview','growth','blog','works','governance','official']);
+const adminPanelIds = new Set(['overview','agents','growth','blog','works','governance','official']);
 const readAdminPanel = () => {
   const outer = new URLSearchParams(String(globalThis.location?.search || '').replace(/^\?/u,''));
   const embeddedRoute = outer.get('gh_route');
@@ -1859,6 +1862,7 @@ function AdminPage({ api, demo, go }) {
   const overviewWarning = state.storage?.level && state.storage.level !== 'healthy' || Number(state.sourceOverview?.failedWebhooks24h || 0) > 0;
   const panels = [
     { id: 'overview', label: '概览', eyebrow: 'OVERVIEW', note: '数据与异常', badge: overviewWarning ? '!' : null },
+    { id: 'agents', label: '机器人', eyebrow: 'AGENTS', note: '身份、Key 与自动发布' },
     { id: 'growth', label: '增长运营', eyebrow: 'GROWTH', note: '传播与专题' },
     { id: 'blog', label: '官方文章', eyebrow: 'JOURNAL', note: '草稿与发布' },
     { id: 'works', label: '作品与来源', eyebrow: 'WORKS', note: '导入、来源、认领', badge: pendingClaims || null },
@@ -1874,6 +1878,7 @@ function AdminPage({ api, demo, go }) {
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}{state.panelError && <div className="admin-panel-error" role="alert"><span>{state.panelError}</span><button type="button" onClick={() => loadPanel(panel, true)}>重新加载</button></div>}
     {firstLoad ? <LoadingCards/> : <>
     {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
+    {panel === 'agents' && <AgentAdmin api={api} go={go}/>}
     {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
     {panel === 'blog' && <BlogAdmin api={api} demo={demo}/>}
     {panel === 'works' && <>

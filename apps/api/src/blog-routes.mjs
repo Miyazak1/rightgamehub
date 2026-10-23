@@ -38,7 +38,7 @@ const contentSchema = {
 const articleParams = { type: 'object', additionalProperties: false, required: ['articleId'], properties: { articleId: { type: 'string', format: 'uuid' } } };
 const slugParams = { type: 'object', additionalProperties: false, required: ['slug'], properties: { slug: { type: 'string', pattern: '^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])$' } } };
 const cursorProperty = { type: 'string', maxLength: 800 };
-const publicListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, cursor: cursorProperty, locale: { type: 'string', enum: ['zh-CN', 'en'] }, q: { type: 'string', maxLength: 100 } } };
+const publicListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 50 }, cursor: cursorProperty, locale: { type: 'string', enum: ['zh-CN', 'en'] }, q: { type: 'string', maxLength: 100 }, author: { type: 'string', pattern: '^[a-z][a-z0-9-]{2,31}$' } } };
 const manageListQuery = { type: 'object', additionalProperties: false, properties: { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: cursorProperty } };
 
 export function registerBlogRoutes(app, { service, requireAuth, siteOrigin = 'https://mooyu.fun' }) {

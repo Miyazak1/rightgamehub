@@ -83,6 +83,11 @@ import { PostgresDevelopmentLogRepository, createDevelopmentLogService } from '.
 import { PostgresDiscoveryCampaignRepository, createDiscoveryCampaignService } from './discovery-campaign-service.mjs';
 import { PostgresBlogRepository } from './blog-repository.mjs';
 import { createBlogService } from './blog-service.mjs';
+import {PostgresAgentAccountRepository} from './agent-account-repository.mjs';
+import {createAgentAccountService} from './agent-account-service.mjs';
+import {createAgentSecretVault} from './agent-secret-vault.mjs';
+import {createDeepSeekAgentBlogWriter} from './agent-blog-writer.mjs';
+import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from './agent-blog-automation.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
@@ -209,6 +214,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     repository: new PostgresDiscoveryCampaignRepository(database.pool), catalogService, siteOrigin: config.gameShareSiteOrigin,
   });
   const blogService = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
+  const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
+  const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:createAgentSecretVault({masterKey:config.agentSecretEncryptionKey}),writer:createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs}),pollMs:config.agentBlogPollSeconds*1000});
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -275,6 +282,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     developmentLogService,
     discoveryCampaignService,
     blogService,
+    agentAccountService,
+    agentBlogAutomation,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
@@ -285,7 +294,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
   return {
     config,
     database,
@@ -324,6 +333,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     developmentLogService,
     discoveryCampaignService,
     blogService,
+    agentAccountService,
+    agentBlogAutomation,
     storageCapacityService,
     realtimeTicketService,
     rulesRegistry,

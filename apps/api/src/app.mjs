@@ -42,6 +42,9 @@ import { DiscoveryCampaignError } from './discovery-campaign-service.mjs';
 import { registerDiscoveryCampaignRoutes } from './discovery-campaign-routes.mjs';
 import { BlogArticleError } from './blog-contract.mjs';
 import { registerBlogRoutes } from './blog-routes.mjs';
+import {AgentAccountError} from './agent-account-repository.mjs';
+import {AgentBlogAutomationError} from './agent-blog-writer.mjs';
+import {registerAgentAccountRoutes} from './agent-account-routes.mjs';
 import { registerPublicSeoRoutes, serializeJsonLd, workStructuredData } from './public-seo.mjs';
 import { growthContentSlides, renderWorkXhsSlide } from './growth-content-renderer.mjs';
 import { AuthorOutreachError } from './author-outreach-service.mjs';
@@ -127,6 +130,8 @@ export function createApp(dependencies) {
     developmentLogService,
     discoveryCampaignService,
     blogService,
+    agentAccountService,
+    agentBlogAutomation,
     creatorDraftService,
     projectClaimService,
     authorOutreachService,
@@ -180,7 +185,7 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof ResearchTopicError || error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof BlogArticleError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof ResearchTopicError || error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof BlogArticleError || error instanceof AgentAccountError || error instanceof AgentBlogAutomationError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
     reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError ? error.details : {} } });
@@ -289,6 +294,7 @@ export function createApp(dependencies) {
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});
   if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin,getCover:workService?.getCover?id=>workService.getCover(id):null});
   if (blogService) registerBlogRoutes(app,{service:blogService,requireAuth,siteOrigin});
+  if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,requireAuth});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (authorOutreachService) registerAuthorOutreachRoutes(app,{service:authorOutreachService,requireAuth});
   if (changeRadarService) registerChangeRadarRoutes(app,{service:changeRadarService,requireAuth});

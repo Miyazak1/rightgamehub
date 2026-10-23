@@ -1,23 +1,26 @@
 import { withTransaction } from './database.mjs';
 import { BlogArticleError, blogRequestHash } from './blog-contract.mjs';
+import {accountDisclosure} from './agent-disclosure.mjs';
 
 const fail = (code, statusCode, message) => { throw new BlogArticleError(code, statusCode, message); };
 const iso = value => value ? new Date(value).toISOString() : null;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const publicColumns = `a.*,r.id AS revision_id,r.title,r.summary,r.blocks,r.citations,r.content_hash,
-  u.display_name AS author_display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS author_handle`;
+  u.display_name AS author_display_name,CASE WHEN u.social_visibility='public' THEN u.profile_handle ELSE NULL END AS author_handle,
+  u.account_type,aa.badge_label AS agent_badge_label,aa.operator_label AS agent_operator_label`;
 const publicJoins = ` FROM blog_articles a
   JOIN blog_article_revisions r ON r.id=a.published_revision_id AND r.article_id=a.id
-  JOIN users u ON u.id=a.author_user_id`;
+  JOIN users u ON u.id=a.author_user_id LEFT JOIN agent_accounts aa ON aa.user_id=u.id`;
 const manageColumns = `a.*,r.id AS revision_id,r.title,r.summary,r.blocks,r.citations,r.content_hash,
-  u.display_name AS author_display_name,u.profile_handle AS author_handle,
+  u.display_name AS author_display_name,u.profile_handle AS author_handle,u.account_type,
+  aa.badge_label AS agent_badge_label,aa.operator_label AS agent_operator_label,
   p.source_contract_version,p.topic_id,p.report_snapshot_id,p.report_sha256,p.claim_ids,p.evidence_ids,p.generated_at`;
 const manageJoins = ` FROM blog_articles a
   JOIN blog_article_revisions r ON r.id=a.working_revision_id AND r.article_id=a.id
-  JOIN users u ON u.id=a.author_user_id
+  JOIN users u ON u.id=a.author_user_id LEFT JOIN agent_accounts aa ON aa.user_id=u.id
   LEFT JOIN blog_revision_research_provenance p ON p.revision_id=r.id`;
 
-const author = row => ({ id: row.author_user_id, displayName: row.author_display_name, handle: row.author_handle ?? null });
+const author = row => ({ id: row.author_user_id, displayName: row.author_display_name, handle: row.author_handle ?? null, ...accountDisclosure(row) });
 const publicView = row => ({
   id: row.id,
   slug: row.slug,
@@ -177,16 +180,17 @@ async function verifyResearchProvenance(client, input) {
 export class PostgresBlogRepository {
   constructor(pool) { this.pool = pool; }
 
-  async listPublic({ limit, locale, query = null, cursor }) {
-    const scope = `public:${locale ?? '*'}:${query ?? ''}`;
+  async listPublic({ limit, locale, query = null, author: authorHandle = null, cursor }) {
+    const scope = `public:${locale ?? '*'}:${query ?? ''}:${authorHandle ?? '*'}`;
     const position = readCursor(cursor, scope);
     const rows = (await this.pool.query(
       `SELECT ${publicColumns},a.last_published_at::text AS sort_at${publicJoins}
         WHERE a.publication_state='published' AND ($1::text IS NULL OR a.locale=$1)
           AND ($2::text IS NULL OR position(lower($2) in lower(r.title))>0 OR position(lower($2) in lower(r.summary))>0)
-          AND ($3::timestamptz IS NULL OR (a.last_published_at,a.id)<($3::timestamptz,$4::uuid))
-        ORDER BY a.last_published_at DESC,a.id DESC LIMIT $5`,
-      [locale, query, position?.at ?? null, position?.id ?? null, limit + 1],
+          AND ($3::text IS NULL OR u.profile_handle=$3)
+          AND ($4::timestamptz IS NULL OR (a.last_published_at,a.id)<($4::timestamptz,$5::uuid))
+        ORDER BY a.last_published_at DESC,a.id DESC LIMIT $6`,
+      [locale, query, authorHandle, position?.at ?? null, position?.id ?? null, limit + 1],
     )).rows;
     const page = rows.slice(0, limit);
     return { items: page.map(publicView), nextCursor: rows.length > limit ? cursorFor(scope, page.at(-1)) : null };
