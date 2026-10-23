@@ -1,3 +1,4 @@
+import {registerResearchQaHttpRoutes} from './researcher-qa-http-routes.mjs';
 import { GameShareError } from './game-share-service.mjs';
 import { registerGameShareRoutes } from './game-share-routes.mjs';
 import {CompetitionError} from './competition-service.mjs';
@@ -146,6 +147,7 @@ export function createApp(dependencies) {
     multiplayerMatchService,
     multiplayerRuleSubmissionService,
     gameShareService,
+    researchQaHttpGateway,
     logger = false,
   } = dependencies;
   const app = Fastify({
@@ -282,6 +284,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  if (researchQaHttpGateway) registerResearchQaHttpRoutes(app,{gateway:researchQaHttpGateway,requireAuth});
   const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});
   if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin,getCover:workService?.getCover?id=>workService.getCover(id):null});
