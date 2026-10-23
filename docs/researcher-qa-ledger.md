@@ -73,3 +73,44 @@ finally先检查容器唯一身份、label和仅tmpfs挂载，再删除这个精
 日志：researcher-qa-review-db.log、researcher-qa-review-targeted.log（系统临时目录）。
 
 本轮最终结果：独立PG17为30个场景/31项测试全部通过（0跳过），定向离线测试15项中10通过、5项独立数据库门控按预期跳过、0失败。没有重跑无关平台功能；首次全量回归的3项既有基线失败仍见上文。
+
+## 2026-10-23 本地 HTTP 与问答账本联调
+
+已与平台会话对齐：继续独立分支 `codex/researcher-qa-ledger`，平台基线仍为 `155fdc66`。冻结协议、两份向量、manifest、0114及旧迁移不变。`app.mjs`仅增加import、可选依赖和条件注册三行；`runtime.mjs`不创建或传入该依赖，所以正常服务中没有这些路由。不能通过环境变量开启。注册需显式注入 `mode:simulation-only` 的本地gateway；测试服务器明确监听127.0.0.1。无真实Researcher执行、模型SDK、账号注册或发布入口。
+
+新增文件：`researcher-qa-http-routes.mjs`处理路由/认证/错误；`researcher-qa-local-gateway.mjs`调用已有账本，并提供只到固定loopback地址的一次性HTTP transport。`startQaLoopbackReceiver`仅用于显式本地模拟Researcher；不自动启动。数据库测试夹具提取到`tests/platform/support/researcher-qa-db.cjs`，仍用随机临时数据库/schema，不读.env或旧DB配置。
+
+### 路由与信任边界
+
+| 方向/路由 | 认证与行为 |
+| --- | --- |
+| POST `/v1/me/research-qa` | 正常平台Bearer，经requireAuth取得actor.userId；body只含文章ID、修订ID、问题、幂等key。可信prepareSubmission/resolveGrant提供固定问题绑定和原授权，必须与actor及输入一致，再交账本准入。 |
+| GET `/v1/me/research-qa/:questionId` | 核对本人、当前原grant和文章权限，返回金额/状态摘要；不返回签名token、scope、proof或原始回执。 |
+| POST `/v1/me/research-qa/:questionId/reconcile` | 本人及当前权限检查后，保存签名inspect查询；向模拟Researcher发一次请求，核对签名status及独立journal，再交账本处理。不是重发submit或模型。 |
+| 冻结v1 accepted、usage；control-v1 authorize、status | 平台仅注册这四种反向动作。独立`x-research-qa-signature`头，拒绝重复/逗号拼接/超长/错签名/过期/错action/错path。签名和绑定最终仍由冻结协议及账本校验。 |
+| outbound submit、control inspect | 不注册为平台入站路由；固定127.0.0.1目的地，无env代理、重定向、自动重试。 |
+
+全部本地路由检查底层socket地址，拒绝Origin、浏览器跨站头、转发地址头和未签名query参数，不把X-Forwarded-For当成本地证据。未改trustProxy。请求正文上限64KiB，reconcile为1KiB，禁止额外顶层字段；标签分支/深层正文继续由冻结校验器检查。响应统一no-store。用户Bearer与服务签名互不替代。
+
+`prepareSubmission`与`resolveGrant`是可信服务端端口，测试实现仅覆盖独立fixture用户和文章。生产版的持久scope工厂、真实平台文章/evidence权限映射尚未启用；不能拿浏览器提交的subject/grant/budget构造它们。生产scope工厂还需从DB复用原始绑定，应支持跨进程并发与重启，不能照搬测试中的内存prepared映射。
+
+### 两阶段执行与恢复
+
+- authorize HTTP只创建/复用仍reserved的许可，不提前consume。模拟Researcher验证返回签名，实际准备执行前才调用可信本地`consumeForExecution`端口。该端口不在HTTP路由表；本阶段尚未定义跨进程真实执行的consume适配。
+- 同键重复submit复用原预留，均经过幂等claimDelivery；只有仍pending的唯一调用方获得派发权，其他状态不重发。换问题/版本冲突409。新submit在claimDelivery提交后仅发一次，断线转uncertain，不自动重发。
+- permit返回前丢响应仍reserved；consume提交后丢确认不能再次得到shouldSend=true。不能用“超时”等同“未发送”或直接释放预留。
+- usageProof和closureProof仅从可信、只读、任务绑定的模拟服务journal读取。proof不接受HTTP body字段；closed hash独立从模拟执行记录取得，不回显status里的hash自证。真实journal适配仍是后续接入门槛。
+- 原始可靠回执提交前/后故障，通过显式重投同业务回执对账；不重跑模型。可信status不能替代缺失的用量证明；未结算known槽先停止，需先从受保护journal对齐回执再显式reconcile。unknown/not_found继续占用预留，不能自动清零。
+- 查询、结算、恢复继续使用既有question行锁和有序预算锁；没有新增全局锁，也没有自动事务重试或后台循环。
+
+### 错误映射与验证
+
+错误在新route模块集中处理，不改全局handler：无/坏Bearer或缺失/无效格式签名401；撤权/身份错绑/无权查看/签名协议拒绝403；输入400、超大413、类型415；用户不存在问题404；预算不足、幂等冲突、确定停止及结果未知均409、retryable:false；已登记派发但无法确认时给QA_HTTP_DELIVERY_UNRESOLVED、reconcileRequired:true和本人的questionId。仅明确401的认证错误归为401；未知数据库/程序异常给通用500、retryable:true，不伪装成登录或业务错误。这里是错误提示，不会触发自动重试。不回显密钥、token、scope、供应商回执或内部错误细节。内部未知question不暴露存在性。
+
+最终独立PG17+本机HTTP：50项全部通过（0跳过）。包括完整签名链路、并发重复提交、跨用户、撤销grant/文章权限、额度不足、permit/consume两阶段断线、unknown/not_found保留预留、原回执提交前后故障及重启恢复、闭合proof伪造、头部/路径/正文边界，另含全部原账本迁移/并发/恢复回归。定向非DB/API基础回归：43项中40通过、3按独立DB门控跳过、0失败。
+
+日志：`researcher-qa-http-db.log`、`researcher-qa-http-targeted.log`（系统临时目录）。所有容器精确核对身份后清除；无旧任务改动、付费请求、线上账户、真实执行或发布。此结果只证明本地HTTP+模拟服务闭环，不表示已接生产平台或真实模型。
+
+平台只读审查后补齐相邻中断窗口：after_admit/before_claim中断可由同key显式续接，保留同一question/reservation/预算，并由唯一pending→dispatching的claim获得者使用原body、原requestId和新的短期签名时间发送；原签名过期也不改变stored claims/digest。反例使用新的重复投递ID并将时钟推进至原签名过期后，仍只远端submit一次。
+
+若after_claim_before_send进程退出，故障点在send的try/catch之外，不假装执行了recoverDelivery。重启后重复submit明确409+QA_HTTP_DELIVERY_UNRESOLVED，只能inspect；可信not_found后GET/reconcile明确unresolved:true、resolution:inspect-only、released:false、held不变，不把dispatching回pending。重复显式inspect各留一条inspection/status_held审计，不新增预留、结算或释放，不产生后台恢复循环。已有远端任务则仍可由签名状态接回accepted。这一未决状态的安全取消/重试需要vNext持久delivery owner/attempt/lease或tombstone，目前不支持；没有用临时全局锁掩盖它，也没有宣称全部失败都能继续执行。
