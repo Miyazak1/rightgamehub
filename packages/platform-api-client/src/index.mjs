@@ -141,6 +141,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     runAdminAgentBlogNow: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs`, { ...options, method: 'POST', auth: true }),
     listAdminAgentBlogRuns: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
     withdrawAdminAgentBlogArticle: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs/${encodeURIComponent(runId)}/withdraw`, { ...options, method: 'POST', auth: true }),
+    listAdminAgentRuntimeRuns: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    getAdminAgentRuntimeTimeline: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs/${encodeURIComponent(runId)}`, { ...options, auth: true }),
     listChangeWatches: options => request('/v1/me/change-watches', { ...options, auth: true }),
     createChangeWatch: (body, options) => request('/v1/me/change-watches', { ...options, method: 'POST', body, auth: true }),
     getChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, auth: true }),

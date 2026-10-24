@@ -30,6 +30,7 @@ function stageView(row) {
     leaseToken: row.lease_token,
     leasedBy: row.leased_by,
     leaseUntil: iso(row.lease_until),
+    attemptStartedAt: iso(row.attempt_started_at),
     outputRef: row.output_ref_json,
     errorCode: row.error_code,
   } : null;
@@ -56,6 +57,40 @@ function actionView(row) {
     finishedAt: iso(row.finished_at),
   } : null;
 }
+
+function outboxView(row) {
+  return row ? {
+    id: row.id,
+    aggregateType: row.aggregate_type,
+    aggregateId: row.aggregate_id,
+    eventType: row.event_type,
+    dedupeKey: row.dedupe_key,
+    payload: row.payload_json,
+    status: row.status,
+    attempts: row.attempts,
+    maxAttempts: row.max_attempts,
+    availableAt: iso(row.available_at),
+    leaseToken: row.lease_token,
+    leaseUntil: iso(row.lease_until),
+    lastErrorCode: row.last_error_code,
+  } : null;
+}
+
+const boundedInteger = (value, min, max, code) => {
+  if (!Number.isInteger(value) || value < min || value > max) fail(code);
+  return value;
+};
+
+const workerIdentifier = value => {
+  if (typeof value !== 'string' || value.length < 1 || value.length > 120) fail('AGENT_RUNTIME_WORKER_INVALID');
+  return value;
+};
+
+const routeKeys = value => {
+  if (value == null) return null;
+  if (!Array.isArray(value) || value.length > 256 || value.some(item => typeof item !== 'string' || item.length < 5 || item.length > 201)) fail('AGENT_RUNTIME_ROUTES_INVALID');
+  return [...new Set(value)];
+};
 
 export class PostgresAgentRuntimeRepository {
   constructor(pool) { this.pool = pool; }
@@ -144,19 +179,39 @@ export class PostgresAgentRuntimeRepository {
     });
   }
 
-  async claimNextStage(workerId, leaseSeconds = 60) {
-    if (typeof workerId !== 'string' || workerId.length < 1 || workerId.length > 120) fail('AGENT_RUNTIME_WORKER_INVALID');
-    if (!Number.isInteger(leaseSeconds) || leaseSeconds < 5 || leaseSeconds > 3600) fail('AGENT_RUNTIME_LEASE_INVALID');
+  async claimNextStage(workerId, leaseSeconds = 60, supportedRoutes = null) {
+    workerIdentifier(workerId);
+    boundedInteger(leaseSeconds, 5, 3600, 'AGENT_RUNTIME_LEASE_INVALID');
+    const routes = routeKeys(supportedRoutes);
+    if (routes?.length === 0) return null;
     return withTransaction(this.pool, async client => {
       const leaseToken = crypto.randomUUID();
-      const row = (await client.query(`WITH candidate AS (
-        SELECT s.id FROM agent_run_stages s JOIN agent_runs r ON r.id=s.run_id
+      const row = (await client.query(`WITH agent_queue AS (
+        SELECT r.agent_user_id,
+          count(DISTINCT active.id) FILTER (WHERE active.status IN ('leased','running')) AS active_count,
+          min(s.available_at) AS oldest_available
+        FROM agent_run_stages s
+        JOIN agent_runs r ON r.id=s.run_id
+        LEFT JOIN agent_runs active_run ON active_run.agent_user_id=r.agent_user_id
+          AND active_run.status IN ('queued','running','waiting')
+        LEFT JOIN agent_run_stages active ON active.run_id=active_run.id AND active.status IN ('leased','running')
         WHERE s.status='queued' AND s.available_at<=now() AND s.attempt<s.max_attempts
           AND r.status IN ('queued','running','waiting')
-        ORDER BY s.available_at,s.created_at,s.id FOR UPDATE OF s SKIP LOCKED LIMIT 1
+          AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
+        GROUP BY r.agent_user_id
+      ), candidate AS (
+        SELECT s.id FROM agent_run_stages s
+        JOIN agent_runs r ON r.id=s.run_id
+        JOIN agent_accounts account ON account.user_id=r.agent_user_id
+        JOIN agent_queue queue ON queue.agent_user_id=r.agent_user_id
+        WHERE s.status='queued' AND s.available_at<=now() AND s.attempt<s.max_attempts
+          AND r.status IN ('queued','running','waiting')
+          AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
+        ORDER BY queue.active_count,queue.oldest_available,s.available_at,s.created_at,s.id
+        FOR UPDATE OF account,s SKIP LOCKED LIMIT 1
       ) UPDATE agent_run_stages s SET status='leased',attempt=attempt+1,lease_token=$2,leased_by=$1,
-        lease_until=now()+($3*interval '1 second'),started_at=COALESCE(started_at,now()),updated_at=now()
-        FROM candidate WHERE s.id=candidate.id RETURNING s.*`, [workerId, leaseToken, leaseSeconds])).rows[0];
+        lease_until=now()+($3*interval '1 second'),attempt_started_at=now(),started_at=COALESCE(started_at,now()),updated_at=now()
+        FROM candidate WHERE s.id=candidate.id RETURNING s.*`, [workerId, leaseToken, leaseSeconds, routes])).rows[0];
       if (!row) return null;
       await client.query(`UPDATE agent_runs SET status='running',started_at=COALESCE(started_at,now()),updated_at=now()
         WHERE id=$1 AND status IN ('queued','waiting')`, [row.run_id]);
@@ -182,7 +237,7 @@ export class PostgresAgentRuntimeRepository {
     return iso(row.lease_until);
   }
 
-  async completeStage({ stageId, workerId, leaseToken, outputRef = {} }) {
+  async completeStage({ stageId, workerId, leaseToken, outputRef = {}, runOutput = null }) {
     return withTransaction(this.pool, async client => {
       const locked = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
@@ -191,7 +246,7 @@ export class PostgresAgentRuntimeRepository {
         WHERE stage_id=$1 AND status NOT IN ('succeeded','rejected','failed','uncertain','cancelled')`, [stageId])).rows[0]?.n ?? 0);
       if (incompleteActions !== 0) fail('AGENT_RUNTIME_ACTIONS_INCOMPLETE');
       const row = (await client.query(`UPDATE agent_run_stages SET status='succeeded',output_ref_json=$4,
-        lease_token=NULL,leased_by=NULL,lease_until=NULL,finished_at=now(),updated_at=now()
+        lease_token=NULL,leased_by=NULL,lease_until=NULL,attempt_started_at=NULL,finished_at=now(),updated_at=now()
         WHERE id=$1 AND status IN ('leased','running') AND leased_by=$2 AND lease_token=$3 AND lease_until>now()
         RETURNING *`, [stageId, workerId, leaseToken, json(outputRef)])).rows[0];
       if (!row) fail('AGENT_RUNTIME_LEASE_LOST');
@@ -210,7 +265,22 @@ export class PostgresAgentRuntimeRepository {
         await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,payload_json)
           VALUES($1,$2,'stage.queued','system',$3)`, [row.run_id, stage.id, json({ unlockedBy: row.stage_key })]);
       }
-      return { stage: stageView(row), unlocked: unlocked.map(stageView) };
+      let finalizedRun = null;
+      if (runOutput !== null) {
+        if (!runOutput || typeof runOutput.type !== 'string' || typeof runOutput.id !== 'string') fail('AGENT_RUN_OUTPUT_INVALID');
+        const remaining = Number((await client.query(`SELECT count(*)::int AS n FROM agent_run_stages
+          WHERE run_id=$1 AND status NOT IN ('succeeded','skipped')`, [row.run_id])).rows[0]?.n ?? 0);
+        if (remaining !== 0) fail('AGENT_RUN_OUTPUT_EARLY');
+        finalizedRun = (await client.query(`UPDATE agent_runs SET status='succeeded',output_type=$2,output_id=$3,
+          finished_at=now(),updated_at=now() WHERE id=$1 AND status='running' RETURNING *`,
+        [row.run_id, runOutput.type, runOutput.id])).rows[0];
+        if (!finalizedRun) fail('AGENT_RUN_NOT_FINALIZABLE');
+        await client.query(`INSERT INTO agent_run_events(run_id,event_type,actor_kind,actor_ref,payload_json)
+          VALUES($1,'run.succeeded','worker',$2,$3)`, [row.run_id, workerId, json({ outputType: runOutput.type, outputId: runOutput.id })]);
+      }
+      return { stage: stageView(row), unlocked: unlocked.map(stageView), run: finalizedRun ? {
+        id: finalizedRun.id, status: finalizedRun.status, outputType: finalizedRun.output_type, outputId: finalizedRun.output_id,
+      } : null };
     });
   }
 
@@ -219,20 +289,30 @@ export class PostgresAgentRuntimeRepository {
       const stage = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
-      const retry = retryable && !uncertain && stage.attempt < stage.max_attempts;
-      const nextStatus = retry ? 'queued' : uncertain ? 'uncertain' : 'failed';
+      const exposed = (await client.query(`SELECT id,status FROM agent_run_actions WHERE stage_id=$1
+        AND status IN ('sending','sent','acknowledged') FOR UPDATE`, [stageId])).rows;
+      const unsafeOutcome = uncertain || exposed.length > 0;
+      if (exposed.length) await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,error_message=$3,
+        finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
+      [stageId, errorCode, errorMessage]);
+      await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
+        finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
+      [stageId, errorCode, errorMessage]);
+      const retry = retryable && !unsafeOutcome && stage.attempt < stage.max_attempts;
+      const nextStatus = retry ? 'queued' : unsafeOutcome ? 'uncertain' : 'failed';
       const row = (await client.query(`UPDATE agent_run_stages SET status=$2,available_at=CASE WHEN $2='queued'
           THEN now()+($5*interval '1 second') ELSE available_at END,lease_token=NULL,leased_by=NULL,lease_until=NULL,
-        error_code=$3,error_message=$4,finished_at=CASE WHEN $2='queued' THEN NULL ELSE now() END,updated_at=now()
+        attempt_started_at=NULL,error_code=$3,error_message=$4,finished_at=CASE WHEN $2='queued' THEN NULL ELSE now() END,updated_at=now()
         WHERE id=$1 RETURNING *`, [stageId, nextStatus, errorCode, errorMessage, backoffSeconds])).rows[0];
       await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
-        VALUES($1,$2,$3,'worker',$4,$5)`, [row.run_id, row.id, retry ? 'stage.retry-scheduled' : `stage.${nextStatus}`, workerId, json({ errorCode, retryable: retry, backoffSeconds })]);
+        VALUES($1,$2,$3,'worker',$4,$5)`, [row.run_id, row.id, retry ? 'stage.retry-scheduled' : `stage.${nextStatus}`, workerId,
+      json({ errorCode, retryable: retry, backoffSeconds, externalOutcomeUncertain: unsafeOutcome })]);
       if (retry) {
         await client.query(`INSERT INTO agent_runtime_outbox(id,aggregate_type,aggregate_id,event_type,dedupe_key,payload_json,available_at)
           VALUES($1,'stage',$2,'stage.available',$3,$4,now()+($5*interval '1 second')) ON CONFLICT DO NOTHING`, [crypto.randomUUID(), row.id, `stage-available:${row.id}:${row.attempt}`, json({ runId: row.run_id, stageId: row.id, stageKey: row.stage_key }), backoffSeconds]);
       } else {
         await client.query(`UPDATE agent_run_stages SET status='cancelled',lease_token=NULL,leased_by=NULL,lease_until=NULL,
-          finished_at=now(),updated_at=now(),error_code='AGENT_RUN_TERMINATED'
+          attempt_started_at=NULL,finished_at=now(),updated_at=now(),error_code='AGENT_RUN_TERMINATED'
           WHERE run_id=$1 AND id<>$2 AND status IN ('blocked','queued','leased','running','waiting')`, [row.run_id, row.id]);
         await client.query(`UPDATE agent_runs SET status=$2,error_code=$3,error_message=$4,finished_at=now(),updated_at=now()
           WHERE id=$1 AND status IN ('queued','running','waiting')`, [row.run_id, nextStatus, errorCode, errorMessage]);
@@ -301,5 +381,183 @@ export class PostgresAgentRuntimeRepository {
         VALUES($1,$2,$3,$4,'system',$5)`, [row.run_id, row.stage_id, row.id, `action.${to}`, json({ from, to, errorCode })]);
       return { ...actionView(row), existing: false };
     });
+  }
+
+  async loadStageExecutionContext({ stageId, workerId, leaseToken }) {
+    workerIdentifier(workerId);
+    const row = (await this.pool.query(`SELECT s.*,r.agent_user_id,r.workflow_key,r.workflow_version,
+        r.manifest_sha256,r.behavior_profile_id,r.policy_profile_id,r.capability_snapshot,r.config_snapshot,
+        r.input_json,r.input_sha256,r.budget_json,w.manifest_json
+      FROM agent_run_stages s JOIN agent_runs r ON r.id=s.run_id
+      JOIN agent_workflow_definitions w ON w.workflow_key=r.workflow_key AND w.workflow_version=r.workflow_version
+      WHERE s.id=$1 AND s.status='running' AND s.leased_by=$2 AND s.lease_token=$3 AND s.lease_until>now()`,
+    [stageId, workerId, leaseToken])).rows[0];
+    if (!row) fail('AGENT_RUNTIME_LEASE_LOST');
+    const prerequisites = (await this.pool.query(`SELECT stage_key,status,output_ref_json FROM agent_run_stages
+      WHERE run_id=$1 AND stage_key=ANY($2::text[]) ORDER BY ordinal,id`, [row.run_id, row.depends_on])).rows;
+    return {
+      run: {
+        id: row.run_id, agentUserId: row.agent_user_id, workflowKey: row.workflow_key,
+        workflowVersion: row.workflow_version, manifestSha256: row.manifest_sha256,
+        behaviorProfileId: row.behavior_profile_id, policyProfileId: row.policy_profile_id,
+        capabilitySnapshot: row.capability_snapshot, configSnapshot: row.config_snapshot,
+        input: row.input_json, inputSha256: row.input_sha256, budget: row.budget_json,
+      },
+      stage: stageView(row),
+      manifest: normalizeWorkflowManifest(row.manifest_json),
+      prerequisites: prerequisites.map(item => ({ stageKey: item.stage_key, status: item.status, outputRef: item.output_ref_json })),
+    };
+  }
+
+  async claimNextOutbox(workerId, leaseSeconds = 30) {
+    workerIdentifier(workerId);
+    boundedInteger(leaseSeconds, 5, 600, 'AGENT_RUNTIME_LEASE_INVALID');
+    return withTransaction(this.pool, async client => {
+      const leaseToken = crypto.randomUUID();
+      const row = (await client.query(`WITH candidate AS (
+        SELECT id FROM agent_runtime_outbox WHERE status='pending' AND available_at<=now() AND attempts<max_attempts
+        ORDER BY available_at,created_at,id FOR UPDATE SKIP LOCKED LIMIT 1
+      ) UPDATE agent_runtime_outbox o SET status='dispatching',attempts=attempts+1,lease_token=$1,
+        lease_until=now()+($2*interval '1 second'),updated_at=now()
+        FROM candidate WHERE o.id=candidate.id RETURNING o.*`, [leaseToken, leaseSeconds])).rows[0];
+      return outboxView(row);
+    });
+  }
+
+  async deliverOutbox({ outboxId, leaseToken }) {
+    const row = (await this.pool.query(`UPDATE agent_runtime_outbox SET status='delivered',lease_token=NULL,
+      lease_until=NULL,delivered_at=now(),last_error_code=NULL,last_error_message=NULL,updated_at=now()
+      WHERE id=$1 AND status='dispatching' AND lease_token=$2 AND lease_until>now() RETURNING *`,
+    [outboxId, leaseToken])).rows[0];
+    if (!row) fail('AGENT_RUNTIME_OUTBOX_LEASE_LOST');
+    return outboxView(row);
+  }
+
+  async failOutbox({ outboxId, leaseToken, errorCode, errorMessage, retryable = true, backoffSeconds = 1 }) {
+    boundedInteger(backoffSeconds, 0, 3600, 'AGENT_RUNTIME_BACKOFF_INVALID');
+    return withTransaction(this.pool, async client => {
+      const current = (await client.query(`SELECT * FROM agent_runtime_outbox WHERE id=$1 AND status='dispatching'
+        AND lease_token=$2 AND lease_until>now() FOR UPDATE`, [outboxId, leaseToken])).rows[0];
+      if (!current) fail('AGENT_RUNTIME_OUTBOX_LEASE_LOST');
+      const retry = retryable && current.attempts < current.max_attempts;
+      const row = (await client.query(`UPDATE agent_runtime_outbox SET status=$3,lease_token=NULL,lease_until=NULL,
+        available_at=CASE WHEN $3='pending' THEN now()+($6*interval '1 second') ELSE available_at END,
+        last_error_code=$4,last_error_message=$5,updated_at=now() WHERE id=$1 AND lease_token=$2 RETURNING *`,
+      [outboxId, leaseToken, retry ? 'pending' : 'failed', errorCode, errorMessage, backoffSeconds])).rows[0];
+      return { message: outboxView(row), retryScheduled: retry };
+    });
+  }
+
+  async recoverExpiredOutbox({ limit = 25, baseBackoffSeconds = 1 } = {}) {
+    boundedInteger(limit, 1, 200, 'AGENT_RUNTIME_RECOVERY_LIMIT_INVALID');
+    boundedInteger(baseBackoffSeconds, 0, 300, 'AGENT_RUNTIME_BACKOFF_INVALID');
+    return withTransaction(this.pool, async client => {
+      const rows = (await client.query(`SELECT * FROM agent_runtime_outbox
+        WHERE status='dispatching' AND lease_until<=now() ORDER BY lease_until,id
+        FOR UPDATE SKIP LOCKED LIMIT $1`, [limit])).rows;
+      let requeued = 0;
+      let failed = 0;
+      for (const item of rows) {
+        const retry = item.attempts < item.max_attempts;
+        const backoff = Math.min(300, baseBackoffSeconds * (2 ** Math.max(0, item.attempts - 1)));
+        await client.query(`UPDATE agent_runtime_outbox SET status=$2,lease_token=NULL,lease_until=NULL,
+          available_at=CASE WHEN $2='pending' THEN now()+($3*interval '1 second') ELSE available_at END,
+          last_error_code='AGENT_OUTBOX_LEASE_EXPIRED',last_error_message='Outbox dispatch lease expired before acknowledgement.',updated_at=now()
+          WHERE id=$1`, [item.id, retry ? 'pending' : 'failed', backoff]);
+        if (retry) requeued += 1; else failed += 1;
+      }
+      return { examined: rows.length, requeued, failed };
+    });
+  }
+
+  async recoverExpiredStages({ workerId = 'agent-runtime-recovery', limit = 25, baseBackoffSeconds = 1 } = {}) {
+    workerIdentifier(workerId);
+    boundedInteger(limit, 1, 200, 'AGENT_RUNTIME_RECOVERY_LIMIT_INVALID');
+    boundedInteger(baseBackoffSeconds, 0, 300, 'AGENT_RUNTIME_BACKOFF_INVALID');
+    return withTransaction(this.pool, async client => {
+      const rows = (await client.query(`SELECT * FROM agent_run_stages
+        WHERE status IN ('leased','running') AND (lease_until<=now()
+          OR attempt_started_at+(timeout_seconds*interval '1 second')<=now())
+        ORDER BY least(lease_until,attempt_started_at+(timeout_seconds*interval '1 second')),id
+        FOR UPDATE SKIP LOCKED LIMIT $1`, [limit])).rows;
+      const result = { examined: rows.length, requeued: 0, failed: 0, uncertain: 0 };
+      for (const stage of rows) {
+        const exposed = (await client.query(`SELECT id FROM agent_run_actions WHERE stage_id=$1
+          AND status IN ('sending','sent','acknowledged') FOR UPDATE`, [stage.id])).rows;
+        const errorCode = exposed.length ? 'AGENT_STAGE_RECOVERY_UNCERTAIN' : 'AGENT_STAGE_LEASE_EXPIRED';
+        const errorMessage = exposed.length
+          ? 'Stage lease expired after an external action crossed the sending boundary.'
+          : 'Stage lease or attempt timeout expired before a durable result was committed.';
+        if (exposed.length) await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,
+          error_message=$3,finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
+        [stage.id, errorCode, errorMessage]);
+        await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
+          finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
+        [stage.id, errorCode, errorMessage]);
+        const retry = exposed.length === 0 && stage.attempt < stage.max_attempts;
+        const nextStatus = exposed.length ? 'uncertain' : retry ? 'queued' : 'failed';
+        const backoff = Math.min(300, baseBackoffSeconds * (2 ** Math.max(0, stage.attempt - 1)));
+        const updated = (await client.query(`UPDATE agent_run_stages SET status=$2,
+          available_at=CASE WHEN $2='queued' THEN now()+($5*interval '1 second') ELSE available_at END,
+          lease_token=NULL,leased_by=NULL,lease_until=NULL,attempt_started_at=NULL,error_code=$3,error_message=$4,
+          finished_at=CASE WHEN $2='queued' THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 RETURNING *`,
+        [stage.id, nextStatus, errorCode, errorMessage, backoff])).rows[0];
+        await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
+          VALUES($1,$2,$3,'system',$4,$5)`, [stage.run_id, stage.id,
+        retry ? 'stage.recovered' : `stage.${nextStatus}`, workerId,
+        json({ previousWorker: stage.leased_by, attempt: stage.attempt, errorCode, backoffSeconds: retry ? backoff : 0 })]);
+        if (retry) {
+          result.requeued += 1;
+          await client.query(`INSERT INTO agent_runtime_outbox(id,aggregate_type,aggregate_id,event_type,dedupe_key,payload_json,available_at)
+            VALUES($1,'stage',$2,'stage.available',$3,$4,now()+($5*interval '1 second')) ON CONFLICT DO NOTHING`,
+          [crypto.randomUUID(), stage.id, `stage-available:${stage.id}:${stage.attempt}`,
+            json({ runId: stage.run_id, stageId: stage.id, stageKey: stage.stage_key, recovered: true }), backoff]);
+        } else {
+          if (nextStatus === 'uncertain') result.uncertain += 1; else result.failed += 1;
+          await client.query(`UPDATE agent_run_stages SET status='cancelled',lease_token=NULL,leased_by=NULL,
+            lease_until=NULL,attempt_started_at=NULL,finished_at=now(),updated_at=now(),error_code='AGENT_RUN_TERMINATED'
+            WHERE run_id=$1 AND id<>$2 AND status IN ('blocked','queued','leased','running','waiting')`, [stage.run_id, stage.id]);
+          await client.query(`UPDATE agent_runs SET status=$2,error_code=$3,error_message=$4,finished_at=now(),updated_at=now()
+            WHERE id=$1 AND status IN ('queued','running','waiting')`, [stage.run_id, nextStatus, errorCode, errorMessage]);
+        }
+        void updated;
+      }
+      return result;
+    });
+  }
+
+  async registerWorker({ workerId, instanceId, runtimeVersion = '1.0.0', capabilities = [], metadata = {}, staleAfterSeconds = 120 }) {
+    workerIdentifier(workerId);
+    boundedInteger(staleAfterSeconds, 15, 3600, 'AGENT_RUNTIME_WORKER_STALE_INVALID');
+    const row = (await this.pool.query(`INSERT INTO agent_runtime_workers(
+        worker_id,instance_id,runtime_version,status,capabilities_json,metadata_json
+      ) VALUES($1,$2,$3,'idle',$4,$5)
+      ON CONFLICT(worker_id) DO UPDATE SET instance_id=EXCLUDED.instance_id,runtime_version=EXCLUDED.runtime_version,
+        status='idle',current_stage_id=NULL,capabilities_json=EXCLUDED.capabilities_json,metadata_json=EXCLUDED.metadata_json,
+        started_at=now(),last_seen_at=now(),stopped_at=NULL,updated_at=now()
+      WHERE agent_runtime_workers.status='offline'
+        OR agent_runtime_workers.last_seen_at<=now()-($6*interval '1 second') RETURNING *`,
+    [workerId, instanceId, runtimeVersion, json(capabilities), json(metadata), staleAfterSeconds])).rows[0];
+    if (!row) fail('AGENT_RUNTIME_WORKER_ALREADY_ACTIVE');
+    return { workerId: row.worker_id, instanceId: row.instance_id, status: row.status };
+  }
+
+  async heartbeatWorker({ workerId, instanceId, status = 'idle', currentStageId = null }) {
+    workerIdentifier(workerId);
+    if (!['idle', 'busy', 'stopping'].includes(status) || (status === 'busy') !== Boolean(currentStageId)) fail('AGENT_RUNTIME_WORKER_HEARTBEAT_INVALID');
+    const row = (await this.pool.query(`UPDATE agent_runtime_workers SET status=$3,current_stage_id=$4,
+      last_seen_at=now(),updated_at=now() WHERE worker_id=$1 AND instance_id=$2 AND status<>'offline' RETURNING *`,
+    [workerId, instanceId, status, currentStageId])).rows[0];
+    if (!row) fail('AGENT_RUNTIME_WORKER_INSTANCE_LOST');
+    return { workerId: row.worker_id, instanceId: row.instance_id, status: row.status, lastSeenAt: iso(row.last_seen_at) };
+  }
+
+  async stopWorker({ workerId, instanceId }) {
+    workerIdentifier(workerId);
+    const row = (await this.pool.query(`UPDATE agent_runtime_workers SET status='offline',current_stage_id=NULL,
+      stopped_at=now(),last_seen_at=now(),updated_at=now() WHERE worker_id=$1 AND instance_id=$2 AND status<>'offline' RETURNING *`,
+    [workerId, instanceId])).rows[0];
+    if (!row) fail('AGENT_RUNTIME_WORKER_INSTANCE_LOST');
+    return { workerId: row.worker_id, instanceId: row.instance_id, status: row.status, stoppedAt: iso(row.stopped_at) };
   }
 }

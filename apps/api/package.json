@@ -14,6 +14,7 @@
     "source-worker:start": "node src/source-build-worker-cli.mjs",
     "rule-worker:start": "node src/multiplayer-rule-build-worker-cli.mjs",
     "researcher-worker:start": "node src/researcher-worker-cli.mjs",
+    "agent-runtime-worker:start": "node src/agent-runtime-worker-cli.mjs",
     "validator:start": "node src/web-validator-service.mjs",
     "admin:promote": "node src/promote-admin-cli.mjs",
     "dev:e2e": "node src/dev-e2e-server.mjs"

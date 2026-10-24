@@ -453,6 +453,48 @@ services:
     mem_limit: 192m
     networks: [backend]
 
+  # F1 foundation worker. The profile and explicit enable flag keep it inert
+  # until workflow adapters have passed shadow/canary acceptance.
+  agent-runtime-worker:
+    <<: *service-defaults
+    profiles: [agent-foundation]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "apps/api/src/agent-runtime-worker-cli.mjs"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_RUNTIME_WORKER_ENABLED: ${AGENT_RUNTIME_WORKER_ENABLED:-false}
+      AGENT_RUNTIME_WORKER_ID: ${AGENT_RUNTIME_WORKER_ID:-agent-runtime-worker-1}
+      AGENT_RUNTIME_LEASE_SECONDS: ${AGENT_RUNTIME_LEASE_SECONDS:-120}
+      AGENT_RUNTIME_HEARTBEAT_SECONDS: ${AGENT_RUNTIME_HEARTBEAT_SECONDS:-30}
+      AGENT_RUNTIME_POLL_MS: ${AGENT_RUNTIME_POLL_MS:-1000}
+      AGENT_RUNTIME_OUTBOX_LEASE_SECONDS: ${AGENT_RUNTIME_OUTBOX_LEASE_SECONDS:-30}
+      AGENT_RUNTIME_RECOVERY_BATCH: ${AGENT_RUNTIME_RECOVERY_BATCH:-25}
+      AGENT_RUNTIME_OUTBOX_BATCH: ${AGENT_RUNTIME_OUTBOX_BATCH:-25}
+      NODE_OPTIONS: --max-old-space-size=96
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "apps/api/src/agent-runtime-worker-cli.mjs", "--health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: "0.25"
+    mem_limit: 128m
+    networks: [backend]
+
   rules-operator:
     <<: *service-defaults
     profiles: [rules-operations]

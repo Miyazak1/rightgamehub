@@ -74,7 +74,9 @@ test('schedule idempotency binds schedule and logical fire time', async () => {
 
 test('foundation migration and repository retain leases, append-only audit and no legacy blog coupling', () => {
   const migration = fs.readFileSync(path.join(root, 'apps/api/migrations/0123_agent_runtime_foundation.sql'), 'utf8');
+  const recoveryMigration = fs.readFileSync(path.join(root, 'apps/api/migrations/0124_agent_runtime_worker_recovery.sql'), 'utf8');
   const repository = fs.readFileSync(path.join(root, 'apps/api/src/agent-runtime-repository.mjs'), 'utf8');
+  const worker = fs.readFileSync(path.join(root, 'apps/api/src/agent-runtime-worker.mjs'), 'utf8');
   for (const table of ['agent_workflow_definitions', 'agent_capability_grants', 'agent_policy_profiles', 'agent_runs', 'agent_run_stages', 'agent_run_actions', 'agent_run_events', 'agent_schedules', 'agent_runtime_outbox']) {
     assert.match(migration, new RegExp(`CREATE TABLE ${table}\\b`, 'u'));
   }
@@ -83,7 +85,11 @@ test('foundation migration and repository retain leases, append-only audit and n
   assert.match(migration, /Invalid Agent run state transition/u);
   assert.match(migration, /FOREIGN KEY\(run_id,action_id\)/u);
   assert.match(migration, /agent_runtime_account_seed/u);
-  assert.match(repository, /FOR UPDATE OF s SKIP LOCKED/u);
+  assert.match(repository, /FOR UPDATE OF account,s SKIP LOCKED/u);
   assert.match(repository, /leased_by=\$2 AND lease_token=\$3 AND lease_until>now\(\)/u);
   assert.doesNotMatch(repository, /agent_blog_runs|agent_blog_automation_settings/u);
+  assert.match(recoveryMigration, /CREATE TABLE agent_runtime_workers/u);
+  assert.match(recoveryMigration, /Agent runtime outbox identity or terminal state cannot change/u);
+  assert.match(worker, /AGENT_RUNTIME_HANDLER_NOT_REGISTERED/u);
+  assert.doesNotMatch(worker, /agent_blog_runs|agent_blog_automation_settings|deepseek/u);
 });

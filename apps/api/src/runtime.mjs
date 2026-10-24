@@ -89,6 +89,7 @@ import {createAgentSecretVault} from './agent-secret-vault.mjs';
 import {createDeepSeekAgentBlogWriter} from './agent-blog-writer.mjs';
 import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from './agent-blog-automation.mjs';
 import {PostgresAgentBlogFollowUpRepository,createAgentBlogFollowUpService} from './agent-blog-follow-up.mjs';
+import {createAgentRuntimeReadService} from './agent-runtime-read-service.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
@@ -220,6 +221,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentBlogWriter=createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs});
   const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter,pollMs:config.agentBlogPollSeconds*1000});
   const agentBlogFollowUpService=createAgentBlogFollowUpService({repository:new PostgresAgentBlogFollowUpRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter});
+  const agentRuntimeReadService=createAgentRuntimeReadService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin'});
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
   const rulesRegistry = loadTrustedRules ? loadRulesRegistry({ manifestPath: config.rulesManifestPath,trustedKeys: config.rulesTrustedKeys,allowUnsigned: config.rulesAllowUnsigned }) : createRulesRegistry();
@@ -289,6 +291,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     agentAccountService,
     agentBlogAutomation,
     agentBlogFollowUpService,
+    agentRuntimeReadService,
     storageCapacityService,
     realtimeTicketService,
     rulesStatus: rulesRegistry.describe(),
@@ -340,6 +343,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     blogService,
     agentAccountService,
     agentBlogAutomation,
+    agentRuntimeReadService,
     storageCapacityService,
     realtimeTicketService,
     rulesRegistry,

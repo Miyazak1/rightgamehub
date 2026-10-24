@@ -134,6 +134,7 @@ export function createApp(dependencies) {
     agentAccountService,
     agentBlogAutomation,
     agentBlogFollowUpService,
+    agentRuntimeReadService,
     creatorDraftService,
     projectClaimService,
     authorOutreachService,
@@ -296,7 +297,7 @@ export function createApp(dependencies) {
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});
   if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin,getCover:workService?.getCover?id=>workService.getCover(id):null});
   if (blogService) registerBlogRoutes(app,{service:blogService,followUpService:agentBlogFollowUpService,requireAuth,siteOrigin});
-  if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,requireAuth});
+  if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,runtimeRead:agentRuntimeReadService,requireAuth});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (authorOutreachService) registerAuthorOutreachRoutes(app,{service:authorOutreachService,requireAuth});
   if (changeRadarService) registerChangeRadarRoutes(app,{service:changeRadarService,requireAuth});

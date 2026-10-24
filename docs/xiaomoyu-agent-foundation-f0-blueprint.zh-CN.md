@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F1-I1\
-状态：F1-1 首批基座代码已在开发分支实现并通过隔离 PostgreSQL 验证；尚未部署，F1-2 及后续能力尚未实现\
+版本：F1-I2\
+状态：F1-1 与 F1-2 通用运行内核已在开发分支实现并通过隔离 PostgreSQL 验证；尚未部署、默认禁用，F1-3 及业务迁移尚未实现\
 更新日期：2026-10-24\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -18,7 +18,7 @@
 - 独立故障恢复；
 - 无法统一观察的后台页面。
 
-F0 本身不实现业务功能。当前开发分支已经按本文进入 F1-1，创建通用运行表、工作流合同和 Repository，但尚未接管旧博客、启动生产 Worker 或调用模型。博客仍是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
+F0 本身不实现业务功能。当前开发分支已经完成 F1-1 与 F1-2：通用运行表、工作流合同、Repository、Worker、Outbox 和恢复循环已经形成，但生产 Worker 由独立 Compose profile 与显式开关双重禁用，尚未接管旧博客或调用模型。博客仍是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
 
 ### 1.1 当前实施证据
 
@@ -27,7 +27,7 @@ F0 本身不实现业务功能。当前开发分支已经按本文进入 F1-1，
 | F1-1 Schema 与状态机 | 开发分支已实现，未部署 | `0123_agent_runtime_foundation.sql`、`agent-runtime-contracts.mjs`、`agent-runtime-repository.mjs` |
 | 工作流 DAG、幂等和状态转换 | 已实现并通过契约测试 | `agent-runtime-foundation.test.cjs` |
 | 真实 PostgreSQL 迁移、并发领取和不可变约束 | 已通过一次性 PostgreSQL 17 隔离测试 | `agent-runtime-foundation-db.test.cjs` |
-| F1-2 Worker 与恢复循环 | 未实现 | 不得启动生产基座 Worker |
+| F1-2 Worker 与恢复循环 | 开发分支已实现，默认禁用 | `agent-runtime-worker.mjs`、`0124_agent_runtime_worker_recovery.sql`；只有注册处理器才会领取对应 Stage |
 | F1-3 Policy、Budget、Provider Gateway | 只有数据边界，未实现执行服务 | 不得声称模型已经通过新网关调用 |
 | F1-4 博客影子迁移 | 未实现 | 旧博客仍是唯一运行链路 |
 
@@ -922,10 +922,13 @@ F0 评审通过后按以下顺序施工：
 
 ### F1-2：Worker 与恢复
 
+- 状态：开发分支已完成通用 Worker、Outbox、心跳、超时和崩溃恢复，并通过真实 PostgreSQL 故障注入；生产 profile 默认关闭；
 - 公平领取、租约、续租、过期回收；
 - Outbox 派发；
 - 多实例和崩溃注入；
-- 后台只读时间线。
+- 后台只读时间线 API；管理界面在影子运行产生真实数据后接入。
+
+F1-2 的安全边界：未越过 Action `sending` 水位的过期 Stage 可以按上限重新排队；一旦 Action 处于 `sending`、`sent` 或 `acknowledged`，恢复器必须把 Action、Stage 和 Run 标记为 `uncertain`，不得猜测外部系统没有执行，也不得自动重发。Worker 只能领取注册表中明确声明的 `workflow_key:stage_key`，因此空处理器的 Foundation Worker 不会误执行旧博客或未来工作流。
 
 ### F1-3：Policy、Budget 与 Provider Gateway
 
