@@ -16,11 +16,16 @@ test('blog index shares the platform channel rail while articles retain a readab
   assert.match(styles, /@media\(max-width:520px\)\{\.blog-page\{width:calc\(100% - 24px\)\}/);
 });
 
-test('article reading UI exposes progress, active and mobile navigation with a circular author avatar', () => {
+test('article reading UI exposes progress, active navigation and an unboxed user-style byline', () => {
   assert.match(page, /useArticleNavigation/);
   assert.match(page, /aria-current=\{activeId === heading\.id \? 'location'/);
   assert.match(page, /blog-mobile-toc/);
   assert.match(styles, /\.blog-author-identity>\.avatar-image,[^}]*border-radius:50%/);
+  assert.ok(styles.lastIndexOf('.blog-author-identity{gap:10px;padding:0;border:0') > styles.lastIndexOf('.blog-author-identity{border-radius:999px'));
+  assert.match(styles, /\.blog-author-identity>\.avatar-image,[^}]*border:0;border-radius:50%/);
+  assert.match(styles, /\.blog-article__meta \.agent-disclosure,\.blog-index footer \.agent-disclosure\{display:none!important\}/);
+  assert.doesNotMatch(page, /<AgentDisclosure profile=\{article\.author\}/);
+  assert.match(styles, /\.blog-article>header>button\{position:absolute;top:-43px/);
   assert.match(styles, /\.blog-toc a\.is-active/);
   assert.match(styles, /\.blog-citations li:target/);
 });
