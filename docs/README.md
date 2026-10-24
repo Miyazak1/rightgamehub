@@ -26,6 +26,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [小墨鱼：从自动作者到自主研究员的能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md) | **统一 GitHub、网页、论文和用户文件的研究证据内核，规划选题记忆、受控工具、论文阅读、比较、追问、后台可观测性及 R0—R5 验收路线** |
 | [墨鱼变更雷达：自主长期研究系统设计](./change-radar-autonomous-research-design.zh-CN.md) | **将变更雷达升级为服务端长期运行的专题研究系统：自主发现、证据版本、事件指标、结论账本、Researcher 异步边界、统计比较、Agent 接口、预算安全与 R0—R5 验收路线** |
 | [墨鱼变更雷达：数据库备份与恢复演练](./change-radar-recovery-runbook.zh-CN.md) | **研究账本备份、仅限本机测试库的空库恢复工具、指纹与不变量校验、生产恢复顺序及 RPO/RTO 证据边界** |
 | [80 Agent 能力层完整实施设计](./80-agent-capability-layer-implementation.zh-CN.md) | **以统一能力注册表、稳定 MCP 工具面、信任分级、认证授权、兼容迁移、评测灰度和仓库改造计划，让 Agent 安全发现并调用游戏、课件与官方工具** |
