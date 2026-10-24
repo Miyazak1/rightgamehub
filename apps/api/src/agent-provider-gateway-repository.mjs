@@ -333,7 +333,8 @@ export class PostgresAgentProviderGatewayRepository {
 
   async #refreshRunUsage(client, runId) {
     const row = totals((await client.query(aggregateSql('run_id=$1'), [runId])).rows[0]);
-    await client.query('UPDATE agent_runs SET usage_json=$2,updated_at=now() WHERE id=$1', [runId, json(row)]);
+    await client.query(`UPDATE agent_runs SET usage_json=COALESCE(usage_json,'{}'::jsonb)
+      || $2::jsonb,updated_at=now() WHERE id=$1`, [runId, json(row)]);
   }
 
   async #recordCircuit(client, provider, modelId, success, errorCode) {

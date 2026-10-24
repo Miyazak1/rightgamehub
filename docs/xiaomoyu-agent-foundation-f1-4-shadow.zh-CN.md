@@ -2,7 +2,7 @@
 
 版本：F1-4B1
 状态：开发分支已实现并通过隔离 PostgreSQL 验证；未部署，不改变线上执行权  
-日期：2026-10-24
+日期：2026-10-25
 
 ## 1. 当前增量的目的
 
@@ -55,7 +55,7 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 
 隔离 PostgreSQL 17 回归覆盖：
 
-- 127 个迁移并发应用且只能应用一次；
+- 128 个迁移并发应用且只能应用一次；
 - 同一旧任务重复投影不重复写事件；
 - `queued → generating → rejected` 可按顺序重建；
 - 观察事件不能更新或删除；
@@ -92,4 +92,18 @@ F1-4B1 在 F1-4A 之上增加一条真实 Runtime 执行路径，但仍不做第
 
 同时冻结了未来 canary 的 `blog.project.single@1` 目标 Manifest。它把 `research.github.read`、`provider.text.generate`、`blog.article.draft` 和 `blog.article.publish` 分成独立能力，迁移为现有博客 Agent 建立最小授权，但该 Manifest **不会自动注册或执行**。这样做是为了先固定长期边界，不把旧博客的大函数直接搬进新 Worker。
 
-进入 F1-4B2 前，还必须实现并验证：GitHub 只读研究 Tool Adapter、经 Provider Gateway 的选题/写作 Action、私有草稿适配器、确定性校验，以及“影子工作流没有发布路由”的部署级断言。F1-4B2 才会产生可比较的新草稿；F1-4B1 只证明新基座可以安全接住旧任务事实。
+进入 F1-4B2b 前，还必须实现并验证：经 Provider Gateway 的选题/写作 Action、私有草稿适配器、确定性校验，以及“影子工作流没有发布路由”的部署级断言。F1-4B2b 才会产生可比较的新草稿；F1-4B1 只证明新基座可以安全接住旧任务事实。
+
+## 8. F1-4B2a：通用 Tool Gateway 与 GitHub 只读研究
+
+F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取逻辑复制进新工作流：
+
+- `agent_tool_contracts` 固定工具版本、能力、风险、执行类别、读写副作用、输入输出 Schema、网络/文件策略、超时和输出上限；
+- `agent_tool_calls` 与 Action 同步记录 `reserved → sending → acknowledged → terminal`，写工具在发送结果未知时进入 `uncertain`；只读工具明确允许安全失败和后续重试；
+- Run、Agent 月度和平台月度三级 `toolCalls` 预算在数据库事务和 advisory lock 下竞争，不能被并发 Worker 超额领取；
+- 工具输出先校验 Schema 和字节上限，再写入不可变 `agent_tool_artifacts`；公开文章不会直接读取工具标准输出；
+- Runtime 管理时间线只返回工具调用和产物摘要，不默认返回产物正文；
+- GitHub 首个适配器只接受 `owner/repository` 或 `https://github.com/owner/repository`，固定访问 `https://api.github.com`、禁止跳转、固定版本 SHA、限制 README 和响应大小；
+- Provider 账本与 Tool 账本合并更新 Run 用量，互不覆盖。
+
+本阶段没有把工具注册到生产 Worker，也没有自动创建研究 Run，因此线上行为仍为零变化。F1-4B2b 才会注册一个无发布 Stage 的单项目影子工作流，并把固定候选集依次交给 Tool Gateway、Provider Gateway、确定性检查和私有草稿适配器。
