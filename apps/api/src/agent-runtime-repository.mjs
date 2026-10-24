@@ -91,6 +91,11 @@ const routeKeys = value => {
   if (!Array.isArray(value) || value.length > 256 || value.some(item => typeof item !== 'string' || item.length < 5 || item.length > 201)) fail('AGENT_RUNTIME_ROUTES_INVALID');
   return [...new Set(value)];
 };
+const policyDigest = value => {
+  const copy = structuredClone(value);
+  if (copy && typeof copy === 'object') delete copy.decidedAt;
+  return stableHash(copy);
+};
 
 export class PostgresAgentRuntimeRepository {
   constructor(pool) { this.pool = pool; }
@@ -290,11 +295,29 @@ export class PostgresAgentRuntimeRepository {
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
       const exposed = (await client.query(`SELECT id,status FROM agent_run_actions WHERE stage_id=$1
-        AND status IN ('sending','sent','acknowledged') FOR UPDATE`, [stageId])).rows;
+        AND status IN ('sending','sent','acknowledged','uncertain') FOR UPDATE`, [stageId])).rows;
       const unsafeOutcome = uncertain || exposed.length > 0;
+      if (exposed.length) {
+        await client.query(`UPDATE agent_budget_reservations reservation SET status='uncertain',
+          charged_provider_calls=reserved_provider_calls,charged_input_tokens=reserved_input_tokens,
+          charged_output_tokens=reserved_output_tokens,charged_cost_microusd=reserved_cost_microusd,
+          settled_at=now(),updated_at=now() FROM agent_run_actions action
+          WHERE action.stage_id=$1 AND reservation.action_id=action.id AND reservation.status='reserved'`, [stageId]);
+        await client.query(`UPDATE agent_provider_calls call SET status='uncertain',error_code=$2,error_message=$3,
+          finished_at=now(),updated_at=now() FROM agent_run_actions action
+          WHERE action.stage_id=$1 AND call.action_id=action.id AND call.status IN ('sending','acknowledged')`,
+        [stageId, errorCode, errorMessage]);
+      }
       if (exposed.length) await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,error_message=$3,
         finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
       [stageId, errorCode, errorMessage]);
+      await client.query(`UPDATE agent_budget_reservations reservation SET status='released',released_at=now(),updated_at=now()
+        FROM agent_run_actions action WHERE action.stage_id=$1 AND reservation.action_id=action.id
+          AND reservation.status='reserved' AND action.status IN ('prepared','authorized','reserved')`, [stageId]);
+      await client.query(`UPDATE agent_provider_calls call SET status='failed',error_code=$2,error_message=$3,
+        finished_at=now(),updated_at=now() FROM agent_run_actions action
+        WHERE action.stage_id=$1 AND call.action_id=action.id AND call.status='reserved'
+          AND action.status IN ('prepared','authorized','reserved')`, [stageId, errorCode, errorMessage]);
       await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
         finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
       [stageId, errorCode, errorMessage]);
@@ -351,7 +374,7 @@ export class PostgresAgentRuntimeRepository {
     if (existing.request_sha256 !== requestHash || existing.action_kind !== action.actionKind
       || existing.capability_key !== action.capabilityKey || existing.contract_version !== action.contractVersion
       || existing.risk_level !== action.riskLevel
-      || stableHash(existing.policy_decision_json) !== stableHash(policyDecision)) fail('AGENT_ACTION_IDEMPOTENCY_CONFLICT');
+      || policyDigest(existing.policy_decision_json) !== policyDigest(policyDecision)) fail('AGENT_ACTION_IDEMPOTENCY_CONFLICT');
     return { id: existing.id, status: existing.status, existing: true };
   }
 
@@ -380,6 +403,25 @@ export class PostgresAgentRuntimeRepository {
       await client.query(`INSERT INTO agent_run_events(run_id,stage_id,action_id,event_type,actor_kind,payload_json)
         VALUES($1,$2,$3,$4,'system',$5)`, [row.run_id, row.stage_id, row.id, `action.${to}`, json({ from, to, errorCode })]);
       return { ...actionView(row), existing: false };
+    });
+  }
+
+  async waitForActionConfirmation({ actionId, stageId, workerId, leaseToken }) {
+    return withTransaction(this.pool, async client => {
+      const action = (await client.query(`SELECT * FROM agent_run_actions
+        WHERE id=$1 AND stage_id=$2 AND status='prepared' FOR UPDATE`, [actionId, stageId])).rows[0];
+      if (!action) fail('AGENT_ACTION_STATE_CONFLICT');
+      const stage = (await client.query(`UPDATE agent_run_stages SET status='waiting',lease_token=NULL,
+        leased_by=NULL,lease_until=NULL,attempt_started_at=NULL,updated_at=now()
+        WHERE id=$1 AND status='running' AND leased_by=$2 AND lease_token=$3 AND lease_until>now() RETURNING *`,
+      [stageId, workerId, leaseToken])).rows[0];
+      if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
+      await client.query(`UPDATE agent_runs SET status='waiting',updated_at=now()
+        WHERE id=$1 AND status='running'`, [action.run_id]);
+      await client.query(`INSERT INTO agent_run_events(run_id,stage_id,action_id,event_type,actor_kind,actor_ref,payload_json)
+        VALUES($1,$2,$3,'action.confirmation-required','system',$4,$5)`, [action.run_id, stage.id, action.id, workerId,
+        json({ policyDecision: action.policy_decision_json })]);
+      return { action: actionView(action), stage: stageView(stage), runStatus: 'waiting' };
     });
   }
 
@@ -483,14 +525,32 @@ export class PostgresAgentRuntimeRepository {
       const result = { examined: rows.length, requeued: 0, failed: 0, uncertain: 0 };
       for (const stage of rows) {
         const exposed = (await client.query(`SELECT id FROM agent_run_actions WHERE stage_id=$1
-          AND status IN ('sending','sent','acknowledged') FOR UPDATE`, [stage.id])).rows;
+          AND status IN ('sending','sent','acknowledged','uncertain') FOR UPDATE`, [stage.id])).rows;
         const errorCode = exposed.length ? 'AGENT_STAGE_RECOVERY_UNCERTAIN' : 'AGENT_STAGE_LEASE_EXPIRED';
         const errorMessage = exposed.length
           ? 'Stage lease expired after an external action crossed the sending boundary.'
           : 'Stage lease or attempt timeout expired before a durable result was committed.';
+        if (exposed.length) {
+          await client.query(`UPDATE agent_budget_reservations reservation SET status='uncertain',
+            charged_provider_calls=reserved_provider_calls,charged_input_tokens=reserved_input_tokens,
+            charged_output_tokens=reserved_output_tokens,charged_cost_microusd=reserved_cost_microusd,
+            settled_at=now(),updated_at=now() FROM agent_run_actions action
+            WHERE action.stage_id=$1 AND reservation.action_id=action.id AND reservation.status='reserved'`, [stage.id]);
+          await client.query(`UPDATE agent_provider_calls call SET status='uncertain',error_code=$2,error_message=$3,
+            finished_at=now(),updated_at=now() FROM agent_run_actions action
+            WHERE action.stage_id=$1 AND call.action_id=action.id AND call.status IN ('sending','acknowledged')`,
+          [stage.id, errorCode, errorMessage]);
+        }
         if (exposed.length) await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,
           error_message=$3,finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
         [stage.id, errorCode, errorMessage]);
+        await client.query(`UPDATE agent_budget_reservations reservation SET status='released',released_at=now(),updated_at=now()
+          FROM agent_run_actions action WHERE action.stage_id=$1 AND reservation.action_id=action.id
+            AND reservation.status='reserved' AND action.status IN ('prepared','authorized','reserved')`, [stage.id]);
+        await client.query(`UPDATE agent_provider_calls call SET status='failed',error_code=$2,error_message=$3,
+          finished_at=now(),updated_at=now() FROM agent_run_actions action
+          WHERE action.stage_id=$1 AND call.action_id=action.id AND call.status='reserved'
+            AND action.status IN ('prepared','authorized','reserved')`, [stage.id, errorCode, errorMessage]);
         await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
           finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
         [stage.id, errorCode, errorMessage]);

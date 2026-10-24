@@ -23,6 +23,10 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   const { PostgresAgentRuntimeRepository } = await harness.load('agent-runtime-repository.mjs');
   const { createAgentRuntimeWorker } = await harness.load('agent-runtime-worker.mjs');
   const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
+  const { createAgentRuntimePolicyService } = await harness.load('agent-runtime-policy-service.mjs');
+  const { PostgresAgentProviderGatewayRepository } = await harness.load('agent-provider-gateway-repository.mjs');
+  const { createAgentProviderGateway } = await harness.load('agent-provider-gateway.mjs');
+  const { createAgentSecretVault } = await harness.load('agent-secret-vault.mjs');
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Foundation operator','admin')", [operatorId]);
   const accountService = createAgentAccountService({ repository: new PostgresAgentAccountRepository(admin), authorizeOperator: async () => true });
@@ -205,6 +209,116 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
     await admin.query("UPDATE agent_runtime_outbox SET status='dispatching',attempts=attempts+1,lease_token=$2,lease_until=now()-interval '1 second' WHERE id=$1", [staleOutbox.id, crypto.randomUUID()]);
     assert.equal((await runtime.recoverExpiredOutbox({ baseBackoffSeconds: 0 })).requeued, 1);
   }
+
+  const providerManifest = {
+    schemaVersion: 'agent-workflow-v1', workflowKey: `foundation.provider.${crypto.randomBytes(5).toString('hex')}`, workflowVersion: 1,
+    inputSchema: 'foundation-input-v1', outputSchema: 'foundation-output-v1',
+    requiredCapabilities: [{ key: 'blog.article.publish', version: 1 }],
+    defaultBudget: { providerCalls: 1, toolCalls: 0, inputTokens: 1000, outputTokens: 500, wallClockSeconds: 120 },
+    stages: [{ key: 'generate', kind: 'provider', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30,
+      capability: { key: 'blog.article.publish', version: 1 }, idempotencyMode: 'key' }],
+  };
+  await runtime.registerWorkflow({ actorUserId: operatorId, manifest: providerManifest });
+  await runtime.activateWorkflow(providerManifest.workflowKey, 1);
+  const providerRun = await runtime.createRun({
+    agentUserId: account.agentUserId, workflowKey: providerManifest.workflowKey, workflowVersion: 1,
+    triggerKind: 'system', idempotencyKey: `provider:${crypto.randomUUID()}`, input: {}, config: {},
+  });
+  const providerStage = await runtime.claimNextStage('provider-worker', 30, [`${providerManifest.workflowKey}:generate`]);
+  await runtime.startStage({ stageId: providerStage.id, workerId: providerStage.leasedBy, leaseToken: providerStage.leaseToken });
+  const governance = new PostgresAgentProviderGatewayRepository(admin, {
+    agentMonthlyLimits: { providerCalls: 10, inputTokens: 10000, outputTokens: 10000, costMicrousd: 100000 },
+    platformMonthlyLimits: { providerCalls: 100, inputTokens: 100000, outputTokens: 100000, costMicrousd: 1000000 },
+  });
+  await governance.registerModel({
+    provider: 'deepseek', modelId: 'fixture-json', catalogVersion: 1, status: 'active',
+    taskClasses: ['structured-generation'], supportsJsonSchema: true,
+    maxInputTokens: 1000, maxOutputTokens: 500,
+    inputPriceMicrousdPerMillion: 1000000, outputPriceMicrousdPerMillion: 2000000,
+    config: { fixture: true },
+  });
+  const vault = createAgentSecretVault({ masterKey: 'ab'.repeat(32) });
+  const encrypted = vault.encrypt(account.agentUserId, 'deepseek', 'fixture-secret-key-1234567890');
+  await admin.query(`INSERT INTO agent_provider_secrets(
+    agent_user_id,provider,ciphertext,nonce,auth_tag,key_fingerprint,key_last_four,updated_by_user_id
+  ) VALUES($1,'deepseek',$2,$3,$4,$5,$6,$7)`, [account.agentUserId, encrypted.ciphertext, encrypted.nonce,
+    encrypted.authTag, encrypted.fingerprint, encrypted.lastFour, operatorId]);
+  const gateway = createAgentProviderGateway({
+    runtimeRepository: runtime, governanceRepository: governance,
+    policyService: createAgentRuntimePolicyService({ pool: admin }), secretVault: vault,
+    adapters: { deepseek: async input => {
+      assert.equal(input.apiKey, 'fixture-secret-key-1234567890');
+      return { providerRequestId: `fixture:${crypto.randomUUID()}`, output: { answer: '受控结果' },
+        responseRef: { artifactId: crypto.randomUUID() },
+        usage: { providerCalls: 1, inputTokens: 70, outputTokens: 20, costMicrousd: 150 } };
+    } },
+    responseSchemas: { 'foundation-answer@1': output => {
+      if (!output || typeof output.answer !== 'string') throw new Error('invalid fixture output');
+      return { answer: output.answer };
+    } },
+  });
+  const providerRequest = {
+    runId: providerRun.id, stageId: providerStage.id, workerId: providerStage.leasedBy, leaseToken: providerStage.leaseToken,
+    action: { actionKey: 'generate-json', actionKind: 'provider', capabilityKey: 'blog.article.publish', contractVersion: 1, riskLevel: 'L1' },
+    idempotencyKey: `provider-action:${providerRun.id}`, resource: { type: 'blog', owner: 'public' },
+    modelPolicy: { taskClass: 'structured-generation', requiresJsonSchema: true, maxInputTokens: 100,
+      maxOutputTokens: 50, maxCostMicrousd: 1000, latencyClass: 'batch', preferredProvider: 'deepseek' },
+    promptTemplate: { key: 'fixture.prompt', version: 1 }, responseSchema: { key: 'foundation-answer', version: 1 },
+    request: { prompt: 'fixture' }, tokenCeiling: 50, timeoutSeconds: 10, estimatedInputTokens: 80,
+  };
+  const providerResult = await gateway.invoke(providerRequest);
+  assert.equal(providerResult.status, 'succeeded');
+  assert.deepEqual(providerResult.output, { answer: '受控结果' });
+  assert.deepEqual(providerResult.chargedUsage, { providerCalls: 1, inputTokens: 80, outputTokens: 50, costMicrousd: 200 });
+  assert.equal((await gateway.invoke(providerRequest)).replayed, true);
+  await assert.rejects(gateway.invoke({ ...providerRequest, idempotencyKey: `provider-action:${crypto.randomUUID()}`,
+    action: { ...providerRequest.action, actionKey: 'generate-json-two' } }), error => error.code === 'AGENT_RUN_BUDGET_EXCEEDED');
+  const providerLedger = (await admin.query(`SELECT r.status,r.charged_cost_microusd,c.status AS call_status,a.status AS action_status
+    FROM agent_budget_reservations r JOIN agent_provider_calls c ON c.reservation_id=r.id
+    JOIN agent_run_actions a ON a.id=r.action_id WHERE r.run_id=$1`, [providerRun.id])).rows[0];
+  assert.deepEqual({ ...providerLedger, charged_cost_microusd: Number(providerLedger.charged_cost_microusd) },
+    { status: 'settled', charged_cost_microusd: 200, call_status: 'succeeded', action_status: 'succeeded' });
+  assert.equal((await admin.query('SELECT position($2::bytea in ciphertext) AS plaintext_at FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3',
+    [account.agentUserId, Buffer.from('fixture-secret-key-1234567890'), 'deepseek'])).rows[0].plaintext_at, 0);
+  await runtime.completeStage({ stageId: providerStage.id, workerId: providerStage.leasedBy, leaseToken: providerStage.leaseToken,
+    outputRef: { generated: true }, runOutput: { type: 'foundation.result', id: crypto.randomUUID() } });
+
+  const concurrentRun = await runtime.createRun({
+    agentUserId: account.agentUserId, workflowKey: providerManifest.workflowKey, workflowVersion: 1,
+    triggerKind: 'system', idempotencyKey: `provider-concurrent:${crypto.randomUUID()}`, input: {}, config: {},
+  });
+  const concurrentStage = await runtime.claimNextStage('provider-concurrent-worker', 30, [`${providerManifest.workflowKey}:generate`]);
+  await runtime.startStage({ stageId: concurrentStage.id, workerId: concurrentStage.leasedBy, leaseToken: concurrentStage.leaseToken });
+  const concurrentBase = { ...providerRequest, runId: concurrentRun.id, stageId: concurrentStage.id,
+    workerId: concurrentStage.leasedBy, leaseToken: concurrentStage.leaseToken };
+  const concurrentResults = await Promise.allSettled([
+    gateway.invoke({ ...concurrentBase, idempotencyKey: `provider-concurrent-a:${concurrentRun.id}`,
+      action: { ...concurrentBase.action, actionKey: 'generate-a' } }),
+    gateway.invoke({ ...concurrentBase, idempotencyKey: `provider-concurrent-b:${concurrentRun.id}`,
+      action: { ...concurrentBase.action, actionKey: 'generate-b' } }),
+  ]);
+  assert.equal(concurrentResults.filter(item => item.status === 'fulfilled').length, 1);
+  assert.equal(concurrentResults.filter(item => item.status === 'rejected' && item.reason?.code === 'AGENT_RUN_BUDGET_EXCEEDED').length, 1);
+  assert.equal(Number((await admin.query(`SELECT count(*)::int AS n FROM agent_budget_reservations
+    WHERE run_id=$1`, [concurrentRun.id])).rows[0].n), 1);
+  await runtime.completeStage({ stageId: concurrentStage.id, workerId: concurrentStage.leasedBy, leaseToken: concurrentStage.leaseToken,
+    outputRef: { concurrentBudget: true }, runOutput: { type: 'foundation.result', id: crypto.randomUUID() } });
+
+  const revokedRun = await runtime.createRun({
+    agentUserId: account.agentUserId, workflowKey: providerManifest.workflowKey, workflowVersion: 1,
+    triggerKind: 'system', idempotencyKey: `provider-revoked:${crypto.randomUUID()}`, input: {}, config: {},
+  });
+  const revokedStage = await runtime.claimNextStage('provider-revoked-worker', 30, [`${providerManifest.workflowKey}:generate`]);
+  await runtime.startStage({ stageId: revokedStage.id, workerId: revokedStage.leasedBy, leaseToken: revokedStage.leaseToken });
+  await admin.query(`UPDATE agent_capability_grants SET status='revoked',revoked_at=now()
+    WHERE agent_user_id=$1 AND capability_key='blog.article.publish' AND status='active'`, [account.agentUserId]);
+  await assert.rejects(gateway.invoke({ ...providerRequest, runId: revokedRun.id, stageId: revokedStage.id,
+    workerId: revokedStage.leasedBy, leaseToken: revokedStage.leaseToken,
+    idempotencyKey: `provider-revoked-action:${revokedRun.id}` }), error => error.code === 'AGENT_POLICY_DENIED');
+  assert.equal(Number((await admin.query('SELECT count(*)::int AS n FROM agent_budget_reservations WHERE run_id=$1', [revokedRun.id])).rows[0].n), 0);
+  await runtime.failStage({ stageId: revokedStage.id, workerId: revokedStage.leasedBy, leaseToken: revokedStage.leaseToken,
+    errorCode: 'AGENT_POLICY_DENIED', errorMessage: 'Capability was revoked.', retryable: false });
+
   const runtimeRead = createAgentRuntimeReadService({ pool: admin, authorizeOperator: async actor => actor?.role === 'admin' });
   const summaries = await runtimeRead.listRuns({ userId: operatorId, role: 'admin' }, account.agentUserId, 20);
   assert(summaries.some(item => item.id === workerRun.id && item.status === 'succeeded' && item.stageCount === 1));
@@ -213,6 +327,9 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   assert.equal(timeline.stages[0].status, 'uncertain');
   assert.equal(timeline.actions[0].status, 'uncertain');
   assert(timeline.events.some(event => event.eventType === 'stage.uncertain'));
+  const providerTimeline = await runtimeRead.timeline({ userId: operatorId, role: 'admin' }, account.agentUserId, providerRun.id);
+  assert.equal(providerTimeline.budgetReservations[0].charged.costMicrousd, 200);
+  assert.equal(providerTimeline.providerCalls[0].status, 'succeeded');
   await assert.rejects(runtimeRead.listRuns({ userId: operatorId, role: 'user' }, account.agentUserId), error => error.code === 'AGENT_OPERATOR_REQUIRED');
   await admin.end();
 });

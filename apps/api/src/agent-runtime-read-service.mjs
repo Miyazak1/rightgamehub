@@ -40,10 +40,13 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
       runId = uuid(runId);
       const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
-      const [stages, actions, events] = await Promise.all([
+      const [stages, actions, events, reservations, providerCalls] = await Promise.all([
         pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
         pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
         pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
+        pool.query('SELECT * FROM agent_budget_reservations WHERE run_id=$1 ORDER BY reserved_at,id', [runId]),
+        pool.query(`SELECT call.* FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
+          WHERE action.run_id=$1 ORDER BY call.created_at,call.id`, [runId]),
       ]);
       return {
         run: {
@@ -69,6 +72,20 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
           id: String(row.id), stageId: row.stage_id, actionId: row.action_id,
           eventType: row.event_type, actorKind: row.actor_kind, actorRef: row.actor_ref,
           payload: row.payload_json, createdAt: iso(row.created_at),
+        })),
+        budgetReservations: reservations.rows.map(row => ({
+          id: row.id, actionId: row.action_id, provider: row.provider, modelId: row.model_id, status: row.status,
+          reserved: { providerCalls: row.reserved_provider_calls, inputTokens: row.reserved_input_tokens,
+            outputTokens: row.reserved_output_tokens, costMicrousd: Number(row.reserved_cost_microusd) },
+          charged: { providerCalls: row.charged_provider_calls, inputTokens: row.charged_input_tokens,
+            outputTokens: row.charged_output_tokens, costMicrousd: Number(row.charged_cost_microusd) },
+          reservedAt: iso(row.reserved_at), settledAt: iso(row.settled_at), releasedAt: iso(row.released_at),
+        })),
+        providerCalls: providerCalls.rows.map(row => ({
+          id: row.id, actionId: row.action_id, provider: row.provider, modelId: row.model_id,
+          catalogVersion: row.catalog_version, status: row.status, providerRequestId: row.provider_request_id,
+          usage: row.usage_json, errorCode: row.error_code, sendingAt: iso(row.sending_at),
+          acknowledgedAt: iso(row.acknowledged_at), finishedAt: iso(row.finished_at),
         })),
       };
     },
