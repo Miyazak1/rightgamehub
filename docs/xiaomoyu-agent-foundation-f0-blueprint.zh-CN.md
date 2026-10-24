@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F0-B1\
-状态：实施前冻结草案；本文定义工程契约，不表示相关表、服务和运行时已经上线\
+版本：F1-I1\
+状态：F1-1 首批基座代码已在开发分支实现并通过隔离 PostgreSQL 验证；尚未部署，F1-2 及后续能力尚未实现\
 更新日期：2026-10-24\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -18,7 +18,18 @@
 - 独立故障恢复；
 - 无法统一观察的后台页面。
 
-F0 本身不实现业务功能。F0 通过评审以后，F1 才创建通用运行表和 Worker；博客是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
+F0 本身不实现业务功能。当前开发分支已经按本文进入 F1-1，创建通用运行表、工作流合同和 Repository，但尚未接管旧博客、启动生产 Worker 或调用模型。博客仍是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
+
+### 1.1 当前实施证据
+
+| 工作包 | 当前状态 | 证据 |
+| --- | --- | --- |
+| F1-1 Schema 与状态机 | 开发分支已实现，未部署 | `0123_agent_runtime_foundation.sql`、`agent-runtime-contracts.mjs`、`agent-runtime-repository.mjs` |
+| 工作流 DAG、幂等和状态转换 | 已实现并通过契约测试 | `agent-runtime-foundation.test.cjs` |
+| 真实 PostgreSQL 迁移、并发领取和不可变约束 | 已通过一次性 PostgreSQL 17 隔离测试 | `agent-runtime-foundation-db.test.cjs` |
+| F1-2 Worker 与恢复循环 | 未实现 | 不得启动生产基座 Worker |
+| F1-3 Policy、Budget、Provider Gateway | 只有数据边界，未实现执行服务 | 不得声称模型已经通过新网关调用 |
+| F1-4 博客影子迁移 | 未实现 | 旧博客仍是唯一运行链路 |
 
 ## 2. 冻结决策
 
@@ -903,6 +914,7 @@ F0 评审通过后按以下顺序施工：
 
 ### F1-1：Schema 与状态机
 
+- 状态：开发分支已完成首版实现和隔离数据库验证，等待部署前评审；
 - 工作流定义、Run、Stage、Action、Event、Schedule、Outbox；
 - 数据库约束和不可变守卫；
 - 纯状态机与 Repository 测试；

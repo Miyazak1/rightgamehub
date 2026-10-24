@@ -9,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 122);
+  assert.equal(files.length, 123);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -450,6 +450,7 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'game_share_links', 'creator_drafts', 'creator_draft_revisions', 'creator_generation_jobs', 'project_claims', 'project_claim_events', 'work_remix_events',
     'work_development_entries', 'work_development_entry_events', 'tool_change_watches', 'tool_change_snapshots',
     'tool_research_topics', 'tool_research_topic_contracts', 'tool_research_runs', 'tool_research_run_actions', 'tool_research_claim_reviews', 'tool_research_method_templates', 'tool_research_metric_definitions', 'tool_research_metric_observations', 'tool_research_derived_metric_definitions', 'tool_research_quality_samples', 'tool_research_quality_sample_reviews', 'tool_research_quality_correction_resolutions', 'tool_research_provider_billing_reconciliations', 'tool_research_provider_billing_reviews', 'tool_research_source_status_reviews', 'tool_research_entity_status_reviews',
+    'agent_workflow_definitions', 'agent_capability_grants', 'agent_policy_profiles', 'agent_policy_profile_assignments', 'agent_runs', 'agent_run_stages', 'agent_run_actions', 'agent_run_events', 'agent_schedules', 'agent_runtime_outbox',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });
