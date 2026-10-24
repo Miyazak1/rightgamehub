@@ -25,13 +25,29 @@ test('Agent writer performs generation and an independent automatic publication 
  assert.equal(result.review.approved,true);assert.equal(result.selection.mode,'single');assert.deepEqual(result.selection.repositories,['openstreetmap/openstreetmap-website']);assert.equal(result.content.locale,'zh-CN');assert.match(result.content.slug,/^agent-/);assert.equal(result.content.citations[0].repositoryUrl,'https://github.com/openstreetmap/openstreetmap-website');assert.equal(result.content.blocks.at(-2).text,'继续追问');assert.deepEqual(result.providerRequestIds,['req-1','req-2','req-3']);assert.ok(requests.every(request=>request.thinking?.type==='disabled'&&request.reasoning_effort==='none'));assert.equal(calls,3);
 });
 
-test('Agent editorial competition may choose a sourced comparison and must cite every selected repository',async()=>{
+test('Agent editorial competition may reuse a previously published repository only inside a sourced comparison',async()=>{
  const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let call=0;
  const sources=['owner/alpha','owner/beta'].map((publisher,index)=>({sourceIndex:index+1,title:publisher,url:`https://github.com/${publisher}`,repositoryUrl:`https://github.com/${publisher}`,publisher,excerpt:`${publisher} 的公开说明包含安装、使用示例和可以核对的项目能力，足以支持对比文章中的具体判断。`.repeat(3),locator:'仓库 README',accessedAt:'2026-10-23T00:00:00.000Z',contentHash:String(index+1).repeat(64)}));
  const generated={title:'两个创作工具应该怎样选择',summary:'两个项目面向相近的创作任务，但上手方式和适用对象不同，可以依据公开资料作出有边界的比较。',blocks:[{type:'heading',level:2,text:'为什么值得放在一起比较'},{type:'paragraph',text:'甲项目提供了清楚的使用入口。'.repeat(40),citationIndexes:[1]},{type:'heading',level:2,text:'另一个项目的取舍'},{type:'paragraph',text:'乙项目采用了不同的体验方式。'.repeat(40),citationIndexes:[2]},{type:'list',ordered:false,items:['先确认自己的使用目的','再比较上手方式'],citationIndexes:[1,2]},{type:'paragraph',text:'选择应该依据实际需求和公开说明。'.repeat(40),citationIndexes:[1,2]}],followUpQuestions:['哪个更适合第一次尝试？','两者的上手方式有什么不同？','应该怎样核对项目最新状态？']};
  const fetchImpl=async()=>{call++;const content=call===1?JSON.stringify({mode:'comparison',selectedIndexes:[1,2],angle:'比较两个同类创作工具的上手路径',rationale:'两个项目解决相近任务，资料都足以支持对上手方式和适用对象进行直接比较。',interestSignals:['可以快速体验'],comparisonAxes:['上手方式','适用对象']}):call===2?JSON.stringify(generated):JSON.stringify({approved:true,qualityScore:.9,sensitiveRisk:'low',factualRisk:'low',reasonCodes:[]});return{ok:true,status:200,headers:{get:()=>`compare-${call}`},json:async()=>({choices:[{finish_reason:'stop',message:{content}}],usage:{}})};};
- const writer=createDeepSeekAgentBlogWriter({fetchImpl,researcher:async()=>({sources,usage:{}})}),result=await writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'有趣的开源创作工具'});
- assert.equal(result.selection.mode,'comparison');assert.deepEqual(result.selection.repositories,['owner/alpha','owner/beta']);assert.equal(result.content.citations.length,2);assert.ok(result.content.citations.every(citation=>result.content.blocks.some(block=>block.citationIds?.includes(citation.id))));
+ const writer=createDeepSeekAgentBlogWriter({fetchImpl,researcher:async()=>({sources,usage:{}})}),result=await writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'有趣的开源创作工具',previousRepositoryUrls:['https://github.com/OWNER/ALPHA']});
+ assert.equal(result.selection.mode,'comparison');assert.deepEqual(result.selection.repositories,['owner/alpha','owner/beta']);assert.deepEqual(result.selection.reusedRepositories,['owner/alpha']);assert.equal(result.content.citations.length,2);assert.ok(result.content.citations.every(citation=>result.content.blocks.some(block=>block.citationIds?.includes(citation.id))));
+});
+
+test('Agent writer hard-rejects a previously published repository as a single-project topic',async()=>{
+ const {createDeepSeekAgentBlogWriter}=await import(url('agent-blog-writer.mjs'));let providerCalls=0;
+ const source={sourceIndex:1,title:'Alpha',url:'https://github.com/owner/alpha',repositoryUrl:'https://github.com/owner/alpha',publisher:'owner/alpha',excerpt:'这个仓库的公开说明包含安装、使用示例和可以核对的项目能力，足以支持文章中的具体判断。'.repeat(4),locator:'仓库 README',accessedAt:'2026-10-23T00:00:00.000Z',contentHash:'a'.repeat(64)};
+ const fetchImpl=async()=>{providerCalls++;return{ok:true,status:200,headers:{get:()=>`single-repeat-${providerCalls}`},json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({mode:'single',selectedIndexes:[1],angle:'再次单独介绍这个已经发布过的项目',rationale:'模型即使再次选择旧项目，服务端也必须在生成文章以前拒绝，不能依赖模型自己遵守去重规则。',interestSignals:['适合学习和探索'],comparisonAxes:[]})}}],usage:{}})}};
+ const writer=createDeepSeekAgentBlogWriter({fetchImpl,researcher:async()=>({sources:[source],usage:{}})});
+ await assert.rejects(()=>writer.generate({apiKey:'sk-valid-key-for-test',model:'deepseek-flash',topicScope:'有趣的开源工具',previousRepositoryUrls:['https://github.com/OWNER/ALPHA']}),error=>error.code==='AGENT_BLOG_SELECTION_INVALID'&&/不能再次作为单项目/.test(error.message));
+ assert.equal(providerCalls,1);
+});
+
+test('Repository history includes published and withdrawn article citations without an arbitrary recency limit',async()=>{
+ const {PostgresAgentBlogAutomationRepository}=await import(url('agent-blog-automation.mjs'));let sql='';
+ const repository=new PostgresAgentBlogAutomationRepository({query:async statement=>{sql=statement;return{rows:[{repository_url:'https://github.com/owner/alpha',source_url:'https://github.com/owner/alpha'},{repository_url:null,source_url:'https://github.com/owner/beta'}]};}});
+ assert.deepEqual(await repository.previousRepositoryUrls(crypto.randomUUID()),['https://github.com/owner/alpha','https://github.com/owner/beta']);
+ assert.match(sql,/publication_state IN \('published','withdrawn'\)/);assert.doesNotMatch(sql,/LIMIT\s+\d+/i);
 });
 
 test('Agent writer fails closed before generation when no GitHub source can be verified',async()=>{
@@ -82,4 +98,6 @@ test('Production secret root is scoped to the API and the admin surface is fully
  assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);
  const migration=fs.readFileSync(path.join(root,'apps/api/migrations/0122_agent_blog_daily_ten.sql'),'utf8');
  assert.match(migration,/next_agent_blog_run_at/);assert.match(migration,/Asia\/Shanghai/);assert.match(migration,/time '10:00'/);
+ const automation=fs.readFileSync(path.join(root,'apps/api/src/agent-blog-automation.mjs'),'utf8');
+ assert.match(automation,/DUPLICATE_SINGLE_REPOSITORY/);assert.match(automation,/previousRepositoryUrls/);
 });
