@@ -88,6 +88,7 @@ import {createAgentAccountService} from './agent-account-service.mjs';
 import {createAgentSecretVault} from './agent-secret-vault.mjs';
 import {createDeepSeekAgentBlogWriter} from './agent-blog-writer.mjs';
 import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from './agent-blog-automation.mjs';
+import {PostgresAgentBlogRuntimeShadowRepository,createAgentBlogRuntimeShadowProjector} from './agent-blog-runtime-shadow.mjs';
 import {PostgresAgentBlogFollowUpRepository,createAgentBlogFollowUpService} from './agent-blog-follow-up.mjs';
 import {createAgentRuntimeReadService} from './agent-runtime-read-service.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
@@ -219,7 +220,8 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
   const agentSecretVault=createAgentSecretVault({masterKey:config.agentSecretEncryptionKey});
   const agentBlogWriter=createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs});
-  const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter,pollMs:config.agentBlogPollSeconds*1000});
+  const agentBlogRuntimeShadowProjector=createAgentBlogRuntimeShadowProjector({repository:new PostgresAgentBlogRuntimeShadowRepository(database.pool)});
+  const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter,shadowProjector:agentBlogRuntimeShadowProjector,pollMs:config.agentBlogPollSeconds*1000});
   const agentBlogFollowUpService=createAgentBlogFollowUpService({repository:new PostgresAgentBlogFollowUpRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter});
   const agentRuntimeReadService=createAgentRuntimeReadService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin'});
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
