@@ -47,6 +47,35 @@ export const BLOG_PROJECT_SINGLE_WORKFLOW = Object.freeze({
   ],
 });
 
+// Shadow generation stops at a private draft.  It deliberately omits both the
+// publication capability and a publish stage, so deployment configuration
+// cannot accidentally turn a shadow run into a public article.
+export const BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
+  schemaVersion: 'agent-workflow-v1',
+  workflowKey: 'blog.project.single.draft-shadow',
+  workflowVersion: 1,
+  inputSchema: 'blog-project-single-input-v1',
+  outputSchema: 'blog-private-draft-output-v1',
+  requiredCapabilities: [
+    { key: 'research.github.read', version: 1 },
+    { key: 'provider.text.generate', version: 1 },
+    { key: 'blog.article.draft', version: 1 },
+  ],
+  defaultBudget: { providerCalls: 4, toolCalls: 12, inputTokens: 90000, outputTokens: 18000, wallClockSeconds: 1800 },
+  stages: [
+    { key: 'freeze-input', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
+    { key: 'collect-evidence', kind: 'tool', dependsOn: ['freeze-input'], maxAttempts: 3, timeoutSeconds: 600,
+      capability: { key: 'research.github.read', version: 1 }, idempotencyMode: 'key' },
+    { key: 'select-subject', kind: 'provider', dependsOn: ['collect-evidence'], maxAttempts: 2, timeoutSeconds: 300,
+      capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
+    { key: 'compose', kind: 'provider', dependsOn: ['select-subject'], maxAttempts: 2, timeoutSeconds: 600,
+      capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
+    { key: 'verify', kind: 'deterministic', dependsOn: ['compose'], maxAttempts: 1, timeoutSeconds: 120 },
+    { key: 'persist-draft', kind: 'domain-write', dependsOn: ['verify'], maxAttempts: 1, timeoutSeconds: 60,
+      capability: { key: 'blog.article.draft', version: 1 }, idempotencyMode: 'queryable' },
+  ],
+});
+
 export async function ensureBlogShadowReplayWorkflow(runtimeRepository, actorUserId) {
   const registered = await runtimeRepository.registerWorkflow({
     actorUserId, manifest: BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW, status: 'draft',

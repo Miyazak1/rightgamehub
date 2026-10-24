@@ -8,9 +8,11 @@ const url = name => pathToFileURL(path.join(root, 'apps/api/src', name)).href;
 
 test('blog target workflow separates research, generation, private draft and publication authority', async () => {
   const { normalizeWorkflowManifest } = await import(url('agent-runtime-contracts.mjs'));
-  const { BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW, BLOG_PROJECT_SINGLE_WORKFLOW } = await import(url('agent-blog-foundation-workflows.mjs'));
+  const { BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW, BLOG_PROJECT_SINGLE_WORKFLOW,
+    BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW } = await import(url('agent-blog-foundation-workflows.mjs'));
   assert.deepEqual(normalizeWorkflowManifest(BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW), BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW);
   assert.deepEqual(normalizeWorkflowManifest(BLOG_PROJECT_SINGLE_WORKFLOW), BLOG_PROJECT_SINGLE_WORKFLOW);
+  assert.deepEqual(normalizeWorkflowManifest(BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW), BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW);
   assert.deepEqual(BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW.defaultBudget,
     { providerCalls: 0, toolCalls: 0, inputTokens: 0, outputTokens: 0, wallClockSeconds: 120 });
   assert.deepEqual(BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW.requiredCapabilities, []);
@@ -20,6 +22,12 @@ test('blog target workflow separates research, generation, private draft and pub
   ]);
   assert.equal(BLOG_PROJECT_SINGLE_WORKFLOW.stages.at(-1).key, 'publish');
   assert.equal(BLOG_PROJECT_SINGLE_WORKFLOW.stages.at(-1).capability.key, 'blog.article.publish');
+  assert.deepEqual(BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.requiredCapabilities.map(item => item.key), [
+    'research.github.read', 'provider.text.generate', 'blog.article.draft',
+  ]);
+  assert.equal(BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.stages.at(-1).key, 'persist-draft');
+  assert.equal(BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.stages.some(stage => stage.key === 'publish'), false);
+  assert.equal(BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.requiredCapabilities.some(item => item.key === 'blog.article.publish'), false);
 });
 
 test('shadow replay handler persists a private parity report without an external action', async () => {

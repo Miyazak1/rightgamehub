@@ -106,4 +106,4 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 - GitHub 首个适配器只接受 `owner/repository` 或 `https://github.com/owner/repository`，固定访问 `https://api.github.com`、禁止跳转、固定版本 SHA、限制 README 和响应大小；
 - Provider 账本与 Tool 账本合并更新 Run 用量，互不覆盖。
 
-本阶段没有把工具注册到生产 Worker，也没有自动创建研究 Run，因此线上行为仍为零变化。F1-4B2b 才会注册一个无发布 Stage 的单项目影子工作流，并把固定候选集依次交给 Tool Gateway、Provider Gateway、确定性检查和私有草稿适配器。
+本阶段没有把工具注册到生产 Worker，也没有自动创建研究 Run，因此线上行为仍为零变化。`blog.project.single.draft-shadow@1` 的执行合同已经冻结：只声明研究、生成和私有草稿三类能力，终点是 `persist-draft`，不存在发布能力或 `publish` Stage。F1-4B2b 完成各适配器后才会注册该工作流，并把固定候选集依次交给 Tool Gateway、Provider Gateway、确定性检查和私有草稿适配器。
