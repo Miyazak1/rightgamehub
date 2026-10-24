@@ -26,6 +26,8 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md) | **把当前自动作者重新定位为纵向验证，定义身份、能力授权、持久工作流、模型网关、工具运行时、统一证据、类型化记忆、策略预算、兼容迁移与 Foundation V1 验收标准** |
+| [小墨鱼 Agent 基座 F0 实施蓝图](./xiaomoyu-agent-foundation-f0-blueprint.zh-CN.md) | **冻结资产映射、Workflow Manifest、Run/Stage/Action Schema、状态机、Provider 与工具调用协议、策略预算、故障窗口、博客迁移和 Foundation V1 证据包** |
 | [小墨鱼：从自动作者到自主研究员的能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md) | **统一 GitHub、网页、论文和用户文件的研究证据内核，规划选题记忆、受控工具、论文阅读、比较、追问、后台可观测性及 R0—R5 验收路线** |
 | [小墨鱼论文阅读机制设计](./xiaomoyu-paper-reading-design.zh-CN.md) | **论文身份与版本、合法资料等级、PDF 版面与 OCR、五轮阅读、结论—证据图、数字校验、多论文比较、追问状态机、安全门禁和 P0—P4 实施契约** |
 | [墨鱼变更雷达：自主长期研究系统设计](./change-radar-autonomous-research-design.zh-CN.md) | **将变更雷达升级为服务端长期运行的专题研究系统：自主发现、证据版本、事件指标、结论账本、Researcher 异步边界、统计比较、Agent 接口、预算安全与 R0—R5 验收路线** |

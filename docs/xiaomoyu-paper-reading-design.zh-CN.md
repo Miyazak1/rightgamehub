@@ -4,6 +4,7 @@
 状态：目标设计，尚未实现，不得对外宣称已经具备论文全文阅读能力  
 更新日期：2026-10-24  
 上位路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)  
+运行基座：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联基础：[墨鱼变更雷达自主长期研究系统](./change-radar-autonomous-research-design.zh-CN.md)
 
 ## 1. 目标
@@ -19,6 +20,8 @@
 - 结论是否因为新版本、勘误或撤稿需要复查。
 
 首版目标是可靠完成单篇开放论文的中文导读和基于冻结证据的追问。多论文比较、主动发现、代码运行和实验复现按后续阶段增加。
+
+论文工作流必须运行在通用 Run/Stage/Action、Provider Gateway、Tool Runtime、Policy 与统一研究证据基座上；不得为论文另建专用任务调度、模型调用账本、预算或崩溃恢复系统。
 
 ## 2. 核心原则
 
