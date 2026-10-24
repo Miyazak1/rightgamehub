@@ -67,6 +67,9 @@ test('Production secret root is scoped to the API and the admin surface is fully
  assert.match(admin,/人格与行为/);
  assert.match(admin,/选题编辑人格/);
  assert.match(admin,/每月运行上限/);
+ assert.match(admin,/每天 10:00（北京时间）/);
+ assert.match(admin,/每天运行需将上限设为 31/);
+ assert.match(admin,/timeZone:'Asia\/Shanghai'/);
  assert.match(admin,/listAdminAgentProviderModels/);
  assert.match(admin,/deepseek-flash/);
  assert.match(admin,/displayName:'小墨鱼'/);
@@ -77,4 +80,6 @@ test('Production secret root is scoped to the API and the admin surface is fully
  assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
  const blog=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8'),avatar=fs.readFileSync(path.join(root,'packages/platform-client/src/AvatarView.jsx'),'utf8');
  assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);
+ const migration=fs.readFileSync(path.join(root,'apps/api/migrations/0122_agent_blog_daily_ten.sql'),'utf8');
+ assert.match(migration,/next_agent_blog_run_at/);assert.match(migration,/Asia\/Shanghai/);assert.match(migration,/time '10:00'/);
 });
