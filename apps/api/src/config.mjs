@@ -61,6 +61,8 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
   if (!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(researcherProviderModel)) throw new Error('RESEARCHER_PROVIDER_MODEL must be a bounded model identifier');
   const agentSecretEncryptionKey = env.AGENT_SECRET_ENCRYPTION_KEY?.trim() || null;
   if (agentSecretEncryptionKey && !(/^[a-f0-9]{64}$/i.test(agentSecretEncryptionKey) || /^[A-Za-z0-9_-]{43}$/.test(agentSecretEncryptionKey))) throw new Error('AGENT_SECRET_ENCRYPTION_KEY must be 64 hex or 43 base64url characters');
+  const agentBlogFoundationMode = env.AGENT_BLOG_FOUNDATION_MODE?.trim() || 'passive';
+  if (!['passive', 'shadow'].includes(agentBlogFoundationMode)) throw new Error('AGENT_BLOG_FOUNDATION_MODE must be passive or shadow');
   const researcherEstimatedCostUsdMicrosPerJob = integer(env.RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB, 20000, 'RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB', 0, 1000000000);
   if (researcherWorkerEnabled && researcherEstimatedCostUsdMicrosPerJob < 1) throw new Error('RESEARCHER_ESTIMATED_COST_USD_MICROS_PER_JOB must be greater than zero when Researcher worker is enabled');
   const githubAppId = env.GITHUB_APP_ID?.trim() || null;
@@ -153,6 +155,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     researcherProvider,
     researcherProviderModel,
     agentSecretEncryptionKey,
+    agentBlogFoundationMode,
     agentBlogPollSeconds: integer(env.AGENT_BLOG_POLL_SECONDS, 30, 'AGENT_BLOG_POLL_SECONDS', 10, 600),
     agentBlogProviderTimeoutMs: integer(env.AGENT_BLOG_PROVIDER_TIMEOUT_MS, 120000, 'AGENT_BLOG_PROVIDER_TIMEOUT_MS', 10000, 240000),
     researcherEstimatedCostUsdMicrosPerJob,

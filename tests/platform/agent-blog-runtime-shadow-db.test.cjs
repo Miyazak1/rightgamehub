@@ -8,6 +8,9 @@ test('passive blog shadow projection is durable, replay-safe, and side-effect fr
   const { createAgentAccountService } = await harness.load('agent-account-service.mjs');
   const { PostgresAgentAccountRepository } = await harness.load('agent-account-repository.mjs');
   const { PostgresAgentBlogRuntimeShadowRepository, createAgentBlogRuntimeShadowProjector } = await harness.load('agent-blog-runtime-shadow.mjs');
+  const { PostgresAgentRuntimeRepository } = await harness.load('agent-runtime-repository.mjs');
+  const { createAgentRuntimeWorker } = await harness.load('agent-runtime-worker.mjs');
+  const { PostgresAgentBlogShadowReplayArtifactRepository, createBlogShadowReplayHandlers } = await harness.load('agent-blog-foundation-workflows.mjs');
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Shadow operator','admin')", [operatorId]);
   const accounts = createAgentAccountService({ repository: new PostgresAgentAccountRepository(admin), authorizeOperator: async () => true });
@@ -41,7 +44,7 @@ test('passive blog shadow projection is durable, replay-safe, and side-effect fr
 
   await admin.query("UPDATE agent_blog_runs SET status='generating',started_at=now(),updated_at=now() WHERE id=$1", [legacyRunId]);
   await projector.projectRun(legacyRunId);
-  await admin.query("UPDATE agent_blog_runs SET status='rejected',reason_codes=ARRAY['MODEL_REVIEW_REJECTED'],finished_at=now(),updated_at=now() WHERE id=$1", [legacyRunId]);
+  await admin.query("UPDATE agent_blog_runs SET status='rejected',reason_codes=ARRAY['MODEL_REVIEW_REJECTED'],provider_usage=$2,finished_at=now(),updated_at=now() WHERE id=$1", [legacyRunId, JSON.stringify({ selectionDecision: { mode: 'single', repositories: ['owner/project'] } })]);
   await projector.projectRun(legacyRunId);
   assert.deepEqual((await admin.query(`SELECT source_status,mapped_run_status,mapped_stage_status,parity_status
     FROM agent_blog_runtime_shadow_projections WHERE legacy_run_id=$1`, [legacyRunId])).rows[0], {
@@ -49,4 +52,30 @@ test('passive blog shadow projection is durable, replay-safe, and side-effect fr
   });
   assert.equal(Number((await admin.query('SELECT count(*)::int AS n FROM agent_blog_runtime_shadow_events WHERE legacy_run_id=$1', [legacyRunId])).rows[0].n), 3);
   await assert.rejects(admin.query('DELETE FROM agent_blog_runtime_shadow_events WHERE legacy_run_id=$1', [legacyRunId]), /append-only/u);
+
+  const runtime = new PostgresAgentRuntimeRepository(admin);
+  const replayProjector = createAgentBlogRuntimeShadowProjector({ repository, runtimeRepository: runtime, mode: 'shadow' });
+  const replayProjection = await replayProjector.projectRun(legacyRunId);
+  assert.equal(replayProjection.projection.projectionMode, 'shadow');
+  assert.equal(replayProjection.replayRun.status, 'queued');
+  assert.equal(Number((await admin.query(`SELECT count(*)::int AS n FROM agent_capability_grants
+    WHERE agent_user_id=$1 AND capability_key IN ('research.github.read','provider.text.generate','blog.article.draft')
+      AND status='active'`, [account.agentUserId])).rows[0].n), 3);
+  const worker = createAgentRuntimeWorker({
+    repository: runtime, workerId: `shadow-replay-${crypto.randomBytes(4).toString('hex')}`,
+    leaseSeconds: 30, heartbeatSeconds: 5,
+    handlers: createBlogShadowReplayHandlers({ artifactRepository: new PostgresAgentBlogShadowReplayArtifactRepository(admin) }),
+  });
+  const replay = await worker.runOnce();
+  assert.equal(replay.status, 'completed');
+  assert.equal(replay.run.status, 'succeeded');
+  const artifact = (await admin.query('SELECT * FROM agent_blog_shadow_replay_artifacts WHERE legacy_run_id=$1', [legacyRunId])).rows[0];
+  assert.equal(artifact.verdict, 'exact');
+  assert.equal(artifact.report_json.providerInvocation, false);
+  assert.equal(artifact.report_json.publicationAttempt, false);
+  assert.equal(Number((await admin.query(`SELECT count(*)::int AS n FROM agent_provider_calls call
+    JOIN agent_run_actions action ON action.id=call.action_id
+    JOIN agent_runs run ON run.id=action.run_id WHERE run.agent_user_id=$1`, [account.agentUserId])).rows[0].n), 0);
+  await assert.rejects(admin.query('DELETE FROM agent_blog_shadow_replay_artifacts WHERE id=$1', [artifact.id]), /immutable/u);
+  await worker.stop();
 });

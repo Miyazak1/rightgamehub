@@ -1,6 +1,6 @@
 # 小墨鱼博客 F1-4 影子迁移
 
-版本：F1-4A  
+版本：F1-4B1
 状态：开发分支已实现并通过隔离 PostgreSQL 验证；未部署，不改变线上执行权  
 日期：2026-10-24
 
@@ -55,7 +55,7 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 
 隔离 PostgreSQL 17 回归覆盖：
 
-- 126 个迁移并发应用且只能应用一次；
+- 127 个迁移并发应用且只能应用一次；
 - 同一旧任务重复投影不重复写事件；
 - `queued → generating → rejected` 可按顺序重建；
 - 观察事件不能更新或删除；
@@ -76,3 +76,20 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 7. 回滚仅停止未来影子创建，不删除投影和历史事件。
 
 F1-4B 通过后仍不能直接全面切换。下一步是单 Agent canary，并且同一逻辑触发时间只能有一个发布所有者。
+
+## 7. F1-4B1：零成本 Foundation 重放
+
+F1-4B1 在 F1-4A 之上增加一条真实 Runtime 执行路径，但仍不做第二次研究、生成或发布：
+
+- 配置默认是 `AGENT_BLOG_FOUNDATION_MODE=passive`；只有显式改为 `shadow` 才创建重放 Run；
+- 只处理已经终结、且旧链路明确记录为 `single` 的任务；对比文章留给独立的对比 Manifest；
+- 工作流 `blog.project.single.shadow-replay@1` 只有 `verify-legacy-run` 一个确定性 Stage；
+- Run 预算固定为 Provider 0 次、Tool 0 次、输入/输出 Token 0；
+- Manifest 没有 Provider、Tool、草稿写入或发布 Stage，也不声明任何能力；
+- Worker 校验来源哈希、终态、人格版本、单项目选择与映射完整性，随后写入不可变的 `agent_blog_shadow_replay_artifacts`；
+- 私有产物通过管理员影子投影接口回读，不进入公开博客或文章列表；
+- 重放创建和产物写入都按旧 Run ID 幂等，Worker 崩溃后由通用租约恢复，不会产生外部副作用。
+
+同时冻结了未来 canary 的 `blog.project.single@1` 目标 Manifest。它把 `research.github.read`、`provider.text.generate`、`blog.article.draft` 和 `blog.article.publish` 分成独立能力，迁移为现有博客 Agent 建立最小授权，但该 Manifest **不会自动注册或执行**。这样做是为了先固定长期边界，不把旧博客的大函数直接搬进新 Worker。
+
+进入 F1-4B2 前，还必须实现并验证：GitHub 只读研究 Tool Adapter、经 Provider Gateway 的选题/写作 Action、私有草稿适配器、确定性校验，以及“影子工作流没有发布路由”的部署级断言。F1-4B2 才会产生可比较的新草稿；F1-4B1 只证明新基座可以安全接住旧任务事实。

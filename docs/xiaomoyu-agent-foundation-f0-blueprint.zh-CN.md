@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F1-I4A\
-状态：F1-1 至 F1-3 通用基座，以及 F1-4A 博客被动影子投影已在开发分支实现并通过隔离 PostgreSQL 验证；尚未部署，发布权与 Provider 调用权仍完全属于旧博客链路\
+版本：F1-I4B1\
+状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影与 F1-4B1 零成本影子重放已在开发分支实现并通过隔离 PostgreSQL 验证；尚未部署，发布权与 Provider 调用权仍完全属于旧博客链路\
 更新日期：2026-10-24\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -18,7 +18,7 @@
 - 独立故障恢复；
 - 无法统一观察的后台页面。
 
-F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 F1-3 通用层，并进入 F1-4A：运行状态机、Worker、Outbox、策略判定、模型目录、预算账本、Provider Gateway、DeepSeek 单次调用适配器和恢复循环已经形成；旧博客的每次状态变化会生成被动、可重建、带哈希的兼容投影和只追加观察事件。生产 Worker 仍由独立 Compose profile 与显式开关双重禁用，投影不会创建 Foundation Run、不会调用 Provider、不会发布第二篇文章。博客仍是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
+F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 F1-3 通用层，并进入 F1-4：运行状态机、Worker、Outbox、策略判定、模型目录、预算账本、Provider Gateway、DeepSeek 单次调用适配器和恢复循环已经形成；旧博客状态会形成被动、可重建、带哈希的兼容投影。在显式 `shadow` 模式下，终态单项目任务还会创建一个零预算 Foundation Run，由 Worker 校验冻结输入并保存私有差异产物。这个 Run 不包含 Action，不调用 Provider，不具备发布阶段。生产默认仍是 `passive`，Worker 仍由独立 Compose profile 与显式开关双重禁用。博客仍是第一个迁移对象，论文是第一个验证“基座可复用”的新能力。
 
 ### 1.1 当前实施证据
 
@@ -30,7 +30,8 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-2 Worker 与恢复循环 | 开发分支已实现，默认禁用 | `agent-runtime-worker.mjs`、`0124_agent_runtime_worker_recovery.sql`；只有注册处理器才会领取对应 Stage |
 | F1-3 Policy、Budget、Provider Gateway | 通用治理层已实现，生产未启用 | `0125_agent_runtime_governance.sql`、`agent-runtime-policy-service.mjs`、`agent-provider-gateway*.mjs`、`agent-deepseek-provider-adapter.mjs`；预算并发、撤权和密钥边界已通过隔离 PostgreSQL 验证 |
 | F1-4A 博客被动影子投影 | 已实现，未部署 | `0126_agent_blog_runtime_shadow.sql`、`agent-blog-runtime-shadow.mjs`；旧任务状态可幂等回放，旧链路仍是 Provider 与发布唯一权威，隔离 PostgreSQL 断言零 `agent_runs`、零 Provider Call |
-| F1-4B 基础运行时影子执行 | 未实现 | 需要单项目 Manifest、冻结候选集和禁止发布的真实影子 Run；必须先达到 F1-4A 一致性门槛 |
+| F1-4B1 零成本基础运行时重放 | 已实现，默认关闭 | `0127_agent_blog_shadow_replay.sql`、`agent-blog-foundation-workflows.mjs`；只重放终态单项目冻结快照，真实 Run/Worker/私有产物，零 Action、零 Provider、零发布 |
+| F1-4B2 独立研究与生成影子 | 未实现 | 目标单项目 Manifest 已冻结但不会自动注册；需要研究、选题、写作与检查适配器全部通过 Gateway/Tool Runtime 后再启用 |
 
 ## 2. 冻结决策
 

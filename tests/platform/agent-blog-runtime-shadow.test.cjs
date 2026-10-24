@@ -6,6 +6,7 @@ const { pathToFileURL } = require('node:url');
 
 const root = path.resolve(__dirname, '../..');
 const moduleUrl = pathToFileURL(path.join(root, 'apps/api/src/agent-blog-runtime-shadow.mjs')).href;
+const contractUrl = pathToFileURL(path.join(root, 'apps/api/src/agent-blog-shadow-contract.mjs')).href;
 
 const snapshot = status => ({
   schemaVersion: 'agent-blog-legacy-run-v1', legacyRunId: 'run', agentUserId: 'agent', requestedByUserId: null,
@@ -19,7 +20,7 @@ const snapshot = status => ({
 });
 
 test('legacy blog states map deterministically without granting provider or publication ownership', async () => {
-  const { mapLegacyAgentBlogRun } = await import(moduleUrl);
+  const { mapLegacyAgentBlogRun } = await import(contractUrl);
   assert.deepEqual(mapLegacyAgentBlogRun(snapshot('queued')), {
     mappedRunStatus: 'queued', mappedStageStatus: 'queued', parityStatus: 'exact', mismatchCodes: [],
   });

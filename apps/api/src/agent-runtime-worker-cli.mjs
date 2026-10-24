@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { PostgresAgentRuntimeRepository } from './agent-runtime-repository.mjs';
 import { createAgentRuntimeWorker, loadAgentRuntimeWorkerConfig } from './agent-runtime-worker.mjs';
+import { PostgresAgentBlogShadowReplayArtifactRepository, createBlogShadowReplayHandlers } from './agent-blog-foundation-workflows.mjs';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 const config = loadAgentRuntimeWorkerConfig();
@@ -21,9 +22,11 @@ try {
     else process.stdout.write(`${JSON.stringify({ status: 'ok', service: 'agent-runtime-worker', workerId: config.workerId, state: row.status })}\n`);
   } else {
     if (!config.enabled) throw new Error('AGENT_RUNTIME_WORKER_ENABLED must be true');
-    // F1-2 intentionally starts without business handlers. F1-4 registers blog
-    // adapters; future paper and tool workflows use the same route registry.
-    const worker = createAgentRuntimeWorker({ repository: new PostgresAgentRuntimeRepository(pool), handlers: {}, ...config, logger: console });
+    // The first business handler is a zero-budget, no-provider, no-publication
+    // replay verifier. Full blog and future paper workflows use this registry
+    // only after their own capability and rollout gates are enabled.
+    const handlers = createBlogShadowReplayHandlers({ artifactRepository: new PostgresAgentBlogShadowReplayArtifactRepository(pool) });
+    const worker = createAgentRuntimeWorker({ repository: new PostgresAgentRuntimeRepository(pool), handlers, ...config, logger: console });
     const stop = () => { void worker.stop(); };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
