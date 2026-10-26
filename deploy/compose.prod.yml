@@ -659,6 +659,95 @@ services:
     cpus: "0.75"
     mem_limit: 256m
 
+  # Installs the reviewed public workflow contract and adapters only. It never
+  # creates a Run, changes publication ownership, changes a schedule, or calls
+  # the model/provider.
+  agent-blog-public-bootstrap:
+    <<: *service-defaults
+    profiles: ["agent-blog-public-bootstrap"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-blog-public-runtime-bootstrap-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment: &agent-blog-public-environment
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_BLOG_PUBLIC_RUNTIME_ENABLED: ${AGENT_BLOG_PUBLIC_RUNTIME_ENABLED:-false}
+      AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID: ${AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID:-}
+      AGENT_BLOG_PUBLIC_RUNTIME_REQUEST_ID: ${AGENT_BLOG_PUBLIC_RUNTIME_REQUEST_ID:-}
+      AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER: ${AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER:-deepseek}
+      AGENT_BLOG_PUBLIC_RUNTIME_MODEL_ID: ${AGENT_BLOG_PUBLIC_RUNTIME_MODEL_ID:-deepseek-flash}
+      AGENT_BLOG_PUBLIC_RUNTIME_DAILY_RUN_LIMIT: ${AGENT_BLOG_PUBLIC_RUNTIME_DAILY_RUN_LIMIT:-1}
+      AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_PROVIDER_CALL_LIMIT: ${AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_PROVIDER_CALL_LIMIT:-120}
+      AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_COST_MICROUSD_LIMIT: ${AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_COST_MICROUSD_LIMIT:-10000000}
+      AGENT_BLOG_PUBLIC_RUNTIME_FAILURE_THRESHOLD: ${AGENT_BLOG_PUBLIC_RUNTIME_FAILURE_THRESHOLD:-2}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: "0.25"
+    mem_limit: 192m
+
+  # Read-only admission check. It requires Foundation ownership, disabled
+  # legacy automation, reviewed capabilities/contracts, a healthy model circuit,
+  # and empty active/uncertain execution sets.
+  agent-blog-public-preflight:
+    <<: *service-defaults
+    profiles: ["agent-blog-public-preflight"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-blog-public-runtime-preflight-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment: *agent-blog-public-environment
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 16
+    cpus: "0.10"
+    mem_limit: 96m
+
+  # Explicit one-shot public execution. This remains outside the default
+  # deployment and cannot publish unless the serialized owner is Foundation.
+  agent-blog-public-run:
+    <<: *service-defaults
+    profiles: ["agent-blog-public-run"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-blog-public-runtime-manual-run-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      <<: *agent-blog-public-environment
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
   # Deterministic post-run attestation. It performs no network or model calls
   # and appends one immutable, content-free report for the selected draft Run.
   agent-blog-canary-report:

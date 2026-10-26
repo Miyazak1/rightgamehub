@@ -45,3 +45,36 @@ test('candidate handoff is disabled by default and creates a draft Run from the 
   assert.equal(calls[0].workflowKey, 'blog.project.single.draft-shadow');
   assert.equal(Object.hasOwn(calls[0], 'publish'), false);
 });
+
+test('public candidate handoff targets only the public workflow and keeps immutable lineage', async () => {
+  const { createAgentBlogCandidatePublicHandoff } = await load('agent-blog-candidate-handoff.mjs');
+  const { defaultAgentBehaviorProfile } = await load('agent-behavior-profile.mjs');
+  const sourceRunId = crypto.randomUUID(), sourceArtifactId = crypto.randomUUID();
+  const calls = [];
+  const handoff = createAgentBlogCandidatePublicHandoff({
+    enabled: true,
+    artifactRepository: { read: async () => ({
+      id: sourceArtifactId, artifactKey: 'blog.candidate-set',
+      schema: { key: 'blog.candidate.discovery', version: 1 }, contentSha256: 'b'.repeat(64),
+      content: { schemaVersion: 'blog-candidate-set-v1', topicScope: '寻找有用的开源工具',
+        candidates: [{ canonicalUrl: 'https://github.com/owner/public-project' }] },
+    }) },
+    runtimeRepository: {
+      registerWorkflow: async () => ({ status: 'active' }),
+      activateWorkflow: async () => assert.fail('active workflow must not be activated again'),
+      createRun: async input => { calls.push(input); return { id: crypto.randomUUID(), status: 'queued' }; },
+    },
+  });
+  await handoff.createDraftRun({
+    agentUserId: crypto.randomUUID(), discoveryRunId: sourceRunId,
+    discoveryArtifactId: sourceArtifactId, idempotencyKey: `public:${crypto.randomUUID()}`,
+    behaviorProfile: defaultAgentBehaviorProfile(),
+  });
+  assert.equal(calls[0].workflowKey, 'blog.project.single');
+  assert.equal(calls[0].input.schemaVersion, 'blog-project-single-input-v1');
+  assert.deepEqual(calls[0].handoff, {
+    kind: 'blog.candidate-set-to-public-article', sourceRunId, sourceArtifactId,
+    sourceOutputType: 'blog.candidate-set', sourceArtifactKey: 'blog.candidate-set',
+    sourceContentSha256: 'b'.repeat(64),
+  });
+});

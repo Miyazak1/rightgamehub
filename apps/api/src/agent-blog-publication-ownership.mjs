@@ -152,7 +152,8 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       [agentUserId, policy.acceptancePolicyVersion, policy.requiredAcceptancePasses]),
       executor.query(`SELECT fire.status FROM agent_schedule_fires fire
         JOIN agent_schedules schedule ON schedule.id=fire.schedule_id AND schedule.agent_user_id=fire.agent_user_id
-        WHERE fire.agent_user_id=$1 AND schedule.workflow_key='blog.project.single.draft-shadow'
+        WHERE fire.agent_user_id=$1 AND schedule.workflow_key='blog.project.discovery-shadow'
+          AND schedule.config_json->>'mode'='private-shadow'
         ORDER BY fire.logical_fire_at DESC,fire.id DESC LIMIT $2`,
       [agentUserId, policy.requiredScheduledPasses]),
     ]);
@@ -214,6 +215,11 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       await client.query(`UPDATE agent_blog_automation_settings SET enabled=false,next_run_at=NULL,
         updated_by_user_id=$2,updated_at=clock_timestamp() WHERE agent_user_id=$1`,
       [agentUserId, actorUserId]);
+      await client.query(`UPDATE agent_schedules SET enabled=false,next_fire_at=NULL,
+        config_json=config_json||jsonb_build_object('disabledAt',clock_timestamp(),
+          'disabledReason','publication-cutover'),updated_by_user_id=$2,updated_at=clock_timestamp()
+        WHERE agent_user_id=$1 AND workflow_key='blog.project.discovery-shadow'
+          AND config_json->>'mode'='private-shadow'`, [agentUserId, actorUserId]);
       const row = (await client.query(`UPDATE agent_blog_publication_owners SET
           active_publisher='foundation',generation=generation+1,reason=$3,
           updated_by_user_id=$2,
@@ -225,7 +231,7 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       return {
         schemaVersion: 'agent-blog-publication-cutover-receipt-v1',
         agentUserId, previousPublisher: 'legacy', owner: ownerView(row),
-        legacyScheduleDisabled: true, automaticSwitch: false,
+        legacyScheduleDisabled: true, privateFoundationScheduleDisabled: true, automaticSwitch: false,
       };
     });
   }

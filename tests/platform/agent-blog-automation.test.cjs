@@ -73,12 +73,13 @@ test('Automation service keeps provider keys write-only and only publishes after
  await assert.rejects(()=>automation.configure(actor,agentUserId,{enabled:true,model:'made-up-model',intervalHours:84,monthlyArticleLimit:8,topicScope:'人文历史地理科学中的大众知识'}),error=>error.code==='AGENT_PROVIDER_MODEL_UNAVAILABLE');
 });
 
-test('Production secret root is scoped to the API and explicit private canary executors only',()=>{
+test('Production secret root is scoped to the API and explicit one-shot or scheduled executors only',()=>{
  const fs=require('node:fs'),root=path.resolve(__dirname,'../..');
  const compose=fs.readFileSync(path.join(root,'deploy/compose.prod.yml'),'utf8'),routes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8'),admin=fs.readFileSync(path.join(root,'packages/platform-client/src/AgentAdmin.jsx'),'utf8');
- assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,3);
+ assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,4);
  assert.match(compose,/agent-blog-canary-run:[\s\S]*?restart: "no"[\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
  assert.match(compose,/agent-blog-private-scheduler:[\s\S]*?profiles: \["agent-blog-private-scheduler"\][\s\S]*?AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: "false"/u);
+ assert.match(compose,/agent-blog-public-run:[\s\S]*?profiles: \["agent-blog-public-run"\][\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
  assert.match(routes,/behavior-profile/);
  assert.match(admin,/新基座先生成私有草稿并完成影子验收/);

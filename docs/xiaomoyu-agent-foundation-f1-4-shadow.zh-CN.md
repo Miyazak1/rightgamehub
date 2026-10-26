@@ -313,7 +313,7 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 
 因此今天的私有 canary 日额度耗尽只会阻止新增真实样本，不会阻止继续完成发布安全架构。额度不得通过改服务器时间、删除 Run 或放宽永久默认值绕过；工程验证可继续运行零 Provider 的迁移、单元、契约和故障测试。
 
-### 20.1 Foundation 公开发布适配器（未注册）
+### 20.1 Foundation 公开发布适配器（默认不可达）
 
 公开发布的代码边界已经实现，但仍保持不可达：
 
@@ -322,5 +322,20 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 3. 发布适配器只接受同一 Run 的 `persist-draft` 正式输出，并在一个数据库事务中锁定 Action、Run、Stage、唯一发布权、文章和修订；它重新确认发布者为 `foundation`，而不是信任预检结果；
 4. 草稿必须来自 `agent_blog_foundation_drafts`，且验证/写作血缘完整、内容哈希一致、文章仍为 `draft`、修订仍为 `working`，任何状态漂移都失败关闭；
 5. 成功后原子更新修订和文章、写入公开事件、完成 Action，并追加唯一且不可变的 `agent_blog_foundation_publications` 收据；幂等重放只能返回同一文章，不能再发布一篇；
-6. 适配器源码、Manifest 与测试存在不等于生产启用。当前生产 runtime、Worker、Compose profile 和调度均未注册 `blog.project.single@1`，发布权仍为 `legacy`，因此部署此增量不会让 Foundation 自动公开发文；
-7. 原子切换服务与接口已经实现，但没有自动调用，也没有管理页按钮；目标公开 Workflow 仍未注册到生产，因此当前部署后预检会明确阻止切换。下一阶段是完成生产公开 Workflow 的受控 bootstrap、执行器装配与回退演练，再由管理员根据预检结果显式切换。
+6. 适配器源码、Manifest 与测试存在不等于生产启用。公开链路只存在于三个显式、默认不启用的 Compose profile 中；默认部署不会注册公开工作流、运行公开 Worker 或改变发布权；
+7. 原子切换服务与接口已经实现，但没有自动调用，也没有管理页按钮。公开 bootstrap 只安装版本化合同，不能创建 Run、调用 Provider、修改计划或切换发布权。
+
+### 20.2 公开执行包与双链路隔离
+
+公开执行包把“能发布的代码”与“获得发布权”分成两个互不替代的条件：
+
+1. `agent-blog-public-bootstrap` 幂等登记 `blog.project.discovery-shadow@3`、`blog.project.single@1`、两份 GitHub 只读工具合同和公开运行模型准入包；收据固定声明未创建 Run、未调用 Provider、未尝试发布、未变更发布权与计划；
+2. `agent-blog-public-preflight` 是只读门禁。它要求唯一发布者已经是 `foundation`、旧自动发布开关已关闭、五项能力完整、公开工作流和工具合同已激活、密钥/模型/熔断正常、没有活跃或不确定 Run，也没有未交接候选；
+3. `agent-blog-public-run` 是一次性进程，先运行同一 preflight，再执行四阶段候选发现，经不可变 Artifact/Handoff 创建七阶段公开 Run；只有最后发布事务再次取得 Foundation 发布权锁后，文章才从草稿原子变为公开；
+4. 公开候选交接使用 `blog.candidate-set-to-public-article`，目标只能是 `blog.project.single@1`；私有交接继续只指向 `blog.project.single.draft-shadow@1`，二者不能靠参数把一种 Run 伪装成另一种；
+5. 公开运行的每日额度只统计公开文章 Run，不把此前私有调试次数伪装成公开发布次数；月度 Provider、费用、连续失败、活跃/不确定运行仍是共同的硬门禁；
+6. 私有计划领取同时检查 `config.mode=private-shadow` 和唯一发布者仍为 `legacy`。切换事务除了关闭旧自动发布设置，也原子停用私有 Foundation 计划；切换后旧 worker 即使仍存活也领不到任务；
+7. 切换所需的“三次私有计划成功”从实际计划入口 `blog.project.discovery-shadow` 且 `mode=private-shadow` 的不可变 fire 账本计算，避免因查询草稿工作流键而永久误判为零；
+8. 目前仍没有自动公开调度。首次公开执行必须走显式 bootstrap、切换预检、管理员切换、公开 preflight 和一次性 run；完成一次公开运行与显式回退演练后，才进入公开每天 10 点调度阶段。
+
+这套顺序不需要等待第二天才能继续工程建设，也不允许通过提高私有日额度伪造切换证据。私有样本门槛、计划门槛和真实时间事实保持不变；公开执行器、失败关闭、回退和调度隔离可以在零 Provider 测试中先完成。

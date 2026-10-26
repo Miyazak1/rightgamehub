@@ -101,8 +101,11 @@ export class PostgresAgentBlogPrivateScheduleRepository {
 
   async ensureDaily({ agentUserId, enabled }) {
     if (!UUID.test(agentUserId ?? '') || typeof enabled !== 'boolean') fail('AGENT_BLOG_SCHEDULE_INPUT_INVALID');
-    const account = (await this.pool.query('SELECT operator_user_id FROM agent_accounts WHERE user_id=$1', [agentUserId])).rows[0];
-    if (!account) fail('AGENT_BLOG_SCHEDULE_AGENT_NOT_FOUND');
+    const account = (await this.pool.query(`SELECT account.operator_user_id
+      FROM agent_accounts account
+      JOIN agent_blog_publication_owners owner ON owner.agent_user_id=account.user_id
+      WHERE account.user_id=$1 AND owner.active_publisher='legacy'`, [agentUserId])).rows[0];
+    if (!account) fail('AGENT_BLOG_SCHEDULE_LEGACY_OWNER_REQUIRED');
     const nextFireAt = enabled ? nextAgentBlogPrivateDailyFire(this.clock()) : null;
     const row = (await this.pool.query(`INSERT INTO agent_schedules(id,agent_user_id,workflow_key,workflow_version,
         timezone,schedule_spec_json,enabled,next_fire_at,last_fire_at,misfire_policy,config_json,updated_by_user_id)
@@ -132,9 +135,13 @@ export class PostgresAgentBlogPrivateScheduleRepository {
       await client.query(`UPDATE agent_schedule_fires SET status='uncertain',attempt_id=NULL,lease_until=NULL,
         error_code='AGENT_BLOG_SCHEDULE_LEASE_EXPIRED',error_message='计划执行进程在完成前失去租约；为避免重复外部调用，未自动重发。',
         finished_at=now(),updated_at=now() WHERE status='running' AND lease_until<now()`);
-      const schedule = (await client.query(`SELECT * FROM agent_schedules WHERE enabled=true
-        AND workflow_key=$1 AND next_fire_at<=now() ORDER BY next_fire_at,id
-        FOR UPDATE SKIP LOCKED LIMIT 1`, [WORKFLOW_KEY])).rows[0];
+      const schedule = (await client.query(`SELECT schedule.* FROM agent_schedules schedule
+        JOIN agent_blog_publication_owners owner ON owner.agent_user_id=schedule.agent_user_id
+        WHERE schedule.enabled=true AND schedule.workflow_key=$1
+          AND schedule.config_json->>'mode'='private-shadow'
+          AND owner.active_publisher='legacy' AND schedule.next_fire_at<=now()
+        ORDER BY schedule.next_fire_at,schedule.id
+        FOR UPDATE OF schedule SKIP LOCKED LIMIT 1`, [WORKFLOW_KEY])).rows[0];
       if (!schedule) return null;
       const logicalFireAt = new Date(schedule.next_fire_at), now = this.clock();
       const nextFireAt = nextAgentBlogPrivateDailyFire(now, schedule.timezone,

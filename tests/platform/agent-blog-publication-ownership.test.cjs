@@ -148,6 +148,17 @@ test('legacy scheduling and manual enqueue are guarded by the same ownership row
   assert.ok(source.match(/assertPublisher\(client,[^,]+,'legacy'\)/gu).length >= 4);
 });
 
+test('private Foundation schedule shares the publication owner boundary and cutover disables it', () => {
+  const schedule = fs.readFileSync(path.join(root, 'apps/api/src/agent-blog-private-schedule.mjs'), 'utf8');
+  const ownership = fs.readFileSync(path.join(root,
+    'apps/api/src/agent-blog-publication-ownership.mjs'), 'utf8');
+  assert.match(schedule, /owner\.active_publisher='legacy'/u);
+  assert.match(schedule, /schedule\.config_json->>'mode'='private-shadow'/u);
+  assert.match(ownership, /'disabledReason','publication-cutover'/u);
+  assert.match(ownership, /privateFoundationScheduleDisabled: true/u);
+  assert.match(ownership, /schedule\.workflow_key='blog\.project\.discovery-shadow'/u);
+});
+
 test('PostgreSQL seeds one legacy owner and atomically audits a valid handoff',
   { skip: !harness.enabled }, async () => {
     const { admin } = await harness.setup();

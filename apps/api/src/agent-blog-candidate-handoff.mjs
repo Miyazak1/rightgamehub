@@ -1,6 +1,8 @@
 import { normalizeAgentBehaviorProfile } from './agent-behavior-profile.mjs';
-import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
-import { normalizeBlogFoundationShadowInput } from './agent-blog-foundation-shadow.mjs';
+import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,
+  BLOG_PROJECT_SINGLE_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
+import { normalizeBlogFoundationPublicInput,
+  normalizeBlogFoundationShadowInput } from './agent-blog-foundation-shadow.mjs';
 import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool.mjs';
 
 export class AgentBlogCandidateHandoffError extends Error {
@@ -42,15 +44,14 @@ function normalizeCandidateSet(artifact) {
   return { topicScope: content.topicScope, repositories };
 }
 
-export function createAgentBlogCandidateDraftHandoffCanary({
-  runtimeRepository, artifactRepository, enabled = false,
-} = {}) {
+function createCandidateHandoff({ runtimeRepository, artifactRepository, enabled = false }, {
+  workflow, normalizeInput, inputSchemaVersion, handoffKind, disabledCode,
+}) {
   if (!runtimeRepository || !artifactRepository) fail('AGENT_BLOG_HANDOFF_DEPENDENCY_REQUIRED');
-  const requireEnabled = () => { if (enabled !== true) fail('AGENT_BLOG_HANDOFF_CANARY_DISABLED'); };
+  const requireEnabled = () => { if (enabled !== true) fail(disabledCode); };
   return {
     async register(actorUserId) {
       requireEnabled();
-      const workflow = BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW;
       const registered = await runtimeRepository.registerWorkflow({ actorUserId, manifest: workflow, status: 'draft' });
       if (registered.status === 'draft') await runtimeRepository.activateWorkflow(workflow.workflowKey, workflow.workflowVersion);
       return workflow;
@@ -72,8 +73,8 @@ export function createAgentBlogCandidateDraftHandoffCanary({
       let profile;
       try { profile = normalizeAgentBehaviorProfile(behaviorProfile); }
       catch { fail('AGENT_BLOG_HANDOFF_BEHAVIOR_INVALID'); }
-      const input = normalizeBlogFoundationShadowInput({
-        schemaVersion: 'blog-project-single-shadow-input-v1',
+      const input = normalizeInput({
+        schemaVersion: inputSchemaVersion,
         topicScope: candidateSet.topicScope,
         candidateRepositories: candidateSet.repositories,
         recentTitles,
@@ -82,16 +83,16 @@ export function createAgentBlogCandidateDraftHandoffCanary({
       });
       return runtimeRepository.createRun({
         agentUserId,
-        workflowKey: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.workflowKey,
-        workflowVersion: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.workflowVersion,
+        workflowKey: workflow.workflowKey,
+        workflowVersion: workflow.workflowVersion,
         triggerKind,
         triggerRef,
         idempotencyKey,
         input,
         config,
-        budget: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.defaultBudget,
+        budget: workflow.defaultBudget,
         handoff: {
-          kind: 'blog.candidate-set-to-private-draft',
+          kind: handoffKind,
           sourceRunId: discoveryRunId,
           sourceArtifactId: artifact.id,
           sourceOutputType: 'blog.candidate-set',
@@ -101,4 +102,24 @@ export function createAgentBlogCandidateDraftHandoffCanary({
       });
     },
   };
+}
+
+export function createAgentBlogCandidateDraftHandoffCanary(dependencies = {}) {
+  return createCandidateHandoff(dependencies, {
+    workflow: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,
+    normalizeInput: normalizeBlogFoundationShadowInput,
+    inputSchemaVersion: 'blog-project-single-shadow-input-v1',
+    handoffKind: 'blog.candidate-set-to-private-draft',
+    disabledCode: 'AGENT_BLOG_HANDOFF_CANARY_DISABLED',
+  });
+}
+
+export function createAgentBlogCandidatePublicHandoff(dependencies = {}) {
+  return createCandidateHandoff(dependencies, {
+    workflow: BLOG_PROJECT_SINGLE_WORKFLOW,
+    normalizeInput: normalizeBlogFoundationPublicInput,
+    inputSchemaVersion: 'blog-project-single-input-v1',
+    handoffKind: 'blog.candidate-set-to-public-article',
+    disabledCode: 'AGENT_BLOG_PUBLIC_HANDOFF_DISABLED',
+  });
 }
