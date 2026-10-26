@@ -1,10 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const harness = require('./support/researcher-qa-db.cjs');
 
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const uuid = () => crypto.randomUUID();
+const publicationAction = Object.freeze({ actionKey: 'publish', actionKind: 'domain-write',
+  capabilityKey: 'blog.article.publish', contractVersion: 1, riskLevel: 'L3' });
 
 const workflow = Object.freeze({
   schemaVersion: 'agent-workflow-v1', workflowKey: 'blog.project.single', workflowVersion: 2147483000,
@@ -119,6 +123,20 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
 
     const policyService = { decide: async input => ({ schemaVersion: 'agent-policy-decision-v1',
       decision: 'allow', reasonCodes: [], agentUserId: input.resource.owner }) };
+    const decisionFor = input => ({ schemaVersion: 'agent-policy-decision-v1', decision: 'allow',
+      reasonCodes: [], agentUserId: input.agentUserId });
+    const preparePublication = async input => {
+      const prepared = await runtime.createAction({
+        runId: input.runId, stageId: input.stageId, action: publicationAction,
+        idempotencyKey: input.idempotencyKey,
+        request: { schemaVersion: 'blog-foundation-publication-request-v1',
+          articleId: input.articleId, revisionId: input.revisionId,
+          contentSha256: input.contentSha256 },
+        policyDecision: decisionFor(input),
+      });
+      await runtime.transitionAction({ actionId: prepared.id, from: 'prepared', to: 'authorized' });
+      return prepared.id;
+    };
     const before = await draftRun('before');
     const beforeGateway = createAgentBlogFoundationPublicationGateway({ runtimeRepository: runtime,
       publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin, {
@@ -161,4 +179,47 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
       JOIN agent_run_actions action ON action.run_id=$1 AND action.action_key='publish'
       WHERE article.id=$2`, [after.runId, after.articleId, after.revisionId])).rows[0],
     { publication_state: 'published', revision_state: 'published', action_status: 'succeeded', receipts: 1, events: 1 });
+
+    const concurrent = await draftRun('concurrent');
+    const concurrentActionId = await preparePublication(concurrent);
+    const concurrentRequest = { actionId: concurrentActionId, articleId: concurrent.articleId,
+      revisionId: concurrent.revisionId, contentSha256: concurrent.contentSha256 };
+    const concurrentResults = await Promise.all([
+      new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
+      new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
+    ]);
+    assert.deepEqual(concurrentResults.map(item => item.existing).sort(), [false, true]);
+    assert.deepEqual((await admin.query(`SELECT
+        (SELECT count(*)::int FROM agent_blog_foundation_publications WHERE run_id=$1) AS receipts,
+        (SELECT count(*)::int FROM blog_article_events WHERE article_id=$2 AND action='published') AS events,
+        (SELECT count(*)::int FROM agent_run_actions WHERE id=$3 AND status='succeeded') AS succeeded_actions`,
+    [concurrent.runId, concurrent.articleId, concurrentActionId])).rows[0],
+    { receipts: 1, events: 1, succeeded_actions: 1 });
+
+    const crashed = await draftRun('crashed');
+    const crashedActionId = await preparePublication(crashed);
+    const childPath = path.join(__dirname, 'support', 'agent-blog-publication-crash-child.mjs');
+    const child = spawnSync(process.execPath, [childPath, crashedActionId, crashed.articleId,
+      crashed.revisionId, crashed.contentSha256], {
+      cwd: path.resolve(__dirname, '../..'), env: { ...process.env }, encoding: 'utf8', timeout: 30_000,
+    });
+    assert.equal(child.status, 91, `${child.stderr}\n${child.stdout}`);
+    const crashReceipt = (await admin.query(`SELECT publication.*,article.publication_state
+      FROM agent_blog_foundation_publications publication
+      JOIN blog_articles article ON article.id=publication.article_id
+      WHERE publication.action_id=$1`, [crashedActionId])).rows[0];
+    assert.equal(crashReceipt.publication_state, 'published');
+    const crashReplay = await createAgentBlogFoundationPublicationGateway({
+      runtimeRepository: runtime,
+      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin),
+      policyService,
+    }).publish(crashed);
+    assert.equal(crashReplay.status, 'succeeded');
+    assert.equal(crashReplay.replayed, true);
+    assert.deepEqual((await admin.query(`SELECT
+        (SELECT count(*)::int FROM agent_blog_foundation_publications WHERE run_id=$1) AS receipts,
+        (SELECT count(*)::int FROM blog_article_events WHERE article_id=$2 AND action='published') AS events,
+        (SELECT count(*)::int FROM agent_run_actions WHERE id=$3 AND status='succeeded') AS succeeded_actions`,
+    [crashed.runId, crashed.articleId, crashedActionId])).rows[0],
+    { receipts: 1, events: 1, succeeded_actions: 1 });
   });
