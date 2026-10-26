@@ -40,7 +40,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
       runId = uuid(runId);
       const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
-      const [stages, actions, events, reservations, providerCalls, toolCalls, toolArtifacts] = await Promise.all([
+      const [stages, actions, events, reservations, providerCalls, toolCalls, toolArtifacts, foundationDrafts] = await Promise.all([
         pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
         pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
         pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
@@ -53,6 +53,10 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
             artifact.content_sha256,artifact.size_bytes,artifact.created_at
           FROM agent_tool_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
           WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
+        pool.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
+            draft.source_artifact_ids,draft.content_sha256,draft.created_at,article.publication_state
+          FROM agent_blog_foundation_drafts draft JOIN blog_articles article ON article.id=draft.article_id
+          WHERE draft.run_id=$1 ORDER BY draft.created_at,draft.article_id`, [runId]),
       ]);
       return {
         run: {
@@ -102,6 +106,11 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
         toolArtifacts: toolArtifacts.rows.map(row => ({
           id: row.id, toolCallId: row.tool_call_id, actionId: row.action_id, mediaType: row.media_type,
           contentSha256: row.content_sha256, sizeBytes: row.size_bytes, createdAt: iso(row.created_at),
+        })),
+        foundationDrafts: foundationDrafts.rows.map(row => ({
+          runId: row.run_id, actionId: row.action_id, articleId: row.article_id, revisionId: row.revision_id,
+          sourceArtifactIds: row.source_artifact_ids, contentSha256: row.content_sha256,
+          publicationState: row.publication_state, createdAt: iso(row.created_at),
         })),
       };
     },

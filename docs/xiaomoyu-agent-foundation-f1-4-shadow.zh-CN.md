@@ -1,8 +1,8 @@
 # 小墨鱼博客 F1-4 影子迁移
 
-版本：F1-4B1
-状态：开发分支已实现并通过隔离 PostgreSQL 验证；未部署，不改变线上执行权  
-日期：2026-10-25
+版本：F1-4B2b1
+状态：私有草稿输出边界已在开发分支实现；未部署，不改变线上执行权
+日期：2026-10-26
 
 ## 1. 当前增量的目的
 
@@ -55,7 +55,7 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 
 隔离 PostgreSQL 17 回归覆盖：
 
-- 128 个迁移并发应用且只能应用一次；
+- 129 个迁移并发应用且只能应用一次；
 - 同一旧任务重复投影不重复写事件；
 - `queued → generating → rejected` 可按顺序重建；
 - 观察事件不能更新或删除；
@@ -107,3 +107,18 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 - Provider 账本与 Tool 账本合并更新 Run 用量，互不覆盖。
 
 本阶段没有把工具注册到生产 Worker，也没有自动创建研究 Run，因此线上行为仍为零变化。`blog.project.single.draft-shadow@1` 的执行合同已经冻结：只声明研究、生成和私有草稿三类能力，终点是 `persist-draft`，不存在发布能力或 `publish` Stage。F1-4B2b 完成各适配器后才会注册该工作流，并把固定候选集依次交给 Tool Gateway、Provider Gateway、确定性检查和私有草稿适配器。
+
+## 9. F1-4B2b1：证据绑定的私有草稿输出
+
+私有草稿适配器已经从旧博客大函数中拆出，并固定以下边界：
+
+- 唯一动作是 `blog.article.draft@1`，风险级别 L2，策略资源固定为 `blog.private-draft`；
+- 每份草稿必须引用 1 至 32 个同一 Run 生成的不可变 `agent_tool_artifacts`，不能拿其他运行的资料拼接；
+- 结构化文章先经过现有博客 Schema 规范化，再用内容摘要参与动作幂等；
+- 文章、工作修订、审计事件、Foundation 映射和 Action 终态在同一个数据库事务完成；
+- 写入结果只能是 `blog_articles.publication_state=draft` 与 `blog_article_revisions.revision_state=working`，公开修订、首次/最近发布时间和撤回时间都必须为空；
+- 适配器没有 publish 方法，影子 Manifest 没有 publish capability/Stage，测试同时断言没有 `published` 事件；
+- `agent_blog_foundation_drafts` 是不可变映射，重放同一动作只返回原草稿，变更内容或证据则产生幂等冲突；
+- 管理时间线只返回文章 ID、修订 ID、证据产物 ID 和摘要，不返回正文。
+
+这一小步仍不会注册 `blog.project.single.draft-shadow@1`，也不会调用 Provider。下一步是把选题与写作分别接入 Provider Gateway，再加确定性文章校验；这些完成前不得打开生产 Worker。
