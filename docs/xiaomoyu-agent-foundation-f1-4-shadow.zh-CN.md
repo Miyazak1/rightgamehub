@@ -209,6 +209,18 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 这仍不是上线开关。其结果只作为下节一次性人工执行的前置门禁。
 
+### 15.1 控制面 bootstrap
+
+工作流 Manifest 与模型准入目录是版本化控制面事实，不能依赖首个业务 Run 临时补写，也不能要求运营者手工执行 SQL。独立 `agent-blog-canary-bootstrap` profile 因此在 preflight 之前执行一次幂等登记：
+
+- 只登记 `blog.project.discovery-shadow@2` 和 `blog.project.single.draft-shadow@1`，不登记公开发布工作流；
+- 只登记经过代码评审的 `deepseek/deepseek-flash@1` 结构化生成准入包；价格字段是预算预留的保守上限，不冒充供应商实时账单；
+- 目标 Agent、其运营管理员、工作流哈希和模型目录版本不匹配时立即失败；已有同版本完全一致记录时幂等返回；
+- bootstrap 不创建 Run、不读取 Key、不访问 GitHub、不调用 Provider、不创建文章，也没有发布能力；
+- bootstrap 完成后在同一进程运行只读 preflight，并把登记收据和最终门禁结果合并输出。
+
+固定运维顺序调整为 `bootstrap → preflight → supervised private canary`。bootstrap 是受控写入，不应混入只读 preflight，也不能在每次 Worker 启动时隐式执行。
+
 ## 16. F1-4B2d3b：一次性人工私有 canary
 
 人工执行链已完成代码装配，但没有在本地或生产实际运行：

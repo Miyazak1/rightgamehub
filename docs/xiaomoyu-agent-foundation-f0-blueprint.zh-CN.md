@@ -38,7 +38,7 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-4B2d1 独立候选发现端口 | 已实现，canary 默认关闭 | `agent-github-repository-search-tool.mjs`、`agent-blog-candidate-discovery.mjs`、`0132_agent_blog_candidate_discovery.sql`；独立最小权限、最多五次搜索、最多十二个候选，搜索摘要不能充当文章证据，也没有 Provider、草稿或发布权限 |
 | F1-4B2d2a 自动查询规划 | 已实现，canary 默认关闭 | `blog.project.discovery-shadow@2` 只允许一次结构化 Provider 调用把中文选题范围变成最多五条普通搜索词；`0133_agent_stage_action_lineage.sql` 允许首个模型产物以同 Run 成功 Action 作为血缘起点，候选集继续同时绑定查询计划和搜索工具产物 |
 | F1-4B2d2b 跨 Run 候选交接与汇总观测 | 已实现，canary 默认关闭 | `0134_agent_run_handoffs.sql`、`agent-blog-candidate-handoff.mjs`、`agent-blog-canary-observability.mjs`；来源 Run、候选工件及哈希、目标 Run 和目标输入哈希在一个事务中冻结，管理员只能读取交接摘要与聚合状态/用量 |
-| F1-4B2d3a 私有 canary 上线预检 | 已实现，只读且默认关闭 | `agent-blog-private-canary-preflight.mjs` 与独立 Compose profile；强制单 Agent、发布恒为 false，并在任何 Run 创建前检查身份、权限、工作流、密钥、模型、熔断、积压、不确定态、每日次数和月度费用 |
+| F1-4B2d3a 私有 canary 控制面 bootstrap 与上线预检 | 已实现，默认关闭 | 独立 bootstrap profile 幂等登记两条私有工作流和经评审的模型准入包，零 Run、零 Provider、零发布；随后由只读 preflight 检查身份、权限、工作流、密钥、模型、熔断、积压、不确定态、每日次数和月度费用 |
 | F1-4B2d3b 一次性人工私有 canary | 已实现，未运行且默认关闭 | `agent-blog-private-canary-manual-run.mjs` 与独立 Compose profile；冻结人格/选题/历史仓库/模型，精确领取本次 Run，发现成功才原子交接私有草稿，任一异常立即停止，零调度、零发布 |
 | F1-4B2d3c 不可变验收证明 | 已实现，未生成真实报告 | `0135_agent_blog_canary_acceptance.sql`、`agent-blog-canary-acceptance.mjs` 与独立报告 profile；确定性检查完整运行图、私有状态、零发布、血缘、重试和预算，连续三次通过只允许进入影子调度评审，不自动改调度 |
 | F1-4B2d3d 受监督单次执行 | 已实现，未运行 | `agent-blog-private-canary-supervisor.mjs` 把一次性执行与不可变验收连成同一操作收据；验收失败以非零状态停止，调度和发布决定恒为不变，独立报告 profile 只用于成功 Run 后的崩溃恢复 |
