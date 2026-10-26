@@ -1009,7 +1009,7 @@ OutputService
 
 显式 `uncertain` 会把尚处于 `prepared`、`authorized` 或 `reserved` 的相关 Action 一并记为未知，避免出现“Run 未知但 Action 被记作已取消”的审计矛盾。预算和 Provider 调用按最保守水位结算。
 
-本项只证明发布边界的代码级故障矩阵已经建立；Foundation V1 仍必须补齐真实 PostgreSQL 下的提交断线、多实例争用和进程级崩溃演练，不能以单元测试替代生产验收。
+隔离 PostgreSQL 验收会执行全部迁移，并实际验证提交前回滚为草稿、提交后响应丢失可恢复、幂等重放后仍只有一条发布回执和一条发布事件。Foundation V1 仍必须补齐多实例争用、真实连接中断和进程级崩溃演练；隔离事务测试不能替代生产 canary。
 
 ### 22.5 安全测试
 
