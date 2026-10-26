@@ -81,6 +81,11 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(compose,/agent-blog-private-scheduler:[\s\S]*?profiles: \["agent-blog-private-scheduler"\][\s\S]*?AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: "false"/u);
  assert.match(compose,/agent-blog-public-run:[\s\S]*?profiles: \["agent-blog-public-run"\][\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
  assert.match(compose,/agent-blog-public-scheduler:[\s\S]*?profiles: \["agent-blog-public-scheduler"\][\s\S]*?AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED:/u);
+ const publicOps=fs.readFileSync(path.join(root,'deploy/agent-blog-public-ops.sh'),'utf8');
+ assert.match(publicOps,/run-once\)/);assert.match(publicOps,/start-scheduler\)/);
+ assert.match(publicOps,/preflight\n\s+compose --profile agent-blog-public-run/);
+ assert.match(publicOps,/This script never edits the/);
+ assert.doesNotMatch(publicOps,/sed -i|mv .*\.env\.prod|AGENT_BLOG_PUBLICATION.*UPDATE/);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
  assert.match(routes,/behavior-profile/);
  assert.match(admin,/新基座先生成私有草稿并完成影子验收/);

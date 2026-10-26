@@ -371,3 +371,16 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 4. 计划开关打开但心跳缺失或过期会明确显示为阻塞，避免“数据库里有下次时间”被误报成“容器正在工作”；
 5. 任何公开 Run 仍在执行前重新做完整 preflight。控制台的绿色状态是可观察性证据，不是授权令牌，也不能绕过唯一发布权、预算、熔断、并发或不确定运行门禁；
 6. 调度失败仍会持久停用计划。心跳只能说明进程活着，不能把失败计划自动恢复，也不能补发错过的文章。
+
+服务器操作统一使用 `deploy/agent-blog-public-ops.sh`，避免手工拼接多行 Compose 命令：
+
+```sh
+cd /www/gamehub/deploy
+./agent-blog-public-ops.sh status
+./agent-blog-public-ops.sh bootstrap
+./agent-blog-public-ops.sh preflight
+./agent-blog-public-ops.sh run-once
+./agent-blog-public-ops.sh start-scheduler
+```
+
+脚本不改 `.env.prod`、不切换发布权、不伪造验收证据，也不自动回退旧流程。`run-once` 与 `start-scheduler` 都先执行只读 preflight；停用计划使用 `stop-scheduler`，查看运行日志使用 `logs`。发布权仍只能通过经过事务重检和审计原因的后台控制面切换。
