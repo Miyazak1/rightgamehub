@@ -74,21 +74,23 @@ export function createGuessBaikeAutomation({ repository, fetchImpl = fetch, cloc
   const runOnce = async () => {
     if (!enabled || running) return { skipped: true };
     running = true; const id = crypto.randomUUID(); const startedAt = clock(); let fetchedCount = 0; let acceptedCount = 0; let scheduledCount = 0;
-    await repository.startAutomationRun({ id, now: startedAt });
     try {
-      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15_000);
-      let pages; try { pages = await fetchWikipediaCandidates({ fetchImpl,batchSize,userAgent,signal: controller.signal }); } finally { clearTimeout(timeout); }
-      fetchedCount = pages.length;
-      const results = pages.map(evaluateCandidate); const puzzles = results.filter(result => result.puzzle).map(result => result.puzzle);
-      acceptedCount = results.filter(result => result.accepted).length;
-      if (puzzles.length) await repository.seed(puzzles,clock());
-      scheduledCount = await fillSchedule(clock());
-      await repository.finishAutomationRun({ id,now: clock(),status: 'succeeded',fetchedCount,acceptedCount,scheduledCount });
-      return { id,status: 'succeeded',fetchedCount,acceptedCount,scheduledCount };
-    } catch (error) {
-      try { scheduledCount = await fillSchedule(clock()); } catch (scheduleError) { logger.error?.({ error: scheduleError.message }, 'Guess Baike fallback scheduling failed'); }
-      await repository.finishAutomationRun({ id,now: clock(),status: 'failed',fetchedCount,acceptedCount,scheduledCount,errorCode: error.code ?? error.name ?? 'AUTOMATION_FAILED',errorMessage: String(error.message ?? error).slice(0,500) });
-      throw error;
+      await repository.startAutomationRun({ id, now: startedAt });
+      try {
+        const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15_000);
+        let pages; try { pages = await fetchWikipediaCandidates({ fetchImpl,batchSize,userAgent,signal: controller.signal }); } finally { clearTimeout(timeout); }
+        fetchedCount = pages.length;
+        const results = pages.map(evaluateCandidate); const puzzles = results.filter(result => result.puzzle).map(result => result.puzzle);
+        acceptedCount = results.filter(result => result.accepted).length;
+        if (puzzles.length) await repository.seed(puzzles,clock());
+        scheduledCount = await fillSchedule(clock());
+        await repository.finishAutomationRun({ id,now: clock(),status: 'succeeded',fetchedCount,acceptedCount,scheduledCount });
+        return { id,status: 'succeeded',fetchedCount,acceptedCount,scheduledCount };
+      } catch (error) {
+        try { scheduledCount = await fillSchedule(clock()); } catch (scheduleError) { logger.error?.({ error: scheduleError.message }, 'Guess Baike fallback scheduling failed'); }
+        await repository.finishAutomationRun({ id,now: clock(),status: 'failed',fetchedCount,acceptedCount,scheduledCount,errorCode: error.code ?? error.name ?? 'AUTOMATION_FAILED',errorMessage: String(error.message ?? error).slice(0,500) });
+        throw error;
+      }
     } finally { running = false; }
   };
   const runSafely = () => runOnce().catch(error => logger.error?.({ error: error.message, code: error.code }, 'Guess Baike automation failed; existing schedule remains active'));
