@@ -59,6 +59,7 @@ export const BLOG_FOUNDATION_SELECTION_PROMPT = `你是小墨鱼的受治理选�
 默认只选一个项目。只有两个或三个项目解决同类问题、存在真实选择关系，并且资料支持至少两个比较维度时，才可选择 comparison。
 single 不得选择 previouslyPublished=true 的仓库；comparison 可以复用旧仓库，但必须存在真实比较关系。
 不得根据热词或臆测判断“有趣”，只能引用输入的人格兴趣信号和可观察资料信号。
+interestSignals 的每一项必须逐字复制 allowedInterestSignals 中的一个完整标签，不得追加冒号、解释、证据或改写。
 返回字段必须且只能是 mode、selectedIndexes、angle、rationale、interestSignals、comparisonAxes。`;
 
 export const BLOG_FOUNDATION_COMPOSITION_PROMPT = `你是小墨鱼，面向中文大众读者写一篇有判断、有证据的开源项目文章。只输出一个 JSON 对象，不要输出 Markdown。
@@ -134,10 +135,17 @@ function editorialInput(context) {
 
 function semanticSelection(output, candidates, profile, previousRepositoryUrls) {
   const indexes = [...new Set(output.selectedIndexes)];
-  if (indexes.length !== output.selectedIndexes.length || indexes.some(index => !Number.isSafeInteger(index)
-    || index < 1 || index > candidates.length) || (output.mode === 'single' && indexes.length !== 1)
-    || (output.mode === 'comparison' && (indexes.length < 2 || indexes.length > 3
-      || profile.modules.editorial.comparisonEnabled !== true))) fail('AGENT_BLOG_SELECTION_INVALID');
+  if (indexes.length !== output.selectedIndexes.length) fail('AGENT_BLOG_SELECTION_INDEX_DUPLICATE');
+  if (indexes.some(index => !Number.isSafeInteger(index) || index < 1 || index > candidates.length)) {
+    fail('AGENT_BLOG_SELECTION_INDEX_INVALID');
+  }
+  if ((output.mode === 'single' && indexes.length !== 1)
+    || (output.mode === 'comparison' && (indexes.length < 2 || indexes.length > 3))) {
+    fail('AGENT_BLOG_SELECTION_CARDINALITY_INVALID');
+  }
+  if (output.mode === 'comparison' && profile.modules.editorial.comparisonEnabled !== true) {
+    fail('AGENT_BLOG_SELECTION_COMPARISON_DISABLED');
+  }
   const previous = new Set(previousRepositoryUrls.map(repositoryKey).filter(Boolean));
   const selected = indexes.map(index => candidates[index - 1]);
   if (output.mode === 'single' && previous.has(repositoryKey(selected[0].repositoryUrl))) {
@@ -145,14 +153,24 @@ function semanticSelection(output, candidates, profile, previousRepositoryUrls) 
   }
   const angle = compact(output.angle, 240);
   const rationale = compact(output.rationale, 500);
-  const interestSignals = output.interestSignals.map(item => compact(item, 80));
+  const configuredSignals = profile.modules.editorial.interestSignals;
+  const canonicalSignal = value => {
+    const item = compact(value, 500);
+    const matches = configuredSignals.filter(signal => item === signal
+      || item.startsWith(`${signal}：`) || item.startsWith(`${signal}:`));
+    return matches.length === 1 ? matches[0] : null;
+  };
+  const interestSignals = output.interestSignals.map(canonicalSignal);
   const comparisonAxes = output.comparisonAxes.map(item => compact(item, 80));
-  const configured = new Set(profile.modules.editorial.interestSignals);
-  if (angle.length < 10 || rationale.length < 30 || interestSignals.length < 1 || interestSignals.length > 6
-    || interestSignals.some(item => item.length < 2 || !configured.has(item))
-    || (output.mode === 'single' && comparisonAxes.length !== 0)
-    || (output.mode === 'comparison' && (comparisonAxes.length < 2 || comparisonAxes.length > 5
-      || comparisonAxes.some(item => item.length < 2)))) fail('AGENT_BLOG_SELECTION_INVALID');
+  if (angle.length < 10) fail('AGENT_BLOG_SELECTION_ANGLE_INVALID');
+  if (rationale.length < 30) fail('AGENT_BLOG_SELECTION_RATIONALE_INVALID');
+  if (interestSignals.length < 1 || interestSignals.length > 6 || interestSignals.some(item => item === null)) {
+    fail('AGENT_BLOG_SELECTION_INTEREST_SIGNAL_INVALID');
+  }
+  if (new Set(interestSignals).size !== interestSignals.length) fail('AGENT_BLOG_SELECTION_INTEREST_SIGNAL_DUPLICATE');
+  if (output.mode === 'single' && comparisonAxes.length !== 0) fail('AGENT_BLOG_SELECTION_SINGLE_AXES_INVALID');
+  if (output.mode === 'comparison' && (comparisonAxes.length < 2 || comparisonAxes.length > 5
+    || comparisonAxes.some(item => item.length < 2))) fail('AGENT_BLOG_SELECTION_COMPARISON_AXES_INVALID');
   return {
     mode: output.mode, selectedIndexes: indexes, selectedToolArtifactIds: selected.map(item => item.artifactId),
     repositories: selected.map(item => item.repositoryKey), repositoryUrls: selected.map(item => item.repositoryUrl),
@@ -241,13 +259,14 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
       const request = {
         topicScope: input.topicScope, recentTitles: input.recentTitles,
         agentBehavior: input.profile,
+        allowedInterestSignals: input.profile.modules.editorial.interestSignals,
         candidates: candidates.map(({ artifactId, ...candidate }) => candidate),
       };
       const result = await providerGateway.invoke({
         runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId, leaseToken: execution.leaseToken,
         action: { actionKey: 'select-subject', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `blog-select:${context.run.id}`, resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 1 },
+        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 2 },
         responseSchema: BLOG_FOUNDATION_SELECTION_SCHEMA,
         request: { messages: [{ role: 'system', content: BLOG_FOUNDATION_SELECTION_PROMPT }, { role: 'user', content: JSON.stringify(request) }], temperature: 0.25 },
         tokenCeiling: 1800, timeoutSeconds: 240, estimatedInputTokens: estimatedTokens(request),

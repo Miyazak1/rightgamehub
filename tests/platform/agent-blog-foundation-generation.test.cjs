@@ -61,7 +61,7 @@ test('foundation generation separates provider selection and composition from de
         status: 'succeeded', actionId: uuid(), output: { mode: 'single', selectedIndexes: [1],
           angle: '从普通用户第一次完成体验的路径观察项目价值',
           rationale: '资料同时展示了清楚说明、可观察结果和常见使用场景，符合小墨鱼关注快速体验与结果直观的兴趣方向。',
-          interestSignals: ['可以快速体验'], comparisonAxes: [] },
+          interestSignals: ['可以快速体验：安装后能够很快看到可验证结果。'], comparisonAxes: [] },
       };
       return { status: 'succeeded', actionId: uuid(), output: {
         title: '让复杂工具真正动手做事', summary: '这篇文章依据固定版本的项目资料，说明它如何把复杂工作整理成可理解、可验证的实践路径，并分析适用对象和使用边界。',
@@ -83,6 +83,7 @@ test('foundation generation separates provider selection and composition from de
     outputRef: { artifactIds: [toolArtifactId] } }]);
   const selected = await handlers['blog.project.single.draft-shadow:select-subject'](selectContext, execution);
   assert.equal(selected.outputRef.artifactKey, 'blog.selection');
+  assert.deepEqual(stored.get(selected.outputRef.artifactId).content.selection.interestSignals, ['可以快速体验']);
   const composeContext = context(runId, uuid(), 'compose', [{ stageKey: 'select-subject', status: 'succeeded',
     outputRef: selected.outputRef }]);
   const composed = await handlers['blog.project.single.draft-shadow:compose'](composeContext, execution);
@@ -93,6 +94,8 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(verified.outputRef.approved, true);
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 2 });
+  assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls.every(item => item.action.capabilityKey === 'provider.text.generate' && item.action.riskLevel === 'L2'));
   assert.equal(providerCalls.some(item => item.action.actionKey === 'verify'), false);
   const verification = stored.get(verified.outputRef.artifactId).content;
@@ -116,6 +119,23 @@ test('foundation selection rejects a repeated repository in single-project mode 
   });
   await assert.rejects(handlers['blog.project.single.draft-shadow:select-subject'](inputContext,
     { workerId: 'worker', leaseToken: uuid() }), error => error.code === 'AGENT_BLOG_SELECTION_DUPLICATE_SINGLE');
+});
+
+test('foundation selection rejects invented interest signals with a specific diagnostic code', async () => {
+  const { createAgentBlogFoundationGenerationHandlers } = await load('agent-blog-foundation-generation.mjs');
+  const runId = uuid();
+  const toolArtifactId = uuid();
+  const inputContext = context(runId, uuid(), 'select-subject', [{ stageKey: 'collect-evidence', status: 'succeeded',
+    outputRef: { artifactId: toolArtifactId } }]);
+  const handlers = createAgentBlogFoundationGenerationHandlers({
+    providerGateway: { invoke: async () => ({ actionId: uuid(), output: { mode: 'single', selectedIndexes: [1],
+      angle: '从普通用户第一次完成体验的路径观察项目价值',
+      rationale: '候选项目资料完整，并且具备可观察的结果与清楚的使用说明，适合独立介绍。',
+      interestSignals: ['模型自行编造的兴趣'], comparisonAxes: [] } }) },
+    artifactRepository: { readToolArtifact: async () => evidence(toolArtifactId), save: async () => assert.fail('must not persist') },
+  });
+  await assert.rejects(handlers['blog.project.single.draft-shadow:select-subject'](inputContext,
+    { workerId: 'worker', leaseToken: uuid() }), error => error.code === 'AGENT_BLOG_SELECTION_INTEREST_SIGNAL_INVALID');
 });
 
 test('foundation response schemas reject prose and unexpected properties', async () => {
