@@ -31,11 +31,18 @@ export function loadAgentBlogPrivateCanaryConfig(env = process.env) {
   const provider = env.AGENT_BLOG_PRIVATE_CANARY_PROVIDER?.trim() || 'deepseek';
   const modelId = env.AGENT_BLOG_PRIVATE_CANARY_MODEL_ID?.trim() || 'deepseek-flash';
   if (provider !== 'deepseek' || !MODEL.test(modelId)) fail('AGENT_BLOG_PRIVATE_CANARY_MODEL_INVALID');
+  const dailyDiscoveryRunBaseLimit = integer(env.AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT ?? 1,
+    1, 4, 'AGENT_BLOG_PRIVATE_CANARY_DAILY_LIMIT_INVALID');
+  const extraDailyRunAllowance = integer(env.AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE ?? 0,
+    0, 1, 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_INVALID');
+  if (extraDailyRunAllowance > 0 && dailyDiscoveryRunBaseLimit !== 4) {
+    fail('AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_REQUIRES_MAX_BASE');
+  }
   return Object.freeze({
     schemaVersion: 'agent-blog-private-canary-config-v1', enabled, publishEnabled: false,
     agentUserId, provider, modelId,
-    dailyDiscoveryRunLimit: integer(env.AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT ?? 1,
-      1, 4, 'AGENT_BLOG_PRIVATE_CANARY_DAILY_LIMIT_INVALID'),
+    dailyDiscoveryRunLimit: dailyDiscoveryRunBaseLimit + extraDailyRunAllowance,
+    dailyDiscoveryRunBaseLimit, extraDailyRunAllowance,
     monthlyProviderCallLimit: integer(env.AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT ?? 12,
       1, 100, 'AGENT_BLOG_PRIVATE_CANARY_PROVIDER_LIMIT_INVALID'),
     monthlyCostMicrousdLimit: integer(env.AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT ?? 1_000_000,
@@ -80,6 +87,8 @@ export function evaluateAgentBlogPrivateCanarySnapshot(config, snapshot) {
     blockers,
     limits: {
       dailyDiscoveryRuns: config.dailyDiscoveryRunLimit,
+      dailyDiscoveryRunsBase: config.dailyDiscoveryRunBaseLimit ?? config.dailyDiscoveryRunLimit,
+      temporaryExtraDailyRuns: config.extraDailyRunAllowance ?? 0,
       monthlyProviderCalls: config.monthlyProviderCallLimit,
       monthlyCostMicrousd: config.monthlyCostMicrousdLimit,
       consecutiveFailures: config.consecutiveFailureLimit,

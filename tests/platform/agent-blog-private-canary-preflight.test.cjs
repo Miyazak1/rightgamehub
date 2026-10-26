@@ -13,6 +13,8 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
   const disabled = loadAgentBlogPrivateCanaryConfig({});
   assert.equal(disabled.enabled, false);
   assert.equal(disabled.publishEnabled, false);
+  assert.equal(disabled.dailyDiscoveryRunLimit, 1);
+  assert.equal(disabled.extraDailyRunAllowance, 0);
   assert.throws(() => loadAgentBlogPrivateCanaryConfig({
     AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: 'true',
   }), error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_PUBLISH_FORBIDDEN');
@@ -26,6 +28,29 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
     awaitingHandoff: 0, discoveryRunsToday: 0, providerCallsMonth: 0,
     costMicrousdMonth: 0, consecutiveFailures: 0 };
   assert.equal(evaluateAgentBlogPrivateCanarySnapshot(enabled, readySnapshot).ready, true);
+  const oneExtraRun = loadAgentBlogPrivateCanaryConfig({
+    AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
+    AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
+    AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
+    AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '1',
+  });
+  assert.equal(oneExtraRun.dailyDiscoveryRunLimit, 5);
+  assert.equal(oneExtraRun.dailyDiscoveryRunBaseLimit, 4);
+  assert.equal(oneExtraRun.extraDailyRunAllowance, 1);
+  assert.equal(evaluateAgentBlogPrivateCanarySnapshot(oneExtraRun,
+    { ...readySnapshot, discoveryRunsToday: 4 }).ready, true);
+  assert.throws(() => loadAgentBlogPrivateCanaryConfig({
+    AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
+    AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
+    AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
+    AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '2',
+  }), error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_INVALID');
+  assert.throws(() => loadAgentBlogPrivateCanaryConfig({
+    AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
+    AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
+    AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '3',
+    AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '1',
+  }), error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_REQUIRES_MAX_BASE');
   const blocked = evaluateAgentBlogPrivateCanarySnapshot(enabled, {
     ...readySnapshot, activeRuns: 1, uncertainRuns: 1, awaitingHandoff: 1,
     discoveryRunsToday: 1, providerCallsMonth: 12, costMicrousdMonth: 1_000_000,

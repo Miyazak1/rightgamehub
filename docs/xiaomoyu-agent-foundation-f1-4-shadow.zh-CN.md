@@ -242,6 +242,8 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 真实 canary 的结论不由模型或人工印象决定。`agent-blog-canary-acceptance-policy-v1` 对一个完整发现—交接—草稿运行图做确定性验收：
 
+受监督调试若已经用尽每天四次发现额度，不得修改服务器时间或放宽永久默认值。运营者可以在单次 preflight 与 run 命令中显式设置 `AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE=1`；它只在基础额度明确为四时生效，最多增加一次，默认值为零，并在 shell 变量取消后立即恢复。发布禁令、月度 Provider/费用额度、连续失败熔断和所有验收条件不受该临时额度影响。
+
 1. 发现必须是 `blog.project.discovery-shadow@3`，草稿必须是 `blog.project.single.draft-shadow@1`，两者触发引用一致且由唯一原子交接记录连接；
 2. 四个发现 Stage 与六个草稿 Stage 必须全部成功，不接受重试、失败、不确定或残留 Action；
 3. 全图必须恰好有三次成功 Provider 调用，Tool 调用在二至十三次之间，总耗时不超过一小时，单样本费用不超过一美元；上限增加的两次只允许来自发现阶段的确定性零结果回退；
