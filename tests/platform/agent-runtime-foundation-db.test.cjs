@@ -109,10 +109,14 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
     agentUserId: account.agentUserId, workflowKey: workerManifest.workflowKey, workflowVersion: 1,
     triggerKind: 'system', idempotencyKey: `worker:${crypto.randomUUID()}`, input: { fixture: true }, config: {},
   });
+  const decoyRun = await runtime.createRun({
+    agentUserId: account.agentUserId, workflowKey: workerManifest.workflowKey, workflowVersion: 1,
+    triggerKind: 'system', idempotencyKey: `worker-decoy:${crypto.randomUUID()}`, input: { fixture: 'decoy' }, config: {},
+  });
   const workerOutputId = crypto.randomUUID();
   const worker = createAgentRuntimeWorker({
     repository: runtime, workerId: 'foundation-runtime-worker', instanceId: crypto.randomUUID(),
-    leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 25,
+    leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 25, targetRunId: workerRun.id,
     handlers: { [`${workerManifest.workflowKey}:execute`]: async context => ({
       outputRef: { inputHash: context.run.inputSha256 }, runOutput: { type: 'foundation.result', id: workerOutputId },
     }) },
@@ -121,9 +125,19 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   assert.equal(workerResult.status, 'completed');
   assert.equal(workerResult.run.outputId, workerOutputId);
   assert.equal((await admin.query('SELECT status FROM agent_runs WHERE id=$1', [workerRun.id])).rows[0].status, 'succeeded');
-  assert.equal((await admin.query("SELECT count(*)::int AS n FROM agent_runtime_outbox WHERE status='pending'", [])).rows[0].n, 0);
+  assert.equal((await admin.query('SELECT status FROM agent_runs WHERE id=$1', [decoyRun.id])).rows[0].status, 'queued');
   await worker.stop();
   assert.equal((await admin.query("SELECT status FROM agent_runtime_workers WHERE worker_id='foundation-runtime-worker'")).rows[0].status, 'offline');
+  const decoyWorker = createAgentRuntimeWorker({
+    repository: runtime, workerId: 'foundation-runtime-decoy-worker', instanceId: crypto.randomUUID(),
+    leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 25, targetRunId: decoyRun.id,
+    handlers: { [`${workerManifest.workflowKey}:execute`]: async () => ({
+      outputRef: { decoy: true }, runOutput: { type: 'foundation.result', id: crypto.randomUUID() },
+    }) },
+  });
+  assert.equal((await decoyWorker.runOnce()).status, 'completed');
+  await decoyWorker.stop();
+  assert.equal(Number((await admin.query("SELECT count(*)::int AS n FROM agent_runtime_outbox WHERE status='pending'", [])).rows[0].n) >= 2, true);
 
   const recoveryManifest = { ...workerManifest, workflowKey: `foundation.recovery.${crypto.randomBytes(5).toString('hex')}` };
   await runtime.registerWorkflow({ actorUserId: operatorId, manifest: recoveryManifest });

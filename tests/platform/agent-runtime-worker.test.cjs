@@ -27,7 +27,7 @@ function repositoryFixture({ handlerFailure = false } = {}) {
       },
       async deliverOutbox(input) { calls.push(['deliver-outbox', input]); },
       async failOutbox(input) { calls.push(['fail-outbox', input]); },
-      async claimNextStage(workerId, leaseSeconds, routes) { calls.push(['claim-stage', workerId, leaseSeconds, routes]); return stage; },
+      async claimNextStage(workerId, leaseSeconds, routes, targetRunId) { calls.push(['claim-stage', workerId, leaseSeconds, routes, targetRunId]); return stage; },
       async heartbeatWorker(input) { calls.push(['heartbeat', input.status]); return input; },
       async startStage(input) { calls.push(['start-stage', input]); return stage; },
       async loadStageExecutionContext() {
@@ -64,8 +64,26 @@ test('runtime worker dispatches outbox and atomically completes a registered sta
   assert(fixture.calls.some(call => call[0] === 'deliver-outbox'));
   const claim = fixture.calls.find(call => call[0] === 'claim-stage');
   assert.deepEqual(claim[3], ['foundation.worker:prepare']);
+  assert.equal(claim[4], null);
   const completed = fixture.calls.find(call => call[0] === 'complete-stage')[1];
   assert.deepEqual(completed.runOutput, { type: 'foundation.result', id: outputId });
+});
+
+test('runtime worker can be pinned to one explicit run for isolated one-shot execution', async () => {
+  const { createAgentRuntimeWorker } = await import(moduleUrl.href);
+  const fixture = repositoryFixture();
+  const targetRunId = '22222222-2222-4222-8222-222222222222';
+  const worker = createAgentRuntimeWorker({
+    repository: fixture.repository, workerId: 'worker-test', targetRunId,
+    leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 1,
+    handlers: { 'foundation.worker:prepare': async () => ({ outputRef: { isolated: true } }) },
+  });
+  await worker.runOnce();
+  assert.equal(fixture.calls.find(call => call[0] === 'claim-stage')[4], targetRunId);
+  assert.equal(fixture.calls.some(call => call[0] === 'recover-stages'), false);
+  assert.equal(fixture.calls.some(call => call[0] === 'claim-outbox'), false);
+  assert.throws(() => createAgentRuntimeWorker({ repository: fixture.repository,
+    targetRunId: 'not-a-run', handlers: {} }), /AGENT_RUNTIME_TARGET_RUN_INVALID/u);
 });
 test('runtime worker converts explicit retryable handler failures into durable retry scheduling', async () => {
   const { createAgentRuntimeWorker, AgentRuntimeWorkerError } = await import(moduleUrl.href);

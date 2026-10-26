@@ -88,6 +88,7 @@ export function createAgentRuntimeWorker({
   outboxLeaseSeconds = 30,
   recoveryBatch = 25,
   outboxBatch = 25,
+  targetRunId = null,
   logger = false,
 } = {}) {
   if (!repository) fail('AGENT_RUNTIME_REPOSITORY_REQUIRED');
@@ -99,6 +100,10 @@ export function createAgentRuntimeWorker({
   integer(outboxLeaseSeconds, 5, 600, 'AGENT_RUNTIME_OUTBOX_LEASE_INVALID');
   integer(recoveryBatch, 1, 200, 'AGENT_RUNTIME_RECOVERY_BATCH_INVALID');
   integer(outboxBatch, 1, 200, 'AGENT_RUNTIME_OUTBOX_BATCH_INVALID');
+  if (targetRunId !== null && (typeof targetRunId !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(targetRunId))) {
+    fail('AGENT_RUNTIME_TARGET_RUN_INVALID');
+  }
 
   let registered = false;
   let running = false;
@@ -210,12 +215,16 @@ export function createAgentRuntimeWorker({
     running = true;
     try {
       await register();
-      const [stageRecovery, outboxRecovery] = await Promise.all([
-        repository.recoverExpiredStages({ workerId, limit: recoveryBatch }),
-        repository.recoverExpiredOutbox({ limit: recoveryBatch }),
-      ]);
-      const outbox = await dispatchOutbox();
-      const claimed = await repository.claimNextStage(workerId, leaseSeconds, [...routes.keys()]);
+      const isolated = targetRunId !== null;
+      const [stageRecovery, outboxRecovery] = isolated
+        ? [{ examined: 0, requeued: 0, failed: 0, uncertain: 0 },
+          { examined: 0, requeued: 0, failed: 0 }]
+        : await Promise.all([
+          repository.recoverExpiredStages({ workerId, limit: recoveryBatch }),
+          repository.recoverExpiredOutbox({ limit: recoveryBatch }),
+        ]);
+      const outbox = isolated ? { delivered: 0, failed: 0 } : await dispatchOutbox();
+      const claimed = await repository.claimNextStage(workerId, leaseSeconds, [...routes.keys()], targetRunId);
       if (!claimed) {
         await repository.heartbeatWorker({ workerId, instanceId, status: 'idle', currentStageId: null });
         return { status: 'idle', recovery: { stages: stageRecovery, outbox: outboxRecovery }, outbox };

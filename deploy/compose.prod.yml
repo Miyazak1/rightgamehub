@@ -534,6 +534,45 @@ services:
     mem_limit: 96m
     networks: [backend]
 
+  # Explicit one-shot private canary. It has no restart policy, scheduler or
+  # publish route; run it only after the read-only preflight reports ready.
+  agent-blog-canary-run:
+    <<: *service-defaults
+    profiles: ["agent-blog-canary-run"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-blog-private-canary-manual-run-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_BLOG_PRIVATE_CANARY_ENABLED: ${AGENT_BLOG_PRIVATE_CANARY_ENABLED:-false}
+      AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: ${AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED:-false}
+      AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: ${AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID:-}
+      AGENT_BLOG_PRIVATE_CANARY_REQUEST_ID: ${AGENT_BLOG_PRIVATE_CANARY_REQUEST_ID:-}
+      AGENT_BLOG_PRIVATE_CANARY_PROVIDER: ${AGENT_BLOG_PRIVATE_CANARY_PROVIDER:-deepseek}
+      AGENT_BLOG_PRIVATE_CANARY_MODEL_ID: ${AGENT_BLOG_PRIVATE_CANARY_MODEL_ID:-deepseek-flash}
+      AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT:-1}
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT:-12}
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT:-1000000}
+      AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: ${AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD:-2}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
   rules-operator:
     <<: *service-defaults
     profiles: [rules-operations]

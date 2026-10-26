@@ -237,10 +237,13 @@ export class PostgresAgentRuntimeRepository {
     });
   }
 
-  async claimNextStage(workerId, leaseSeconds = 60, supportedRoutes = null) {
+  async claimNextStage(workerId, leaseSeconds = 60, supportedRoutes = null, targetRunId = null) {
     workerIdentifier(workerId);
     boundedInteger(leaseSeconds, 5, 3600, 'AGENT_RUNTIME_LEASE_INVALID');
     const routes = routeKeys(supportedRoutes);
+    if (targetRunId !== null && (typeof targetRunId !== 'string' || !UUID.test(targetRunId))) {
+      fail('AGENT_RUNTIME_TARGET_RUN_INVALID');
+    }
     if (routes?.length === 0) return null;
     return withTransaction(this.pool, async client => {
       const leaseToken = crypto.randomUUID();
@@ -256,6 +259,7 @@ export class PostgresAgentRuntimeRepository {
         WHERE s.status='queued' AND s.available_at<=now() AND s.attempt<s.max_attempts
           AND r.status IN ('queued','running','waiting')
           AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
+          AND ($5::uuid IS NULL OR r.id=$5)
         GROUP BY r.agent_user_id
       ), candidate AS (
         SELECT s.id FROM agent_run_stages s
@@ -265,11 +269,12 @@ export class PostgresAgentRuntimeRepository {
         WHERE s.status='queued' AND s.available_at<=now() AND s.attempt<s.max_attempts
           AND r.status IN ('queued','running','waiting')
           AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
+          AND ($5::uuid IS NULL OR r.id=$5)
         ORDER BY queue.active_count,queue.oldest_available,s.available_at,s.created_at,s.id
         FOR UPDATE OF account,s SKIP LOCKED LIMIT 1
       ) UPDATE agent_run_stages s SET status='leased',attempt=attempt+1,lease_token=$2,leased_by=$1,
         lease_until=now()+($3*interval '1 second'),attempt_started_at=now(),started_at=COALESCE(started_at,now()),updated_at=now()
-        FROM candidate WHERE s.id=candidate.id RETURNING s.*`, [workerId, leaseToken, leaseSeconds, routes])).rows[0];
+        FROM candidate WHERE s.id=candidate.id RETURNING s.*`, [workerId, leaseToken, leaseSeconds, routes, targetRunId])).rows[0];
       if (!row) return null;
       await client.query(`UPDATE agent_runs SET status='running',started_at=COALESCE(started_at,now()),updated_at=now()
         WHERE id=$1 AND status IN ('queued','waiting')`, [row.run_id]);
