@@ -80,3 +80,30 @@ test('generated Guess Baike bank contains only complete eligible leads', async (
   }
 });
 
+
+test('generated Guess Baike categories survive startup validation', async () => {
+  const { evaluateGuessBaikeSelection } = await import('../../packages/platform-client/src/guess-baike-policy.mjs');
+  const bank = require('../../packages/platform-client/src/guess-baike-puzzles.json');
+  for (const puzzle of bank.puzzles) {
+    const generated = evaluateGuessBaikeSelection({ ...puzzle, curatedCategory: puzzle.category, requirePopularity: false });
+    assert.equal(generated.eligible, true, puzzle.title);
+    const startup = evaluateGuessBaikeSelection({ ...puzzle, content: generated.content, curatedCategory: generated.category, requirePopularity: false });
+    assert.equal(startup.eligible, true, puzzle.title + ': ' + startup.reason);
+    assert.equal(startup.category, generated.category, puzzle.title);
+  }
+});
+
+test('all canonical curated topics remain valid without bypassing other selection rules', async () => {
+  const { evaluateGuessBaikeSelection } = await import('../../packages/platform-client/src/guess-baike-policy.mjs');
+  const content = '这是完整的中文百科导言，用于介绍基本概念、主要特点及其对人类社会的影响。'.repeat(20);
+  for (const curatedCategory of ['科学', '历史', '地理', '人文', '娱乐', '体育', '生活']) {
+    const input = { title: '百科主题', content, curatedCategory, requirePopularity: false };
+    const result = evaluateGuessBaikeSelection(input);
+    assert.equal(result.eligible, true, curatedCategory);
+    assert.equal(result.category, curatedCategory);
+    assert.equal(evaluateGuessBaikeSelection({ ...input, title: 'AI主题' }).eligible, false);
+    assert.equal(evaluateGuessBaikeSelection({ ...input, content: '短文' }).eligible, false);
+    assert.equal(evaluateGuessBaikeSelection({ ...input, categories: ['Category:在世人物'] }).eligible, false);
+    assert.equal(evaluateGuessBaikeSelection({ ...input, requirePopularity: true }).reasonCode, 'POPULARITY_DATA_MISSING');
+  }
+});

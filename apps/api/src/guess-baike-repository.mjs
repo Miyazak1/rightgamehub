@@ -1,3 +1,5 @@
+import { GUESS_BAIKE_SELECTION_POLICY_VERSION } from '../../../packages/platform-client/src/guess-baike-policy.mjs';
+
 export class PostgresGuessBaikeRepository {
   constructor(pool) { this.pool = pool; }
   async seed(puzzles, now) {
@@ -33,7 +35,7 @@ export class PostgresGuessBaikeRepository {
   async setStatus(id, status, now) {
     return (await this.pool.query(
       `UPDATE guess_baike_puzzles SET status=$2,updated_at=$3
-       WHERE id=$1 AND ($2='disabled' OR quality_reason IS NULL) RETURNING *`, [id,status,now],
+       WHERE id=$1 AND ($2='disabled' OR (quality_reason IS NULL AND selection_signals->>'policyVersion'=$4::text)) RETURNING *`, [id,status,now,GUESS_BAIKE_SELECTION_POLICY_VERSION],
     )).rows[0] ?? null;
   }
   async rejectLegacyUnverified({ approvedIds, policyVersion, fromDate, now }) {
@@ -41,13 +43,13 @@ export class PostgresGuessBaikeRepository {
     try {
       await client.query('BEGIN');
       await client.query(
-        `UPDATE guess_baike_puzzles SET status='rejected',quality_reason='缺少当前严格选题规则所需的分类或大众度信号',updated_at=$3
-         WHERE status='ready' AND NOT (id=ANY($1::text[])) AND selection_signals->>'policyVersion' IS DISTINCT FROM $2::text`,
+        `UPDATE guess_baike_puzzles SET status=CASE WHEN status='disabled' THEN 'disabled' ELSE 'rejected' END,quality_reason='缺少当前严格选题规则所需的分类或大众度信号',updated_at=$3
+         WHERE status IN ('ready','disabled') AND NOT (id=ANY($1::text[])) AND selection_signals->>'policyVersion' IS DISTINCT FROM $2::text`,
         [approvedIds,policyVersion,now],
       );
       await client.query(
         `DELETE FROM guess_baike_schedule s USING guess_baike_puzzles p
-         WHERE s.puzzle_id=p.id AND p.status='rejected' AND s.puzzle_date >= $1::date`,
+         WHERE s.puzzle_id=p.id AND (p.status='rejected' OR (p.status='disabled' AND p.quality_reason IS NOT NULL)) AND s.puzzle_date >= $1::date`,
         [fromDate],
       );
       await client.query('COMMIT');

@@ -84,6 +84,8 @@ export function summarizeWikipediaPageviews(pageviews = {}) {
 }
 
 export function classifyGuessBaikeTopic(categories = [], curatedCategory = '') {
+  // Generated banks store canonical topics; accept them again during startup validation.
+  if (topicRules.some(([topic]) => topic === curatedCategory)) return curatedCategory;
   const categoryText = [curatedCategory, ...categories.map(item => typeof item === 'string' ? item : item?.title)]
     .filter(Boolean)
     .map(item => String(item).replace(/^(?:Category|分类):/u, ''))

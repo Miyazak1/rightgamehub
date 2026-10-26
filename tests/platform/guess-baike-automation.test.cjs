@@ -79,10 +79,48 @@ test('strict Guess Baike migration rejects unverifiable legacy inventory and rem
   await repository.rejectLegacyUnverified({ approvedIds: ['curated-1'], policyVersion: 2, fromDate: '2026-10-21', now });
 
   assert.equal(calls[0].sql, 'BEGIN');
-  assert.match(calls[1].sql, /status='rejected'/);
+  assert.match(calls[1].sql, /status IN \('ready','disabled'\)/);
   assert.deepEqual(calls[1].values, [['curated-1'], 2, now]);
   assert.match(calls[2].sql, /DELETE FROM guess_baike_schedule/);
   assert.deepEqual(calls[2].values, ['2026-10-21']);
   assert.equal(calls[3].sql, 'COMMIT');
   assert.equal(released, true);
+});
+
+test('automatic Guess Baike retries after the run journal temporarily fails', async () => {
+  const { createGuessBaikeAutomation } = await import('../../apps/api/src/guess-baike-automation.mjs');
+  let starts = 0; let fetches = 0; const finished = [];
+  const unavailable = new Error('temporary database failure');
+  const repository = {
+    startAutomationRun: async () => { if (++starts === 1) throw unavailable; },
+    finishAutomationRun: async input => { finished.push(input); },
+    automationSnapshot: async () => ({ puzzles: [], schedules: [] }),
+  };
+  const automation = createGuessBaikeAutomation({ repository, fetchImpl: async () => { fetches++; return { ok: true, json: async () => ({ query: { pages: [] } }) }; } });
+  await assert.rejects(automation.runOnce(), error => error === unavailable);
+  assert.equal(fetches, 0, 'do not fetch candidates before the run journal exists');
+  assert.equal(finished.length, 0, 'do not finish a run that was never created');
+  const result = await automation.runOnce();
+  assert.equal(result.status, 'succeeded');
+  assert.equal(starts, 2);
+  assert.equal(fetches, 1);
+  assert.equal(finished.length, 1);
+  assert.equal(finished[0].id, result.id);
+});
+
+test('automatic Guess Baike still excludes overlapping runs while starting', async () => {
+  const { createGuessBaikeAutomation } = await import('../../apps/api/src/guess-baike-automation.mjs');
+  let releaseStart; let starts = 0;
+  const starting = new Promise(resolve => { releaseStart = resolve; });
+  const repository = {
+    startAutomationRun: async () => { starts++; await starting; },
+    finishAutomationRun: async () => {},
+    automationSnapshot: async () => ({ puzzles: [], schedules: [] }),
+  };
+  const automation = createGuessBaikeAutomation({ repository, fetchImpl: async () => ({ ok: true, json: async () => ({}) }) });
+  const first = automation.runOnce();
+  try { assert.deepEqual(await automation.runOnce(), { skipped: true }); }
+  finally { releaseStart(); }
+  assert.equal((await first).status, 'succeeded');
+  assert.equal(starts, 1);
 });
