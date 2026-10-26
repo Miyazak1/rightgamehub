@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F1-I4B2d2b\
-状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放、F1-4B2 私有草稿影子 Run，以及自动查询规划、跨 Run 候选交接和私有汇总观测已在开发分支实现；尚未部署，所有 canary 默认关闭，发布权与生产 Provider 调用权仍完全属于旧博客链路\
+版本：F1-I4B2d3a\
+状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放、F1-4B2 私有草稿影子 Run，以及自动查询规划、跨 Run 候选交接、私有汇总观测和只读上线预检已在开发分支实现；尚未部署，所有 canary 默认关闭，发布权与生产 Provider 调用权仍完全属于旧博客链路\
 更新日期：2026-10-26\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -38,6 +38,7 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-4B2d1 独立候选发现端口 | 已实现，canary 默认关闭 | `agent-github-repository-search-tool.mjs`、`agent-blog-candidate-discovery.mjs`、`0132_agent_blog_candidate_discovery.sql`；独立最小权限、最多五次搜索、最多十二个候选，搜索摘要不能充当文章证据，也没有 Provider、草稿或发布权限 |
 | F1-4B2d2a 自动查询规划 | 已实现，canary 默认关闭 | `blog.project.discovery-shadow@2` 只允许一次结构化 Provider 调用把中文选题范围变成最多五条普通搜索词；`0133_agent_stage_action_lineage.sql` 允许首个模型产物以同 Run 成功 Action 作为血缘起点，候选集继续同时绑定查询计划和搜索工具产物 |
 | F1-4B2d2b 跨 Run 候选交接与汇总观测 | 已实现，canary 默认关闭 | `0134_agent_run_handoffs.sql`、`agent-blog-candidate-handoff.mjs`、`agent-blog-canary-observability.mjs`；来源 Run、候选工件及哈希、目标 Run 和目标输入哈希在一个事务中冻结，管理员只能读取交接摘要与聚合状态/用量 |
+| F1-4B2d3a 私有 canary 上线预检 | 已实现，只读且默认关闭 | `agent-blog-private-canary-preflight.mjs` 与独立 Compose profile；强制单 Agent、发布恒为 false，并在任何 Run 创建前检查身份、权限、工作流、密钥、模型、熔断、积压、不确定态、每日次数和月度费用 |
 
 ## 2. 冻结决策
 

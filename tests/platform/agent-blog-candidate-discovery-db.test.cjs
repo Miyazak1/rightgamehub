@@ -29,6 +29,8 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
       await harness.load('agent-blog-candidate-handoff.mjs');
     const { createAgentBlogCanaryObservabilityService } =
       await harness.load('agent-blog-canary-observability.mjs');
+    const { loadAgentBlogPrivateCanaryConfig, PostgresAgentBlogPrivateCanaryPreflightRepository,
+      runAgentBlogPrivateCanaryPreflight } = await harness.load('agent-blog-private-canary-preflight.mjs');
 
     const operatorId = crypto.randomUUID();
     await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Discovery operator','admin')", [operatorId]);
@@ -212,6 +214,22 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     await admin.query(`UPDATE agent_runs SET status='cancelled',finished_at=now(),
       error_code='TEST_CANARY_CLEANUP',error_message='Unexecuted handoff fixture cleanup.',updated_at=now()
       WHERE id=$1 AND status='queued'`, [draftRun.id]);
+    const preflightConfig = loadAgentBlogPrivateCanaryConfig({
+      AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
+      AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: account.agentUserId,
+      AGENT_BLOG_PRIVATE_CANARY_MODEL_ID: 'fixture-discovery',
+      AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: '100',
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: '100000000',
+      AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: '2',
+    });
+    const preflight = await runAgentBlogPrivateCanaryPreflight({
+      repository: new PostgresAgentBlogPrivateCanaryPreflightRepository(admin), config: preflightConfig,
+    });
+    assert.equal(preflight.ready, false);
+    assert.deepEqual(preflight.blockers, ['AGENT_BLOG_PRIVATE_CANARY_AWAITING_HANDOFF']);
+    assert.equal(preflight.observed.activeRuns, 0);
+    assert.equal(preflight.observed.providerCallsMonth, 1);
     await autonomousWorker.stop();
     await admin.end();
   });
