@@ -1,6 +1,6 @@
 # 小墨鱼博客 F1-4 影子迁移
 
-版本：F1-4B2b2
+版本：F1-4B2c
 状态：私有草稿边界与受治理选题/写作/校验已在开发分支实现；未部署，不改变线上执行权
 日期：2026-10-26
 
@@ -55,7 +55,7 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 
 隔离 PostgreSQL 17 回归覆盖：
 
-- 130 个迁移并发应用且只能应用一次；
+- 131 个迁移并发应用且只能应用一次；
 - 同一旧任务重复投影不重复写事件；
 - `queued → generating → rejected` 可按顺序重建；
 - 观察事件不能更新或删除；
@@ -140,4 +140,19 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 - `single` 模式在确定性代码中拒绝历史已用仓库；只有 `comparison` 可以复用旧仓库，并仍需满足 2 至 3 个项目和至少两个比较维度；
 - 小墨鱼的人格兴趣信号可以影响模型选择，但模型返回的信号必须来自冻结人格版本，不能借人格提升权限或绕过来源规则。
 
-`blog.project.single.draft-shadow@1` 仍只是冻结合同，没有注册到生产 Runtime，现有计划任务不会进入这些处理器，也不存在发布 Action。下一阶段 F1-4B2c 才进行端到端影子装配与零公开副作用验收。
+## 11. F1-4B2c：端到端私有草稿影子 Run
+
+完整装配已经在开发分支形成，但只通过显式 `enabled: true` 的 canary 工厂注册和创建 Run；生产 Worker CLI 没有导入这些处理器，现有计划任务也不会进入该工作流。
+
+执行链固定为：
+
+1. `freeze-input` 严格校验 Run 输入、候选数量、候选唯一性、人格版本与输入哈希；
+2. `collect-evidence` 只能遍历创建 Run 时已经冻结的 1 至 12 个 GitHub 仓库，每个仓库独立创建受策略和预算约束的 Tool Action；
+3. `select-subject`、`compose` 和 `verify` 复用 F1-4B2b2 的结构化生成与确定性校验；
+4. `persist-draft` 从验证产物反向读取写作产物和工具证据，不接收调用方临时替换的正文；
+5. 草稿事务把 `verification_artifact_id` 与 `composition_artifact_id` 一并写入不可变映射，正文哈希、来源集合或产物链任一不一致均拒绝落库；
+6. Run 输出只能是 `blog.private-draft`，Manifest 没有 `blog.article.publish` 能力和 `publish` Stage。
+
+隔离 PostgreSQL 17 已让整条六阶段 Run 实际执行完成，并断言：两次 Provider Action、一次 GitHub Tool Action、一份私有草稿、零发布 Stage、零发布 Action、零 `published` 事件。迁移套件共 82 项全部通过。
+
+这不等于已经上线。生产仍保持被动投影和旧链路单一发布所有权。下一步是 F1-4B2d：建设候选发现端口、canary 配置与私有运行观测，然后才决定是否在一个 Agent 上启用不发布的生产影子 Run。

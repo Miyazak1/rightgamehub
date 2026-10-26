@@ -262,7 +262,8 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
     action: { actionKey: 'generate-json', actionKind: 'provider', capabilityKey: 'blog.article.publish', contractVersion: 1, riskLevel: 'L1' },
     idempotencyKey: `provider-action:${providerRun.id}`, resource: { type: 'blog', owner: 'public' },
     modelPolicy: { taskClass: 'structured-generation', requiresJsonSchema: true, maxInputTokens: 100,
-      maxOutputTokens: 50, maxCostMicrousd: 1000, latencyClass: 'batch', preferredProvider: 'deepseek' },
+      maxOutputTokens: 50, maxCostMicrousd: 1000, latencyClass: 'batch', preferredProvider: 'deepseek',
+      preferredModel: 'fixture-json' },
     promptTemplate: { key: 'fixture.prompt', version: 1 }, responseSchema: { key: 'foundation-answer', version: 1 },
     request: { prompt: 'fixture' }, tokenCeiling: 50, timeoutSeconds: 10, estimatedInputTokens: 80,
   };

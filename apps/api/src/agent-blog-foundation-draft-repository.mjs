@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
+import { blogRequestHash } from './blog-contract.mjs';
+import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 
 export class AgentBlogFoundationDraftRepositoryError extends Error {
   constructor(code) {
@@ -25,6 +27,8 @@ const view = row => row ? ({
   agentUserId: row.agent_user_id,
   articleId: row.article_id,
   revisionId: row.revision_id,
+  verificationArtifactId: row.verification_artifact_id,
+  compositionArtifactId: row.composition_artifact_id,
   sourceArtifactIds: row.source_artifact_ids,
   contentSha256: row.content_sha256,
   publicationState: row.publication_state ?? 'draft',
@@ -49,8 +53,11 @@ export class PostgresAgentBlogFoundationDraftRepository {
     return view(row);
   }
 
-  async persist({ actionId, content, contentSha256, sourceArtifactIds }) {
+  async persist({ actionId, content, contentSha256, sourceArtifactIds, verificationArtifactId }) {
     const artifacts = ids(sourceArtifactIds);
+    if (typeof verificationArtifactId !== 'string' || !uuidPattern.test(verificationArtifactId)) {
+      fail('AGENT_BLOG_DRAFT_VERIFICATION_INVALID');
+    }
     return withTransaction(this.pool, async client => {
       const action = (await client.query(`SELECT action.*,run.agent_user_id,run.status AS run_status,
           stage.status AS stage_status,account.status AS agent_status,author.status AS user_status
@@ -67,6 +74,7 @@ export class PostgresAgentBlogFoundationDraftRepository {
         WHERE draft.action_id=$1`, [actionId])).rows[0];
       if (existing) {
         if (existing.content_sha256 !== contentSha256
+          || existing.verification_artifact_id !== verificationArtifactId
           || existing.source_artifact_ids.length !== artifacts.length
           || existing.source_artifact_ids.some((id, index) => id !== artifacts[index])) {
           fail('AGENT_BLOG_DRAFT_IDEMPOTENCY_CONFLICT');
@@ -84,6 +92,40 @@ export class PostgresAgentBlogFoundationDraftRepository {
           AND artifact.id=ANY($2::uuid[])`,
       [action.run_id, artifacts])).rows[0].n);
       if (verified !== artifacts.length) fail('AGENT_BLOG_DRAFT_SOURCE_ARTIFACTS_UNVERIFIED');
+      const lineage = (await client.query(`SELECT verification.*,composition.id AS composition_id,
+          composition.run_id AS composition_run_id,composition.stage_id AS composition_stage_id,
+          composition.artifact_key AS composition_artifact_key,
+          composition.artifact_kind AS composition_artifact_kind,
+          composition.schema_key AS composition_schema_key,
+          composition.schema_version AS composition_schema_version,
+          composition.content_json AS composition_content_json,
+          composition.content_sha256 AS composition_content_sha256,
+          composition.source_tool_artifact_ids AS composition_source_tool_artifact_ids
+        FROM agent_runtime_stage_artifacts verification
+        JOIN agent_runtime_stage_artifacts composition
+          ON composition.id::text=verification.content_json->>'compositionArtifactId'
+        WHERE verification.id=$1 AND verification.run_id=$2`, [verificationArtifactId, action.run_id])).rows[0];
+      const proof = lineage?.content_json;
+      const compositionPackage = lineage?.composition_content_json;
+      if (!lineage || lineage.artifact_key !== 'blog.verification' || lineage.artifact_kind !== 'verification'
+        || lineage.schema_key !== 'blog.article.verification' || lineage.schema_version !== 1
+        || proof?.schemaVersion !== 'blog-article-verification-v1' || proof.approved !== true
+        || proof.compositionArtifactId !== lineage.composition_id
+        || proof.contentSha256 !== lineage.composition_content_sha256
+        || !lineage.source_stage_artifact_ids.includes(lineage.composition_id)
+        || lineage.composition_run_id !== action.run_id
+        || lineage.composition_artifact_key !== 'blog.composition'
+        || lineage.composition_artifact_kind !== 'validated-output'
+        || lineage.composition_schema_key !== 'blog.article.normalized'
+        || lineage.composition_schema_version !== 1
+        || compositionPackage?.schemaVersion !== 'blog-article-composition-v1'
+        || blogRequestHash(compositionPackage.content) !== contentSha256
+        || stableHash(compositionPackage.content) !== stableHash(content)
+        || stableHash(compositionPackage.sourceToolArtifactIds) !== stableHash(artifacts)
+        || stableHash(lineage.composition_source_tool_artifact_ids) !== stableHash(artifacts)
+        || stableHash(proof.sourceToolArtifactIds) !== stableHash(artifacts)) {
+        fail('AGENT_BLOG_DRAFT_VERIFICATION_INVALID');
+      }
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`agent-blog-draft:${action.agent_user_id}`]);
       const draftCount = Number((await client.query(`SELECT count(*)::int AS n FROM blog_articles
         WHERE author_user_id=$1 AND publication_state='draft'`, [action.agent_user_id])).rows[0].n);
@@ -119,9 +161,11 @@ export class PostgresAgentBlogFoundationDraftRepository {
       [crypto.randomUUID(), articleId, action.agent_user_id, revisionId,
         json({ source: 'agent_foundation_shadow', runId: action.run_id, actionId: action.id, sourceArtifactIds: artifacts })]);
       await client.query(`INSERT INTO agent_blog_foundation_drafts(
-          run_id,agent_user_id,action_id,article_id,revision_id,source_artifact_ids,content_sha256
-        ) VALUES($1,$2,$3,$4,$5,$6,$7)`,
-      [action.run_id, action.agent_user_id, action.id, articleId, revisionId, artifacts, contentSha256]);
+          run_id,agent_user_id,action_id,article_id,revision_id,source_artifact_ids,content_sha256,
+          verification_artifact_id,composition_artifact_id
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [action.run_id, action.agent_user_id, action.id, articleId, revisionId, artifacts, contentSha256,
+        verificationArtifactId, lineage.composition_id]);
       await client.query(`UPDATE agent_run_actions SET status='sent',provider_request_id=$2,sent_at=now(),updated_at=now()
         WHERE id=$1 AND status='sending'`, [action.id, `database:blog-draft:${articleId}`]);
       const acknowledged = (await client.query(`UPDATE agent_run_actions SET status='acknowledged',response_ref_json=$2,
@@ -136,6 +180,7 @@ export class PostgresAgentBlogFoundationDraftRepository {
       await appendActionEvent(client, action, 'action.succeeded', { articleId, revisionId, publicationState: 'draft' });
       return { runId: action.run_id, actionId: action.id, agentUserId: action.agent_user_id,
         articleId, revisionId, sourceArtifactIds: artifacts, contentSha256,
+        verificationArtifactId, compositionArtifactId: lineage.composition_id,
         publicationState: 'draft', createdAt: new Date().toISOString(), existing: false };
     });
   }

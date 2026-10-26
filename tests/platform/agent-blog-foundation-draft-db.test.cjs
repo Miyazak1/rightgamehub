@@ -71,40 +71,53 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
     idempotencyKey: `evidence:${run.id}`, resource: { type: 'github.repository', owner: 'public', id: 'owner/project' },
     tool: { toolKey: fixtureTool.toolKey, contractVersion: 1 }, request: { repository: 'owner/project' },
   });
-  await runtime.completeStage({ stageId: evidenceStage.id, workerId: evidenceStage.leasedBy,
-    leaseToken: evidenceStage.leaseToken, outputRef: { artifactId: evidence.artifactId } });
-  const draftStage = await runtime.claimNextStage('draft-worker', 30, [`${workflow.workflowKey}:persist-draft`]);
-  await runtime.startStage({ stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken });
-  const draftRepository = new PostgresAgentBlogFoundationDraftRepository(admin);
   const stageArtifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
-  const verificationArtifactInput = {
-    runId: run.id, stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken,
-    artifactKey: 'blog.fixture-verification', artifactKind: 'verification',
-    schema: { key: 'blog.article.verification', version: 1 },
-    content: { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true } },
-    sourceToolArtifactIds: [evidence.artifactId],
-  };
-  const verificationArtifact = await stageArtifactRepository.save(verificationArtifactInput);
-  assert.equal(verificationArtifact.existing, false);
-  assert.equal((await stageArtifactRepository.save(verificationArtifactInput)).existing, true);
-  assert.deepEqual((await stageArtifactRepository.read({ runId: run.id, artifactId: verificationArtifact.id,
-    expectedArtifactKey: 'blog.fixture-verification' })).content,
-  { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true } });
-  await assert.rejects(admin.query('UPDATE agent_runtime_stage_artifacts SET size_bytes=size_bytes+1 WHERE id=$1',
-    [verificationArtifact.id]), /immutable/u);
-  const gateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime, draftRepository, policyService });
   const content = {
     slug: `foundation-${crypto.randomBytes(6).toString('hex')}`, locale: 'zh-CN', title: '基座生成的私有研究草稿',
     summary: '这篇结构化草稿只用于验证证据绑定、幂等保存和禁止自动发布的基座边界。',
     blocks: [{ type: 'paragraph', text: '文章内容来自同一运行中不可变且受大小限制的工具研究产物。' }], citations: [],
   };
+  const compositionArtifact = await stageArtifactRepository.save({
+    runId: run.id, stageId: evidenceStage.id, workerId: evidenceStage.leasedBy, leaseToken: evidenceStage.leaseToken,
+    actionId: null, artifactKey: 'blog.composition', artifactKind: 'validated-output',
+    schema: { key: 'blog.article.normalized', version: 1 },
+    content: { schemaVersion: 'blog-article-composition-v1', content,
+      selection: { mode: 'single' }, sourceToolArtifactIds: [evidence.artifactId] },
+    sourceToolArtifactIds: [evidence.artifactId],
+  });
+  await runtime.completeStage({ stageId: evidenceStage.id, workerId: evidenceStage.leasedBy,
+    leaseToken: evidenceStage.leaseToken, outputRef: { artifactId: evidence.artifactId } });
+  const draftStage = await runtime.claimNextStage('draft-worker', 30, [`${workflow.workflowKey}:persist-draft`]);
+  await runtime.startStage({ stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken });
+  const draftRepository = new PostgresAgentBlogFoundationDraftRepository(admin);
+  const verificationArtifactInput = {
+    runId: run.id, stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken,
+    artifactKey: 'blog.verification', artifactKind: 'verification',
+    schema: { key: 'blog.article.verification', version: 1 },
+    content: { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true },
+      compositionArtifactId: compositionArtifact.id, contentSha256: compositionArtifact.contentSha256,
+      sourceToolArtifactIds: [evidence.artifactId] },
+    sourceStageArtifactIds: [compositionArtifact.id],
+  };
+  const verificationArtifact = await stageArtifactRepository.save(verificationArtifactInput);
+  assert.equal(verificationArtifact.existing, false);
+  assert.equal((await stageArtifactRepository.save(verificationArtifactInput)).existing, true);
+  assert.deepEqual((await stageArtifactRepository.read({ runId: run.id, artifactId: verificationArtifact.id,
+    expectedArtifactKey: 'blog.verification' })).content,
+  { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true },
+    compositionArtifactId: compositionArtifact.id, contentSha256: compositionArtifact.contentSha256,
+    sourceToolArtifactIds: [evidence.artifactId] });
+  await assert.rejects(admin.query('UPDATE agent_runtime_stage_artifacts SET size_bytes=size_bytes+1 WHERE id=$1',
+    [verificationArtifact.id]), /immutable/u);
+  const gateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime, draftRepository, policyService });
   await assert.rejects(gateway.persist({ agentUserId: account.agentUserId, runId: run.id,
     stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken,
-    idempotencyKey: `unverified:${run.id}`, content, sourceArtifactIds: [crypto.randomUUID()] }),
+    idempotencyKey: `unverified:${run.id}`, content, sourceArtifactIds: [crypto.randomUUID()],
+    verificationArtifactId: verificationArtifact.id }),
   error => error.code === 'AGENT_BLOG_DRAFT_SOURCE_ARTIFACTS_UNVERIFIED');
   const input = { agentUserId: account.agentUserId, runId: run.id, stageId: draftStage.id, workerId: draftStage.leasedBy,
     leaseToken: draftStage.leaseToken, idempotencyKey: `persist:${run.id}`, content,
-    sourceArtifactIds: [evidence.artifactId] };
+    sourceArtifactIds: [evidence.artifactId], verificationArtifactId: verificationArtifact.id };
   const draft = await gateway.persist(input);
   assert.equal(draft.status, 'succeeded');
   assert.equal(draft.publicationState, 'draft');
@@ -112,6 +125,7 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
   assert.equal(replay.replayed, true);
   assert.equal(replay.articleId, draft.articleId);
   const stored = (await admin.query(`SELECT article.*,revision.revision_state,mapping.source_artifact_ids,
+      mapping.verification_artifact_id,mapping.composition_artifact_id,
       (SELECT count(*)::int FROM blog_article_events event WHERE event.article_id=article.id AND event.action='published') AS publish_events
     FROM agent_blog_foundation_drafts mapping
     JOIN blog_articles article ON article.id=mapping.article_id
@@ -124,6 +138,8 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
   assert.equal(stored.revision_state, 'working');
   assert.equal(stored.publish_events, 0);
   assert.deepEqual(stored.source_artifact_ids, [evidence.artifactId]);
+  assert.equal(stored.verification_artifact_id, verificationArtifact.id);
+  assert.equal(stored.composition_artifact_id, compositionArtifact.id);
   await assert.rejects(admin.query('UPDATE agent_blog_foundation_drafts SET content_sha256=$2 WHERE run_id=$1',
     [run.id, 'c'.repeat(64)]), /immutable/u);
   await runtime.completeStage({ stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken,
@@ -133,9 +149,11 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
     .timeline({ userId: operatorId }, account.agentUserId, run.id);
   assert.equal(timeline.foundationDrafts.length, 1);
   assert.equal(timeline.foundationDrafts[0].publicationState, 'draft');
+  assert.equal(timeline.foundationDrafts[0].verificationArtifactId, verificationArtifact.id);
+  assert.equal(timeline.foundationDrafts[0].compositionArtifactId, compositionArtifact.id);
   assert.equal(Object.hasOwn(timeline.foundationDrafts[0], 'content'), false);
-  assert.equal(timeline.stageArtifacts.length, 1);
-  assert.equal(timeline.stageArtifacts[0].id, verificationArtifact.id);
-  assert.equal(Object.hasOwn(timeline.stageArtifacts[0], 'content'), false);
+  assert.equal(timeline.stageArtifacts.length, 2);
+  assert(timeline.stageArtifacts.some(item => item.id === verificationArtifact.id));
+  assert(timeline.stageArtifacts.every(item => Object.hasOwn(item, 'content') === false));
   await admin.end();
 });

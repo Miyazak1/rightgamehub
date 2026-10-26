@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F1-I4B2b2\
-状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放、F1-4B2a Tool Gateway、F1-4B2b1 私有草稿边界，以及 F1-4B2b2 受治理选题/写作/校验已在开发分支实现；尚未部署，发布权与生产 Provider 调用权仍完全属于旧博客链路\
+版本：F1-I4B2c\
+状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放，以及 F1-4B2 私有草稿影子 Run 已在开发分支实现；尚未部署，完整 canary 默认关闭，发布权与生产 Provider 调用权仍完全属于旧博客链路\
 更新日期：2026-10-26\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -34,7 +34,7 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-4B2a Tool Runtime 与 GitHub 研究端口 | 已实现，未接生产 Worker | `0128_agent_tool_runtime.sql`、`agent-tool-gateway*.mjs`、`agent-github-repository-tool.mjs`；策略授权、Run 工具预算、发送水位、只读重试语义、不可变有界产物和后台时间线均已验证 |
 | F1-4B2b1 私有草稿输出边界 | 已实现，未接生产 Worker | `0129_agent_blog_foundation_drafts.sql`、`agent-blog-foundation-draft*.mjs`；要求同一 Run 的不可变工具产物，事务内仅创建 `draft/working`，无发布方法、发布事件或公开时间戳 |
 | F1-4B2b2 受治理选题、写作与校验 | 已实现，未接生产 Worker | `0130_agent_runtime_stage_artifacts.sql`、`agent-blog-foundation-generation.mjs`、`agent-runtime-stage-artifact-repository.mjs`；Provider 成功响应可崩溃重放，选题/写作分离，单项目禁止历史重复，确定性引用与结构校验不调用模型 |
-| F1-4B2c 影子工作流端到端装配 | 未实现 | 下一步补冻结候选、Tool 研究调度、私有草稿收口和整条 Run 的集成验收；完成前不注册生产工作流 |
+| F1-4B2c 影子工作流端到端装配 | 已实现，canary 默认关闭 | `agent-blog-foundation-shadow.mjs`、`0131_agent_blog_verified_draft_lineage.sql`、`agent-blog-foundation-shadow-db.test.cjs`；冻结候选后依次完成 GitHub 研究、选题、写作、确定性验证和私有草稿，真实 PostgreSQL 断言零发布 Stage、零发布 Action、零发布事件 |
 
 ## 2. 冻结决策
 

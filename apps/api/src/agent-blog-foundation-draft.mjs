@@ -24,8 +24,12 @@ const normalizeArtifactIds = value => {
 export function createAgentBlogFoundationDraftGateway({ runtimeRepository, draftRepository, policyService } = {}) {
   if (!runtimeRepository || !draftRepository || !policyService) fail('AGENT_BLOG_DRAFT_GATEWAY_DEPENDENCY_REQUIRED');
   return {
-    async persist({ agentUserId, runId, stageId, workerId, leaseToken, idempotencyKey, content: input, sourceArtifactIds: inputIds }) {
+    async persist({ agentUserId, runId, stageId, workerId, leaseToken, idempotencyKey, content: input,
+      sourceArtifactIds: inputIds, verificationArtifactId }) {
       if (typeof agentUserId !== 'string' || !uuidPattern.test(agentUserId)) fail('AGENT_BLOG_DRAFT_AGENT_INVALID');
+      if (typeof verificationArtifactId !== 'string' || !uuidPattern.test(verificationArtifactId)) {
+        fail('AGENT_BLOG_DRAFT_VERIFICATION_INVALID');
+      }
       let content;
       try { content = normalizeBlogContent(input); } catch (error) { fail(error.code ?? 'AGENT_BLOG_DRAFT_CONTENT_INVALID', error); }
       const sourceArtifactIds = normalizeArtifactIds(inputIds);
@@ -36,7 +40,7 @@ export function createAgentBlogFoundationDraftGateway({ runtimeRepository, draft
       const prepared = await runtimeRepository.createAction({
         runId, stageId, action: ACTION, idempotencyKey,
         request: { schemaVersion: 'blog-private-draft-request-v1', slug: content.slug,
-          locale: content.locale, contentSha256, sourceArtifactIds },
+          locale: content.locale, contentSha256, sourceArtifactIds, verificationArtifactId },
         policyDecision: decision,
       });
       const existing = prepared.existing ? await draftRepository.getByAction(prepared.id) : null;
@@ -55,7 +59,8 @@ export function createAgentBlogFoundationDraftGateway({ runtimeRepository, draft
         await runtimeRepository.transitionAction({ actionId: prepared.id, from: 'prepared', to: 'authorized' });
       } else if (prepared.status !== 'authorized') fail('AGENT_BLOG_DRAFT_ACTION_IN_PROGRESS');
       try {
-        const draft = await draftRepository.persist({ actionId: prepared.id, content, contentSha256, sourceArtifactIds });
+        const draft = await draftRepository.persist({ actionId: prepared.id, content, contentSha256,
+          sourceArtifactIds, verificationArtifactId });
         return { status: 'succeeded', replayed: draft.existing, ...draft };
       } catch (error) {
         try {

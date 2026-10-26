@@ -7,6 +7,7 @@ const { pathToFileURL } = require('node:url');
 const root = path.resolve(__dirname, '../..');
 const load = name => import(pathToFileURL(path.join(root, 'apps/api/src', name)).href);
 const artifactId = crypto.randomUUID();
+const verificationArtifactId = crypto.randomUUID();
 const agentUserId = crypto.randomUUID();
 const content = {
   slug: 'foundation-private-draft', locale: 'zh-CN', title: '私有草稿输出边界',
@@ -29,7 +30,7 @@ test('blog foundation draft gateway authorizes one fixed private-draft action an
     policyService: { decide: async input => (calls.push(['policy', input]), { decision: 'allow', reasonCodes: [], agentUserId }) },
   });
   const result = await gateway.persist({ agentUserId, runId: 'run', stageId: 'stage', workerId: 'worker', leaseToken: 'lease',
-    idempotencyKey: 'foundation-draft-test', content, sourceArtifactIds: [artifactId] });
+    idempotencyKey: 'foundation-draft-test', content, sourceArtifactIds: [artifactId], verificationArtifactId });
   assert.equal(result.status, 'succeeded');
   assert.equal(result.publicationState, 'draft');
   assert.deepEqual(calls.map(item => item[0]), ['policy', 'prepare', 'authorized', 'persist']);
@@ -39,6 +40,8 @@ test('blog foundation draft gateway authorizes one fixed private-draft action an
   });
   assert.equal(calls[0][1].resource.type, 'blog.private-draft');
   assert.equal(calls[0][1].resource.owner, agentUserId);
+  assert.equal(calls[1][1].request.verificationArtifactId, verificationArtifactId);
+  assert.equal(calls[3][1].verificationArtifactId, verificationArtifactId);
   assert.equal(JSON.stringify(calls).includes('blog.article.publish'), false);
   assert.equal(JSON.stringify(calls).includes('publicationState":"published'), false);
 });
@@ -55,7 +58,7 @@ test('blog foundation draft gateway parks confirmation and does not write', asyn
     policyService: { decide: async () => ({ decision: 'require-confirmation', reasonCodes: [], agentUserId }) },
   });
   const result = await gateway.persist({ agentUserId, runId: 'run', stageId: 'stage', workerId: 'worker', leaseToken: 'lease',
-    idempotencyKey: 'foundation-draft-confirm', content, sourceArtifactIds: [artifactId] });
+    idempotencyKey: 'foundation-draft-confirm', content, sourceArtifactIds: [artifactId], verificationArtifactId });
   assert.equal(result.status, 'waiting-confirmation');
   assert.equal(persisted, false);
 });

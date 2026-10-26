@@ -62,7 +62,8 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
             content_sha256,size_bytes,source_tool_artifact_ids,source_stage_artifact_ids,created_at
           FROM agent_runtime_stage_artifacts WHERE run_id=$1 ORDER BY created_at,id`, [runId]),
         pool.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
-            draft.source_artifact_ids,draft.content_sha256,draft.created_at,article.publication_state
+            draft.source_artifact_ids,draft.content_sha256,draft.verification_artifact_id,
+            draft.composition_artifact_id,draft.created_at,article.publication_state
           FROM agent_blog_foundation_drafts draft JOIN blog_articles article ON article.id=draft.article_id
           WHERE draft.run_id=$1 ORDER BY draft.created_at,draft.article_id`, [runId]),
       ]);
@@ -130,6 +131,8 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
         foundationDrafts: foundationDrafts.rows.map(row => ({
           runId: row.run_id, actionId: row.action_id, articleId: row.article_id, revisionId: row.revision_id,
           sourceArtifactIds: row.source_artifact_ids, contentSha256: row.content_sha256,
+          verificationArtifactId: row.verification_artifact_id,
+          compositionArtifactId: row.composition_artifact_id,
           publicationState: row.publication_state, createdAt: iso(row.created_at),
         })),
       };

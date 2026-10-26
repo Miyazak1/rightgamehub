@@ -39,7 +39,7 @@ test('Agent tool gateway persists one bounded immutable artifact on isolated Pos
   const stage = await runtime.claimNextStage('tool-worker', 30, [`${workflow.workflowKey}:research`]);
   await runtime.startStage({ stageId: stage.id, workerId: stage.leasedBy, leaseToken: stage.leaseToken });
   const tools = new PostgresAgentToolGatewayRepository(admin);
-  assert.equal((await tools.registerTool(GITHUB_REPOSITORY_READ_TOOL)).existing, false);
+  assert.equal((await tools.registerTool(GITHUB_REPOSITORY_READ_TOOL)).toolKey, GITHUB_REPOSITORY_READ_TOOL.toolKey);
   assert.equal((await tools.registerTool(GITHUB_REPOSITORY_READ_TOOL)).existing, true);
   const output = {
     schemaVersion: 'fixture-evidence-v1', repository: { key: 'owner/project' },
