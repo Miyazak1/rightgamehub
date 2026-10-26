@@ -81,17 +81,19 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
     validateGitHubRepositoryReadInput, validateGitHubRepositoryReadOutput,
   } = await load('agent-github-repository-tool.mjs');
   const requests = [];
-  const fetchImpl = async url => {
-    requests.push(url);
+  const fetchImpl = async (url, options) => {
+    requests.push({ url, options });
     if (url.endsWith('/repos/owner/project')) return new Response(JSON.stringify({
       name: 'project', full_name: 'owner/project', description: 'A useful project', homepage: 'https://example.com',
       default_branch: 'main', stargazers_count: 42, forks_count: 3, open_issues_count: 1, topics: ['agent'],
       license: { spdx_id: 'MIT' }, archived: false, pushed_at: '2026-10-24T00:00:00Z',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
-    if (url.includes('/commits/main')) return new Response(JSON.stringify({ sha: 'a'.repeat(40) }), { status: 200 });
-    if (url.includes('/readme?ref=main')) return new Response(JSON.stringify({
-      encoding: 'base64', path: 'docs/README.md', content: Buffer.from('# Project\nUseful README excerpt.').toString('base64'),
+    if (url.includes('/git/ref/heads/main')) return new Response(JSON.stringify({
+      object: { type: 'commit', sha: 'a'.repeat(40) },
     }), { status: 200 });
+    if (url.includes(`/readme?ref=${'a'.repeat(40)}`)) return new Response('# Project\nUseful README excerpt.', {
+      status: 200, headers: { 'content-disposition': 'inline; filename="README.md"' },
+    });
     return new Response('', { status: 404 });
   };
   const adapter = createGitHubRepositoryReadAdapter({ fetchImpl });
@@ -100,13 +102,55 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
   assert.equal(receipt.output.sourceVersion.revision, 'a'.repeat(40));
   assert.equal(receipt.output.metadata.stars, 42);
   assert.equal(validateGitHubRepositoryReadOutput(receipt.output).readme.text.includes('Useful README'), true);
+  assert.equal(receipt.output.readme.path, 'README.md');
+  assert.equal(receipt.output.readme.truncated, false);
   assert.equal(requests.length, 3);
-  assert(requests.every(url => url.startsWith('https://api.github.com/')));
+  assert(requests.every(item => item.url.startsWith('https://api.github.com/')));
+  assert.equal(requests[2].options.headers.accept, 'application/vnd.github.raw+json');
+  assert.equal(requests[2].options.headers.range, 'bytes=0-49151');
+  const tampered = structuredClone(receipt.output);
+  tampered.readme.canonicalUri = 'https://evil.example/README.md';
+  assert.throws(() => validateGitHubRepositoryReadOutput(tampered));
   assert.equal(normalizeGitHubRepositoryLocator('OWNER/Project.git').key, 'owner/project');
   for (const invalid of ['http://github.com/owner/project', 'https://evil.example/owner/project',
     'https://github.com/owner/project/issues', 'owner/project/extra', '127.0.0.1/repo']) {
     assert.throws(() => normalizeGitHubRepositoryLocator(invalid));
   }
+});
+
+test('GitHub repository tool streams a bounded raw README prefix instead of rejecting a large README', async () => {
+  const { createGitHubRepositoryReadAdapter } = await load('agent-github-repository-tool.mjs');
+  const revision = 'b'.repeat(40);
+  const fetchImpl = async url => {
+    if (url.endsWith('/repos/owner/large')) return new Response(JSON.stringify({
+      name: 'large', full_name: 'owner/large', default_branch: 'main', stargazers_count: 10,
+      forks_count: 1, open_issues_count: 0, topics: [], license: { spdx_id: 'MIT' }, archived: false,
+    }), { status: 200 });
+    if (url.includes('/git/ref/heads/main')) return new Response(JSON.stringify({
+      object: { type: 'commit', sha: revision },
+    }), { status: 200 });
+    if (url.includes(`/readme?ref=${revision}`)) return new Response('甲'.repeat(200000), {
+      status: 200, headers: { 'content-length': '600000', 'content-disposition': 'inline; filename=README.zh-CN.md' },
+    });
+    return new Response('', { status: 404 });
+  };
+  const receipt = await createGitHubRepositoryReadAdapter({ fetchImpl })({
+    request: { repository: 'https://github.com/owner/large' }, timeoutSeconds: 5,
+  });
+  assert.equal(receipt.output.sourceVersion.revision, revision);
+  assert.equal(receipt.output.readme.text.length, 12000);
+  assert.equal(receipt.output.readme.truncated, true);
+  assert.equal(receipt.output.readme.path, 'README.zh-CN.md');
+  assert.equal(receipt.usage.networkRequests, 3);
+});
+
+test('GitHub repository tool keeps strict response limits for metadata and references', async () => {
+  const { createGitHubRepositoryReadAdapter } = await load('agent-github-repository-tool.mjs');
+  const adapter = createGitHubRepositoryReadAdapter({ fetchImpl: async () => new Response('{}', {
+    status: 200, headers: { 'content-length': '300000' },
+  }) });
+  await assert.rejects(adapter({ request: { repository: 'owner/project' }, timeoutSeconds: 5 }),
+    error => error.code === 'AGENT_GITHUB_RESPONSE_TOO_LARGE');
 });
 
 test('GitHub discovery tool accepts only plain bounded queries and returns non-evidentiary candidates', async () => {

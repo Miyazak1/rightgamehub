@@ -168,6 +168,8 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 5. 真正进入写作前，另一个私有草稿 Run 仍须逐仓库执行 `research.github.repository.read@1`，取得固定提交和 README 证据；
 6. 发现工作流默认关闭，Manifest 的 Provider 预算为零，不存在草稿或发布 Stage。
 
+仓库读取保持固定来源和有界内存：先从默认分支解析不可变提交哈希，再以该提交调用 GitHub raw README 媒体类型；README 即使很大也只流式读取最多 48 KiB 前缀并最多保留 12,000 字符，同时写入 `truncated` 标记。元数据和 Git 引用仍执行 256 KiB 硬上限，不会因为 README 特例变成任意大响应下载。这样既避免 Base64 JSON 膨胀和大型 README 阻断整个 Run，也避免分支在并发读取期间移动导致提交与正文证据不一致。
+
 ## 13. F1-4B2d2a：模型规划搜索词，不直接搜索
 
 `blog.project.discovery-shadow@3` 在发现工具之前增加了一个独立 Provider Stage：
