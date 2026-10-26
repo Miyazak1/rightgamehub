@@ -573,6 +573,36 @@ services:
     cpus: "0.75"
     mem_limit: 256m
 
+  # Deterministic post-run attestation. It performs no network or model calls
+  # and appends one immutable, content-free report for the selected draft Run.
+  agent-blog-canary-report:
+    <<: *service-defaults
+    profiles: ["agent-blog-canary-report"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-blog-canary-acceptance-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=64
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: ${AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID:-}
+      AGENT_BLOG_PRIVATE_CANARY_DRAFT_RUN_ID: ${AGENT_BLOG_PRIVATE_CANARY_DRAFT_RUN_ID:-}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 16
+    cpus: "0.10"
+    mem_limit: 96m
+
   rules-operator:
     <<: *service-defaults
     profiles: [rules-operations]

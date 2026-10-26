@@ -31,6 +31,8 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
       await harness.load('agent-blog-canary-observability.mjs');
     const { loadAgentBlogPrivateCanaryConfig, PostgresAgentBlogPrivateCanaryPreflightRepository,
       runAgentBlogPrivateCanaryPreflight } = await harness.load('agent-blog-private-canary-preflight.mjs');
+    const { PostgresAgentBlogCanaryAcceptanceRepository,
+      createAgentBlogCanaryAcceptanceService } = await harness.load('agent-blog-canary-acceptance.mjs');
 
     const operatorId = crypto.randomUUID();
     await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Discovery operator','admin')", [operatorId]);
@@ -214,6 +216,21 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     await admin.query(`UPDATE agent_runs SET status='cancelled',finished_at=now(),
       error_code='TEST_CANARY_CLEANUP',error_message='Unexecuted handoff fixture cleanup.',updated_at=now()
       WHERE id=$1 AND status='queued'`, [draftRun.id]);
+    const acceptance = createAgentBlogCanaryAcceptanceService({
+      repository: new PostgresAgentBlogCanaryAcceptanceRepository(admin),
+    });
+    const failedReport = await acceptance.attest(account.agentUserId, draftRun.id);
+    assert.equal(failedReport.verdict, 'failed');
+    assert.equal(failedReport.recommendation, 'stop-and-investigate');
+    assert(failedReport.reasonCodes.includes('DRAFT_NOT_SUCCEEDED'));
+    assert(failedReport.reasonCodes.includes('DRAFT_NOT_PRIVATE'));
+    assert.equal((await acceptance.attest(account.agentUserId, draftRun.id)).existing, true);
+    const storedReport = (await admin.query(`SELECT evidence_json FROM agent_blog_canary_acceptance_reports
+      WHERE id=$1`, [failedReport.id])).rows[0];
+    assert.equal(Object.hasOwn(storedReport.evidence_json, 'content'), false);
+    await assert.rejects(admin.query(`UPDATE agent_blog_canary_acceptance_reports
+      SET verdict='passed',reason_codes='{}' WHERE id=$1`, [failedReport.id]));
+    assert.equal((await acceptance.readiness(account.agentUserId)).automaticScheduleChange, false);
     const preflightConfig = loadAgentBlogPrivateCanaryConfig({
       AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
       AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: account.agentUserId,

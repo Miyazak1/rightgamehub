@@ -15,6 +15,8 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const { createAgentToolGateway } = await harness.load('agent-tool-gateway.mjs');
   const { GITHUB_REPOSITORY_READ_TOOL, validateGitHubRepositoryReadInput,
     validateGitHubRepositoryReadOutput } = await harness.load('agent-github-repository-tool.mjs');
+  const { GITHUB_REPOSITORY_SEARCH_TOOL, validateGitHubRepositorySearchInput,
+    validateGitHubRepositorySearchOutput } = await harness.load('agent-github-repository-search-tool.mjs');
   const { PostgresAgentProviderGatewayRepository } = await harness.load('agent-provider-gateway-repository.mjs');
   const { createAgentProviderGateway } = await harness.load('agent-provider-gateway.mjs');
   const { createAgentSecretVault } = await harness.load('agent-secret-vault.mjs');
@@ -24,6 +26,13 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const { createAgentBlogFoundationDraftGateway } = await harness.load('agent-blog-foundation-draft.mjs');
   const { createAgentBlogFoundationShadowHandlers,
     createAgentBlogFoundationShadowCanary } = await harness.load('agent-blog-foundation-shadow.mjs');
+  const { createAgentBlogAutonomousCandidateDiscoveryHandlers,
+    createAgentBlogAutonomousDiscoveryCanary, BLOG_DISCOVERY_RESPONSE_SCHEMAS } =
+    await harness.load('agent-blog-candidate-discovery.mjs');
+  const { createAgentBlogCandidateDraftHandoffCanary } =
+    await harness.load('agent-blog-candidate-handoff.mjs');
+  const { PostgresAgentBlogCanaryAcceptanceRepository,
+    createAgentBlogCanaryAcceptanceService } = await harness.load('agent-blog-canary-acceptance.mjs');
 
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Shadow canary operator','admin')", [operatorId]);
@@ -41,6 +50,7 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const policyService = createAgentRuntimePolicyService({ pool: admin });
   const toolRepository = new PostgresAgentToolGatewayRepository(admin);
   await toolRepository.registerTool(GITHUB_REPOSITORY_READ_TOOL);
+  await toolRepository.registerTool(GITHUB_REPOSITORY_SEARCH_TOOL);
   const revision = 'a'.repeat(40);
   const repositoryOutput = {
     schemaVersion: 'github-repository-evidence-v1',
@@ -56,12 +66,29 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   };
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
-    adapters: { 'research.github.repository.read@1': async () => ({
-      receiptId: `github:owner/project@${revision}`, output: repositoryOutput,
-      responseRef: { canonicalUri: repositoryOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
-    }) },
-    inputSchemas: { 'github.repository.read.input@1': validateGitHubRepositoryReadInput },
-    outputSchemas: { 'github.repository.read.output@1': validateGitHubRepositoryReadOutput },
+    adapters: {
+      'research.github.repository.search@1': async () => ({
+        receiptId: 'github-search:shadow-fixture', output: {
+          schemaVersion: 'github-repository-search-v1',
+          query: { text: 'agent tool', sort: 'stars', minStars: 10, pushedAfter: '2026-01-01' },
+          source: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
+            fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: 'c'.repeat(64) },
+          candidates: [{ key: 'owner/project', canonicalUrl: 'https://github.com/owner/project',
+            owner: 'owner', name: 'project', description: 'A useful tool', stars: 1200, forks: 100,
+            language: 'TypeScript', topics: ['agent'], licenseSpdx: 'MIT',
+            pushedAt: '2026-10-25T00:00:00.000Z' }],
+        }, responseRef: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
+          contentSha256: 'c'.repeat(64) }, usage: { toolCalls: 1, networkRequests: 1, candidates: 1 },
+      }),
+      'research.github.repository.read@1': async () => ({
+        receiptId: `github:owner/project@${revision}`, output: repositoryOutput,
+        responseRef: { canonicalUri: repositoryOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
+      }),
+    },
+    inputSchemas: { 'github.repository.search.input@1': validateGitHubRepositorySearchInput,
+      'github.repository.read.input@1': validateGitHubRepositoryReadInput },
+    outputSchemas: { 'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
+      'github.repository.read.output@1': validateGitHubRepositoryReadOutput },
   });
 
   const governance = new PostgresAgentProviderGatewayRepository(admin, {
@@ -83,7 +110,11 @@ test('draft shadow workflow runs end to end and has zero publication authority',
     runtimeRepository: runtime, governanceRepository: governance, policyService, secretVault: vault,
     adapters: { deepseek: async request => {
       providerInvocations += 1;
-      const output = request.responseSchema.key === 'blog.subject.selection'
+      const output = request.responseSchema.key === 'blog.discovery.query-plan'
+        ? { queries: ['agent tool'],
+          rationale: '选题范围关注可以快速体验的开放工具，因此先用普通关键词寻找具有明确用途和可观察结果的项目。',
+          interestSignals: ['可以快速体验'] }
+        : request.responseSchema.key === 'blog.subject.selection'
         ? { mode: 'single', selectedIndexes: [1], angle: '先验证最小路径，再理解它如何降低上手门槛',
           rationale: '仓库资料给出了明确安装步骤、可观察结果和本地运行方式，适合面向普通读者解释其实际价值。',
           interestSignals: ['可以快速体验'], comparisonAxes: [] }
@@ -101,23 +132,47 @@ test('draft shadow workflow runs end to end and has zero publication authority',
       return { providerRequestId: `fixture:${crypto.randomUUID()}`, output, responseRef: {},
         usage: { providerCalls: 1, inputTokens: 500, outputTokens: 1200, costMicrousd: 10 } };
     } },
-    responseSchemas: BLOG_FOUNDATION_RESPONSE_SCHEMAS,
+    responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS },
   });
   const artifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
   const draftGateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime,
     draftRepository: new PostgresAgentBlogFoundationDraftRepository(admin), policyService });
   const handlers = createAgentBlogFoundationShadowHandlers({ toolGateway, providerGateway, artifactRepository, draftGateway });
-  const input = { schemaVersion: 'blog-project-single-shadow-input-v1',
-    topicScope: '发现有趣、有用且证据完整的开源工具', candidateRepositories: ['owner/project'],
-    recentTitles: [], previousRepositoryUrls: [], behaviorProfile: defaultAgentBehaviorProfile() };
-  const run = await canary.createRun({ agentUserId: account.agentUserId, idempotencyKey: `shadow:${crypto.randomUUID()}`,
-    input, config: { model: { provider: 'deepseek', modelId: 'fixture-blog' } } });
+  const discoveryCanary = createAgentBlogAutonomousDiscoveryCanary({ runtimeRepository: runtime, enabled: true });
+  const discoveryWorkflow = await discoveryCanary.register(operatorId);
+  const discoveryRun = await discoveryCanary.createRun({ agentUserId: account.agentUserId,
+    idempotencyKey: `shadow-discovery:${crypto.randomUUID()}`,
+    config: { model: { provider: 'deepseek', modelId: 'fixture-blog' } }, input: {
+      schemaVersion: 'blog-project-discovery-input-v2', topicScope: '发现有趣、有用且证据完整的开源工具',
+      searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: '2026-01-01',
+        maxCandidates: 8, maxQueries: 3 }, previousRepositoryUrls: [],
+      behaviorProfile: defaultAgentBehaviorProfile(),
+    } });
+  const discoveryHandlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
+    providerGateway, toolGateway, artifactRepository,
+  });
+  const discoveryWorker = createAgentRuntimeWorker({ repository: runtime, handlers: discoveryHandlers,
+    workerId: `shadow-discovery-${crypto.randomBytes(4).toString('hex')}`, leaseSeconds: 30, heartbeatSeconds: 5 });
+  for (let index = 0; index < discoveryWorkflow.stages.length; index += 1) {
+    const result = await discoveryWorker.runOnce();
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+  }
+  const discoveryStored = (await admin.query('SELECT * FROM agent_runs WHERE id=$1', [discoveryRun.id])).rows[0];
+  assert.equal(discoveryStored.status, 'succeeded');
+  const handoffCanary = createAgentBlogCandidateDraftHandoffCanary({
+    runtimeRepository: runtime, artifactRepository, enabled: true,
+  });
+  const run = await handoffCanary.createDraftRun({ agentUserId: account.agentUserId,
+    discoveryRunId: discoveryRun.id, discoveryArtifactId: discoveryStored.output_id,
+    idempotencyKey: `shadow-draft:${crypto.randomUUID()}`, behaviorProfile: defaultAgentBehaviorProfile(),
+    config: { model: { provider: 'deepseek', modelId: 'fixture-blog' } },
+  });
   const worker = createAgentRuntimeWorker({ repository: runtime, handlers,
     workerId: `shadow-canary-${crypto.randomBytes(4).toString('hex')}`, leaseSeconds: 30, heartbeatSeconds: 5 });
   const results = [];
   for (let index = 0; index < workflow.stages.length; index += 1) results.push(await worker.runOnce());
   assert(results.every(result => result.status === 'completed'));
-  assert.equal(providerInvocations, 2);
+  assert.equal(providerInvocations, 3);
   const storedRun = (await admin.query('SELECT * FROM agent_runs WHERE id=$1', [run.id])).rows[0];
   assert.equal(storedRun.status, 'succeeded');
   assert.equal(storedRun.output_type, 'blog.private-draft');
@@ -139,6 +194,16 @@ test('draft shadow workflow runs end to end and has zero publication authority',
     WHERE run_id=$1 AND capability_key='blog.article.publish'`, [run.id])).rows[0].n), 0);
   assert.equal(Number((await admin.query(`SELECT count(*)::int AS n FROM agent_run_stages
     WHERE run_id=$1 AND stage_key='publish'`, [run.id])).rows[0].n), 0);
+  const acceptance = createAgentBlogCanaryAcceptanceService({
+    repository: new PostgresAgentBlogCanaryAcceptanceRepository(admin),
+  });
+  const report = await acceptance.attest(account.agentUserId, run.id);
+  assert.equal(report.verdict, 'passed');
+  assert.deepEqual(report.reasonCodes, []);
+  assert.equal(report.recommendation, 'retain-private-and-collect-more-samples');
+  assert.equal((await acceptance.attest(account.agentUserId, run.id)).existing, true);
+  assert.equal((await acceptance.readiness(account.agentUserId)).automaticScheduleChange, false);
+  await discoveryWorker.stop();
   await worker.stop();
   await admin.end();
 });
