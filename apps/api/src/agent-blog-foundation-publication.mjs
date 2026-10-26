@@ -33,6 +33,7 @@ export function createAgentBlogFoundationPublicationGateway({
     async publish({ agentUserId, runId, stageId, workerId, leaseToken, idempotencyKey,
       articleId, revisionId, contentSha256 }) {
       if (![agentUserId, runId, stageId, articleId, revisionId].every(value => UUID.test(value ?? ''))
+        || typeof workerId !== 'string' || workerId.trim() === '' || !UUID.test(leaseToken ?? '')
         || typeof contentSha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(contentSha256)) {
         fail('AGENT_BLOG_PUBLICATION_INPUT_INVALID');
       }
@@ -67,11 +68,14 @@ export function createAgentBlogFoundationPublicationGateway({
       } else if (prepared.status !== 'authorized') fail('AGENT_BLOG_PUBLICATION_ACTION_IN_PROGRESS');
       try {
         const publication = await publicationRepository.publish({
-          actionId: prepared.id, articleId, revisionId, contentSha256,
+          actionId: prepared.id, workerId, leaseToken, articleId, revisionId, contentSha256,
         });
         return { status: 'succeeded', replayed: publication.existing,
           ...assertMatchingReceipt(publication, { articleId, revisionId, contentSha256 }) };
       } catch (error) {
+        // A stale worker must not settle an Action owned by a newer lease. Stage
+        // recovery will requeue or close the attempt under the current lease state.
+        if (error?.code === 'AGENT_RUNTIME_LEASE_LOST') throw error;
         let recovered = null;
         try {
           recovered = await publicationRepository.getByAction(prepared.id);

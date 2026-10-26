@@ -182,8 +182,10 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
 
     const concurrent = await draftRun('concurrent');
     const concurrentActionId = await preparePublication(concurrent);
-    const concurrentRequest = { actionId: concurrentActionId, articleId: concurrent.articleId,
-      revisionId: concurrent.revisionId, contentSha256: concurrent.contentSha256 };
+    const concurrentRequest = { actionId: concurrentActionId,
+      workerId: concurrent.workerId, leaseToken: concurrent.leaseToken,
+      articleId: concurrent.articleId, revisionId: concurrent.revisionId,
+      contentSha256: concurrent.contentSha256 };
     const concurrentResults = await Promise.all([
       new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
       new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
@@ -199,8 +201,8 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
     const crashed = await draftRun('crashed');
     const crashedActionId = await preparePublication(crashed);
     const childPath = path.join(__dirname, 'support', 'agent-blog-publication-crash-child.mjs');
-    const child = spawnSync(process.execPath, [childPath, crashedActionId, crashed.articleId,
-      crashed.revisionId, crashed.contentSha256], {
+    const child = spawnSync(process.execPath, [childPath, crashedActionId, crashed.workerId,
+      crashed.leaseToken, crashed.articleId, crashed.revisionId, crashed.contentSha256], {
       cwd: path.resolve(__dirname, '../..'), env: { ...process.env }, encoding: 'utf8', timeout: 30_000,
     });
     assert.equal(child.status, 91, `${child.stderr}\n${child.stdout}`);
@@ -222,4 +224,30 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
         (SELECT count(*)::int FROM agent_run_actions WHERE id=$3 AND status='succeeded') AS succeeded_actions`,
     [crashed.runId, crashed.articleId, crashedActionId])).rows[0],
     { receipts: 1, events: 1, succeeded_actions: 1 });
+
+    const expired = await draftRun('lease-expired');
+    await admin.query("UPDATE agent_run_stages SET lease_until=now()-interval '1 second' WHERE id=$1",
+      [expired.stageId]);
+    await assert.rejects(createAgentBlogFoundationPublicationGateway({
+      runtimeRepository: runtime,
+      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin),
+      policyService,
+    }).publish(expired), error => error.code === 'AGENT_RUNTIME_LEASE_LOST');
+    assert.deepEqual((await admin.query(`SELECT article.publication_state,revision.revision_state,
+        action.status AS action_status,
+        (SELECT count(*)::int FROM agent_blog_foundation_publications WHERE run_id=$1) AS receipts,
+        (SELECT count(*)::int FROM blog_article_events WHERE article_id=$2 AND action='published') AS events
+      FROM blog_articles article JOIN blog_article_revisions revision ON revision.id=$3
+      JOIN agent_run_actions action ON action.run_id=$1 AND action.action_key='publish'
+      WHERE article.id=$2`, [expired.runId, expired.articleId, expired.revisionId])).rows[0],
+    { publication_state: 'draft', revision_state: 'working', action_status: 'authorized',
+      receipts: 0, events: 0 });
+    const stageRecovery = await runtime.recoverExpiredStages({ baseBackoffSeconds: 0 });
+    assert.equal(stageRecovery.failed, 1);
+    assert.deepEqual((await admin.query(`SELECT run.status AS run_status,stage.status AS stage_status,
+        action.status AS action_status FROM agent_runs run
+      JOIN agent_run_stages stage ON stage.run_id=run.id
+      JOIN agent_run_actions action ON action.stage_id=stage.id AND action.action_key='publish'
+      WHERE run.id=$1`, [expired.runId])).rows[0],
+    { run_status: 'failed', stage_status: 'failed', action_status: 'cancelled' });
   });

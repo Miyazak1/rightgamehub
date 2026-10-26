@@ -52,10 +52,12 @@ export class PostgresAgentBlogFoundationPublicationRepository {
     return view(row);
   }
 
-  async publish({ actionId, articleId, revisionId, contentSha256 }) {
+  async publish({ actionId, workerId, leaseToken, articleId, revisionId, contentSha256 }) {
     const publication = await withTransaction(this.pool, async client => {
       const action = (await client.query(`SELECT action.*,run.agent_user_id,run.workflow_key,
           run.status AS run_status,stage.status AS stage_status,
+          stage.leased_by AS stage_leased_by,stage.lease_token AS stage_lease_token,
+          stage.lease_until>now() AS stage_lease_valid,
           account.status AS agent_status,author.status AS user_status
         FROM agent_run_actions action
         JOIN agent_runs run ON run.id=action.run_id
@@ -80,6 +82,8 @@ export class PostgresAgentBlogFoundationPublicationRepository {
         }
         return { ...view(existing), existing: true };
       }
+      if (action.stage_leased_by !== workerId || action.stage_lease_token !== leaseToken
+        || action.stage_lease_valid !== true) fail('AGENT_RUNTIME_LEASE_LOST');
       if (action.status !== 'authorized' || action.run_status !== 'running'
         || action.stage_status !== 'running' || action.agent_status !== 'active'
         || action.user_status !== 'active') fail('AGENT_BLOG_PUBLICATION_ACTION_NOT_AUTHORIZED');

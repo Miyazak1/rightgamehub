@@ -44,6 +44,33 @@ test('Foundation publication gateway authorizes one L3 publish action and is ide
     type: 'blog.article', owner: agentUserId, id: input.articleId,
   });
   assert.equal(calls[1][1].request.schemaVersion, 'blog-foundation-publication-request-v1');
+  assert.equal(calls[3][1].workerId, input.workerId);
+  assert.equal(calls[3][1].leaseToken, input.leaseToken);
+});
+
+test('Foundation publication gateway leaves lease-lost action for stage recovery', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  const transitions = [];
+  const gateway = createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: uuid(), existing: false, status: 'prepared' }),
+      transitionAction: async value => (transitions.push(value), {}),
+    },
+    publicationRepository: {
+      getByAction: async () => null,
+      publish: async () => { throw Object.assign(new Error('lease lost'), {
+        code: 'AGENT_RUNTIME_LEASE_LOST',
+      }); },
+    },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  });
+  await assert.rejects(gateway.publish({ agentUserId, runId: uuid(), stageId: uuid(),
+    workerId: 'stale-worker', leaseToken: uuid(), idempotencyKey: 'foundation-lease-lost',
+    articleId: uuid(), revisionId: uuid(), contentSha256: sha }),
+  error => error.code === 'AGENT_RUNTIME_LEASE_LOST');
+  assert.deepEqual(transitions.map(item => item.to), ['authorized']);
 });
 
 test('Foundation publication gateway parks confirmation without changing the article', async () => {
@@ -244,6 +271,8 @@ test('publication receipt is immutable and repository rechecks Foundation owners
   assert.ok(guard > -1);
   assert.ok(articleUpdate > guard);
   assert.match(repository, /workflow_key !== 'blog\.project\.single'/u);
+  assert.match(repository, /stage_lease_token !== leaseToken/u);
+  assert.match(repository, /stage_lease_valid !== true/u);
   assert.match(repository, /verification_artifact_id == null/u);
   assert.match(repository, /boundary: 'before-commit'/u);
   assert.match(repository, /boundary: 'after-commit'/u);

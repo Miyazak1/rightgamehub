@@ -9,8 +9,9 @@ const pg = requireApi('pg');
 const { PostgresAgentBlogFoundationPublicationRepository } = await import(pathToFileURL(
   path.join(root, 'apps/api/src/agent-blog-foundation-publication-repository.mjs')).href);
 
-const [actionId, articleId, revisionId, contentSha256] = process.argv.slice(2);
-if (!process.env.QA_LEDGER_TEST_URL || [actionId, articleId, revisionId, contentSha256].some(value => !value)) {
+const [actionId, workerId, leaseToken, articleId, revisionId, contentSha256] = process.argv.slice(2);
+if (!process.env.QA_LEDGER_TEST_URL
+  || [actionId, workerId, leaseToken, articleId, revisionId, contentSha256].some(value => !value)) {
   process.exit(90);
 }
 
@@ -21,6 +22,6 @@ const repository = new PostgresAgentBlogFoundationPublicationRepository(pool, {
     if (event.boundary === 'after-commit') process.exit(91);
   },
 });
-await repository.publish({ actionId, articleId, revisionId, contentSha256 });
+await repository.publish({ actionId, workerId, leaseToken, articleId, revisionId, contentSha256 });
 await pool.end();
 process.exit(92);
