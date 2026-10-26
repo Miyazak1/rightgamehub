@@ -229,6 +229,58 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       };
     });
   }
+
+  async rollback({ agentUserId, actorUserId, expectedGeneration, reason }) {
+    if (!UUID.test(agentUserId ?? '') || !UUID.test(actorUserId ?? '')
+      || !Number.isSafeInteger(expectedGeneration) || expectedGeneration < 2
+      || typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 500) {
+      fail('AGENT_BLOG_PUBLICATION_ROLLBACK_INPUT_INVALID', 400, '发布链路回退参数无效。');
+    }
+    return withTransaction(this.pool, async client => {
+      const managed = (await client.query(`SELECT account.user_id FROM agent_accounts account
+        JOIN users operator ON operator.id=account.operator_user_id
+        WHERE account.user_id=$1 AND account.operator_user_id=$2
+          AND operator.account_type='human' AND operator.status='active' AND operator.role='admin'
+        FOR SHARE OF account,operator`, [agentUserId, actorUserId])).rows[0];
+      if (!managed) fail('AGENT_NOT_FOUND', 404, '机器人不存在或不由当前管理员运营。');
+      await client.query(`SELECT agent_user_id FROM agent_blog_automation_settings
+        WHERE agent_user_id=$1 FOR UPDATE`, [agentUserId]);
+      const owner = await this.assertPublisher(client, agentUserId, 'foundation');
+      if (owner.generation !== expectedGeneration) {
+        fail('AGENT_BLOG_PUBLICATION_GENERATION_MISMATCH', 409, '发布权版本已经变化，请重新读取状态。');
+      }
+      const execution = (await client.query(`SELECT
+          (SELECT count(*)::int FROM agent_blog_runs WHERE agent_user_id=$1
+            AND status IN ('queued','generating','checking')) AS legacy_active_runs,
+          count(*) FILTER (WHERE status IN ('queued','running','waiting'))::int AS foundation_active_runs,
+          count(*) FILTER (WHERE status='uncertain')::int AS foundation_uncertain_runs
+        FROM agent_runs WHERE agent_user_id=$1`, [agentUserId])).rows[0];
+      const blockers = [];
+      if (integer(execution?.legacy_active_runs) > 0) blockers.push('LEGACY_RUN_ACTIVE');
+      if (integer(execution?.foundation_active_runs) > 0) blockers.push('FOUNDATION_RUN_ACTIVE');
+      if (integer(execution?.foundation_uncertain_runs) > 0) blockers.push('FOUNDATION_RUN_UNCERTAIN');
+      if (blockers.length) {
+        throw new AgentBlogPublicationOwnershipError('AGENT_BLOG_PUBLICATION_ROLLBACK_BLOCKED',
+          409, '仍有运行中或不确定的发布任务，不能回退。', { blockers });
+      }
+      await client.query(`UPDATE agent_blog_automation_settings SET enabled=false,next_run_at=NULL,
+        updated_by_user_id=$2,updated_at=clock_timestamp() WHERE agent_user_id=$1`,
+      [agentUserId, actorUserId]);
+      const row = (await client.query(`UPDATE agent_blog_publication_owners SET
+          active_publisher='legacy',generation=generation+1,reason=$3,
+          updated_by_user_id=$2,
+          switched_at=GREATEST(clock_timestamp(),switched_at+interval '1 microsecond'),
+          updated_at=GREATEST(clock_timestamp(),updated_at+interval '1 microsecond')
+        WHERE agent_user_id=$1 AND active_publisher='foundation' AND generation=$4 RETURNING *`,
+      [agentUserId, actorUserId, reason.trim(), expectedGeneration])).rows[0];
+      if (!row) fail('AGENT_BLOG_PUBLICATION_ROLLBACK_CONFLICT', 409, '发布链路回退发生并发冲突。');
+      return {
+        schemaVersion: 'agent-blog-publication-rollback-receipt-v1',
+        agentUserId, previousPublisher: 'foundation', owner: ownerView(row),
+        legacyScheduleEnabled: false, automaticResume: false,
+      };
+    });
+  }
 }
 
 export function createAgentBlogPublicationCutoverService({ repository, authorizeOperator,
@@ -249,6 +301,13 @@ export function createAgentBlogPublicationCutoverService({ repository, authorize
       }
       return repository.cutover({ agentUserId, actorUserId: actor.userId,
         expectedGeneration: input?.expectedGeneration, reason: input?.reason }, policy);
+    },
+    async rollback(actor, agentUserId, input) {
+      if (!actor?.userId || !await authorizeOperator?.(actor)) {
+        fail('AGENT_OPERATOR_REQUIRED', 403, '需要管理员权限。');
+      }
+      return repository.rollback({ agentUserId, actorUserId: actor.userId,
+        expectedGeneration: input?.expectedGeneration, reason: input?.reason });
     },
   };
 }

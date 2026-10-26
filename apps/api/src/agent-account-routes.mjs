@@ -24,6 +24,7 @@ export function registerAgentAccountRoutes(app,{accountService,automation,runtim
   if(publicationCutover){
     app.get('/v1/admin/agents/:agentUserId/blog-publication-cutover-preflight',{preHandler:requireAuth,schema:{params:agentParams}},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await publicationCutover.preflight(request.actor,request.params.agentUserId));});
     app.post('/v1/admin/agents/:agentUserId/blog-publication-cutover',{preHandler:requireAuth,schema:{params:agentParams,body:publicationCutoverSchema}},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await publicationCutover.cutover(request.actor,request.params.agentUserId,request.body));});
+    app.post('/v1/admin/agents/:agentUserId/blog-publication-rollback',{preHandler:requireAuth,schema:{params:agentParams,body:publicationCutoverSchema}},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await publicationCutover.rollback(request.actor,request.params.agentUserId,request.body));});
   }
   app.post('/v1/admin/agents/:agentUserId/blog-runs/:runId/withdraw',{preHandler:requireAuth,schema:{params:runParams}},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await automation.withdrawPublished(request.actor,request.params.agentUserId,request.params.runId));});
   if(runtimeRead){

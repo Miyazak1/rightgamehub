@@ -92,7 +92,33 @@ test('admin exposes separate read-only preflight and explicit guarded cutover en
   const routes = fs.readFileSync(path.join(root, 'apps/api/src/agent-account-routes.mjs'), 'utf8');
   assert.match(routes, /\.get\('\/v1\/admin\/agents\/:agentUserId\/blog-publication-cutover-preflight'/u);
   assert.match(routes, /\.post\('\/v1\/admin\/agents\/:agentUserId\/blog-publication-cutover'/u);
+  assert.match(routes, /\.post\('\/v1\/admin\/agents\/:agentUserId\/blog-publication-rollback'/u);
   assert.doesNotMatch(routes, /\.put\([^\n]*blog-publication-cutover/u);
+});
+
+test('rollback remains explicit, generation-bound, and never re-enables legacy scheduling', async () => {
+  const { createAgentBlogPublicationCutoverService } = await import(moduleUrl.href);
+  const calls = [];
+  const service = createAgentBlogPublicationCutoverService({
+    repository: {
+      snapshot: async () => snapshot(), cutover: async () => ({}),
+      rollback: async input => (calls.push(input), {
+        owner: { activePublisher: 'legacy' }, legacyScheduleEnabled: false,
+      }),
+    },
+    authorizeOperator: async () => true,
+  });
+  const actorUserId = crypto.randomUUID();
+  const result = await service.rollback({ userId: actorUserId }, agentUserId,
+    { expectedGeneration: 2, reason: 'incident rollback' });
+  assert.equal(result.owner.activePublisher, 'legacy');
+  assert.equal(result.legacyScheduleEnabled, false);
+  assert.deepEqual(calls[0], { agentUserId, actorUserId, expectedGeneration: 2,
+    reason: 'incident rollback' });
+  const source = fs.readFileSync(path.join(root,
+    'apps/api/src/agent-blog-publication-ownership.mjs'), 'utf8');
+  assert.match(source, /AGENT_BLOG_PUBLICATION_ROLLBACK_BLOCKED/u);
+  assert.match(source, /legacyScheduleEnabled: false, automaticResume: false/u);
 });
 
 test('cutover service requires an administrator and forwards an expected generation', async () => {
