@@ -24,6 +24,9 @@ import { PostgresAgentBlogFoundationDraftRepository } from './agent-blog-foundat
 import { createAgentBlogFoundationDraftGateway } from './agent-blog-foundation-draft.mjs';
 import { createAgentBlogFoundationShadowHandlers } from './agent-blog-foundation-shadow.mjs';
 import { createAgentBlogCandidateDraftHandoffCanary } from './agent-blog-candidate-handoff.mjs';
+import { PostgresAgentBlogCanaryAcceptanceRepository,
+  createAgentBlogCanaryAcceptanceService } from './agent-blog-canary-acceptance.mjs';
+import { createAgentBlogPrivateCanarySupervisor } from './agent-blog-private-canary-supervisor.mjs';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 if (!process.env.AGENT_SECRET_ENCRYPTION_KEY) throw new Error('AGENT_SECRET_ENCRYPTION_KEY is required');
@@ -86,7 +89,14 @@ try {
     createDiscoveryWorker: runId => worker(runId, discoveryHandlers, 'discovery'),
     createDraftWorker: runId => worker(runId, draftHandlers, 'draft'),
   });
-  process.stdout.write(`${JSON.stringify(await runner.run({ requestId }))}\n`);
+  const supervised = createAgentBlogPrivateCanarySupervisor({ runner,
+    acceptanceService: createAgentBlogCanaryAcceptanceService({
+      repository: new PostgresAgentBlogCanaryAcceptanceRepository(pool),
+    }),
+  });
+  const result = await supervised.run({ requestId });
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+  if (result.acceptance.verdict !== 'passed') process.exitCode = 1;
 } finally {
   await pool.end();
 }

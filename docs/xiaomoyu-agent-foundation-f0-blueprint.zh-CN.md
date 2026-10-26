@@ -1,7 +1,7 @@
 # 小墨鱼 Agent 基座 F0 实施蓝图
 
-版本：F1-I4B2d3c\
-状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放、F1-4B2 私有草稿影子 Run，以及自动查询规划、跨 Run 候选交接、私有汇总观测、只读上线预检、一次性人工私有 canary 和不可变验收证明已在开发分支实现；尚未部署，所有 canary 默认关闭，发布权与生产 Provider 调用权仍完全属于旧博客链路\
+版本：F1-I4B2d3d\
+状态：F1-1 至 F1-3 通用基座、F1-4A 被动投影、F1-4B1 零成本影子重放、F1-4B2 私有草稿影子 Run，以及自动查询规划、跨 Run 候选交接、私有汇总观测、只读上线预检、一次性受监督私有 canary 和不可变验收证明已在开发分支实现；尚未部署，所有 canary 默认关闭，发布权与生产 Provider 调用权仍完全属于旧博客链路\
 更新日期：2026-10-26\
 上位架构：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
 关联路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
@@ -41,6 +41,7 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-4B2d3a 私有 canary 上线预检 | 已实现，只读且默认关闭 | `agent-blog-private-canary-preflight.mjs` 与独立 Compose profile；强制单 Agent、发布恒为 false，并在任何 Run 创建前检查身份、权限、工作流、密钥、模型、熔断、积压、不确定态、每日次数和月度费用 |
 | F1-4B2d3b 一次性人工私有 canary | 已实现，未运行且默认关闭 | `agent-blog-private-canary-manual-run.mjs` 与独立 Compose profile；冻结人格/选题/历史仓库/模型，精确领取本次 Run，发现成功才原子交接私有草稿，任一异常立即停止，零调度、零发布 |
 | F1-4B2d3c 不可变验收证明 | 已实现，未生成真实报告 | `0135_agent_blog_canary_acceptance.sql`、`agent-blog-canary-acceptance.mjs` 与独立报告 profile；确定性检查完整运行图、私有状态、零发布、血缘、重试和预算，连续三次通过只允许进入影子调度评审，不自动改调度 |
+| F1-4B2d3d 受监督单次执行 | 已实现，未运行 | `agent-blog-private-canary-supervisor.mjs` 把一次性执行与不可变验收连成同一操作收据；验收失败以非零状态停止，调度和发布决定恒为不变，独立报告 profile 只用于成功 Run 后的崩溃恢复 |
 
 ## 2. 冻结决策
 

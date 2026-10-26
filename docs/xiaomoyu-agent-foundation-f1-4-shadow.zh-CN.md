@@ -1,7 +1,7 @@
 # 小墨鱼博客 F1-4 影子迁移
 
-版本：F1-4B2d3c
-状态：私有草稿影子 Run、自动查询规划、跨 Run 候选交接、私有汇总观测、只读上线预检、一次性人工 canary 与不可变验收证明已在开发分支实现；未部署，不改变线上执行权
+版本：F1-4B2d3d
+状态：私有草稿影子 Run、自动查询规划、跨 Run 候选交接、私有汇总观测、只读上线预检、一次性受监督 canary 与不可变验收证明已在开发分支实现；未部署，不改变线上执行权
 日期：2026-10-26
 
 ## 1. 当前增量的目的
@@ -236,8 +236,21 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 7. 失败报告同样保留并返回稳定原因码。未终态 Run 不得生成报告，以免把进行中任务误记为失败样本；
 8. 最近三份报告连续通过时只返回 `readyForShadowScheduleReview=true`，并固定返回 `automaticScheduleChange=false`。这不授权系统自行启动每天 10 点调度。
 
-运维顺序固定为：先运行只读 preflight，再显式运行一次 canary，取得 `draft.runId` 后单独运行 `agent-blog-canary-report` profile。报告失败或执行被中断时立即停止，保持 canary 与发布开关关闭，并从管理员时间线检查最后一个 Stage、Action 发送水位和不确定状态。不得直接重跑一个仍活跃或不确定的 Run；已经发送但结果未知的 Provider/Tool Action 必须先按原请求 ID 对账，不能猜测重发。
+运维顺序固定为：先单独运行只读 preflight，再显式运行一次 `agent-blog-canary-run`。受监督执行器会在私有草稿成功后立即写入不可变报告并返回同一份内容为空的操作收据，不再要求运营者手工复制 `draft.runId`。`agent-blog-canary-report` profile 只用于“草稿已成功、但主进程在写报告前崩溃”的恢复场景。报告失败或执行被中断时立即停止，保持 canary 与发布开关关闭，并从管理员时间线检查最后一个 Stage、Action 发送水位和不确定状态。不得直接重跑一个仍活跃或不确定的 Run；已经发送但结果未知的 Provider/Tool Action 必须先按原请求 ID 对账，不能猜测重发。
 
 `docker compose stop agent-blog-canary-run` 只停止一次性进程，不会伪造数据库终态、删除 Run 或释放不确定费用。被中断的 Run 会继续阻止下一次 preflight，这是刻意的 fail-closed 行为。当前阶段不提供“强制清空”按钮；恢复必须依据时间线和外部回执选择原结果对账、安全取消未发送工作，或保留不确定状态等待人工处置。
 
 本阶段仍未进行任何真实 canary。下一阶段只有在运营者明确批准实际模型费用后，才执行首个样本并生成第一份报告；未取得三次连续通过前，不评审影子调度，更不切换发布所有权。
+
+## 18. F1-4B2d3d：受监督单次执行收据
+
+`agent-blog-private-canary-supervisor.mjs` 只组合既有 runner 与验收服务，不增加新的 Provider、工具或发布权限：
+
+1. runner 内部再次执行 preflight，通过后才创建发现 Run；
+2. 发现、交接和私有草稿全部成功后，监督器用返回的 Agent ID 与草稿 Run ID 立即生成验收报告；
+3. 输出只包含 Run、Artifact、Article、报告 ID、状态、计数、用量、哈希和 readiness，不包含正文、提示词、原始模型响应或密钥；
+4. 报告失败时命令返回非零状态，但不会删除私有草稿，也不会启动重试、发布或调度；
+5. 监督器拒绝任何声称 `automaticScheduleChange=true` 的验收实现，并固定返回 `scheduleDecision=unchanged`；
+6. 若 runner 在草稿成功前失败，不伪造验收报告；若草稿已成功而报告写入前进程崩溃，运营者只能使用独立报告 profile 按原草稿 Run ID 幂等补写。
+
+这使真实 canary 的正常路径只需一次显式写操作，同时保留一个数据库只读取证、只追加报告的恢复入口。当前开发机没有生产 `.env.prod`、数据库连接或目标 Agent UUID，因此本阶段仍未执行真实 Provider 调用。

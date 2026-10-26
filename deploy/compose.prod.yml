@@ -534,8 +534,9 @@ services:
     mem_limit: 96m
     networks: [backend]
 
-  # Explicit one-shot private canary. It has no restart policy, scheduler or
-  # publish route; run it only after the read-only preflight reports ready.
+  # Explicit supervised private canary. It has no restart policy, scheduler or
+  # publish route. A successful run appends its immutable acceptance report in
+  # the same process; use the report-only profile solely for recovery.
   agent-blog-canary-run:
     <<: *service-defaults
     profiles: ["agent-blog-canary-run"]
