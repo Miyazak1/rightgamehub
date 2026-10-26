@@ -108,3 +108,37 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
     assert.throws(() => normalizeGitHubRepositoryLocator(invalid));
   }
 });
+
+test('GitHub discovery tool accepts only plain bounded queries and returns non-evidentiary candidates', async () => {
+  const {
+    createGitHubRepositorySearchAdapter, validateGitHubRepositorySearchInput,
+    validateGitHubRepositorySearchOutput,
+  } = await load('agent-github-repository-search-tool.mjs');
+  const requests = [];
+  const fetchImpl = async url => {
+    requests.push(url);
+    return new Response(JSON.stringify({ items: [
+      { name: 'UsefulTool', owner: { login: 'OpenTeam' }, description: 'Useful and observable.',
+        stargazers_count: 100, forks_count: 9, language: 'TypeScript', topics: ['agent', 'tool'],
+        license: { spdx_id: 'MIT' }, archived: false, fork: false, pushed_at: '2026-10-25T00:00:00Z' },
+      { name: 'Archived', owner: { login: 'OpenTeam' }, stargazers_count: 99, forks_count: 1,
+        archived: true, fork: false, pushed_at: '2026-10-20T00:00:00Z' },
+    ] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const input = validateGitHubRepositorySearchInput({ query: 'agent tool', limit: 10,
+    sort: 'stars', minStars: 20, pushedAfter: '2026-01-01' });
+  const receipt = await createGitHubRepositorySearchAdapter({ fetchImpl })({ request: input, timeoutSeconds: 5 });
+  assert.equal(requests.length, 1);
+  assert(requests[0].startsWith('https://api.github.com/search/repositories?'));
+  assert.match(new URL(requests[0]).searchParams.get('q'),
+    /archived:false fork:false stars:>=20 pushed:>=2026-01-01/u);
+  assert.equal(receipt.output.candidates.length, 1);
+  assert.equal(receipt.output.candidates[0].key, 'openteam/usefultool');
+  assert.equal(receipt.output.candidates[0].canonicalUrl, 'https://github.com/OpenTeam/UsefulTool');
+  assert.equal(Object.hasOwn(receipt.output.candidates[0], 'readme'), false);
+  assert.equal(validateGitHubRepositorySearchOutput(receipt.output).source.contentSha256.length, 64);
+  for (const query of ['stars:>0', 'agent/tool', 'a', 'agent\nrepo']) {
+    assert.throws(() => validateGitHubRepositorySearchInput({ query, limit: 10,
+      sort: 'stars', minStars: 0, pushedAfter: null }));
+  }
+});

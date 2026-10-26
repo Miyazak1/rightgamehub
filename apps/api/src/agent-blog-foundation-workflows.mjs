@@ -15,6 +15,25 @@ export const BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW = Object.freeze({
   ],
 });
 
+// Candidate discovery is an independent read-only workflow. Its search output
+// is never accepted as article evidence: a later draft Run must read each
+// selected repository through the revision-pinned repository tool.
+export const BLOG_PROJECT_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
+  schemaVersion: 'agent-workflow-v1',
+  workflowKey: 'blog.project.discovery-shadow',
+  workflowVersion: 1,
+  inputSchema: 'blog-project-discovery-input-v1',
+  outputSchema: 'blog-candidate-set-output-v1',
+  requiredCapabilities: [{ key: 'research.github.discover', version: 1 }],
+  defaultBudget: { providerCalls: 0, toolCalls: 5, inputTokens: 0, outputTokens: 0, wallClockSeconds: 600 },
+  stages: [
+    { key: 'freeze-brief', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
+    { key: 'search-candidates', kind: 'tool', dependsOn: ['freeze-brief'], maxAttempts: 3, timeoutSeconds: 300,
+      capability: { key: 'research.github.discover', version: 1 }, idempotencyMode: 'key' },
+    { key: 'finalize-candidates', kind: 'deterministic', dependsOn: ['search-candidates'], maxAttempts: 1, timeoutSeconds: 60 },
+  ],
+});
+
 // This is the target contract, not a production registration.  F1-4B only
 // registers the zero-cost replay workflow above.  Canary registration waits
 // until every adapter and publish-ownership gate has passed its own review.

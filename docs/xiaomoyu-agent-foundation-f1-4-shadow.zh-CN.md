@@ -1,7 +1,7 @@
 # 小墨鱼博客 F1-4 影子迁移
 
-版本：F1-4B2c
-状态：私有草稿边界与受治理选题/写作/校验已在开发分支实现；未部署，不改变线上执行权
+版本：F1-4B2d1
+状态：私有草稿影子 Run 与独立候选发现端口已在开发分支实现；未部署，不改变线上执行权
 日期：2026-10-26
 
 ## 1. 当前增量的目的
@@ -55,7 +55,7 @@ F1-4A 不是第二套博客执行器，而是切换前的被动旁路记录。�
 
 隔离 PostgreSQL 17 回归覆盖：
 
-- 131 个迁移并发应用且只能应用一次；
+- 132 个迁移并发应用且只能应用一次；
 - 同一旧任务重复投影不重复写事件；
 - `queued → generating → rejected` 可按顺序重建；
 - 观察事件不能更新或删除；
@@ -153,6 +153,19 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 5. 草稿事务把 `verification_artifact_id` 与 `composition_artifact_id` 一并写入不可变映射，正文哈希、来源集合或产物链任一不一致均拒绝落库；
 6. Run 输出只能是 `blog.private-draft`，Manifest 没有 `blog.article.publish` 能力和 `publish` Stage。
 
-隔离 PostgreSQL 17 已让整条六阶段 Run 实际执行完成，并断言：两次 Provider Action、一次 GitHub Tool Action、一份私有草稿、零发布 Stage、零发布 Action、零 `published` 事件。迁移套件共 82 项全部通过。
+隔离 PostgreSQL 17 已让整条六阶段 Run 实际执行完成，并断言：两次 Provider Action、一次 GitHub Tool Action、一份私有草稿、零发布 Stage、零发布 Action、零 `published` 事件。加入候选发现真实事务验收后，迁移套件共 83 项全部通过。
 
-这不等于已经上线。生产仍保持被动投影和旧链路单一发布所有权。下一步是 F1-4B2d：建设候选发现端口、canary 配置与私有运行观测，然后才决定是否在一个 Agent 上启用不发布的生产影子 Run。
+这不等于已经上线。生产仍保持被动投影和旧链路单一发布所有权。
+
+## 12. F1-4B2d1：候选发现与文章研究分层
+
+候选发现已经成为独立的 `blog.project.discovery-shadow@1` 工作流，而不是塞进文章写作提示词：
+
+1. 新的 `research.github.discover@1` 权限只允许访问 `github.repository-search`，不能读取文章证据、调用模型、写草稿或发布；
+2. 搜索工具只接受普通关键词，不接收 GitHub 搜索限定符、URL 或控制字符；固定访问 `api.github.com`，拒绝重定向，单次最多返回二十项；
+3. 一个发现 Run 最多冻结五条查询，最终候选集最多十二项；多查询结果会按仓库身份去重，并显式标记是否曾发布；
+4. 搜索结果只有仓库卡片，没有 README 和提交版本，因此永远不能被写作模块当成已验证来源；
+5. 真正进入写作前，另一个私有草稿 Run 仍须逐仓库执行 `research.github.repository.read@1`，取得固定提交和 README 证据；
+6. 发现工作流默认关闭，Manifest 的 Provider 预算为零，不存在草稿或发布 Stage。
+
+这一步只完成受治理发现端口和确定性候选归并，尚未把自然语言选题范围自动翻译为搜索词，也尚未自动把发现 Run 交接给草稿 Run。下一步 F1-4B2d2 会增加受结构约束的查询规划、跨 Run 血缘和私有 canary 观测；三者完成后才考虑在一个 Agent 上开启“不发布”的生产影子 canary。
