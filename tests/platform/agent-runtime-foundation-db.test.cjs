@@ -218,6 +218,33 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   [uncertainRun.id, uncertainStage.id, uncertainAction.id])).rows[0],
   { run_status: 'uncertain', stage_status: 'uncertain', action_status: 'uncertain' });
 
+  const explicitUnknownRun = await runtime.createRun({
+    agentUserId: account.agentUserId, workflowKey: uncertainManifest.workflowKey, workflowVersion: 1,
+    triggerKind: 'system', idempotencyKey: `explicit-uncertain:${crypto.randomUUID()}`, input: {}, config: {},
+  });
+  const explicitUnknownStage = await runtime.claimNextStage('explicit-uncertain-worker', 30,
+    [`${uncertainManifest.workflowKey}:write`]);
+  await runtime.startStage({ stageId: explicitUnknownStage.id, workerId: explicitUnknownStage.leasedBy,
+    leaseToken: explicitUnknownStage.leaseToken });
+  const explicitUnknownAction = await runtime.createAction({
+    runId: explicitUnknownRun.id, stageId: explicitUnknownStage.id,
+    idempotencyKey: `database-write:${explicitUnknownRun.id}`,
+    action: { actionKey: 'database-write', actionKind: 'domain-write',
+      capabilityKey: 'blog.article.publish', contractVersion: 1, riskLevel: 'L3' },
+    request: { runId: explicitUnknownRun.id }, policyDecision: { decision: 'allow' },
+  });
+  await runtime.transitionAction({ actionId: explicitUnknownAction.id, from: 'prepared', to: 'authorized' });
+  await runtime.failStage({ stageId: explicitUnknownStage.id,
+    workerId: explicitUnknownStage.leasedBy, leaseToken: explicitUnknownStage.leaseToken,
+    errorCode: 'DATABASE_COMMIT_OUTCOME_UNKNOWN', errorMessage: 'Commit outcome could not be queried.',
+    retryable: false, uncertain: true });
+  assert.deepEqual((await admin.query(`SELECT
+      (SELECT status FROM agent_runs WHERE id=$1) AS run_status,
+      (SELECT status FROM agent_run_stages WHERE id=$2) AS stage_status,
+      (SELECT status FROM agent_run_actions WHERE id=$3) AS action_status`,
+  [explicitUnknownRun.id, explicitUnknownStage.id, explicitUnknownAction.id])).rows[0],
+  { run_status: 'uncertain', stage_status: 'uncertain', action_status: 'uncertain' });
+
   const staleOutbox = (await admin.query("SELECT * FROM agent_runtime_outbox WHERE status='pending' ORDER BY created_at DESC LIMIT 1")).rows[0];
   if (staleOutbox) {
     await admin.query("UPDATE agent_runtime_outbox SET status='dispatching',attempts=attempts+1,lease_token=$2,lease_until=now()-interval '1 second' WHERE id=$1", [staleOutbox.id, crypto.randomUUID()]);

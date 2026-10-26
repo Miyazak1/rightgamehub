@@ -68,6 +68,133 @@ test('Foundation publication gateway parks confirmation without changing the art
   assert.equal(published, false);
 });
 
+test('Foundation publication gateway recovers a committed receipt after the caller loses the response', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  const actionId = uuid();
+  const input = { agentUserId, runId: uuid(), stageId: uuid(), workerId: 'worker',
+    leaseToken: uuid(), idempotencyKey: 'foundation-publication-lost-response',
+    articleId: uuid(), revisionId: uuid(), contentSha256: sha };
+  let receipt = null;
+  const transitions = [];
+  const gateway = createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: actionId, existing: false, status: 'prepared' }),
+      transitionAction: async value => (transitions.push(value), {}),
+    },
+    publicationRepository: {
+      getByAction: async () => receipt,
+      publish: async () => {
+        receipt = { actionId, articleId: input.articleId, revisionId: input.revisionId,
+          contentSha256: input.contentSha256, publicationState: 'published',
+          ownershipGeneration: 3 };
+        throw Object.assign(new Error('connection lost after commit'), { code: 'ECONNRESET' });
+      },
+    },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  });
+  const result = await gateway.publish(input);
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.replayed, true);
+  assert.equal(result.reconciled, true);
+  assert.equal(result.ownershipGeneration, 3);
+  assert.deepEqual(transitions.map(item => item.to), ['authorized']);
+});
+
+test('Foundation publication gateway settles a proven pre-commit failure without retrying', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  const transitions = [];
+  const gateway = createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: uuid(), existing: false, status: 'prepared' }),
+      transitionAction: async value => (transitions.push(value), {}),
+    },
+    publicationRepository: {
+      publish: async () => { throw Object.assign(new Error('rolled back before commit'), {
+        code: 'AGENT_BLOG_PUBLICATION_DRAFT_STATE_CHANGED',
+      }); },
+      getByAction: async () => null,
+    },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  });
+  await assert.rejects(gateway.publish({ agentUserId, runId: uuid(), stageId: uuid(),
+    workerId: 'worker', leaseToken: uuid(), idempotencyKey: 'foundation-publication-pre-commit',
+    articleId: uuid(), revisionId: uuid(), contentSha256: sha }),
+  error => error.code === 'AGENT_BLOG_PUBLICATION_DRAFT_STATE_CHANGED');
+  assert.deepEqual(transitions.map(item => item.to), ['authorized', 'failed']);
+});
+
+test('Foundation publication gateway reconciles a receipt committed during failure settlement', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  const input = { agentUserId, runId: uuid(), stageId: uuid(), workerId: 'worker',
+    leaseToken: uuid(), idempotencyKey: 'foundation-publication-concurrent-settlement',
+    articleId: uuid(), revisionId: uuid(), contentSha256: sha };
+  let reads = 0;
+  const receipt = { articleId: input.articleId, revisionId: input.revisionId,
+    contentSha256: input.contentSha256, publicationState: 'published', ownershipGeneration: 4 };
+  const gateway = createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: uuid(), existing: false, status: 'prepared' }),
+      transitionAction: async value => {
+        if (value.to === 'failed') throw Object.assign(new Error('state already succeeded'), {
+          code: 'AGENT_ACTION_STATE_CONFLICT',
+        });
+      },
+    },
+    publicationRepository: {
+      publish: async () => { throw Object.assign(new Error('commit outcome delayed'), { code: 'ECONNRESET' }); },
+      getByAction: async () => (++reads === 1 ? null : receipt),
+    },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  });
+  const result = await gateway.publish(input);
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.reconciled, true);
+  assert.equal(result.ownershipGeneration, 4);
+  assert.equal(reads, 2);
+});
+
+test('Foundation publication gateway fails closed when the committed outcome cannot be queried', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  const gateway = createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: uuid(), existing: false, status: 'prepared' }),
+      transitionAction: async () => ({}),
+    },
+    publicationRepository: {
+      publish: async () => { throw Object.assign(new Error('connection lost'), { code: 'ECONNRESET' }); },
+      getByAction: async () => { throw Object.assign(new Error('database unavailable'), { code: 'ECONNREFUSED' }); },
+    },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  });
+  await assert.rejects(gateway.publish({ agentUserId, runId: uuid(), stageId: uuid(),
+    workerId: 'worker', leaseToken: uuid(), idempotencyKey: 'foundation-publication-unknown',
+    articleId: uuid(), revisionId: uuid(), contentSha256: sha }), error => (
+    error.code === 'AGENT_BLOG_PUBLICATION_OUTCOME_UNCERTAIN'
+      && error.uncertain === true && error.retryable === false));
+});
+
+test('Foundation publication gateway rejects a mismatched replay receipt', async () => {
+  const { createAgentBlogFoundationPublicationGateway } = await load(
+    'agent-blog-foundation-publication.mjs');
+  const agentUserId = uuid();
+  await assert.rejects(createAgentBlogFoundationPublicationGateway({
+    runtimeRepository: { createAction: async () => ({ id: uuid(), existing: true, status: 'succeeded' }) },
+    publicationRepository: { getByAction: async () => ({ articleId: uuid(), revisionId: uuid(),
+      contentSha256: sha, publicationState: 'published' }) },
+    policyService: { decide: async () => ({ decision: 'allow', reasonCodes: [], agentUserId }) },
+  }).publish({ agentUserId, runId: uuid(), stageId: uuid(), workerId: 'worker', leaseToken: uuid(),
+    idempotencyKey: 'foundation-publication-conflict', articleId: uuid(), revisionId: uuid(),
+    contentSha256: sha }), error => error.code === 'AGENT_BLOG_PUBLICATION_IDEMPOTENCY_CONFLICT');
+});
+
 test('public workflow handler publishes only the exact persisted draft output', async () => {
   const { createAgentBlogFoundationPublicHandlers, normalizeBlogFoundationPublicInput } = await load(
     'agent-blog-foundation-shadow.mjs');
@@ -118,4 +245,6 @@ test('publication receipt is immutable and repository rechecks Foundation owners
   assert.ok(articleUpdate > guard);
   assert.match(repository, /workflow_key !== 'blog\.project\.single'/u);
   assert.match(repository, /verification_artifact_id == null/u);
+  assert.match(repository, /boundary: 'before-commit'/u);
+  assert.match(repository, /boundary: 'after-commit'/u);
 });

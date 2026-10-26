@@ -995,6 +995,22 @@ OutputService
 
 每个故障必须得到确定的可恢复、失败或未知状态，不允许永久活动任务和自动重复收费。
 
+#### 22.4.1 当前实现证据（2026-10-26）
+
+发布事务已经具备显式的 `before-commit` / `after-commit` 故障探针，并按不可变发布回执处理四种结果：
+
+| 故障窗口 | 可验证事实 | 运行时结果 | 自动重试 |
+| --- | --- | --- | --- |
+| 提交前失败 | 按 Action 查不到发布回执 | Action `failed`，Stage/Run 失败关闭 | 否 |
+| 提交后响应丢失 | 按 Action 查到且内容哈希、文章、修订完全一致的回执 | 恢复为成功并标记 `reconciled` | 否 |
+| 失败结算期间并发提交 | 第一次未找到回执、Action 终态冲突、第二次找到匹配回执 | 恢复为成功 | 否 |
+| 无法查询提交结果 | 既不能证明回滚，也不能证明提交 | Action/Stage/Run 进入 `uncertain` | 否 |
+| 回执与请求不一致 | 幂等键对应的文章、修订或哈希不一致 | `AGENT_BLOG_PUBLICATION_IDEMPOTENCY_CONFLICT` | 否 |
+
+显式 `uncertain` 会把尚处于 `prepared`、`authorized` 或 `reserved` 的相关 Action 一并记为未知，避免出现“Run 未知但 Action 被记作已取消”的审计矛盾。预算和 Provider 调用按最保守水位结算。
+
+本项只证明发布边界的代码级故障矩阵已经建立；Foundation V1 仍必须补齐真实 PostgreSQL 下的提交断线、多实例争用和进程级崩溃演练，不能以单元测试替代生产验收。
+
 ### 22.5 安全测试
 
 - README/PDF/网页提示注入；

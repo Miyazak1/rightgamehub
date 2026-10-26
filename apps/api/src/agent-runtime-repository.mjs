@@ -352,10 +352,13 @@ export class PostgresAgentRuntimeRepository {
       const stage = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
-      const exposed = (await client.query(`SELECT id,status FROM agent_run_actions WHERE stage_id=$1
-        AND status IN ('sending','sent','acknowledged','uncertain') FOR UPDATE`, [stageId])).rows;
+      const activeActions = (await client.query(`SELECT id,status FROM agent_run_actions WHERE stage_id=$1
+        AND status IN ('prepared','authorized','reserved','sending','sent','acknowledged','uncertain')
+        FOR UPDATE`, [stageId])).rows;
+      const exposed = activeActions.filter(action => ['sending', 'sent', 'acknowledged', 'uncertain'].includes(action.status));
+      const explicitlyUncertain = uncertain && activeActions.length > 0;
       const unsafeOutcome = uncertain || exposed.length > 0;
-      if (exposed.length) {
+      if (exposed.length || explicitlyUncertain) {
         await client.query(`UPDATE agent_budget_reservations reservation SET status='uncertain',
           charged_provider_calls=reserved_provider_calls,charged_input_tokens=reserved_input_tokens,
           charged_output_tokens=reserved_output_tokens,charged_cost_microusd=reserved_cost_microusd,
@@ -363,12 +366,20 @@ export class PostgresAgentRuntimeRepository {
           WHERE action.stage_id=$1 AND reservation.action_id=action.id AND reservation.status='reserved'`, [stageId]);
         await client.query(`UPDATE agent_provider_calls call SET status='uncertain',error_code=$2,error_message=$3,
           finished_at=now(),updated_at=now() FROM agent_run_actions action
-          WHERE action.stage_id=$1 AND call.action_id=action.id AND call.status IN ('sending','acknowledged')`,
+          WHERE action.stage_id=$1 AND call.action_id=action.id
+            AND call.status IN ('reserved','sending','acknowledged')`,
         [stageId, errorCode, errorMessage]);
       }
-      if (exposed.length) await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,error_message=$3,
-        finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
-      [stageId, errorCode, errorMessage]);
+      if (explicitlyUncertain) {
+        await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,error_message=$3,
+          finished_at=now(),updated_at=now() WHERE stage_id=$1
+            AND status IN ('prepared','authorized','reserved','sending','sent','acknowledged')`,
+        [stageId, errorCode, errorMessage]);
+      } else if (exposed.length) {
+        await client.query(`UPDATE agent_run_actions SET status='uncertain',error_code=$2,error_message=$3,
+          finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('sending','sent','acknowledged')`,
+        [stageId, errorCode, errorMessage]);
+      }
       await client.query(`UPDATE agent_budget_reservations reservation SET status='released',released_at=now(),updated_at=now()
         FROM agent_run_actions action WHERE action.stage_id=$1 AND reservation.action_id=action.id
           AND reservation.status='reserved' AND action.status IN ('prepared','authorized','reserved')`, [stageId]);

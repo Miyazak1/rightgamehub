@@ -101,6 +101,27 @@ test('runtime worker converts explicit retryable handler failures into durable r
   assert.equal(failure.uncertain, false);
 });
 
+test('runtime worker preserves an explicit unknown side-effect outcome without retrying', async () => {
+  const { createAgentRuntimeWorker } = await import(moduleUrl.href);
+  const fixture = repositoryFixture();
+  const worker = createAgentRuntimeWorker({
+    repository: fixture.repository, workerId: 'worker-test',
+    instanceId: '99999999-9999-4999-8999-999999999999',
+    leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 1,
+    handlers: { 'foundation.worker:prepare': async () => {
+      throw Object.assign(new Error('commit outcome cannot be queried'), {
+        code: 'DATABASE_COMMIT_OUTCOME_UNKNOWN', retryable: false, uncertain: true,
+      });
+    } },
+  });
+  const result = await worker.runOnce();
+  assert.equal(result.status, 'failed');
+  const failure = fixture.calls.find(call => call[0] === 'fail-stage')[1];
+  assert.equal(failure.errorCode, 'DATABASE_COMMIT_OUTCOME_UNKNOWN');
+  assert.equal(failure.retryable, false);
+  assert.equal(failure.uncertain, true);
+});
+
 test('runtime worker configuration fails closed on unsafe heartbeat and disabled values', async () => {
   const { loadAgentRuntimeWorkerConfig } = await import(moduleUrl.href);
   assert.equal(loadAgentRuntimeWorkerConfig({}).enabled, false);

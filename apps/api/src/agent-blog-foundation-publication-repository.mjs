@@ -34,10 +34,14 @@ async function appendActionEvent(client, action, eventType, payload) {
 }
 
 export class PostgresAgentBlogFoundationPublicationRepository {
-  constructor(pool, { publicationOwnership } = {}) {
+  constructor(pool, { publicationOwnership, boundaryProbe } = {}) {
     this.pool = pool;
     this.publicationOwnership = publicationOwnership
       ?? new PostgresAgentBlogPublicationOwnershipRepository(pool);
+    if (boundaryProbe != null && typeof boundaryProbe !== 'function') {
+      fail('AGENT_BLOG_PUBLICATION_BOUNDARY_PROBE_INVALID');
+    }
+    this.boundaryProbe = boundaryProbe ?? (async () => {});
   }
 
   async getByAction(actionId) {
@@ -49,7 +53,7 @@ export class PostgresAgentBlogFoundationPublicationRepository {
   }
 
   async publish({ actionId, articleId, revisionId, contentSha256 }) {
-    return withTransaction(this.pool, async client => {
+    const publication = await withTransaction(this.pool, async client => {
       const action = (await client.query(`SELECT action.*,run.agent_user_id,run.workflow_key,
           run.status AS run_status,stage.status AS stage_status,
           account.status AS agent_status,author.status AS user_status
@@ -153,11 +157,15 @@ export class PostgresAgentBlogFoundationPublicationRepository {
       await appendActionEvent(client, action, 'action.succeeded', {
         articleId, revisionId, publicationState: 'published', ownershipGeneration: ownership.generation,
       });
-      return {
+      const result = {
         runId: action.run_id, actionId: action.id, agentUserId: action.agent_user_id,
         articleId, revisionId, ownershipGeneration: ownership.generation, contentSha256,
         publicationState: 'published', publishedAt: published.first_published_at, existing: false,
       };
+      await this.boundaryProbe({ boundary: 'before-commit', publication: structuredClone(result) });
+      return result;
     });
+    await this.boundaryProbe({ boundary: 'after-commit', publication: structuredClone(publication) });
+    return publication;
   }
 }
