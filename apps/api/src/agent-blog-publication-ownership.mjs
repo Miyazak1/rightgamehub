@@ -272,6 +272,11 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       await client.query(`UPDATE agent_blog_automation_settings SET enabled=false,next_run_at=NULL,
         updated_by_user_id=$2,updated_at=clock_timestamp() WHERE agent_user_id=$1`,
       [agentUserId, actorUserId]);
+      await client.query(`UPDATE agent_schedules SET enabled=false,next_fire_at=NULL,
+        config_json=config_json||jsonb_build_object('disabledAt',clock_timestamp(),
+          'disabledReason','publication-rollback'),updated_by_user_id=$2,updated_at=clock_timestamp()
+        WHERE agent_user_id=$1 AND workflow_key='blog.project.discovery-shadow'
+          AND config_json->>'mode'='foundation-public'`, [agentUserId, actorUserId]);
       const row = (await client.query(`UPDATE agent_blog_publication_owners SET
           active_publisher='legacy',generation=generation+1,reason=$3,
           updated_by_user_id=$2,
@@ -283,7 +288,7 @@ export class PostgresAgentBlogPublicationOwnershipRepository {
       return {
         schemaVersion: 'agent-blog-publication-rollback-receipt-v1',
         agentUserId, previousPublisher: 'foundation', owner: ownerView(row),
-        legacyScheduleEnabled: false, automaticResume: false,
+        legacyScheduleEnabled: false, publicScheduleDisabled: true, automaticResume: false,
       };
     });
   }

@@ -76,10 +76,11 @@ test('Automation service keeps provider keys write-only and only publishes after
 test('Production secret root is scoped to the API and explicit one-shot or scheduled executors only',()=>{
  const fs=require('node:fs'),root=path.resolve(__dirname,'../..');
  const compose=fs.readFileSync(path.join(root,'deploy/compose.prod.yml'),'utf8'),routes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8'),admin=fs.readFileSync(path.join(root,'packages/platform-client/src/AgentAdmin.jsx'),'utf8');
- assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,4);
+ assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,5);
  assert.match(compose,/agent-blog-canary-run:[\s\S]*?restart: "no"[\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
  assert.match(compose,/agent-blog-private-scheduler:[\s\S]*?profiles: \["agent-blog-private-scheduler"\][\s\S]*?AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: "false"/u);
  assert.match(compose,/agent-blog-public-run:[\s\S]*?profiles: \["agent-blog-public-run"\][\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
+ assert.match(compose,/agent-blog-public-scheduler:[\s\S]*?profiles: \["agent-blog-public-scheduler"\][\s\S]*?AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED:/u);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
  assert.match(routes,/behavior-profile/);
  assert.match(admin,/新基座先生成私有草稿并完成影子验收/);

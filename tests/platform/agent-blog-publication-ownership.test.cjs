@@ -118,7 +118,8 @@ test('rollback remains explicit, generation-bound, and never re-enables legacy s
   const source = fs.readFileSync(path.join(root,
     'apps/api/src/agent-blog-publication-ownership.mjs'), 'utf8');
   assert.match(source, /AGENT_BLOG_PUBLICATION_ROLLBACK_BLOCKED/u);
-  assert.match(source, /legacyScheduleEnabled: false, automaticResume: false/u);
+  assert.match(source, /legacyScheduleEnabled: false, publicScheduleDisabled: true, automaticResume: false/u);
+  assert.match(source, /'disabledReason','publication-rollback'/u);
 });
 
 test('cutover service requires an administrator and forwards an expected generation', async () => {

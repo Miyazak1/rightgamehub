@@ -748,6 +748,35 @@ services:
     cpus: "0.75"
     mem_limit: 256m
 
+  # Durable public scheduler, excluded from the default deployment. Startup is
+  # an explicit activation attempt; any unsafe preflight condition aborts it,
+  # and any failed fire persistently suspends the schedule.
+  agent-blog-public-scheduler:
+    <<: *service-defaults
+    profiles: ["agent-blog-public-scheduler"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "apps/api/src/agent-blog-public-schedule-worker-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      <<: *agent-blog-public-environment
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED: ${AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED:-false}
+      AGENT_BLOG_PUBLIC_SCHEDULE_POLL_MS: ${AGENT_BLOG_PUBLIC_SCHEDULE_POLL_MS:-30000}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
   # Deterministic post-run attestation. It performs no network or model calls
   # and appends one immutable, content-free report for the selected draft Run.
   agent-blog-canary-report:

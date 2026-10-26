@@ -336,6 +336,17 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 5. 公开运行的每日额度只统计公开文章 Run，不把此前私有调试次数伪装成公开发布次数；月度 Provider、费用、连续失败、活跃/不确定运行仍是共同的硬门禁；
 6. 私有计划领取同时检查 `config.mode=private-shadow` 和唯一发布者仍为 `legacy`。切换事务除了关闭旧自动发布设置，也原子停用私有 Foundation 计划；切换后旧 worker 即使仍存活也领不到任务；
 7. 切换所需的“三次私有计划成功”从实际计划入口 `blog.project.discovery-shadow` 且 `mode=private-shadow` 的不可变 fire 账本计算，避免因查询草稿工作流键而永久误判为零；
-8. 目前仍没有自动公开调度。首次公开执行必须走显式 bootstrap、切换预检、管理员切换、公开 preflight 和一次性 run；完成一次公开运行与显式回退演练后，才进入公开每天 10 点调度阶段。
+8. 公开调度执行器已经实现，但 profile 与开关均默认关闭。首次公开执行仍必须走显式 bootstrap、切换预检、管理员切换、公开 preflight 和一次性 run；完成一次公开运行与显式回退演练后，才允许显式启用每天 10 点公开计划。
+
+### 20.3 每天 10 点公开计划
+
+公开计划复用现有唯一计划行，但把模式从 `private-shadow` 显式改为 `foundation-public`，不创建第二条会竞争的计划：
+
+1. 启动同时需要 Compose profile `agent-blog-public-scheduler`、`AGENT_BLOG_PUBLIC_RUNTIME_ENABLED=true` 和 `AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED=true`；任一缺失都不会运行；
+2. 激活只允许当前唯一发布者为 Foundation，并再次检查身份、五项能力、工作流、工具、密钥、模型、熔断、旧自动化和运行水位；当前自然日已经完成一次公开发布只影响今天执行，不阻止为明天 10 点登记计划；
+3. 计划仍固定为 `Asia/Shanghai 10:00`、`fire-once`，每个逻辑触发有稳定请求 ID 和唯一 fire 账本；
+4. 领取任务时同时检查 `mode=foundation-public` 与当前发布者仍为 Foundation。即使容器未及时停止，回退后也不能领取新任务；
+5. 计划只把实际得到 `blog.article/published` 的完整七阶段 Run 记为成功。草稿、等待确认、失败、不确定或租约过期都会持久暂停计划，不能自动重发；
+6. 回退事务会先停用公开计划，再把发布权交回 legacy；旧计划同样不会自动恢复，因此回退不会造成另一条链路自行接管。
 
 这套顺序不需要等待第二天才能继续工程建设，也不允许通过提高私有日额度伪造切换证据。私有样本门槛、计划门槛和真实时间事实保持不变；公开执行器、失败关闭、回退和调度隔离可以在零 Provider 测试中先完成。
