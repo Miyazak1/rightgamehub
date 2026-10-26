@@ -254,9 +254,13 @@ function estimatedTokens(payload) {
   return Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(payload)) / 3));
 }
 
-export function createAgentBlogFoundationGenerationHandlers({ providerGateway, artifactRepository } = {}) {
+export function createAgentBlogFoundationGenerationHandlers({ providerGateway, artifactRepository,
+  workflowKey = 'blog.project.single.draft-shadow' } = {}) {
   if (!providerGateway || !artifactRepository) fail('AGENT_BLOG_GENERATION_DEPENDENCY_REQUIRED');
-  const workflow = 'blog.project.single.draft-shadow';
+  if (!['blog.project.single.draft-shadow', 'blog.project.single'].includes(workflowKey)) {
+    fail('AGENT_BLOG_GENERATION_WORKFLOW_INVALID');
+  }
+  const workflow = workflowKey;
   return {
     [`${workflow}:select-subject`]: async (context, execution) => {
       const input = editorialInput(context);

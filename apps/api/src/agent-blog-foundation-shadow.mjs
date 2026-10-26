@@ -1,6 +1,7 @@
 import { normalizeAgentBehaviorProfile } from './agent-behavior-profile.mjs';
 import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool.mjs';
-import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
+import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,
+  BLOG_PROJECT_SINGLE_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
 import { createAgentBlogFoundationGenerationHandlers } from './agent-blog-foundation-generation.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 
@@ -24,12 +25,12 @@ function stringList(value, { maxItems, maxLength }) {
   return items;
 }
 
-export function normalizeBlogFoundationShadowInput(value) {
+function normalizeInput(value, schemaVersion) {
   const keys = ['schemaVersion', 'topicScope', 'candidateRepositories', 'recentTitles',
     'previousRepositoryUrls', 'behaviorProfile'];
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || Object.keys(value).some(key => !keys.includes(key))
-    || value.schemaVersion !== 'blog-project-single-shadow-input-v1') fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
+    || value.schemaVersion !== schemaVersion) fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
   const topicScope = compact(value.topicScope, 2000);
   if (topicScope.length < 2) fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
   if (!Array.isArray(value.candidateRepositories) || value.candidateRepositories.length < 1
@@ -53,6 +54,11 @@ export function normalizeBlogFoundationShadowInput(value) {
   };
 }
 
+export const normalizeBlogFoundationShadowInput = value => normalizeInput(
+  value, 'blog-project-single-shadow-input-v1');
+export const normalizeBlogFoundationPublicInput = value => normalizeInput(
+  value, 'blog-project-single-input-v1');
+
 function prerequisite(context, stageKey) {
   const stage = context.prerequisites.find(item => item.stageKey === stageKey && item.status === 'succeeded');
   if (!stage) fail('AGENT_BLOG_SHADOW_PREREQUISITE_INVALID');
@@ -65,17 +71,18 @@ function artifactId(result) {
   return id;
 }
 
-export function createAgentBlogFoundationShadowHandlers({
-  toolGateway, providerGateway, artifactRepository, draftGateway,
-} = {}) {
-  if (!toolGateway || !providerGateway || !artifactRepository || !draftGateway) {
+function createFoundationHandlers({
+  toolGateway, providerGateway, artifactRepository, draftGateway, publicationGateway = null,
+}, { workflow, normalizeInputValue }) {
+  if (!toolGateway || !providerGateway || !artifactRepository || !draftGateway
+    || (workflow === BLOG_PROJECT_SINGLE_WORKFLOW.workflowKey && !publicationGateway)) {
     fail('AGENT_BLOG_SHADOW_DEPENDENCY_REQUIRED');
   }
-  const workflow = BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.workflowKey;
-  const generated = createAgentBlogFoundationGenerationHandlers({ providerGateway, artifactRepository });
-  return {
+  const generated = createAgentBlogFoundationGenerationHandlers({ providerGateway, artifactRepository,
+    workflowKey: workflow });
+  const handlers = {
     [`${workflow}:freeze-input`]: async context => {
-      const input = normalizeBlogFoundationShadowInput(context.run.input);
+      const input = normalizeInputValue(context.run.input);
       if (stableHash(context.run.input) !== context.run.inputSha256) fail('AGENT_BLOG_SHADOW_INPUT_HASH_MISMATCH');
       return { outputRef: {
         schemaVersion: 'blog-frozen-input-ref-v1', inputSha256: context.run.inputSha256,
@@ -85,7 +92,7 @@ export function createAgentBlogFoundationShadowHandlers({
     },
 
     [`${workflow}:collect-evidence`]: async (context, execution) => {
-      const input = normalizeBlogFoundationShadowInput(context.run.input);
+      const input = normalizeInputValue(context.run.input);
       const frozen = prerequisite(context, 'freeze-input');
       if (frozen.schemaVersion !== 'blog-frozen-input-ref-v1' || frozen.inputSha256 !== context.run.inputSha256
         || frozen.candidateCount !== input.candidateRepositories.length
@@ -148,11 +155,50 @@ export function createAgentBlogFoundationShadowHandlers({
       return {
         outputRef: { articleId: draft.articleId, revisionId: draft.revisionId,
           publicationState: 'draft', verificationArtifactId: verification.id,
-          compositionArtifactId: composition.id, sourceArtifactIds: packageContent.sourceToolArtifactIds },
+          compositionArtifactId: composition.id, sourceArtifactIds: packageContent.sourceToolArtifactIds,
+          contentSha256: draft.contentSha256 },
         runOutput: { type: 'blog.private-draft', id: draft.articleId },
       };
     },
   };
+  if (publicationGateway) handlers[`${workflow}:publish`] = async (context, execution) => {
+    const draft = prerequisite(context, 'persist-draft');
+    if (draft.publicationState !== 'draft' || typeof draft.articleId !== 'string'
+      || typeof draft.revisionId !== 'string' || !/^[a-f0-9]{64}$/u.test(draft.contentSha256 ?? '')) {
+      fail('AGENT_BLOG_PUBLICATION_DRAFT_REF_INVALID');
+    }
+    const publication = await publicationGateway.publish({
+      agentUserId: context.run.agentUserId, runId: context.run.id, stageId: context.stage.id,
+      workerId: execution.workerId, leaseToken: execution.leaseToken,
+      idempotencyKey: `blog-foundation-publish:${context.run.id}`,
+      articleId: draft.articleId, revisionId: draft.revisionId,
+      contentSha256: draft.contentSha256,
+    });
+    if (publication.status !== 'succeeded' || publication.publicationState !== 'published') {
+      fail('AGENT_BLOG_PUBLICATION_INCOMPLETE');
+    }
+    return {
+      outputRef: { articleId: publication.articleId, revisionId: publication.revisionId,
+        publicationState: 'published', ownershipGeneration: publication.ownershipGeneration,
+        contentSha256: publication.contentSha256 },
+      runOutput: { type: 'blog.article', id: publication.articleId },
+    };
+  };
+  return handlers;
+}
+
+export function createAgentBlogFoundationShadowHandlers(dependencies = {}) {
+  return createFoundationHandlers(dependencies, {
+    workflow: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW.workflowKey,
+    normalizeInputValue: normalizeBlogFoundationShadowInput,
+  });
+}
+
+export function createAgentBlogFoundationPublicHandlers(dependencies = {}) {
+  return createFoundationHandlers(dependencies, {
+    workflow: BLOG_PROJECT_SINGLE_WORKFLOW.workflowKey,
+    normalizeInputValue: normalizeBlogFoundationPublicInput,
+  });
 }
 
 export function createAgentBlogFoundationShadowCanary({ runtimeRepository, enabled = false } = {}) {
