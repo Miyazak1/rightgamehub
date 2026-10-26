@@ -43,7 +43,7 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
     AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
     AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
     AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
-    AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '2',
+    AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '3',
   }), error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_INVALID');
   assert.throws(() => loadAgentBlogPrivateCanaryConfig({
     AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',

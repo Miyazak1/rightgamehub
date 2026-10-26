@@ -34,7 +34,7 @@ export function loadAgentBlogPrivateCanaryConfig(env = process.env) {
   const dailyDiscoveryRunBaseLimit = integer(env.AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT ?? 1,
     1, 4, 'AGENT_BLOG_PRIVATE_CANARY_DAILY_LIMIT_INVALID');
   const extraDailyRunAllowance = integer(env.AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE ?? 0,
-    0, 1, 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_INVALID');
+    0, 2, 'AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_INVALID');
   if (extraDailyRunAllowance > 0 && dailyDiscoveryRunBaseLimit !== 4) {
     fail('AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_ALLOWANCE_REQUIRES_MAX_BASE');
   }

@@ -71,7 +71,7 @@ test('foundation generation separates provider selection and composition from de
           { type: 'heading', level: 2, text: '如何判断是否适合自己' },
           { type: 'paragraph', text: articleParagraph, citationIndexes: [1] },
           { type: 'heading', level: 2, text: '先做一次小规模验证' },
-          { type: 'paragraph', text: articleParagraph, citationIndexes: [1] },
+          { type: 'list', text: articleParagraph, citationIndexes: [1] },
         ],
         followUpQuestions: ['第一次体验应该从哪里开始？', '这个项目更适合哪些使用者？', '验证结果时最容易忽略什么？'],
       } };
@@ -88,6 +88,7 @@ test('foundation generation separates provider selection and composition from de
     outputRef: selected.outputRef }]);
   const composed = await handlers['blog.project.single.draft-shadow:compose'](composeContext, execution);
   assert.equal(composed.outputRef.artifactKey, 'blog.composition');
+  assert.equal(stored.get(composed.outputRef.artifactId).content.content.blocks[5].type, 'paragraph');
   const verifyContext = context(runId, uuid(), 'verify', [{ stageKey: 'compose', status: 'succeeded',
     outputRef: composed.outputRef }]);
   const verified = await handlers['blog.project.single.draft-shadow:verify'](verifyContext, execution);
@@ -95,6 +96,7 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
   assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 2 });
+  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 2 });
   assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls.every(item => item.action.capabilityKey === 'provider.text.generate' && item.action.riskLevel === 'L2'));
   assert.equal(providerCalls.some(item => item.action.actionKey === 'verify'), false);
