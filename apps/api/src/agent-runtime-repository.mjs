@@ -14,6 +14,8 @@ export class AgentRuntimeRepositoryError extends Error {
 const fail = code => { throw new AgentRuntimeRepositoryError(code); };
 const iso = value => value?.toISOString?.() ?? value ?? null;
 const json = value => JSON.stringify(value);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const KEY = /^[a-z][a-z0-9.-]{2,119}$/u;
 
 function stageView(row) {
   return row ? {
@@ -97,6 +99,23 @@ const policyDigest = value => {
   return stableHash(copy);
 };
 
+function normalizeRunHandoff(value) {
+  if (value == null) return null;
+  const keys = ['kind', 'sourceRunId', 'sourceArtifactId', 'sourceOutputType',
+    'sourceArtifactKey', 'sourceContentSha256'];
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).length !== keys.length || keys.some(key => !Object.hasOwn(value, key))
+    || typeof value.kind !== 'string' || !KEY.test(value.kind)
+    || typeof value.sourceRunId !== 'string' || !UUID.test(value.sourceRunId)
+    || typeof value.sourceArtifactId !== 'string' || !UUID.test(value.sourceArtifactId)
+    || typeof value.sourceOutputType !== 'string' || !KEY.test(value.sourceOutputType)
+    || typeof value.sourceArtifactKey !== 'string' || !KEY.test(value.sourceArtifactKey)
+    || typeof value.sourceContentSha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(value.sourceContentSha256)) {
+    fail('AGENT_RUN_HANDOFF_INVALID');
+  }
+  return structuredClone(value);
+}
+
 export class PostgresAgentRuntimeRepository {
   constructor(pool) { this.pool = pool; }
 
@@ -124,9 +143,10 @@ export class PostgresAgentRuntimeRepository {
 
   async createRun({
     id = crypto.randomUUID(), agentUserId, workflowKey, workflowVersion, triggerKind, triggerRef = null,
-    idempotencyKey, input = {}, config = {}, budget = null,
+    idempotencyKey, input = {}, config = {}, budget = null, handoff = null,
   }) {
     return withTransaction(this.pool, async client => {
+      handoff = normalizeRunHandoff(handoff);
       const workflow = (await client.query(`SELECT * FROM agent_workflow_definitions
         WHERE workflow_key=$1 AND workflow_version=$2 AND status='active' FOR SHARE`, [workflowKey, workflowVersion])).rows[0];
       if (!workflow) fail('AGENT_WORKFLOW_NOT_ACTIVE');
@@ -154,7 +174,30 @@ export class PostgresAgentRuntimeRepository {
           || existing.manifest_sha256 !== workflow.manifest_sha256 || existing.trigger_kind !== triggerKind
           || existing.trigger_ref !== triggerRef || stableHash(existing.config_snapshot) !== stableHash(config)
           || stableHash(existing.budget_json) !== stableHash(requestedBudget)) fail('AGENT_RUN_IDEMPOTENCY_CONFLICT');
+        const existingHandoff = (await client.query('SELECT * FROM agent_run_handoffs WHERE target_run_id=$1',
+          [existing.id])).rows[0] ?? null;
+        const sameHandoff = handoff === null ? existingHandoff === null : existingHandoff !== null
+          && existingHandoff.handoff_kind === handoff.kind
+          && existingHandoff.source_run_id === handoff.sourceRunId
+          && existingHandoff.source_artifact_id === handoff.sourceArtifactId
+          && existingHandoff.source_output_type === handoff.sourceOutputType
+          && existingHandoff.source_artifact_key === handoff.sourceArtifactKey
+          && existingHandoff.source_content_sha256 === handoff.sourceContentSha256
+          && existingHandoff.target_input_sha256 === inputHash;
+        if (!sameHandoff) fail('AGENT_RUN_IDEMPOTENCY_CONFLICT');
         return { id: existing.id, status: existing.status, existing: true };
+      }
+      if (handoff) {
+        const source = (await client.query(`SELECT source.agent_user_id,source.status,source.output_type,source.output_id,
+            artifact.artifact_key,artifact.content_sha256
+          FROM agent_runs source JOIN agent_runtime_stage_artifacts artifact
+            ON artifact.run_id=source.id AND artifact.id=$2
+          WHERE source.id=$1 FOR SHARE OF source,artifact`,
+        [handoff.sourceRunId, handoff.sourceArtifactId])).rows[0];
+        if (!source || source.agent_user_id !== agentUserId || source.status !== 'succeeded'
+          || source.output_id !== handoff.sourceArtifactId || source.output_type !== handoff.sourceOutputType
+          || source.artifact_key !== handoff.sourceArtifactKey
+          || source.content_sha256 !== handoff.sourceContentSha256) fail('AGENT_RUN_HANDOFF_SOURCE_INVALID');
       }
       const capabilitySnapshot = {
         schemaVersion: 'agent-capability-snapshot-v1',
@@ -167,6 +210,12 @@ export class PostgresAgentRuntimeRepository {
         id, agentUserId, workflowKey, workflowVersion, workflow.manifest_sha256, triggerKind, triggerRef, idempotencyKey,
         identity.active_profile_id, identity.active_policy_profile_id, json(capabilitySnapshot), json(config), json(input), inputHash, json(budget ?? manifest.defaultBudget),
       ])).rows[0];
+      if (handoff) await client.query(`INSERT INTO agent_run_handoffs(
+          id,agent_user_id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
+          source_artifact_key,source_content_sha256,target_run_id,target_input_sha256
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [crypto.randomUUID(), agentUserId, handoff.kind,
+        handoff.sourceRunId, handoff.sourceArtifactId, handoff.sourceOutputType,
+        handoff.sourceArtifactKey, handoff.sourceContentSha256, run.id, inputHash]);
       for (const [ordinal, stage] of manifest.stages.entries()) {
         const stageId = crypto.randomUUID();
         const status = stage.dependsOn.length ? 'blocked' : 'queued';
@@ -180,6 +229,10 @@ export class PostgresAgentRuntimeRepository {
       }
       await client.query(`INSERT INTO agent_run_events(run_id,event_type,actor_kind,actor_ref,payload_json)
         VALUES($1,'run.created','system',NULL,$2)`, [id, json({ triggerKind, workflowKey, workflowVersion })]);
+      if (handoff) await client.query(`INSERT INTO agent_run_events(run_id,event_type,actor_kind,actor_ref,payload_json)
+        VALUES($1,'run.handoff-accepted','system',NULL,$2)`, [id, json({ handoffKind: handoff.kind,
+        sourceRunId: handoff.sourceRunId, sourceArtifactId: handoff.sourceArtifactId,
+        sourceContentSha256: handoff.sourceContentSha256 })]);
       return { id: run.id, status: run.status, existing: false };
     });
   }

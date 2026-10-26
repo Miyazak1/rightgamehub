@@ -25,6 +25,10 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     const { createAgentProviderGateway } = await harness.load('agent-provider-gateway.mjs');
     const { createAgentSecretVault } = await harness.load('agent-secret-vault.mjs');
     const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
+    const { createAgentBlogCandidateDraftHandoffCanary } =
+      await harness.load('agent-blog-candidate-handoff.mjs');
+    const { createAgentBlogCanaryObservabilityService } =
+      await harness.load('agent-blog-canary-observability.mjs');
 
     const operatorId = crypto.randomUUID();
     await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Discovery operator','admin')", [operatorId]);
@@ -156,6 +160,58 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     ]);
     assert.equal(Number((await admin.query('SELECT count(*)::int AS n FROM agent_blog_foundation_drafts WHERE run_id=$1',
       [autonomousRun.id])).rows[0].n), 0);
+    const handoffCanary = createAgentBlogCandidateDraftHandoffCanary({
+      runtimeRepository: runtime, artifactRepository, enabled: true,
+    });
+    await handoffCanary.register(operatorId);
+    const handoffRequest = {
+      agentUserId: account.agentUserId,
+      discoveryRunId: autonomousRun.id,
+      discoveryArtifactId: autonomousStored.output_id,
+      idempotencyKey: `candidate-handoff:${crypto.randomUUID()}`,
+      behaviorProfile: defaultAgentBehaviorProfile(),
+      config: { model: { provider: 'deepseek', modelId: 'fixture-discovery' } },
+    };
+    const draftRun = await handoffCanary.createDraftRun(handoffRequest);
+    assert.equal((await handoffCanary.createDraftRun(handoffRequest)).id, draftRun.id);
+    const handoff = (await admin.query('SELECT * FROM agent_run_handoffs WHERE target_run_id=$1',
+      [draftRun.id])).rows[0];
+    assert.equal(handoff.source_run_id, autonomousRun.id);
+    assert.equal(handoff.source_artifact_id, autonomousStored.output_id);
+    assert.equal(handoff.source_content_sha256,
+      (await artifactRepository.read({ runId: autonomousRun.id,
+        artifactId: autonomousStored.output_id })).contentSha256);
+    assert.equal((await admin.query('SELECT input_json FROM agent_runs WHERE id=$1', [draftRun.id]))
+      .rows[0].input_json.candidateRepositories[0], 'https://github.com/owner/project');
+    const targetTimeline = await createAgentRuntimeReadService({ pool: admin,
+      authorizeOperator: async () => true }).timeline({ userId: operatorId }, account.agentUserId, draftRun.id);
+    assert.equal(targetTimeline.handoffs.incoming.length, 1);
+    assert.equal(targetTimeline.handoffs.incoming[0].sourceRunId, autonomousRun.id);
+    assert.equal(Object.hasOwn(targetTimeline.handoffs.incoming[0], 'content'), false);
+    await assert.rejects(admin.query('UPDATE agent_run_handoffs SET handoff_kind=$2 WHERE id=$1',
+      [handoff.id, 'blog.changed']));
+    await assert.rejects(runtime.createRun({
+      agentUserId: account.agentUserId, workflowKey: 'blog.project.single.draft-shadow', workflowVersion: 1,
+      triggerKind: 'system', idempotencyKey: handoffRequest.idempotencyKey,
+      input: (await admin.query('SELECT input_json FROM agent_runs WHERE id=$1', [draftRun.id])).rows[0].input_json,
+      config: handoffRequest.config,
+    }), error => error.code === 'AGENT_RUN_IDEMPOTENCY_CONFLICT');
+    const summary = await createAgentBlogCanaryObservabilityService({ pool: admin,
+      authorizeOperator: async () => true }).summary({ userId: operatorId }, account.agentUserId);
+    assert.equal(summary.discovery.total, 2);
+    assert.equal(summary.discovery.succeeded, 2);
+    assert.equal(summary.discovery.awaitingHandoff, 1);
+    assert.equal(summary.handoffs.total, 1);
+    assert.equal(summary.drafts.active, 1);
+    assert.equal(summary.drafts.succeeded, 0);
+    assert.equal(summary.usage.providerCalls, 1);
+    assert.equal(summary.usage.toolCalls, 2);
+    await admin.query(`UPDATE agent_run_stages SET status='cancelled',finished_at=now(),
+      error_code='TEST_CANARY_CLEANUP',error_message='Unexecuted handoff fixture cleanup.',updated_at=now()
+      WHERE run_id=$1 AND status IN ('blocked','queued')`, [draftRun.id]);
+    await admin.query(`UPDATE agent_runs SET status='cancelled',finished_at=now(),
+      error_code='TEST_CANARY_CLEANUP',error_message='Unexecuted handoff fixture cleanup.',updated_at=now()
+      WHERE id=$1 AND status='queued'`, [draftRun.id]);
     await autonomousWorker.stop();
     await admin.end();
   });

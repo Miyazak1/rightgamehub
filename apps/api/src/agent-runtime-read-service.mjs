@@ -41,7 +41,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
       const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
       const [stages, actions, events, reservations, providerCalls, providerOutputArtifacts, toolCalls, toolArtifacts,
-        stageArtifacts, foundationDrafts] = await Promise.all([
+        stageArtifacts, foundationDrafts, incomingHandoffs, outgoingHandoffs] = await Promise.all([
         pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
         pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
         pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
@@ -66,7 +66,20 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
             draft.composition_artifact_id,draft.created_at,article.publication_state
           FROM agent_blog_foundation_drafts draft JOIN blog_articles article ON article.id=draft.article_id
           WHERE draft.run_id=$1 ORDER BY draft.created_at,draft.article_id`, [runId]),
+        pool.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
+            source_artifact_key,source_content_sha256,target_run_id,target_input_sha256,created_at
+          FROM agent_run_handoffs WHERE target_run_id=$1 ORDER BY created_at,id`, [runId]),
+        pool.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
+            source_artifact_key,source_content_sha256,target_run_id,target_input_sha256,created_at
+          FROM agent_run_handoffs WHERE source_run_id=$1 ORDER BY created_at,id`, [runId]),
       ]);
+      const handoffView = row => ({
+        id: row.id, kind: row.handoff_kind, sourceRunId: row.source_run_id,
+        sourceArtifactId: row.source_artifact_id, sourceOutputType: row.source_output_type,
+        sourceArtifactKey: row.source_artifact_key, sourceContentSha256: row.source_content_sha256,
+        targetRunId: row.target_run_id, targetInputSha256: row.target_input_sha256,
+        createdAt: iso(row.created_at),
+      });
       return {
         run: {
           id: run.id, workflowKey: run.workflow_key, workflowVersion: run.workflow_version,
@@ -135,6 +148,10 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
           compositionArtifactId: row.composition_artifact_id,
           publicationState: row.publication_state, createdAt: iso(row.created_at),
         })),
+        handoffs: {
+          incoming: incomingHandoffs.rows.map(handoffView),
+          outgoing: outgoingHandoffs.rows.map(handoffView),
+        },
       };
     },
   };

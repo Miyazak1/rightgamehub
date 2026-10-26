@@ -9,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 133);
+  assert.equal(files.length, 134);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
