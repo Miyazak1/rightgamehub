@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import {withTransaction} from './database.mjs';
 import {defaultAgentBehaviorProfile} from './agent-behavior-profile.mjs';
-const agentErrors={AGENT_INPUT:[400,'机器人账号参数无效。'],AGENT_OPERATOR_PORT_REQUIRED:[500,'机器人管理授权未配置。'],AGENT_OPERATOR_REQUIRED:[403,'需要管理员权限。'],AGENT_CAPABILITY_DENIED:[403,'请求的机器人能力不被允许。'],AGENT_NOT_FOUND:[404,'机器人不存在。'],AGENT_SUSPENDED:[409,'机器人已暂停。'],AGENT_PROVISION_CONFLICT:[409,'这个机器人创建标识已用于不同配置。'],AGENT_ROTATION_CONFLICT:[409,'执行凭据轮换标识冲突。'],AGENT_PRINCIPAL_DENIED:[401,'机器人执行凭据无效。']};
+const agentErrors={AGENT_INPUT:[400,'机器人账号参数无效。'],AGENT_OPERATOR_PORT_REQUIRED:[500,'机器人管理授权未配置。'],AGENT_OPERATOR_REQUIRED:[403,'需要管理员权限。'],AGENT_CAPABILITY_DENIED:[403,'请求的机器人能力不被允许。'],AGENT_NOT_FOUND:[404,'机器人不存在。'],AGENT_DRAFT_NOT_FOUND:[404,'私有草稿不存在或不属于这个机器人。'],AGENT_SUSPENDED:[409,'机器人已暂停。'],AGENT_PROVISION_CONFLICT:[409,'这个机器人创建标识已用于不同配置。'],AGENT_ROTATION_CONFLICT:[409,'执行凭据轮换标识冲突。'],AGENT_PRINCIPAL_DENIED:[401,'机器人执行凭据无效。']};
 export class AgentAccountError extends Error {constructor(code){const item=agentErrors[code]??[409,'机器人管理操作失败。'];super(`${code}: ${item[1]}`);this.name='AgentAccountError';this.code=code;this.statusCode=item[0];this.retryable=false;}}
 const fail=code=>{throw new AgentAccountError(code);};
 const principalView=r=>({executionPrincipalId:r.id,agentUserId:r.agent_user_id,keyId:r.key_id,status:r.status,capabilities:r.capabilities});

@@ -33,3 +33,32 @@ test('runtime overview exposes canary readiness without enabling scheduling', as
   assert.equal(overview.schedule, null);
   assert.equal(calls[1].params[2], 3);
 });
+
+test('foundation draft preview is operator-scoped and read-only', async () => {
+  const { createAgentRuntimeReadService } = await import(moduleUrl.href);
+  const operatorId = crypto.randomUUID(), agentUserId = crypto.randomUUID(), articleId = crypto.randomUUID();
+  const pool = { query: async (sql, params) => {
+    if (/SELECT user_id FROM agent_accounts/u.test(sql)) {
+      assert.deepEqual(params, [agentUserId, operatorId]);
+      return { rows: [{ user_id: agentUserId }] };
+    }
+    if (/FROM agent_blog_foundation_drafts draft/u.test(sql)) {
+      assert.deepEqual(params, [agentUserId, articleId]);
+      assert.match(sql, /article\.author_user_id=draft\.agent_user_id/u);
+      return { rows: [{ run_id: crypto.randomUUID(), article_id: articleId, revision_id: crypto.randomUUID(),
+        content_sha256: 'a'.repeat(64), created_at: new Date('2026-10-26T07:26:52Z'),
+        slug: 'agent-private-draft', locale: 'zh-CN', publication_state: 'draft',
+        title: '一篇只读草稿', summary: '这是一篇只允许所属机器人运营者查看的私有草稿摘要。',
+        blocks: [{ type: 'paragraph', text: '草稿正文。' }], citations: [], content_hash: 'b'.repeat(64) }] };
+    }
+    throw new Error(`Unexpected query: ${sql}`);
+  } };
+  const service = createAgentRuntimeReadService({ pool,
+    authorizeOperator: async actor => actor.userId === operatorId });
+  const draft = await service.foundationDraft({ userId: operatorId }, agentUserId, articleId);
+  assert.equal(draft.schemaVersion, 'agent-blog-foundation-draft-preview-v1');
+  assert.equal(draft.readOnly, true);
+  assert.equal(draft.articleId, articleId);
+  assert.equal(draft.publicationState, 'draft');
+  assert.deepEqual(draft.blocks, [{ type: 'paragraph', text: '草稿正文。' }]);
+});

@@ -112,6 +112,26 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
         queuedAt: iso(row.queued_at), startedAt: iso(row.started_at), finishedAt: iso(row.finished_at),
       }));
     },
+    async foundationDraft(actor, agentUserId, articleId) {
+      agentUserId = await scope(actor, agentUserId);
+      articleId = uuid(articleId);
+      const row = (await pool.query(`SELECT draft.run_id,draft.article_id,draft.revision_id,
+          draft.content_sha256,draft.created_at,article.slug,article.locale,article.publication_state,
+          revision.title,revision.summary,revision.blocks,revision.citations,revision.content_hash
+        FROM agent_blog_foundation_drafts draft
+        JOIN blog_articles article ON article.id=draft.article_id AND article.author_user_id=draft.agent_user_id
+        JOIN blog_article_revisions revision ON revision.id=draft.revision_id AND revision.article_id=article.id
+        WHERE draft.agent_user_id=$1 AND draft.article_id=$2
+        ORDER BY draft.created_at DESC LIMIT 1`, [agentUserId, articleId])).rows[0];
+      if (!row) fail('AGENT_DRAFT_NOT_FOUND');
+      return {
+        schemaVersion: 'agent-blog-foundation-draft-preview-v1', readOnly: true,
+        runId: row.run_id, articleId: row.article_id, revisionId: row.revision_id,
+        slug: row.slug, locale: row.locale, publicationState: row.publication_state,
+        title: row.title, summary: row.summary, blocks: row.blocks ?? [], citations: row.citations ?? [],
+        contentHash: row.content_hash, contentSha256: row.content_sha256, createdAt: iso(row.created_at),
+      };
+    },
     async timeline(actor, agentUserId, runId) {
       agentUserId = await scope(actor, agentUserId);
       runId = uuid(runId);

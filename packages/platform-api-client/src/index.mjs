@@ -143,6 +143,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     withdrawAdminAgentBlogArticle: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs/${encodeURIComponent(runId)}/withdraw`, { ...options, method: 'POST', auth: true }),
     getAdminAgentRuntimeOverview: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-overview`, { ...options, auth: true }),
     listAdminAgentRuntimeRuns: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    getAdminAgentFoundationDraft: (agentUserId, articleId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/foundation-drafts/${encodeURIComponent(articleId)}`, { ...options, auth: true }),
     getAdminAgentRuntimeTimeline: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs/${encodeURIComponent(runId)}`, { ...options, auth: true }),
     listChangeWatches: options => request('/v1/me/change-watches', { ...options, auth: true }),
     createChangeWatch: (body, options) => request('/v1/me/change-watches', { ...options, method: 'POST', body, auth: true }),

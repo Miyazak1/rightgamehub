@@ -87,6 +87,12 @@ test('Production secret root is scoped to the API and explicit private canary ex
  assert.match(admin,/listAdminAgentRuntimeRuns/);
  assert.match(admin,/getAdminAgentRuntimeTimeline/);
  assert.match(admin,/查看草稿/);
+ assert.match(admin,/getAdminAgentFoundationDraft/);
+ assert.match(admin,/openFoundationDraft\(draft\.articleId\)/);
+ assert.match(admin,/PRIVATE DRAFT · READ ONLY/);
+ assert.match(admin,/aria-modal="true"/);
+ const accountRoutes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8');
+ assert.match(accountRoutes,/foundation-drafts\/:articleId/);
  assert.match(admin,/人格与行为/);
  assert.match(admin,/选题编辑人格/);
  assert.match(admin,/每月运行上限/);
