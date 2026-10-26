@@ -1,5 +1,7 @@
 import { BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
   BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
+import { GITHUB_REPOSITORY_SEARCH_TOOL } from './agent-github-repository-search-tool.mjs';
+import { GITHUB_REPOSITORY_READ_TOOL } from './agent-github-repository-tool.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -87,10 +89,10 @@ async function registerActiveWorkflow(runtimeRepository, actorUserId, manifest) 
 }
 
 export function createAgentBlogPrivateCanaryBootstrap({
-  config, identityRepository, runtimeRepository, providerRepository,
+  config, identityRepository, runtimeRepository, toolRepository, providerRepository,
 } = {}) {
   if (!config || config.schemaVersion !== 'agent-blog-private-canary-config-v1'
-    || !identityRepository || !runtimeRepository || !providerRepository) {
+    || !identityRepository || !runtimeRepository || !toolRepository || !providerRepository) {
     fail('AGENT_BLOG_PRIVATE_CANARY_BOOTSTRAP_DEPENDENCY_REQUIRED');
   }
   if (!config.enabled) fail('AGENT_BLOG_PRIVATE_CANARY_DISABLED');
@@ -102,6 +104,17 @@ export function createAgentBlogPrivateCanaryBootstrap({
       if (identity.agentUserId !== config.agentUserId || !UUID.test(identity.operatorUserId)) {
         fail('AGENT_BLOG_PRIVATE_CANARY_IDENTITY_NOT_READY');
       }
+      const tools = [];
+      for (const contract of [GITHUB_REPOSITORY_SEARCH_TOOL, GITHUB_REPOSITORY_READ_TOOL]) {
+        const registered = await toolRepository.registerTool(contract);
+        if (registered.status !== 'active') fail('AGENT_BLOG_PRIVATE_CANARY_TOOL_NOT_ACTIVE');
+        tools.push({
+          toolKey: registered.toolKey,
+          contractVersion: registered.contractVersion,
+          status: registered.status,
+          existing: registered.existing === true,
+        });
+      }
       const workflows = [];
       for (const manifest of [BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
         BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW]) {
@@ -112,6 +125,7 @@ export function createAgentBlogPrivateCanaryBootstrap({
         schemaVersion: 'agent-blog-private-canary-bootstrap-receipt-v1',
         agentUserId: identity.agentUserId,
         operatorUserId: identity.operatorUserId,
+        tools,
         workflows,
         model: {
           provider: model.provider,

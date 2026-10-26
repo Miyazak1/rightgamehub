@@ -54,6 +54,7 @@ export function evaluateAgentBlogPrivateCanarySnapshot(config, snapshot) {
   if (!config.enabled) blockers.push('AGENT_BLOG_PRIVATE_CANARY_DISABLED');
   if (!snapshot.identityReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_IDENTITY_NOT_READY');
   if (snapshot.capabilityCount !== 4) blockers.push('AGENT_BLOG_PRIVATE_CANARY_CAPABILITIES_NOT_READY');
+  if (snapshot.toolCount !== 2) blockers.push('AGENT_BLOG_PRIVATE_CANARY_TOOLS_NOT_READY');
   if (snapshot.workflowCount !== 2) blockers.push('AGENT_BLOG_PRIVATE_CANARY_WORKFLOWS_NOT_READY');
   if (!snapshot.secretReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_SECRET_NOT_READY');
   if (!snapshot.modelReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_MODEL_NOT_READY');
@@ -105,6 +106,9 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
         (SELECT count(DISTINCT capability_key)::int FROM agent_capability_grants
           WHERE agent_user_id=$1 AND status='active' AND valid_from<=now()
             AND (valid_until IS NULL OR valid_until>now()) AND capability_key=ANY($2::text[])) AS capability_count,
+        (SELECT count(*)::int FROM agent_tool_contracts WHERE status='active'
+          AND (tool_key,contract_version) IN (
+            ('research.github.repository.search',1),('research.github.repository.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
             ('blog.project.discovery-shadow',2),('blog.project.single.draft-shadow',1))) AS workflow_count,
@@ -142,6 +146,7 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
     }
     return {
       identityReady: row.identity_ready, capabilityCount: Number(row.capability_count),
+      toolCount: Number(row.tool_count),
       workflowCount: Number(row.workflow_count), secretReady: row.secret_ready,
       modelReady: row.model_ready, circuitReady: row.circuit_ready,
       activeRuns: Number(row.active_runs), uncertainRuns: Number(row.uncertain_runs),

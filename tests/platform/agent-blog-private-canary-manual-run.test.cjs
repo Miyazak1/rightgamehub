@@ -37,7 +37,7 @@ function fixture({ discoveryStatus = 'completed' } = {}) {
     dailyDiscoveryRunLimit: 1, monthlyProviderCallLimit: 12,
     monthlyCostMicrousdLimit: 1000000, consecutiveFailureLimit: 2 };
   const preflightRepository = { async snapshot() { events.push('preflight'); return { identityReady: true,
-    capabilityCount: 4, workflowCount: 2, secretReady: true, modelReady: true, circuitReady: true,
+    capabilityCount: 4, toolCount: 2, workflowCount: 2, secretReady: true, modelReady: true, circuitReady: true,
     activeRuns: 0, uncertainRuns: 0, awaitingHandoff: 0, discoveryRunsToday: 0,
     providerCallsMonth: 0, costMicrousdMonth: 0, consecutiveFailures: 0 }; } };
   const inputRepository = { async snapshot() { events.push('snapshot'); return {
@@ -76,8 +76,12 @@ test('manual private canary runs one isolated discovery and one private draft ha
 test('manual private canary stops before handoff when discovery is not fully successful', async () => {
   const { createAgentBlogPrivateCanaryManualRunner } = await import(moduleUrl.href);
   const value = fixture({ discoveryStatus: 'retry-scheduled' });
-  await assert.rejects(() => createAgentBlogPrivateCanaryManualRunner(value.runnerOptions).run({ requestId }),
-    error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_STAGE_INCOMPLETE');
+  await assert.rejects(() => createAgentBlogPrivateCanaryManualRunner(value.runnerOptions).run({ requestId }), error => {
+    assert.equal(error.code, 'AGENT_BLOG_PRIVATE_CANARY_STAGE_INCOMPLETE');
+    assert.equal(error.details.workerStatus, 'retry-scheduled');
+    assert.equal(error.details.stageNumber, 1);
+    return true;
+  });
   assert(!value.events.includes('handoff'));
   assert(value.events.includes(`stop:${discoveryRunId}`));
 });
@@ -86,7 +90,7 @@ test('manual private canary remains read-only when preflight blocks execution', 
   const { createAgentBlogPrivateCanaryManualRunner } = await import(moduleUrl.href);
   const value = fixture();
   value.runnerOptions.preflightRepository.snapshot = async () => ({ identityReady: false,
-    capabilityCount: 0, workflowCount: 0, secretReady: false, modelReady: false, circuitReady: false,
+    capabilityCount: 0, toolCount: 0, workflowCount: 0, secretReady: false, modelReady: false, circuitReady: false,
     activeRuns: 0, uncertainRuns: 0, awaitingHandoff: 0, discoveryRunsToday: 0,
     providerCallsMonth: 0, costMicrousdMonth: 0, consecutiveFailures: 0 });
   await assert.rejects(() => createAgentBlogPrivateCanaryManualRunner(value.runnerOptions).run({ requestId }),

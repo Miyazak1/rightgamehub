@@ -21,7 +21,7 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
     AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
     AGENT_BLOG_PRIVATE_CANARY_MODEL_ID: 'deepseek-flash',
   });
-  const readySnapshot = { identityReady: true, capabilityCount: 4, workflowCount: 2,
+  const readySnapshot = { identityReady: true, capabilityCount: 4, toolCount: 2, workflowCount: 2,
     secretReady: true, modelReady: true, circuitReady: true, activeRuns: 0, uncertainRuns: 0,
     awaitingHandoff: 0, discoveryRunsToday: 0, providerCallsMonth: 0,
     costMicrousdMonth: 0, consecutiveFailures: 0 };

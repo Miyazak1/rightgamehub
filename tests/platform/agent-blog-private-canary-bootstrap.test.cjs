@@ -21,6 +21,7 @@ test('private canary bootstrap registers only the two private workflows and appr
   const operatorUserId = crypto.randomUUID();
   const registered = [];
   const activated = [];
+  const tools = [];
   let model;
   const receipt = await createAgentBlogPrivateCanaryBootstrap({
     config: input,
@@ -35,6 +36,10 @@ test('private canary bootstrap registers only the two private workflows and appr
         return { status: 'active' };
       },
     },
+    toolRepository: { registerTool: async value => {
+      tools.push(value);
+      return { ...value, existing: false };
+    } },
     providerRepository: { registerModel: async value => {
       model = value;
       return { provider: value.provider, modelId: value.modelId, catalogVersion: value.catalogVersion, existing: false };
@@ -45,6 +50,9 @@ test('private canary bootstrap registers only the two private workflows and appr
   ]);
   assert.deepEqual(activated, [
     ['blog.project.discovery-shadow', 2], ['blog.project.single.draft-shadow', 1],
+  ]);
+  assert.deepEqual(tools.map(item => [item.toolKey, item.contractVersion]), [
+    ['research.github.repository.search', 1], ['research.github.repository.read', 1],
   ]);
   assert.equal(model.provider, 'deepseek');
   assert.equal(model.modelId, 'deepseek-flash');
@@ -69,6 +77,7 @@ test('private canary bootstrap is idempotent for active workflows and an existin
       registerWorkflow: async ({ manifest }) => ({ status: 'active', manifestSha256: manifest.workflowKey }),
       activateWorkflow: async () => { activations += 1; },
     },
+    toolRepository: { registerTool: async value => ({ ...value, existing: true }) },
     providerRepository: { registerModel: async value => ({
       provider: value.provider, modelId: value.modelId, catalogVersion: value.catalogVersion, existing: true,
     }) },
@@ -89,6 +98,7 @@ test('private canary bootstrap rejects unapproved models before catalog mutation
       registerWorkflow: async ({ manifest }) => ({ status: 'active', manifestSha256: manifest.workflowKey }),
       activateWorkflow: async () => ({ status: 'active' }),
     },
+    toolRepository: { registerTool: async value => ({ ...value, existing: false }) },
     providerRepository: { registerModel: async () => { registeredModel = true; } },
   }).run(), error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_MODEL_CATALOG_UNSUPPORTED');
   assert.equal(registeredModel, false);

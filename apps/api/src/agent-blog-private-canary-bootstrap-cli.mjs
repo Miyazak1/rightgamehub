@@ -3,6 +3,7 @@ import { loadAgentBlogPrivateCanaryConfig, PostgresAgentBlogPrivateCanaryPreflig
   runAgentBlogPrivateCanaryPreflight } from './agent-blog-private-canary-preflight.mjs';
 import { PostgresAgentRuntimeRepository } from './agent-runtime-repository.mjs';
 import { PostgresAgentProviderGatewayRepository } from './agent-provider-gateway-repository.mjs';
+import { PostgresAgentToolGatewayRepository } from './agent-tool-gateway-repository.mjs';
 import { createAgentBlogPrivateCanaryBootstrap,
   PostgresAgentBlogPrivateCanaryBootstrapIdentityRepository } from './agent-blog-private-canary-bootstrap.mjs';
 
@@ -22,6 +23,7 @@ try {
     config,
     identityRepository: new PostgresAgentBlogPrivateCanaryBootstrapIdentityRepository(pool),
     runtimeRepository: new PostgresAgentRuntimeRepository(pool),
+    toolRepository: new PostgresAgentToolGatewayRepository(pool),
     providerRepository: new PostgresAgentProviderGatewayRepository(pool),
   }).run();
   const preflight = await runAgentBlogPrivateCanaryPreflight({

@@ -79,7 +79,8 @@ async function executeRun({ worker, expectedStageCount, outputType, runId }) {
       const result = await worker.runOnce();
       if (result?.status !== 'completed') {
         fail('AGENT_BLOG_PRIVATE_CANARY_STAGE_INCOMPLETE', { runId, stageNumber: index + 1,
-          workerStatus: result?.status ?? 'unknown' });
+          workerStatus: result?.status ?? 'unknown', stageKey: result?.stage?.stageKey ?? null,
+          stageErrorCode: result?.stage?.errorCode ?? result?.error?.code ?? null });
       }
       if (result.run) terminal = result.run;
     }
