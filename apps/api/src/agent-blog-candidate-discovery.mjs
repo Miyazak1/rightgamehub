@@ -9,7 +9,8 @@ import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 export const BLOG_DISCOVERY_QUERY_PLAN_SCHEMA = Object.freeze({ key: 'blog.discovery.query-plan', version: 1 });
 export const BLOG_DISCOVERY_QUERY_PLAN_PROMPT = `你是小墨鱼的候选发现规划模块。只输出一个 JSON 对象，不要输出 Markdown。
 你的任务只是把中文选题范围规划成一至五条 GitHub 仓库搜索词，不得选择项目、写文章或声称任何项目事实。
-搜索词只能包含普通文字、数字、空格、点、下划线、加号、井号和连字符；不得包含 URL、斜杠、冒号或 GitHub 搜索限定符。
+每条搜索词必须使用二至六个适合 GitHub 仓库元数据的英文技术关键词，至少包含一个英文字母；不得包含中文、URL、斜杠、冒号或 GitHub 搜索限定符。
+不要把 open source、GitHub、repository、project 当作主要关键词；优先使用项目作者会写在名称、简介或 topics 中的具体能力词，例如 agent、visualization、transcription、game engine。
 人格兴趣只用于决定搜索方向，不是事实证据。不得规划时政、敏感或高风险主题。
 返回字段必须且只能是 queries、rationale、interestSignals。`;
 
@@ -26,6 +27,9 @@ const fail = code => { throw new AgentBlogCandidateDiscoveryError(code); };
 const compact = (value, max) => String(value ?? '').replace(/\s+/gu, ' ').trim().slice(0, max);
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).every(key => keys.includes(key)) && keys.every(key => Object.hasOwn(value, key));
+const AUTONOMOUS_QUERY = /^[A-Za-z0-9 ._+#-]{2,120}$/u;
+const QUERY_FILLER = new Set(['open', 'source', 'github', 'repository', 'repositories', 'project', 'projects',
+  'software', 'app', 'apps', 'application', 'applications']);
 
 function repositoryList(value) {
   if (value == null) return [];
@@ -141,7 +145,13 @@ function normalizeQueryPlan(output, input) {
     catch { fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID'); }
   });
   const queries = searches.map(item => item.query);
-  if (new Set(queries.map(item => item.toLocaleLowerCase('en-US'))).size !== queries.length) {
+  if (queries.some(query => {
+    const tokens = query.match(/[A-Za-z0-9+#._-]+/gu) ?? [];
+    const meaningful = tokens.filter(token => !QUERY_FILLER.has(token.toLocaleLowerCase('en-US')));
+    return !AUTONOMOUS_QUERY.test(query) || !/[A-Za-z]/u.test(query)
+      || tokens.length < 2 || tokens.length > 6 || meaningful.length < 2;
+  })
+    || new Set(queries.map(item => item.toLocaleLowerCase('en-US'))).size !== queries.length) {
     fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   }
   const configured = new Set(input.behaviorProfile.modules.editorial.interestSignals);
@@ -153,12 +163,91 @@ function normalizeQueryPlan(output, input) {
   return { queries, rationale, interestSignals };
 }
 
+function broadenGitHubQuery(query) {
+  const tokens = query.match(/[A-Za-z0-9+#._-]+/gu) ?? [];
+  const meaningful = tokens.filter(token => !QUERY_FILLER.has(token.toLocaleLowerCase('en-US')));
+  if (meaningful.length < 2) return null;
+  const broadened = meaningful.slice(0, meaningful.length > 2 ? 2 : 1).join(' ');
+  return broadened.toLocaleLowerCase('en-US') === query.toLocaleLowerCase('en-US') ? null : broadened;
+}
+
+async function executeSearches({ context, execution, toolGateway, artifactRepository,
+  plannedQueries, searchPolicy, allowFallback }) {
+  const artifacts = [];
+  const execute = async (query, kind, sourceQuery = null) => {
+    const ordinal = String(artifacts.length + 1).padStart(2, '0');
+    const result = await toolGateway.invoke({
+      runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId,
+      leaseToken: execution.leaseToken,
+      action: { actionKey: `search-repositories-${ordinal}`, actionKind: 'tool',
+        capabilityKey: 'research.github.discover', contractVersion: 1, riskLevel: 'L1' },
+      idempotencyKey: `blog-discovery:${context.run.id}:${ordinal}`,
+      resource: { type: 'github.repository-search', owner: 'public', id: stableHash({ query }).slice(0, 24) },
+      tool: { toolKey: 'research.github.repository.search', contractVersion: 1 },
+      request: { query, limit: 20, sort: searchPolicy.sort,
+        minStars: searchPolicy.minStars, pushedAfter: searchPolicy.pushedAfter },
+    });
+    if (result.status !== 'succeeded') fail('AGENT_BLOG_DISCOVERY_TOOL_INCOMPLETE');
+    const id = artifactId(result);
+    const stored = await artifactRepository.readToolArtifact({ runId: context.run.id, artifactId: id });
+    let output;
+    try { output = validateGitHubRepositorySearchOutput(stored.content); }
+    catch { fail('AGENT_BLOG_DISCOVERY_SEARCH_OUTPUT_INVALID'); }
+    if (output.query.text !== query) fail('AGENT_BLOG_DISCOVERY_SEARCH_OUTPUT_INVALID');
+    artifacts.push({ id, query, kind, sourceQuery, candidateCount: output.candidates.length });
+  };
+  for (const query of plannedQueries) await execute(query, 'planned');
+  if (allowFallback && artifacts.every(item => item.candidateCount === 0)) {
+    const used = new Set(plannedQueries.map(query => query.toLocaleLowerCase('en-US')));
+    const fallbacks = [];
+    for (const sourceQuery of plannedQueries) {
+      const query = broadenGitHubQuery(sourceQuery);
+      const normalized = query?.toLocaleLowerCase('en-US');
+      if (!query || used.has(normalized)) continue;
+      used.add(normalized);
+      fallbacks.push({ query, sourceQuery });
+    }
+    for (const fallback of fallbacks.slice(0, Math.max(0, 5 - artifacts.length))) {
+      await execute(fallback.query, 'fallback', fallback.sourceQuery);
+      if (artifacts.at(-1).candidateCount > 0) break;
+    }
+  }
+  return {
+    schemaVersion: 'blog-discovery-search-set-ref-v1',
+    artifactIds: artifacts.map(item => item.id),
+    plannedQueries,
+    queries: artifacts.map(item => item.query),
+    fallbackQueries: artifacts.filter(item => item.kind === 'fallback').map(item => item.query),
+    fallbackLineage: artifacts.filter(item => item.kind === 'fallback')
+      .map(item => ({ query: item.query, sourceQuery: item.sourceQuery })),
+    candidateCounts: artifacts.map(item => item.candidateCount),
+  };
+}
+
 async function finalizeCandidateSet({ context, execution, artifactRepository, input, queries,
   planArtifactId = null }) {
   const searched = prerequisite(context, 'search-candidates');
   const artifactIds = searched.artifactIds;
+  const executedQueries = searched.queries;
   if (searched.schemaVersion !== 'blog-discovery-search-set-ref-v1' || !Array.isArray(artifactIds)
-    || artifactIds.length !== queries.length || new Set(artifactIds).size !== artifactIds.length) {
+    || !Array.isArray(executedQueries) || !Array.isArray(searched.plannedQueries)
+    || !Array.isArray(searched.fallbackQueries) || !Array.isArray(searched.fallbackLineage)
+    || !Array.isArray(searched.candidateCounts)
+    || artifactIds.length !== executedQueries.length || artifactIds.length !== searched.candidateCounts.length
+    || artifactIds.length < queries.length || artifactIds.length > 5
+    || artifactIds.some(id => typeof id !== 'string')
+    || executedQueries.some(query => typeof query !== 'string')
+    || searched.candidateCounts.some(count => !Number.isSafeInteger(count) || count < 0 || count > 20)
+    || searched.fallbackLineage.length !== searched.fallbackQueries.length
+    || searched.fallbackLineage.some(item => !exact(item, ['query', 'sourceQuery'])
+      || typeof item.query !== 'string' || typeof item.sourceQuery !== 'string')
+    || stableHash(searched.plannedQueries) !== stableHash(queries)
+    || stableHash(executedQueries.slice(0, queries.length)) !== stableHash(queries)
+    || stableHash(searched.fallbackQueries) !== stableHash(executedQueries.slice(queries.length))
+    || stableHash(searched.fallbackLineage.map(item => item.query)) !== stableHash(searched.fallbackQueries)
+    || searched.fallbackLineage.some(item => !queries.includes(item.sourceQuery))
+    || new Set(artifactIds).size !== artifactIds.length
+    || new Set(executedQueries.map(query => query.toLocaleLowerCase('en-US'))).size !== executedQueries.length) {
     fail('AGENT_BLOG_DISCOVERY_SEARCH_SET_INVALID');
   }
   const artifacts = await Promise.all(artifactIds.map(id => artifactRepository.readToolArtifact({
@@ -170,7 +259,7 @@ async function finalizeCandidateSet({ context, execution, artifactRepository, in
     let result;
     try { result = validateGitHubRepositorySearchOutput(artifact.content); }
     catch { fail('AGENT_BLOG_DISCOVERY_SEARCH_OUTPUT_INVALID'); }
-    if (!queries.includes(result.query.text)) fail('AGENT_BLOG_DISCOVERY_SEARCH_OUTPUT_INVALID');
+    if (!executedQueries.includes(result.query.text)) fail('AGENT_BLOG_DISCOVERY_SEARCH_OUTPUT_INVALID');
     for (const [rank, candidate] of result.candidates.entries()) {
       const existing = merged.get(candidate.key);
       if (existing) {
@@ -191,8 +280,10 @@ async function finalizeCandidateSet({ context, execution, artifactRepository, in
   if (!candidates.length) fail('AGENT_BLOG_DISCOVERY_EMPTY');
   const searchPolicy = input.searchPolicy ?? input;
   const content = { schemaVersion: 'blog-candidate-set-v1', topicScope: input.topicScope,
-    queryPolicy: { queries, sort: searchPolicy.sort, minStars: searchPolicy.minStars,
-      pushedAfter: searchPolicy.pushedAfter }, candidates };
+    queryPolicy: { queries: executedQueries, plannedQueries: queries,
+      fallbackQueries: searched.fallbackQueries, fallbackLineage: searched.fallbackLineage,
+      sort: searchPolicy.sort,
+      minStars: searchPolicy.minStars, pushedAfter: searchPolicy.pushedAfter }, candidates };
   const artifact = await artifactRepository.save({
     runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId,
     leaseToken: execution.leaseToken, artifactKey: 'blog.candidate-set', artifactKind: 'validated-output',
@@ -222,24 +313,9 @@ export function createAgentBlogCandidateDiscoveryHandlers({ toolGateway, artifac
         || frozen.queryCount !== input.queries.length || frozen.querySetSha256 !== stableHash(input.queries)) {
         fail('AGENT_BLOG_DISCOVERY_FROZEN_INPUT_INVALID');
       }
-      const artifactIds = [];
-      for (const [index, query] of input.queries.entries()) {
-        const ordinal = String(index + 1).padStart(2, '0');
-        const result = await toolGateway.invoke({
-          runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId,
-          leaseToken: execution.leaseToken,
-          action: { actionKey: `search-repositories-${ordinal}`, actionKind: 'tool',
-            capabilityKey: 'research.github.discover', contractVersion: 1, riskLevel: 'L1' },
-          idempotencyKey: `blog-discovery:${context.run.id}:${ordinal}`,
-          resource: { type: 'github.repository-search', owner: 'public', id: stableHash({ query }).slice(0, 24) },
-          tool: { toolKey: 'research.github.repository.search', contractVersion: 1 },
-          request: { query, limit: 20, sort: input.sort, minStars: input.minStars, pushedAfter: input.pushedAfter },
-        });
-        if (result.status !== 'succeeded') fail('AGENT_BLOG_DISCOVERY_TOOL_INCOMPLETE');
-        artifactIds.push(artifactId(result));
-      }
-      return { outputRef: { schemaVersion: 'blog-discovery-search-set-ref-v1', artifactIds,
-        queryCount: input.queries.length } };
+      return { outputRef: { ...(await executeSearches({ context, execution, toolGateway, artifactRepository,
+        plannedQueries: input.queries, searchPolicy: input, allowFallback: false })),
+      queryCount: input.queries.length } };
     },
 
     [`${workflow}:finalize-candidates`]: async (context, execution) => {
@@ -281,7 +357,7 @@ export function createAgentBlogAutonomousCandidateDiscoveryHandlers({
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `blog-discovery-plan:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 1 },
+        modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 2 },
         responseSchema: BLOG_DISCOVERY_QUERY_PLAN_SCHEMA,
         request: { messages: [{ role: 'system', content: BLOG_DISCOVERY_QUERY_PLAN_PROMPT },
           { role: 'user', content: JSON.stringify(request) }], temperature: 0.2 },
@@ -311,25 +387,9 @@ export function createAgentBlogAutonomousCandidateDiscoveryHandlers({
       if (artifact.content?.schemaVersion !== 'blog-discovery-query-plan-v1'
         || artifact.contentSha256 !== planned.contentSha256) fail('AGENT_BLOG_DISCOVERY_PLAN_ARTIFACT_INVALID');
       const plan = normalizeQueryPlan(artifact.content, input);
-      const artifactIds = [];
-      for (const [index, query] of plan.queries.entries()) {
-        const ordinal = String(index + 1).padStart(2, '0');
-        const result = await toolGateway.invoke({
-          runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId,
-          leaseToken: execution.leaseToken,
-          action: { actionKey: `search-repositories-${ordinal}`, actionKind: 'tool',
-            capabilityKey: 'research.github.discover', contractVersion: 1, riskLevel: 'L1' },
-          idempotencyKey: `blog-discovery:${context.run.id}:${ordinal}`,
-          resource: { type: 'github.repository-search', owner: 'public', id: stableHash({ query }).slice(0, 24) },
-          tool: { toolKey: 'research.github.repository.search', contractVersion: 1 },
-          request: { query, limit: 20, sort: input.searchPolicy.sort,
-            minStars: input.searchPolicy.minStars, pushedAfter: input.searchPolicy.pushedAfter },
-        });
-        if (result.status !== 'succeeded') fail('AGENT_BLOG_DISCOVERY_TOOL_INCOMPLETE');
-        artifactIds.push(artifactId(result));
-      }
-      return { outputRef: { schemaVersion: 'blog-discovery-search-set-ref-v1', artifactIds,
-        queryCount: plan.queries.length, planArtifactId: artifact.id } };
+      return { outputRef: { ...(await executeSearches({ context, execution, toolGateway, artifactRepository,
+        plannedQueries: plan.queries, searchPolicy: input.searchPolicy, allowFallback: true })),
+      queryCount: plan.queries.length, planArtifactId: artifact.id } };
     },
 
     [`${workflow}:finalize-candidates`]: async (context, execution) => {

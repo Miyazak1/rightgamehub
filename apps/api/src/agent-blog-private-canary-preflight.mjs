@@ -111,7 +111,7 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
             ('research.github.repository.search',1),('research.github.repository.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
-            ('blog.project.discovery-shadow',2),('blog.project.single.draft-shadow',1))) AS workflow_count,
+            ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',1))) AS workflow_count,
         EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3) AS secret_ready,
         EXISTS(SELECT 1 FROM agent_provider_models WHERE provider=$3 AND model_id=$4 AND status='active'
           AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS model_ready,

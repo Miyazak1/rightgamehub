@@ -36,7 +36,7 @@ F0 本身不实现业务功能。当前开发分支已经完成 F1-1、F1-2 与 
 | F1-4B2b2 受治理选题、写作与校验 | 已实现，未接生产 Worker | `0130_agent_runtime_stage_artifacts.sql`、`agent-blog-foundation-generation.mjs`、`agent-runtime-stage-artifact-repository.mjs`；Provider 成功响应可崩溃重放，选题/写作分离，单项目禁止历史重复，确定性引用与结构校验不调用模型 |
 | F1-4B2c 影子工作流端到端装配 | 已实现，canary 默认关闭 | `agent-blog-foundation-shadow.mjs`、`0131_agent_blog_verified_draft_lineage.sql`、`agent-blog-foundation-shadow-db.test.cjs`；冻结候选后依次完成 GitHub 研究、选题、写作、确定性验证和私有草稿，真实 PostgreSQL 断言零发布 Stage、零发布 Action、零发布事件 |
 | F1-4B2d1 独立候选发现端口 | 已实现，canary 默认关闭 | `agent-github-repository-search-tool.mjs`、`agent-blog-candidate-discovery.mjs`、`0132_agent_blog_candidate_discovery.sql`；独立最小权限、最多五次搜索、最多十二个候选，搜索摘要不能充当文章证据，也没有 Provider、草稿或发布权限 |
-| F1-4B2d2a 自动查询规划 | 已实现，canary 默认关闭 | `blog.project.discovery-shadow@2` 只允许一次结构化 Provider 调用把中文选题范围变成最多五条普通搜索词；`0133_agent_stage_action_lineage.sql` 允许首个模型产物以同 Run 成功 Action 作为血缘起点，候选集继续同时绑定查询计划和搜索工具产物 |
+| F1-4B2d2a 自动查询规划 | 已实现，canary 默认关闭 | `blog.project.discovery-shadow@3` 只允许一次结构化 Provider 调用把中文选题范围变成最多五条 GitHub 友好的英文技术搜索词；计划词全部无结果时，系统最多执行两条确定性放宽查询，并在候选工件中保留计划、执行与回退血缘；`0133_agent_stage_action_lineage.sql` 允许首个模型产物以同 Run 成功 Action 作为血缘起点，候选集继续同时绑定查询计划和搜索工具产物 |
 | F1-4B2d2b 跨 Run 候选交接与汇总观测 | 已实现，canary 默认关闭 | `0134_agent_run_handoffs.sql`、`agent-blog-candidate-handoff.mjs`、`agent-blog-canary-observability.mjs`；来源 Run、候选工件及哈希、目标 Run 和目标输入哈希在一个事务中冻结，管理员只能读取交接摘要与聚合状态/用量 |
 | F1-4B2d3a 私有 canary 控制面 bootstrap 与上线预检 | 已实现，默认关闭 | 独立 bootstrap profile 幂等登记两条私有工作流、两份 GitHub 只读工具合同和经评审的模型准入包，零 Run、零 Provider、零发布；随后由只读 preflight 检查身份、权限、工具、工作流、密钥、模型、熔断、积压、不确定态、每日次数和月度费用 |
 | F1-4B2d3b 一次性人工私有 canary | 已实现，未运行且默认关闭 | `agent-blog-private-canary-manual-run.mjs` 与独立 Compose profile；冻结人格/选题/历史仓库/模型，精确领取本次 Run，发现成功才原子交接私有草稿，任一异常立即停止，零调度、零发布 |

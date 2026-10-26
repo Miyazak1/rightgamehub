@@ -145,11 +145,110 @@ test('autonomous discovery lets the model plan only bounded queries before gover
   assert.equal(providerCalls.length, 1);
   assert.equal(providerCalls[0].action.actionKey, 'plan-queries');
   assert.equal(providerCalls[0].action.capabilityKey, 'provider.text.generate');
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 2 });
   assert.equal(searched.outputRef.artifactIds.length, 2);
   const candidateSet = stored.get(finalized.outputRef.artifactId);
   assert.deepEqual(candidateSet.content.queryPolicy.queries, ['visual ai tool', 'creative agent']);
+  assert.deepEqual(candidateSet.content.queryPolicy.plannedQueries, ['visual ai tool', 'creative agent']);
+  assert.deepEqual(candidateSet.content.queryPolicy.fallbackQueries, []);
+  assert.deepEqual(candidateSet.content.queryPolicy.fallbackLineage, []);
   assert.deepEqual(candidateSet.input.sourceStageArtifactIds, [planned.outputRef.artifactId]);
   const planArtifact = stored.get(planned.outputRef.artifactId);
   assert.equal(planArtifact.input.actionId == null, false);
   assert.deepEqual(planArtifact.input.sourceToolArtifactIds, undefined);
+});
+
+test('autonomous discovery broadens empty planned searches deterministically and preserves query lineage', async () => {
+  const { defaultAgentBehaviorProfile } = await load('agent-behavior-profile.mjs');
+  const { stableHash } = await load('researcher-qa-protocol/stable-json.mjs');
+  const { createAgentBlogAutonomousCandidateDiscoveryHandlers } =
+    await load('agent-blog-candidate-discovery.mjs');
+  const autonomousInput = { schemaVersion: 'blog-project-discovery-input-v2',
+    topicScope: '发现有趣而有用的开源人工智能工具',
+    searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: '2026-01-01', maxCandidates: 4, maxQueries: 3 },
+    previousRepositoryUrls: [], behaviorProfile: defaultAgentBehaviorProfile() };
+  const stored = new Map();
+  const toolOutputs = new Map();
+  const queries = [];
+  const providerGateway = { invoke: async () => ({ status: 'succeeded', actionId: uuid(), output: {
+    queries: ['visual artificial intelligence', 'creative autonomous agent'],
+    rationale: '选题范围强调直观结果与创作空间，因此分别检索可视化智能项目和具有自主创作能力的智能体项目。',
+    interestSignals: ['结果直观或可视化', '能够生成或分享作品'],
+  } }) };
+  const toolGateway = { invoke: async call => {
+    queries.push(call.request.query);
+    const id = uuid();
+    const candidates = call.request.query === 'visual artificial' ? [candidate('new/fallback', 120)] : [];
+    toolOutputs.set(id, { id, content: searchOutput(call.request.query, candidates) });
+    return { status: 'succeeded', artifactId: id };
+  } };
+  const artifactRepository = {
+    save: async value => {
+      const id = uuid();
+      const item = { id, artifactKey: value.artifactKey, contentSha256: stableHash(value.content),
+        content: structuredClone(value.content), input: structuredClone(value) };
+      stored.set(id, item);
+      return item;
+    },
+    read: async ({ artifactId }) => structuredClone(stored.get(artifactId)),
+    readToolArtifact: async ({ artifactId }) => structuredClone(toolOutputs.get(artifactId)),
+  };
+  const handlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
+    providerGateway, toolGateway, artifactRepository,
+  });
+  const execution = { workerId: 'worker', leaseToken: uuid() };
+  const run = { id: uuid(), agentUserId: uuid(), configSnapshot: {}, input: autonomousInput,
+    inputSha256: stableHash(autonomousInput) };
+  const frozen = await handlers['blog.project.discovery-shadow:freeze-brief']({
+    run, stage: { id: uuid() }, prerequisites: [],
+  });
+  const planned = await handlers['blog.project.discovery-shadow:plan-queries']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'freeze-brief', status: 'succeeded', outputRef: frozen.outputRef }] }, execution);
+  const searched = await handlers['blog.project.discovery-shadow:search-candidates']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'plan-queries', status: 'succeeded', outputRef: planned.outputRef }] }, execution);
+  const finalized = await handlers['blog.project.discovery-shadow:finalize-candidates']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'search-candidates', status: 'succeeded', outputRef: searched.outputRef }] }, execution);
+  assert.deepEqual(queries,
+    ['visual artificial intelligence', 'creative autonomous agent', 'visual artificial']);
+  assert.deepEqual(searched.outputRef.candidateCounts, [0, 0, 1]);
+  assert.deepEqual(searched.outputRef.fallbackLineage,
+    [{ query: 'visual artificial', sourceQuery: 'visual artificial intelligence' }]);
+  const candidateSet = stored.get(finalized.outputRef.artifactId);
+  assert.deepEqual(candidateSet.content.queryPolicy.plannedQueries,
+    ['visual artificial intelligence', 'creative autonomous agent']);
+  assert.deepEqual(candidateSet.content.queryPolicy.queries,
+    ['visual artificial intelligence', 'creative autonomous agent', 'visual artificial']);
+  assert.deepEqual(candidateSet.content.queryPolicy.fallbackQueries, ['visual artificial']);
+  assert.deepEqual(candidateSet.content.candidates.map(item => item.key), ['new/fallback']);
+});
+
+test('autonomous discovery rejects Chinese promotional phrases before any GitHub search', async () => {
+  const { defaultAgentBehaviorProfile } = await load('agent-behavior-profile.mjs');
+  const { stableHash } = await load('researcher-qa-protocol/stable-json.mjs');
+  const { createAgentBlogAutonomousCandidateDiscoveryHandlers } =
+    await load('agent-blog-candidate-discovery.mjs');
+  const autonomousInput = { schemaVersion: 'blog-project-discovery-input-v2',
+    topicScope: '发现有趣而有用的开源人工智能工具',
+    searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: null, maxCandidates: 4, maxQueries: 3 },
+    previousRepositoryUrls: [], behaviorProfile: defaultAgentBehaviorProfile() };
+  const providerGateway = { invoke: async () => ({ status: 'succeeded', actionId: uuid(), output: {
+    queries: ['开源 人工智能 插件 智能体 工具'],
+    rationale: '选题范围强调面向普通用户的人工智能工具，因此先从容易理解且具有实际用途的项目开始搜索。',
+    interestSignals: ['可以快速体验'],
+  } }) };
+  let toolCalls = 0;
+  const handlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({ providerGateway,
+    toolGateway: { invoke: async () => { toolCalls += 1; } },
+    artifactRepository: { save: async () => { throw new Error('must not save invalid plan'); } },
+  });
+  const run = { id: uuid(), agentUserId: uuid(), configSnapshot: {}, input: autonomousInput,
+    inputSha256: stableHash(autonomousInput) };
+  const frozen = await handlers['blog.project.discovery-shadow:freeze-brief']({
+    run, stage: { id: uuid() }, prerequisites: [],
+  });
+  await assert.rejects(handlers['blog.project.discovery-shadow:plan-queries']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'freeze-brief', status: 'succeeded', outputRef: frozen.outputRef }] },
+  { workerId: 'worker', leaseToken: uuid() }),
+  error => error.code === 'AGENT_BLOG_DISCOVERY_PLAN_INVALID');
+  assert.equal(toolCalls, 0);
 });

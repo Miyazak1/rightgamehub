@@ -14,7 +14,7 @@ const ids = {
 function evidence() {
   return {
     schemaVersion: 'agent-blog-canary-evidence-v1', agentUserId: ids.agent,
-    discovery: { id: ids.discovery, workflowKey: 'blog.project.discovery-shadow', workflowVersion: 2,
+    discovery: { id: ids.discovery, workflowKey: 'blog.project.discovery-shadow', workflowVersion: 3,
       triggerRef: '99999999-9999-4999-8999-999999999999', status: 'succeeded',
       outputType: 'blog.candidate-set', outputId: ids.candidate },
     handoff: { id: ids.handoff, sourceRunId: ids.discovery, sourceArtifactId: ids.candidate, targetRunId: ids.draft },
@@ -70,7 +70,7 @@ test('acceptance service is idempotent and three passes only recommend a schedul
   assert.equal((await service.attest(ids.agent, ids.draft)).recommendation,
     'retain-private-and-collect-more-samples');
   assert.deepEqual(await service.readiness(ids.agent), {
-    schemaVersion: 'agent-blog-canary-readiness-v1', policyVersion: 1,
+    schemaVersion: 'agent-blog-canary-readiness-v1', policyVersion: 2,
     requiredConsecutivePasses: 3, consecutivePasses: 3,
     readyForShadowScheduleReview: true, automaticScheduleChange: false,
   });

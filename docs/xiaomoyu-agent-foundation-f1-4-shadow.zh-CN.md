@@ -170,14 +170,15 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 ## 13. F1-4B2d2a：模型规划搜索词，不直接搜索
 
-`blog.project.discovery-shadow@2` 在发现工具之前增加了一个独立 Provider Stage：
+`blog.project.discovery-shadow@3` 在发现工具之前增加了一个独立 Provider Stage：
 
 - 模型只接收冻结的中文选题范围、人格版本、兴趣信号和最大查询数；
-- 返回值必须是结构化 `queries/rationale/interestSignals`，兴趣信号必须来自冻结人格；
-- 确定性代码再次拒绝 URL、斜杠、冒号、搜索限定符、重复词和超额查询；
+- 返回值必须是结构化 `queries/rationale/interestSignals`，兴趣信号必须来自冻结人格；查询必须由二至六个 GitHub 仓库元数据中常见的英文技术关键词组成；
+- 确定性代码再次拒绝中文、纯宣传词、URL、斜杠、冒号、搜索限定符、重复词和超额查询；提示词符合要求不等于放行，运行时契约才是最终边界；
+- 若全部计划查询都得到零候选，系统只从已验证的计划词确定性删减通用词并最多追加两次放宽查询；不会再次调用模型，也不会临时改成模型自由搜索；
 - 一个 Run 最多调用模型一次、搜索工具五次，模型没有网络、草稿或发布能力；
 - 查询计划作为不可变 Stage Artifact 保存，以同 Run 中成功的 Provider Action 为血缘起点；
-- 最终候选集同时引用查询计划产物和全部搜索工具产物，不能在搜索后悄悄替换计划。
+- 最终候选集同时记录计划查询、实际查询、回退查询及每条回退的来源，并引用查询计划产物和全部搜索工具产物，不能在搜索后悄悄替换计划。
 
 这一步完成了自然语言选题范围到受治理搜索的自动化，但尚未自动把发现 Run 交接给草稿 Run。
 
@@ -213,7 +214,7 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 工作流 Manifest 与模型准入目录是版本化控制面事实，不能依赖首个业务 Run 临时补写，也不能要求运营者手工执行 SQL。独立 `agent-blog-canary-bootstrap` profile 因此在 preflight 之前执行一次幂等登记：
 
-- 只登记 `blog.project.discovery-shadow@2` 和 `blog.project.single.draft-shadow@1`，以及它们所需的 GitHub 搜索、仓库读取两份只读工具合同，不登记公开发布工作流；
+- 只登记 `blog.project.discovery-shadow@3` 和 `blog.project.single.draft-shadow@1`，以及它们所需的 GitHub 搜索、仓库读取两份只读工具合同，不登记公开发布工作流；
 - 只登记经过代码评审的 `deepseek/deepseek-flash@1` 结构化生成准入包；价格字段是预算预留的保守上限，不冒充供应商实时账单；
 - 目标 Agent、其运营管理员、工作流哈希和模型目录版本不匹配时立即失败；已有同版本完全一致记录时幂等返回；
 - bootstrap 不创建 Run、不读取 Key、不访问 GitHub、不调用 Provider、不创建文章，也没有发布能力；
@@ -227,7 +228,7 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 1. 独立命令每次只接受一个目标 Agent；先执行 d3a 的只读预检，任何门禁不通过都不会创建 Run；
 2. 输入快照一次冻结当前选题范围、模型、人格 ID/版本与完整配置、最近标题和历史 GitHub 仓库，旧文章中的非 GitHub 引用不会污染去重集合；
-3. 先创建 `blog.project.discovery-shadow@2`，四个 Stage 全成功并正式输出候选工件后，才通过 `agent_run_handoffs` 原子创建一次私有草稿 Run；
+3. 先创建 `blog.project.discovery-shadow@3`，四个 Stage 全成功并正式输出候选工件后，才通过 `agent_run_handoffs` 原子创建一次私有草稿 Run；
 4. 草稿 Run 只执行六个既有 Stage，终点必须是 `blog.private-draft`；Manifest、处理器和 Compose 服务均不存在发布 Stage、发布适配器或定时循环；
 5. 一次性 Worker 用 `targetRunId` 精确领取本次 Run，并跳过全局过期恢复和 Outbox 派发，不会误领、恢复或派发其他任务；
 6. 任一 Stage 返回空闲、重试、失败、不确定或租约丢失，本次链路立即停止且不进入下一 Run；重跑必须由运营者使用明确 UUID 决定是否复用同一幂等请求；
@@ -239,9 +240,9 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 真实 canary 的结论不由模型或人工印象决定。`agent-blog-canary-acceptance-policy-v1` 对一个完整发现—交接—草稿运行图做确定性验收：
 
-1. 发现必须是 `blog.project.discovery-shadow@2`，草稿必须是 `blog.project.single.draft-shadow@1`，两者触发引用一致且由唯一原子交接记录连接；
+1. 发现必须是 `blog.project.discovery-shadow@3`，草稿必须是 `blog.project.single.draft-shadow@1`，两者触发引用一致且由唯一原子交接记录连接；
 2. 四个发现 Stage 与六个草稿 Stage 必须全部成功，不接受重试、失败、不确定或残留 Action；
-3. 全图必须恰好有三次成功 Provider 调用，Tool 调用在二至十一次之间，总耗时不超过一小时，单样本费用不超过一美元；
+3. 全图必须恰好有三次成功 Provider 调用，Tool 调用在二至十三次之间，总耗时不超过一小时，单样本费用不超过一美元；上限增加的两次只允许来自发现阶段的确定性零结果回退；
 4. 任意发布 Stage、`blog.article.publish` Action 或 `published` 事件都会直接判失败；文章必须保持 `draft`、修订必须保持 `working`，且 `published_revision_id` 为空；
 5. 候选工件哈希、目标输入哈希、写作产物、验证产物和来源工件必须形成完整血缘；报告只保存 ID、状态、计数、用量和哈希，不保存正文、提示词、原始模型响应或密钥；
 6. 报告写入 `agent_blog_canary_acceptance_reports` 后不可更新或删除；同一草稿 Run 在同一策略版本下只能有一份报告，幂等重放必须得到完全相同的报告哈希；

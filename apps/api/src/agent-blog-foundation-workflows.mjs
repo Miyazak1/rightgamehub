@@ -37,7 +37,7 @@ export const BLOG_PROJECT_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
 export const BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'blog.project.discovery-shadow',
-  workflowVersion: 2,
+  workflowVersion: 3,
   inputSchema: 'blog-project-discovery-input-v2',
   outputSchema: 'blog-candidate-set-output-v1',
   requiredCapabilities: [

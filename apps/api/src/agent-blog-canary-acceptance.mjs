@@ -6,9 +6,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const TERMINAL = new Set(['succeeded', 'rejected', 'failed', 'cancelled', 'uncertain']);
 
 export const AGENT_BLOG_CANARY_ACCEPTANCE_POLICY = Object.freeze({
-  schemaVersion: 'agent-blog-canary-acceptance-policy-v1', policyVersion: 1,
+  schemaVersion: 'agent-blog-canary-acceptance-policy-v1', policyVersion: 2,
   requiredConsecutivePasses: 3, expectedDiscoveryStages: 4, expectedDraftStages: 6,
-  expectedProviderCalls: 3, minToolCalls: 2, maxToolCalls: 11,
+  expectedProviderCalls: 3, minToolCalls: 2, maxToolCalls: 13,
   maxStageRetries: 0, maxWallClockSeconds: 3600, maxCostMicrousd: 1_000_000,
 });
 
@@ -26,7 +26,7 @@ const integer = value => Number(value ?? 0);
 
 function validatePolicy(policy) {
   if (!policy || policy.schemaVersion !== 'agent-blog-canary-acceptance-policy-v1'
-    || policy.policyVersion !== 1 || !Number.isSafeInteger(policy.requiredConsecutivePasses)
+    || policy.policyVersion !== 2 || !Number.isSafeInteger(policy.requiredConsecutivePasses)
     || policy.requiredConsecutivePasses < 1 || policy.requiredConsecutivePasses > 20) {
     fail('AGENT_BLOG_CANARY_ACCEPTANCE_POLICY_INVALID');
   }
@@ -47,7 +47,7 @@ export function evaluateAgentBlogCanaryAcceptance(snapshot,
   }
   const reasons = [];
   if (snapshot.discovery.workflowKey !== 'blog.project.discovery-shadow'
-    || snapshot.discovery.workflowVersion !== 2
+    || snapshot.discovery.workflowVersion !== 3
     || snapshot.draft.workflowKey !== 'blog.project.single.draft-shadow'
     || snapshot.draft.workflowVersion !== 1
     || snapshot.handoff.sourceRunId !== snapshot.discovery.id
