@@ -21,6 +21,7 @@ function request() {
 test('provider gateway enforces policy, budget, send watermark and settlement order', async () => {
   const { createAgentProviderGateway } = await load('agent-provider-gateway.mjs');
   const calls = [];
+  let finishInput;
   const runtimeRepository = {
     createAction: async () => (calls.push('prepare'), { id: 'action', status: 'prepared', existing: false }),
     transitionAction: async input => (calls.push(input.to), { status: input.to }),
@@ -32,7 +33,12 @@ test('provider gateway enforces policy, budget, send watermark and settlement or
     reserveProviderCall: async () => (calls.push('reserve'), { callId: 'call', reservationId: 'budget' }),
     markSending: async () => { calls.push('sending'); },
     acknowledge: async () => { calls.push('acknowledge'); },
-    finish: async () => (calls.push('settle'), { usage: { providerCalls: 1 }, chargedUsage: { providerCalls: 1 } }),
+    finish: async (_callId, input) => {
+      calls.push('settle');
+      finishInput = input;
+      return { usage: { providerCalls: 1 }, chargedUsage: { providerCalls: 1 },
+        outputArtifactId: 'provider-output', outputSha256: 'sha256' };
+    },
   };
   const gateway = createAgentProviderGateway({
     runtimeRepository, governanceRepository,
@@ -45,8 +51,27 @@ test('provider gateway enforces policy, budget, send watermark and settlement or
   });
   const result = await gateway.invoke(request());
   assert.equal(result.status, 'succeeded');
+  assert.equal(result.outputArtifactId, 'provider-output');
+  assert.deepEqual(finishInput.output, { summary: 'ok' });
+  assert.deepEqual(finishInput.responseSchema, { key: 'paper-summary', version: 1 });
   assert.deepEqual(calls, ['policy', 'prepare', 'authorized', 'resolve', 'load-secret', 'reserve', 'decrypt',
     'sending', 'invoke:secret', 'acknowledge', 'validate', 'settle']);
+});
+
+test('provider gateway refuses to replay a succeeded action without its durable output artifact', async () => {
+  const { createAgentProviderGateway, AgentProviderGatewayError } = await load('agent-provider-gateway.mjs');
+  const gateway = createAgentProviderGateway({
+    runtimeRepository: {
+      createAction: async () => ({ id: 'action', status: 'succeeded', existing: true }),
+    },
+    governanceRepository: {
+      getProviderCallByAction: async () => ({ status: 'succeeded', output: null }),
+    },
+    policyService: { decide: async () => ({ decision: 'allow', agentUserId: 'agent' }) },
+    secretVault: {}, adapters: {}, responseSchemas: { 'paper-summary@1': output => output },
+  });
+  await assert.rejects(gateway.invoke(request()), error => error instanceof AgentProviderGatewayError
+    && error.code === 'AGENT_PROVIDER_OUTPUT_ARTIFACT_MISSING');
 });
 
 test('provider gateway retains conservative budget when dispatch outcome is unknown', async () => {

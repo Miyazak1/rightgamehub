@@ -49,7 +49,12 @@ export function createAgentProviderGateway({
       });
       if (prepared.existing) {
         const replay = await governanceRepository.getProviderCallByAction(prepared.id);
-        if (replay?.status === 'succeeded') return { status: 'succeeded', replayed: true, ...replay };
+        if (replay?.status === 'succeeded') {
+          if (!replay.output || typeof replay.output !== 'object' || Array.isArray(replay.output)) {
+            fail('AGENT_PROVIDER_OUTPUT_ARTIFACT_MISSING');
+          }
+          return { status: 'succeeded', replayed: true, ...replay };
+        }
         if (replay?.status === 'uncertain') fail('AGENT_PROVIDER_OUTCOME_UNCERTAIN', { uncertain: true });
         fail('AGENT_PROVIDER_ACTION_IN_PROGRESS');
       }
@@ -156,13 +161,20 @@ export function createAgentProviderGateway({
         });
         fail('AGENT_PROVIDER_OUTPUT_INVALID', { cause: error });
       }
-      const settled = await governanceRepository.finish(reservation.callId, {
-        status: 'succeeded', actualUsage: receipt.usage ?? {}, responseRef: receipt.responseRef ?? {},
-      });
+      let settled;
+      try {
+        settled = await governanceRepository.finish(reservation.callId, {
+          status: 'succeeded', actualUsage: receipt.usage ?? {}, responseRef: receipt.responseRef ?? {},
+          output, responseSchema,
+        });
+      } catch (error) {
+        fail(errorCode(error), { cause: error, uncertain: true });
+      }
       return {
         status: 'succeeded', replayed: false, actionId: prepared.id, callId: reservation.callId,
         provider: model.provider, modelId: model.modelId, output, usage: settled.usage,
         chargedUsage: settled.chargedUsage, providerRequestId: receipt.providerRequestId,
+        outputArtifactId: settled.outputArtifactId, outputSha256: settled.outputSha256,
       };
     },
   };

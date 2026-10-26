@@ -269,8 +269,21 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   const providerResult = await gateway.invoke(providerRequest);
   assert.equal(providerResult.status, 'succeeded');
   assert.deepEqual(providerResult.output, { answer: '受控结果' });
+  assert.match(providerResult.outputArtifactId, /^[a-f0-9-]{36}$/u);
+  assert.match(providerResult.outputSha256, /^[a-f0-9]{64}$/u);
   assert.deepEqual(providerResult.chargedUsage, { providerCalls: 1, inputTokens: 80, outputTokens: 50, costMicrousd: 200 });
-  assert.equal((await gateway.invoke(providerRequest)).replayed, true);
+  const providerReplay = await gateway.invoke(providerRequest);
+  assert.equal(providerReplay.replayed, true);
+  assert.deepEqual(providerReplay.output, { answer: '受控结果' });
+  assert.equal(providerReplay.outputArtifactId, providerResult.outputArtifactId);
+  const durableProviderOutput = (await admin.query(`SELECT output.*,action.response_sha256
+    FROM agent_provider_output_artifacts output JOIN agent_run_actions action ON action.id=output.action_id
+    WHERE output.id=$1`, [providerResult.outputArtifactId])).rows[0];
+  assert.deepEqual(durableProviderOutput.content_json, { answer: '受控结果' });
+  assert.equal(durableProviderOutput.content_sha256, providerResult.outputSha256);
+  assert.equal(durableProviderOutput.response_sha256, providerResult.outputSha256);
+  await assert.rejects(admin.query('UPDATE agent_provider_output_artifacts SET size_bytes=size_bytes+1 WHERE id=$1',
+    [providerResult.outputArtifactId]), /immutable/u);
   await assert.rejects(gateway.invoke({ ...providerRequest, idempotencyKey: `provider-action:${crypto.randomUUID()}`,
     action: { ...providerRequest.action, actionKey: 'generate-json-two' } }), error => error.code === 'AGENT_RUN_BUDGET_EXCEEDED');
   const providerLedger = (await admin.query(`SELECT r.status,r.charged_cost_microusd,c.status AS call_status,a.status AS action_status
@@ -330,6 +343,9 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   const providerTimeline = await runtimeRead.timeline({ userId: operatorId, role: 'admin' }, account.agentUserId, providerRun.id);
   assert.equal(providerTimeline.budgetReservations[0].charged.costMicrousd, 200);
   assert.equal(providerTimeline.providerCalls[0].status, 'succeeded');
+  assert.equal(providerTimeline.providerOutputArtifacts.length, 1);
+  assert.equal(providerTimeline.providerOutputArtifacts[0].id, providerResult.outputArtifactId);
+  assert.equal(Object.hasOwn(providerTimeline.providerOutputArtifacts[0], 'content'), false);
   await assert.rejects(runtimeRead.listRuns({ userId: operatorId, role: 'user' }, account.agentUserId), error => error.code === 'AGENT_OPERATOR_REQUIRED');
   await admin.end();
 });

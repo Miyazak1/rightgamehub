@@ -40,19 +40,27 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
       runId = uuid(runId);
       const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
-      const [stages, actions, events, reservations, providerCalls, toolCalls, toolArtifacts, foundationDrafts] = await Promise.all([
+      const [stages, actions, events, reservations, providerCalls, providerOutputArtifacts, toolCalls, toolArtifacts,
+        stageArtifacts, foundationDrafts] = await Promise.all([
         pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
         pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
         pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
         pool.query('SELECT * FROM agent_budget_reservations WHERE run_id=$1 ORDER BY reserved_at,id', [runId]),
         pool.query(`SELECT call.* FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
           WHERE action.run_id=$1 ORDER BY call.created_at,call.id`, [runId]),
+        pool.query(`SELECT artifact.id,artifact.provider_call_id,artifact.action_id,artifact.schema_key,
+            artifact.schema_version,artifact.media_type,artifact.content_sha256,artifact.size_bytes,artifact.created_at
+          FROM agent_provider_output_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
+          WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
         pool.query(`SELECT call.* FROM agent_tool_calls call JOIN agent_run_actions action ON action.id=call.action_id
           WHERE action.run_id=$1 ORDER BY call.created_at,call.id`, [runId]),
         pool.query(`SELECT artifact.id,artifact.tool_call_id,artifact.action_id,artifact.media_type,
             artifact.content_sha256,artifact.size_bytes,artifact.created_at
           FROM agent_tool_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
           WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
+        pool.query(`SELECT id,stage_id,action_id,artifact_key,artifact_kind,schema_key,schema_version,media_type,
+            content_sha256,size_bytes,source_tool_artifact_ids,source_stage_artifact_ids,created_at
+          FROM agent_runtime_stage_artifacts WHERE run_id=$1 ORDER BY created_at,id`, [runId]),
         pool.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
             draft.source_artifact_ids,draft.content_sha256,draft.created_at,article.publication_state
           FROM agent_blog_foundation_drafts draft JOIN blog_articles article ON article.id=draft.article_id
@@ -97,6 +105,11 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
           usage: row.usage_json, errorCode: row.error_code, sendingAt: iso(row.sending_at),
           acknowledgedAt: iso(row.acknowledged_at), finishedAt: iso(row.finished_at),
         })),
+        providerOutputArtifacts: providerOutputArtifacts.rows.map(row => ({
+          id: row.id, providerCallId: row.provider_call_id, actionId: row.action_id,
+          schema: { key: row.schema_key, version: row.schema_version }, mediaType: row.media_type,
+          contentSha256: row.content_sha256, sizeBytes: row.size_bytes, createdAt: iso(row.created_at),
+        })),
         toolCalls: toolCalls.rows.map(row => ({
           id: row.id, actionId: row.action_id, toolKey: row.tool_key, contractVersion: row.contract_version,
           status: row.status, receiptId: row.receipt_id, responseSha256: row.response_sha256,
@@ -106,6 +119,13 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
         toolArtifacts: toolArtifacts.rows.map(row => ({
           id: row.id, toolCallId: row.tool_call_id, actionId: row.action_id, mediaType: row.media_type,
           contentSha256: row.content_sha256, sizeBytes: row.size_bytes, createdAt: iso(row.created_at),
+        })),
+        stageArtifacts: stageArtifacts.rows.map(row => ({
+          id: row.id, stageId: row.stage_id, actionId: row.action_id, artifactKey: row.artifact_key,
+          artifactKind: row.artifact_kind, schema: { key: row.schema_key, version: row.schema_version },
+          mediaType: row.media_type, contentSha256: row.content_sha256, sizeBytes: row.size_bytes,
+          sourceToolArtifactIds: row.source_tool_artifact_ids,
+          sourceStageArtifactIds: row.source_stage_artifact_ids, createdAt: iso(row.created_at),
         })),
         foundationDrafts: foundationDrafts.rows.map(row => ({
           runId: row.run_id, actionId: row.action_id, articleId: row.article_id, revisionId: row.revision_id,

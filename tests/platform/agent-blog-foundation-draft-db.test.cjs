@@ -13,6 +13,7 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
   const { createAgentToolGateway } = await harness.load('agent-tool-gateway.mjs');
   const { PostgresAgentBlogFoundationDraftRepository } = await harness.load('agent-blog-foundation-draft-repository.mjs');
   const { createAgentBlogFoundationDraftGateway } = await harness.load('agent-blog-foundation-draft.mjs');
+  const { PostgresAgentRuntimeStageArtifactRepository } = await harness.load('agent-runtime-stage-artifact-repository.mjs');
   const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Draft operator','admin')", [operatorId]);
@@ -75,6 +76,22 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
   const draftStage = await runtime.claimNextStage('draft-worker', 30, [`${workflow.workflowKey}:persist-draft`]);
   await runtime.startStage({ stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken });
   const draftRepository = new PostgresAgentBlogFoundationDraftRepository(admin);
+  const stageArtifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
+  const verificationArtifactInput = {
+    runId: run.id, stageId: draftStage.id, workerId: draftStage.leasedBy, leaseToken: draftStage.leaseToken,
+    artifactKey: 'blog.fixture-verification', artifactKind: 'verification',
+    schema: { key: 'blog.article.verification', version: 1 },
+    content: { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true } },
+    sourceToolArtifactIds: [evidence.artifactId],
+  };
+  const verificationArtifact = await stageArtifactRepository.save(verificationArtifactInput);
+  assert.equal(verificationArtifact.existing, false);
+  assert.equal((await stageArtifactRepository.save(verificationArtifactInput)).existing, true);
+  assert.deepEqual((await stageArtifactRepository.read({ runId: run.id, artifactId: verificationArtifact.id,
+    expectedArtifactKey: 'blog.fixture-verification' })).content,
+  { schemaVersion: 'blog-article-verification-v1', approved: true, checks: { fixture: true } });
+  await assert.rejects(admin.query('UPDATE agent_runtime_stage_artifacts SET size_bytes=size_bytes+1 WHERE id=$1',
+    [verificationArtifact.id]), /immutable/u);
   const gateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime, draftRepository, policyService });
   const content = {
     slug: `foundation-${crypto.randomBytes(6).toString('hex')}`, locale: 'zh-CN', title: '基座生成的私有研究草稿',
@@ -117,5 +134,8 @@ test('Agent foundation persists one evidence-bound private draft and cannot publ
   assert.equal(timeline.foundationDrafts.length, 1);
   assert.equal(timeline.foundationDrafts[0].publicationState, 'draft');
   assert.equal(Object.hasOwn(timeline.foundationDrafts[0], 'content'), false);
+  assert.equal(timeline.stageArtifacts.length, 1);
+  assert.equal(timeline.stageArtifacts[0].id, verificationArtifact.id);
+  assert.equal(Object.hasOwn(timeline.stageArtifacts[0], 'content'), false);
   await admin.end();
 });

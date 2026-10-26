@@ -158,13 +158,23 @@ export class PostgresAgentProviderGatewayRepository {
   }
 
   async getProviderCallByAction(actionId) {
-    const row = (await this.pool.query(`SELECT call.*,action.status AS action_status
+    const row = (await this.pool.query(`SELECT call.*,action.status AS action_status,
+        output.id AS output_artifact_id,output.schema_key AS output_schema_key,
+        output.schema_version AS output_schema_version,output.content_json AS output_content,
+        output.content_sha256 AS output_sha256,output.size_bytes AS output_size_bytes
       FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
+      LEFT JOIN agent_provider_output_artifacts output ON output.provider_call_id=call.id
       WHERE call.action_id=$1`, [actionId])).rows[0];
     return row ? {
       id: row.id, actionId: row.action_id, status: row.status, actionStatus: row.action_status,
       provider: row.provider, modelId: row.model_id, providerRequestId: row.provider_request_id,
       responseRef: row.response_ref_json, usage: row.usage_json, errorCode: row.error_code,
+      ...(row.output_artifact_id ? {
+        outputArtifactId: row.output_artifact_id,
+        responseSchema: { key: row.output_schema_key, version: row.output_schema_version },
+        outputSha256: row.output_sha256, outputSizeBytes: row.output_size_bytes,
+        output: row.output_content,
+      } : {}),
     } : null;
   }
 
@@ -262,9 +272,20 @@ export class PostgresAgentProviderGatewayRepository {
     });
   }
 
-  async finish(callId, { status = 'succeeded', actualUsage = {}, responseRef = null, errorCode = null,
-    errorMessage = null, circuitFailure = false } = {}) {
+  async finish(callId, { status = 'succeeded', actualUsage = {}, responseRef = null, output = null,
+    responseSchema = null, errorCode = null, errorMessage = null, circuitFailure = false } = {}) {
     if (!['succeeded', 'failed'].includes(status)) fail('AGENT_PROVIDER_CALL_STATE');
+    if ((status === 'succeeded') !== (output !== null)) fail('AGENT_PROVIDER_OUTPUT_STATE');
+    let outputRecord = null;
+    if (output !== null) {
+      if (!output || typeof output !== 'object' || Array.isArray(output) || !responseSchema
+        || !/^[a-z][a-z0-9.-]{2,119}$/u.test(responseSchema.key)
+        || !Number.isSafeInteger(responseSchema.version) || responseSchema.version < 1) fail('AGENT_PROVIDER_OUTPUT_INVALID');
+      const serialized = json(output);
+      const sizeBytes = Buffer.byteLength(serialized);
+      if (sizeBytes < 1 || sizeBytes > 1048576) fail('AGENT_PROVIDER_OUTPUT_INVALID');
+      outputRecord = { serialized, sizeBytes, digest: stableHash(output) };
+    }
     const actual = usage({ providerCalls: 1, ...actualUsage });
     return withTransaction(this.pool, async client => {
       const call = (await client.query('SELECT * FROM agent_provider_calls WHERE id=$1 FOR UPDATE', [callId])).rows[0];
@@ -282,21 +303,39 @@ export class PostgresAgentProviderGatewayRepository {
         charged_input_tokens=$7,charged_output_tokens=$8,charged_cost_microusd=$9,settled_at=now(),updated_at=now()
         WHERE id=$1`, [reservation.id, actual.providerCalls, actual.inputTokens, actual.outputTokens, actual.costMicrousd,
         charged.providerCalls, charged.inputTokens, charged.outputTokens, charged.costMicrousd]);
+      let effectiveResponseRef = responseRef;
+      let outputArtifactId = null;
+      if (status === 'succeeded') {
+        outputArtifactId = crypto.randomUUID();
+        await client.query(`INSERT INTO agent_provider_output_artifacts(
+            id,provider_call_id,action_id,schema_key,schema_version,media_type,content_json,content_sha256,size_bytes
+          ) VALUES($1,$2,$3,$4,$5,'application/json',$6,$7,$8)`,
+        [outputArtifactId, call.id, call.action_id, responseSchema.key, responseSchema.version,
+          outputRecord.serialized, outputRecord.digest, outputRecord.sizeBytes]);
+        effectiveResponseRef = {
+          ...(responseRef ?? call.response_ref_json ?? {}),
+          outputArtifactId, outputSha256: outputRecord.digest, outputSizeBytes: outputRecord.sizeBytes,
+          responseSchema: { key: responseSchema.key, version: responseSchema.version },
+        };
+      }
       await client.query(`UPDATE agent_provider_calls SET status=$2,response_ref_json=COALESCE($3,response_ref_json),
         usage_json=$4,error_code=$5,error_message=$6,finished_at=now(),updated_at=now() WHERE id=$1`,
-      [call.id, status, responseRef === null ? null : json(responseRef), json(actual), errorCode, errorMessage]);
+      [call.id, status, effectiveResponseRef === null ? null : json(effectiveResponseRef), json(actual), errorCode, errorMessage]);
       const action = (await client.query(`UPDATE agent_run_actions SET status=$2,response_ref_json=COALESCE($3,response_ref_json),
+        response_sha256=CASE WHEN $2='succeeded' THEN $7 ELSE response_sha256 END,
         usage_json=$4,error_code=$5,error_message=$6,finished_at=now(),updated_at=now()
         WHERE id=$1 AND status='acknowledged' RETURNING *`,
-      [call.action_id, status, responseRef === null ? null : json(responseRef), json(charged), errorCode, errorMessage])).rows[0];
+      [call.action_id, status, effectiveResponseRef === null ? null : json(effectiveResponseRef), json(charged),
+        errorCode, errorMessage, outputRecord?.digest ?? null])).rows[0];
       if (!action) fail('AGENT_PROVIDER_ACTION_STATE');
       await this.#refreshRunUsage(client, action.run_id);
       if (status === 'succeeded') await this.#recordCircuit(client, call.provider, call.model_id, true, null);
       else if (circuitFailure) await this.#recordCircuit(client, call.provider, call.model_id, false, errorCode);
       await client.query(`INSERT INTO agent_run_events(run_id,stage_id,action_id,event_type,actor_kind,payload_json)
         VALUES($1,$2,$3,$4,'system',$5)`, [action.run_id, action.stage_id, action.id, `action.${status}`,
-        json({ actualUsage: actual, chargedUsage: charged, errorCode })]);
-      return { actionId: action.id, status, usage: actual, chargedUsage: charged };
+        json({ actualUsage: actual, chargedUsage: charged, errorCode, outputArtifactId })]);
+      return { actionId: action.id, status, usage: actual, chargedUsage: charged,
+        outputArtifactId, outputSha256: outputRecord?.digest ?? null };
     });
   }
 
