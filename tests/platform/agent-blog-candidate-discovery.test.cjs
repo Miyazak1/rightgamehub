@@ -90,3 +90,66 @@ test('candidate discovery is disabled by default and has no provider, draft, or 
   assert.throws(() => normalizeBlogCandidateDiscoveryInput({ ...input,
     queries: ['agent tool', 'agent   tool'] }), error => error.code === 'AGENT_BLOG_DISCOVERY_INPUT_INVALID');
 });
+
+test('autonomous discovery lets the model plan only bounded queries before governed search', async () => {
+  const { defaultAgentBehaviorProfile } = await load('agent-behavior-profile.mjs');
+  const { stableHash } = await load('researcher-qa-protocol/stable-json.mjs');
+  const { createAgentBlogAutonomousCandidateDiscoveryHandlers } =
+    await load('agent-blog-candidate-discovery.mjs');
+  const runId = uuid();
+  const autonomousInput = { schemaVersion: 'blog-project-discovery-input-v2',
+    topicScope: '发现有趣而有用的开源人工智能工具',
+    searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: '2026-01-01', maxCandidates: 4, maxQueries: 3 },
+    previousRepositoryUrls: [], behaviorProfile: defaultAgentBehaviorProfile() };
+  const stored = new Map();
+  const toolOutputs = new Map();
+  const providerCalls = [];
+  const providerGateway = { invoke: async call => {
+    providerCalls.push(call);
+    return { status: 'succeeded', actionId: uuid(), output: {
+      queries: ['visual ai tool', 'creative agent'],
+      rationale: '选题范围强调直观结果和创作空间，因此先搜索可视化人工智能工具，再补充具有创作能力的智能体项目。',
+      interestSignals: ['结果直观或可视化', '能够生成或分享作品'],
+    } };
+  } };
+  const toolGateway = { invoke: async call => {
+    const id = uuid();
+    const candidateKey = call.request.query === 'visual ai tool' ? 'new/visual' : 'new/creative';
+    toolOutputs.set(id, { id, content: searchOutput(call.request.query, [candidate(candidateKey, 100)]) });
+    return { status: 'succeeded', artifactId: id };
+  } };
+  const artifactRepository = {
+    save: async value => {
+      const id = uuid();
+      const item = { id, artifactKey: value.artifactKey, contentSha256: stableHash(value.content),
+        content: structuredClone(value.content), input: structuredClone(value) };
+      stored.set(id, item);
+      return item;
+    },
+    read: async ({ artifactId }) => structuredClone(stored.get(artifactId)),
+    readToolArtifact: async ({ artifactId }) => structuredClone(toolOutputs.get(artifactId)),
+  };
+  const handlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
+    providerGateway, toolGateway, artifactRepository,
+  });
+  const execution = { workerId: 'worker', leaseToken: uuid() };
+  const run = { id: runId, agentUserId: uuid(), configSnapshot: {}, input: autonomousInput,
+    inputSha256: stableHash(autonomousInput) };
+  const frozen = await handlers['blog.project.discovery-shadow:freeze-brief']({ run, stage: { id: uuid() }, prerequisites: [] });
+  const planned = await handlers['blog.project.discovery-shadow:plan-queries']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'freeze-brief', status: 'succeeded', outputRef: frozen.outputRef }] }, execution);
+  const searched = await handlers['blog.project.discovery-shadow:search-candidates']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'plan-queries', status: 'succeeded', outputRef: planned.outputRef }] }, execution);
+  const finalized = await handlers['blog.project.discovery-shadow:finalize-candidates']({ run, stage: { id: uuid() },
+    prerequisites: [{ stageKey: 'search-candidates', status: 'succeeded', outputRef: searched.outputRef }] }, execution);
+  assert.equal(providerCalls.length, 1);
+  assert.equal(providerCalls[0].action.actionKey, 'plan-queries');
+  assert.equal(providerCalls[0].action.capabilityKey, 'provider.text.generate');
+  assert.equal(searched.outputRef.artifactIds.length, 2);
+  const candidateSet = stored.get(finalized.outputRef.artifactId);
+  assert.deepEqual(candidateSet.content.queryPolicy.queries, ['visual ai tool', 'creative agent']);
+  assert.deepEqual(candidateSet.input.sourceStageArtifactIds, [planned.outputRef.artifactId]);
+  const planArtifact = stored.get(planned.outputRef.artifactId);
+  assert.equal(planArtifact.input.actionId == null, false);
+  assert.deepEqual(planArtifact.input.sourceToolArtifactIds, undefined);
+});

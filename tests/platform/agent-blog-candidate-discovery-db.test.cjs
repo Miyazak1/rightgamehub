@@ -17,7 +17,13 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
       validateGitHubRepositorySearchOutput } = await harness.load('agent-github-repository-search-tool.mjs');
     const { PostgresAgentRuntimeStageArtifactRepository } = await harness.load('agent-runtime-stage-artifact-repository.mjs');
     const { createAgentBlogCandidateDiscoveryHandlers,
-      createAgentBlogCandidateDiscoveryCanary } = await harness.load('agent-blog-candidate-discovery.mjs');
+      createAgentBlogCandidateDiscoveryCanary, createAgentBlogAutonomousCandidateDiscoveryHandlers,
+      createAgentBlogAutonomousDiscoveryCanary, BLOG_DISCOVERY_RESPONSE_SCHEMAS } =
+      await harness.load('agent-blog-candidate-discovery.mjs');
+    const { defaultAgentBehaviorProfile } = await harness.load('agent-behavior-profile.mjs');
+    const { PostgresAgentProviderGatewayRepository } = await harness.load('agent-provider-gateway-repository.mjs');
+    const { createAgentProviderGateway } = await harness.load('agent-provider-gateway.mjs');
+    const { createAgentSecretVault } = await harness.load('agent-secret-vault.mjs');
     const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
 
     const operatorId = crypto.randomUUID();
@@ -85,5 +91,71 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     assert.equal(timeline.toolCalls.length, 1);
     assert.equal(Object.hasOwn(timeline.stageArtifacts[0], 'content'), false);
     await worker.stop();
+
+    const governance = new PostgresAgentProviderGatewayRepository(admin, {
+      agentMonthlyLimits: { providerCalls: 10, inputTokens: 50000, outputTokens: 10000, costMicrousd: 10000000 },
+      platformMonthlyLimits: { providerCalls: 100, inputTokens: 500000, outputTokens: 100000, costMicrousd: 100000000 },
+    });
+    await governance.registerModel({ provider: 'deepseek', modelId: 'fixture-discovery', catalogVersion: 1,
+      status: 'active', taskClasses: ['structured-generation'], supportsJsonSchema: true,
+      maxInputTokens: 10000, maxOutputTokens: 1200, inputPriceMicrousdPerMillion: 1000000,
+      outputPriceMicrousdPerMillion: 2000000, config: { fixture: true } });
+    const vault = createAgentSecretVault({ masterKey: 'de'.repeat(32) });
+    const encrypted = vault.encrypt(account.agentUserId, 'deepseek', 'fixture-discovery-secret');
+    await admin.query(`INSERT INTO agent_provider_secrets(
+      agent_user_id,provider,ciphertext,nonce,auth_tag,key_fingerprint,key_last_four,updated_by_user_id
+    ) VALUES($1,'deepseek',$2,$3,$4,$5,$6,$7)`, [account.agentUserId, encrypted.ciphertext,
+      encrypted.nonce, encrypted.authTag, encrypted.fingerprint, encrypted.lastFour, operatorId]);
+    let providerInvocations = 0;
+    const providerGateway = createAgentProviderGateway({ runtimeRepository: runtime,
+      governanceRepository: governance, policyService: createAgentRuntimePolicyService({ pool: admin }),
+      secretVault: vault, responseSchemas: BLOG_DISCOVERY_RESPONSE_SCHEMAS,
+      adapters: { deepseek: async () => {
+        providerInvocations += 1;
+        return { providerRequestId: `fixture:${crypto.randomUUID()}`, output: {
+          queries: ['agent tool'],
+          rationale: '选题范围关注可以快速体验的人工智能工具，因此先用普通关键词寻找具有明确用途和可观察结果的项目。',
+          interestSignals: ['可以快速体验'],
+        }, responseRef: {}, usage: { providerCalls: 1, inputTokens: 200, outputTokens: 80, costMicrousd: 2 } };
+      } },
+    });
+    const autonomousCanary = createAgentBlogAutonomousDiscoveryCanary({ runtimeRepository: runtime, enabled: true });
+    const autonomousWorkflow = await autonomousCanary.register(operatorId);
+    const autonomousHandlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
+      providerGateway, toolGateway: gateway, artifactRepository,
+    });
+    const autonomousRun = await autonomousCanary.createRun({ agentUserId: account.agentUserId,
+      idempotencyKey: `autonomous-discovery:${crypto.randomUUID()}`,
+      config: { model: { provider: 'deepseek', modelId: 'fixture-discovery' } }, input: {
+        schemaVersion: 'blog-project-discovery-input-v2', topicScope: '寻找可快速体验的开源人工智能工具',
+        searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: '2026-01-01',
+          maxCandidates: 8, maxQueries: 3 }, previousRepositoryUrls: [],
+        behaviorProfile: defaultAgentBehaviorProfile(),
+      } });
+    const autonomousWorker = createAgentRuntimeWorker({ repository: runtime, handlers: autonomousHandlers,
+      workerId: `autonomous-discovery-${crypto.randomBytes(4).toString('hex')}`,
+      leaseSeconds: 30, heartbeatSeconds: 5 });
+    for (let index = 0; index < autonomousWorkflow.stages.length; index += 1) {
+      const result = await autonomousWorker.runOnce();
+      assert.equal(result.status, 'completed', JSON.stringify(result));
+    }
+    assert.equal(providerInvocations, 1);
+    const autonomousStored = (await admin.query('SELECT * FROM agent_runs WHERE id=$1', [autonomousRun.id])).rows[0];
+    assert.equal(autonomousStored.status, 'succeeded');
+    assert.equal(autonomousStored.output_type, 'blog.candidate-set');
+    const lineage = (await admin.query(`SELECT artifact_key,action_id,source_tool_artifact_ids,source_stage_artifact_ids
+      FROM agent_runtime_stage_artifacts WHERE run_id=$1 ORDER BY created_at,id`, [autonomousRun.id])).rows;
+    const plan = lineage.find(item => item.artifact_key === 'blog.discovery-plan');
+    const candidates = lineage.find(item => item.artifact_key === 'blog.candidate-set');
+    assert.equal(plan.action_id == null, false);
+    assert.deepEqual(plan.source_tool_artifact_ids, []);
+    assert.deepEqual(plan.source_stage_artifact_ids, []);
+    assert.deepEqual(candidates.source_stage_artifact_ids, [
+      (await admin.query(`SELECT id FROM agent_runtime_stage_artifacts
+        WHERE run_id=$1 AND artifact_key='blog.discovery-plan'`, [autonomousRun.id])).rows[0].id,
+    ]);
+    assert.equal(Number((await admin.query('SELECT count(*)::int AS n FROM agent_blog_foundation_drafts WHERE run_id=$1',
+      [autonomousRun.id])).rows[0].n), 0);
+    await autonomousWorker.stop();
     await admin.end();
   });

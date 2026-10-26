@@ -34,6 +34,27 @@ export const BLOG_PROJECT_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
   ],
 });
 
+export const BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
+  schemaVersion: 'agent-workflow-v1',
+  workflowKey: 'blog.project.discovery-shadow',
+  workflowVersion: 2,
+  inputSchema: 'blog-project-discovery-input-v2',
+  outputSchema: 'blog-candidate-set-output-v1',
+  requiredCapabilities: [
+    { key: 'provider.text.generate', version: 1 },
+    { key: 'research.github.discover', version: 1 },
+  ],
+  defaultBudget: { providerCalls: 1, toolCalls: 5, inputTokens: 12000, outputTokens: 1200, wallClockSeconds: 900 },
+  stages: [
+    { key: 'freeze-brief', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
+    { key: 'plan-queries', kind: 'provider', dependsOn: ['freeze-brief'], maxAttempts: 2, timeoutSeconds: 180,
+      capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
+    { key: 'search-candidates', kind: 'tool', dependsOn: ['plan-queries'], maxAttempts: 3, timeoutSeconds: 300,
+      capability: { key: 'research.github.discover', version: 1 }, idempotencyMode: 'key' },
+    { key: 'finalize-candidates', kind: 'deterministic', dependsOn: ['search-candidates'], maxAttempts: 1, timeoutSeconds: 60 },
+  ],
+});
+
 // This is the target contract, not a production registration.  F1-4B only
 // registers the zero-cost replay workflow above.  Canary registration waits
 // until every adapter and publish-ownership gate has passed its own review.

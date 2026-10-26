@@ -66,7 +66,7 @@ export class PostgresAgentRuntimeStageArtifactRepository {
     if (!content || typeof content !== 'object' || Array.isArray(content)) fail('AGENT_STAGE_ARTIFACT_CONTENT_INVALID');
     const toolIds = ids(sourceToolArtifactIds);
     const stageIds = ids(sourceStageArtifactIds);
-    if (toolIds.length + stageIds.length < 1 || toolIds.length + stageIds.length > 32) {
+    if ((toolIds.length + stageIds.length < 1 && !actionId) || toolIds.length + stageIds.length > 32) {
       fail('AGENT_STAGE_ARTIFACT_SOURCE_INVALID');
     }
     const serialized = json(content);
