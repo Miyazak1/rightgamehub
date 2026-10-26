@@ -1,5 +1,8 @@
 import { AgentAccountError } from './agent-account-repository.mjs';
 import { AGENT_BLOG_CANARY_ACCEPTANCE_POLICY } from './agent-blog-canary-acceptance.mjs';
+import { evaluateAgentBlogPublicRuntimeSnapshot,
+  PostgresAgentBlogPublicRuntimePreflightRepository } from './agent-blog-public-runtime-preflight.mjs';
+import { evaluateAgentBlogPublicOperationsReadiness } from './agent-blog-public-operations-readiness.mjs';
 
 const fail = code => { throw new AgentAccountError(code); };
 const uuid = value => {
@@ -8,8 +11,11 @@ const uuid = value => {
 };
 const iso = value => value?.toISOString?.() ?? value ?? null;
 
-export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
+export function createAgentRuntimeReadService({ pool, authorizeOperator,
+  publicRuntimeConfig, publicScheduleConfig, clock = () => new Date() }) {
   if (!pool || typeof authorizeOperator !== 'function') fail('AGENT_OPERATOR_PORT_REQUIRED');
+  const publicPreflightRepository = publicRuntimeConfig && publicScheduleConfig
+    ? new PostgresAgentBlogPublicRuntimePreflightRepository(pool) : null;
   const scope = async (actor, agentUserId) => {
     const operatorId = uuid(actor?.userId);
     if (await authorizeOperator(structuredClone(actor)) !== true) fail('AGENT_OPERATOR_REQUIRED');
@@ -36,6 +42,22 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
         consecutivePasses += 1;
       }
       const scheduleRow = schedule.rows[0];
+      let publicOperations = null;
+      if (publicPreflightRepository) {
+        const effectiveRuntimeConfig = Object.freeze({ ...publicRuntimeConfig, agentUserId });
+        const snapshot = await publicPreflightRepository.snapshot(effectiveRuntimeConfig);
+        const runtimePreflight = evaluateAgentBlogPublicRuntimeSnapshot(effectiveRuntimeConfig, snapshot);
+        publicOperations = evaluateAgentBlogPublicOperationsReadiness({
+          agentUserId, runtimeConfig: publicRuntimeConfig, scheduleConfig: publicScheduleConfig,
+          runtimePreflight,
+          schedule: scheduleRow ? {
+            enabled: scheduleRow.enabled,
+            mode: scheduleRow.config_json?.mode ?? null,
+            worker: scheduleRow.config_json?.worker ?? null,
+          } : null,
+          now: clock(),
+        });
+      }
       return {
         schemaVersion: 'agent-blog-foundation-overview-v1',
         acceptance: {
@@ -56,6 +78,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator }) {
           suspensionReason: scheduleRow.config_json?.suspensionReason ?? null,
           updatedAt: iso(scheduleRow.updated_at),
         } : null,
+        publicOperations,
       };
     },
     async listRuns(actor, agentUserId, limit = 30) {

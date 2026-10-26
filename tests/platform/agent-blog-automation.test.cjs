@@ -98,6 +98,9 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/rollbackAdminAgentPublication/);
  assert.match(admin,/切换发布权不会自动启动新流程/);
  assert.match(admin,/每天 10 点计划验收/);
+ assert.match(admin,/公开运行就绪度/);
+ assert.match(admin,/定时执行器没有新鲜心跳/);
+ assert.match(admin,/不会从网页静默启动容器或绕过预检/);
  const client=fs.readFileSync(path.join(root,'packages/platform-api-client/src/index.mjs'),'utf8');
  assert.match(client,/blog-publication-cutover-preflight/);
  assert.match(client,/blog-publication-cutover/);
@@ -127,6 +130,7 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(styles,/agent-switch input\[type="checkbox"\][^\n]*width:16px/);
  assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
  assert.match(styles,/agent-publication-grid[^\n]*grid-template-columns:repeat\(2/);
+ assert.match(styles,/agent-operations-grid[^\n]*grid-template-columns:repeat\(2/);
  assert.match(styles,/agent-draft-preview__close[^\n]*min-width:72px[^\n]*white-space:nowrap/);
  const blog=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8'),avatar=fs.readFileSync(path.join(root,'packages/platform-client/src/AvatarView.jsx'),'utf8');
  assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);

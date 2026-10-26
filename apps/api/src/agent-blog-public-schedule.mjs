@@ -123,6 +123,23 @@ export class PostgresAgentBlogPublicScheduleRepository {
     });
   }
 
+  async heartbeat({ agentUserId, instanceId, state = 'idle' }) {
+    if (!UUID.test(agentUserId ?? '') || !UUID.test(instanceId ?? '')
+      || !['starting', 'idle', 'busy', 'suspended', 'stopped'].includes(state)) {
+      fail('AGENT_BLOG_PUBLIC_SCHEDULE_HEARTBEAT_INVALID');
+    }
+    const row = (await this.pool.query(`UPDATE agent_schedules SET
+        config_json=jsonb_set(config_json,'{worker}',jsonb_build_object(
+          'instanceId',$2::text,'state',$3::text,'heartbeatAt',clock_timestamp()),true),
+        updated_at=clock_timestamp()
+      WHERE agent_user_id=$1 AND workflow_key=$4
+        AND config_json->>'mode'='foundation-public'
+      RETURNING config_json->'worker' AS worker`,
+    [agentUserId, instanceId, state, WORKFLOW_KEY])).rows[0];
+    if (!row) fail('AGENT_BLOG_PUBLIC_SCHEDULE_MISSING');
+    return row.worker;
+  }
+
   async finish(fireId, attemptId, { status, result = {}, errorCode = null, errorMessage = null }) {
     if (!UUID.test(fireId ?? '') || !UUID.test(attemptId ?? '')
       || !['succeeded', 'failed'].includes(status) || !result || typeof result !== 'object'
@@ -164,6 +181,12 @@ export function createAgentBlogPublicScheduleController({
       if (enabled && blockers.length > 0) return { enabled: false, blocked: true, blockers, preflight };
       const schedule = await repository.ensureDaily({ agentUserId, enabled });
       return { enabled: schedule.enabled, blocked: false, blockers: [], preflight, schedule };
+    },
+    async heartbeat(input) {
+      if (typeof repository.heartbeat !== 'function') {
+        fail('AGENT_BLOG_PUBLIC_SCHEDULE_HEARTBEAT_PORT_REQUIRED');
+      }
+      return repository.heartbeat(input);
     },
     async runOnce() {
       const fire = await repository.claimDue();

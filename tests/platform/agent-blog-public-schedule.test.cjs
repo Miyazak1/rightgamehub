@@ -33,6 +33,7 @@ function fixture({ observed = snapshot(), publicationState = 'published', throwR
       claimDue: async () => (events.push(['claim']), fire),
       finish: async (id, attempt, result) => (events.push(['finish', id, attempt, result]),
         { ...fire, status: result.status, result: result.result ?? {}, errorCode: result.errorCode ?? null }),
+      heartbeat: async input => (events.push(['heartbeat', input]), input),
     },
     preflightRepository: { snapshot: async () => observed },
     runtimeConfig,
@@ -78,6 +79,14 @@ test('public scheduled fire succeeds only after an article is publicly committed
   assert.equal(run.triggerKind, 'schedule');
   assert.equal(run.requestId, requestId);
   assert.equal(value.events.find(([event]) => event === 'finish')[3].status, 'succeeded');
+});
+
+test('public scheduler heartbeats are explicit and delegated to durable storage', async () => {
+  const { createAgentBlogPublicScheduleController } = await load('agent-blog-public-schedule.mjs');
+  const value = fixture(), instanceId = crypto.randomUUID();
+  await createAgentBlogPublicScheduleController(value)
+    .heartbeat({ agentUserId, instanceId, state: 'idle' });
+  assert.deepEqual(value.events[0], ['heartbeat', { agentUserId, instanceId, state: 'idle' }]);
 });
 
 test('incomplete or failed public fire is persisted as failed for schedule suspension', async () => {

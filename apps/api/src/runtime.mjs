@@ -93,6 +93,8 @@ import {PostgresAgentBlogFollowUpRepository,createAgentBlogFollowUpService} from
 import {createAgentRuntimeReadService} from './agent-runtime-read-service.mjs';
 import {PostgresAgentRuntimeRepository} from './agent-runtime-repository.mjs';
 import {PostgresAgentBlogPublicationOwnershipRepository,createAgentBlogPublicationCutoverService} from './agent-blog-publication-ownership.mjs';
+import {loadAgentBlogPublicRuntimeConfig} from './agent-blog-public-runtime-preflight.mjs';
+import {loadAgentBlogPublicScheduleConfig} from './agent-blog-public-schedule.mjs';
 import { PostgresAuthorOutreachRepository, createAuthorOutreachService } from './author-outreach-service.mjs';
 import { createChangeRadarFetcher } from './change-radar-fetcher.mjs';
 import { PostgresChangeRadarRepository, createChangeRadarService, createChangeRadarWorker } from './change-radar-service.mjs';
@@ -225,7 +227,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentBlogRuntimeShadowProjector=createAgentBlogRuntimeShadowProjector({repository:new PostgresAgentBlogRuntimeShadowRepository(database.pool),runtimeRepository:new PostgresAgentRuntimeRepository(database.pool),mode:config.agentBlogFoundationMode});
   const agentBlogAutomation=createAgentBlogAutomation({repository:new PostgresAgentBlogAutomationRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter,shadowProjector:agentBlogRuntimeShadowProjector,pollMs:config.agentBlogPollSeconds*1000});
   const agentBlogFollowUpService=createAgentBlogFollowUpService({repository:new PostgresAgentBlogFollowUpRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter});
-  const agentRuntimeReadService=createAgentRuntimeReadService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin'});
+  const agentRuntimeReadService=createAgentRuntimeReadService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin',publicRuntimeConfig:loadAgentBlogPublicRuntimeConfig(env),publicScheduleConfig:loadAgentBlogPublicScheduleConfig(env)});
   const agentBlogPublicationCutoverService=createAgentBlogPublicationCutoverService({repository:new PostgresAgentBlogPublicationOwnershipRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
   const realtimeTicketStore = createRedisRealtimeTicketStore({ url: config.redisUrl });
   const realtimeTicketService = createRealtimeTicketService({ store: realtimeTicketStore, websocketUrl: config.realtimePublicUrl, ttlSeconds: config.realtimeTicketTtlSeconds });
