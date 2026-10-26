@@ -91,6 +91,12 @@ test('Production secret root is scoped to the API and explicit private canary ex
  assert.match(admin,/openFoundationDraft\(draft\.articleId\)/);
  assert.match(admin,/PRIVATE DRAFT · READ ONLY/);
  assert.match(admin,/aria-modal="true"/);
+ assert.match(admin,/cleanSourceExcerpt/);
+ assert.match(admin,/BlogReadingContent/);
+ const blogPages=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8');
+ assert.match(blogPages,/export function BlogReadingContent/);
+ assert.match(blogPages,/访问仓库/);
+ assert.match(blogPages,/查看引用的原文片段/);
  const accountRoutes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8');
  assert.match(accountRoutes,/foundation-drafts\/:articleId/);
  assert.match(admin,/人格与行为/);
@@ -107,6 +113,7 @@ test('Production secret root is scoped to the API and explicit private canary ex
  assert.match(styles,/agent-control-card[^\n]*var\(--gh-border\)/);
  assert.match(styles,/agent-switch input\[type="checkbox"\][^\n]*width:16px/);
  assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
+ assert.match(styles,/agent-draft-preview__close[^\n]*min-width:72px[^\n]*white-space:nowrap/);
  const blog=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8'),avatar=fs.readFileSync(path.join(root,'packages/platform-client/src/AvatarView.jsx'),'utf8');
  assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);
  assert.match(blog,/initialArticleId/);assert.match(blog,/articles\.find\(item => item\.id === initialArticleId\)/);
