@@ -98,3 +98,12 @@ test('manual private canary remains read-only when preflight blocks execution', 
   assert(!value.events.includes('snapshot'));
   assert(!value.events.includes('create-discovery'));
 });
+
+test('private canary rejects unknown trigger kinds before preflight or external work', async () => {
+  const { createAgentBlogPrivateCanaryManualRunner } = await import(moduleUrl.href);
+  const value = fixture();
+  await assert.rejects(() => createAgentBlogPrivateCanaryManualRunner(value.runnerOptions)
+    .run({ requestId, triggerKind: 'cron', triggerRef: 'unsafe' }),
+  error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_TRIGGER_INVALID');
+  assert.deepEqual(value.events, []);
+});

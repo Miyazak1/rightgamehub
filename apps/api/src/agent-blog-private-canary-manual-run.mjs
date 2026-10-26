@@ -103,9 +103,13 @@ export function createAgentBlogPrivateCanaryManualRunner({
     fail('AGENT_BLOG_PRIVATE_CANARY_DEPENDENCY_REQUIRED');
   }
   return {
-    async run({ requestId }) {
+    async run({ requestId, triggerKind = 'manual', triggerRef = requestId }) {
       if (typeof requestId !== 'string' || !UUID.test(requestId)) {
         fail('AGENT_BLOG_PRIVATE_CANARY_REQUEST_ID_INVALID');
+      }
+      if (!['manual','schedule'].includes(triggerKind) || typeof triggerRef !== 'string'
+        || triggerRef.length < 1 || triggerRef.length > 240) {
+        fail('AGENT_BLOG_PRIVATE_CANARY_TRIGGER_INVALID');
       }
       const preflight = await runAgentBlogPrivateCanaryPreflight({ repository: preflightRepository, config });
       if (!preflight.ready) fail('AGENT_BLOG_PRIVATE_CANARY_PREFLIGHT_BLOCKED', { blockers: preflight.blockers });
@@ -122,7 +126,7 @@ export function createAgentBlogPrivateCanaryManualRunner({
       const modelConfig = { model: { provider: config.provider, modelId: config.modelId },
         behaviorProfileId: frozen.behaviorProfileId, behaviorProfileVersion: frozen.behaviorProfileVersion };
       const discovery = await discoveryCanary.createRun({
-        agentUserId: config.agentUserId, triggerKind: 'manual', triggerRef: requestId,
+        agentUserId: config.agentUserId, triggerKind, triggerRef,
         idempotencyKey: `private-canary:${requestId}:discovery`, config: modelConfig,
         input: {
           schemaVersion: 'blog-project-discovery-input-v2', topicScope: frozen.topicScope,
@@ -131,16 +135,16 @@ export function createAgentBlogPrivateCanaryManualRunner({
           behaviorProfile: frozen.behaviorProfile,
         },
       });
-      const discoveryOutput = await executeRun({ worker: createDiscoveryWorker(discovery.id),
+      const discoveryOutput = await executeRun({ worker: createDiscoveryWorker(discovery.id, requestId),
         expectedStageCount: 4, outputType: 'blog.candidate-set', runId: discovery.id });
       const draft = await handoffCanary.createDraftRun({
         agentUserId: config.agentUserId, discoveryRunId: discovery.id,
         discoveryArtifactId: discoveryOutput.outputId,
-        idempotencyKey: `private-canary:${requestId}:draft`, triggerKind: 'manual', triggerRef: requestId,
+        idempotencyKey: `private-canary:${requestId}:draft`, triggerKind, triggerRef,
         recentTitles: frozen.recentTitles, previousRepositoryUrls: frozen.previousRepositoryUrls,
         behaviorProfile: frozen.behaviorProfile, config: modelConfig,
       });
-      const draftOutput = await executeRun({ worker: createDraftWorker(draft.id),
+      const draftOutput = await executeRun({ worker: createDraftWorker(draft.id, requestId),
         expectedStageCount: 6, outputType: 'blog.private-draft', runId: draft.id });
       return Object.freeze({
         schemaVersion: 'agent-blog-private-canary-result-v1', requestId,

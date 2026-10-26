@@ -17,8 +17,8 @@ export function createAgentBlogPrivateCanarySupervisor({ runner, acceptanceServi
     fail('AGENT_BLOG_PRIVATE_CANARY_SUPERVISOR_DEPENDENCY_REQUIRED');
   }
   return {
-    async run({ requestId }) {
-      const canary = await runner.run({ requestId });
+    async run({ requestId, triggerKind = 'manual', triggerRef = requestId }) {
+      const canary = await runner.run({ requestId, triggerKind, triggerRef });
       if (canary?.schemaVersion !== 'agent-blog-private-canary-result-v1'
         || !UUID.test(canary.agentUserId ?? '') || !UUID.test(canary.draft?.runId ?? '')
         || canary.draft?.publicationState !== 'draft' || canary.publicationAttempted !== false) {

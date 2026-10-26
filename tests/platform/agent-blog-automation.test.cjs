@@ -73,14 +73,20 @@ test('Automation service keeps provider keys write-only and only publishes after
  await assert.rejects(()=>automation.configure(actor,agentUserId,{enabled:true,model:'made-up-model',intervalHours:84,monthlyArticleLimit:8,topicScope:'人文历史地理科学中的大众知识'}),error=>error.code==='AGENT_PROVIDER_MODEL_UNAVAILABLE');
 });
 
-test('Production secret root is scoped to the API and explicit one-shot canary only',()=>{
+test('Production secret root is scoped to the API and explicit private canary executors only',()=>{
  const fs=require('node:fs'),root=path.resolve(__dirname,'../..');
  const compose=fs.readFileSync(path.join(root,'deploy/compose.prod.yml'),'utf8'),routes=fs.readFileSync(path.join(root,'apps/api/src/agent-account-routes.mjs'),'utf8'),admin=fs.readFileSync(path.join(root,'packages/platform-client/src/AgentAdmin.jsx'),'utf8');
- assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,2);
+ assert.equal(compose.split(/\r?\n/).filter(line=>/^\s+AGENT_SECRET_ENCRYPTION_KEY:/.test(line)).length,3);
  assert.match(compose,/agent-blog-canary-run:[\s\S]*?restart: "no"[\s\S]*?AGENT_SECRET_ENCRYPTION_KEY:/u);
+ assert.match(compose,/agent-blog-private-scheduler:[\s\S]*?profiles: \["agent-blog-private-scheduler"\][\s\S]*?AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: "false"/u);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
  assert.match(routes,/behavior-profile/);
- assert.match(admin,/不进入人工编辑流程/);
+ assert.match(admin,/新基座先生成私有草稿并完成影子验收/);
+ assert.match(admin,/新基座影子运行/);
+ assert.match(admin,/旧自动发布记录/);
+ assert.match(admin,/listAdminAgentRuntimeRuns/);
+ assert.match(admin,/getAdminAgentRuntimeTimeline/);
+ assert.match(admin,/查看草稿/);
  assert.match(admin,/人格与行为/);
  assert.match(admin,/选题编辑人格/);
  assert.match(admin,/每月运行上限/);
@@ -90,13 +96,16 @@ test('Production secret root is scoped to the API and explicit one-shot canary o
  assert.match(admin,/listAdminAgentProviderModels/);
  assert.match(admin,/deepseek-flash/);
  assert.match(admin,/displayName:'小墨鱼'/);
- assert.doesNotMatch(admin,/博客编辑器|保存私有草稿|人工审核/);
+ assert.doesNotMatch(admin,/博客编辑器|人工审核/);
  const styles=fs.readFileSync(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
  assert.match(styles,/agent-control-card[^\n]*var\(--gh-border\)/);
  assert.match(styles,/agent-switch input\[type="checkbox"\][^\n]*width:16px/);
  assert.match(styles,/agent-state[^\n]*white-space:nowrap/);
  const blog=fs.readFileSync(path.join(root,'packages/platform-client/src/BlogPages.jsx'),'utf8'),avatar=fs.readFileSync(path.join(root,'packages/platform-client/src/AvatarView.jsx'),'utf8');
  assert.match(blog,/blog-author-identity/);assert.match(blog,/article\.author\.avatar/);assert.match(avatar,/xiaomoyu-avatar-v1\.webp/);
+ assert.match(blog,/initialArticleId/);assert.match(blog,/articles\.find\(item => item\.id === initialArticleId\)/);
+ const app=fs.readFileSync(path.join(root,'packages/platform-client/src/App.jsx'),'utf8');
+ assert.match(app,/readAdminArticle/);assert.match(app,/initialArticleId=\{readAdminArticle\(\)\}/);
  const migration=fs.readFileSync(path.join(root,'apps/api/migrations/0122_agent_blog_daily_ten.sql'),'utf8');
  assert.match(migration,/next_agent_blog_run_at/);assert.match(migration,/Asia\/Shanghai/);assert.match(migration,/time '10:00'/);
  const automation=fs.readFileSync(path.join(root,'apps/api/src/agent-blog-automation.mjs'),'utf8');

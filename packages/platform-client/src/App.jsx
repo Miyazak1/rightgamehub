@@ -1758,6 +1758,12 @@ const readAdminPanel = () => {
   const value = outer.get('panel') || embedded?.get('panel') || 'overview';
   return adminPanelIds.has(value) ? value : 'overview';
 };
+const readAdminArticle = () => {
+  const outer = new URLSearchParams(String(globalThis.location?.search || '').replace(/^\?/u,''));
+  const embeddedRoute = outer.get('gh_route');
+  const embedded = embeddedRoute ? new URLSearchParams(String(embeddedRoute).split('?')[1] || '') : null;
+  return outer.get('article') || embedded?.get('article') || null;
+};
 
 function AdminPage({ api, demo, go }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
@@ -1868,7 +1874,7 @@ function AdminPage({ api, demo, go }) {
     {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
     {panel === 'agents' && <AgentAdmin api={api} go={go}/>}
     {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
-    {panel === 'blog' && <BlogAdmin api={api} demo={demo}/>}
+    {panel === 'blog' && <BlogAdmin api={api} demo={demo} initialArticleId={readAdminArticle()}/>}
     {panel === 'works' && <>
     {state.sourceOverview && <section className="source-operations"><div className="puzzle-ops__head"><div><span className="kicker">GITHUB SOURCE CONTROL</span><h2>GitHub 只读导入</h2><p>连接、授权仓库、近 24 小时导入与 Webhook 故障；此面板不提供源码执行能力。</p></div><span>{state.sourceOverview.activeConnections} 个活动连接</span></div><div className="source-operation-kpis"><article><span>授权仓库</span><strong>{state.sourceOverview.activeRepositories}</strong></article><article><span>24h 导入</span><strong>{state.sourceOverview.imports24h}</strong></article><article className={state.sourceOverview.failedWebhooks24h ? 'is-warning' : ''}><span>24h Webhook 失败</span><strong>{state.sourceOverview.failedWebhooks24h}</strong></article></div><details><summary>最近来源审计</summary>{state.sourceAudit.length ? <ol>{state.sourceAudit.slice(0,20).map(event => <li key={event.id}><strong>{event.action}</strong><code>{event.details?.commitSha?.slice(0,12) || event.connectionId || '—'}</code><time>{new Date(event.createdAt).toLocaleString('zh-CN')}</time></li>)}</ol> : <p>暂无来源事件。</p>}</details></section>}
     <AdminProvenanceManager items={state.provenance} api={api} demo={demo} onSaved={next=>setState(current=>({...current,provenance:current.provenance.map(item=>item.workId===next.workId?next:item)}))}/>

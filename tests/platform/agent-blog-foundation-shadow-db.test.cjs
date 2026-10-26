@@ -33,6 +33,7 @@ test('draft shadow workflow runs end to end and has zero publication authority',
     await harness.load('agent-blog-candidate-handoff.mjs');
   const { PostgresAgentBlogCanaryAcceptanceRepository,
     createAgentBlogCanaryAcceptanceService } = await harness.load('agent-blog-canary-acceptance.mjs');
+  const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
 
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Shadow canary operator','admin')", [operatorId]);
@@ -203,6 +204,17 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   assert.equal(report.recommendation, 'retain-private-and-collect-more-samples');
   assert.equal((await acceptance.attest(account.agentUserId, run.id)).existing, true);
   assert.equal((await acceptance.readiness(account.agentUserId)).automaticScheduleChange, false);
+  const runtimeRead = createAgentRuntimeReadService({ pool: admin, authorizeOperator: async () => true });
+  const summaries = await runtimeRead.listRuns({ userId: operatorId }, account.agentUserId, 20);
+  const draftSummary = summaries.find(item => item.id === run.id);
+  const discoverySummary = summaries.find(item => item.id === discoveryRun.id);
+  assert.equal(draftSummary.sourceRunId, discoveryRun.id);
+  assert.equal(draftSummary.foundationDraft.articleId, draft.article_id);
+  assert.equal(draftSummary.foundationDraft.title, draft.title);
+  assert.equal(draftSummary.foundationDraft.publicationState, 'draft');
+  assert.equal(draftSummary.acceptance.verdict, 'passed');
+  assert.deepEqual(draftSummary.acceptance.reasonCodes, []);
+  assert.equal(discoverySummary.targetRunId, run.id);
   await discoveryWorker.stop();
   await worker.stop();
   await admin.end();

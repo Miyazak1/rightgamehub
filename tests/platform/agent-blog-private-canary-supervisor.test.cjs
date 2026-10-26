@@ -58,3 +58,15 @@ test('supervisor rejects any acceptance implementation that claims schedule auth
     fixture({ automaticScheduleChange: true })).run({ requestId }),
   error => error.code === 'AGENT_BLOG_PRIVATE_CANARY_SUPERVISOR_SCHEDULE_AUTHORITY_FORBIDDEN');
 });
+
+test('supervisor preserves an authorized schedule trigger through the shared runner', async () => {
+  const { createAgentBlogPrivateCanarySupervisor } = await import(moduleUrl.href);
+  const value = fixture();
+  let received;
+  const original = value.runner.run;
+  value.runner.run = async input => { received = input; return original(input); };
+  await createAgentBlogPrivateCanarySupervisor(value).run({ requestId,
+    triggerKind: 'schedule', triggerRef: 'schedule:one:2026-10-26T02:00:00.000Z' });
+  assert.deepEqual(received, { requestId, triggerKind: 'schedule',
+    triggerRef: 'schedule:one:2026-10-26T02:00:00.000Z' });
+});
