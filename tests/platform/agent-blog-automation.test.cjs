@@ -96,6 +96,9 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/新基座运行/);
  assert.match(admin,/blog\.project\.single/);
  assert.match(admin,/旧自动发布记录/);
+ assert.match(admin,/旧流程已下线/);
+ assert.match(admin,/{!publicationIsFoundation&&<section className="agent-control-card agent-run-history"/);
+ assert.match(admin,/includeLegacy\?api\.listAdminAgentBlogRuns\(id\):Promise\.resolve\(\{data:\[\]\}\)/);
  assert.match(admin,/listAdminAgentRuntimeRuns/);
  assert.match(admin,/getAdminAgentRuntimeTimeline/);
  assert.match(admin,/查看草稿/);
@@ -104,8 +107,8 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/公开发布权/);
  assert.match(admin,/getAdminAgentPublicationCutoverPreflight/);
  assert.match(admin,/cutoverAdminAgentPublication/);
- assert.match(admin,/rollbackAdminAgentPublication/);
- assert.match(admin,/切换发布权不会自动启动新流程/);
+ assert.doesNotMatch(admin,/rollbackAdminAgentPublication/);
+ assert.match(admin,/新基座接管后，旧流程会从日常管理面退役/);
  assert.match(admin,/切换后独立启用/);
  assert.match(admin,/新基座自动运行/);
  assert.match(admin,/定时执行器没有新鲜心跳/);
