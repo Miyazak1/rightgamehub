@@ -10,8 +10,8 @@ export const YUE_RHYME_DATA_NOTICE=Object.freeze({
     license:'CC BY 4.0（部分映射数据另受 ODbL 1.0 约束）',
   },
   legacyFrequency:[
-    {name:'hanziDB',license:'MIT',status:'legacy-attribution-needs-source-snapshot'},
-    {name:'cantonese-list',license:'CC0',status:'legacy-attribution-needs-source-snapshot'},
+    {name:'hanziDB',license:'MIT',status:'legacy-attribution-recorded'},
+    {name:'cantonese-list',license:'CC0',status:'legacy-attribution-recorded'},
   ],
 });
 
