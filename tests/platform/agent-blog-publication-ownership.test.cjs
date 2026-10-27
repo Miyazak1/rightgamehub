@@ -20,8 +20,8 @@ function snapshot(overrides = {}) {
     execution: { legacyActiveRuns: 0, foundationActiveRuns: 0, foundationUncertainRuns: 0 },
     foundation: { workflowStatus: 'active', publishCapabilityActive: true,
       autoPublishPolicyEnabled: true },
-    acceptance: { consecutivePasses: 3 },
-    privateSchedule: { consecutivePasses: 3 },
+    acceptance: { consecutivePasses: 1 },
+    privateSchedule: { consecutivePasses: 0 },
     ...overrides,
   };
 }
@@ -37,14 +37,15 @@ test('publication ownership migration creates one serialized owner and immutable
   assert.match(sql, /AFTER INSERT ON agent_accounts/u);
 });
 
-test('cutover preflight passes only with quiescent execution and both evidence gates complete', async () => {
+test('cutover preflight accepts one complete private run without inventing calendar evidence', async () => {
   const { evaluateAgentBlogPublicationCutover } = await import(moduleUrl.href);
   const result = evaluateAgentBlogPublicationCutover(snapshot());
   assert.equal(result.ready, true);
   assert.deepEqual(result.blockers, []);
   assert.equal(result.automaticSwitch, false);
-  assert.equal(result.evidence.requiredAcceptancePasses, 3);
-  assert.equal(result.evidence.requiredScheduledPasses, 3);
+  assert.equal(result.policyVersion, 2);
+  assert.equal(result.evidence.requiredAcceptancePasses, 1);
+  assert.equal(result.evidence.requiredScheduledPasses, 0);
 });
 
 test('cutover preflight reports every unsafe condition without changing ownership', async () => {
@@ -53,14 +54,13 @@ test('cutover preflight reports every unsafe condition without changing ownershi
     execution: { legacyActiveRuns: 1, foundationActiveRuns: 2, foundationUncertainRuns: 1 },
     foundation: { workflowStatus: null, publishCapabilityActive: false,
       autoPublishPolicyEnabled: false },
-    acceptance: { consecutivePasses: 1 }, privateSchedule: { consecutivePasses: 0 },
+    acceptance: { consecutivePasses: 0 }, privateSchedule: { consecutivePasses: 0 },
   }));
   assert.equal(result.ready, false);
   assert.deepEqual(result.blockers, [
     'LEGACY_RUN_ACTIVE', 'FOUNDATION_RUN_ACTIVE', 'FOUNDATION_RUN_UNCERTAIN',
     'FOUNDATION_PUBLIC_WORKFLOW_NOT_ACTIVE', 'FOUNDATION_PUBLISH_CAPABILITY_MISSING',
     'FOUNDATION_AUTO_PUBLISH_POLICY_DISABLED', 'PRIVATE_ACCEPTANCE_INCOMPLETE',
-    'PRIVATE_SCHEDULE_EVIDENCE_INCOMPLETE',
   ]);
   assert.equal(result.owner.activePublisher, 'legacy');
   assert.equal(result.automaticSwitch, false);

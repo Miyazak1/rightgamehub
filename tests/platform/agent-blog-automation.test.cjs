@@ -102,7 +102,7 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/cutoverAdminAgentPublication/);
  assert.match(admin,/rollbackAdminAgentPublication/);
  assert.match(admin,/切换发布权不会自动启动新流程/);
- assert.match(admin,/每天 10 点计划验收/);
+ assert.match(admin,/切换后独立启用/);
  assert.match(admin,/新基座自动运行/);
  assert.match(admin,/定时执行器没有新鲜心跳/);
  assert.match(admin,/立即运行新基座/);

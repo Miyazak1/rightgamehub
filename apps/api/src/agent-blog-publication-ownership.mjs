@@ -3,10 +3,10 @@ import { withTransaction } from './database.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export const AGENT_BLOG_PUBLICATION_CUTOVER_POLICY = Object.freeze({
-  schemaVersion: 'agent-blog-publication-cutover-policy-v1',
-  policyVersion: 1,
-  requiredAcceptancePasses: 3,
-  requiredScheduledPasses: 3,
+  schemaVersion: 'agent-blog-publication-cutover-policy-v2',
+  policyVersion: 2,
+  requiredAcceptancePasses: 1,
+  requiredScheduledPasses: 0,
   targetWorkflowKey: 'blog.project.single',
   targetWorkflowVersion: 1,
   acceptancePolicyVersion: 2,
@@ -30,10 +30,10 @@ const fail = (code, statusCode, message) => {
 const integer = value => Number(value ?? 0);
 
 function validatePolicy(policy) {
-  if (!policy || policy.schemaVersion !== 'agent-blog-publication-cutover-policy-v1'
-    || policy.policyVersion !== 1
+  if (!policy || policy.schemaVersion !== 'agent-blog-publication-cutover-policy-v2'
+    || policy.policyVersion !== 2
     || !Number.isSafeInteger(policy.requiredAcceptancePasses) || policy.requiredAcceptancePasses < 1
-    || !Number.isSafeInteger(policy.requiredScheduledPasses) || policy.requiredScheduledPasses < 1
+    || !Number.isSafeInteger(policy.requiredScheduledPasses) || policy.requiredScheduledPasses < 0
     || policy.targetWorkflowKey !== 'blog.project.single'
     || !Number.isSafeInteger(policy.targetWorkflowVersion)
     || !Number.isSafeInteger(policy.acceptancePolicyVersion)) {
@@ -61,7 +61,8 @@ export function evaluateAgentBlogPublicationCutover(snapshot,
   if (integer(snapshot.acceptance.consecutivePasses) < policy.requiredAcceptancePasses) {
     blockers.push('PRIVATE_ACCEPTANCE_INCOMPLETE');
   }
-  if (integer(snapshot.privateSchedule.consecutivePasses) < policy.requiredScheduledPasses) {
+  if (policy.requiredScheduledPasses > 0
+    && integer(snapshot.privateSchedule.consecutivePasses) < policy.requiredScheduledPasses) {
     blockers.push('PRIVATE_SCHEDULE_EVIDENCE_INCOMPLETE');
   }
   return {
