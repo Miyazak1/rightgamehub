@@ -111,6 +111,11 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/新基座接管后，旧流程会从日常管理面退役/);
  assert.match(admin,/切换后独立启用/);
  assert.match(admin,/新基座自动运行/);
+ assert.match(admin,/今日已完成/);
+ assert.match(admin,/明天 10 点自动执行/);
+ assert.match(admin,/公开运行记录/);
+ assert.match(admin,/foundationOwnsPublication\?run\.workflowKey==='blog\.project\.single'/);
+ assert.match(admin,/actionablePublicBlockers/);
  assert.match(admin,/定时执行器没有新鲜心跳/);
  assert.match(admin,/立即运行新基座/);
  assert.match(admin,/setAdminAgentPublicSchedule/);
