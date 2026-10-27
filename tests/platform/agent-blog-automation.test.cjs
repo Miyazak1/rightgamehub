@@ -83,6 +83,7 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(compose,/agent-blog-public-scheduler:[\s\S]*?profiles: \["agent-blog-public-scheduler"\][\s\S]*?AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED:/u);
  const publicOps=fs.readFileSync(path.join(root,'deploy/agent-blog-public-ops.sh'),'utf8');
  assert.match(publicOps,/run-once\)/);assert.match(publicOps,/start-scheduler\)/);
+ assert.match(publicOps,/agent-blog-public-preflight run --rm --build agent-blog-public-preflight/);
  assert.match(publicOps,/preflight\n\s+compose --profile agent-blog-public-run/);
  assert.match(publicOps,/This script never edits the/);
  assert.doesNotMatch(publicOps,/sed -i|mv .*\.env\.prod|AGENT_BLOG_PUBLICATION.*UPDATE/);

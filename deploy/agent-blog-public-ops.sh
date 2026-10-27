@@ -38,7 +38,7 @@ require_secret() {
 
 preflight() {
   require_runtime
-  compose --profile agent-blog-public-preflight run --rm agent-blog-public-preflight
+  compose --profile agent-blog-public-preflight run --rm --build agent-blog-public-preflight
 }
 
 usage() {
