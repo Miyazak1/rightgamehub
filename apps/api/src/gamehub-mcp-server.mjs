@@ -327,6 +327,20 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
     };
   });
 
+  const yueRhymeTool = officialTool('yue-rhyme');
+  registerAppTool(server, yueRhymeTool.toolName, {
+    ...createOfficialAppToolOptions(yueRhymeTool, uiResourceUri),
+    inputSchema: {},
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+  }, async () => {
+    const path = yueRhymeTool.route;
+    const url = new URL('/mcp-app', origin); url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return {
+      content: [{ type: 'text', text: 'Opened the local Cantonese rhyme finder. Ask the user to enter one Han character there. Only the active bounded lookup result is exposed as conversation context; the full dictionary and custom library remain local.' }],
+      structuredContent: { view: { path, url: url.href } },
+    };
+  });
+
   const knowledgeMapTool = officialTool('knowledge-map');
   registerAppTool(server, knowledgeMapTool.toolName, {
     ...createOfficialAppToolOptions(knowledgeMapTool, uiResourceUri),

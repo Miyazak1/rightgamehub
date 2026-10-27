@@ -4,6 +4,8 @@ export const PDF_READER_CONTEXT = 'gamehub/pdf-reader.context';
 export const PDF_READER_STATUS = 'gamehub/pdf-reader.status';
 export const CHANGE_RADAR_CONTEXT = 'gamehub/change-radar.context';
 export const CHANGE_RADAR_STATUS = 'gamehub/change-radar.status';
+export const YUE_RHYME_CONTEXT = 'gamehub/yue-rhyme.context';
+export const YUE_RHYME_STATUS = 'gamehub/yue-rhyme.status';
 
 export function isEmbeddedAgentTool(locationImpl = globalThis.location) {
   if (!locationImpl) return false;
@@ -54,6 +56,22 @@ export function subscribeChangeRadarStatus(handler, { parentWindow = globalThis.
   if (!windowImpl?.addEventListener) return () => {};
   const onMessage = event => {
     if (event.source !== parentWindow || event.data?.type !== CHANGE_RADAR_STATUS) return;
+    handler(event.data);
+  };
+  windowImpl.addEventListener('message', onMessage);
+  return () => windowImpl.removeEventListener('message', onMessage);
+}
+
+export function syncYueRhymeContext(payload, { parentWindow = globalThis.parent, currentWindow = globalThis } = {}) {
+  if (!parentWindow?.postMessage || parentWindow === currentWindow) return false;
+  parentWindow.postMessage({ type: YUE_RHYME_CONTEXT, payload }, '*');
+  return true;
+}
+
+export function subscribeYueRhymeStatus(handler, { parentWindow = globalThis.parent, windowImpl = globalThis } = {}) {
+  if (!windowImpl?.addEventListener) return () => {};
+  const onMessage = event => {
+    if (event.source !== parentWindow || event.data?.type !== YUE_RHYME_STATUS) return;
     handler(event.data);
   };
   windowImpl.addEventListener('message', onMessage);

@@ -27,7 +27,7 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   t.after(async () => { await client.close(); await server.close(); });
 
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_capability', 'get_game', 'launch_capability', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_capabilities', 'search_games']);
+  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_capability', 'get_game', 'launch_capability', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'open_yue_rhyme', 'search_capabilities', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
   const mcpUiUri = openGameHubTool._meta.ui.resourceUri;
@@ -36,7 +36,7 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.deepEqual(openGameHubTool._meta.ui.visibility, ['model', 'app']);
   assert.equal(openGameHubTool._meta['openai/outputTemplate'], mcpUiUri);
   const uiTools = tools.tools.filter(item => item._meta?.ui?.resourceUri);
-  assert.equal(uiTools.length, 8);
+  assert.equal(uiTools.length, 9);
   for (const tool of uiTools) {
     assert.equal(tool._meta.ui.resourceUri, mcpUiUri);
     assert.equal(tool._meta['openai/outputTemplate'], mcpUiUri);
@@ -70,6 +70,12 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   const pdfReader = await client.callTool({ name: 'open_pdf_reader', arguments: {} });
   assert.equal(pdfReader.structuredContent.view.path, '/tools/pdf-reader');
   assert.match(pdfReader.structuredContent.view.url, /gh_route=%2Ftools%2Fpdf-reader/u);
+  const yueRhymeTool = tools.tools.find(item => item.name === 'open_yue_rhyme');
+  assert.equal(yueRhymeTool.annotations.readOnlyHint, true);
+  assert.match(yueRhymeTool.description, /full dictionary and custom library are not shared/iu);
+  const yueRhyme = await client.callTool({ name: 'open_yue_rhyme', arguments: {} });
+  assert.equal(yueRhyme.structuredContent.view.path, '/tools/yue-rhyme');
+  assert.match(yueRhyme.structuredContent.view.url, /gh_route=%2Ftools%2Fyue-rhyme/u);
   const knowledgeTool = tools.tools.find(item => item.name === 'open_knowledge_map');
   assert.equal(knowledgeTool.annotations.readOnlyHint, false);
   assert.equal(knowledgeTool.annotations.destructiveHint, false);
@@ -175,6 +181,8 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.match(widget.script.text, /gamehub\/navigation\.openExternal/u);
   assert.match(widget.script.text, /gamehub\/spreadsheet-audit\.submit/u);
   assert.match(widget.script.text, /gamehub\/pdf-reader\.context/u);
+  assert.match(widget.script.text, /gamehub\/yue-rhyme\.context/u);
+  assert.match(widget.script.text, /customLibraryShared:false/u);
   assert.match(widget.script.text, /gamehub\/change-radar\.context/u);
   assert.match(widget.script.text, /includesResearchQuestions/u);
   assert.match(widget.script.text, /includesAcceptedClaims/u);

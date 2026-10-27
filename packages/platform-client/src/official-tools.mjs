@@ -5,6 +5,7 @@ export const TOOL_DOCUMENT_SCHEMA_VERSION=1;
 
 const toolLoaders=Object.freeze({
   'knowledge-map':()=>import('./KnowledgeMapTool.jsx'),
+  'yue-rhyme':()=>import('./YueRhymeTool.jsx'),
   'pdf-reader':()=>import('./PdfReaderTool.jsx'),
   'privacy-redactor':()=>import('./PrivacyRedactorTool.jsx'),
   'document-compare':()=>import('./DocumentCompareTool.jsx'),

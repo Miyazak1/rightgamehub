@@ -40,6 +40,21 @@ export const officialToolCapabilities = Object.freeze([
     dataPolicy: { localFirst: true, retention: 'device-local', prohibitedToolInputs: ['secrets'], agentContext: 'bounded-disclosed' },
   }),
   base({
+    toolId: 'yue-rhyme', titleKey: 'tools.yueRhyme.title', descriptionKey: 'tools.yueRhyme.description', mark: '粵',
+    title: { 'zh-CN': '粤韵查', en: 'Cantonese Rhyme Finder' },
+    summary: { 'zh-CN': '查询汉字粤拼、严韵和宽韵，在本机维护补充读音，并把当前查询自动提供给 Agent。', en: 'Look up Jyutping, strict rhymes, and broad rhymes, maintain local additions, and share only the current query with the Agent.' },
+    discovery: { tags: ['cantonese', 'jyutping', 'rhyme', 'lyrics', 'local-first'], intents: ['find_cantonese_rhyme', 'look_up_jyutping', 'write_cantonese_lyrics'] },
+    capabilities: ['rhyme.lookup', 'rhyme.strict', 'rhyme.wide', 'pronunciation.play', 'library.local', 'document.import', 'document.export', 'agent.context'],
+    operation: { effect: 'ui-open', confirmation: 'none' },
+    mcp: {
+      toolName: 'open_yue_rhyme', title: 'Open Cantonese Rhyme Finder',
+      description: 'Open the local-first Cantonese rhyme workspace. The user enters one Han character in the UI to inspect Jyutping, strict rhymes, broad rhymes, and optional Cantonese speech. Custom readings stay on the device. In an embedded Agent, only the current bounded lookup result is automatically shared; the full dictionary and custom library are not shared.',
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      invoking: 'Opening the Cantonese rhyme finder…', invoked: 'Cantonese rhyme finder opened.',
+    },
+    dataPolicy: { localFirst: true, retention: 'device-local', prohibitedToolInputs: ['custom-library', 'secrets'], agentContext: 'bounded-disclosed' },
+  }),
+  base({
     toolId: 'pdf-reader', titleKey: 'tools.pdfReader.title', descriptionKey: 'tools.pdfReader.description', mark: '▤',
     title: { 'zh-CN': '墨鱼文献阅读器', en: 'MOOYU PDF Reader' },
     summary: { 'zh-CN': '在本机阅读、OCR、摘录和引用 PDF，并向 Agent 披露有页码的最小上下文。', en: 'Read, OCR, annotate, and cite PDFs locally while sharing only bounded page-aware context with the Agent.' },
