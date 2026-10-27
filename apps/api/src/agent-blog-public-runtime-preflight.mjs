@@ -122,9 +122,10 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
         (SELECT count(*)::int FROM agent_runs source WHERE source.agent_user_id=$1
           AND source.workflow_key='blog.project.discovery-shadow' AND source.status='succeeded'
           AND NOT EXISTS(SELECT 1 FROM agent_run_handoffs handoff WHERE handoff.source_run_id=source.id)) AS awaiting_handoff,
-        (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1
-          AND workflow_key='blog.project.single'
-          AND created_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Shanghai') AT TIME ZONE 'Asia/Shanghai') AS publication_runs_today,
+        (SELECT count(*)::int FROM agent_blog_foundation_publications publication
+          WHERE publication.agent_user_id=$1
+          AND publication.published_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Shanghai')
+            AT TIME ZONE 'Asia/Shanghai') AS publication_runs_today,
         (SELECT COALESCE(sum(charged_provider_calls),0)::bigint FROM agent_budget_reservations
           WHERE agent_user_id=$1 AND period_month=date_trunc('month',now() AT TIME ZONE 'UTC')::date
             AND status IN ('settled','uncertain')) AS provider_calls_month,

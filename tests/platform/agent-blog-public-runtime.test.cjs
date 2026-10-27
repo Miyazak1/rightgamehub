@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -39,6 +40,14 @@ test('public runtime defaults off and requires Foundation ownership plus a quies
     'AGENT_BLOG_PUBLIC_RUNTIME_UNCERTAIN',
     'AGENT_BLOG_PUBLIC_RUNTIME_DAILY_LIMIT_REACHED',
   ]);
+});
+
+test('daily public limit counts immutable publications rather than failed attempts', () => {
+  const source = fs.readFileSync(path.join(root,
+    'apps/api/src/agent-blog-public-runtime-preflight.mjs'), 'utf8');
+  assert.match(source, /FROM agent_blog_foundation_publications publication/u);
+  assert.match(source, /publication\.published_at>=date_trunc\('day'/u);
+  assert.doesNotMatch(source, /workflow_key='blog\.project\.single'[\s\S]{0,180}AS publication_runs_today/u);
 });
 
 test('public bootstrap registers the public workflow without creating a Run or changing ownership', async () => {

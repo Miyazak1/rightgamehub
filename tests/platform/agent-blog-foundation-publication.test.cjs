@@ -231,9 +231,28 @@ test('public workflow handler publishes only the exact persisted draft output', 
     behaviorProfile: defaultAgentBehaviorProfile() };
   assert.equal(normalizeBlogFoundationPublicInput(input).candidateRepositories[0],
     'https://github.com/owner/project');
+  const verificationArtifactId = uuid();
+  const compositionArtifactId = uuid();
+  const articleId = uuid();
+  const revisionId = uuid();
   let request = null;
   const handlers = createAgentBlogFoundationPublicHandlers({
-    toolGateway: {}, providerGateway: {}, artifactRepository: {}, draftGateway: {},
+    toolGateway: {}, providerGateway: {}, artifactRepository: { read: async inputValue => {
+      if (inputValue.artifactId === verificationArtifactId) return {
+        id: verificationArtifactId,
+        content: { schemaVersion: 'blog-article-verification-v1', approved: true,
+          compositionArtifactId, contentSha256: sha, sourceToolArtifactIds: [] },
+      };
+      if (inputValue.artifactId === compositionArtifactId) return {
+        id: compositionArtifactId, contentSha256: sha,
+        content: { schemaVersion: 'blog-article-composition-v1', sourceToolArtifactIds: [],
+          content: { slug: 'public-handler-test', locale: 'zh-CN', title: '公开流程测试',
+            summary: '验证草稿阶段不会提前结束公开工作流。', blocks: [], citations: [] } },
+      };
+      throw new Error('unexpected artifact');
+    } },
+    draftGateway: { persist: async () => ({ status: 'succeeded', publicationState: 'draft',
+      articleId, revisionId, contentSha256: sha }) },
     publicationGateway: { publish: async value => {
       request = value;
       return { status: 'succeeded', articleId: value.articleId, revisionId: value.revisionId,
@@ -242,13 +261,19 @@ test('public workflow handler publishes only the exact persisted draft output', 
   });
   const runId = uuid();
   const agentUserId = uuid();
-  const articleId = uuid();
-  const revisionId = uuid();
+  const draft = await handlers['blog.project.single:persist-draft']({
+    run: { id: runId, agentUserId }, stage: { id: uuid() }, prerequisites: [{
+      stageKey: 'verify', status: 'succeeded', outputRef: {
+        artifactId: verificationArtifactId, artifactKey: 'blog.verification', approved: true,
+        compositionArtifactId,
+      },
+    }],
+  }, { workerId: 'public-worker', leaseToken: uuid() });
+  assert.equal(draft.outputRef.publicationState, 'draft');
+  assert.equal(Object.hasOwn(draft, 'runOutput'), false);
   const result = await handlers['blog.project.single:publish']({
     run: { id: runId, agentUserId }, stage: { id: uuid() }, prerequisites: [{
-      stageKey: 'persist-draft', status: 'succeeded', outputRef: {
-        articleId, revisionId, publicationState: 'draft', contentSha256: sha,
-      },
+      stageKey: 'persist-draft', status: 'succeeded', outputRef: draft.outputRef,
     }],
   }, { workerId: 'public-worker', leaseToken: uuid() });
   assert.equal(result.runOutput.type, 'blog.article');

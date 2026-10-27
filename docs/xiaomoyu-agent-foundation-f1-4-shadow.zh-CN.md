@@ -333,7 +333,7 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 2. `agent-blog-public-preflight` 是只读门禁。它要求唯一发布者已经是 `foundation`、旧自动发布开关已关闭、五项能力完整、公开工作流和工具合同已激活、密钥/模型/熔断正常、没有活跃或不确定 Run，也没有未交接候选；
 3. `agent-blog-public-run` 是一次性进程，先运行同一 preflight，再执行四阶段候选发现，经不可变 Artifact/Handoff 创建七阶段公开 Run；只有最后发布事务再次取得 Foundation 发布权锁后，文章才从草稿原子变为公开；
 4. 公开候选交接使用 `blog.candidate-set-to-public-article`，目标只能是 `blog.project.single@1`；私有交接继续只指向 `blog.project.single.draft-shadow@1`，二者不能靠参数把一种 Run 伪装成另一种；
-5. 公开运行的每日额度只统计公开文章 Run，不把此前私有调试次数伪装成公开发布次数；月度 Provider、费用、连续失败、活跃/不确定运行仍是共同的硬门禁；
+5. 每日发布额度只统计不可变发布回执，不把私有调试或失败尝试伪装成公开文章；失败尝试仍计入月度 Provider、费用与连续失败熔断，活跃或不确定运行也会继续阻止重入；
 6. 私有计划领取同时检查 `config.mode=private-shadow` 和唯一发布者仍为 `legacy`。切换事务除了关闭旧自动发布设置，也原子停用私有 Foundation 计划；切换后旧 worker 即使仍存活也领不到任务；
 7. 私有计划成功记录仍从实际计划入口 `blog.project.discovery-shadow` 且 `mode=private-shadow` 的不可变 fire 账本计算，作为私有调度自身启用与稳定性观测证据；发布权策略 v2 不再要求等待三个自然日，也不会伪造 fire 历史；
 8. 公开调度执行器已经实现，但 profile 与开关均默认关闭。首次公开执行仍必须走显式 bootstrap、切换预检、管理员切换、公开 preflight 和一次性 run；完成一次公开运行与显式回退演练后，才允许显式启用每天 10 点公开计划。
@@ -365,7 +365,7 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 
 控制台新增“新基座自动运行”控制面，解决“数据库已经准备好”和“服务器执行器真的在线”被误认为同一件事的问题：
 
-1. API 与公开执行器读取同一组非秘密运行策略，包括目标 Agent、模型、每日公开 Run、月度 Provider 调用、费用和连续失败上限；Compose profile 仍由部署流程管理，后台可以持久启停每天 10 点计划，并把下一次触发安全提前到现在；容器重启只恢复执行器心跳，不得覆盖管理员保存的暂停状态；
+1. API 与公开执行器读取同一组非秘密运行策略，包括目标 Agent、模型、每日公开文章、月度 Provider 调用、费用和连续失败上限；Compose profile 仍由部署流程管理，后台可以持久启停每天 10 点计划，并把下一次触发安全提前到现在；容器重启只恢复执行器心跳，不得覆盖管理员保存的暂停状态；
 2. 一次性公开运行就绪度复用生产 preflight 的同一快照与判定规则，并额外检查部署绑定的 Agent 是否就是当前后台账号；
 3. 定时执行器在激活后和每轮轮询时把随机实例 ID、状态与心跳时间写入公开计划的 `config_json.worker`。控制台只在心跳不超过三倍轮询周期且计划为 `foundation-public` 时把执行器视为在线；
 4. 计划开关打开但心跳缺失或过期会明确显示为阻塞，避免“数据库里有下次时间”被误报成“容器正在工作”；

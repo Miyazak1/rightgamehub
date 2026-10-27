@@ -152,13 +152,16 @@ function createFoundationHandlers({
       if (draft.status !== 'succeeded' || draft.publicationState !== 'draft') {
         fail('AGENT_BLOG_SHADOW_DRAFT_INCOMPLETE');
       }
-      return {
+      const result = {
         outputRef: { articleId: draft.articleId, revisionId: draft.revisionId,
           publicationState: 'draft', verificationArtifactId: verification.id,
           compositionArtifactId: composition.id, sourceArtifactIds: packageContent.sourceToolArtifactIds,
           contentSha256: draft.contentSha256 },
-        runOutput: { type: 'blog.private-draft', id: draft.articleId },
       };
+      if (!publicationGateway) {
+        result.runOutput = { type: 'blog.private-draft', id: draft.articleId };
+      }
+      return result;
     },
   };
   if (publicationGateway) handlers[`${workflow}:publish`] = async (context, execution) => {
