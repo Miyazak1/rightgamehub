@@ -383,4 +383,4 @@ cd /www/gamehub/deploy
 ./agent-blog-public-ops.sh start-scheduler
 ```
 
-脚本不改 `.env.prod`、不切换发布权、不伪造验收证据，也不自动回退旧流程。`run-once` 与 `start-scheduler` 都先重新构建并执行当前提交的只读 preflight，避免 profile 镜像在默认部署后仍停留在旧版本；停用计划使用 `stop-scheduler`，查看运行日志使用 `logs`。发布权仍只能通过经过事务重检和审计原因的后台控制面切换。
+脚本不改 `.env.prod`、不切换发布权、不伪造验收证据，也不自动回退旧流程。`run-once` 会先重新构建并执行当前提交的只读 preflight，避免 profile 镜像在默认部署后仍停留在旧版本；`start-scheduler` 由调度 Worker 执行专用激活门禁，该门禁只忽略“今天已经发布满额”这一瞬态条件，使今天成功发布后仍能登记明天 10 点的计划，其余安全条件不放宽。停用计划使用 `stop-scheduler`，查看运行日志使用 `logs`。发布权仍只能通过经过事务重检和审计原因的后台控制面切换。

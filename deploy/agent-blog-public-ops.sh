@@ -50,7 +50,7 @@ Commands:
   bootstrap        Register reviewed tools, models and workflows; creates no Run.
   preflight        Run the read-only public admission check.
   run-once         Preflight, then immediately attempt one public article Run.
-  start-scheduler  Preflight, then start the fail-closed daily 10:00 scheduler.
+  start-scheduler  Start the scheduler; its worker performs guarded activation.
   stop-scheduler   Stop the scheduler without changing ownership or history.
   logs             Follow scheduler logs.
 EOF
@@ -91,7 +91,6 @@ case "$command" in
       echo "AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED must be true." >&2
       exit 1
     }
-    preflight
     compose --profile agent-blog-public-scheduler up -d --build --wait \
       --wait-timeout "${DEPLOY_WAIT_SECONDS:-240}" agent-blog-public-scheduler
     compose --profile agent-blog-public-scheduler ps agent-blog-public-scheduler
