@@ -762,7 +762,7 @@ services:
 
   # Durable public scheduler, excluded from the default deployment. Startup is
   # an explicit activation attempt; any unsafe preflight condition aborts it,
-  # and any failed fire persistently suspends the schedule.
+  # and consecutive failed fires suspend the schedule at the configured threshold.
   agent-blog-public-scheduler:
     <<: *service-defaults
     profiles: ["agent-blog-public-scheduler"]
