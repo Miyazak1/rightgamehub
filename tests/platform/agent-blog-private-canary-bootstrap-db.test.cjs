@@ -13,6 +13,8 @@ test('private canary bootstrap is idempotent and writes control-plane records on
   const { createAgentBlogPrivateCanaryBootstrap,
     PostgresAgentBlogPrivateCanaryBootstrapIdentityRepository } =
     await harness.load('agent-blog-private-canary-bootstrap.mjs');
+  const { DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG } =
+    await harness.load('agent-blog-public-runtime-bootstrap.mjs');
 
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Canary operator','admin')", [operatorId]);
@@ -28,18 +30,24 @@ test('private canary bootstrap is idempotent and writes control-plane records on
     schemaVersion: 'agent-blog-private-canary-config-v1', enabled: true, publishEnabled: false,
     agentUserId: account.agentUserId, provider: 'deepseek', modelId: 'deepseek-flash',
   };
+  const providerRepository = new PostgresAgentProviderGatewayRepository(admin);
   const create = () => createAgentBlogPrivateCanaryBootstrap({
     config,
     identityRepository: new PostgresAgentBlogPrivateCanaryBootstrapIdentityRepository(admin),
     runtimeRepository: new PostgresAgentRuntimeRepository(admin),
     toolRepository: new PostgresAgentToolGatewayRepository(admin),
-    providerRepository: new PostgresAgentProviderGatewayRepository(admin),
+    providerRepository,
   }).run();
   const first = await create();
   const second = await create();
   assert.equal(first.model.existing, false);
   assert.equal(second.model.existing, true);
   assert.equal(second.workflows.every(item => item.status === 'active'), true);
+  const publicFirst = await providerRepository.registerModel(DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG);
+  const publicSecond = await providerRepository.registerModel(DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG);
+  assert.equal(publicFirst.catalogVersion, 2);
+  assert.equal(publicFirst.existing, false);
+  assert.equal(publicSecond.existing, true);
 
   const counts = (await admin.query(`SELECT
     (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
@@ -50,10 +58,14 @@ test('private canary bootstrap is idempotent and writes control-plane records on
         ('research.github.repository.search',1),('research.github.repository.read',1))) AS tools,
     (SELECT count(*)::int FROM agent_provider_models WHERE provider='deepseek'
       AND model_id='deepseek-flash' AND catalog_version=1 AND status='active'
-      AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS models,
+      AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS private_models,
+    (SELECT count(*)::int FROM agent_provider_models WHERE provider='deepseek'
+      AND model_id='deepseek-flash' AND catalog_version=2 AND status='active'
+      AND config_json->>'admissionScope'='agent-blog-public-runtime') AS public_models,
     (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1) AS runs,
     (SELECT count(*)::int FROM agent_provider_calls) AS provider_calls,
     (SELECT count(*)::int FROM blog_articles WHERE author_user_id=$1) AS articles`,
   [account.agentUserId])).rows[0];
-  assert.deepEqual(counts, { workflows: 2, tools: 2, models: 1, runs: 0, provider_calls: 0, articles: 0 });
+  assert.deepEqual(counts, { workflows: 2, tools: 2, private_models: 1, public_models: 1,
+    runs: 0, provider_calls: 0, articles: 0 });
 });

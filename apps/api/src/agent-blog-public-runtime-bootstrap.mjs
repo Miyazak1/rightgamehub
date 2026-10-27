@@ -15,7 +15,7 @@ export class AgentBlogPublicRuntimeBootstrapError extends Error {
 const fail = code => { throw new AgentBlogPublicRuntimeBootstrapError(code); };
 
 export const DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG = Object.freeze({
-  provider: 'deepseek', modelId: 'deepseek-flash', catalogVersion: 1, status: 'active',
+  provider: 'deepseek', modelId: 'deepseek-flash', catalogVersion: 2, status: 'active',
   taskClasses: Object.freeze(['structured-generation']), supportsJsonSchema: true,
   maxInputTokens: 60_000, maxOutputTokens: 8_192,
   inputPriceMicrousdPerMillion: 1_000_000, outputPriceMicrousdPerMillion: 5_000_000,

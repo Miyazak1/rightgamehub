@@ -42,8 +42,11 @@ test('public runtime defaults off and requires Foundation ownership plus a quies
 });
 
 test('public bootstrap registers the public workflow without creating a Run or changing ownership', async () => {
-  const { createAgentBlogPublicRuntimeBootstrap } = await load('agent-blog-public-runtime-bootstrap.mjs');
+  const { createAgentBlogPublicRuntimeBootstrap, DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG } =
+    await load('agent-blog-public-runtime-bootstrap.mjs');
+  const { DEEPSEEK_FLASH_PRIVATE_CANARY_CATALOG } = await load('agent-blog-private-canary-bootstrap.mjs');
   const value = config(), operatorUserId = crypto.randomUUID(), workflows = [];
+  let registeredModel = null;
   const receipt = await createAgentBlogPublicRuntimeBootstrap({
     config: value,
     identityRepository: { load: async () => ({ agentUserId: value.agentUserId, operatorUserId }) },
@@ -55,9 +58,17 @@ test('public bootstrap registers the public workflow without creating a Run or c
       activateWorkflow: async () => ({ status: 'active' }),
     },
     toolRepository: { registerTool: async tool => ({ ...tool, existing: false }) },
-    providerRepository: { registerModel: async model => ({ ...model, existing: false }) },
+    providerRepository: { registerModel: async model => {
+      registeredModel = model;
+      return { ...model, existing: false };
+    } },
   }).run();
   assert.deepEqual(workflows, ['blog.project.discovery-shadow', 'blog.project.single']);
+  assert.equal(DEEPSEEK_FLASH_PRIVATE_CANARY_CATALOG.catalogVersion, 1);
+  assert.equal(DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG.catalogVersion, 2);
+  assert.equal(registeredModel.catalogVersion, 2);
+  assert.equal(registeredModel.config.admissionScope, 'agent-blog-public-runtime');
+  assert.equal(receipt.model.catalogVersion, 2);
   assert.equal(receipt.runCreated, false);
   assert.equal(receipt.providerInvoked, false);
   assert.equal(receipt.publicationAttempted, false);

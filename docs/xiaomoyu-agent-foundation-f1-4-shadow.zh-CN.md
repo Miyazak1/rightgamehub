@@ -329,7 +329,7 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 
 公开执行包把“能发布的代码”与“获得发布权”分成两个互不替代的条件：
 
-1. `agent-blog-public-bootstrap` 幂等登记 `blog.project.discovery-shadow@3`、`blog.project.single@1`、两份 GitHub 只读工具合同和公开运行模型准入包；收据固定声明未创建 Run、未调用 Provider、未尝试发布、未变更发布权与计划；
+1. `agent-blog-public-bootstrap` 幂等登记 `blog.project.discovery-shadow@3`、`blog.project.single@1`、两份 GitHub 只读工具合同和 `deepseek/deepseek-flash@2` 公开运行模型准入包；私有 canary 使用的 `@1` 保持不可变，公开作用域不得覆盖或复用其目录版本；收据固定声明未创建 Run、未调用 Provider、未尝试发布、未变更发布权与计划；
 2. `agent-blog-public-preflight` 是只读门禁。它要求唯一发布者已经是 `foundation`、旧自动发布开关已关闭、五项能力完整、公开工作流和工具合同已激活、密钥/模型/熔断正常、没有活跃或不确定 Run，也没有未交接候选；
 3. `agent-blog-public-run` 是一次性进程，先运行同一 preflight，再执行四阶段候选发现，经不可变 Artifact/Handoff 创建七阶段公开 Run；只有最后发布事务再次取得 Foundation 发布权锁后，文章才从草稿原子变为公开；
 4. 公开候选交接使用 `blog.candidate-set-to-public-article`，目标只能是 `blog.project.single@1`；私有交接继续只指向 `blog.project.single.draft-shadow@1`，二者不能靠参数把一种 Run 伪装成另一种；
