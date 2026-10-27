@@ -148,6 +148,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     getAdminAgentPublicationCutoverPreflight: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-cutover-preflight`, { ...options, auth: true }),
     cutoverAdminAgentPublication: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-cutover`, { ...options, method: 'POST', body, auth: true, idempotent: true }),
     rollbackAdminAgentPublication: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-rollback`, { ...options, method: 'POST', body, auth: true, idempotent: true }),
+    setAdminAgentPublicSchedule: (agentUserId, enabled, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/public-schedule`, { ...options, method: 'PUT', body: { enabled }, auth: true, idempotent: true }),
+    runAdminAgentFoundationNow: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/public-runs`, { ...options, method: 'POST', auth: true, idempotent: true }),
     listChangeWatches: options => request('/v1/me/change-watches', { ...options, auth: true }),
     createChangeWatch: (body, options) => request('/v1/me/change-watches', { ...options, method: 'POST', body, auth: true }),
     getChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, auth: true }),

@@ -20,11 +20,12 @@ process.once('SIGINT', stop);
 process.once('SIGTERM', stop);
 
 try {
-  const activation = await controller.ensure({ agentUserId: runtime.config.agentUserId, enabled: true });
+  const activation = await controller.ensure({ agentUserId: runtime.config.agentUserId, enabled: true,
+    preserveExisting: true });
   process.stdout.write(`${JSON.stringify({ service: 'agent-blog-public-scheduler', event: 'activation',
     enabled: activation.enabled, blocked: activation.blocked, blockers: activation.blockers,
     schedule: activation.schedule ?? null })}\n`);
-  if (!activation.enabled) throw Object.assign(new Error('AGENT_BLOG_PUBLIC_SCHEDULE_ACTIVATION_BLOCKED'), {
+  if (activation.blocked) throw Object.assign(new Error('AGENT_BLOG_PUBLIC_SCHEDULE_ACTIVATION_BLOCKED'), {
     code: 'AGENT_BLOG_PUBLIC_SCHEDULE_ACTIVATION_BLOCKED', blockers: activation.blockers,
   });
   await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId, state: 'idle' });
@@ -33,7 +34,7 @@ try {
       await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId, state: 'busy' });
       const result = await controller.runOnce();
       await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId,
-        state: result.status === 'failed' ? 'suspended' : 'idle' });
+        state: result.fire?.scheduleSuspended ? 'suspended' : 'idle' });
       if (result.status !== 'idle') process.stdout.write(`${JSON.stringify({
         service: 'agent-blog-public-scheduler', event: 'fire-finished', ...result,
       })}\n`);

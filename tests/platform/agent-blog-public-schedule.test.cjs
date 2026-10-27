@@ -30,6 +30,9 @@ function fixture({ observed = snapshot(), publicationState = 'published', throwR
     repository: {
       ensureDaily: async input => (events.push(['ensure', input]), { id: scheduleId,
         enabled: input.enabled, mode: 'foundation-public', nextFireAt: '2026-10-27T02:00:00.000Z' }),
+      requestImmediate: async (id, options) => (events.push(['request-now', id, options]), {
+        id: scheduleId, enabled: true, mode: 'foundation-public', requestedAt: '2026-10-27T01:00:00.000Z',
+      }),
       claimDue: async () => (events.push(['claim']), fire),
       finish: async (id, attempt, result) => (events.push(['finish', id, attempt, result]),
         { ...fire, status: result.status, result: result.result ?? {}, errorCode: result.errorCode ?? null }),
@@ -61,6 +64,9 @@ test('public schedule activation ignores only a spent current-day public quota',
     .ensure({ agentUserId, enabled: true });
   assert.equal(activated.enabled, true);
   assert.deepEqual(activated.blockers, []);
+  assert.deepEqual(daily.events.find(([event]) => event === 'ensure')[1], {
+    agentUserId, enabled: true, resume: false, preserveExisting: false,
+  });
 
   const unsafe = fixture({ observed: snapshot({ activePublisher: 'legacy', publicationRunsToday: 1 }) });
   const blocked = await createAgentBlogPublicScheduleController(unsafe)
@@ -89,12 +95,23 @@ test('public scheduler heartbeats are explicit and delegated to durable storage'
   assert.deepEqual(value.events[0], ['heartbeat', { agentUserId, instanceId, state: 'idle' }]);
 });
 
-test('incomplete or failed public fire is persisted as failed for schedule suspension', async () => {
+test('an administrator can safely move the next durable fire to now after preflight', async () => {
+  const { createAgentBlogPublicScheduleController } = await load('agent-blog-public-schedule.mjs');
+  const value = fixture();
+  const result = await createAgentBlogPublicScheduleController(value)
+    .requestNow({ agentUserId, maxHeartbeatAgeMs: 60000 });
+  assert.equal(result.queued, true);
+  assert.deepEqual(value.events.find(([event]) => event === 'request-now').slice(1),
+    [agentUserId, { maxHeartbeatAgeMs: 60000 }]);
+});
+
+test('incomplete or failed public fire is persisted and only suspends at the configured threshold', async () => {
   const { createAgentBlogPublicScheduleController } = await load('agent-blog-public-schedule.mjs');
   const incomplete = fixture({ publicationState: 'draft' });
   assert.equal((await createAgentBlogPublicScheduleController(incomplete).runOnce()).status, 'failed');
   assert.equal(incomplete.events.find(([event]) => event === 'finish')[3].errorCode,
     'AGENT_BLOG_PUBLIC_SCHEDULE_PUBLICATION_INCOMPLETE');
+  assert.equal(incomplete.events.find(([event]) => event === 'finish')[3].suspendAfterFailures, 2);
   const failed = fixture({ throwRun: true });
   assert.equal((await createAgentBlogPublicScheduleController(failed).runOnce()).status, 'failed');
   assert.equal(failed.events.find(([event]) => event === 'finish')[3].errorCode, 'PROVIDER_FAILED');

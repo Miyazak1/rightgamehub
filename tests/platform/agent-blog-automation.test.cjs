@@ -88,7 +88,7 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.doesNotMatch(publicOps,/sed -i|mv .*\.env\.prod|AGENT_BLOG_PUBLICATION.*UPDATE/);
  assert.match(routes,/blog-runs\/:runId\/withdraw/);
  assert.match(routes,/behavior-profile/);
- assert.match(admin,/新基座先生成私有草稿并完成影子验收/);
+ assert.match(admin,/无需逐篇确认/);
  assert.match(admin,/新基座运行/);
  assert.match(admin,/blog\.project\.single/);
  assert.match(admin,/旧自动发布记录/);
@@ -103,13 +103,17 @@ test('Production secret root is scoped to the API and explicit one-shot or sched
  assert.match(admin,/rollbackAdminAgentPublication/);
  assert.match(admin,/切换发布权不会自动启动新流程/);
  assert.match(admin,/每天 10 点计划验收/);
- assert.match(admin,/公开运行就绪度/);
+ assert.match(admin,/新基座自动运行/);
  assert.match(admin,/定时执行器没有新鲜心跳/);
- assert.match(admin,/不会从网页静默启动容器或绕过预检/);
+ assert.match(admin,/立即运行新基座/);
+ assert.match(admin,/setAdminAgentPublicSchedule/);
+ assert.match(admin,/runAdminAgentFoundationNow/);
  const client=fs.readFileSync(path.join(root,'packages/platform-api-client/src/index.mjs'),'utf8');
  assert.match(client,/blog-publication-cutover-preflight/);
  assert.match(client,/blog-publication-cutover/);
  assert.match(client,/blog-publication-rollback/);
+ assert.match(client,/public-schedule/);
+ assert.match(client,/public-runs/);
  assert.match(admin,/PRIVATE DRAFT · READ ONLY/);
  assert.match(admin,/aria-modal="true"/);
  assert.match(admin,/cleanSourceExcerpt/);

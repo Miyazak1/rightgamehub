@@ -47,8 +47,9 @@ export class PostgresAgentBlogPublicScheduleRepository {
     this.clock = clock;
   }
 
-  async ensureDaily({ agentUserId, enabled }) {
-    if (!UUID.test(agentUserId ?? '') || typeof enabled !== 'boolean') {
+  async ensureDaily({ agentUserId, enabled, resume = false, preserveExisting = false }) {
+    if (!UUID.test(agentUserId ?? '') || typeof enabled !== 'boolean' || typeof resume !== 'boolean'
+      || typeof preserveExisting !== 'boolean') {
       fail('AGENT_BLOG_PUBLIC_SCHEDULE_INPUT_INVALID');
     }
     return withTransaction(this.pool, async client => {
@@ -71,22 +72,63 @@ export class PostgresAgentBlogPublicScheduleRepository {
         ON CONFLICT(agent_user_id,workflow_key) DO UPDATE SET
           workflow_version=EXCLUDED.workflow_version,timezone=EXCLUDED.timezone,
           schedule_spec_json=EXCLUDED.schedule_spec_json,
-          enabled=CASE WHEN agent_schedules.config_json->>'mode'='foundation-public'
+          enabled=CASE WHEN $11 THEN agent_schedules.enabled WHEN $10 THEN EXCLUDED.enabled
+            WHEN agent_schedules.config_json->>'mode'='foundation-public'
             AND agent_schedules.config_json ? 'suspendedAt' THEN false ELSE EXCLUDED.enabled END,
-          next_fire_at=CASE WHEN agent_schedules.config_json->>'mode'='foundation-public'
+          next_fire_at=CASE WHEN $11 THEN agent_schedules.next_fire_at
+            WHEN $10 AND EXCLUDED.enabled THEN EXCLUDED.next_fire_at
+            WHEN agent_schedules.config_json->>'mode'='foundation-public'
             AND agent_schedules.config_json ? 'suspendedAt' THEN NULL
             WHEN EXCLUDED.enabled THEN COALESCE(agent_schedules.next_fire_at,EXCLUDED.next_fire_at) ELSE NULL END,
           misfire_policy=EXCLUDED.misfire_policy,
-          config_json=CASE WHEN agent_schedules.config_json->>'mode'='foundation-public'
+          config_json=CASE WHEN $11 THEN agent_schedules.config_json||EXCLUDED.config_json
+            WHEN $10 THEN
+            (agent_schedules.config_json-'suspendedAt'-'suspendedByFireId'-'suspensionReason')
+              ||EXCLUDED.config_json||jsonb_build_object('consecutiveFailures',0)
+            WHEN agent_schedules.config_json->>'mode'='foundation-public'
             AND agent_schedules.config_json ? 'suspendedAt'
-            THEN agent_schedules.config_json ELSE EXCLUDED.config_json END,
+            THEN agent_schedules.config_json ELSE agent_schedules.config_json||EXCLUDED.config_json END,
           updated_by_user_id=EXCLUDED.updated_by_user_id,updated_at=now()
         RETURNING *`, [crypto.randomUUID(), agentUserId, WORKFLOW_KEY, WORKFLOW_VERSION,
-        JSON.stringify(SPEC), enabled, nextFireAt, JSON.stringify(config), account.operator_user_id])).rows[0];
+        JSON.stringify(SPEC), enabled, nextFireAt, JSON.stringify(config), account.operator_user_id,
+        resume, preserveExisting])).rows[0];
       return { id: row.id, enabled: row.enabled, timezone: row.timezone,
         spec: row.schedule_spec_json, mode: row.config_json?.mode,
         suspendedAt: iso(row.config_json?.suspendedAt), nextFireAt: iso(row.next_fire_at),
         lastFireAt: iso(row.last_fire_at) };
+    });
+  }
+
+  async requestImmediate(agentUserId, { maxHeartbeatAgeMs = 90000 } = {}) {
+    if (!UUID.test(agentUserId ?? '') || !Number.isSafeInteger(maxHeartbeatAgeMs)
+      || maxHeartbeatAgeMs < 30000 || maxHeartbeatAgeMs > 900000) {
+      fail('AGENT_BLOG_PUBLIC_SCHEDULE_INPUT_INVALID');
+    }
+    return withTransaction(this.pool, async client => {
+      const row = (await client.query(`SELECT schedule.* FROM agent_schedules schedule
+        JOIN agent_blog_publication_owners owner ON owner.agent_user_id=schedule.agent_user_id
+        WHERE schedule.agent_user_id=$1 AND schedule.workflow_key=$2
+          AND schedule.enabled=true AND schedule.config_json->>'mode'='foundation-public'
+          AND owner.active_publisher='foundation' FOR UPDATE OF schedule`,
+      [agentUserId, WORKFLOW_KEY])).rows[0];
+      if (!row) fail('AGENT_BLOG_PUBLIC_SCHEDULE_NOT_ENABLED');
+      const worker = row.config_json?.worker;
+      const heartbeatAt = worker?.heartbeatAt ? new Date(worker.heartbeatAt) : null;
+      if (!heartbeatAt || !Number.isFinite(heartbeatAt.getTime())
+        || this.clock().getTime() - heartbeatAt.getTime() > maxHeartbeatAgeMs
+        || !['idle', 'busy'].includes(worker?.state)) {
+        fail('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
+      }
+      const running = (await client.query(`SELECT 1 FROM agent_schedule_fires
+        WHERE schedule_id=$1 AND status='running' LIMIT 1`, [row.id])).rows[0];
+      if (running) fail('AGENT_BLOG_PUBLIC_SCHEDULE_FIRE_ACTIVE');
+      const requestedAt = this.clock();
+      const updated = (await client.query(`UPDATE agent_schedules SET next_fire_at=$2,
+          config_json=config_json||jsonb_build_object('manualRequestedAt',$2::timestamptz),updated_at=now()
+        WHERE id=$1 RETURNING *`, [row.id, requestedAt])).rows[0];
+      return { id: updated.id, enabled: updated.enabled, timezone: updated.timezone,
+        spec: updated.schedule_spec_json, mode: updated.config_json?.mode,
+        nextFireAt: iso(updated.next_fire_at), requestedAt: iso(requestedAt) };
     });
   }
 
@@ -140,11 +182,16 @@ export class PostgresAgentBlogPublicScheduleRepository {
     return row.worker;
   }
 
-  async finish(fireId, attemptId, { status, result = {}, errorCode = null, errorMessage = null }) {
+  async finish(fireId, attemptId, { status, result = {}, errorCode = null, errorMessage = null,
+    suspendAfterFailures = 2 }) {
     if (!UUID.test(fireId ?? '') || !UUID.test(attemptId ?? '')
       || !['succeeded', 'failed'].includes(status) || !result || typeof result !== 'object'
-      || Array.isArray(result)) fail('AGENT_BLOG_PUBLIC_SCHEDULE_RESULT_INVALID');
+      || Array.isArray(result) || !Number.isSafeInteger(suspendAfterFailures)
+      || suspendAfterFailures < 1 || suspendAfterFailures > 10) {
+      fail('AGENT_BLOG_PUBLIC_SCHEDULE_RESULT_INVALID');
+    }
     return withTransaction(this.pool, async client => {
+      let scheduleSuspended = false;
       const row = (await client.query(`UPDATE agent_schedule_fires SET status=$3,attempt_id=NULL,
           lease_until=NULL,result_json=$4,error_code=$5,error_message=$6,
           finished_at=now(),updated_at=now()
@@ -152,11 +199,31 @@ export class PostgresAgentBlogPublicScheduleRepository {
       [fireId, attemptId, status, JSON.stringify(result), errorCode,
         errorMessage?.slice?.(0, 500) ?? null])).rows[0];
       if (!row) fail('AGENT_BLOG_PUBLIC_SCHEDULE_LEASE_LOST');
-      if (status === 'failed') await client.query(`UPDATE agent_schedules SET enabled=false,next_fire_at=NULL,
-        config_json=config_json||jsonb_build_object('suspendedAt',now(),'suspendedByFireId',$2::text,
-          'suspensionReason',COALESCE($3,'AGENT_BLOG_PUBLIC_SCHEDULE_RUN_FAILED')),updated_at=now()
-        WHERE id=$1`, [row.schedule_id, row.id, errorCode]);
-      return fireView(row);
+      if (status === 'failed') {
+        const schedule = (await client.query('SELECT config_json FROM agent_schedules WHERE id=$1 FOR UPDATE',
+          [row.schedule_id])).rows[0];
+        const failures = Math.max(0, Number(schedule?.config_json?.consecutiveFailures) || 0) + 1;
+        if (failures >= suspendAfterFailures) {
+          scheduleSuspended = true;
+          await client.query(`UPDATE agent_schedules SET enabled=false,next_fire_at=NULL,
+            config_json=config_json||jsonb_build_object('consecutiveFailures',$2::int,
+              'lastFailureAt',now(),'suspendedAt',now(),'suspendedByFireId',$3::text,
+              'suspensionReason',COALESCE($4,'AGENT_BLOG_PUBLIC_SCHEDULE_RUN_FAILED')),updated_at=now()
+            WHERE id=$1`, [row.schedule_id, failures, row.id, errorCode]);
+        } else {
+          await client.query(`UPDATE agent_schedules SET
+            config_json=(config_json-'suspendedAt'-'suspendedByFireId'-'suspensionReason')
+              ||jsonb_build_object('consecutiveFailures',$2::int,'lastFailureAt',now(),
+                'lastFailureCode',COALESCE($3,'AGENT_BLOG_PUBLIC_SCHEDULE_RUN_FAILED')),
+            updated_at=now() WHERE id=$1`, [row.schedule_id, failures, errorCode]);
+        }
+      } else {
+        await client.query(`UPDATE agent_schedules SET
+          config_json=(config_json-'suspendedAt'-'suspendedByFireId'-'suspensionReason'
+            -'lastFailureAt'-'lastFailureCode')||jsonb_build_object('consecutiveFailures',0),
+          updated_at=now() WHERE id=$1`, [row.schedule_id]);
+      }
+      return { ...fireView(row), scheduleSuspended };
     });
   }
 }
@@ -166,21 +233,33 @@ const ACTIVATION_TRANSIENT_BLOCKERS = new Set(['AGENT_BLOG_PUBLIC_RUNTIME_DAILY_
 export function createAgentBlogPublicScheduleController({
   repository, preflightRepository, runtimeConfig, runner,
 } = {}) {
-  if (!repository || !preflightRepository || !runtimeConfig || !runner
+  if (!repository || !preflightRepository || !runtimeConfig
     || typeof repository.ensureDaily !== 'function' || typeof repository.claimDue !== 'function'
-    || typeof repository.finish !== 'function' || typeof runner.run !== 'function') {
+    || typeof repository.finish !== 'function' || (runner && typeof runner.run !== 'function')) {
     fail('AGENT_BLOG_PUBLIC_SCHEDULE_DEPENDENCY_REQUIRED');
   }
   return {
-    async ensure({ agentUserId, enabled }) {
+    async ensure({ agentUserId, enabled, resume = false, preserveExisting = false }) {
       if (agentUserId !== runtimeConfig.agentUserId) fail('AGENT_BLOG_PUBLIC_SCHEDULE_AGENT_MISMATCH');
       const preflight = await runAgentBlogPublicRuntimePreflight({
         repository: preflightRepository, config: runtimeConfig,
       });
       const blockers = preflight.blockers.filter(code => !ACTIVATION_TRANSIENT_BLOCKERS.has(code));
       if (enabled && blockers.length > 0) return { enabled: false, blocked: true, blockers, preflight };
-      const schedule = await repository.ensureDaily({ agentUserId, enabled });
+      const schedule = await repository.ensureDaily({ agentUserId, enabled, resume, preserveExisting });
       return { enabled: schedule.enabled, blocked: false, blockers: [], preflight, schedule };
+    },
+    async requestNow({ agentUserId, maxHeartbeatAgeMs }) {
+      if (agentUserId !== runtimeConfig.agentUserId) fail('AGENT_BLOG_PUBLIC_SCHEDULE_AGENT_MISMATCH');
+      if (typeof repository.requestImmediate !== 'function') {
+        fail('AGENT_BLOG_PUBLIC_SCHEDULE_REQUEST_PORT_REQUIRED');
+      }
+      const preflight = await runAgentBlogPublicRuntimePreflight({
+        repository: preflightRepository, config: runtimeConfig,
+      });
+      if (!preflight.ready) return { queued: false, blocked: true, blockers: preflight.blockers, preflight };
+      const schedule = await repository.requestImmediate(agentUserId, { maxHeartbeatAgeMs });
+      return { queued: true, blocked: false, blockers: [], preflight, schedule };
     },
     async heartbeat(input) {
       if (typeof repository.heartbeat !== 'function') {
@@ -189,6 +268,7 @@ export function createAgentBlogPublicScheduleController({
       return repository.heartbeat(input);
     },
     async runOnce() {
+      if (!runner) fail('AGENT_BLOG_PUBLIC_SCHEDULE_RUNNER_REQUIRED');
       const fire = await repository.claimDue();
       if (!fire) return { status: 'idle' };
       try {
@@ -200,14 +280,16 @@ export function createAgentBlogPublicScheduleController({
           articleId: run?.publication?.articleId ?? null,
           publicationState: run?.publication?.publicationState ?? null };
         const finished = await repository.finish(fire.id, fire.attemptId, published
-          ? { status: 'succeeded', result }
+          ? { status: 'succeeded', result, suspendAfterFailures: runtimeConfig.consecutiveFailureLimit }
           : { status: 'failed', result, errorCode: 'AGENT_BLOG_PUBLIC_SCHEDULE_PUBLICATION_INCOMPLETE',
-            errorMessage: '公开计划没有得到已发布文章，计划已自动停用。' });
+            errorMessage: '公开计划没有得到已发布文章。',
+            suspendAfterFailures: runtimeConfig.consecutiveFailureLimit });
         return { status: finished.status, fire: finished };
       } catch (error) {
         const finished = await repository.finish(fire.id, fire.attemptId, { status: 'failed',
           errorCode: String(error?.code || 'AGENT_BLOG_PUBLIC_SCHEDULE_RUN_FAILED').slice(0, 120),
-          errorMessage: String(error?.message || '公开计划运行失败。').slice(0, 500) });
+          errorMessage: String(error?.message || '公开计划运行失败。').slice(0, 500),
+          suspendAfterFailures: runtimeConfig.consecutiveFailureLimit });
         return { status: 'failed', fire: finished };
       }
     },
