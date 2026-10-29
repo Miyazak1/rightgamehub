@@ -76,7 +76,7 @@ test('arXiv adapter uses two fixed-origin requests and emits versioned page evid
   const result = await adapter({ request: { paper: 'https://arxiv.org/abs/2401.12345v2' } });
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /^https:\/\/export\.arxiv\.org\/api\/query\?/u);
-  assert.equal(calls[1].url, 'https://arxiv.org/pdf/2401.12345v2.pdf');
+  assert.equal(calls[1].url, 'https://arxiv.org/pdf/2401.12345v2');
   assert(calls.every(call => call.options.redirect === 'error'));
   assert(calls.every(call => call.options.headers['User-Agent'].includes('research@example.com')));
   assert.equal(result.usage.networkRequests, 2);
@@ -96,6 +96,51 @@ test('arXiv adapter uses two fixed-origin requests and emits versioned page evid
   assert.equal(archive.evidence.length, 3);
   assert(archive.evidence.every(span => span.allowedUses.join(',') === 'analysis'));
   assert.equal(archive.extension.qualityAssessment.grade, 'limited-text');
+});
+
+test('arXiv uses the direct versioned PDF URL while preserving archived references and redirect denial', async () => {
+  const { createArxivPaperReadAdapter, validateArxivPaperReadOutput } = await import(moduleUrl);
+  const calls = [];
+  const adapter = createArxivPaperReadAdapter({ contactEmail: 'research@example.com',
+    pdfLoader: fakePdfLoader(), fetchImpl: async (url, options) => {
+      calls.push(String(url));
+      assert.equal(options.redirect, 'error');
+      if (String(url).startsWith('https://export.arxiv.org/')) {
+        return new Response(atom(), { headers: { 'content-type': 'application/atom+xml' } });
+      }
+      // The upstream .pdf URL redirects. A fetch with redirect:error rejects it.
+      if (String(url).endsWith('.pdf')) throw new TypeError('unexpected redirect');
+      assert.equal(String(url), 'https://arxiv.org/pdf/2401.12345v2');
+      return new Response(Buffer.from('%PDF-fixture'), { headers: { 'content-type': 'application/pdf' } });
+    } });
+  const { output } = await adapter({ request: { paper: 'https://arxiv.org/pdf/2401.12345v2.pdf' } });
+  assert.equal(calls.length, 2);
+  assert.equal(output.sourceVersion.canonicalUri, 'https://arxiv.org/pdf/2401.12345v2');
+  assert.equal(output.version.sourceUrl, output.sourceVersion.canonicalUri);
+  assert.equal(validateArxivPaperReadOutput(output).sourceVersion.revision, '2401.12345v2');
+  const archived = structuredClone(output);
+  archived.sourceVersion.canonicalUri += '.pdf';
+  archived.version.sourceUrl = archived.sourceVersion.canonicalUri;
+  assert.deepEqual(validateArxivPaperReadOutput(archived), archived);
+  for (const url of ['https://example.com/pdf/2401.12345v2',
+    'https://arxiv.org/pdf/2401.12345v1', 'https://arxiv.org/pdf/2401.12345',
+    'https://arxiv.org/pdf/2401.12345v2?download=1']) {
+    const invalid = structuredClone(output);
+    invalid.sourceVersion.canonicalUri = url;
+    invalid.version.sourceUrl = url;
+    assert.throws(() => validateArxivPaperReadOutput(invalid),
+      error => error.code === 'AGENT_ARXIV_TOOL_OUTPUT_INVALID');
+  }
+  const redirecting = createArxivPaperReadAdapter({ contactEmail: 'research@example.com',
+    pdfLoader: fakePdfLoader(), fetchImpl: async (url, options) => {
+      assert.equal(options.redirect, 'error');
+      if (String(url).startsWith('https://export.arxiv.org/')) {
+        return new Response(atom(), { headers: { 'content-type': 'application/atom+xml' } });
+      }
+      throw new TypeError('unexpected redirect');
+    } });
+  await assert.rejects(redirecting({ request: { paper: '2401.12345v2' } }),
+    error => error.code === 'AGENT_ARXIV_NETWORK_FAILED' && error.retryable === true);
 });
 
 test('production pdfjs parser extracts an actual bounded PDF text layer', async () => {

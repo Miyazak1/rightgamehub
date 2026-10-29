@@ -124,7 +124,7 @@ for (const failureCount of [1, 2, 3]) {
               metadataRequests++;
               return new Response(xml, { status: 200, headers: { 'content-type': 'application/atom+xml' } });
             }
-            assert.equal(String(url), 'https://arxiv.org/pdf/2601.01234v1.pdf');
+            assert.equal(String(url), 'https://arxiv.org/pdf/2601.01234v1');
             pdfRequests++;
             return new Response(Buffer.from('%PDF-offline-fixture'), { status: 200,
               headers: { 'content-type': 'application/pdf' } });

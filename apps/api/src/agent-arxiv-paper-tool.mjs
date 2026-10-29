@@ -298,7 +298,9 @@ export function validateArxivPaperReadOutput(value) {
     }
   }
   if (value.layoutManifest.artifactVersionId !== value.version.artifactVersionId
-    || value.sourceVersion.canonicalUri !== `https://arxiv.org/pdf/${value.metadata.versionedArxivId}.pdf`
+    // New acquisitions use the direct PDF URL; retain compatibility with archived .pdf references.
+    || ![`https://arxiv.org/pdf/${value.metadata.versionedArxivId}`,
+      `https://arxiv.org/pdf/${value.metadata.versionedArxivId}.pdf`].includes(value.sourceVersion.canonicalUri)
     || value.version.sourceUrl !== value.sourceVersion.canonicalUri
     || value.sourceVersion.fetchedAt !== value.version.fetchedAt
     || baseId(value.metadata.versionedArxivId) !== value.identity.identifiers.arxiv
@@ -356,7 +358,7 @@ export function createArxivPaperReadAdapter({ fetchImpl = globalThis.fetch,
     if (locator.requestedVersion !== null && versionNumber(metadata.resolvedId) !== locator.requestedVersion) {
       fail('AGENT_ARXIV_VERSION_NOT_FOUND');
     }
-    const pdfUrl = `https://arxiv.org/pdf/${metadata.resolvedId}.pdf`;
+    const pdfUrl = `https://arxiv.org/pdf/${metadata.resolvedId}`;
     const pdfResponse = await request(pdfUrl, timeoutSeconds);
     const contentType = (pdfResponse.headers.get('content-type') ?? '').toLowerCase();
     if (!contentType.startsWith('application/pdf')) fail('AGENT_ARXIV_PDF_CONTENT_TYPE_INVALID');
