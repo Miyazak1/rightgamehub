@@ -14,7 +14,11 @@ const names=requested.length?requested:(await fs.readdir(templateRoot,{withFileT
   .filter(entry=>entry.isDirectory())
   .map(entry=>entry.name)
   .filter(async name=>fs.stat(path.join(templateRoot,name,'modules/ui-kit/module.json')).catch(()=>null));
-const canonical=await fs.readFile(canonicalPath);
+// Release integrity is computed from Git's cross-platform LF representation.
+// Normalizing here prevents a Windows CRLF checkout from producing manifests
+// that fail when the same release is checked out or built on Linux.
+const canonicalText=await fs.readFile(canonicalPath,'utf8');
+const canonical=Buffer.from(canonicalText.replace(/\r\n?/gu,'\n'),'utf8');
 const discovered=[];
 for(const name of names){
   const moduleRoot=path.join(templateRoot,name,'modules/ui-kit');

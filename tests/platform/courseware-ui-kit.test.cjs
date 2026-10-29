@@ -1,5 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
@@ -22,6 +23,8 @@ test('the motion courseware consumes the canonical hot-swappable UI shell',async
   assert.equal(manifest.runtime.rootModules[0],'component.courseware-ui');
   assert.equal(moduleManifest.id,'component.courseware-ui');
   assert.equal(moduleManifest.hotSwap,'live');
+  assert.equal(moduleManifest.integrity,`sha256:${crypto.createHash('sha256').update(releaseBytes).digest('hex')}`);
+  assert.equal(releaseBytes.includes(Buffer.from('\r\n')),false,'release bytes must remain LF-only across Windows and Linux');
   assert.match(html,/\.\/_mooyu\/bootstrap\.mjs/u);
   assert.doesNotMatch(html,/id="locale"|language-action|data-locale-switch/u);
   assert.match(html,/function applyLocale\(next\)/u);
@@ -66,14 +69,17 @@ test('mathematics, physics, and chemistry share the gold-standard shell and 3 by
   const canonicalBytes=await fs.readFile(canonical);
   for(const name of packages){
     const templateRoot=path.join(root,'templates/courseware',name);
-    const [manifest,experience,journeys,html,releaseBytes]=await Promise.all([
+    const [manifest,experience,journeys,html,releaseBytes,moduleManifest]=await Promise.all([
       fs.readFile(path.join(templateRoot,'mooyu-courseware.json'),'utf8').then(JSON.parse),
       fs.readFile(path.join(templateRoot,'courseware/experience.json'),'utf8').then(JSON.parse),
       fs.readFile(path.join(templateRoot,'tests/journeys.json'),'utf8').then(JSON.parse),
       fs.readFile(path.join(templateRoot,'dist/index.html'),'utf8'),
       fs.readFile(path.join(templateRoot,'modules/ui-kit/index.mjs')),
+      fs.readFile(path.join(templateRoot,'modules/ui-kit/module.json'),'utf8').then(JSON.parse),
     ]);
     assert.deepEqual(releaseBytes,canonicalBytes,`${name} must carry the canonical UI Kit bytes`);
+    assert.equal(moduleManifest.integrity,`sha256:${crypto.createHash('sha256').update(releaseBytes).digest('hex')}`,`${name} must hash the committed LF release bytes`);
+    assert.equal(releaseBytes.includes(Buffer.from('\r\n')),false,`${name} must remain LF-only across Windows and Linux`);
     assert.equal(manifest.runtime.rootModules[0],'component.courseware-ui');
     assert.deepEqual(experience.modes.map(mode=>mode.id),expectedModes);
     assert.deepEqual(experience.views.map(view=>view.id),expectedViews);

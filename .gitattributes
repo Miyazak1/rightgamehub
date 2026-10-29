@@ -5,6 +5,7 @@ rules/**/*.cjs -text
 *.sh text eol=lf
 
 # Courseware module integrity is byte-exact across Windows authoring and Linux builds.
+packages/courseware-ui-kit/** text eol=lf
 packages/courseware-domain-packs/** text eol=lf
 templates/courseware/** text eol=lf
 plugins/gamehub/templates/courseware/** text eol=lf
