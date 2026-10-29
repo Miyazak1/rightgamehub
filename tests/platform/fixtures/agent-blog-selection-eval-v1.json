@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "agent-blog-selection-eval-v1",
+  "cases": [
+    {
+      "id": "new-licensed-project",
+      "candidate": {
+        "repositoryKey": "example/useful-tool",
+        "repositoryUrl": "https://github.com/example/useful-tool",
+        "title": "example/useful-tool",
+        "description": "A practical local-first knowledge tool for ordinary creators.",
+        "excerpt": "This README explains the supported platforms, installation path, local-first storage model, searchable notes, export format, limitations and a complete quick-start example for new users.",
+        "signals": { "archived": false, "licenseSpdx": "MIT", "hasReadme": true, "materialTypes": ["readme", "license", "docs"], "topics": ["knowledge", "local-first"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": true, "reasonCodes": [], "restrictionCodes": [], "eligibleModes": ["single", "comparison"] }
+    },
+    {
+      "id": "archived-project",
+      "candidate": {
+        "repositoryKey": "example/archived-tool",
+        "repositoryUrl": "https://github.com/example/archived-tool",
+        "title": "example/archived-tool",
+        "description": "A practical archived tool with a documented use case.",
+        "excerpt": "The README contains enough primary evidence to explain installation, usage, outputs, supported platforms, limitations and the intended audience without relying on external summaries.",
+        "signals": { "archived": true, "licenseSpdx": "Apache-2.0", "hasReadme": true, "materialTypes": ["readme", "license"], "topics": ["tool"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": false, "reasonCodes": ["ARCHIVED_REPOSITORY"], "restrictionCodes": [], "eligibleModes": [] }
+    },
+    {
+      "id": "missing-license",
+      "candidate": {
+        "repositoryKey": "example/unlicensed-tool",
+        "repositoryUrl": "https://github.com/example/unlicensed-tool",
+        "title": "example/unlicensed-tool",
+        "description": "A useful project whose redistribution terms are not verified.",
+        "excerpt": "The README contains enough primary evidence to explain installation, usage, outputs, supported platforms, limitations and the intended audience without relying on external summaries.",
+        "signals": { "archived": false, "licenseSpdx": null, "hasReadme": true, "materialTypes": ["readme"], "topics": ["tool"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": false, "reasonCodes": ["LICENSE_NOT_VERIFIED"], "restrictionCodes": [], "eligibleModes": [] }
+    },
+    {
+      "id": "insufficient-primary-evidence",
+      "candidate": {
+        "repositoryKey": "example/thin-tool",
+        "repositoryUrl": "https://github.com/example/thin-tool",
+        "title": "example/thin-tool",
+        "description": "A project with too little first-party material to support an article.",
+        "excerpt": "Short placeholder.",
+        "signals": { "archived": false, "licenseSpdx": "MIT", "hasReadme": false, "materialTypes": ["license"], "topics": ["tool"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": false, "reasonCodes": ["PRIMARY_EVIDENCE_INSUFFICIENT"], "restrictionCodes": [], "eligibleModes": [] }
+    },
+    {
+      "id": "high-risk-project",
+      "candidate": {
+        "repositoryKey": "example/credential-stealer",
+        "repositoryUrl": "https://github.com/example/credential-stealer",
+        "title": "example/credential-stealer",
+        "description": "Credential stealer demonstration with a complete technical guide.",
+        "excerpt": "The README contains enough primary evidence to explain installation, usage, outputs, supported platforms, limitations and the intended audience without relying on external summaries.",
+        "signals": { "archived": false, "licenseSpdx": "GPL-3.0", "hasReadme": true, "materialTypes": ["readme", "license"], "topics": ["security"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": false, "reasonCodes": ["HIGH_RISK_PROJECT"], "restrictionCodes": [], "eligibleModes": [] }
+    },
+    {
+      "id": "previous-main-comparison-only",
+      "candidate": {
+        "repositoryKey": "example/known-tool",
+        "repositoryUrl": "https://github.com/example/known-tool",
+        "title": "example/known-tool",
+        "description": "A documented project that was already the main subject of an article.",
+        "excerpt": "The README contains enough primary evidence to explain installation, usage, outputs, supported platforms, limitations and the intended audience without relying on external summaries.",
+        "signals": { "archived": false, "licenseSpdx": "MIT", "hasReadme": true, "materialTypes": ["readme", "license", "release"], "topics": ["tool"] }
+      },
+      "previousRepositoryUrls": ["https://github.com/example/known-tool"],
+      "expected": { "accepted": true, "reasonCodes": [], "restrictionCodes": ["SINGLE_PROJECT_PREVIOUSLY_FEATURED"], "eligibleModes": ["comparison"] }
+    },
+    {
+      "id": "invalid-repository-identity",
+      "candidate": {
+        "repositoryKey": "example/not-github",
+        "repositoryUrl": "https://example.com/example/not-github",
+        "title": "example/not-github",
+        "description": "A candidate whose claimed repository identity is outside GitHub.",
+        "excerpt": "The README contains enough primary evidence to explain installation, usage, outputs, supported platforms, limitations and the intended audience without relying on external summaries.",
+        "signals": { "archived": false, "licenseSpdx": "MIT", "hasReadme": true, "materialTypes": ["readme", "license"], "topics": ["tool"] }
+      },
+      "previousRepositoryUrls": [],
+      "expected": { "accepted": false, "reasonCodes": ["REPOSITORY_IDENTITY_INVALID"], "restrictionCodes": [], "eligibleModes": [] }
+    }
+  ]
+}

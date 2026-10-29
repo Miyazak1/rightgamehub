@@ -59,7 +59,7 @@ function createCandidateHandoff({ runtimeRepository, artifactRepository, enabled
 
     async createDraftRun({
       agentUserId, discoveryRunId, discoveryArtifactId, idempotencyKey,
-      recentTitles = [], previousRepositoryUrls = [], behaviorProfile, config = {},
+      recentTitles = [], previousRepositoryUrls = [], behaviorProfile, editorialMemory, config = {},
       triggerKind = 'system', triggerRef = null,
     }) {
       requireEnabled();
@@ -80,6 +80,7 @@ function createCandidateHandoff({ runtimeRepository, artifactRepository, enabled
         recentTitles,
         previousRepositoryUrls,
         behaviorProfile: profile,
+        editorialMemory,
       });
       return runtimeRepository.createRun({
         agentUserId,
@@ -108,7 +109,7 @@ export function createAgentBlogCandidateDraftHandoffCanary(dependencies = {}) {
   return createCandidateHandoff(dependencies, {
     workflow: BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,
     normalizeInput: normalizeBlogFoundationShadowInput,
-    inputSchemaVersion: 'blog-project-single-shadow-input-v1',
+    inputSchemaVersion: 'blog-project-single-shadow-input-v2',
     handoffKind: 'blog.candidate-set-to-private-draft',
     disabledCode: 'AGENT_BLOG_HANDOFF_CANARY_DISABLED',
   });
@@ -118,7 +119,7 @@ export function createAgentBlogCandidatePublicHandoff(dependencies = {}) {
   return createCandidateHandoff(dependencies, {
     workflow: BLOG_PROJECT_SINGLE_WORKFLOW,
     normalizeInput: normalizeBlogFoundationPublicInput,
-    inputSchemaVersion: 'blog-project-single-input-v1',
+    inputSchemaVersion: 'blog-project-single-input-v2',
     handoffKind: 'blog.candidate-set-to-public-article',
     disabledCode: 'AGENT_BLOG_PUBLIC_HANDOFF_DISABLED',
   });

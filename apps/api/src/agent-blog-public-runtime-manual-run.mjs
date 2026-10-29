@@ -1,4 +1,5 @@
 import { runAgentBlogPublicRuntimePreflight } from './agent-blog-public-runtime-preflight.mjs';
+import { AGENT_GITHUB_RESEARCH_LIMITS } from './agent-github-research-runtime.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -54,7 +55,7 @@ export function createAgentBlogPublicRuntimeManualRunner({
       const preflight = await runAgentBlogPublicRuntimePreflight({ repository: preflightRepository, config });
       if (!preflight.ready) fail('AGENT_BLOG_PUBLIC_RUNTIME_PREFLIGHT_BLOCKED', { blockers: preflight.blockers });
       const frozen = await inputRepository.snapshot(config.agentUserId);
-      if (frozen?.schemaVersion !== 'agent-blog-private-canary-input-snapshot-v1'
+      if (frozen?.schemaVersion !== 'agent-blog-private-canary-input-snapshot-v2'
         || frozen.agentUserId !== config.agentUserId) fail('AGENT_BLOG_PUBLIC_RUNTIME_INPUT_INVALID');
       if (frozen.configuredModelId !== config.modelId) {
         fail('AGENT_BLOG_PUBLIC_RUNTIME_MODEL_DRIFT', {
@@ -69,7 +70,9 @@ export function createAgentBlogPublicRuntimeManualRunner({
         idempotencyKey: `public-runtime:${requestId}:discovery`, config: modelConfig,
         input: {
           schemaVersion: 'blog-project-discovery-input-v2', topicScope: frozen.topicScope,
-          searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: null, maxCandidates: 8, maxQueries: 3 },
+          searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: null,
+            maxCandidates: AGENT_GITHUB_RESEARCH_LIMITS.maxCandidates,
+            maxQueries: AGENT_GITHUB_RESEARCH_LIMITS.maxSearchRequests },
           previousRepositoryUrls: frozen.previousRepositoryUrls,
           behaviorProfile: frozen.behaviorProfile,
         },
@@ -83,6 +86,7 @@ export function createAgentBlogPublicRuntimeManualRunner({
         discoveryArtifactId: discoveryOutput.outputId,
         idempotencyKey: `public-runtime:${requestId}:article`, triggerKind, triggerRef,
         recentTitles: frozen.recentTitles, previousRepositoryUrls: frozen.previousRepositoryUrls,
+        editorialMemory: frozen.editorialMemory,
         behaviorProfile: frozen.behaviorProfile, config: modelConfig,
       });
       const publicationOutput = await executeRun({

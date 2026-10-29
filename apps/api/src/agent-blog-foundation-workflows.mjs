@@ -61,8 +61,8 @@ export const BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
 export const BLOG_PROJECT_SINGLE_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'blog.project.single',
-  workflowVersion: 1,
-  inputSchema: 'blog-project-single-input-v1',
+  workflowVersion: 2,
+  inputSchema: 'blog-project-single-input-v2',
   outputSchema: 'blog-article-output-v1',
   requiredCapabilities: [
     { key: 'research.github.read', version: 1 },
@@ -93,8 +93,8 @@ export const BLOG_PROJECT_SINGLE_WORKFLOW = Object.freeze({
 export const BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'blog.project.single.draft-shadow',
-  workflowVersion: 1,
-  inputSchema: 'blog-project-single-input-v1',
+  workflowVersion: 2,
+  inputSchema: 'blog-project-single-shadow-input-v2',
   outputSchema: 'blog-private-draft-output-v1',
   requiredCapabilities: [
     { key: 'research.github.read', version: 1 },

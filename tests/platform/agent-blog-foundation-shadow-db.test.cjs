@@ -15,6 +15,8 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const { createAgentToolGateway } = await harness.load('agent-tool-gateway.mjs');
   const { GITHUB_REPOSITORY_READ_TOOL, validateGitHubRepositoryReadInput,
     validateGitHubRepositoryReadOutput } = await harness.load('agent-github-repository-tool.mjs');
+  const { GITHUB_REPOSITORY_MATERIALS_TOOL, validateGitHubRepositoryMaterialsInput,
+    validateGitHubRepositoryMaterialsOutput } = await harness.load('agent-github-repository-materials-tool.mjs');
   const { GITHUB_REPOSITORY_SEARCH_TOOL, validateGitHubRepositorySearchInput,
     validateGitHubRepositorySearchOutput } = await harness.load('agent-github-repository-search-tool.mjs');
   const { PostgresAgentProviderGatewayRepository } = await harness.load('agent-provider-gateway-repository.mjs');
@@ -34,6 +36,11 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const { PostgresAgentBlogCanaryAcceptanceRepository,
     createAgentBlogCanaryAcceptanceService } = await harness.load('agent-blog-canary-acceptance.mjs');
   const { createAgentRuntimeReadService } = await harness.load('agent-runtime-read-service.mjs');
+  const { PostgresAgentResearchEvidenceRepository } =
+    await harness.load('agent-research-evidence-repository.mjs');
+  const { recordAgentEditorialMemory, PostgresAgentEditorialMemoryRepository } =
+    await harness.load('agent-editorial-memory-repository.mjs');
+  const { stableHash } = await harness.load('researcher-qa-protocol/stable-json.mjs');
 
   const operatorId = crypto.randomUUID();
   await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Shadow canary operator','admin')", [operatorId]);
@@ -51,20 +58,37 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const policyService = createAgentRuntimePolicyService({ pool: admin });
   const toolRepository = new PostgresAgentToolGatewayRepository(admin);
   await toolRepository.registerTool(GITHUB_REPOSITORY_READ_TOOL);
+  await toolRepository.registerTool(GITHUB_REPOSITORY_MATERIALS_TOOL);
   await toolRepository.registerTool(GITHUB_REPOSITORY_SEARCH_TOOL);
   const revision = 'a'.repeat(40);
   const repositoryOutput = {
     schemaVersion: 'github-repository-evidence-v1',
     repository: { key: 'owner/project', canonicalUrl: 'https://github.com/owner/project', owner: 'owner', name: 'project' },
     sourceVersion: { revision, canonicalUri: `https://github.com/owner/project/tree/${revision}`,
-      fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: 'b'.repeat(64) },
+      fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: '' },
     metadata: { name: 'project', fullName: 'owner/project',
       description: '一个可以快速体验、把复杂任务变成清晰步骤的开放工具。', homepage: null,
       defaultBranch: 'main', stars: 1200, forks: 100, openIssues: 12,
       topics: ['tool'], licenseSpdx: 'MIT', archived: false, pushedAt: '2026-10-25T00:00:00.000Z' },
     readme: { canonicalUri: `https://github.com/owner/project/blob/${revision}/README.md`, path: 'README.md',
-      text: '这个项目提供可复现的安装步骤、清晰的输入输出和本地运行方式。使用者可以在几分钟内看到结果，并按文档逐步扩展。' },
+      text: '这个项目提供可复现的安装步骤、清晰的输入输出和本地运行方式。使用者可以在几分钟内看到结果，并按文档逐步扩展。'.repeat(4) },
   };
+  repositoryOutput.sourceVersion.contentSha256 = stableHash({
+    metadata: repositoryOutput.metadata, readme: repositoryOutput.readme,
+  });
+  const materialsOutput = {
+    schemaVersion: 'github-repository-materials-v1',
+    repository: repositoryOutput.repository,
+    sourceVersion: { ...repositoryOutput.sourceVersion, contentSha256: '' },
+    metadata: repositoryOutput.metadata,
+    materials: [{ type: 'readme', path: repositoryOutput.readme.path,
+      canonicalUri: repositoryOutput.readme.canonicalUri, sourceRevision: revision, publishedAt: null,
+      text: repositoryOutput.readme.text, truncated: false,
+      contentSha256: stableHash(repositoryOutput.readme.text) }],
+  };
+  materialsOutput.sourceVersion.contentSha256 = stableHash({
+    metadata: materialsOutput.metadata, materials: materialsOutput.materials,
+  });
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
     adapters: {
@@ -85,11 +109,17 @@ test('draft shadow workflow runs end to end and has zero publication authority',
         receiptId: `github:owner/project@${revision}`, output: repositoryOutput,
         responseRef: { canonicalUri: repositoryOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
       }),
+      'research.github.repository.materials.read@1': async () => ({
+        receiptId: `github-materials:owner/project@${revision}`, output: materialsOutput,
+        responseRef: { canonicalUri: materialsOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
+      }),
     },
     inputSchemas: { 'github.repository.search.input@1': validateGitHubRepositorySearchInput,
-      'github.repository.read.input@1': validateGitHubRepositoryReadInput },
+      'github.repository.read.input@1': validateGitHubRepositoryReadInput,
+      'github.repository.materials.read.input@1': validateGitHubRepositoryMaterialsInput },
     outputSchemas: { 'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
-      'github.repository.read.output@1': validateGitHubRepositoryReadOutput },
+      'github.repository.read.output@1': validateGitHubRepositoryReadOutput,
+      'github.repository.materials.read.output@1': validateGitHubRepositoryMaterialsOutput },
   });
 
   const governance = new PostgresAgentProviderGatewayRepository(admin, {
@@ -118,7 +148,10 @@ test('draft shadow workflow runs end to end and has zero publication authority',
         : request.responseSchema.key === 'blog.subject.selection'
         ? { mode: 'single', selectedIndexes: [1], angle: '先验证最小路径，再理解它如何降低上手门槛',
           rationale: '仓库资料给出了明确安装步骤、可观察结果和本地运行方式，适合面向普通读者解释其实际价值。',
-          interestSignals: ['可以快速体验'], comparisonAxes: [] }
+          interestSignals: ['可以快速体验'], comparisonAxes: [],
+          scores: { readerValue: 85, handsOnPotential: 90, novelty: 65,
+            explainability: 88, evidenceStrength: 92 },
+          decisionReasonCodes: ['EVIDENCE_STRONG', 'HANDS_ON_TESTABLE'] }
         : { title: '先跑通最小路径，再理解这个开放工具',
           summary: '这篇文章依据仓库的固定版本资料，说明如何快速完成最小体验、适用边界以及继续探索的方法。',
           blocks: [
@@ -137,8 +170,12 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   });
   const artifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
   const draftGateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime,
-    draftRepository: new PostgresAgentBlogFoundationDraftRepository(admin), policyService });
-  const handlers = createAgentBlogFoundationShadowHandlers({ toolGateway, providerGateway, artifactRepository, draftGateway });
+    draftRepository: new PostgresAgentBlogFoundationDraftRepository(admin,
+      { requireResearchEvidence: true }), policyService });
+  const handlers = createAgentBlogFoundationShadowHandlers({
+    toolGateway, providerGateway, artifactRepository, draftGateway,
+    researchEvidenceRepository: new PostgresAgentResearchEvidenceRepository(admin),
+  });
   const discoveryCanary = createAgentBlogAutonomousDiscoveryCanary({ runtimeRepository: runtime, enabled: true });
   const discoveryWorkflow = await discoveryCanary.register(operatorId);
   const discoveryRun = await discoveryCanary.createRun({ agentUserId: account.agentUserId,
@@ -166,13 +203,15 @@ test('draft shadow workflow runs end to end and has zero publication authority',
   const run = await handoffCanary.createDraftRun({ agentUserId: account.agentUserId,
     discoveryRunId: discoveryRun.id, discoveryArtifactId: discoveryStored.output_id,
     idempotencyKey: `shadow-draft:${crypto.randomUUID()}`, behaviorProfile: defaultAgentBehaviorProfile(),
+    editorialMemory: { schemaVersion: 'blog-editorial-memory-input-v1',
+      capturedAt: '2026-10-27T00:00:00.000Z', activeCooldowns: [] },
     config: { model: { provider: 'deepseek', modelId: 'fixture-blog' } },
   });
   const worker = createAgentRuntimeWorker({ repository: runtime, handlers,
     workerId: `shadow-canary-${crypto.randomBytes(4).toString('hex')}`, leaseSeconds: 30, heartbeatSeconds: 5 });
   const results = [];
   for (let index = 0; index < workflow.stages.length; index += 1) results.push(await worker.runOnce());
-  assert(results.every(result => result.status === 'completed'));
+  assert(results.every(result => result.status === 'completed'), JSON.stringify(results));
   assert.equal(providerInvocations, 3);
   const storedRun = (await admin.query('SELECT * FROM agent_runs WHERE id=$1', [run.id])).rows[0];
   assert.equal(storedRun.status, 'succeeded');
@@ -195,6 +234,67 @@ test('draft shadow workflow runs end to end and has zero publication authority',
     WHERE run_id=$1 AND capability_key='blog.article.publish'`, [run.id])).rows[0].n), 0);
   assert.equal(Number((await admin.query(`SELECT count(*)::int AS n FROM agent_run_stages
     WHERE run_id=$1 AND stage_key='publish'`, [run.id])).rows[0].n), 0);
+  const evidenceLedger = (await admin.query(`SELECT binding.id,binding.content_sha256,
+      source.canonical_url,version.content_hash,
+      count(evidence_link.evidence_id)::int AS evidence_count
+    FROM agent_research_artifact_bindings binding
+    JOIN tool_research_sources source ON source.id=binding.research_source_id
+    JOIN tool_research_source_versions version ON version.id=binding.research_source_version_id
+    JOIN agent_research_evidence_bindings evidence_link ON evidence_link.artifact_binding_id=binding.id
+    WHERE binding.run_id=$1
+    GROUP BY binding.id,source.canonical_url,version.content_hash`, [run.id])).rows[0];
+  assert.equal(evidenceLedger.canonical_url, 'https://github.com/owner/project');
+  assert.equal(evidenceLedger.content_hash, materialsOutput.sourceVersion.contentSha256);
+  assert.equal(evidenceLedger.content_sha256.length, 64);
+  assert(evidenceLedger.evidence_count >= 2);
+  const citationEvidence = (await admin.query(`SELECT count(*)::int AS evidence_count,
+      count(DISTINCT citation_id)::int AS citation_count,
+      count(DISTINCT tool_artifact_id)::int AS artifact_count
+    FROM blog_revision_citation_evidence WHERE revision_id=$1`, [draft.revision_id])).rows[0];
+  assert.equal(citationEvidence.citation_count, 1);
+  assert.equal(citationEvidence.artifact_count, 1);
+  assert.equal(citationEvidence.evidence_count, evidenceLedger.evidence_count);
+  const memoryClient = await admin.connect();
+  let memoryReceipt;
+  try {
+    await memoryClient.query('BEGIN');
+    memoryReceipt = await recordAgentEditorialMemory(memoryClient, {
+      agentUserId: account.agentUserId, runId: run.id, articleId: draft.article_id,
+      revisionId: draft.revision_id, compositionArtifactId: draft.composition_artifact_id,
+      publishedAt: '2026-10-27T02:00:00.000Z',
+    });
+    await memoryClient.query('COMMIT');
+  } catch (error) {
+    await memoryClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    memoryClient.release();
+  }
+  assert(memoryReceipt.eventCount >= 4);
+  const memoryRows = (await admin.query(`SELECT event_type,research_source_version_id,
+      previous_event_id,research_reason FROM agent_editorial_memory_events
+    WHERE revision_id=$1 ORDER BY event_type,id`, [draft.revision_id])).rows;
+  const projectVersion = memoryRows.find(item => item.event_type === 'project-version-observed');
+  assert.equal(projectVersion.research_source_version_id == null, false);
+  assert.equal(projectVersion.previous_event_id, null);
+  assert.equal(projectVersion.research_reason, 'single-publication-initial-research');
+  const claimRelations = (await admin.query(`SELECT relation_kind,evidence_id,related_claim_event_id
+    FROM agent_editorial_claim_relations WHERE agent_user_id=$1 ORDER BY relation_kind,evidence_id`,
+  [account.agentUserId])).rows;
+  assert.equal(claimRelations.length, citationEvidence.evidence_count);
+  assert(claimRelations.every(item => item.relation_kind === 'supports' && item.evidence_id
+    && item.related_claim_event_id === null));
+  const memorySnapshot = await new PostgresAgentEditorialMemoryRepository(admin, {
+    clock: () => new Date('2026-10-27T02:01:00.000Z'),
+  }).snapshot(account.agentUserId);
+  assert.deepEqual(memorySnapshot.previousRepositoryUrls, ['https://github.com/owner/project']);
+  assert.equal((await recordAgentEditorialMemory(admin, {
+    agentUserId: account.agentUserId, runId: run.id, articleId: draft.article_id,
+    revisionId: draft.revision_id, compositionArtifactId: draft.composition_artifact_id,
+    publishedAt: '2026-10-27T02:00:00.000Z',
+  })).eventCount, 0);
+  await assert.rejects(admin.query(`UPDATE agent_editorial_claim_relations
+    SET explanation='mutated relation' WHERE agent_user_id=$1`, [account.agentUserId]));
   const acceptance = createAgentBlogCanaryAcceptanceService({
     repository: new PostgresAgentBlogCanaryAcceptanceRepository(admin),
   });

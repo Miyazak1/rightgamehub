@@ -9,6 +9,7 @@ const { PassThrough, Readable } = require('node:stream');
 const { readFile, readdir, stat, unlink } = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { createCapabilityArtifactHost } = require('./capability-artifact-host.cjs');
 const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 
 const TOKEN_KEY = 'gamehub.session.v1';
@@ -308,6 +309,7 @@ const runEditorUpdateCheck = (context, output, options) => {
 
 async function activate(context) {
   let currentView;
+  const capabilityArtifactHost = createCapabilityArtifactHost({ vscode });
   const updateOutput = vscode.window.createOutputChannel('墨鱼工坊');
   const coursewareOutput = vscode.window.createOutputChannel('墨鱼工坊课件');
   let coursewarePreview = null;
@@ -467,9 +469,10 @@ async function activate(context) {
       const realtimeSources = localApi ? 'ws://127.0.0.1:3093 ws://localhost:3093' : `wss://${apiUrl.host}`;
       view.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] };
       const scriptUri = view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'gamehub.js'));
+      const mediaBaseUrl = `${view.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media')).toString().replace(/\/?$/u, '')}/`;
       const nonce = randomBytes(18).toString('base64');
-      const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
-      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource} 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources} blob:; worker-src blob:; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>墨鱼工坊</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
+      const bootstrap = { host: hostId(), hostVersion: vscode.version, remoteName: vscode.env.remoteName || null, apiBaseUrl: apiUrl.origin, mediaBaseUrl, runtimeDomain: gameRuntimeDomain, canLaunchDesktop: desktopLauncher?.enabled === true, theme: { mode: themeMode() } };
+      view.webview.html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${view.webview.cspSource} 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob: ${apiUrl.origin}; connect-src ${apiUrl.origin} ${realtimeSources} ${view.webview.cspSource} blob:; worker-src blob: ${view.webview.cspSource}; frame-src http://*.localhost:3092 https://*.${gameRuntimeDomain};"><title>墨鱼工坊</title></head><body><div id="root"></div><script nonce="${nonce}">window.__GAMEHUB_EDITOR__=${JSON.stringify(bootstrap).replaceAll('<','\\u003c')};</script><script nonce="${nonce}" src="${scriptUri}"></script></body></html>`;
       const exportRequests=new Map();
       const subscription = view.webview.onDidReceiveMessage(async message => {
         if (!message || message.type !== 'gamehub:request' || !Number.isSafeInteger(message.id)) return;
@@ -494,6 +497,7 @@ async function activate(context) {
             finally {clearTimeout(timer);exportRequests.delete(operationId);}
           }
           else if (message.operation === 'external.open') result = await vscode.env.openExternal(vscode.Uri.parse(trustedExternalUrl(message.payload?.url).href));
+          else if (message.operation === 'capabilityArtifacts.open') result = await capabilityArtifactHost.open(message.payload);
           else if (message.operation === 'desktop.status') {
             if (!desktopLauncher?.enabled) throw new Error('Windows 本机启动能力不可用。');
             const release = desktopRelease(message.payload?.release);

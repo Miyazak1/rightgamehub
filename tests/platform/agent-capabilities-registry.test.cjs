@@ -61,7 +61,7 @@ test('official Agent capabilities are strict, immutable and uniquely addressable
   );
 });
 
-test('frontend and MCP server consume the same official capability metadata', async t => {
+test('frontend hosts browser tools while MCP retains every official capability', async t => {
   const [registry, frontend, { createGameHubMcpServer }, { Client }, { InMemoryTransport }] = await Promise.all([
     import(moduleUrl('packages/agent-capabilities/src/index.mjs')),
     import(moduleUrl('packages/platform-client/src/official-tools.mjs')),
@@ -70,11 +70,15 @@ test('frontend and MCP server consume the same official capability metadata', as
     import(moduleUrl('apps/api/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js')),
   ]);
 
+  const browserCapabilities = registry.officialToolCapabilities.filter(
+    capability => capability.toolId !== 'change-radar',
+  );
   assert.deepEqual(
     frontend.officialTools.map(tool => tool.id),
-    registry.officialToolCapabilities.map(capability => capability.toolId),
+    browserCapabilities.map(capability => capability.toolId),
   );
-  for (const capability of registry.officialToolCapabilities) {
+  assert.equal(frontend.findOfficialTool('change-radar'), null);
+  for (const capability of browserCapabilities) {
     const tool = frontend.findOfficialTool(capability.toolId);
     assert.ok(tool);
     assert.equal(tool.route, capability.launch.route);

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "paper-semantic-eval-v1",
+  "evidence": [
+    {"index":1,"id":"11111111-1111-4111-8111-111111111111","quoteText":"作者提出一种有界检索方法。","quoteHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","locator":{"kind":"paper.layout","pages":[1],"sectionPath":[],"blockIds":["p1-b1"],"objectLabel":null}},
+    {"index":2,"id":"22222222-2222-4222-8222-222222222222","quoteText":"实验报告准确率提高了五个百分点。","quoteHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","locator":{"kind":"paper.layout","pages":[2],"sectionPath":[],"blockIds":["p2-b1"],"objectLabel":null}},
+    {"index":3,"id":"33333333-3333-4333-8333-333333333333","quoteText":"作者说明小样本规模限制了结论的外推。","quoteHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","locator":{"kind":"paper.layout","pages":[3],"sectionPath":[],"blockIds":["p3-b1"],"objectLabel":null}}
+  ],
+  "extraction": {
+    "schemaVersion":"paper-semantic-extraction-v1",
+    "sections":[
+      {"key":"page-window-01","title":"第 1 页","level":1,"evidenceIndexes":[1]},
+      {"key":"page-window-02","title":"第 2 页","level":1,"evidenceIndexes":[2]},
+      {"key":"page-window-03","title":"第 3 页","level":1,"evidenceIndexes":[3]}
+    ],
+    "findings":[
+      {"key":"method-claim","kind":"author_claim","text":"作者提出有界检索方法。","evidenceIndexes":[1],"relations":[{"evidenceIndex":1,"relation":"supports"}],"confidence":"high"},
+      {"key":"reported-result","kind":"observed_result","text":"论文报告准确率提高五个百分点。","evidenceIndexes":[2],"relations":[{"evidenceIndex":2,"relation":"supports"}],"confidence":"high"},
+      {"key":"reader-inference","kind":"xiaomoyu_inference","text":"该方法在更大样本上的表现仍需验证。","evidenceIndexes":[3],"relations":[{"evidenceIndex":3,"relation":"supports"}],"confidence":"medium"},
+      {"key":"missing-cost","kind":"unknown","text":"现有证据未说明运行成本。","evidenceIndexes":[],"relations":[],"confidence":"low"}
+    ],
+    "limitations":[{"key":"small-sample","text":"样本规模限制外推。","evidenceIndexes":[3]}],
+    "followUpQuestions":["方法在更大样本上是否稳定？","运行成本如何？","是否存在独立复现实验？"]
+  }
+}

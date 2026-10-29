@@ -43,7 +43,10 @@ async function appendActionEvent(client, action, eventType, payload) {
 }
 
 export class PostgresAgentBlogFoundationDraftRepository {
-  constructor(pool) { this.pool = pool; }
+  constructor(pool, { requireResearchEvidence = false } = {}) {
+    this.pool = pool;
+    this.requireResearchEvidence = requireResearchEvidence === true;
+  }
 
   async getByAction(actionId) {
     const row = (await this.pool.query(`SELECT draft.*,article.publication_state
@@ -155,6 +158,35 @@ export class PostgresAgentBlogFoundationDraftRepository {
         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'working')`,
       [revisionId, articleId, action.agent_user_id, content.title, content.summary,
         json(content.blocks), json(content.citations), contentSha256]);
+      if (this.requireResearchEvidence) {
+        if (content.citations.length !== artifacts.length
+          || content.citations.some(citation => !uuidPattern.test(citation.id))) {
+          fail('AGENT_BLOG_DRAFT_EVIDENCE_COVERAGE_INVALID');
+        }
+        const evidenceRows = (await client.query(`SELECT binding.tool_artifact_id,
+            binding.id AS artifact_binding_id,link.evidence_id
+          FROM agent_research_artifact_bindings binding
+          JOIN agent_research_evidence_bindings link ON link.artifact_binding_id=binding.id
+          WHERE binding.tool_artifact_id=ANY($1::uuid[])
+          ORDER BY binding.tool_artifact_id,link.created_at,link.evidence_id`, [artifacts])).rows;
+        const byArtifact = new Map();
+        for (const row of evidenceRows) {
+          const values = byArtifact.get(row.tool_artifact_id) ?? [];
+          values.push(row);
+          byArtifact.set(row.tool_artifact_id, values);
+        }
+        if (artifacts.some(artifactId => !(byArtifact.get(artifactId)?.length > 0))) {
+          fail('AGENT_BLOG_DRAFT_EVIDENCE_COVERAGE_INVALID');
+        }
+        for (const [index, artifactId] of artifacts.entries()) {
+          for (const row of byArtifact.get(artifactId)) {
+            await client.query(`INSERT INTO blog_revision_citation_evidence(
+                revision_id,citation_id,tool_artifact_id,artifact_binding_id,evidence_id
+              ) VALUES($1,$2,$3,$4,$5)`, [revisionId, content.citations[index].id,
+              artifactId, row.artifact_binding_id, row.evidence_id]);
+          }
+        }
+      }
       await client.query(`INSERT INTO blog_article_events(
           id,article_id,actor_user_id,action,revision_id,details
         ) VALUES($1,$2,$3,'draft_created',$4,$5)`,

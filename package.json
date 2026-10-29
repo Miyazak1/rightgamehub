@@ -16,6 +16,7 @@
     "build:offscreen-package": "node scripts/build-offscreen-package.mjs",
     "start:harness-m0": "node scripts/start-harness-m0.mjs",
     "pack:harness": "npm run build:harness && npm pack ./extensions/harness --ignore-scripts --pack-destination ./artifacts --cache ./.runtime/npm-cache",
+    "verify:capability-host-installed": "npm run pack:vscode && npm run pack:harness && node scripts/verify-capability-host-installation.mjs",
     "guess-baike:generate": "node scripts/generate-guess-baike-puzzles.mjs",
     "contracts:generate": "node scripts/generate-contracts.mjs",
     "contracts:check": "node scripts/generate-contracts.mjs --check",

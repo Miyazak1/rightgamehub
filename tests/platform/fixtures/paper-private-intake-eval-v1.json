@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "paper-private-intake-eval-v1",
+  "cases": [
+    {"id":"native-text","qualityGrade":"trusted-text","permittedUses":["analysis","citation","comparison"],"signal":{"scannedCandidate":false,"multiColumn":false,"tableRisk":false,"formulaRisk":false,"readingOrderRisk":false,"imageCount":0},"expectedGrade":"text-native"},
+    {"id":"multi-column","qualityGrade":"limited-text","permittedUses":["analysis"],"signal":{"scannedCandidate":false,"multiColumn":true,"tableRisk":false,"formulaRisk":false,"readingOrderRisk":false,"imageCount":0},"expectedGrade":"mixed-limited"},
+    {"id":"table-risk","qualityGrade":"limited-text","permittedUses":["analysis"],"signal":{"scannedCandidate":false,"multiColumn":false,"tableRisk":true,"formulaRisk":false,"readingOrderRisk":false,"imageCount":0},"expectedGrade":"mixed-limited"},
+    {"id":"formula-risk","qualityGrade":"limited-text","permittedUses":["analysis"],"signal":{"scannedCandidate":false,"multiColumn":false,"tableRisk":false,"formulaRisk":true,"readingOrderRisk":false,"imageCount":0},"expectedGrade":"mixed-limited"},
+    {"id":"reading-order-risk","qualityGrade":"limited-text","permittedUses":["analysis"],"signal":{"scannedCandidate":false,"multiColumn":true,"tableRisk":false,"formulaRisk":false,"readingOrderRisk":true,"imageCount":0},"expectedGrade":"mixed-limited"},
+    {"id":"scan-with-image","qualityGrade":"blocked","permittedUses":[],"signal":{"scannedCandidate":true,"multiColumn":false,"tableRisk":false,"formulaRisk":false,"readingOrderRisk":false,"imageCount":1},"expectedGrade":"blocked"}
+  ]
+}

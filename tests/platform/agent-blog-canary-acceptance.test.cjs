@@ -18,7 +18,7 @@ function evidence() {
       triggerRef: '99999999-9999-4999-8999-999999999999', status: 'succeeded',
       outputType: 'blog.candidate-set', outputId: ids.candidate },
     handoff: { id: ids.handoff, sourceRunId: ids.discovery, sourceArtifactId: ids.candidate, targetRunId: ids.draft },
-    draft: { id: ids.draft, workflowKey: 'blog.project.single.draft-shadow', workflowVersion: 1,
+    draft: { id: ids.draft, workflowKey: 'blog.project.single.draft-shadow', workflowVersion: 2,
       triggerRef: '99999999-9999-4999-8999-999999999999', status: 'succeeded',
       outputType: 'blog.private-draft', outputId: ids.article },
     execution: { discoveryStages: 4, draftStages: 6, nonSucceededStages: 0, stageRetries: 0,

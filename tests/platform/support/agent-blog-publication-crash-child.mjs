@@ -18,6 +18,7 @@ if (!process.env.QA_LEDGER_TEST_URL
 const pool = new pg.Pool({ connectionString: process.env.QA_LEDGER_TEST_URL, max: 2,
   application_name: 'agent-blog-publication-crash-test' });
 const repository = new PostgresAgentBlogFoundationPublicationRepository(pool, {
+  editorialMemoryRecorder: async () => ({ eventCount: 0 }),
   boundaryProbe: async event => {
     if (event.boundary === 'after-commit') process.exit(91);
   },

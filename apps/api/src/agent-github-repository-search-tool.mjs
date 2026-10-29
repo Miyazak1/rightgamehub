@@ -1,4 +1,6 @@
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
+import { githubRateLimitBackoffSeconds, githubRequestHeaders,
+  normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
 
 const MAX_RESPONSE_BYTES = 262144;
 const QUERY = /^[\p{L}\p{N} ._+#-]{2,120}$/u;
@@ -21,12 +23,13 @@ export const GITHUB_REPOSITORY_SEARCH_TOOL = Object.freeze({
 });
 
 export class AgentGitHubRepositorySearchToolError extends Error {
-  constructor(code, { retryable = false, notDispatched = false, cause = null } = {}) {
+  constructor(code, { retryable = false, notDispatched = false, backoffSeconds = null, cause = null } = {}) {
     super(code, cause ? { cause } : undefined);
     this.name = 'AgentGitHubRepositorySearchToolError';
     this.code = code;
     this.retryable = retryable;
     this.notDispatched = notDispatched;
+    this.backoffSeconds = backoffSeconds;
   }
 }
 
@@ -97,8 +100,9 @@ async function readResponse(response) {
 }
 
 export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fetch,
-  userAgent = 'GameHub-Agent-Discovery/1.0' } = {}) {
+  userAgent = 'GameHub-Agent-Discovery/1.0', token = null } = {}) {
   if (typeof fetchImpl !== 'function') fail('AGENT_GITHUB_SEARCH_FETCH_REQUIRED', { notDispatched: true });
+  const researchToken = normalizeGitHubResearchToken(token);
   return async ({ request: raw, timeoutSeconds = 30 }) => {
     const input = validateGitHubRepositorySearchInput(raw);
     const search = `${input.query} archived:false fork:false stars:>=${input.minStars}`
@@ -109,15 +113,17 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
     try {
       response = await fetchImpl(canonicalUri, {
         method: 'GET', redirect: 'error', signal: AbortSignal.timeout(timeoutSeconds * 1000),
-        headers: { accept: 'application/vnd.github+json', 'user-agent': userAgent,
-          'x-github-api-version': '2022-11-28' },
+        headers: githubRequestHeaders({ accept: 'application/vnd.github+json', userAgent, token: researchToken }),
       });
     } catch (error) {
       fail('AGENT_GITHUB_SEARCH_NETWORK_FAILED', { retryable: true, cause: error });
     }
-    if (!response.ok) fail('AGENT_GITHUB_SEARCH_UPSTREAM_FAILED', {
-      retryable: response.status === 403 || response.status === 429 || response.status >= 500,
-    });
+    if (!response.ok) {
+      const backoffSeconds = githubRateLimitBackoffSeconds(response);
+      fail(backoffSeconds == null ? 'AGENT_GITHUB_SEARCH_UPSTREAM_FAILED' : 'AGENT_GITHUB_RATE_LIMITED', {
+        retryable: backoffSeconds != null || response.status >= 500, backoffSeconds,
+      });
+    }
     let payload;
     try { payload = JSON.parse(await readResponse(response)); }
     catch (error) { fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID', { cause: error }); }

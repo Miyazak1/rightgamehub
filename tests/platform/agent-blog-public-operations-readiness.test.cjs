@@ -11,6 +11,7 @@ const now = new Date('2026-10-26T02:00:00.000Z');
 const runtimeConfig = overrides => ({
   schemaVersion: 'agent-blog-public-runtime-config-v1', enabled: true, agentUserId,
   provider: 'deepseek', modelId: 'deepseek-flash', dailyPublicationRunLimit: 1,
+  githubResearchAuthenticated: true,
   monthlyProviderCallLimit: 120, monthlyCostMicrousdLimit: 10_000_000,
   consecutiveFailureLimit: 2, ...overrides,
 });

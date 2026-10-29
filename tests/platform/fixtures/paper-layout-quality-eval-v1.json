@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "paper-layout-quality-eval-v1",
+  "cases": [
+    {
+      "id": "single-column-clean",
+      "expectedGrade": "trusted-text",
+      "evidencePages": [1, 2],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 0, "items": [
+          { "str": "A complete abstract and introduction with enough text for a reliable page-level evidence block.", "x": 70, "y": 700, "width": 450 }
+        ] },
+        { "page": 2, "width": 600, "height": 800, "imageCount": 0, "items": [
+          { "str": "The method section continues in ordinary single-column prose and has a stable reading order.", "x": 70, "y": 700, "width": 450 }
+        ] }
+      ]
+    },
+    {
+      "id": "two-column-order-reset",
+      "expectedGrade": "blocked",
+      "evidencePages": [1],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 0, "items": [
+          { "str": "left one text", "x": 50, "y": 700, "width": 190 },
+          { "str": "left two text", "x": 50, "y": 600, "width": 190 },
+          { "str": "left three text", "x": 50, "y": 500, "width": 190 },
+          { "str": "left four text", "x": 50, "y": 400, "width": 190 },
+          { "str": "left five text", "x": 50, "y": 300, "width": 190 },
+          { "str": "left six text", "x": 50, "y": 200, "width": 190 },
+          { "str": "right one text", "x": 340, "y": 700, "width": 190 },
+          { "str": "right two text", "x": 340, "y": 600, "width": 190 },
+          { "str": "right three text", "x": 340, "y": 500, "width": 190 },
+          { "str": "right four text", "x": 340, "y": 400, "width": 190 },
+          { "str": "right five text", "x": 340, "y": 300, "width": 190 },
+          { "str": "right six text", "x": 340, "y": 200, "width": 190 }
+        ] }
+      ]
+    },
+    {
+      "id": "table-grid-risk",
+      "expectedGrade": "limited-text",
+      "evidencePages": [1],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 0, "items": [
+          { "str": "Model", "x": 60, "y": 650, "width": 60 }, { "str": "Score", "x": 220, "y": 650, "width": 60 }, { "str": "Cost", "x": 380, "y": 650, "width": 60 },
+          { "str": "Alpha", "x": 60, "y": 610, "width": 60 }, { "str": "91.2", "x": 220, "y": 610, "width": 60 }, { "str": "12", "x": 380, "y": 610, "width": 60 },
+          { "str": "Beta", "x": 60, "y": 570, "width": 60 }, { "str": "89.8", "x": 220, "y": 570, "width": 60 }, { "str": "8", "x": 380, "y": 570, "width": 60 },
+          { "str": "Results are shown for the complete benchmark and require row and column context.", "x": 60, "y": 500, "width": 440 }
+        ] }
+      ]
+    },
+    {
+      "id": "formula-and-figure-risk",
+      "expectedGrade": "limited-text",
+      "evidencePages": [1],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 1, "items": [
+          { "str": "The objective is L = sum of weighted errors, while Figure 2 contains the visual result that the text layer cannot verify.", "x": 60, "y": 700, "width": 470 },
+          { "str": "The formula uses x = y and the surrounding prose remains available for internal analysis only.", "x": 60, "y": 650, "width": 470 }
+        ] }
+      ]
+    },
+    {
+      "id": "partial-scan",
+      "expectedGrade": "blocked",
+      "evidencePages": [1, 3],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Searchable first page with enough ordinary prose for a local text block and evidence locator.", "x": 60, "y": 700, "width": 470 }] },
+        { "page": 2, "width": 600, "height": 800, "imageCount": 2, "items": [] },
+        { "page": 3, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Searchable final page with enough ordinary prose, but the scanned middle page blocks trust.", "x": 60, "y": 700, "width": 470 }] }
+      ]
+    },
+    {
+      "id": "evidence-coverage-gap",
+      "expectedGrade": "blocked",
+      "evidencePages": [1, 2],
+      "pages": [
+        { "page": 1, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Page one has text and evidence, with enough content to avoid the low-density warning.", "x": 60, "y": 700, "width": 470 }] },
+        { "page": 2, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Page two has text and evidence, with enough content to avoid the low-density warning.", "x": 60, "y": 700, "width": 470 }] },
+        { "page": 3, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Page three has text but no evidence locator, so citation coverage is incomplete.", "x": 60, "y": 700, "width": 470 }] },
+        { "page": 4, "width": 600, "height": 800, "imageCount": 0, "items": [{ "str": "Page four has text but no evidence locator, so citation coverage remains incomplete.", "x": 60, "y": 700, "width": 470 }] }
+      ]
+    }
+  ]
+}

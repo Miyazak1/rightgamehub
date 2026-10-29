@@ -6,7 +6,7 @@
   "kind": "component",
   "apiVersion": 1,
   "entry": "./index.mjs",
-  "integrity": "sha256:bdbf137cb57d8c29c3238b471e326117712e338bee09c6817667b1cdc7464b4b",
+  "integrity": "sha256:90c4c7dcb54775ca591af58db27e4891b1836c94bf9fdae122dbd6c7e4e46f56",
   "hotSwap": "live",
   "stateSchemaVersion": 1,
   "capabilities": [

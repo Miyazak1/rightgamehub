@@ -52,6 +52,7 @@ test('runtime worker dispatches outbox and atomically completes a registered sta
   const worker = createAgentRuntimeWorker({
     repository: fixture.repository, workerId: 'worker-test', instanceId: '77777777-7777-4777-8777-777777777777',
     leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 2,
+    metadata: { role: 'paper-research', agentUserId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
     handlers: { 'foundation.worker:prepare': async (context, execution) => {
       assert.equal(context.run.id, '22222222-2222-4222-8222-222222222222');
       assert.equal(execution.signal.aborted, false);
@@ -61,6 +62,10 @@ test('runtime worker dispatches outbox and atomically completes a registered sta
   const result = await worker.runOnce();
   assert.equal(result.status, 'completed');
   assert.equal(result.run.status, 'succeeded');
+  const registration = fixture.calls.find(call => call[0] === 'register')[1];
+  assert.equal(registration.metadata.role, 'paper-research');
+  assert.equal(registration.metadata.agentUserId, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  assert.equal(typeof registration.metadata.pid, 'number');
   assert(fixture.calls.some(call => call[0] === 'deliver-outbox'));
   const claim = fixture.calls.find(call => call[0] === 'claim-stage');
   assert.deepEqual(claim[3], ['foundation.worker:prepare']);
@@ -91,7 +96,9 @@ test('runtime worker converts explicit retryable handler failures into durable r
   const worker = createAgentRuntimeWorker({
     repository: fixture.repository, workerId: 'worker-test', instanceId: '88888888-8888-4888-8888-888888888888',
     leaseSeconds: 30, heartbeatSeconds: 5, outboxBatch: 1,
-    handlers: { 'foundation.worker:prepare': async () => { throw new AgentRuntimeWorkerError('FIXTURE_RETRY', { retryable: true }); } },
+    handlers: { 'foundation.worker:prepare': async () => {
+      throw new AgentRuntimeWorkerError('FIXTURE_RETRY', { retryable: true, backoffSeconds: 91 });
+    } },
   });
   const result = await worker.runOnce();
   assert.equal(result.status, 'retry-scheduled');
@@ -99,6 +106,7 @@ test('runtime worker converts explicit retryable handler failures into durable r
   assert.equal(failure.errorCode, 'FIXTURE_RETRY');
   assert.equal(failure.retryable, true);
   assert.equal(failure.uncertain, false);
+  assert.equal(failure.backoffSeconds, 91);
 });
 
 test('runtime worker preserves an explicit unknown side-effect outcome without retrying', async () => {

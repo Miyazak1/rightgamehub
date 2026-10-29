@@ -30,6 +30,9 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
       'agent-blog-foundation-publication-repository.mjs');
     const { createAgentBlogFoundationPublicationGateway } = await harness.load(
       'agent-blog-foundation-publication.mjs');
+    const withoutEditorialMemory = options => new PostgresAgentBlogFoundationPublicationRepository(admin, {
+      ...options, editorialMemoryRecorder: async () => ({ eventCount: 0 }),
+    });
 
     const operatorId = uuid();
     await admin.query("INSERT INTO users(id,display_name,role) VALUES($1,'Publication fault operator','admin')",
@@ -139,7 +142,7 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
     };
     const before = await draftRun('before');
     const beforeGateway = createAgentBlogFoundationPublicationGateway({ runtimeRepository: runtime,
-      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin, {
+      publicationRepository: withoutEditorialMemory({
         boundaryProbe: async event => {
           if (event.boundary === 'before-commit') throw Object.assign(new Error('injected before commit'), {
             code: 'INJECTED_BEFORE_COMMIT',
@@ -158,7 +161,7 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
 
     const after = await draftRun('after');
     const afterGateway = createAgentBlogFoundationPublicationGateway({ runtimeRepository: runtime,
-      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin, {
+      publicationRepository: withoutEditorialMemory({
         boundaryProbe: async event => {
           if (event.boundary === 'after-commit') throw Object.assign(new Error('injected response loss'), {
             code: 'INJECTED_AFTER_COMMIT',
@@ -187,8 +190,8 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
       articleId: concurrent.articleId, revisionId: concurrent.revisionId,
       contentSha256: concurrent.contentSha256 };
     const concurrentResults = await Promise.all([
-      new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
-      new PostgresAgentBlogFoundationPublicationRepository(admin).publish(concurrentRequest),
+      withoutEditorialMemory().publish(concurrentRequest),
+      withoutEditorialMemory().publish(concurrentRequest),
     ]);
     assert.deepEqual(concurrentResults.map(item => item.existing).sort(), [false, true]);
     assert.deepEqual((await admin.query(`SELECT
@@ -213,7 +216,7 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
     assert.equal(crashReceipt.publication_state, 'published');
     const crashReplay = await createAgentBlogFoundationPublicationGateway({
       runtimeRepository: runtime,
-      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin),
+      publicationRepository: withoutEditorialMemory(),
       policyService,
     }).publish(crashed);
     assert.equal(crashReplay.status, 'succeeded');
@@ -230,7 +233,7 @@ test('Foundation publication commit boundaries recover exactly once on PostgreSQ
       [expired.stageId]);
     await assert.rejects(createAgentBlogFoundationPublicationGateway({
       runtimeRepository: runtime,
-      publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(admin),
+      publicationRepository: withoutEditorialMemory(),
       policyService,
     }).publish(expired), error => error.code === 'AGENT_RUNTIME_LEASE_LOST');
     assert.deepEqual((await admin.query(`SELECT article.publication_state,revision.revision_state,

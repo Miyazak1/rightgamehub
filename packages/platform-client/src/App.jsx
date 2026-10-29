@@ -106,7 +106,9 @@ const emitAnalytics = (api, hostKind, event, demo = false) => {
 
 function resolveHostIdentity(capabilities = {}) {
   const id = String(capabilities.host || 'browser').toLowerCase();
-  return hostIdentities[id] ?? { id, label: capabilities.host || 'Agent', short: id.slice(0, 3).toUpperCase() };
+  const version = String(capabilities.hostVersion || '1');
+  return hostIdentities[id] ? { ...hostIdentities[id], version }
+    : { id, version, label: capabilities.host || 'Agent', short: id.slice(0, 3).toUpperCase() };
 }
 
 function useRoute(mode) {
@@ -1765,7 +1767,7 @@ const readAdminArticle = () => {
   return outer.get('article') || embedded?.get('article') || null;
 };
 
-function AdminPage({ api, demo, go }) {
+function AdminPage({ api, demo, go, hostIdentity, hostAdapter }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
   const demoPuzzles = [{ id: 'wikipedia-4723', title: '足球', aliases: ['协会足球','英式足球'], category: '体育', sourceKind: 'wikipedia-lead', sourceTitle: '足球', sourceUrl: 'https://zh.wikipedia.org/wiki/%E8%B6%B3%E7%90%83', sourceRevision: 94245396, sourceUpdatedAt: '2026-09-27T15:22:05Z', license: 'CC BY-SA 4.0', introHanCount: 364, content: '足球主要专指英式足球，官方名为协会足球，是一种世界流行的团体球类运动。', status: 'ready', qualityReason: null, scheduledDates: [today] }];
   const demoAutomation = { enabled: true, running: false, intervalMinutes: 360, batchSize: 20, scheduleDays: 14, readyCount: 18, scheduledCount: 14, lastRun: { status: 'succeeded', startedAt: new Date().toISOString(), finishedAt: new Date().toISOString(), fetchedCount: 20, acceptedCount: 7, scheduledCount: 4, errorCode: null, errorMessage: null } };
@@ -1872,7 +1874,7 @@ function AdminPage({ api, demo, go }) {
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}{state.panelError && <div className="admin-panel-error" role="alert"><span>{state.panelError}</span><button type="button" onClick={() => loadPanel(panel, true)}>重新加载</button></div>}
     {firstLoad ? <LoadingCards/> : <>
     {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
-    {panel === 'agents' && <AgentAdmin api={api} go={go}/>}
+    {panel === 'agents' && <AgentAdmin api={api} go={go} hostIdentity={hostIdentity} hostAdapter={hostAdapter}/>}
     {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
     {panel === 'blog' && <BlogAdmin api={api} demo={demo} initialArticleId={readAdminArticle()}/>}
     {panel === 'works' && <>
@@ -1959,7 +1961,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload') content = <UploadPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'builds') content = <SourceBuildPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go} savedWork={savedWork} route={route}/>;
-  else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go}/>;
+  else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go} hostIdentity={hostIdentity} hostAdapter={host}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art}/>;
   else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;

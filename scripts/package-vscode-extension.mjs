@@ -24,6 +24,7 @@ const contentTypes = `<?xml version="1.0" encoding="utf-8"?>
   <Default Extension="js" ContentType="application/javascript" />
   <Default Extension="cjs" ContentType="application/javascript" />
   <Default Extension="mjs" ContentType="application/javascript" />
+  <Default Extension="gz" ContentType="application/gzip" />
   <Default Extension="svg" ContentType="image/svg+xml" />
   <Default Extension="map" ContentType="application/json" />
   <Default Extension="md" ContentType="text/markdown" />
@@ -58,6 +59,13 @@ const treeInputs = async (sourceUrl,packagePrefix) => {
   return visit(sourceUrl);
 };
 
+const copiedMediaInputs = await Promise.all(
+  (await readdir(new URL('media/', extensionRoot), { withFileTypes: true }))
+    .filter(entry => entry.isFile() && /^[a-zA-Z0-9._-]+\.[0-9a-f]{16}\.(?:gz|js|mjs)$/u.test(entry.name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(async entry => [`extension/media/${entry.name}`, await readFile(new URL(`media/${entry.name}`, extensionRoot))]),
+);
+
 const inputs = [
   ['[Content_Types].xml', Buffer.from(contentTypes)],
   ['extension.vsixmanifest', Buffer.from(manifest)],
@@ -65,6 +73,7 @@ const inputs = [
   ['extension/package.nls.json', await readFile(new URL('package.nls.json', extensionRoot))],
   ['extension/package.nls.zh-cn.json', await readFile(new URL('package.nls.zh-cn.json', extensionRoot))],
   ['extension/gamehub-extension.cjs', await readFile(new URL('gamehub-extension.cjs', extensionRoot))],
+  ['extension/capability-artifact-host.cjs', await readFile(new URL('capability-artifact-host.cjs', extensionRoot))],
   ['extension/bin/courseware-bridge.mjs', await readFile(new URL('bin/courseware-bridge.mjs', extensionRoot))],
   ['extension/toolkits/catalog.json', await readFile(new URL('plugins/gamehub/toolkits/catalog.json', root))],
   ['extension/host-support.json', await readFile(new URL('plugins/gamehub/host-support.json', root))],
@@ -74,7 +83,7 @@ const inputs = [
   ...await Promise.all(['store-contract.mjs','store-rpc.mjs','sqlite-store.mjs'].map(async name=>['extension/save-cache/'+name,await readFile(new URL('packages/save-cache/src/'+name,root))])),
   ['extension/media/file-export.cjs', await readFile(new URL('media/file-export.cjs', extensionRoot))],
   ['extension/media/gamehub.js', await readFile(new URL('media/gamehub.js', extensionRoot))],
-  ['extension/media/gamehub.js.map', await readFile(new URL('media/gamehub.js.map', extensionRoot))],
+  ...copiedMediaInputs,
   ['extension/media/arcade.svg', await readFile(new URL('media/arcade.svg', extensionRoot))],
   ['extension/README.md', await readFile(new URL('README.md', extensionRoot))],
 ];

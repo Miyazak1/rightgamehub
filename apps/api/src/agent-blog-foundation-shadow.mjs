@@ -25,12 +25,46 @@ function stringList(value, { maxItems, maxLength }) {
   return items;
 }
 
+function editorialMemory(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || value.schemaVersion !== 'blog-editorial-memory-input-v1'
+    || Object.keys(value).some(key => !['schemaVersion', 'capturedAt', 'activeCooldowns'].includes(key))
+    || !Array.isArray(value.activeCooldowns) || value.activeCooldowns.length > 120) {
+    fail('AGENT_BLOG_SHADOW_EDITORIAL_MEMORY_INVALID');
+  }
+  const capturedAt = new Date(value.capturedAt);
+  if (!Number.isFinite(capturedAt.getTime())) fail('AGENT_BLOG_SHADOW_EDITORIAL_MEMORY_INVALID');
+  const activeCooldowns = value.activeCooldowns.map(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)
+      || Object.keys(item).some(key => !['subjectKind', 'subjectKey', 'label', 'occurrenceCount', 'cooldownUntil'].includes(key))
+      || !['comparison', 'topic', 'claim', 'scenario'].includes(item.subjectKind)
+      || !Number.isSafeInteger(item.occurrenceCount) || item.occurrenceCount < 1) {
+      fail('AGENT_BLOG_SHADOW_EDITORIAL_MEMORY_INVALID');
+    }
+    const subjectKey = compact(item.subjectKey, 512);
+    const label = compact(item.label, 1000);
+    const cooldownUntil = new Date(item.cooldownUntil);
+    if (subjectKey.length < 3 || label.length < 2 || !Number.isFinite(cooldownUntil.getTime())
+      || cooldownUntil.getTime() <= capturedAt.getTime()) fail('AGENT_BLOG_SHADOW_EDITORIAL_MEMORY_INVALID');
+    return { subjectKind: item.subjectKind, subjectKey, label,
+      occurrenceCount: item.occurrenceCount, cooldownUntil: cooldownUntil.toISOString() };
+  });
+  if (new Set(activeCooldowns.map(item => `${item.subjectKind}\0${item.subjectKey}`)).size !== activeCooldowns.length) {
+    fail('AGENT_BLOG_SHADOW_EDITORIAL_MEMORY_INVALID');
+  }
+  return { schemaVersion: value.schemaVersion, capturedAt: capturedAt.toISOString(), activeCooldowns };
+}
+
 function normalizeInput(value, schemaVersion) {
   const keys = ['schemaVersion', 'topicScope', 'candidateRepositories', 'recentTitles',
-    'previousRepositoryUrls', 'behaviorProfile'];
+    'previousRepositoryUrls', 'behaviorProfile', 'editorialMemory'];
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || Object.keys(value).some(key => !keys.includes(key))
-    || value.schemaVersion !== schemaVersion) fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
+    || !schemaVersion.includes(value.schemaVersion)
+    || (value.schemaVersion.endsWith('-v1') && Object.hasOwn(value, 'editorialMemory'))
+    || (value.schemaVersion.endsWith('-v2') && !Object.hasOwn(value, 'editorialMemory'))) {
+    fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
+  }
   const topicScope = compact(value.topicScope, 2000);
   if (topicScope.length < 2) fail('AGENT_BLOG_SHADOW_INPUT_INVALID');
   if (!Array.isArray(value.candidateRepositories) || value.candidateRepositories.length < 1
@@ -44,6 +78,9 @@ function normalizeInput(value, schemaVersion) {
   let behaviorProfile;
   try { behaviorProfile = normalizeAgentBehaviorProfile(value.behaviorProfile); }
   catch { fail('AGENT_BLOG_SHADOW_BEHAVIOR_INVALID'); }
+  const memory = value.schemaVersion.endsWith('-v2')
+    ? editorialMemory(value.editorialMemory) : { schemaVersion: 'blog-editorial-memory-input-v1',
+      capturedAt: new Date(0).toISOString(), activeCooldowns: [] };
   return {
     schemaVersion: value.schemaVersion,
     topicScope,
@@ -51,13 +88,14 @@ function normalizeInput(value, schemaVersion) {
     recentTitles: stringList(value.recentTitles, { maxItems: 30, maxLength: 120 }),
     previousRepositoryUrls: stringList(value.previousRepositoryUrls, { maxItems: 500, maxLength: 500 }),
     behaviorProfile,
+    editorialMemory: memory,
   };
 }
 
 export const normalizeBlogFoundationShadowInput = value => normalizeInput(
-  value, 'blog-project-single-shadow-input-v1');
+  value, ['blog-project-single-shadow-input-v1', 'blog-project-single-shadow-input-v2']);
 export const normalizeBlogFoundationPublicInput = value => normalizeInput(
-  value, 'blog-project-single-input-v1');
+  value, ['blog-project-single-input-v1', 'blog-project-single-input-v2']);
 
 function prerequisite(context, stageKey) {
   const stage = context.prerequisites.find(item => item.stageKey === stageKey && item.status === 'succeeded');
@@ -73,6 +111,7 @@ function artifactId(result) {
 
 function createFoundationHandlers({
   toolGateway, providerGateway, artifactRepository, draftGateway, publicationGateway = null,
+  researchEvidenceRepository = null,
 }, { workflow, normalizeInputValue }) {
   if (!toolGateway || !providerGateway || !artifactRepository || !draftGateway
     || (workflow === BLOG_PROJECT_SINGLE_WORKFLOW.workflowKey && !publicationGateway)) {
@@ -100,6 +139,7 @@ function createFoundationHandlers({
         fail('AGENT_BLOG_SHADOW_FROZEN_INPUT_INVALID');
       }
       const artifactIds = [];
+      const researchEvidenceBindingIds = [];
       for (const [index, repository] of input.candidateRepositories.entries()) {
         const ordinal = String(index + 1).padStart(2, '0');
         const result = await toolGateway.invoke({
@@ -109,14 +149,23 @@ function createFoundationHandlers({
             capabilityKey: 'research.github.read', contractVersion: 1, riskLevel: 'L1' },
           idempotencyKey: `blog-evidence:${context.run.id}:${ordinal}`,
           resource: { type: 'github.repository', owner: 'public', id: repository },
-          tool: { toolKey: 'research.github.repository.read', contractVersion: 1 },
+          tool: { toolKey: 'research.github.repository.materials.read', contractVersion: 1 },
           request: { repository },
         });
         if (result.status !== 'succeeded') fail('AGENT_BLOG_SHADOW_TOOL_INCOMPLETE');
-        artifactIds.push(artifactId(result));
+        const sourceArtifactId = artifactId(result);
+        artifactIds.push(sourceArtifactId);
+        if (researchEvidenceRepository) {
+          const archived = await researchEvidenceRepository.archiveGitHubRepositoryArtifact({
+            runId: context.run.id, stageId: context.stage.id, actionId: result.actionId,
+            toolArtifactId: sourceArtifactId, workerId: execution.workerId,
+            leaseToken: execution.leaseToken,
+          });
+          researchEvidenceBindingIds.push(archived.id);
+        }
       }
       return { outputRef: { schemaVersion: 'blog-evidence-set-ref-v1', artifactIds,
-        candidateCount: input.candidateRepositories.length } };
+        researchEvidenceBindingIds, candidateCount: input.candidateRepositories.length } };
     },
 
     ...generated,

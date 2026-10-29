@@ -3,6 +3,16 @@ import {createBrowserFileExporter} from './file-export.mjs';
 import {validateFileExport} from '../../web-game-sdk/src/sharing-protocol.mjs';
 import {createIndexedDbSaveStore} from '../../save-cache/src/indexeddb-store.mjs';
 import {createSaveStoreProxy} from '../../save-cache/src/store-rpc.mjs';
+export { CAPABILITY_HOST_PROTOCOL_VERSION, CAPABILITY_HOST_OPERATIONS,
+  CapabilityHostProtocolError, normalizeCapabilityHostProfileV1,
+  normalizeCapabilityHostRunV1, normalizeCapabilityHostArtifactV1,
+  normalizeCapabilityHostEventV1, createCapabilityExecutionHostClient,
+} from './capability-execution.mjs';
+export { createCapabilityControlPlaneTransport } from './capability-control-plane.mjs';
+export { createCapabilityTaskSurface } from './capability-task-surface.mjs';
+export { stableCapabilityArtifactJson, sha256CapabilityArtifact,
+  normalizeCapabilityArtifactOpenDirectiveV1, verifyCapabilityArtifactOpenPayload,
+} from './capability-artifact-open.mjs';
 const MODES = new Set(['light', 'dark', 'high-contrast']);
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -198,6 +208,27 @@ export function createHarnessHostAdapter({ window: hostWindow = globalThis.windo
       },
       async persistence() { await ensureCredentials(); return { ...credentialPersistence }; },
     },
+    capabilityArtifacts: {
+      async open(payload) {
+        const response = await hostWindow.fetch(new URL('api/gamehub/capability-artifact-open', hostWindow.document.baseURI), {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
+          headers: { 'Content-Type': 'application/json', 'X-GameHub-Capability-Artifact': '1' },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.opened !== true || typeof result.previewPath !== 'string') {
+          throw Object.assign(new Error(result.error || 'Harness 未能打开任务产物。'),
+            { code: 'CAPABILITY_HOST_ARTIFACT_OPEN_FAILED' });
+        }
+        const preview = hostWindow.open?.(new URL(result.previewPath, hostWindow.document.baseURI).href,
+          '_blank', 'noopener,noreferrer');
+        if (preview === null || preview === undefined) {
+          throw Object.assign(new Error('Harness 阻止了产物预览窗口。'),
+            { code: 'CAPABILITY_HOST_ARTIFACT_OPEN_FAILED' });
+        }
+        return { opened: true, cancelled: false };
+      },
+    },
     diagnostics: { async snapshot() { await ensureCredentials(); return { host: 'harness', surface: 'sidebar', theme: readTheme().mode, credentialPersistence: credentialPersistence.kind }; } },
     dispose,
   };
@@ -279,6 +310,9 @@ export function createEditorHostAdapter({ window: hostWindow = globalThis.window
       async setTokens(tokens) { await bridge.call('credentials.set', { tokens }); },
       async clearTokens() { await bridge.call('credentials.clear'); },
       async persistence() { return { kind: 'secret-storage', description: `${host === 'cursor' ? 'Cursor' : 'VS Code'} SecretStorage` }; },
+    },
+    capabilityArtifacts: {
+      async open(payload) { return bridge.call('capabilityArtifacts.open', payload); },
     },
     ...(desktopEnabled ? { desktop: { getReleaseStatus: getDesktopReleaseStatus, prepareRelease: prepareDesktopRelease, launchRelease: launchDesktopRelease } } : {}),
     navigation: { async openExternal(url) { return bridge.call('external.open', { url }); } },

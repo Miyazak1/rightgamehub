@@ -38,7 +38,9 @@ test('web ZIP becomes a persistent playable record without exposing asset manife
   assert.equal(file.web.assets, undefined);
   const restored = await f.createTransferService({ root: f.root });
   t.after(() => restored.close());
-  const response = await restored.routes[0].fetch(new Request('http://dsh.internal/api/gamehub/files'));
+  const filesRoute = restored.routes.find(route => route.path === '/api/gamehub/files');
+  assert.ok(filesRoute, 'files route must be registered');
+  const response = await filesRoute.fetch(new Request('http://dsh.internal/api/gamehub/files'));
   assert.deepEqual((await response.json()).files, [file]);
   assert.equal(await fs.readFile(path.join(f.root, 'web', file.id, 'assets/app.js'), 'utf8'), script.data);
 });

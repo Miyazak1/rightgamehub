@@ -95,6 +95,27 @@ test('Harness adapter restores and updates credentials through the host OS keych
   assert.equal(await adapter.account.getAccessToken(), null);
 });
 
+test('Harness adapter opens verified artifacts only through its trusted local route', async () => {
+  const { createHarnessHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
+  const hostWindow = fakeHarnessWindow();
+  hostWindow.document.baseURI = 'http://dsh.internal/sidebar/';
+  let request; let opened;
+  hostWindow.fetch = async (url, init) => {
+    request = { url: String(url), init };
+    return new Response(JSON.stringify({ ok: true, opened: true,
+      previewPath: '/api/gamehub/capability-artifact-preview?id=33333333-3333-4333-8333-333333333333' }),
+    { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  hostWindow.open = url => { opened = url; return {}; };
+  const adapter = createHarnessHostAdapter({ window: hostWindow, credentialBridge: null });
+  assert.deepEqual(await adapter.capabilityArtifacts.open({ directive: { artifactId: 'fixture' },
+    artifact: { content: {} } }), { opened: true, cancelled: false });
+  assert.equal(new URL(request.url).pathname, '/sidebar/api/gamehub/capability-artifact-open');
+  assert.equal(request.init.headers['X-GameHub-Capability-Artifact'], '1');
+  assert.equal(new URL(opened).pathname, '/api/gamehub/capability-artifact-preview');
+  adapter.dispose();
+});
+
 test('VS Code and Cursor adapter follows editor theme and stores credentials through SecretStorage', async () => {
   const { createEditorHostAdapter } = await import('../../packages/host-contract/src/index.mjs');
   const colors = {
@@ -141,9 +162,10 @@ test('VS Code and Cursor adapter follows editor theme and stores credentials thr
   await adapter.account.clearTokens();
   assert.equal(credentials, null);
   await adapter.navigation.openExternal('https://github.com/login/oauth/authorize');
+  await adapter.capabilityArtifacts.open({ directive: { artifactId: 'fixture' }, artifact: { content: {} } });
   assert.equal((await adapter.account.persistence()).kind, 'secret-storage');
   assert.equal((await adapter.diagnostics.snapshot()).remoteName, 'ssh-remote');
-  assert.deepEqual(calls.map(([operation]) => operation), ['credentials.get', 'credentials.set', 'credentials.clear', 'external.open']);
+  assert.deepEqual(calls.map(([operation]) => operation), ['credentials.get', 'credentials.set', 'credentials.clear', 'external.open', 'capabilityArtifacts.open']);
   adapter.dispose();
   assert.equal(themeListener, null);
 });

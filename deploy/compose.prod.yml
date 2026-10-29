@@ -161,6 +161,9 @@ services:
       # and decrypts managed Agent provider credentials. Migration/workers do
       # not need it and must not receive it through the shared environment.
       AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      # GitHub research authentication is server-only and deliberately not
+      # inherited by migration or unrelated workers through api-environment.
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
       DEEPSEEK_SEARCH_ENABLED: ${DEEPSEEK_SEARCH_ENABLED:-false}
       DEEPSEEK_FETCH_ENABLED: ${DEEPSEEK_FETCH_ENABLED:-false}
       RESEARCH_CANDIDATE_ASSESSMENT_ENABLED: ${RESEARCH_CANDIDATE_ASSESSMENT_ENABLED:-false}
@@ -573,6 +576,8 @@ services:
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT:-12}
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT:-1000000}
       AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: ${AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD:-2}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
+      AGENT_ARXIV_CONTACT_EMAIL: ${AGENT_ARXIV_CONTACT_EMAIL:-}
       NODE_OPTIONS: --max-old-space-size=64
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -618,6 +623,7 @@ services:
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT:-12}
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT:-1000000}
       AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: ${AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD:-2}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
     networks: [backend]
     read_only: true
     tmpfs: [/tmp]
@@ -661,6 +667,8 @@ services:
       AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: ${AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD:-2}
       AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED: ${AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED:-false}
       AGENT_BLOG_PRIVATE_SCHEDULE_POLL_MS: ${AGENT_BLOG_PRIVATE_SCHEDULE_POLL_MS:-30000}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
+      AGENT_ARXIV_CONTACT_EMAIL: ${AGENT_ARXIV_CONTACT_EMAIL:-}
     networks: [backend]
     read_only: true
     tmpfs: [/tmp]
@@ -723,7 +731,9 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       postgres: { condition: service_healthy }
-    environment: *agent-blog-public-environment
+    environment:
+      <<: *agent-blog-public-environment
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
     networks: [backend]
     read_only: true
     tmpfs: [/tmp]
@@ -750,6 +760,64 @@ services:
     environment:
       <<: *agent-blog-public-environment
       AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
+  # Explicit paper-to-article execution. It consumes one existing verified
+  # paper analysis and persists a private draft only; publication is impossible.
+  agent-paper-article-run:
+    <<: *service-defaults
+    profiles: ["agent-paper-article-run"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-paper-article-manual-run-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      <<: *agent-blog-public-environment
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_PAPER_ARTICLE_ANALYSIS_ID: ${AGENT_PAPER_ARTICLE_ANALYSIS_ID:-}
+      AGENT_PAPER_ARTICLE_REQUEST_ID: ${AGENT_PAPER_ARTICLE_REQUEST_ID:-}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
+  # R2.3 production acceptance: exactly three distinct, already verified arXiv
+  # analyses become private drafts and receive one immutable acceptance receipt.
+  # It has no publication or scheduler authority.
+  agent-paper-article-acceptance:
+    <<: *service-defaults
+    profiles: ["agent-paper-article-acceptance"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-paper-article-acceptance-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      <<: *agent-blog-public-environment
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_PAPER_ARTICLE_ACCEPTANCE_ANALYSIS_IDS: ${AGENT_PAPER_ARTICLE_ACCEPTANCE_ANALYSIS_IDS:-}
+      AGENT_PAPER_ARTICLE_ACCEPTANCE_REQUEST_ID: ${AGENT_PAPER_ARTICLE_ACCEPTANCE_REQUEST_ID:-}
     networks: [backend]
     read_only: true
     tmpfs: [/tmp]
@@ -777,6 +845,7 @@ services:
     environment:
       <<: *agent-blog-public-environment
       AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
       AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED: ${AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED:-false}
       AGENT_BLOG_PUBLIC_SCHEDULE_POLL_MS: ${AGENT_BLOG_PUBLIC_SCHEDULE_POLL_MS:-30000}
     networks: [backend]
@@ -788,6 +857,88 @@ services:
     pids_limit: 64
     cpus: "0.75"
     mem_limit: 256m
+
+  # Explicit one-shot private paper analysis. The source paper must already be
+  # an immutable trusted-text, fulltext-open arXiv version. This service has no
+  # blog publication capability and is never part of the default deployment.
+  agent-paper-semantic-run:
+    <<: *service-defaults
+    profiles: ["agent-paper-semantic-run"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: "no"
+    command: ["node", "apps/api/src/agent-paper-semantic-run-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_PAPER_SEMANTIC_ENABLED: ${AGENT_PAPER_SEMANTIC_ENABLED:-false}
+      AGENT_PAPER_SEMANTIC_AGENT_USER_ID: ${AGENT_PAPER_SEMANTIC_AGENT_USER_ID:-}
+      AGENT_PAPER_SEMANTIC_PAPER_VERSION_ID: ${AGENT_PAPER_SEMANTIC_PAPER_VERSION_ID:-}
+      AGENT_PAPER_SEMANTIC_REQUEST_ID: ${AGENT_PAPER_SEMANTIC_REQUEST_ID:-}
+      AGENT_PAPER_SEMANTIC_PROVIDER: ${AGENT_PAPER_SEMANTIC_PROVIDER:-deepseek}
+      AGENT_PAPER_SEMANTIC_MODEL_ID: ${AGENT_PAPER_SEMANTIC_MODEL_ID:-deepseek-flash}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 256m
+
+  # Durable private paper worker for the single-server deployment. It only
+  # consumes paper.private.research stages, accepts lawful open full text, and
+  # has no blog publication capability.
+  agent-paper-research-worker:
+    <<: *service-defaults
+    profiles: ["agent-paper-research-worker"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    command: ["node", "apps/api/src/agent-paper-research-worker-cli.mjs"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=256
+      DATABASE_URL: postgresql://gamehub:${POSTGRES_PASSWORD}@postgres:5432/gamehub
+      DATABASE_SSL: "false"
+      AGENT_SECRET_ENCRYPTION_KEY: ${AGENT_SECRET_ENCRYPTION_KEY:-}
+      AGENT_PAPER_RESEARCH_WORKER_ENABLED: ${AGENT_PAPER_RESEARCH_WORKER_ENABLED:-false}
+      AGENT_PAPER_RESEARCH_OPERATIONS_INTERVAL_SECONDS: ${AGENT_PAPER_RESEARCH_OPERATIONS_INTERVAL_SECONDS:-300}
+      MAIL_PROVIDER: resend
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      MAIL_FROM: ${MAIL_FROM}
+      AGENT_BLOG_PRIVATE_CANARY_ENABLED: ${AGENT_BLOG_PRIVATE_CANARY_ENABLED:-false}
+      AGENT_BLOG_PRIVATE_CANARY_PUBLISH_ENABLED: "false"
+      AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: ${AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID:-}
+      AGENT_BLOG_PRIVATE_CANARY_PROVIDER: ${AGENT_BLOG_PRIVATE_CANARY_PROVIDER:-deepseek}
+      AGENT_BLOG_PRIVATE_CANARY_MODEL_ID: ${AGENT_BLOG_PRIVATE_CANARY_MODEL_ID:-deepseek-flash}
+      AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT:-1}
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT:-12}
+      AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: ${AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT:-1000000}
+      AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: ${AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD:-2}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${AGENT_GITHUB_RESEARCH_TOKEN:-}
+      AGENT_ARXIV_CONTACT_EMAIL: ${AGENT_ARXIV_CONTACT_EMAIL:-}
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    cpus: "0.75"
+    mem_limit: 320m
 
   # Deterministic post-run attestation. It performs no network or model calls
   # and appends one immutable, content-free report for the selected draft Run.

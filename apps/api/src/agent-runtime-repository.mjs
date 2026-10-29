@@ -14,6 +14,7 @@ export class AgentRuntimeRepositoryError extends Error {
 const fail = code => { throw new AgentRuntimeRepositoryError(code); };
 const iso = value => value?.toISOString?.() ?? value ?? null;
 const json = value => JSON.stringify(value);
+const sha256 = value => crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const KEY = /^[a-z][a-z0-9.-]{2,119}$/u;
 
@@ -32,6 +33,7 @@ function stageView(row) {
     leaseToken: row.lease_token,
     leasedBy: row.leased_by,
     leaseUntil: iso(row.lease_until),
+    availableAt: iso(row.available_at),
     attemptStartedAt: iso(row.attempt_started_at),
     outputRef: row.output_ref_json,
     errorCode: row.error_code,
@@ -260,6 +262,24 @@ export class PostgresAgentRuntimeRepository {
           AND r.status IN ('queued','running','waiting')
           AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
           AND ($5::uuid IS NULL OR r.id=$5)
+          AND NOT EXISTS(SELECT 1 FROM agent_stage_placement_decisions placement
+            WHERE placement.stage_id=s.id AND placement.stage_attempt=s.attempt
+              AND placement.decision_status='ready' AND placement.target IN ('browser','desktop'))
+          AND NOT EXISTS(
+            SELECT 1 FROM agent_workflow_definitions workflow,
+              jsonb_array_elements(workflow.manifest_json->'stages') stage_definition
+            JOIN agent_capability_execution_manifests execution_manifest
+              ON execution_manifest.contract_key=stage_definition->'capability'->>'key'
+              AND execution_manifest.contract_version=(stage_definition->'capability'->>'version')::integer
+              AND execution_manifest.status='active'
+            WHERE workflow.workflow_key=r.workflow_key AND workflow.workflow_version=r.workflow_version
+              AND stage_definition->>'key'=s.stage_key
+              AND EXISTS(SELECT 1 FROM jsonb_array_elements(execution_manifest.manifest_json->'placements') placement
+                WHERE placement->>'target' IN ('browser','desktop'))
+              AND NOT EXISTS(SELECT 1 FROM agent_stage_placement_decisions current_placement
+                WHERE current_placement.stage_id=s.id AND current_placement.stage_attempt=s.attempt
+                  AND current_placement.decision_status='ready' AND current_placement.target='cloud')
+          )
         GROUP BY r.agent_user_id
       ), candidate AS (
         SELECT s.id FROM agent_run_stages s
@@ -270,6 +290,24 @@ export class PostgresAgentRuntimeRepository {
           AND r.status IN ('queued','running','waiting')
           AND ($4::text[] IS NULL OR (r.workflow_key||':'||s.stage_key)=ANY($4))
           AND ($5::uuid IS NULL OR r.id=$5)
+          AND NOT EXISTS(SELECT 1 FROM agent_stage_placement_decisions placement
+            WHERE placement.stage_id=s.id AND placement.stage_attempt=s.attempt
+              AND placement.decision_status='ready' AND placement.target IN ('browser','desktop'))
+          AND NOT EXISTS(
+            SELECT 1 FROM agent_workflow_definitions workflow,
+              jsonb_array_elements(workflow.manifest_json->'stages') stage_definition
+            JOIN agent_capability_execution_manifests execution_manifest
+              ON execution_manifest.contract_key=stage_definition->'capability'->>'key'
+              AND execution_manifest.contract_version=(stage_definition->'capability'->>'version')::integer
+              AND execution_manifest.status='active'
+            WHERE workflow.workflow_key=r.workflow_key AND workflow.workflow_version=r.workflow_version
+              AND stage_definition->>'key'=s.stage_key
+              AND EXISTS(SELECT 1 FROM jsonb_array_elements(execution_manifest.manifest_json->'placements') placement
+                WHERE placement->>'target' IN ('browser','desktop'))
+              AND NOT EXISTS(SELECT 1 FROM agent_stage_placement_decisions current_placement
+                WHERE current_placement.stage_id=s.id AND current_placement.stage_attempt=s.attempt
+                  AND current_placement.decision_status='ready' AND current_placement.target='cloud')
+          )
         ORDER BY queue.active_count,queue.oldest_available,s.available_at,s.created_at,s.id
         FOR UPDATE OF account,s SKIP LOCKED LIMIT 1
       ) UPDATE agent_run_stages s SET status='leased',attempt=attempt+1,lease_token=$2,leased_by=$1,
@@ -281,6 +319,118 @@ export class PostgresAgentRuntimeRepository {
       await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
         VALUES($1,$2,'stage.leased','worker',$3,$4)`, [row.run_id, row.id, workerId, json({ attempt: row.attempt, leaseToken })]);
       return stageView(row);
+    });
+  }
+
+  async claimNextPlacedStage({ nodeId, ownerUserId, grantId, leaseSeconds = 120 }) {
+    for (const value of [nodeId, ownerUserId, grantId]) {
+      if (typeof value !== 'string' || !UUID.test(value)) fail('AGENT_RUNTIME_NODE_LEASE_INPUT_INVALID');
+    }
+    boundedInteger(leaseSeconds, 15, 3600, 'AGENT_RUNTIME_LEASE_INVALID');
+    const workerId = `execution-node:${nodeId}`;
+    return withTransaction(this.pool, async client => {
+      const candidate = (await client.query(`SELECT s.*,r.agent_user_id,r.workflow_key,
+          r.workflow_version,r.manifest_sha256 AS workflow_manifest_sha256,r.input_json,
+          r.input_sha256 AS run_input_sha256,placement.id AS placement_decision_id,
+          placement.capability_id,placement.capability_version,placement.decision_json,
+          manifest.contract_key,manifest.contract_version,manifest.manifest_sha256,
+          manifest.manifest_json
+        FROM agent_run_stages s
+        JOIN agent_runs r ON r.id=s.run_id
+        JOIN agent_accounts account ON account.user_id=r.agent_user_id
+        JOIN agent_stage_placement_decisions placement ON placement.stage_id=s.id
+          AND placement.stage_attempt=s.attempt AND placement.decision_status='ready'
+          AND placement.target IN ('browser','desktop') AND placement.node_id=$1
+        JOIN agent_capability_execution_manifests manifest
+          ON manifest.capability_id=placement.capability_id
+          AND manifest.capability_version=placement.capability_version AND manifest.status='active'
+        JOIN agent_execution_nodes node ON node.id=$1 AND node.owner_user_id=$2
+          AND node.status='online' AND node.last_seen_at>now()-interval '5 minutes'
+        JOIN agent_execution_node_grants node_grant ON node_grant.id=$3
+          AND node_grant.node_id=node.id AND node_grant.owner_user_id=node.owner_user_id
+          AND node_grant.revoked_at IS NULL AND node_grant.expires_at>now()
+          AND 'leases:claim'=ANY(node_grant.scopes)
+        WHERE account.operator_user_id=$2 AND s.status='queued' AND s.available_at<=now()
+          AND s.attempt<s.max_attempts AND r.status IN ('queued','running','waiting')
+          AND (
+            manifest.manifest_json->'placements'->((placement.decision_json->>'placementIndex')::integer)->'package'='null'::jsonb
+            OR EXISTS(SELECT 1 FROM agent_execution_node_capabilities installed
+              WHERE installed.node_id=node.id AND installed.capability_id=placement.capability_id
+                AND installed.capability_version=placement.capability_version AND installed.status='ready'
+                AND installed.package_sha256=(manifest.manifest_json->'placements'
+                  ->((placement.decision_json->>'placementIndex')::integer)->'package'->>'sha256'))
+          )
+        ORDER BY s.available_at,s.created_at,s.id
+        FOR UPDATE OF s SKIP LOCKED LIMIT 1`, [nodeId, ownerUserId, grantId])).rows[0];
+      if (!candidate) return null;
+      const leaseToken = crypto.randomUUID(), executionLeaseId = crypto.randomUUID();
+      const leasedStage = (await client.query(`UPDATE agent_run_stages SET status='leased',attempt=attempt+1,
+          lease_token=$2,leased_by=$3,lease_until=now()+($4*interval '1 second'),
+          attempt_started_at=now(),started_at=COALESCE(started_at,now()),updated_at=now()
+        WHERE id=$1 AND status='queued' AND attempt=$5 RETURNING *`, [candidate.id, leaseToken,
+        workerId, leaseSeconds, candidate.attempt])).rows[0];
+      if (!leasedStage) fail('AGENT_RUNTIME_LEASE_LOST');
+      const stage = (await client.query(`UPDATE agent_run_stages SET status='running',updated_at=now()
+        WHERE id=$1 AND status='leased' AND leased_by=$2 AND lease_token=$3
+          AND lease_until>now() RETURNING *`, [leasedStage.id, workerId, leaseToken])).rows[0];
+      if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
+      const prerequisites = (await client.query(`SELECT stage_key,status,output_ref_json
+        FROM agent_run_stages WHERE run_id=$1 AND stage_key=ANY($2::text[])
+        ORDER BY ordinal,id`, [stage.run_id, stage.depends_on])).rows;
+      await client.query(`INSERT INTO agent_execution_stage_leases(id,stage_id,stage_attempt,
+          placement_decision_id,node_id,grant_id,capability_id,capability_version,contract_key,
+          contract_version,manifest_sha256,run_input_sha256,lease_token_sha256,lease_expires_at)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [executionLeaseId,
+        stage.id, stage.attempt, candidate.placement_decision_id, nodeId, grantId,
+        candidate.capability_id, candidate.capability_version, candidate.contract_key,
+        candidate.contract_version, candidate.manifest_sha256, candidate.run_input_sha256,
+        sha256(leaseToken), stage.lease_until]);
+      await client.query(`UPDATE agent_runs SET status='running',started_at=COALESCE(started_at,now()),
+        updated_at=now() WHERE id=$1 AND status IN ('queued','waiting')`, [stage.run_id]);
+      await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
+        VALUES($1,$2,'stage.leased','worker',$3,$4),
+          ($1,$2,'stage.started','worker',$3,$5)`, [stage.run_id, stage.id, workerId,
+        json({ attempt: stage.attempt, executionLeaseId, placementDecisionId: candidate.placement_decision_id }),
+        json({ attempt: stage.attempt, executionLeaseId })]);
+      const stageForNode = stageView(stage);
+      delete stageForNode.leaseToken;
+      return {
+        lease: { id: executionLeaseId, token: leaseToken, expiresAt: iso(stage.lease_until) },
+        stage: stageForNode,
+        run: { id: stage.run_id, workflowKey: candidate.workflow_key,
+          workflowVersion: candidate.workflow_version, manifestSha256: candidate.workflow_manifest_sha256 },
+        capability: { id: candidate.capability_id, version: candidate.capability_version,
+          manifestSha256: candidate.manifest_sha256, manifest: candidate.manifest_json,
+          contract: { key: candidate.contract_key, version: candidate.contract_version },
+          placement: candidate.decision_json },
+        input: { value: candidate.input_json, sha256: candidate.run_input_sha256 },
+        prerequisites: prerequisites.map(row => ({ stageKey: row.stage_key,
+          status: row.status, outputRef: row.output_ref_json })),
+      };
+    });
+  }
+
+  async renewPlacedStageLease({ executionLeaseId, nodeId, grantId, leaseToken, leaseSeconds = 120 }) {
+    for (const value of [executionLeaseId, nodeId, grantId, leaseToken]) {
+      if (typeof value !== 'string' || !UUID.test(value)) fail('AGENT_RUNTIME_NODE_LEASE_INPUT_INVALID');
+    }
+    boundedInteger(leaseSeconds, 15, 3600, 'AGENT_RUNTIME_LEASE_INVALID');
+    const workerId = `execution-node:${nodeId}`;
+    return withTransaction(this.pool, async client => {
+      const evidence = (await client.query(`SELECT * FROM agent_execution_stage_leases
+        WHERE id=$1 AND node_id=$2 AND grant_id=$3 AND status='active'
+          AND lease_token_sha256=$4 FOR UPDATE`, [executionLeaseId, nodeId, grantId,
+        sha256(leaseToken)])).rows[0];
+      if (!evidence) fail('AGENT_RUNTIME_LEASE_LOST');
+      const stage = (await client.query(`UPDATE agent_run_stages
+          SET lease_until=now()+($5*interval '1 second'),updated_at=now()
+        WHERE id=$1 AND status='running' AND leased_by=$2 AND lease_token=$3
+          AND lease_until>now() AND attempt=$4 RETURNING lease_until`, [evidence.stage_id,
+        workerId, leaseToken, evidence.stage_attempt, leaseSeconds])).rows[0];
+      if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
+      await client.query(`UPDATE agent_execution_stage_leases SET lease_expires_at=$2,
+        last_renewed_at=now() WHERE id=$1`, [executionLeaseId, stage.lease_until]);
+      return { executionLeaseId, expiresAt: iso(stage.lease_until) };
     });
   }
 
@@ -300,8 +450,9 @@ export class PostgresAgentRuntimeRepository {
     return iso(row.lease_until);
   }
 
-  async completeStage({ stageId, workerId, leaseToken, outputRef = {}, runOutput = null }) {
-    return withTransaction(this.pool, async client => {
+  async completeStage({ stageId, workerId, leaseToken, outputRef = {}, runOutput = null,
+    transactionClient = null }) {
+    const execute = async client => {
       const locked = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!locked) fail('AGENT_RUNTIME_LEASE_LOST');
@@ -344,11 +495,59 @@ export class PostgresAgentRuntimeRepository {
       return { stage: stageView(row), unlocked: unlocked.map(stageView), run: finalizedRun ? {
         id: finalizedRun.id, status: finalizedRun.status, outputType: finalizedRun.output_type, outputId: finalizedRun.output_id,
       } : null };
+    };
+    return transactionClient ? execute(transactionClient) : withTransaction(this.pool, execute);
+  }
+
+  async completePlacedStage({ executionLeaseId, nodeId, grantId, leaseToken, submissionId,
+    resultRef, resultSha256 }) {
+    for (const value of [executionLeaseId, nodeId, grantId, leaseToken, submissionId]) {
+      if (typeof value !== 'string' || !UUID.test(value)) fail('AGENT_RUNTIME_NODE_LEASE_INPUT_INVALID');
+    }
+    if (!resultRef || typeof resultRef !== 'object' || Array.isArray(resultRef)
+      || typeof resultSha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(resultSha256)
+      || stableHash(resultRef) !== resultSha256 || Buffer.byteLength(json(resultRef), 'utf8') > 32768) {
+      fail('AGENT_RUNTIME_NODE_RESULT_INVALID');
+    }
+    const workerId = `execution-node:${nodeId}`;
+    return withTransaction(this.pool, async client => {
+      const prior = (await client.query(`SELECT receipt.*,lease.stage_id,lease.status AS lease_status
+        FROM agent_execution_stage_result_receipts receipt
+        JOIN agent_execution_stage_leases lease ON lease.id=receipt.execution_lease_id
+        WHERE receipt.execution_lease_id=$1 AND receipt.submission_id=$2
+          AND receipt.node_id=$3 FOR SHARE`, [executionLeaseId, submissionId, nodeId])).rows[0];
+      if (prior) {
+        if (prior.result_sha256 !== resultSha256) fail('AGENT_RUNTIME_NODE_RESULT_IDEMPOTENCY_CONFLICT');
+        return { executionLeaseId, stageId: prior.stage_id, status: prior.lease_status,
+          resultSha256, existing: true };
+      }
+      const evidence = (await client.query(`SELECT * FROM agent_execution_stage_leases
+        WHERE id=$1 AND node_id=$2 AND grant_id=$3 AND status='active'
+          AND lease_token_sha256=$4 FOR UPDATE`, [executionLeaseId, nodeId, grantId,
+        sha256(leaseToken)])).rows[0];
+      if (!evidence) fail('AGENT_RUNTIME_LEASE_LOST');
+      if (resultRef.contract?.key !== evidence.contract_key
+        || resultRef.contract?.version !== evidence.contract_version) {
+        fail('AGENT_RUNTIME_NODE_RESULT_CONTRACT_MISMATCH');
+      }
+      const completed = await this.completeStage({ stageId: evidence.stage_id, workerId,
+        leaseToken, outputRef: resultRef, transactionClient: client });
+      const receiptId = crypto.randomUUID();
+      await client.query(`INSERT INTO agent_execution_stage_result_receipts(id,execution_lease_id,
+          submission_id,node_id,result_ref_json,result_sha256)VALUES($1,$2,$3,$4,$5,$6)`,
+      [receiptId, executionLeaseId, submissionId, nodeId, json(resultRef), resultSha256]);
+      await client.query(`UPDATE agent_execution_stage_leases SET status='completed',
+        result_ref_json=$2,result_sha256=$3,finished_at=now() WHERE id=$1`,
+      [executionLeaseId, json(resultRef), resultSha256]);
+      return { executionLeaseId, receiptId, stage: completed.stage, unlocked: completed.unlocked,
+        resultSha256, existing: false };
     });
   }
 
-  async failStage({ stageId, workerId, leaseToken, errorCode, errorMessage, retryable = false, backoffSeconds = 0, uncertain = false }) {
-    return withTransaction(this.pool, async client => {
+  async failStage({ stageId, workerId, leaseToken, errorCode, errorMessage, retryable = false,
+    backoffSeconds = 0, uncertain = false, transactionClient = null }) {
+    boundedInteger(backoffSeconds, 0, 3600, 'AGENT_RUNTIME_BACKOFF_INVALID');
+    const execute = async client => {
       const stage = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
@@ -410,6 +609,35 @@ export class PostgresAgentRuntimeRepository {
           WHERE id=$1 AND status IN ('queued','running','waiting')`, [row.run_id, nextStatus, errorCode, errorMessage]);
       }
       return { stage: stageView(row), retryScheduled: retry };
+    };
+    return transactionClient ? execute(transactionClient) : withTransaction(this.pool, execute);
+  }
+
+  async failPlacedStage({ executionLeaseId, nodeId, grantId, leaseToken, errorCode,
+    errorMessage, retryable = false, uncertain = false }) {
+    for (const value of [executionLeaseId, nodeId, grantId, leaseToken]) {
+      if (typeof value !== 'string' || !UUID.test(value)) fail('AGENT_RUNTIME_NODE_LEASE_INPUT_INVALID');
+    }
+    if (typeof errorCode !== 'string' || !/^[A-Z][A-Z0-9_]{2,119}$/u.test(errorCode)
+      || typeof errorMessage !== 'string' || errorMessage.length < 1 || errorMessage.length > 500
+      || typeof retryable !== 'boolean' || typeof uncertain !== 'boolean') {
+      fail('AGENT_RUNTIME_NODE_FAILURE_INVALID');
+    }
+    const workerId = `execution-node:${nodeId}`;
+    return withTransaction(this.pool, async client => {
+      const evidence = (await client.query(`SELECT * FROM agent_execution_stage_leases
+        WHERE id=$1 AND node_id=$2 AND grant_id=$3 AND status='active'
+          AND lease_token_sha256=$4 FOR UPDATE`, [executionLeaseId, nodeId, grantId,
+        sha256(leaseToken)])).rows[0];
+      if (!evidence) fail('AGENT_RUNTIME_LEASE_LOST');
+      const failed = await this.failStage({ stageId: evidence.stage_id, workerId, leaseToken,
+        errorCode, errorMessage, retryable: retryable && !uncertain,
+        uncertain, transactionClient: client });
+      const status = uncertain ? 'uncertain' : 'failed';
+      await client.query(`UPDATE agent_execution_stage_leases SET status=$2,failure_code=$3,
+        failure_message=$4,finished_at=now() WHERE id=$1`, [executionLeaseId, status,
+        errorCode, errorMessage]);
+      return { executionLeaseId, status, stage: failed.stage, retryScheduled: failed.retryScheduled };
     });
   }
 
@@ -581,16 +809,20 @@ export class PostgresAgentRuntimeRepository {
     });
   }
 
-  async recoverExpiredStages({ workerId = 'agent-runtime-recovery', limit = 25, baseBackoffSeconds = 1 } = {}) {
+  async recoverExpiredStages({ workerId = 'agent-runtime-recovery', limit = 25,
+    baseBackoffSeconds = 1, stageId = null } = {}) {
     workerIdentifier(workerId);
     boundedInteger(limit, 1, 200, 'AGENT_RUNTIME_RECOVERY_LIMIT_INVALID');
     boundedInteger(baseBackoffSeconds, 0, 300, 'AGENT_RUNTIME_BACKOFF_INVALID');
+    if (stageId !== null && (typeof stageId !== 'string' || !UUID.test(stageId))) {
+      fail('AGENT_RUNTIME_STAGE_ID_INVALID');
+    }
     return withTransaction(this.pool, async client => {
       const rows = (await client.query(`SELECT * FROM agent_run_stages
-        WHERE status IN ('leased','running') AND (lease_until<=now()
+        WHERE ($2::uuid IS NULL OR id=$2) AND status IN ('leased','running') AND (lease_until<=now()
           OR attempt_started_at+(timeout_seconds*interval '1 second')<=now())
         ORDER BY least(lease_until,attempt_started_at+(timeout_seconds*interval '1 second')),id
-        FOR UPDATE SKIP LOCKED LIMIT $1`, [limit])).rows;
+        FOR UPDATE SKIP LOCKED LIMIT $1`, [limit, stageId])).rows;
       const result = { examined: rows.length, requeued: 0, failed: 0, uncertain: 0 };
       for (const stage of rows) {
         const exposed = (await client.query(`SELECT id FROM agent_run_actions WHERE stage_id=$1
@@ -631,6 +863,10 @@ export class PostgresAgentRuntimeRepository {
           lease_token=NULL,leased_by=NULL,lease_until=NULL,attempt_started_at=NULL,error_code=$3,error_message=$4,
           finished_at=CASE WHEN $2='queued' THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 RETURNING *`,
         [stage.id, nextStatus, errorCode, errorMessage, backoff])).rows[0];
+        await client.query(`UPDATE agent_execution_stage_leases SET status='expired',
+            failure_code=$3,failure_message=$4,finished_at=now()
+          WHERE stage_id=$1 AND stage_attempt=$2 AND status='active'`,
+        [stage.id, stage.attempt, errorCode, errorMessage]);
         await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
           VALUES($1,$2,$3,'system',$4,$5)`, [stage.run_id, stage.id,
         retry ? 'stage.recovered' : `stage.${nextStatus}`, workerId,

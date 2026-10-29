@@ -11,13 +11,14 @@ const load = relative => import(pathToFileURL(path.join(root, 'apps/api/src', re
 function config(overrides = {}) {
   return { schemaVersion: 'agent-blog-public-runtime-config-v1', enabled: true,
     agentUserId: crypto.randomUUID(), provider: 'deepseek', modelId: 'deepseek-flash',
+    githubResearchAuthenticated: true,
     dailyPublicationRunLimit: 1, monthlyProviderCallLimit: 120,
     monthlyCostMicrousdLimit: 10_000_000, consecutiveFailureLimit: 2, ...overrides };
 }
 
 function readySnapshot(overrides = {}) {
   return { activePublisher: 'foundation', legacyAutomationEnabled: false, identityReady: true,
-    capabilityCount: 5, toolCount: 2, workflowCount: 2, secretReady: true, modelReady: true,
+    capabilityCount: 5, toolCount: 3, workflowCount: 2, secretReady: true, modelReady: true,
     circuitReady: true, activeRuns: 0, uncertainRuns: 0, awaitingHandoff: 0,
     publicationRunsToday: 0, providerCallsMonth: 0, costMicrousdMonth: 0,
     consecutiveFailures: 0, ...overrides };
@@ -27,8 +28,20 @@ test('public runtime defaults off and requires Foundation ownership plus a quies
   const { loadAgentBlogPublicRuntimeConfig, evaluateAgentBlogPublicRuntimeSnapshot } =
     await load('agent-blog-public-runtime-preflight.mjs');
   assert.equal(loadAgentBlogPublicRuntimeConfig({}).enabled, false);
+  const missingGitHubAuth = loadAgentBlogPublicRuntimeConfig({
+    AGENT_BLOG_PUBLIC_RUNTIME_ENABLED: 'true',
+    AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID: crypto.randomUUID(),
+  });
+  assert.equal(evaluateAgentBlogPublicRuntimeSnapshot(missingGitHubAuth, readySnapshot()).blockers.includes(
+    'AGENT_BLOG_PUBLIC_RUNTIME_GITHUB_AUTH_NOT_READY'), true);
+  assert.throws(() => loadAgentBlogPublicRuntimeConfig({ AGENT_GITHUB_RESEARCH_TOKEN: 'too-short' }),
+    error => error.code === 'AGENT_GITHUB_RESEARCH_TOKEN_INVALID');
   const value = config();
-  assert.equal(evaluateAgentBlogPublicRuntimeSnapshot(value, readySnapshot()).ready, true);
+  const ready = evaluateAgentBlogPublicRuntimeSnapshot(value, readySnapshot());
+  assert.equal(ready.ready, true);
+  assert.equal(ready.limits.githubRequestBudgetPerRun, 43);
+  assert.equal(ready.limits.githubCandidateLimit, 5);
+  assert.equal(ready.observed.githubResearchAuthenticated, true);
   const blocked = evaluateAgentBlogPublicRuntimeSnapshot(value, readySnapshot({
     activePublisher: 'legacy', legacyAutomationEnabled: true, activeRuns: 1,
     uncertainRuns: 1, publicationRunsToday: 1,
@@ -72,7 +85,9 @@ test('public bootstrap registers the public workflow without creating a Run or c
       return { ...model, existing: false };
     } },
   }).run();
-  assert.deepEqual(workflows, ['blog.project.discovery-shadow', 'blog.project.single']);
+  assert.deepEqual(workflows, ['blog.project.discovery-shadow', 'blog.project.single',
+    'paper.article.draft-shadow']);
+  assert.equal(receipt.tools.some(tool => tool.toolKey === 'research.paper.analysis.read'), true);
   assert.equal(DEEPSEEK_FLASH_PRIVATE_CANARY_CATALOG.catalogVersion, 1);
   assert.equal(DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG.catalogVersion, 2);
   assert.equal(registeredModel.catalogVersion, 2);
@@ -103,13 +118,16 @@ test('public runner executes discovery then the seven-stage publication Run', as
     config: value,
     preflightRepository: { snapshot: async () => readySnapshot() },
     inputRepository: { snapshot: async () => ({
-      schemaVersion: 'agent-blog-private-canary-input-snapshot-v1', agentUserId: value.agentUserId,
+      schemaVersion: 'agent-blog-private-canary-input-snapshot-v2', agentUserId: value.agentUserId,
       topicScope: '开源工具', configuredModelId: 'deepseek-flash',
       behaviorProfileId: crypto.randomUUID(), behaviorProfileVersion: 2,
       behaviorProfile: { schemaVersion: 'agent-behavior-profile-v1', mission: '发现有用工具',
         personality: '好奇', voice: '清晰', audience: '普通读者', selectionPersona: '重视证据',
         interestSignals: ['有用'], allowComparisons: true },
-      recentTitles: [], previousRepositoryUrls: [],
+      recentTitles: [], previousRepositoryUrls: [], editorialMemory: {
+        schemaVersion: 'blog-editorial-memory-input-v1', capturedAt: '2026-10-27T00:00:00.000Z',
+        activeCooldowns: [],
+      },
     }) },
     discoveryCanary: { createRun: async input => (calls.push(['discovery', input]), { id: discoveryId }) },
     publicHandoff: { createDraftRun: async input => (calls.push(['publication', input]), { id: publicationId }) },
@@ -121,5 +139,7 @@ test('public runner executes discovery then the seven-stage publication Run', as
   assert.equal(result.publication.publicationState, 'published');
   assert.equal(result.publicationAttempted, true);
   assert.equal(calls[0][1].idempotencyKey, `public-runtime:${requestId}:discovery`);
+  assert.equal(calls[0][1].input.searchPolicy.maxCandidates, 5);
+  assert.equal(calls[0][1].input.searchPolicy.maxQueries, 3);
   assert.equal(calls[1][1].idempotencyKey, `public-runtime:${requestId}:article`);
 });

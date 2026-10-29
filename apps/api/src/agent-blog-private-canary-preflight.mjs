@@ -1,3 +1,6 @@
+import { AGENT_GITHUB_RESEARCH_LIMITS,
+  normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const MODEL = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/u;
 
@@ -31,6 +34,7 @@ export function loadAgentBlogPrivateCanaryConfig(env = process.env) {
   const provider = env.AGENT_BLOG_PRIVATE_CANARY_PROVIDER?.trim() || 'deepseek';
   const modelId = env.AGENT_BLOG_PRIVATE_CANARY_MODEL_ID?.trim() || 'deepseek-flash';
   if (provider !== 'deepseek' || !MODEL.test(modelId)) fail('AGENT_BLOG_PRIVATE_CANARY_MODEL_INVALID');
+  const githubResearchAuthenticated = normalizeGitHubResearchToken(env.AGENT_GITHUB_RESEARCH_TOKEN) !== null;
   const dailyDiscoveryRunBaseLimit = integer(env.AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT ?? 1,
     1, 4, 'AGENT_BLOG_PRIVATE_CANARY_DAILY_LIMIT_INVALID');
   const extraDailyRunAllowance = integer(env.AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE ?? 0,
@@ -41,6 +45,7 @@ export function loadAgentBlogPrivateCanaryConfig(env = process.env) {
   return Object.freeze({
     schemaVersion: 'agent-blog-private-canary-config-v1', enabled, publishEnabled: false,
     agentUserId, provider, modelId,
+    githubResearchAuthenticated,
     dailyDiscoveryRunLimit: dailyDiscoveryRunBaseLimit + extraDailyRunAllowance,
     dailyDiscoveryRunBaseLimit, extraDailyRunAllowance,
     monthlyProviderCallLimit: integer(env.AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT ?? 12,
@@ -61,11 +66,12 @@ export function evaluateAgentBlogPrivateCanarySnapshot(config, snapshot) {
   if (!config.enabled) blockers.push('AGENT_BLOG_PRIVATE_CANARY_DISABLED');
   if (!snapshot.identityReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_IDENTITY_NOT_READY');
   if (snapshot.capabilityCount !== 4) blockers.push('AGENT_BLOG_PRIVATE_CANARY_CAPABILITIES_NOT_READY');
-  if (snapshot.toolCount !== 2) blockers.push('AGENT_BLOG_PRIVATE_CANARY_TOOLS_NOT_READY');
+  if (snapshot.toolCount !== 3) blockers.push('AGENT_BLOG_PRIVATE_CANARY_TOOLS_NOT_READY');
   if (snapshot.workflowCount !== 2) blockers.push('AGENT_BLOG_PRIVATE_CANARY_WORKFLOWS_NOT_READY');
   if (!snapshot.secretReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_SECRET_NOT_READY');
   if (!snapshot.modelReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_MODEL_NOT_READY');
   if (!snapshot.circuitReady) blockers.push('AGENT_BLOG_PRIVATE_CANARY_PROVIDER_CIRCUIT_OPEN');
+  if (!config.githubResearchAuthenticated) blockers.push('AGENT_BLOG_PRIVATE_CANARY_GITHUB_AUTH_NOT_READY');
   if (snapshot.activeRuns > 0) blockers.push('AGENT_BLOG_PRIVATE_CANARY_RUN_ACTIVE');
   if (snapshot.uncertainRuns > 0) blockers.push('AGENT_BLOG_PRIVATE_CANARY_UNCERTAIN');
   if (snapshot.awaitingHandoff > 0) blockers.push('AGENT_BLOG_PRIVATE_CANARY_AWAITING_HANDOFF');
@@ -92,8 +98,12 @@ export function evaluateAgentBlogPrivateCanarySnapshot(config, snapshot) {
       monthlyProviderCalls: config.monthlyProviderCallLimit,
       monthlyCostMicrousd: config.monthlyCostMicrousdLimit,
       consecutiveFailures: config.consecutiveFailureLimit,
+      githubRequestBudgetPerRun: AGENT_GITHUB_RESEARCH_LIMITS.requestBudgetPerRun,
+      githubCandidateLimit: AGENT_GITHUB_RESEARCH_LIMITS.maxCandidates,
+      githubSearchRequestLimit: AGENT_GITHUB_RESEARCH_LIMITS.maxSearchRequests,
     },
-    observed: structuredClone(snapshot),
+    observed: { ...structuredClone(snapshot),
+      githubResearchAuthenticated: config.githubResearchAuthenticated },
   };
 }
 
@@ -117,10 +127,11 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
             AND (valid_until IS NULL OR valid_until>now()) AND capability_key=ANY($2::text[])) AS capability_count,
         (SELECT count(*)::int FROM agent_tool_contracts WHERE status='active'
           AND (tool_key,contract_version) IN (
-            ('research.github.repository.search',1),('research.github.repository.read',1))) AS tool_count,
+            ('research.github.repository.search',1),('research.github.repository.read',1),
+            ('research.github.repository.materials.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
-            ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',1))) AS workflow_count,
+            ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',2))) AS workflow_count,
         EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3) AS secret_ready,
         EXISTS(SELECT 1 FROM agent_provider_models WHERE provider=$3 AND model_id=$4 AND status='active'
           AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS model_ready,

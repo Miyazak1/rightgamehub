@@ -25,9 +25,16 @@ test('shadow assembly freezes candidates, collects governed evidence and persist
   const execution = { workerId: 'shadow-worker', leaseToken: uuid() };
   const toolCalls = [];
   const toolArtifacts = [uuid(), uuid()];
+  const toolActions = [uuid(), uuid()];
   const toolGateway = { invoke: async request => {
     toolCalls.push(request);
-    return { status: 'succeeded', artifactId: toolArtifacts[toolCalls.length - 1] };
+    return { status: 'succeeded', actionId: toolActions[toolCalls.length - 1],
+      artifactId: toolArtifacts[toolCalls.length - 1] };
+  } };
+  const archivedEvidence = [];
+  const researchEvidenceRepository = { archiveGitHubRepositoryArtifact: async request => {
+    archivedEvidence.push(request);
+    return { id: uuid(), evidenceCount: 2 };
   } };
   const compositionArtifactId = uuid();
   const verificationArtifactId = uuid();
@@ -54,7 +61,7 @@ test('shadow assembly freezes candidates, collects governed evidence and persist
   } };
   const handlers = createAgentBlogFoundationShadowHandlers({
     toolGateway, providerGateway: { invoke: async () => { throw new Error('not used'); } },
-    artifactRepository, draftGateway,
+    artifactRepository, draftGateway, researchEvidenceRepository,
   });
   const freezeRoute = 'blog.project.single.draft-shadow:freeze-input';
   const collectRoute = 'blog.project.single.draft-shadow:collect-evidence';
@@ -64,11 +71,16 @@ test('shadow assembly freezes candidates, collects governed evidence and persist
     { stageKey: 'freeze-input', status: 'succeeded', outputRef: frozen.outputRef },
   ] }, execution);
   assert.deepEqual(evidence.outputRef.artifactIds, toolArtifacts);
+  assert.equal(evidence.outputRef.researchEvidenceBindingIds.length, 2);
+  assert.deepEqual(archivedEvidence.map(item => item.toolArtifactId), toolArtifacts);
+  assert.deepEqual(archivedEvidence.map(item => item.actionId), toolActions);
+  assert(archivedEvidence.every(item => item.runId === runId
+    && item.workerId === execution.workerId && item.leaseToken === execution.leaseToken));
   assert.deepEqual(toolCalls.map(item => item.request.repository), [
     'https://github.com/Owner/Project', 'https://github.com/other/tool',
   ]);
   assert(toolCalls.every(item => item.action.capabilityKey === 'research.github.read'
-    && item.tool.toolKey === 'research.github.repository.read'));
+    && item.tool.toolKey === 'research.github.repository.materials.read'));
   const persisted = await handlers[persistRoute]({ run, stage: { id: uuid() }, prerequisites: [
     { stageKey: 'verify', status: 'succeeded', outputRef: {
       artifactId: verificationArtifactId, artifactKey: 'blog.verification', approved: true, compositionArtifactId,

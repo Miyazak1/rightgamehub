@@ -6,6 +6,8 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '../..');
 const load = relative => import(pathToFileURL(path.join(root, 'apps/api/src', relative)).href);
+const editorialMemory = { schemaVersion: 'blog-editorial-memory-input-v1',
+  capturedAt: '2026-10-27T00:00:00.000Z', activeCooldowns: [] };
 
 test('candidate handoff is disabled by default and creates a draft Run from the immutable candidate artifact', async () => {
   const { createAgentBlogCandidateDraftHandoffCanary } = await load('agent-blog-candidate-handoff.mjs');
@@ -32,7 +34,7 @@ test('candidate handoff is disabled by default and creates a draft Run from the 
   const canary = createAgentBlogCandidateDraftHandoffCanary({ runtimeRepository, artifactRepository, enabled: true });
   const result = await canary.createDraftRun({
     agentUserId: crypto.randomUUID(), discoveryRunId: sourceRunId, discoveryArtifactId: sourceArtifactId,
-    idempotencyKey: `handoff:${crypto.randomUUID()}`, behaviorProfile: defaultAgentBehaviorProfile(),
+    idempotencyKey: `handoff:${crypto.randomUUID()}`, behaviorProfile: defaultAgentBehaviorProfile(), editorialMemory,
   });
   assert.equal(result.status, 'queued');
   assert.equal(calls.length, 1);
@@ -68,10 +70,10 @@ test('public candidate handoff targets only the public workflow and keeps immuta
   await handoff.createDraftRun({
     agentUserId: crypto.randomUUID(), discoveryRunId: sourceRunId,
     discoveryArtifactId: sourceArtifactId, idempotencyKey: `public:${crypto.randomUUID()}`,
-    behaviorProfile: defaultAgentBehaviorProfile(),
+    behaviorProfile: defaultAgentBehaviorProfile(), editorialMemory,
   });
   assert.equal(calls[0].workflowKey, 'blog.project.single');
-  assert.equal(calls[0].input.schemaVersion, 'blog-project-single-input-v1');
+  assert.equal(calls[0].input.schemaVersion, 'blog-project-single-input-v2');
   assert.deepEqual(calls[0].handoff, {
     kind: 'blog.candidate-set-to-public-article', sourceRunId, sourceArtifactId,
     sourceOutputType: 'blog.candidate-set', sourceArtifactKey: 'blog.candidate-set',

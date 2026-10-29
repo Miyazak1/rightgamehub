@@ -2,6 +2,10 @@ import { BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
   BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
 import { GITHUB_REPOSITORY_SEARCH_TOOL } from './agent-github-repository-search-tool.mjs';
 import { GITHUB_REPOSITORY_READ_TOOL } from './agent-github-repository-tool.mjs';
+import { GITHUB_REPOSITORY_MATERIALS_TOOL } from './agent-github-repository-materials-tool.mjs';
+import { ARXIV_PAPER_READ_TOOL } from './agent-arxiv-paper-tool.mjs';
+import { PAPER_SINGLE_SEMANTIC_SHADOW_WORKFLOW } from './agent-paper-semantic-workflow.mjs';
+import { PAPER_RESEARCH_EXECUTION_WORKFLOW } from './agent-paper-research-execution.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -24,7 +28,7 @@ export const DEEPSEEK_FLASH_PRIVATE_CANARY_CATALOG = Object.freeze({
   modelId: 'deepseek-flash',
   catalogVersion: 1,
   status: 'active',
-  taskClasses: Object.freeze(['structured-generation']),
+  taskClasses: Object.freeze(['structured-generation', 'paper-semantic-analysis']),
   supportsJsonSchema: true,
   maxInputTokens: 60_000,
   maxOutputTokens: 8_192,
@@ -105,7 +109,8 @@ export function createAgentBlogPrivateCanaryBootstrap({
         fail('AGENT_BLOG_PRIVATE_CANARY_IDENTITY_NOT_READY');
       }
       const tools = [];
-      for (const contract of [GITHUB_REPOSITORY_SEARCH_TOOL, GITHUB_REPOSITORY_READ_TOOL]) {
+      for (const contract of [GITHUB_REPOSITORY_SEARCH_TOOL, GITHUB_REPOSITORY_READ_TOOL,
+        GITHUB_REPOSITORY_MATERIALS_TOOL, ARXIV_PAPER_READ_TOOL]) {
         const registered = await toolRepository.registerTool(contract);
         if (registered.status !== 'active') fail('AGENT_BLOG_PRIVATE_CANARY_TOOL_NOT_ACTIVE');
         tools.push({
@@ -117,7 +122,8 @@ export function createAgentBlogPrivateCanaryBootstrap({
       }
       const workflows = [];
       for (const manifest of [BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
-        BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW]) {
+        BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW, PAPER_SINGLE_SEMANTIC_SHADOW_WORKFLOW,
+        PAPER_RESEARCH_EXECUTION_WORKFLOW]) {
         workflows.push(await registerActiveWorkflow(runtimeRepository, identity.operatorUserId, manifest));
       }
       const model = await providerRepository.registerModel(catalog);

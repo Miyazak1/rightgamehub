@@ -16,6 +16,10 @@
     "researcher-worker:start": "node src/researcher-worker-cli.mjs",
     "agent-runtime-worker:start": "node src/agent-runtime-worker-cli.mjs",
     "agent-blog-private-scheduler:start": "node src/agent-blog-private-schedule-worker-cli.mjs",
+    "agent-paper-semantic:run": "node src/agent-paper-semantic-run-cli.mjs",
+    "agent-paper-article:run": "node src/agent-paper-article-manual-run-cli.mjs",
+    "agent-paper-article:accept": "node src/agent-paper-article-acceptance-cli.mjs",
+    "agent-paper-research-worker:start": "node src/agent-paper-research-worker-cli.mjs",
     "validator:start": "node src/web-validator-service.mjs",
     "admin:promote": "node src/promote-admin-cli.mjs",
     "dev:e2e": "node src/dev-e2e-server.mjs"
@@ -32,6 +36,7 @@
     "ali-oss": "^6.23.0",
     "fastify": "5.12.5",
     "hono": "^4.13.13",
+    "pdfjs-dist": "6.4.299",
     "pg": "8.23.0",
     "redis": "^5.8.2",
     "sharp": "0.35.5",

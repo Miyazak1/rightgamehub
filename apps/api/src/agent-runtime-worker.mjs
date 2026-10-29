@@ -4,12 +4,13 @@ import { setTimeout as delay } from 'node:timers/promises';
 const RUNTIME_VERSION = '1.0.0';
 
 export class AgentRuntimeWorkerError extends Error {
-  constructor(code, { retryable = false, uncertain = false, cause = null } = {}) {
+  constructor(code, { retryable = false, uncertain = false, backoffSeconds = null, cause = null } = {}) {
     super(code, cause ? { cause } : undefined);
     this.name = 'AgentRuntimeWorkerError';
     this.code = code;
     this.retryable = retryable;
     this.uncertain = uncertain;
+    this.backoffSeconds = backoffSeconds;
   }
 }
 const fail = (code, options) => { throw new AgentRuntimeWorkerError(code, options); };
@@ -44,12 +45,16 @@ function errorDetails(error, stage) {
   const code = typeof error?.code === 'string' && error.code.length <= 120 ? error.code : 'AGENT_STAGE_EXECUTION_FAILED';
   const message = String(error?.message ?? error ?? code).slice(0, 500);
   const explicitRetryable = typeof error?.retryable === 'boolean' ? error.retryable : null;
+  const requestedBackoff = Number(error?.backoffSeconds);
+  const exponentialBackoff = Math.min(300, 2 ** Math.max(0, stage.attempt - 1));
   return {
     errorCode: code,
     errorMessage: message,
     retryable: explicitRetryable ?? stage.kind === 'deterministic',
     uncertain: error?.uncertain === true,
-    backoffSeconds: Math.min(300, 2 ** Math.max(0, stage.attempt - 1)),
+    backoffSeconds: Number.isFinite(requestedBackoff) && requestedBackoff >= 0
+      ? Math.min(3600, Math.max(exponentialBackoff, Math.ceil(requestedBackoff)))
+      : exponentialBackoff,
   };
 }
 
@@ -89,6 +94,7 @@ export function createAgentRuntimeWorker({
   recoveryBatch = 25,
   outboxBatch = 25,
   targetRunId = null,
+  metadata = {},
   logger = false,
 } = {}) {
   if (!repository) fail('AGENT_RUNTIME_REPOSITORY_REQUIRED');
@@ -104,6 +110,10 @@ export function createAgentRuntimeWorker({
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(targetRunId))) {
     fail('AGENT_RUNTIME_TARGET_RUN_INVALID');
   }
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)
+    || Buffer.byteLength(JSON.stringify(metadata), 'utf8') > 4096) {
+    fail('AGENT_RUNTIME_WORKER_METADATA_INVALID');
+  }
 
   let registered = false;
   let running = false;
@@ -115,7 +125,8 @@ export function createAgentRuntimeWorker({
     if (registered) return;
     await repository.registerWorker({
       workerId, instanceId, runtimeVersion, capabilities: [...routes.keys()],
-      metadata: { pid: process.pid, platform: process.platform }, staleAfterSeconds: Math.max(leaseSeconds * 2, 30),
+      metadata: { ...structuredClone(metadata), pid: process.pid, platform: process.platform },
+      staleAfterSeconds: Math.max(leaseSeconds * 2, 30),
     });
     registered = true;
   };

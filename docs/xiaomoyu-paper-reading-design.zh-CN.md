@@ -1,10 +1,19 @@
 # 小墨鱼论文阅读机制设计
 
-版本：v1.0  
-状态：目标设计，尚未实现，不得对外宣称已经具备论文全文阅读能力  
-更新日期：2026-10-24  
-上位路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)  
-运行基座：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)\
+版本：v1.9
+
+状态：R1.4–R1.10 已形成可运营的私有论文研究链；R2.1/R2.2 已把单篇核验分析接入现有证据、写作与草稿基座，可显式生成私有科普草稿。真实开放论文生产验收、复杂版面生产引擎、多论文比较和论文公开发布治理仍未完成；论文研究目前不具备公开发布权限
+
+更新日期：2026-10-29
+
+R2.2 实施与单服务器立即运行见 [论文证据到私有科普草稿运行时](./xiaomoyu-r2-2-paper-article-runtime.zh-CN.md)。
+
+R1.8 实施与单服务器部署见 [私有论文研究执行器](./xiaomoyu-r1-8-paper-research-executor.zh-CN.md)。
+
+上位路线：[小墨鱼能力升级路线](./xiaomoyu-capability-roadmap.zh-CN.md)
+
+运行基座：[小墨鱼 Agent 基座架构设计](./xiaomoyu-agent-foundation-architecture.zh-CN.md)
+
 关联基础：[墨鱼变更雷达自主长期研究系统](./change-radar-autonomous-research-design.zh-CN.md)
 
 ## 1. 目标
@@ -22,6 +31,8 @@
 首版目标是可靠完成单篇开放论文的中文导读和基于冻结证据的追问。多论文比较、主动发现、代码运行和实验复现按后续阶段增加。
 
 论文工作流必须运行在通用 Run/Stage/Action、Provider Gateway、Tool Runtime、Policy 与统一研究证据基座上；不得为论文另建专用任务调度、模型调用账本、预算或崩溃恢复系统。
+
+代码已冻结 `research.paper.identity@1`、`research.paper.version@1`、`research.paper.layout-manifest@1` 和 `research.paper.evidence-span@1` 四个失败关闭契约。R1.2 增加 `research.source.archive@1`；R1.3 将 arXiv 工具升级为 `research.paper.arxiv.read@2`，并增加 `research.paper.parse-quality@1`；R1.4 增加 `paper.single.semantic-shadow@1` 与 `research.paper.analyze@1`；R1.5 增加 `paper.semantic.follow-up-private@1`、`research.paper.follow-up@1` 和不可变问答引用账本；R1.6 增加私有 DOI/PDF 收件账本、内容寻址归档与 `paper-layout-capability-v1`。它仍不代表已经具备论文主动发现、OCR、复杂版面语义、论文评价或公开发布能力。实施边界见 [R1.2 多源研究与论文证据基座](./xiaomoyu-r1-2-multi-source-paper-foundation.zh-CN.md)、[R1.3 论文解析质量门禁](./xiaomoyu-r1-3-paper-parse-quality.zh-CN.md)、[R1.4 单篇论文语义阅读基座](./xiaomoyu-r1-4-paper-semantic-reading.zh-CN.md)、[R1.5 私有论文证据追问闭环](./xiaomoyu-r1-5-paper-evidence-follow-up.zh-CN.md) 与 [R1.6 私有论文安全收件与复杂版面基座](./xiaomoyu-r1-6-private-paper-intake.zh-CN.md)。
 
 ## 2. 核心原则
 
@@ -591,12 +602,16 @@ queued
 
 ### P0：契约和样本冻结
 
+状态：契约、现有研究账本映射和增加式扩展已完成；真实论文评测集仍待扩充。
+
 - 冻结论文身份、资料等级、版面清单和证据契约；
 - 盘点现有研究表与需要的增加式扩展；
 - 建立 PDF、版本、表格和失败样本集；
 - 明确版权与保存策略。
 
 ### P1：单篇论文阅读最小闭环
+
+状态：已完成 arXiv 标识、开放 PDF 取得、文字层页码和 EvidenceSpan 归档；DOI、用户文件、章节语义、多轮阅读、导读和追问尚未完成。
 
 - DOI/arXiv/PDF 身份解析；
 - 开放全文与用户文件权限检查；
@@ -607,10 +622,13 @@ queued
 
 ### P2：复杂版面和可靠引用
 
+- 状态：F1.3a 已完成严格输入/输出合同、逐页路由、仅本地权限和可运行参考包；真实 OCR/版面引擎、开放论文坐标金标及 EvidenceSpan 接入属于 F1.3b。
 - 双栏、表格、公式、图片和 OCR；
 - 数字和单位校验；
 - 原文片段与页面区域查看；
 - 预印本、正式版和勘误关系。
+
+P2 的重型版面能力遵循 [通用能力执行织网 F1](./mooyu-capability-execution-fabric-f1.zh-CN.md)：文本 PDF 继续使用轻量路径，扫描/复杂版面租给用户桌面端。F1.3a 对私有 PDF 固定 `localOnly=true / upload=never / cloudFallback=never`；未来若增加云端 OCR，必须作为独立合同、重新取得显式同意并经过预算与资源门禁，不能静默放宽当前合同。论文模块只消费统一版面输出，不绑定某个 OCR 厂商或引擎。
 
 ### P3：多论文比较与继续研究
 
@@ -640,3 +658,10 @@ queued
 7. 只有达到身份、定位和失败关闭门槛后，才接入小墨鱼的生成与发布流程。
 
 第一版宁可稳定阅读少量合法论文，也不以不可靠的全文总结换取表面覆盖量。
+# 实施状态
+
+- R1.2–R1.6 已建立论文身份、版本、版面、语义、证据追问与私有收件。
+- R1.7 已建立受控发现、确定性身份解析和私有研究队列，详见 [R1.7 实施文档](./xiaomoyu-r1-7-paper-discovery-identity-queue.zh-CN.md)。
+- R1.8 已把队列接入通用 Durable Runtime；R1.9 已补齐持久 Worker 心跳、积压/耗时/预算/错误观测和过期租约受控恢复；R1.10 已在同一 Worker 内完成持久告警、周报、通知 outbox 和派生快照保留策略，详见 [R1.9](./xiaomoyu-r1-9-research-operations.zh-CN.md) 与 [R1.10](./xiaomoyu-r1-10-research-operations-lifecycle.zh-CN.md) 实施文档。
+- 论文发现和阅读仍是私有研究能力，不具备博客或论文公开发布权限。
+- F1.3a 已把 `research.paper.layout@1` 接入通用执行织网：文字层正常页不 OCR，复杂但有文字层的页面只做本地版面恢复，扫描/缺失/损坏页才进入本地 OCR；文件只经用户选择、只读授权、零网络沙箱处理。详见 [F1.3a 实施文档](./mooyu-capability-executor-f1-3a.zh-CN.md)。

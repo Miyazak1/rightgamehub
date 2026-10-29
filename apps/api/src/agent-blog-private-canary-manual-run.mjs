@@ -1,6 +1,8 @@
 import { normalizeAgentBehaviorProfile } from './agent-behavior-profile.mjs';
 import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool.mjs';
 import { runAgentBlogPrivateCanaryPreflight } from './agent-blog-private-canary-preflight.mjs';
+import { PostgresAgentEditorialMemoryRepository } from './agent-editorial-memory-repository.mjs';
+import { AGENT_GITHUB_RESEARCH_LIMITS } from './agent-github-research-runtime.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -28,9 +30,11 @@ function repositoryUrls(rows) {
 }
 
 export class PostgresAgentBlogPrivateCanaryInputRepository {
-  constructor(pool) {
+  constructor(pool, { editorialMemoryRepository } = {}) {
     if (!pool) fail('AGENT_BLOG_PRIVATE_CANARY_DATABASE_REQUIRED');
     this.pool = pool;
+    this.editorialMemoryRepository = editorialMemoryRepository
+      ?? new PostgresAgentEditorialMemoryRepository(pool);
   }
 
   async snapshot(agentUserId) {
@@ -48,7 +52,7 @@ export class PostgresAgentBlogPrivateCanaryInputRepository {
     let behaviorProfile;
     try { behaviorProfile = normalizeAgentBehaviorProfile(base.profile); }
     catch { fail('AGENT_BLOG_PRIVATE_CANARY_BEHAVIOR_INVALID'); }
-    const [titleRows, citationRows] = await Promise.all([
+    const [titleRows, citationRows, editorialMemory] = await Promise.all([
       this.pool.query(`SELECT revision.title FROM blog_articles article
         JOIN blog_article_revisions revision ON revision.id=article.published_revision_id
         WHERE article.author_user_id=$1 AND article.publication_state='published'
@@ -57,9 +61,14 @@ export class PostgresAgentBlogPrivateCanaryInputRepository {
         FROM blog_articles article JOIN blog_article_revisions revision ON revision.id=article.published_revision_id
         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(revision.citations,'[]'::jsonb)) citation
         WHERE article.author_user_id=$1 AND article.publication_state IN ('published','withdrawn')`, [agentUserId]),
+      this.editorialMemoryRepository.snapshot(agentUserId),
+    ]);
+    const previousRepositoryUrls = repositoryUrls([
+      ...citationRows.rows,
+      ...editorialMemory.previousRepositoryUrls.map(repository_url => ({ repository_url })),
     ]);
     return Object.freeze({
-      schemaVersion: 'agent-blog-private-canary-input-snapshot-v1',
+      schemaVersion: 'agent-blog-private-canary-input-snapshot-v2',
       agentUserId,
       topicScope: String(base.topic_scope).trim(),
       configuredModelId: String(base.model).trim(),
@@ -67,7 +76,8 @@ export class PostgresAgentBlogPrivateCanaryInputRepository {
       behaviorProfileVersion: Number(base.behavior_profile_version),
       behaviorProfile,
       recentTitles: titleRows.rows.map(row => String(row.title).trim()).filter(Boolean),
-      previousRepositoryUrls: repositoryUrls(citationRows.rows),
+      previousRepositoryUrls,
+      editorialMemory: editorialMemory.selectionMemory,
     });
   }
 }
@@ -114,7 +124,7 @@ export function createAgentBlogPrivateCanaryManualRunner({
       const preflight = await runAgentBlogPrivateCanaryPreflight({ repository: preflightRepository, config });
       if (!preflight.ready) fail('AGENT_BLOG_PRIVATE_CANARY_PREFLIGHT_BLOCKED', { blockers: preflight.blockers });
       const frozen = await inputRepository.snapshot(config.agentUserId);
-      if (frozen?.schemaVersion !== 'agent-blog-private-canary-input-snapshot-v1'
+      if (frozen?.schemaVersion !== 'agent-blog-private-canary-input-snapshot-v2'
         || frozen.agentUserId !== config.agentUserId) {
         fail('AGENT_BLOG_PRIVATE_CANARY_INPUT_INVALID');
       }
@@ -130,7 +140,9 @@ export function createAgentBlogPrivateCanaryManualRunner({
         idempotencyKey: `private-canary:${requestId}:discovery`, config: modelConfig,
         input: {
           schemaVersion: 'blog-project-discovery-input-v2', topicScope: frozen.topicScope,
-          searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: null, maxCandidates: 8, maxQueries: 3 },
+          searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: null,
+            maxCandidates: AGENT_GITHUB_RESEARCH_LIMITS.maxCandidates,
+            maxQueries: AGENT_GITHUB_RESEARCH_LIMITS.maxSearchRequests },
           previousRepositoryUrls: frozen.previousRepositoryUrls,
           behaviorProfile: frozen.behaviorProfile,
         },
@@ -142,6 +154,7 @@ export function createAgentBlogPrivateCanaryManualRunner({
         discoveryArtifactId: discoveryOutput.outputId,
         idempotencyKey: `private-canary:${requestId}:draft`, triggerKind, triggerRef,
         recentTitles: frozen.recentTitles, previousRepositoryUrls: frozen.previousRepositoryUrls,
+        editorialMemory: frozen.editorialMemory,
         behaviorProfile: frozen.behaviorProfile, config: modelConfig,
       });
       const draftOutput = await executeRun({ worker: createDraftWorker(draft.id, requestId),

@@ -57,7 +57,7 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   await assert.rejects(runtime.createRun({ ...request, input: { subject: 'changed' } }), error => error.code === 'AGENT_RUN_IDEMPOTENCY_CONFLICT');
   await assert.rejects(admin.query("UPDATE agent_runs SET status='waiting' WHERE id=$1", [run.id]));
 
-  const claims = await Promise.all([runtime.claimNextStage('foundation-worker-a', 60), runtime.claimNextStage('foundation-worker-b', 60)]);
+  const claims = await Promise.all([runtime.claimNextStage('foundation-worker-a', 60, null, run.id), runtime.claimNextStage('foundation-worker-b', 60, null, run.id)]);
   const rootClaims = claims.filter(item => item?.runId === run.id);
   assert.equal(rootClaims.length, 1);
   const prepare = rootClaims[0];
@@ -66,7 +66,7 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   assert.equal(completed.unlocked.length, 1);
   await assert.rejects(runtime.renewStageLease({ stageId: prepare.id, workerId: prepare.leasedBy, leaseToken: prepare.leaseToken }), error => error.code === 'AGENT_RUNTIME_LEASE_LOST');
 
-  const publish = await runtime.claimNextStage('foundation-worker-publish', 60);
+  const publish = await runtime.claimNextStage('foundation-worker-publish', 60, null, run.id);
   assert.equal(publish.runId, run.id);
   await runtime.startStage({ stageId: publish.id, workerId: publish.leasedBy, leaseToken: publish.leaseToken });
   const action = await runtime.createAction({

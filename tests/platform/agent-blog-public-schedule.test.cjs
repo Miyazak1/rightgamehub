@@ -12,11 +12,12 @@ const fireId = crypto.randomUUID(), attemptId = crypto.randomUUID(), requestId =
 const runtimeConfig = {
   schemaVersion: 'agent-blog-public-runtime-config-v1', enabled: true, agentUserId,
   provider: 'deepseek', modelId: 'deepseek-flash', dailyPublicationRunLimit: 1,
+  githubResearchAuthenticated: true,
   monthlyProviderCallLimit: 120, monthlyCostMicrousdLimit: 10_000_000,
   consecutiveFailureLimit: 2,
 };
 const snapshot = overrides => ({ activePublisher: 'foundation', legacyAutomationEnabled: false,
-  identityReady: true, capabilityCount: 5, toolCount: 2, workflowCount: 2,
+  identityReady: true, capabilityCount: 5, toolCount: 3, workflowCount: 2,
   secretReady: true, modelReady: true, circuitReady: true, activeRuns: 0,
   uncertainRuns: 0, awaitingHandoff: 0, publicationRunsToday: 0,
   providerCallsMonth: 0, costMicrousdMonth: 0, consecutiveFailures: 0, ...overrides });

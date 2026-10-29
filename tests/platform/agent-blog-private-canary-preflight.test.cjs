@@ -22,8 +22,9 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
     AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
     AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
     AGENT_BLOG_PRIVATE_CANARY_MODEL_ID: 'deepseek-flash',
+    AGENT_GITHUB_RESEARCH_TOKEN: 'github_pat_test_read_only_1234567890',
   });
-  const readySnapshot = { identityReady: true, capabilityCount: 4, toolCount: 2, workflowCount: 2,
+  const readySnapshot = { identityReady: true, capabilityCount: 4, toolCount: 3, workflowCount: 2,
     secretReady: true, modelReady: true, circuitReady: true, activeRuns: 0, uncertainRuns: 0,
     awaitingHandoff: 0, discoveryRunsToday: 0, providerCallsMonth: 0,
     costMicrousdMonth: 0, consecutiveFailures: 0 };
@@ -33,12 +34,19 @@ test('private blog canary defaults off, forbids publish, and fails closed on eve
     AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
     AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
     AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE: '1',
+    AGENT_GITHUB_RESEARCH_TOKEN: 'github_pat_test_read_only_1234567890',
   });
   assert.equal(oneExtraRun.dailyDiscoveryRunLimit, 5);
   assert.equal(oneExtraRun.dailyDiscoveryRunBaseLimit, 4);
   assert.equal(oneExtraRun.extraDailyRunAllowance, 1);
   assert.equal(evaluateAgentBlogPrivateCanarySnapshot(oneExtraRun,
     { ...readySnapshot, discoveryRunsToday: 4 }).ready, true);
+  const missingGitHubAuth = loadAgentBlogPrivateCanaryConfig({
+    AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
+    AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),
+  });
+  assert.equal(evaluateAgentBlogPrivateCanarySnapshot(missingGitHubAuth, readySnapshot).blockers.includes(
+    'AGENT_BLOG_PRIVATE_CANARY_GITHUB_AUTH_NOT_READY'), true);
   assert.throws(() => loadAgentBlogPrivateCanaryConfig({
     AGENT_BLOG_PRIVATE_CANARY_ENABLED: 'true',
     AGENT_BLOG_PRIVATE_CANARY_AGENT_USER_ID: crypto.randomUUID(),

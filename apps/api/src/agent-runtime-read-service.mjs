@@ -27,7 +27,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
     async blogOverview(actor, agentUserId) {
       agentUserId = await scope(actor, agentUserId);
       const policy = AGENT_BLOG_CANARY_ACCEPTANCE_POLICY;
-      const [reports, schedule] = await Promise.all([
+      const [reports, schedule, paperQuality] = await Promise.all([
         pool.query(`SELECT verdict,reason_codes,created_at FROM agent_blog_canary_acceptance_reports
           WHERE agent_user_id=$1 AND policy_version=$2 ORDER BY created_at DESC,id DESC LIMIT $3`,
         [agentUserId, policy.policyVersion, policy.requiredConsecutivePasses]),
@@ -35,6 +35,36 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
             config_json,updated_at
           FROM agent_schedules WHERE agent_user_id=$1 AND workflow_key='blog.project.discovery-shadow'
           ORDER BY updated_at DESC,id DESC LIMIT 1`, [agentUserId]),
+        pool.query(`WITH assessments AS (
+            SELECT assessment.*,identity.title,version.id AS version_id
+            FROM agent_paper_parse_assessments assessment
+            JOIN agent_paper_versions version ON version.id=assessment.paper_version_id
+            JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
+            WHERE identity.agent_user_id=$1
+          ), semantic AS (
+            SELECT analysis.*,identity.title
+            FROM agent_paper_semantic_analyses analysis
+            JOIN agent_paper_versions version ON version.id=analysis.paper_version_id
+            JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
+            WHERE analysis.agent_user_id=$1
+          ) SELECT count(*)::int AS total,
+            count(*) FILTER (WHERE reliability_grade='trusted-text')::int AS trusted,
+            count(*) FILTER (WHERE reliability_grade='limited-text')::int AS limited,
+            count(*) FILTER (WHERE reliability_grade='blocked')::int AS blocked,
+            (SELECT jsonb_build_object('paperVersionId',version_id,'title',title,
+              'grade',reliability_grade,'reasonCodes',reason_codes,'metrics',metrics_json,
+              'parserVersion',parser_version,'policyVersion',policy_version,
+              'assessmentSha256',assessment_sha256,'createdAt',created_at)
+              FROM assessments ORDER BY created_at DESC,paper_version_id DESC LIMIT 1) AS latest,
+            (SELECT count(*)::int FROM semantic) AS semantic_total,
+            (SELECT jsonb_build_object('id',id,'paperVersionId',paper_version_id,'runId',run_id,
+              'title',title,'provider',provider,'modelId',model_id,'policyVersion',policy_version,
+              'promptVersion',prompt_version,'findingCount',jsonb_array_length(findings),
+              'limitationCount',jsonb_array_length(limitations),
+              'followUpQuestionCount',jsonb_array_length(follow_up_questions),
+              'analysisSha256',analysis_sha256,'createdAt',created_at)
+              FROM semantic ORDER BY created_at DESC,id DESC LIMIT 1) AS latest_semantic
+          FROM assessments`, [agentUserId]),
       ]);
       let consecutivePasses = 0;
       for (const report of reports.rows) {
@@ -42,6 +72,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         consecutivePasses += 1;
       }
       const scheduleRow = schedule.rows[0];
+      const paperQualityRow = paperQuality.rows[0] ?? {};
       let publicOperations = null;
       if (publicPreflightRepository) {
         const effectiveRuntimeConfig = Object.freeze({ ...publicRuntimeConfig, agentUserId });
@@ -78,6 +109,41 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           suspensionReason: scheduleRow.config_json?.suspensionReason ?? null,
           updatedAt: iso(scheduleRow.updated_at),
         } : null,
+        paperResearch: {
+          schemaVersion: 'agent-paper-quality-overview-v2', publicPublicationEnabled: false,
+          counts: { total: Number(paperQualityRow.total ?? 0),
+            trusted: Number(paperQualityRow.trusted ?? 0),
+            limited: Number(paperQualityRow.limited ?? 0),
+            blocked: Number(paperQualityRow.blocked ?? 0) },
+          latest: paperQualityRow.latest ? {
+            paperVersionId: paperQualityRow.latest.paperVersionId,
+            title: paperQualityRow.latest.title, grade: paperQualityRow.latest.grade,
+            reasonCodes: paperQualityRow.latest.reasonCodes ?? [],
+            metrics: paperQualityRow.latest.metrics ?? {},
+            parserVersion: paperQualityRow.latest.parserVersion,
+            policyVersion: paperQualityRow.latest.policyVersion,
+            assessmentSha256: paperQualityRow.latest.assessmentSha256,
+            createdAt: iso(paperQualityRow.latest.createdAt),
+          } : null,
+          semantic: {
+            total: Number(paperQualityRow.semantic_total ?? 0),
+            latest: paperQualityRow.latest_semantic ? {
+              id: paperQualityRow.latest_semantic.id,
+              paperVersionId: paperQualityRow.latest_semantic.paperVersionId,
+              runId: paperQualityRow.latest_semantic.runId,
+              title: paperQualityRow.latest_semantic.title,
+              provider: paperQualityRow.latest_semantic.provider,
+              modelId: paperQualityRow.latest_semantic.modelId,
+              policyVersion: paperQualityRow.latest_semantic.policyVersion,
+              promptVersion: paperQualityRow.latest_semantic.promptVersion,
+              findingCount: Number(paperQualityRow.latest_semantic.findingCount ?? 0),
+              limitationCount: Number(paperQualityRow.latest_semantic.limitationCount ?? 0),
+              followUpQuestionCount: Number(paperQualityRow.latest_semantic.followUpQuestionCount ?? 0),
+              analysisSha256: paperQualityRow.latest_semantic.analysisSha256,
+              createdAt: iso(paperQualityRow.latest_semantic.createdAt),
+            } : null,
+          },
+        },
         publicOperations,
       };
     },
@@ -97,11 +163,19 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           acceptance.policy_version AS acceptance_policy_version,
           acceptance.verdict AS acceptance_verdict,
           acceptance.reason_codes AS acceptance_reason_codes,
-          acceptance.created_at AS acceptance_created_at
+          acceptance.created_at AS acceptance_created_at,
+          semantic.id AS semantic_analysis_id,semantic.paper_version_id AS semantic_paper_version_id,
+          semantic.analysis_sha256 AS semantic_analysis_sha256,
+          semantic.created_at AS semantic_created_at,semantic_identity.title AS semantic_title,
+          jsonb_array_length(semantic.findings) AS semantic_finding_count,
+          jsonb_array_length(semantic.limitations) AS semantic_limitation_count
         FROM agent_runs r
         LEFT JOIN agent_blog_foundation_drafts draft ON draft.run_id=r.id
         LEFT JOIN blog_articles article ON article.id=draft.article_id
         LEFT JOIN blog_article_revisions revision ON revision.id=draft.revision_id
+        LEFT JOIN agent_paper_semantic_analyses semantic ON semantic.run_id=r.id
+        LEFT JOIN agent_paper_versions semantic_version ON semantic_version.id=semantic.paper_version_id
+        LEFT JOIN agent_paper_identities semantic_identity ON semantic_identity.id=semantic_version.paper_identity_id
         LEFT JOIN LATERAL (
           SELECT handoff.source_run_id FROM agent_run_handoffs handoff
           WHERE handoff.target_run_id=r.id ORDER BY handoff.created_at DESC,handoff.id DESC LIMIT 1
@@ -132,6 +206,13 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           policyVersion: row.acceptance_policy_version, verdict: row.acceptance_verdict,
           reasonCodes: row.acceptance_reason_codes ?? [], createdAt: iso(row.acceptance_created_at),
         } : null,
+        paperSemanticAnalysis: row.semantic_analysis_id ? {
+          id: row.semantic_analysis_id, paperVersionId: row.semantic_paper_version_id,
+          title: row.semantic_title, analysisSha256: row.semantic_analysis_sha256,
+          findingCount: Number(row.semantic_finding_count ?? 0),
+          limitationCount: Number(row.semantic_limitation_count ?? 0),
+          createdAt: iso(row.semantic_created_at),
+        } : null,
         queuedAt: iso(row.queued_at), startedAt: iso(row.started_at), finishedAt: iso(row.finished_at),
       }));
     },
@@ -140,7 +221,16 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
       articleId = uuid(articleId);
       const row = (await pool.query(`SELECT draft.run_id,draft.article_id,draft.revision_id,
           draft.content_sha256,draft.created_at,article.slug,article.locale,article.publication_state,
-          revision.title,revision.summary,revision.blocks,revision.citations,revision.content_hash
+          revision.title,revision.summary,revision.blocks,revision.citations,revision.content_hash,
+          jsonb_array_length(revision.citations) AS citation_count,
+          (SELECT count(DISTINCT link.citation_id)::int FROM blog_revision_citation_evidence link
+            WHERE link.revision_id=revision.id) AS bound_citation_count,
+          (SELECT count(DISTINCT link.evidence_id)::int FROM blog_revision_citation_evidence link
+            WHERE link.revision_id=revision.id) AS evidence_span_count,
+          (SELECT count(DISTINCT binding.research_source_version_id)::int
+            FROM blog_revision_citation_evidence link
+            JOIN agent_research_artifact_bindings binding ON binding.id=link.artifact_binding_id
+            WHERE link.revision_id=revision.id) AS source_version_count
         FROM agent_blog_foundation_drafts draft
         JOIN blog_articles article ON article.id=draft.article_id AND article.author_user_id=draft.agent_user_id
         JOIN blog_article_revisions revision ON revision.id=draft.revision_id AND revision.article_id=article.id
@@ -153,6 +243,12 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         slug: row.slug, locale: row.locale, publicationState: row.publication_state,
         title: row.title, summary: row.summary, blocks: row.blocks ?? [], citations: row.citations ?? [],
         contentHash: row.content_hash, contentSha256: row.content_sha256, createdAt: iso(row.created_at),
+        researchEvidence: {
+          citationCount: Number(row.citation_count), boundCitationCount: Number(row.bound_citation_count),
+          evidenceSpanCount: Number(row.evidence_span_count), sourceVersionCount: Number(row.source_version_count),
+          complete: Number(row.citation_count) > 0
+            && Number(row.bound_citation_count) === Number(row.citation_count),
+        },
       };
     },
     async timeline(actor, agentUserId, runId) {
@@ -161,7 +257,8 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
       const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
       const [stages, actions, events, reservations, providerCalls, providerOutputArtifacts, toolCalls, toolArtifacts,
-        stageArtifacts, foundationDrafts, incomingHandoffs, outgoingHandoffs] = await Promise.all([
+        stageArtifacts, foundationDrafts, incomingHandoffs, outgoingHandoffs,
+        paperQualityAssessments, paperSemanticAnalyses] = await Promise.all([
         pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
         pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
         pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
@@ -179,7 +276,8 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           FROM agent_tool_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
           WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
         pool.query(`SELECT id,stage_id,action_id,artifact_key,artifact_kind,schema_key,schema_version,media_type,
-            content_sha256,size_bytes,source_tool_artifact_ids,source_stage_artifact_ids,created_at
+            content_sha256,size_bytes,source_tool_artifact_ids,source_stage_artifact_ids,created_at,
+            CASE WHEN artifact_key='blog.selection' THEN content_json ELSE NULL END AS audit_content
           FROM agent_runtime_stage_artifacts WHERE run_id=$1 ORDER BY created_at,id`, [runId]),
         pool.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
             draft.source_artifact_ids,draft.content_sha256,draft.verification_artifact_id,
@@ -194,6 +292,28 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         pool.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
             source_artifact_key,source_content_sha256,target_run_id,target_input_sha256,created_at
           FROM agent_run_handoffs WHERE source_run_id=$1 ORDER BY created_at,id`, [runId]),
+        pool.query(`SELECT assessment.paper_version_id,assessment.policy_version,
+            assessment.parser_version,assessment.reliability_grade,assessment.permitted_uses,
+            assessment.reason_codes,assessment.metrics_json,assessment.assessment_sha256,
+            assessment.created_at,identity.title,binding.id AS artifact_binding_id
+          FROM agent_research_artifact_bindings binding
+          JOIN agent_paper_versions version
+            ON version.research_source_version_id=binding.research_source_version_id
+          JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
+          JOIN agent_paper_parse_assessments assessment ON assessment.paper_version_id=version.id
+          WHERE binding.run_id=$1 AND binding.agent_user_id=$2 AND binding.artifact_kind='paper'
+          ORDER BY assessment.created_at,assessment.paper_version_id`, [runId, agentUserId]),
+        pool.query(`SELECT analysis.id,analysis.paper_version_id,analysis.schema_version,
+            analysis.policy_version,analysis.prompt_version,analysis.provider,analysis.model_id,
+            analysis.section_manifest,analysis.findings,analysis.limitations,analysis.follow_up_questions,
+            analysis.evidence_manifest_sha256,analysis.analysis_sha256,analysis.created_at,identity.title,
+            (SELECT count(*)::int FROM agent_paper_semantic_evidence_links link
+              WHERE link.analysis_id=analysis.id) AS evidence_relation_count
+          FROM agent_paper_semantic_analyses analysis
+          JOIN agent_paper_versions version ON version.id=analysis.paper_version_id
+          JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
+          WHERE analysis.run_id=$1 AND analysis.agent_user_id=$2
+          ORDER BY analysis.created_at,analysis.id`, [runId, agentUserId]),
       ]);
       const handoffView = row => ({
         id: row.id, kind: row.handoff_kind, sourceRunId: row.source_run_id,
@@ -202,6 +322,31 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         targetRunId: row.target_run_id, targetInputSha256: row.target_input_sha256,
         createdAt: iso(row.created_at),
       });
+      const selectionArtifact = stageArtifacts.rows.find(row => row.artifact_key === 'blog.selection');
+      const rawCandidateGate = selectionArtifact?.audit_content?.gateReport ?? null;
+      const rawSelection = selectionArtifact?.audit_content?.selection;
+      const selectionDecision = rawSelection ? {
+        mode: rawSelection.mode, repositories: rawSelection.repositories ?? [],
+        reusedRepositories: rawSelection.reusedRepositories ?? [], angle: rawSelection.angle ?? null,
+        rationale: rawSelection.rationale ?? null, scores: rawSelection.scores ?? null,
+        decisionReasonCodes: rawSelection.decisionReasonCodes ?? [],
+      } : null;
+      const charged = reservations.rows.reduce((total, row) => ({
+        providerCalls: total.providerCalls + Number(row.charged_provider_calls ?? 0),
+        inputTokens: total.inputTokens + Number(row.charged_input_tokens ?? 0),
+        outputTokens: total.outputTokens + Number(row.charged_output_tokens ?? 0),
+        costMicrousd: total.costMicrousd + Number(row.charged_cost_microusd ?? 0),
+      }), { providerCalls: 0, inputTokens: 0, outputTokens: 0, costMicrousd: 0 });
+      const startedAt = run.started_at ? new Date(run.started_at).getTime() : null;
+      const endedAt = run.finished_at ? new Date(run.finished_at).getTime() : Date.now();
+      const usageSummary = {
+        providerCalls: providerCalls.rows.length, toolCalls: toolCalls.rows.length,
+        inputTokens: charged.inputTokens, outputTokens: charged.outputTokens,
+        costMicrousd: charged.costMicrousd,
+        wallClockSeconds: startedAt === null ? null : Math.max(0, Math.round((endedAt - startedAt) / 1000)),
+      };
+      const candidateGate = rawCandidateGate
+        ? { ...rawCandidateGate, selectionDecision, usageSummary } : null;
       return {
         run: {
           id: run.id, workflowKey: run.workflow_key, workflowVersion: run.workflow_version,
@@ -213,7 +358,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         stages: stages.rows.map(row => ({
           id: row.id, ordinal: row.ordinal, stageKey: row.stage_key, kind: row.kind, status: row.status,
           attempt: row.attempt, maxAttempts: row.max_attempts, leasedBy: row.leased_by,
-          leaseUntil: iso(row.lease_until), errorCode: row.error_code,
+          leaseUntil: iso(row.lease_until), availableAt: iso(row.available_at), errorCode: row.error_code,
           startedAt: iso(row.started_at), finishedAt: iso(row.finished_at),
         })),
         actions: actions.rows.map(row => ({
@@ -227,6 +372,9 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           eventType: row.event_type, actorKind: row.actor_kind, actorRef: row.actor_ref,
           payload: row.payload_json, createdAt: iso(row.created_at),
         })),
+        candidateGate,
+        selectionDecision,
+        usageSummary,
         budgetReservations: reservations.rows.map(row => ({
           id: row.id, actionId: row.action_id, provider: row.provider, modelId: row.model_id, status: row.status,
           reserved: { providerCalls: row.reserved_provider_calls, inputTokens: row.reserved_input_tokens,
@@ -275,6 +423,24 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           incoming: incomingHandoffs.rows.map(handoffView),
           outgoing: outgoingHandoffs.rows.map(handoffView),
         },
+        paperQualityAssessments: paperQualityAssessments.rows.map(row => ({
+          paperVersionId: row.paper_version_id, artifactBindingId: row.artifact_binding_id,
+          title: row.title, policyVersion: row.policy_version, parserVersion: row.parser_version,
+          grade: row.reliability_grade, permittedUses: row.permitted_uses ?? [],
+          reasonCodes: row.reason_codes ?? [], metrics: row.metrics_json ?? {},
+          assessmentSha256: row.assessment_sha256, createdAt: iso(row.created_at),
+        })),
+        paperSemanticAnalyses: paperSemanticAnalyses.rows.map(row => ({
+          id: row.id, paperVersionId: row.paper_version_id, title: row.title,
+          schemaVersion: row.schema_version, policyVersion: row.policy_version,
+          promptVersion: row.prompt_version, provider: row.provider, modelId: row.model_id,
+          sectionManifest: row.section_manifest, findings: row.findings ?? [],
+          limitations: row.limitations ?? [], followUpQuestions: row.follow_up_questions ?? [],
+          evidenceRelationCount: Number(row.evidence_relation_count ?? 0),
+          evidenceManifestSha256: row.evidence_manifest_sha256,
+          analysisSha256: row.analysis_sha256, private: true,
+          publicPublicationEnabled: false, createdAt: iso(row.created_at),
+        })),
       };
     },
   };

@@ -56,3 +56,27 @@ test('mailer localizes verification messages from an explicit supported locale',
   assert.match(body.html, /lang="en"/u);
   assert.doesNotMatch(body.text, /验证码/u);
 });
+
+test('Resend mailer sends operations alerts through the same configured transport', async () => {
+  const { createConfiguredMailer } = await import(mailerUrl);
+  let body;
+  const mailer = createConfiguredMailer({
+    mailProvider: 'resend', resendApiKey: 're_test_secret', mailFrom: 'MOOYU.FUN <ops@example.com>',
+  }, async (_url, options) => { body = JSON.parse(options.body); return { ok: true, status: 200 }; });
+  assert.equal(mailer.configured, true);
+  await mailer.sendOperationsMessage({
+    email: 'operator@example.com', subject: '小墨鱼论文研究告警',
+    text: 'PAPER_RESEARCH_WORKER_MISSING', html: '<h2>告警</h2>',
+  });
+  assert.deepEqual(body.to, ['operator@example.com']);
+  assert.equal(body.subject, '小墨鱼论文研究告警');
+  assert.equal(body.text, 'PAPER_RESEARCH_WORKER_MISSING');
+  assert.equal(body.html, '<h2>告警</h2>');
+});
+
+test('disabled mailer explicitly reports operations delivery unavailable', async () => {
+  const { createConfiguredMailer } = await import(mailerUrl);
+  const mailer = createConfiguredMailer({ mailProvider: 'disabled' });
+  assert.equal(mailer.configured, false);
+  await assert.rejects(mailer.sendOperationsMessage({}), /MAIL_PROVIDER_NOT_CONFIGURED/);
+});

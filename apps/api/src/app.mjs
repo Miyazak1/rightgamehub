@@ -45,8 +45,17 @@ import { registerBlogRoutes } from './blog-routes.mjs';
 import {AgentAccountError} from './agent-account-repository.mjs';
 import {AgentBlogAutomationError} from './agent-blog-writer.mjs';
 import {AgentBlogFollowUpError} from './agent-blog-follow-up.mjs';
+import {AgentPaperFollowUpServiceError} from './agent-paper-follow-up-service.mjs';
+import {AgentPaperIntakeServiceError} from './agent-paper-intake-service.mjs';
+import {AgentPaperResearchExecutionError} from './agent-paper-research-execution.mjs';
+import {AgentPaperResearchOperationsError} from './agent-paper-research-operations.mjs';
+import {AgentCapabilityExecutionError} from './agent-capability-execution-service.mjs';
+import {AgentCapabilityHostError} from './agent-capability-host-service.mjs';
 import {AgentBlogPublicationOwnershipError} from './agent-blog-publication-ownership.mjs';
 import {registerAgentAccountRoutes} from './agent-account-routes.mjs';
+import {registerAgentCapabilityExecutionRoutes} from './agent-capability-execution-routes.mjs';
+import {registerAgentCapabilityHostRoutes} from './agent-capability-host-routes.mjs';
+import {registerAgentExecutionNodeAccessRoutes} from './agent-execution-node-access-routes.mjs';
 import { registerPublicSeoRoutes, serializeJsonLd, workStructuredData } from './public-seo.mjs';
 import { growthContentSlides, renderWorkXhsSlide } from './growth-content-renderer.mjs';
 import { AuthorOutreachError } from './author-outreach-service.mjs';
@@ -137,6 +146,14 @@ export function createApp(dependencies) {
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
     agentRuntimeReadService,
+    agentPaperFollowUpService,
+    agentPaperIntakeService,
+    agentPaperDiscoveryService,
+    agentPaperResearchExecutionService,
+    agentPaperResearchOperationsService,
+    agentCapabilityExecutionService,
+    agentCapabilityHostService,
+    agentExecutionNodeAccessService,
     agentBlogPublicOperationsService,
     creatorDraftService,
     projectClaimService,
@@ -176,7 +193,7 @@ export function createApp(dependencies) {
     reply.header('Access-Control-Allow-Origin', origin);
     reply.header('Vary', 'Origin');
     reply.header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS');
-    reply.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key, If-Match, If-None-Match, X-GameHub-Session, X-GameHub-Save-Schema, X-Content-SHA256, Content-Encoding');
+    reply.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key, If-Match, If-None-Match, X-GameHub-Session, X-GameHub-Save-Schema, X-Content-SHA256, X-Paper-Filename, X-Paper-Rights, X-Paper-Doi, Content-Encoding');
     reply.header('Access-Control-Expose-Headers', 'ETag, X-Request-Id, X-GameHub-Save-Schema, X-Content-SHA256');
     if (request.method === 'OPTIONS') return reply.status(204).send();
   });
@@ -191,12 +208,12 @@ export function createApp(dependencies) {
     }
   });
   app.setErrorHandler((error, request, reply) => {
-    const known = error instanceof ResearchTopicError || error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof BlogArticleError || error instanceof AgentAccountError || error instanceof AgentBlogAutomationError || error instanceof AgentBlogFollowUpError || error instanceof AgentBlogPublicationOwnershipError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
+    const known = error instanceof ResearchTopicError || error instanceof ChangeRadarError || error instanceof GameShareError || error instanceof CompetitionError || error instanceof CommunityError || error instanceof GameSaveError || error instanceof GameSessionError || error instanceof AuthError || error instanceof WorkError || error instanceof CreatorDraftError || error instanceof ProjectClaimError || error instanceof AuthorOutreachError || error instanceof GitHubSourceError || error instanceof SourceBuildRepositoryError || error instanceof UploadError || error instanceof CatalogError || error instanceof EngagementError || error instanceof ModerationError || error instanceof SocialError || error instanceof PublicProfileError || error instanceof GuessBaikeError || error instanceof AnalyticsError || error instanceof CreatorFeedbackError || error instanceof ContributionTaskError || error instanceof DevelopmentLogError || error instanceof DiscoveryCampaignError || error instanceof BlogArticleError || error instanceof AgentAccountError || error instanceof AgentBlogAutomationError || error instanceof AgentBlogFollowUpError || error instanceof AgentPaperFollowUpServiceError || error instanceof AgentPaperIntakeServiceError || error instanceof AgentPaperResearchExecutionError || error instanceof AgentPaperResearchOperationsError || error instanceof AgentCapabilityExecutionError || error instanceof AgentCapabilityHostError || error instanceof AgentBlogPublicationOwnershipError || error instanceof StorageCapacityError || error instanceof RealtimeTicketError || error instanceof MultiplayerRoomError || error instanceof MultiplayerMatchError || error instanceof MultiplayerRuleSubmissionError;
     const statusCode = known ? error.statusCode : (error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500);
     const code = known ? error.code : (statusCode === 400 ? 'SCHEMA_INVALID' : 'INTERNAL_ERROR');
-    reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError || error instanceof AgentBlogPublicationOwnershipError ? error.details : {} } });
+    reply.status(statusCode).send({ error: { code, message: known ? error.message : (statusCode < 500 ? error.message : 'An internal error occurred.'), requestId: request.id, retryable: known ? error.retryable : statusCode >= 500, details: error instanceof GameSaveError || error instanceof AgentBlogPublicationOwnershipError || error instanceof AgentPaperFollowUpServiceError || error instanceof AgentPaperIntakeServiceError || error instanceof AgentPaperResearchExecutionError || error instanceof AgentPaperResearchOperationsError ? error.details : {} } });
   });
-  app.addContentTypeParser(['application/zip', 'application/x-zip-compressed', 'application/octet-stream', 'image/png', 'image/jpeg', 'image/gif', 'image/webp'], (request, payload, done) => done(null, payload));
+  app.addContentTypeParser(['application/zip', 'application/x-zip-compressed', 'application/octet-stream', 'application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp'], (request, payload, done) => done(null, payload));
 
   app.get('/health', async () => envelope({ status: 'ok' }));
   app.get('/ready', async (_request, reply) => {
@@ -300,7 +317,10 @@ export function createApp(dependencies) {
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});
   if (discoveryCampaignService) registerDiscoveryCampaignRoutes(app,{service:discoveryCampaignService,requireAuth,siteOrigin,getCover:workService?.getCover?id=>workService.getCover(id):null});
   if (blogService) registerBlogRoutes(app,{service:blogService,followUpService:agentBlogFollowUpService,requireAuth,siteOrigin});
-  if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,runtimeRead:agentRuntimeReadService,publicationCutover:agentBlogPublicationCutoverService,publicOperations:agentBlogPublicOperationsService,requireAuth});
+  if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,runtimeRead:agentRuntimeReadService,paperFollowUp:agentPaperFollowUpService,paperIntake:agentPaperIntakeService,paperDiscovery:agentPaperDiscoveryService,paperResearch:agentPaperResearchExecutionService,paperResearchOperations:agentPaperResearchOperationsService,publicationCutover:agentBlogPublicationCutoverService,publicOperations:agentBlogPublicOperationsService,requireAuth});
+  if (agentCapabilityExecutionService) registerAgentCapabilityExecutionRoutes(app,{service:agentCapabilityExecutionService,requireAuth});
+  if (agentCapabilityHostService) registerAgentCapabilityHostRoutes(app,{service:agentCapabilityHostService,requireAuth});
+  if (agentExecutionNodeAccessService) registerAgentExecutionNodeAccessRoutes(app,{service:agentExecutionNodeAccessService,requireAuth});
   if (projectClaimService) registerProjectClaimRoutes(app,{service:projectClaimService,requireAuth});
   if (authorOutreachService) registerAuthorOutreachRoutes(app,{service:authorOutreachService,requireAuth});
   if (changeRadarService) registerChangeRadarRoutes(app,{service:changeRadarService,requireAuth});

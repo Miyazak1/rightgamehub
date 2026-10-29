@@ -1,3 +1,6 @@
+import { AGENT_GITHUB_RESEARCH_LIMITS,
+  normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const MODEL = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/u;
 
@@ -29,8 +32,10 @@ export function loadAgentBlogPublicRuntimeConfig(env = process.env) {
   const provider = env.AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER?.trim() || 'deepseek';
   const modelId = env.AGENT_BLOG_PUBLIC_RUNTIME_MODEL_ID?.trim() || 'deepseek-flash';
   if (provider !== 'deepseek' || !MODEL.test(modelId)) fail('AGENT_BLOG_PUBLIC_RUNTIME_MODEL_INVALID');
+  const githubResearchAuthenticated = normalizeGitHubResearchToken(env.AGENT_GITHUB_RESEARCH_TOKEN) !== null;
   return Object.freeze({
     schemaVersion: 'agent-blog-public-runtime-config-v1', enabled, agentUserId, provider, modelId,
+    githubResearchAuthenticated,
     dailyPublicationRunLimit: integer(env.AGENT_BLOG_PUBLIC_RUNTIME_DAILY_RUN_LIMIT ?? 1,
       1, 4, 'AGENT_BLOG_PUBLIC_RUNTIME_DAILY_LIMIT_INVALID'),
     monthlyProviderCallLimit: integer(env.AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_PROVIDER_CALL_LIMIT ?? 120,
@@ -51,11 +56,12 @@ export function evaluateAgentBlogPublicRuntimeSnapshot(config, snapshot) {
   if (snapshot.legacyAutomationEnabled) blockers.push('AGENT_BLOG_LEGACY_AUTOMATION_STILL_ENABLED');
   if (!snapshot.identityReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_IDENTITY_NOT_READY');
   if (snapshot.capabilityCount !== 5) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_CAPABILITIES_NOT_READY');
-  if (snapshot.toolCount !== 2) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_TOOLS_NOT_READY');
+  if (snapshot.toolCount !== 3) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_TOOLS_NOT_READY');
   if (snapshot.workflowCount !== 2) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_WORKFLOWS_NOT_READY');
   if (!snapshot.secretReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_SECRET_NOT_READY');
   if (!snapshot.modelReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_MODEL_NOT_READY');
   if (!snapshot.circuitReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER_CIRCUIT_OPEN');
+  if (!config.githubResearchAuthenticated) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_GITHUB_AUTH_NOT_READY');
   if (snapshot.activeRuns > 0) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_RUN_ACTIVE');
   if (snapshot.uncertainRuns > 0) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_UNCERTAIN');
   if (snapshot.awaitingHandoff > 0) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_AWAITING_HANDOFF');
@@ -78,8 +84,12 @@ export function evaluateAgentBlogPublicRuntimeSnapshot(config, snapshot) {
       monthlyProviderCalls: config.monthlyProviderCallLimit,
       monthlyCostMicrousd: config.monthlyCostMicrousdLimit,
       consecutiveFailures: config.consecutiveFailureLimit,
+      githubRequestBudgetPerRun: AGENT_GITHUB_RESEARCH_LIMITS.requestBudgetPerRun,
+      githubCandidateLimit: AGENT_GITHUB_RESEARCH_LIMITS.maxCandidates,
+      githubSearchRequestLimit: AGENT_GITHUB_RESEARCH_LIMITS.maxSearchRequests,
     },
-    observed: structuredClone(snapshot),
+    observed: { ...structuredClone(snapshot),
+      githubResearchAuthenticated: config.githubResearchAuthenticated },
   });
 }
 
@@ -105,7 +115,8 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
             AND (valid_until IS NULL OR valid_until>now()) AND capability_key=ANY($2::text[])) AS capability_count,
         (SELECT count(*)::int FROM agent_tool_contracts WHERE status='active'
           AND (tool_key,contract_version) IN (
-            ('research.github.repository.search',1),('research.github.repository.read',1))) AS tool_count,
+            ('research.github.repository.search',1),('research.github.repository.read',1),
+            ('research.github.repository.materials.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
             ('blog.project.discovery-shadow',3),('blog.project.single',1))) AS workflow_count,

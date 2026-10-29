@@ -17,6 +17,8 @@ const profile = { schemaVersion: 'agent-behavior-v1', core: {
   voice: '使用自然、具体和克制的简体中文。', audience: '关注开放工具和数字创作的普通中文读者。',
 }, modules: { editorial: { persona: '像一位好奇而审慎的科技编辑，所有判断必须来自候选仓库证据。',
   comparisonEnabled: true, interestSignals: ['可以快速体验'] } } };
+const editorialMemory = { schemaVersion: 'blog-editorial-memory-input-v1',
+  capturedAt: '2026-10-27T00:00:00.000Z', activeCooldowns: [] };
 
 function completedWorker(runId, count, outputType, outputId, events) {
   let index = 0;
@@ -34,25 +36,27 @@ function fixture({ discoveryStatus = 'completed' } = {}) {
   const events = [];
   const config = { schemaVersion: 'agent-blog-private-canary-config-v1', enabled: true,
     publishEnabled: false, agentUserId, provider: 'deepseek', modelId: 'deepseek-flash',
+    githubResearchAuthenticated: true,
     dailyDiscoveryRunLimit: 1, monthlyProviderCallLimit: 12,
     monthlyCostMicrousdLimit: 1000000, consecutiveFailureLimit: 2 };
   const preflightRepository = { async snapshot() { events.push('preflight'); return { identityReady: true,
-    capabilityCount: 4, toolCount: 2, workflowCount: 2, secretReady: true, modelReady: true, circuitReady: true,
+    capabilityCount: 4, toolCount: 3, workflowCount: 2, secretReady: true, modelReady: true, circuitReady: true,
     activeRuns: 0, uncertainRuns: 0, awaitingHandoff: 0, discoveryRunsToday: 0,
     providerCallsMonth: 0, costMicrousdMonth: 0, consecutiveFailures: 0 }; } };
   const inputRepository = { async snapshot() { events.push('snapshot'); return {
-    schemaVersion: 'agent-blog-private-canary-input-snapshot-v1',
+    schemaVersion: 'agent-blog-private-canary-input-snapshot-v2',
     agentUserId, topicScope: '有趣而且实用的开源工具', configuredModelId: 'deepseek-flash',
     behaviorProfileId: '77777777-7777-4777-8777-777777777777', behaviorProfileVersion: 3,
     behaviorProfile: profile, recentTitles: ['旧文章'],
-    previousRepositoryUrls: ['https://github.com/old/project'],
+    previousRepositoryUrls: ['https://github.com/old/project'], editorialMemory,
   }; } };
   const discoveryCanary = { async createRun(input) { events.push('create-discovery');
     assert.equal(input.input.schemaVersion, 'blog-project-discovery-input-v2');
     assert.deepEqual(input.input.previousRepositoryUrls, ['https://github.com/old/project']);
     return { id: discoveryRunId }; } };
   const handoffCanary = { async createDraftRun(input) { events.push('handoff');
-    assert.equal(input.discoveryArtifactId, artifactId); return { id: draftRunId }; } };
+    assert.equal(input.discoveryArtifactId, artifactId);
+    assert.deepEqual(input.editorialMemory, editorialMemory); return { id: draftRunId }; } };
   const createDiscoveryWorker = runId => discoveryStatus === 'completed'
     ? completedWorker(runId, 4, 'blog.candidate-set', artifactId, events)
     : { async runOnce() { events.push('stage-failed'); return { status: discoveryStatus }; },

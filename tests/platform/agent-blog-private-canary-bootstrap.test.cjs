@@ -15,7 +15,7 @@ function config(overrides = {}) {
   };
 }
 
-test('private canary bootstrap registers only the two private workflows and approved model catalog', async () => {
+test('private canary bootstrap registers private blog and paper workflows with approved model catalog', async () => {
   const { createAgentBlogPrivateCanaryBootstrap } = await load('agent-blog-private-canary-bootstrap.mjs');
   const input = config();
   const operatorUserId = crypto.randomUUID();
@@ -46,17 +46,20 @@ test('private canary bootstrap registers only the two private workflows and appr
     } },
   }).run();
   assert.deepEqual(registered.map(item => [item.manifest.workflowKey, item.manifest.workflowVersion]), [
-    ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 1],
+    ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 2],
+    ['paper.single.semantic-shadow', 1], ['paper.private.research', 1],
   ]);
   assert.deepEqual(activated, [
-    ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 1],
+    ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 2],
+    ['paper.single.semantic-shadow', 1], ['paper.private.research', 1],
   ]);
   assert.deepEqual(tools.map(item => [item.toolKey, item.contractVersion]), [
     ['research.github.repository.search', 1], ['research.github.repository.read', 1],
+    ['research.github.repository.materials.read', 1], ['research.paper.arxiv.read', 2],
   ]);
   assert.equal(model.provider, 'deepseek');
   assert.equal(model.modelId, 'deepseek-flash');
-  assert.deepEqual(model.taskClasses, ['structured-generation']);
+  assert.deepEqual(model.taskClasses, ['structured-generation', 'paper-semantic-analysis']);
   assert.equal(model.supportsJsonSchema, true);
   assert.ok(model.maxInputTokens >= 60_000);
   assert.ok(model.maxOutputTokens >= 7_000);

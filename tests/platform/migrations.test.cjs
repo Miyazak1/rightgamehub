@@ -9,7 +9,7 @@ const files = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql'))
 const migrations = files.map(name => ({ name, sql: fs.readFileSync(path.join(migrationDir, name), 'utf8') }));
 
 test('M1 migrations are sequential, transactional and non-destructive', () => {
-  assert.equal(files.length, 138);
+  assert.equal(files.length, 158);
   const creatorStudio = fs.readFileSync(path.join(migrationDir, '0056_creator_studio_drafts.sql'), 'utf8');
   const creatorGeneration = fs.readFileSync(path.join(migrationDir, '0057_creator_generation_lifecycle.sql'), 'utf8');
   const communityProjects = fs.readFileSync(path.join(migrationDir, '0058_community_projects.sql'), 'utf8');
@@ -69,6 +69,36 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   const researchCandidateEvaluationPredictions = fs.readFileSync(path.join(migrationDir, '0112_research_candidate_evaluation_predictions.sql'), 'utf8');
   const platformBlog = fs.readFileSync(path.join(migrationDir, '0113_platform_blog_foundation.sql'), 'utf8');
   const researchLocalNodes = fs.readFileSync(path.join(migrationDir, '0114_research_local_nodes.sql'), 'utf8');
+  const agentResearchEvidenceBridge = fs.readFileSync(path.join(
+    migrationDir, '0140_agent_research_evidence_bridge.sql'), 'utf8');
+  const agentEditorialMemory = fs.readFileSync(path.join(
+    migrationDir, '0141_agent_editorial_memory.sql'), 'utf8');
+  const agentEditorialMemoryLineage = fs.readFileSync(path.join(
+    migrationDir, '0142_agent_editorial_memory_lineage.sql'), 'utf8');
+  const agentEditorialClaimRelations = fs.readFileSync(path.join(
+    migrationDir, '0143_agent_editorial_claim_relations.sql'), 'utf8');
+  const agentRuntimeExplicitUncertainty = fs.readFileSync(path.join(
+    migrationDir, '0144_agent_runtime_explicit_uncertainty.sql'), 'utf8');
+  const agentPaperResearchExtensions = fs.readFileSync(path.join(
+    migrationDir, '0145_agent_paper_research_extensions.sql'), 'utf8');
+  const agentPaperParseQuality = fs.readFileSync(path.join(
+    migrationDir, '0146_agent_paper_parse_quality.sql'), 'utf8');
+  const agentPaperSemanticAnalysis = fs.readFileSync(path.join(
+    migrationDir, '0147_agent_paper_semantic_analysis.sql'), 'utf8');
+  const agentPaperFollowUp = fs.readFileSync(path.join(
+    migrationDir, '0148_agent_paper_follow_up.sql'), 'utf8');
+  const agentPaperPrivateIntakes = fs.readFileSync(path.join(
+    migrationDir, '0149_agent_paper_private_intakes.sql'), 'utf8');
+  const agentCapabilityExecutionFabric = fs.readFileSync(path.join(
+    migrationDir, '0154_agent_capability_execution_fabric.sql'), 'utf8');
+  const agentExecutionNodeAccess = fs.readFileSync(path.join(
+    migrationDir, '0155_agent_execution_node_access.sql'), 'utf8');
+  const agentExecutionStageLeases = fs.readFileSync(path.join(
+    migrationDir, '0156_agent_execution_stage_leases.sql'), 'utf8');
+  const agentCapabilityHostBindings = fs.readFileSync(path.join(
+    migrationDir, '0157_agent_capability_host_bindings.sql'), 'utf8');
+  const agentPaperArticleAcceptance = fs.readFileSync(path.join(
+    migrationDir, '0158_agent_paper_article_acceptance.sql'), 'utf8');
   assert.match(creatorStudio, /CREATE TABLE creator_drafts/);
   assert.match(creatorStudio, /CREATE TABLE creator_draft_revisions/);
   assert.match(creatorStudio, /CREATE TABLE creator_generation_jobs/);
@@ -89,9 +119,46 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(autonomousResearch, /CREATE TABLE tool_research_topics/);
   assert.match(autonomousResearch, /CREATE TABLE tool_research_topic_contracts/);
   assert.match(autonomousResearch, /CREATE TABLE tool_research_runs/);
+  assert.match(agentPaperSemanticAnalysis, /CREATE TABLE agent_paper_semantic_analyses/);
+  assert.match(agentPaperSemanticAnalysis, /CREATE TABLE agent_paper_semantic_evidence_links/);
+  assert.match(agentExecutionNodeAccess, /CREATE TABLE agent_execution_node_pairings/);
+  assert.match(agentExecutionNodeAccess, /CREATE TABLE agent_execution_node_access_tokens/);
+  assert.match(agentExecutionNodeAccess, /CREATE TABLE agent_execution_node_renewal_tokens/);
+  assert.match(agentExecutionNodeAccess, /Execution node access evidence is immutable/);
+  assert.match(agentExecutionStageLeases, /CREATE TABLE agent_execution_stage_leases/);
+  assert.match(agentExecutionStageLeases, /CREATE TABLE agent_execution_stage_result_receipts/);
+  assert.match(agentExecutionStageLeases, /Execution stage lease identity cannot change/);
+  assert.match(agentExecutionStageLeases, /Execution stage result evidence is immutable/);
+  assert.match(agentCapabilityHostBindings, /CREATE TABLE agent_capability_host_bindings/);
+  assert.match(agentCapabilityHostBindings, /PRIMARY KEY\(capability_id,capability_version\)/);
+  assert.match(agentCapabilityHostBindings, /Capability host binding is immutable/);
+  assert.match(agentPaperArticleAcceptance, /CREATE TABLE agent_paper_article_acceptance_reports/);
+  assert.match(agentPaperArticleAcceptance, /cardinality\(analysis_ids\)=3/);
+  assert.match(agentPaperArticleAcceptance, /agent_paper_article_acceptance_reports_immutable/);
+  assert.match(agentPaperSemanticAnalysis, /research\.paper\.analyze/);
+  assert.match(agentPaperSemanticAnalysis, /reject_agent_paper_research_mutation/);
+  assert.match(agentPaperFollowUp, /CREATE TABLE agent_paper_follow_up_answers/);
+  assert.match(agentPaperFollowUp, /CREATE TABLE agent_paper_follow_up_evidence_links/);
+  assert.match(agentPaperFollowUp, /research\.paper\.follow-up/);
+  assert.match(agentPaperFollowUp, /agent_paper_follow_up_answers_immutable/);
+  assert.match(agentPaperPrivateIntakes, /CREATE TABLE agent_paper_private_intakes/);
+  assert.match(agentPaperPrivateIntakes, /local_document_id/);
+  assert.match(agentPaperPrivateIntakes, /agent_paper_private_intakes_immutable/);
+  assert.match(agentCapabilityExecutionFabric, /CREATE TABLE agent_capability_execution_manifests/);
+  assert.match(agentCapabilityExecutionFabric, /CREATE TABLE agent_execution_nodes/);
+  assert.match(agentCapabilityExecutionFabric, /CREATE TABLE agent_capability_package_receipts/);
+  assert.match(agentCapabilityExecutionFabric, /CREATE TABLE agent_stage_placement_decisions/);
+  assert.match(agentCapabilityExecutionFabric, /UNIQUE\(stage_id,stage_attempt\)/);
+  assert.match(agentCapabilityExecutionFabric, /Capability execution evidence is immutable/);
   assert.match(autonomousResearch, /tool_research_runs_one_active_idx/);
   assert.match(autonomousResearch, /lease_until/);
   assert.match(autonomousResearch, /ADD COLUMN research_topic_id/);
+  assert.match(agentPaperResearchExtensions, /CREATE TABLE agent_paper_identities/);
+  assert.match(agentPaperResearchExtensions, /CREATE TABLE agent_paper_versions/);
+  assert.match(agentPaperResearchExtensions, /CREATE TABLE agent_paper_layout_manifests/);
+  assert.match(agentPaperParseQuality, /CREATE TABLE agent_paper_parse_assessments/);
+  assert.match(agentPaperParseQuality, /agent_paper_parse_assessments_immutable/);
+  assert.match(agentPaperParseQuality, /'trusted-text','limited-text','blocked'/);
   assert.match(researchDiscoveryClusters, /CREATE TABLE tool_research_discovery_clusters/);
   assert.match(researchDiscoveryClusters, /CREATE TABLE tool_research_discovery_cluster_members/);
   assert.match(researchDiscoveryClusters, /exact-normalized-title-day/);
@@ -132,6 +199,27 @@ test('M1 migrations are sequential, transactional and non-destructive', () => {
   assert.match(researchLocalNodes, /token_sha256 text NOT NULL UNIQUE/);
   assert.match(researchLocalNodes, /ADD COLUMN executor_kind/);
   assert.match(researchLocalNodes, /ADD COLUMN local_node_id/);
+  assert.match(agentResearchEvidenceBridge, /CREATE TABLE agent_research_artifact_bindings/);
+  assert.match(agentResearchEvidenceBridge, /CREATE TABLE agent_research_evidence_bindings/);
+  assert.match(agentResearchEvidenceBridge, /CREATE TABLE blog_revision_citation_evidence/);
+  assert.match(agentResearchEvidenceBridge, /tool_artifact_id uuid NOT NULL UNIQUE/);
+  assert.match(agentResearchEvidenceBridge, /FOREIGN KEY\(artifact_binding_id,evidence_id\)/);
+  assert.match(agentResearchEvidenceBridge, /Agent research evidence bindings are immutable/);
+  assert.match(agentResearchEvidenceBridge, /blog_revision_citation_evidence_immutable/);
+  assert.match(agentEditorialMemory, /CREATE TABLE agent_editorial_memory_events/);
+  assert.match(agentEditorialMemory, /CREATE TABLE agent_editorial_memory_subjects/);
+  assert.match(agentEditorialMemory, /permanent_main_exclusion boolean NOT NULL DEFAULT false/);
+  assert.match(agentEditorialMemory, /Agent editorial memory events are immutable/);
+  assert.match(agentEditorialMemory, /Agent editorial memory subjects cannot be deleted/);
+  assert.match(agentEditorialMemoryLineage, /'project-version-observed'/);
+  assert.match(agentEditorialMemoryLineage, /previous_event_id uuid REFERENCES agent_editorial_memory_events/);
+  assert.match(agentEditorialMemoryLineage, /agent_editorial_memory_version_event_shape/);
+  assert.match(agentEditorialClaimRelations, /CREATE TABLE agent_editorial_claim_relations/);
+  assert.match(agentEditorialClaimRelations, /'supports','opposes','context','unknown','revises'/);
+  assert.match(agentEditorialClaimRelations, /Agent editorial claim relations are immutable/);
+  assert.match(agentRuntimeExplicitUncertainty,
+    /OLD\.status='authorized' AND NEW\.status IN \('reserved','rejected','failed','cancelled','uncertain'\)/);
+  assert.match(agentRuntimeExplicitUncertainty, /CREATE OR REPLACE FUNCTION guard_agent_runtime_foundation/);
   assert.match(researchActionBudgetIndex, /tool_research_run_actions_monthly_budget_idx/);
   assert.match(researchProviderCircuits, /CREATE TABLE tool_research_provider_circuits/);
   assert.match(researchActionRecoveryIndex, /tool_research_run_actions_recovery_idx/);
@@ -451,6 +539,19 @@ test('migration baseline contains every M1 identity, work, upload and queue tabl
     'work_development_entries', 'work_development_entry_events', 'tool_change_watches', 'tool_change_snapshots',
     'tool_research_topics', 'tool_research_topic_contracts', 'tool_research_runs', 'tool_research_run_actions', 'tool_research_claim_reviews', 'tool_research_method_templates', 'tool_research_metric_definitions', 'tool_research_metric_observations', 'tool_research_derived_metric_definitions', 'tool_research_quality_samples', 'tool_research_quality_sample_reviews', 'tool_research_quality_correction_resolutions', 'tool_research_provider_billing_reconciliations', 'tool_research_provider_billing_reviews', 'tool_research_source_status_reviews', 'tool_research_entity_status_reviews',
     'agent_workflow_definitions', 'agent_capability_grants', 'agent_policy_profiles', 'agent_policy_profile_assignments', 'agent_runs', 'agent_run_stages', 'agent_run_actions', 'agent_run_events', 'agent_schedules', 'agent_schedule_fires', 'agent_runtime_outbox', 'agent_runtime_workers',
+    'agent_research_artifact_bindings', 'agent_research_evidence_bindings',
+    'blog_revision_citation_evidence',
+    'agent_editorial_memory_events', 'agent_editorial_memory_subjects', 'agent_editorial_claim_relations',
+    'agent_paper_semantic_analyses', 'agent_paper_semantic_evidence_links',
+    'agent_paper_follow_up_answers', 'agent_paper_follow_up_evidence_links',
+    'agent_paper_private_intakes',
+    'agent_capability_execution_manifests', 'agent_execution_nodes',
+    'agent_execution_node_capabilities', 'agent_capability_package_receipts',
+    'agent_stage_placement_decisions',
+    'agent_execution_node_pairings', 'agent_execution_node_grants',
+    'agent_execution_node_access_tokens', 'agent_execution_node_renewal_tokens',
+    'agent_execution_node_access_events', 'agent_execution_stage_leases',
+    'agent_execution_stage_result_receipts',
   ];
   for (const table of expected) assert.match(sql, new RegExp(`CREATE TABLE ${table}\\b`, 'i'), table);
 });

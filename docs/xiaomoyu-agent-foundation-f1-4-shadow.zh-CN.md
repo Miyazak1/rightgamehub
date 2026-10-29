@@ -1,7 +1,7 @@
 # 小墨鱼博客 F1-4 影子迁移
 
 版本：F1-4B2d3d
-状态：私有草稿影子 Run、自动查询规划、跨 Run 候选交接、私有汇总观测、只读上线预检、一次性受监督 canary 与不可变验收证明已在开发分支实现；未部署，不改变线上执行权
+状态：私有影子、公开 canary、唯一发布权切换和每天 10 点生产调度均已完成；旧自动发布链路已下线，本文保留迁移与验收历史
 日期：2026-10-26
 
 ## 1. 当前增量的目的
@@ -209,7 +209,7 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 - 任何活跃 Run、不确定 Run、成功但未交接的候选集都会阻止新 canary；
 - 每日发现 Run、月度 Provider 调用、月度费用和连续失败分别设硬上限，达到上限即 fail closed；
 - 独立 `agent-blog-canary-preflight` Compose profile 只读数据库、一次运行后退出，不创建 Run、不调用 Provider、不注册 Worker；
-- 真实 PostgreSQL 套件验证预检能准确识别未交接积压，83 项全部通过。
+- 真实 PostgreSQL 套件验证预检能准确识别未交接积压，当前 85 项全部通过。
 
 这仍不是上线开关。其结果只作为下节一次性人工执行的前置门禁。
 
@@ -217,7 +217,7 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 工作流 Manifest 与模型准入目录是版本化控制面事实，不能依赖首个业务 Run 临时补写，也不能要求运营者手工执行 SQL。独立 `agent-blog-canary-bootstrap` profile 因此在 preflight 之前执行一次幂等登记：
 
-- 只登记 `blog.project.discovery-shadow@3` 和 `blog.project.single.draft-shadow@1`，以及它们所需的 GitHub 搜索、仓库读取两份只读工具合同，不登记公开发布工作流；
+- 只登记 `blog.project.discovery-shadow@3` 和 `blog.project.single.draft-shadow@2`，以及它们所需的 GitHub 搜索、仓库读取、官方资料读取三份只读工具合同，不登记公开发布工作流；
 - 只登记经过代码评审的 `deepseek/deepseek-flash@1` 结构化生成准入包；价格字段是预算预留的保守上限，不冒充供应商实时账单；
 - 目标 Agent、其运营管理员、工作流哈希和模型目录版本不匹配时立即失败；已有同版本完全一致记录时幂等返回；
 - bootstrap 不创建 Run、不读取 Key、不访问 GitHub、不调用 Provider、不创建文章，也没有发布能力；
@@ -245,7 +245,7 @@ F1-4B2a 先建设博客与论文都需要的研究端口，不把旧博客抓取
 
 受监督调试若已经用尽每天四次发现额度，不得修改服务器时间或放宽永久默认值。运营者可以在单次 preflight 与 run 命令中显式设置 `AGENT_BLOG_PRIVATE_CANARY_EXTRA_DAILY_RUN_ALLOWANCE`；它只在基础额度明确为四时生效，最多增加两次，默认值为零，并在 shell 变量取消后立即恢复。发布禁令、月度 Provider/费用额度、连续失败熔断和所有验收条件不受该临时额度影响。
 
-1. 发现必须是 `blog.project.discovery-shadow@3`，草稿必须是 `blog.project.single.draft-shadow@1`，两者触发引用一致且由唯一原子交接记录连接；
+1. 发现必须是 `blog.project.discovery-shadow@3`，草稿必须是 `blog.project.single.draft-shadow@2`，两者触发引用一致且由唯一原子交接记录连接；
 2. 四个发现 Stage 与六个草稿 Stage 必须全部成功，不接受重试、失败、不确定或残留 Action；
 3. 全图必须恰好有三次成功 Provider 调用，Tool 调用在二至十三次之间，总耗时不超过一小时，单样本费用不超过一美元；上限增加的两次只允许来自发现阶段的确定性零结果回退；
 4. 任意发布 Stage、`blog.article.publish` Action 或 `published` 事件都会直接判失败；文章必须保持 `draft`、修订必须保持 `working`，且 `published_revision_id` 为空；
@@ -317,7 +317,7 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 
 公开发布的代码边界已经实现，但仍保持不可达：
 
-1. `blog.project.single@1` 复用与私有草稿完全相同的输入冻结、仓库证据、模型选择、写作、确定性验证和草稿落库阶段，只在最后增加独立 `publish` Stage；
+1. `blog.project.single@2` 复用与私有草稿完全相同的输入冻结、仓库证据、模型选择、写作、确定性验证和草稿落库阶段，只在最后增加独立 `publish` Stage；
 2. 发布动作固定为 `blog.article.publish@1`、L3，必须同时通过冻结授权、当前授权和策略中的 `autoPublish=true`；需要确认时只把 Action 停在等待状态，不修改文章；
 3. 发布适配器只接受同一 Run 的 `persist-draft` 正式输出，并在一个数据库事务中锁定 Action、Run、Stage、唯一发布权、文章和修订；它重新确认发布者为 `foundation`，而不是信任预检结果；
 4. 草稿必须来自 `agent_blog_foundation_drafts`，且验证/写作血缘完整、内容哈希一致、文章仍为 `draft`、修订仍为 `working`，任何状态漂移都失败关闭；
@@ -329,10 +329,10 @@ AGENT_BLOG_PRIVATE_SCHEDULE_ENABLED=true
 
 公开执行包把“能发布的代码”与“获得发布权”分成两个互不替代的条件：
 
-1. `agent-blog-public-bootstrap` 幂等登记 `blog.project.discovery-shadow@3`、`blog.project.single@1`、两份 GitHub 只读工具合同和 `deepseek/deepseek-flash@2` 公开运行模型准入包；私有 canary 使用的 `@1` 保持不可变，公开作用域不得覆盖或复用其目录版本；收据固定声明未创建 Run、未调用 Provider、未尝试发布、未变更发布权与计划；
+1. `agent-blog-public-bootstrap` 幂等登记 `blog.project.discovery-shadow@3`、`blog.project.single@2`、三份 GitHub 只读工具合同和 `deepseek/deepseek-flash@2` 公开运行模型准入包；私有 canary 使用的 `@1` 保持不可变，公开作用域不得覆盖或复用其目录版本；收据固定声明未创建 Run、未调用 Provider、未尝试发布、未变更发布权与计划；
 2. `agent-blog-public-preflight` 是只读门禁。它要求唯一发布者已经是 `foundation`、旧自动发布开关已关闭、五项能力完整、公开工作流和工具合同已激活、密钥/模型/熔断正常、没有活跃或不确定 Run，也没有未交接候选；
 3. `agent-blog-public-run` 是一次性进程，先运行同一 preflight，再执行四阶段候选发现，经不可变 Artifact/Handoff 创建七阶段公开 Run；只有最后发布事务再次取得 Foundation 发布权锁后，文章才从草稿原子变为公开；
-4. 公开候选交接使用 `blog.candidate-set-to-public-article`，目标只能是 `blog.project.single@1`；私有交接继续只指向 `blog.project.single.draft-shadow@1`，二者不能靠参数把一种 Run 伪装成另一种；
+4. 公开候选交接使用 `blog.candidate-set-to-public-article`，目标只能是 `blog.project.single@2`；私有交接继续只指向 `blog.project.single.draft-shadow@2`，二者不能靠参数把一种 Run 伪装成另一种；
 5. 每日发布额度只统计不可变发布回执，不把私有调试或失败尝试伪装成公开文章；失败尝试仍计入月度 Provider、费用与连续失败熔断，活跃或不确定运行也会继续阻止重入；
 6. 私有计划领取同时检查 `config.mode=private-shadow` 和唯一发布者仍为 `legacy`。切换事务除了关闭旧自动发布设置，也原子停用私有 Foundation 计划；切换后旧 worker 即使仍存活也领不到任务；
 7. 私有计划成功记录仍从实际计划入口 `blog.project.discovery-shadow` 且 `mode=private-shadow` 的不可变 fire 账本计算，作为私有调度自身启用与稳定性观测证据；发布权策略 v2 不再要求等待三个自然日，也不会伪造 fire 历史；

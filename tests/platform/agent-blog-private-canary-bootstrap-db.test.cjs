@@ -23,7 +23,7 @@ test('private canary bootstrap is idempotent and writes control-plane records on
   }).provision({ userId: operatorId }, {
     provisionKey: `canary-bootstrap-${crypto.randomUUID()}`,
     displayName: 'Canary Agent', handle: `canary-${crypto.randomBytes(5).toString('hex')}`,
-    badgeLabel: 'Agent', operatorLabel: 'Canary operator',
+    badgeLabel: 'AI 助手', operatorLabel: 'Canary operator',
     capabilities: ['blog:auto-publish'], metadata: {},
   });
   const config = {
@@ -52,10 +52,11 @@ test('private canary bootstrap is idempotent and writes control-plane records on
   const counts = (await admin.query(`SELECT
     (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
       AND (workflow_key,workflow_version) IN (
-        ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',1))) AS workflows,
+        ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',2))) AS workflows,
     (SELECT count(*)::int FROM agent_tool_contracts WHERE status='active'
       AND (tool_key,contract_version) IN (
-        ('research.github.repository.search',1),('research.github.repository.read',1))) AS tools,
+        ('research.github.repository.search',1),('research.github.repository.read',1),
+        ('research.github.repository.materials.read',1),('research.paper.arxiv.read',2))) AS tools,
     (SELECT count(*)::int FROM agent_provider_models WHERE provider='deepseek'
       AND model_id='deepseek-flash' AND catalog_version=1 AND status='active'
       AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS private_models,
@@ -63,9 +64,11 @@ test('private canary bootstrap is idempotent and writes control-plane records on
       AND model_id='deepseek-flash' AND catalog_version=2 AND status='active'
       AND config_json->>'admissionScope'='agent-blog-public-runtime') AS public_models,
     (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1) AS runs,
-    (SELECT count(*)::int FROM agent_provider_calls) AS provider_calls,
+    (SELECT count(*)::int FROM agent_provider_calls call
+      JOIN agent_run_actions action ON action.id=call.action_id
+      JOIN agent_runs run ON run.id=action.run_id WHERE run.agent_user_id=$1) AS provider_calls,
     (SELECT count(*)::int FROM blog_articles WHERE author_user_id=$1) AS articles`,
   [account.agentUserId])).rows[0];
-  assert.deepEqual(counts, { workflows: 2, tools: 2, private_models: 1, public_models: 1,
+  assert.deepEqual(counts, { workflows: 2, tools: 4, private_models: 1, public_models: 1,
     runs: 0, provider_calls: 0, articles: 0 });
 });

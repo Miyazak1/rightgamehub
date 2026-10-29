@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 import { PostgresAgentBlogPublicationOwnershipRepository } from './agent-blog-publication-ownership.mjs';
+import { recordAgentEditorialMemory } from './agent-editorial-memory-repository.mjs';
 
 export class AgentBlogFoundationPublicationRepositoryError extends Error {
   constructor(code) {
@@ -34,7 +35,7 @@ async function appendActionEvent(client, action, eventType, payload) {
 }
 
 export class PostgresAgentBlogFoundationPublicationRepository {
-  constructor(pool, { publicationOwnership, boundaryProbe } = {}) {
+  constructor(pool, { publicationOwnership, boundaryProbe, editorialMemoryRecorder } = {}) {
     this.pool = pool;
     this.publicationOwnership = publicationOwnership
       ?? new PostgresAgentBlogPublicationOwnershipRepository(pool);
@@ -42,6 +43,7 @@ export class PostgresAgentBlogFoundationPublicationRepository {
       fail('AGENT_BLOG_PUBLICATION_BOUNDARY_PROBE_INVALID');
     }
     this.boundaryProbe = boundaryProbe ?? (async () => {});
+    this.editorialMemoryRecorder = editorialMemoryRecorder ?? recordAgentEditorialMemory;
   }
 
   async getByAction(actionId) {
@@ -142,6 +144,11 @@ export class PostgresAgentBlogFoundationPublicationRepository {
         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
       [action.run_id, action.agent_user_id, action.id, articleId, revisionId,
         ownership.generation, contentSha256, published.first_published_at]);
+      await this.editorialMemoryRecorder(client, {
+        agentUserId: action.agent_user_id, runId: action.run_id, articleId, revisionId,
+        compositionArtifactId: draft.composition_artifact_id,
+        publishedAt: published.first_published_at,
+      });
       await client.query(`UPDATE agent_run_actions SET status='sent',provider_request_id=$2,
         sent_at=now(),updated_at=now() WHERE id=$1 AND status='sending'`,
       [action.id, `database:blog-publish:${articleId}`]);

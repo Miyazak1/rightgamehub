@@ -1,12 +1,17 @@
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inlineComponentCss, inlineImportedAssets } from './esbuild-inline-css.mjs';
+import { copiedImportedAssets, inlineComponentCss } from './esbuild-inline-css.mjs';
 
 const root = new URL('../', import.meta.url);
 const extensionRoot = new URL('extensions/vscode/', root);
 const out = new URL('media/', extensionRoot);
 await mkdir(out, { recursive: true });
+for (const entry of await readdir(out, { withFileTypes: true })) {
+  if (entry.isFile() && /^[a-zA-Z0-9._-]+\.[0-9a-f]{16}\.(?:gz|js|mjs)$/u.test(entry.name)) {
+    await unlink(new URL(entry.name, out));
+  }
+}
 const css = await readFile(new URL('packages/platform-client/src/styles.css', root), 'utf8');
 const workspaceModules = [
   fileURLToPath(new URL('extensions/harness/node_modules/', root)),
@@ -17,8 +22,8 @@ const { build } = await import(pathToFileURL(requireFromHarness.resolve('esbuild
 await build({
   entryPoints: [fileURLToPath(new URL('src/platform-client.jsx', extensionRoot))],
   outfile: fileURLToPath(new URL('gamehub.js', out)),
-  bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], sourcemap: true,
-  plugins: [inlineImportedAssets, inlineComponentCss],
+  bundle: true, format: 'iife', platform: 'browser', target: ['chrome110'], sourcemap: true, sourcesContent: false, minifySyntax: true, minifyWhitespace: true,
+  plugins: [copiedImportedAssets({ outputDirectory: fileURLToPath(out) }), inlineComponentCss],
   nodePaths: workspaceModules,
   loader: { '.png': 'dataurl', '.webp': 'dataurl' },
   define: {

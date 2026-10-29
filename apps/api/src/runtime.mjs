@@ -91,6 +91,14 @@ import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from '.
 import {PostgresAgentBlogRuntimeShadowRepository,createAgentBlogRuntimeShadowProjector} from './agent-blog-runtime-shadow.mjs';
 import {PostgresAgentBlogFollowUpRepository,createAgentBlogFollowUpService} from './agent-blog-follow-up.mjs';
 import {createAgentRuntimeReadService} from './agent-runtime-read-service.mjs';
+import {createAgentPaperFollowUpService} from './agent-paper-follow-up-service.mjs';
+import {createAgentPaperIntakeService} from './agent-paper-intake-service.mjs';
+import {createAgentPaperDiscoveryService} from './agent-paper-discovery-service.mjs';
+import {createAgentPaperResearchExecutionService} from './agent-paper-research-execution.mjs';
+import {createAgentPaperResearchOperationsService} from './agent-paper-research-operations.mjs';
+import {createAgentCapabilityExecutionService} from './agent-capability-execution-service.mjs';
+import {createAgentCapabilityHostService} from './agent-capability-host-service.mjs';
+import {createAgentExecutionNodeAccessService} from './agent-execution-node-access-service.mjs';
 import {PostgresAgentRuntimeRepository} from './agent-runtime-repository.mjs';
 import {PostgresAgentBlogPublicationOwnershipRepository,createAgentBlogPublicationCutoverService} from './agent-blog-publication-ownership.mjs';
 import {loadAgentBlogPublicRuntimeConfig} from './agent-blog-public-runtime-preflight.mjs';
@@ -232,6 +240,40 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentBlogFollowUpService=createAgentBlogFollowUpService({repository:new PostgresAgentBlogFollowUpRepository(database.pool),vault:agentSecretVault,writer:agentBlogWriter});
   const publicRuntimeConfig=loadAgentBlogPublicRuntimeConfig(env),publicScheduleConfig=loadAgentBlogPublicScheduleConfig(env);
   const agentRuntimeReadService=createAgentRuntimeReadService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin',publicRuntimeConfig,publicScheduleConfig});
+  // Paper follow-up needs the managed provider-key vault. Keep the generic API
+  // bootable when that optional capability is not configured; its routes are
+  // registered only when the service exists.
+  const agentPaperFollowUpService=config.agentSecretEncryptionKey
+    ?createAgentPaperFollowUpService({pool:database.pool,env,authorizeOperator:async actor=>actor?.profile?.role==='admin'})
+    :null;
+  const agentPaperIntakeService=createAgentPaperIntakeService({pool:database.pool,quarantineStore,siteOrigin:config.gameShareSiteOrigin,authorizeOperator:async actor=>actor?.profile?.role==='admin'});
+  const agentPaperDiscoveryService=createAgentPaperDiscoveryService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin'});
+  const agentRuntimeRepository=new PostgresAgentRuntimeRepository(database.pool);
+  const agentPaperResearchExecutionService=createAgentPaperResearchExecutionService({
+    pool:database.pool,runtimeRepository:agentRuntimeRepository,
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',
+    provider:env.AGENT_BLOG_PRIVATE_CANARY_PROVIDER?.trim()||'deepseek',
+    modelId:env.AGENT_BLOG_PRIVATE_CANARY_MODEL_ID?.trim()||'deepseek-flash',
+  });
+  const agentPaperResearchOperationsService=createAgentPaperResearchOperationsService({
+    pool:database.pool,runtimeRepository:agentRuntimeRepository,
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',
+  });
+  const agentCapabilityExecutionService=createAgentCapabilityExecutionService({
+    pool:database.pool,
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',
+    authorizeNodeOwner:async actor=>actor?.profile?.role==='admin',
+  });
+  const agentCapabilityHostService=createAgentCapabilityHostService({
+    pool:database.pool,runtimeRepository:agentRuntimeRepository,
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',
+  });
+  const agentExecutionNodeAccessService=createAgentExecutionNodeAccessService({
+    pool:database.pool,
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',
+    capabilityService:agentCapabilityExecutionService,
+    runtimeRepository:agentRuntimeRepository,
+  });
   const publicScheduleController=createAgentBlogPublicScheduleController({repository:new PostgresAgentBlogPublicScheduleRepository(database.pool),preflightRepository:new PostgresAgentBlogPublicRuntimePreflightRepository(database.pool),runtimeConfig:publicRuntimeConfig});
   const agentBlogPublicOperationsService=createAgentBlogPublicOperationsService({pool:database.pool,authorizeOperator:async actor=>actor?.profile?.role==='admin',controller:publicScheduleController,runtimeConfig:publicRuntimeConfig,scheduleConfig:publicScheduleConfig});
   const agentBlogPublicationCutoverService=createAgentBlogPublicationCutoverService({repository:new PostgresAgentBlogPublicationOwnershipRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
@@ -306,6 +348,14 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
     agentRuntimeReadService,
+    agentPaperFollowUpService,
+    agentPaperIntakeService,
+    agentPaperDiscoveryService,
+    agentPaperResearchExecutionService,
+    agentPaperResearchOperationsService,
+    agentCapabilityExecutionService,
+    agentCapabilityHostService,
+    agentExecutionNodeAccessService,
     agentBlogPublicOperationsService,
     storageCapacityService,
     realtimeTicketService,
@@ -360,6 +410,13 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     agentBlogAutomation,
     agentBlogPublicationCutoverService,
     agentRuntimeReadService,
+    agentPaperFollowUpService,
+    agentPaperIntakeService,
+    agentPaperDiscoveryService,
+    agentPaperResearchExecutionService,
+    agentPaperResearchOperationsService,
+    agentCapabilityExecutionService,
+    agentExecutionNodeAccessService,
     agentBlogPublicOperationsService,
     storageCapacityService,
     realtimeTicketService,

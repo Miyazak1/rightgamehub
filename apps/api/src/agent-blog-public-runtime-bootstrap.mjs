@@ -2,6 +2,9 @@ import { BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
   BLOG_PROJECT_SINGLE_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
 import { GITHUB_REPOSITORY_SEARCH_TOOL } from './agent-github-repository-search-tool.mjs';
 import { GITHUB_REPOSITORY_READ_TOOL } from './agent-github-repository-tool.mjs';
+import { GITHUB_REPOSITORY_MATERIALS_TOOL } from './agent-github-repository-materials-tool.mjs';
+import { PAPER_ANALYSIS_READ_TOOL } from './agent-paper-analysis-tool.mjs';
+import { PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW } from './agent-paper-article-workflow.mjs';
 
 export class AgentBlogPublicRuntimeBootstrapError extends Error {
   constructor(code) {
@@ -56,7 +59,8 @@ export function createAgentBlogPublicRuntimeBootstrap({
       const catalog = catalogFor(config);
       const identity = await identityRepository.load(config.agentUserId);
       const tools = [];
-      for (const contract of [GITHUB_REPOSITORY_SEARCH_TOOL, GITHUB_REPOSITORY_READ_TOOL]) {
+      for (const contract of [GITHUB_REPOSITORY_SEARCH_TOOL, GITHUB_REPOSITORY_READ_TOOL,
+        GITHUB_REPOSITORY_MATERIALS_TOOL, PAPER_ANALYSIS_READ_TOOL]) {
         const registered = await toolRepository.registerTool(contract);
         if (registered.status !== 'active') fail('AGENT_BLOG_PUBLIC_RUNTIME_TOOL_NOT_ACTIVE');
         tools.push({ toolKey: registered.toolKey, contractVersion: registered.contractVersion,
@@ -64,7 +68,7 @@ export function createAgentBlogPublicRuntimeBootstrap({
       }
       const workflows = [];
       for (const manifest of [BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
-        BLOG_PROJECT_SINGLE_WORKFLOW]) {
+        BLOG_PROJECT_SINGLE_WORKFLOW, PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW]) {
         workflows.push(await registerActiveWorkflow(runtimeRepository, identity.operatorUserId, manifest));
       }
       const model = await providerRepository.registerModel(catalog);

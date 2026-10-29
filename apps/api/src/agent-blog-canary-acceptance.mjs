@@ -49,7 +49,7 @@ export function evaluateAgentBlogCanaryAcceptance(snapshot,
   if (snapshot.discovery.workflowKey !== 'blog.project.discovery-shadow'
     || snapshot.discovery.workflowVersion !== 3
     || snapshot.draft.workflowKey !== 'blog.project.single.draft-shadow'
-    || snapshot.draft.workflowVersion !== 1
+    || snapshot.draft.workflowVersion !== 2
     || snapshot.handoff.sourceRunId !== snapshot.discovery.id
     || snapshot.handoff.targetRunId !== snapshot.draft.id
     || snapshot.discovery.triggerRef !== snapshot.draft.triggerRef) reasons.push('RUN_GRAPH_INVALID');

@@ -299,6 +299,11 @@ test('publication receipt is immutable and repository rechecks Foundation owners
   assert.match(repository, /stage_lease_token !== leaseToken/u);
   assert.match(repository, /stage_lease_valid !== true/u);
   assert.match(repository, /verification_artifact_id == null/u);
+  const publishUpdate = repository.indexOf('UPDATE blog_articles SET', guard);
+  const memoryWrite = repository.indexOf('this.editorialMemoryRecorder(client', publishUpdate);
+  const transactionReturn = repository.indexOf("boundary: 'before-commit'", memoryWrite);
+  assert.ok(memoryWrite > publishUpdate);
+  assert.ok(transactionReturn > memoryWrite);
   assert.match(repository, /boundary: 'before-commit'/u);
   assert.match(repository, /boundary: 'after-commit'/u);
 });

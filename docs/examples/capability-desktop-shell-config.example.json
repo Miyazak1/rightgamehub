@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "capability-desktop-shell-config-v1",
+  "dataRoot": "C:\\Users\\USER\\AppData\\Local\\Mooyu\\CapabilityNode",
+  "installVersion": "0.1.0",
+  "nodeConfigPath": "C:\\Users\\USER\\AppData\\Local\\Mooyu\\CapabilityNode\\capability-node.json",
+  "startupValueName": "MooyuCapabilityNode"
+}

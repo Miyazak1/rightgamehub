@@ -48,7 +48,9 @@ test('streamed upload persists exact bytes, private metadata and restart listing
   assert.deepEqual(await fs.readFile(path.join(f.root, `${file.id}.bin`)), data);
   const restarted = await f.createTransferService({ root: f.root });
   t.after(() => restarted.close());
-  const list = await restarted.routes[0].fetch(new Request('http://dsh.internal/api/gamehub/files'));
+  const filesRoute = restarted.routes.find(route => route.path === '/api/gamehub/files');
+  assert.ok(filesRoute, 'files route must be registered');
+  const list = await filesRoute.fetch(new Request('http://dsh.internal/api/gamehub/files'));
   assert.deepEqual((await list.json()).files, [file]);
   assert.equal((await fs.readdir(f.root)).length, 2);
 });

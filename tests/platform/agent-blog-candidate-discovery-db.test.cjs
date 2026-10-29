@@ -174,6 +174,8 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
       discoveryArtifactId: autonomousStored.output_id,
       idempotencyKey: `candidate-handoff:${crypto.randomUUID()}`,
       behaviorProfile: defaultAgentBehaviorProfile(),
+      editorialMemory: { schemaVersion: 'blog-editorial-memory-input-v1',
+        capturedAt: '2026-10-27T00:00:00.000Z', activeCooldowns: [] },
       config: { model: { provider: 'deepseek', modelId: 'fixture-discovery' } },
     };
     const draftRun = await handoffCanary.createDraftRun(handoffRequest);
@@ -195,7 +197,7 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
     await assert.rejects(admin.query('UPDATE agent_run_handoffs SET handoff_kind=$2 WHERE id=$1',
       [handoff.id, 'blog.changed']));
     await assert.rejects(runtime.createRun({
-      agentUserId: account.agentUserId, workflowKey: 'blog.project.single.draft-shadow', workflowVersion: 1,
+      agentUserId: account.agentUserId, workflowKey: 'blog.project.single.draft-shadow', workflowVersion: 2,
       triggerKind: 'system', idempotencyKey: handoffRequest.idempotencyKey,
       input: (await admin.query('SELECT input_json FROM agent_runs WHERE id=$1', [draftRun.id])).rows[0].input_json,
       config: handoffRequest.config,
@@ -238,13 +240,17 @@ test('candidate discovery Run is read-only, bounded, and produces no article evi
       AGENT_BLOG_PRIVATE_CANARY_DAILY_RUN_LIMIT: '4',
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_PROVIDER_CALL_LIMIT: '100',
       AGENT_BLOG_PRIVATE_CANARY_MONTHLY_COST_MICROUSD_LIMIT: '100000000',
+      AGENT_GITHUB_RESEARCH_TOKEN: 'github_pat_test_read_only_1234567890',
       AGENT_BLOG_PRIVATE_CANARY_FAILURE_THRESHOLD: '2',
     });
     const preflight = await runAgentBlogPrivateCanaryPreflight({
       repository: new PostgresAgentBlogPrivateCanaryPreflightRepository(admin), config: preflightConfig,
     });
     assert.equal(preflight.ready, false);
-    assert.deepEqual(preflight.blockers, ['AGENT_BLOG_PRIVATE_CANARY_AWAITING_HANDOFF']);
+    assert.deepEqual(preflight.blockers, [
+      'AGENT_BLOG_PRIVATE_CANARY_TOOLS_NOT_READY',
+      'AGENT_BLOG_PRIVATE_CANARY_AWAITING_HANDOFF',
+    ]);
     assert.equal(preflight.observed.activeRuns, 0);
     assert.equal(preflight.observed.providerCallsMonth, 1);
     await autonomousWorker.stop();

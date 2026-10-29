@@ -1,4 +1,6 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { basename, extname, join } from 'node:path';
 
 const assetMime = path => {
   if (/\.m?js$/u.test(path)) return 'text/javascript';
@@ -38,3 +40,26 @@ export const inlineImportedAssets = {
     });
   },
 };
+
+export const copiedImportedAssets = ({ outputDirectory }) => ({
+  name: 'copied-imported-assets',
+  setup(context) {
+    context.onResolve({ filter: /\?url$/u }, async ({ path, resolveDir, kind }) => {
+      const resolved = await context.resolve(path.slice(0, -4), { resolveDir, kind });
+      if (resolved.errors.length) return { errors: resolved.errors, warnings: resolved.warnings };
+      return { path: resolved.path, namespace: 'copied-asset-url' };
+    });
+    context.onLoad({ filter: /.*/u, namespace: 'copied-asset-url' }, async ({ path }) => {
+      const bytes = await readFile(path);
+      const extension = extname(path);
+      const stem = basename(path, extension).replaceAll(/[^a-zA-Z0-9._-]/gu, '-');
+      const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+      const filename = `${stem}.${digest}${extension}`;
+      await writeFile(join(outputDirectory, filename), bytes);
+      return {
+        contents: `const base=globalThis.__GAMEHUB_EDITOR__?.mediaBaseUrl;if(!base)throw new Error("GAMEHUB_EDITOR_MEDIA_BASE_REQUIRED");export default new URL(${JSON.stringify(filename)},base).href;`,
+        loader: 'js',
+      };
+    });
+  },
+});

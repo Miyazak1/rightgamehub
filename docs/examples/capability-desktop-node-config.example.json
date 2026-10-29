@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "capability-desktop-node-config-v1",
+  "dataRoot": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Mooyu\\CapabilityNode",
+  "apiBaseUrl": "https://mooyu.fun/",
+  "runtimeId": "mooyu.windows.capability-runtime",
+  "catalogUrl": "https://mooyu.fun/releases/capability-runtime/windows-x64/catalog.json",
+  "resources": {
+    "cpuCores": 4,
+    "memoryMiB": 8192,
+    "diskMiB": 32768,
+    "gpuMemoryMiB": 0
+  },
+  "metadata": {
+    "deviceLabel": "我的电脑",
+    "channel": "stable"
+  },
+  "trustedRuntimeKeys": [
+    {
+      "keyId": "REPLACE_WITH_RUNTIME_KEY_ID",
+      "status": "active",
+      "publicKeyPem": "REPLACE_WITH_ED25519_PUBLIC_KEY_PEM",
+      "notBefore": "2026-01-01T00:00:00.000Z",
+      "notAfter": null
+    }
+  ],
+  "trustedCatalogKeys": [
+    {
+      "keyId": "REPLACE_WITH_CATALOG_KEY_ID",
+      "status": "active",
+      "publicKeyPem": "REPLACE_WITH_ED25519_PUBLIC_KEY_PEM",
+      "notBefore": "2026-01-01T00:00:00.000Z",
+      "notAfter": null
+    }
+  ],
+  "trustedPackageKeys": [
+    {
+      "keyId": "REPLACE_WITH_PACKAGE_KEY_ID",
+      "status": "active",
+      "publicKeyPem": "REPLACE_WITH_ED25519_PUBLIC_KEY_PEM",
+      "notBefore": "2026-01-01T00:00:00.000Z",
+      "notAfter": null
+    }
+  ],
+  "pollIntervalMs": 10000,
+  "heartbeatIntervalMs": 60000,
+  "updateIntervalMs": 21600000,
+  "leaseSeconds": 120,
+  "renewalIntervalMs": 30000,
+  "nativeTimeoutMs": 900000,
+  "initialBackoffMs": 1000,
+  "maximumBackoffMs": 60000,
+  "circuitFailureThreshold": 5,
+  "circuitCooldownMs": 300000
+}

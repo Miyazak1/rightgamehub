@@ -13,10 +13,42 @@ import { OFFSCREEN_MANIFEST, OFFSCREEN_PACKAGE_POLICY, validateOffscreenManifest
 import { createDesktopLauncher } from './desktop-launcher.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const ARTIFACT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
+const ARTIFACT_NAME = /^[a-z][a-z0-9.-]{2,119}$/;
+const ARTIFACT_MAX_BYTES = 1024 * 1024;
+const ARTIFACT_DIRECTIVE_KEYS = ['schemaVersion', 'artifactId', 'runId', 'name', 'mediaType',
+  'sizeBytes', 'sha256', 'openMode', 'locator', 'expiresAt'];
+const ARTIFACT_CONTENT_KEYS = ['schemaVersion', 'artifactId', 'runId', 'name', 'mediaType',
+  'sizeBytes', 'sha256', 'content'];
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 const UPDATE_PHASES = new Set(['checking', 'downloading', 'verifying', 'installing', 'ready', 'current', 'failed']);
 const CURRENT_PLUGIN_VERSION = JSON.parse((await readFile(new URL('../package.json', import.meta.url), 'utf8')).replace(/^\uFEFF/, '')).version;
+const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+const stableArtifactJson = value => {
+  const active = new Set();
+  const visit = item => {
+    if (item === null) return 'null';
+    if (typeof item === 'string' || typeof item === 'boolean') return JSON.stringify(item);
+    if (typeof item === 'number' && Number.isFinite(item)) return JSON.stringify(item);
+    if (!item || typeof item !== 'object' || active.has(item)) fail(400, '产物正文格式无效。');
+    active.add(item);
+    try {
+      if (Array.isArray(item)) {
+        if (Object.keys(item).some(key => !/^\d+$/.test(key) || String(Number(key)) !== key
+          || Number(key) >= item.length)) fail(400, '产物正文格式无效。');
+        return `[${item.map((entry, index) => {
+          if (!Object.hasOwn(item, index)) fail(400, '产物正文格式无效。');
+          return visit(entry);
+        }).join(',')}]`;
+      }
+      if (![Object.prototype, null].includes(Object.getPrototypeOf(item))) fail(400, '产物正文格式无效。');
+      return `{${Object.keys(item).sort().map(key => `${JSON.stringify(key)}:${visit(item[key])}`).join(',')}}`;
+    } finally { active.delete(item); }
+  };
+  return visit(value);
+};
 class TransferError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
@@ -49,6 +81,7 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
     saveStore=await createSqliteSaveStore({root:path.join(root,'game-saves')});
   } catch {} })();
   const records = new Map();
+  const artifactPreviews = new Map();
   for (const filename of await readdir(root)) {
     if (!filename.endsWith('.json') || !UUID.test(filename.slice(0, -5))) continue;
     const record = JSON.parse(await readFile(path.join(root, filename), 'utf8'));
@@ -261,6 +294,54 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
   }
 
   const handlers = {
+    '/api/gamehub/capability-artifact-open': { methods: ['POST'], requestBody: 'buffered', run: async request => {
+      if (request.headers.get('x-gamehub-capability-artifact') !== '1') fail(403, '请从墨鱼工坊任务面板打开产物。');
+      const text = await request.text();
+      if (Buffer.byteLength(text) > 2 * 1024 * 1024) fail(413, '产物预览请求过大。');
+      let body;
+      try { body = JSON.parse(text); } catch { fail(400, '产物预览请求格式无效。'); }
+      const directive = body?.directive; const artifact = body?.artifact;
+      const expiresAt = Date.parse(directive?.expiresAt);
+      const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
+        && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+      if (!exact(body, ['directive', 'artifact'])
+        || !exact(directive, ARTIFACT_DIRECTIVE_KEYS) || !exact(artifact, ARTIFACT_CONTENT_KEYS)
+        || directive.schemaVersion !== 'capability-artifact-open-v1'
+        || artifact.schemaVersion !== 'capability-artifact-content-v1'
+        || !ARTIFACT_UUID.test(String(directive.artifactId))
+        || !ARTIFACT_UUID.test(String(directive.runId))
+        || !ARTIFACT_NAME.test(String(directive.name))
+        || directive.artifactId !== artifact.artifactId || directive.runId !== artifact.runId
+        || directive.name !== artifact.name || directive.mediaType !== 'application/json'
+        || artifact.mediaType !== 'application/json' || directive.sizeBytes !== artifact.sizeBytes
+        || !Number.isSafeInteger(directive.sizeBytes) || directive.sizeBytes < 1
+        || directive.sizeBytes > ARTIFACT_MAX_BYTES
+        || directive.sha256 !== artifact.sha256 || !SHA256.test(String(directive.sha256))
+        || !['host-preview', 'external-app', 'download'].includes(directive.openMode)
+        || directive.locator !== `mooyu-artifact://${directive.openMode}/${directive.artifactId}`
+        || !Number.isFinite(expiresAt) || expiresAt <= Date.now()
+        || expiresAt > Date.now() + 5 * 60 * 1000 + 5000
+        || !artifact.content || typeof artifact.content !== 'object' || Array.isArray(artifact.content)
+        || ![Object.prototype, null].includes(Object.getPrototypeOf(artifact.content))
+        || createHash('sha256').update(stableArtifactJson(artifact.content)).digest('hex') !== directive.sha256) {
+        fail(400, '产物摘要、权限或有效期校验失败。');
+      }
+      const previewId = randomUUID();
+      artifactPreviews.set(previewId, { expiresAt: Math.min(expiresAt, Date.now() + 60000),
+        name: directive.name, content: JSON.stringify(artifact.content, null, 2) });
+      return json({ ok: true, opened: true,
+        previewPath: `/api/gamehub/capability-artifact-preview?id=${previewId}` });
+    } },
+    '/api/gamehub/capability-artifact-preview': { methods: ['GET'], requestBody: 'buffered', run: async (_request, url) => {
+      const previewId = url.searchParams.get('id');
+      const preview = UUID.test(previewId || '') ? artifactPreviews.get(previewId) : null;
+      artifactPreviews.delete(previewId);
+      if (!preview || preview.expiresAt <= Date.now()) fail(404, '产物预览已过期，请返回任务面板重新打开。');
+      const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><meta name="referrer" content="no-referrer"><title>${escapeHtml(preview.name)}</title><style>body{margin:0;padding:24px;background:#111018;color:#f7f4ff;font:14px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}main{max-width:1100px;margin:auto}h1{font:600 20px/1.3 system-ui,sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #39344a;padding:18px;background:#181522}</style></head><body><main><h1>${escapeHtml(preview.name)}</h1><pre>${escapeHtml(preview.content)}</pre></main></body></html>`;
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'", 'Referrer-Policy': 'no-referrer' } });
+    } },
     '/api/gamehub/files': { methods: ['GET'], requestBody: 'buffered', run: () => json({ ok: true, files: [...records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(catalogRecord), maxBytes, quotaBytes, usedBytes: usedBytes() }) },
     '/api/gamehub/save-cache': {methods:['POST'],requestBody:'buffered',run:async request=>{
       if(request.headers.get('x-gamehub-save-cache')!=='1'||request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')fail(403,'请从 GameHub 操作本机存档。');
@@ -362,5 +443,5 @@ export async function createTransferService({ root, maxBytes = 500 * 1024 * 1024
       }
     },
   }));
-  return { routes, close: async () => { lifetime.abort(); await saveStorePromise; await saveStore?.close(); return Promise.all([runtime.close(), native.close(), offscreen.close(), desktop.close()]); } };
+  return { routes, close: async () => { lifetime.abort(); artifactPreviews.clear(); await saveStorePromise; await saveStore?.close(); return Promise.all([runtime.close(), native.close(), offscreen.close(), desktop.close()]); } };
 }

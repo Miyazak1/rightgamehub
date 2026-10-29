@@ -9,6 +9,9 @@ packages/courseware-domain-packs/** text eol=lf
 templates/courseware/** text eol=lf
 plugins/gamehub/templates/courseware/** text eol=lf
 
+# Generated third-party browser code contains intentional spaces inside string literals.
+extensions/vscode/media/gamehub.js -whitespace
+
 # QA protocol snapshots and fixtures are hashed as byte-exact cross-platform artifacts.
 apps/api/src/researcher-qa-protocol/** text eol=lf
 tests/platform/fixtures/researcher-qa/** text eol=lf

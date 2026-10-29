@@ -65,13 +65,15 @@ test('read-only tool failure after dispatch is failed and retryable rather than 
     },
     policyService: { decide: async () => ({ decision: 'allow', agentUserId: 'agent' }) },
     adapters: { 'research.github.repository.read@1': async () => {
-      const error = new Error('upstream unavailable'); error.code = 'GITHUB_DOWN'; error.retryable = true; throw error;
+      const error = new Error('upstream unavailable'); error.code = 'GITHUB_DOWN'; error.retryable = true;
+      error.backoffSeconds = 87; throw error;
     } },
     inputSchemas: { 'github.repository.read.input@1': input => input },
     outputSchemas: { 'github.repository.read.output@1': output => output },
   });
   await assert.rejects(gateway.invoke(invocation()), error => error instanceof AgentToolGatewayError
-    && error.code === 'GITHUB_DOWN' && error.retryable === true && error.uncertain === false);
+    && error.code === 'GITHUB_DOWN' && error.retryable === true && error.uncertain === false
+    && error.backoffSeconds === 87);
   assert.deepEqual(failure, { id: 'call', notDispatched: false, errorCode: 'GITHUB_DOWN', errorMessage: 'upstream unavailable' });
 });
 
@@ -96,7 +98,8 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
     });
     return new Response('', { status: 404 });
   };
-  const adapter = createGitHubRepositoryReadAdapter({ fetchImpl });
+  const adapter = createGitHubRepositoryReadAdapter({ fetchImpl,
+    token: 'github_pat_test_read_only_1234567890' });
   const receipt = await adapter({ request: validateGitHubRepositoryReadInput({ repository: 'https://github.com/owner/project' }), timeoutSeconds: 5 });
   assert.equal(receipt.receiptId, `github:owner/project@${'a'.repeat(40)}`);
   assert.equal(receipt.output.sourceVersion.revision, 'a'.repeat(40));
@@ -106,6 +109,8 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
   assert.equal(receipt.output.readme.truncated, false);
   assert.equal(requests.length, 3);
   assert(requests.every(item => item.url.startsWith('https://api.github.com/')));
+  assert(requests.every(item => item.options.headers.authorization
+    === 'Bearer github_pat_test_read_only_1234567890'));
   assert.equal(requests[2].options.headers.accept, 'application/vnd.github.raw+json');
   assert.equal(requests[2].options.headers.range, 'bytes=0-49151');
   const tampered = structuredClone(receipt.output);
@@ -116,6 +121,46 @@ test('GitHub repository tool is fixed-origin, revision-pinned and bounded', asyn
     'https://github.com/owner/project/issues', 'owner/project/extra', '127.0.0.1/repo']) {
     assert.throws(() => normalizeGitHubRepositoryLocator(invalid));
   }
+});
+
+test('GitHub rate limits produce a bounded durable backoff without exposing the token', async () => {
+  const { createGitHubRepositorySearchAdapter } = await load('agent-github-repository-search-tool.mjs');
+  const token = 'github_pat_test_read_only_1234567890';
+  let authorization = null;
+  const adapter = createGitHubRepositorySearchAdapter({ token, fetchImpl: async (url, options) => {
+    authorization = options.headers.authorization;
+    return new Response('{"message":"rate limit"}', { status: 429,
+      headers: { 'retry-after': '91' } });
+  } });
+  await assert.rejects(adapter({ request: { query: 'agent tool', limit: 5, sort: 'stars',
+    minStars: 10, pushedAfter: null }, timeoutSeconds: 5 }), error => {
+    assert.equal(error.code, 'AGENT_GITHUB_RATE_LIMITED');
+    assert.equal(error.retryable, true);
+    assert.equal(error.backoffSeconds, 91);
+    assert.equal(String(error).includes(token), false);
+    return true;
+  });
+  assert.equal(authorization, `Bearer ${token}`);
+});
+
+test('GitHub research budget is a closed upper bound for the configured discovery run', async () => {
+  const { AGENT_GITHUB_RESEARCH_LIMITS, normalizeGitHubResearchToken } =
+    await load('agent-github-research-runtime.mjs');
+  assert.deepEqual(AGENT_GITHUB_RESEARCH_LIMITS, {
+    maxSearchRequests: 3,
+    maxCandidates: 5,
+    maxMaterialRequestsPerRepository: 8,
+    requestBudgetPerRun: 43,
+  });
+  assert.equal(AGENT_GITHUB_RESEARCH_LIMITS.requestBudgetPerRun,
+    AGENT_GITHUB_RESEARCH_LIMITS.maxSearchRequests
+      + (AGENT_GITHUB_RESEARCH_LIMITS.maxCandidates
+        * AGENT_GITHUB_RESEARCH_LIMITS.maxMaterialRequestsPerRepository));
+  assert.equal(normalizeGitHubResearchToken(''), null);
+  assert.throws(() => normalizeGitHubResearchToken('short token'),
+    error => error.code === 'AGENT_GITHUB_RESEARCH_TOKEN_INVALID');
+  assert.throws(() => normalizeGitHubResearchToken(' github_pat_test_read_only_1234567890'),
+    error => error.code === 'AGENT_GITHUB_RESEARCH_TOKEN_INVALID');
 });
 
 test('GitHub repository tool streams a bounded raw README prefix instead of rejecting a large README', async () => {

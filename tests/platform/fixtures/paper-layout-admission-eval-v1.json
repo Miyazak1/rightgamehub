@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "paper-layout-admission-eval-v1",
+  "cases": [
+    {
+      "id": "born-digital-clean",
+      "artifact": { "sizeBytes": 100000, "pageCount": 2 },
+      "pages": [
+        { "page": 1, "textChars": 900, "replacementChars": 0, "positionedGlyphs": 850, "imageCoverageBp": 300, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 2, "textChars": 700, "replacementChars": 0, "positionedGlyphs": 650, "imageCoverageBp": 0, "multiColumn": false, "tableRisk": false, "formulaRisk": false }
+      ],
+      "expected": { "route": "text-layer", "text": [1, 2], "layout": [], "ocr": [] }
+    },
+    {
+      "id": "scanned-document",
+      "artifact": { "sizeBytes": 200000, "pageCount": 2 },
+      "pages": [
+        { "page": 1, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9800, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 2, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9600, "multiColumn": false, "tableRisk": false, "formulaRisk": false }
+      ],
+      "expected": { "route": "local-ocr", "text": [], "layout": [], "ocr": [1, 2] }
+    },
+    {
+      "id": "mixed-document-page-selective",
+      "artifact": { "sizeBytes": 300000, "pageCount": 3 },
+      "pages": [
+        { "page": 1, "textChars": 800, "replacementChars": 0, "positionedGlyphs": 760, "imageCoverageBp": 0, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 2, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9900, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 3, "textChars": 500, "replacementChars": 0, "positionedGlyphs": 450, "imageCoverageBp": 200, "multiColumn": true, "tableRisk": true, "formulaRisk": false }
+      ],
+      "expected": { "route": "mixed", "text": [1], "layout": [3], "ocr": [2] }
+    },
+    {
+      "id": "corrupted-text-layer",
+      "artifact": { "sizeBytes": 90000, "pageCount": 1 },
+      "pages": [
+        { "page": 1, "textChars": 100, "replacementChars": 20, "positionedGlyphs": 80, "imageCoverageBp": 1000, "multiColumn": false, "tableRisk": false, "formulaRisk": false }
+      ],
+      "expected": { "route": "local-ocr", "text": [], "layout": [], "ocr": [1] }
+    },
+    {
+      "id": "complex-layout-with-good-text",
+      "artifact": { "sizeBytes": 120000, "pageCount": 1 },
+      "pages": [
+        { "page": 1, "textChars": 1200, "replacementChars": 0, "positionedGlyphs": 1150, "imageCoverageBp": 700, "multiColumn": true, "tableRisk": true, "formulaRisk": true }
+      ],
+      "expected": { "route": "local-layout", "text": [], "layout": [1], "ocr": [] }
+    },
+    {
+      "id": "ocr-budget-exceeded",
+      "artifact": { "sizeBytes": 200000, "pageCount": 3 },
+      "ocrPageLimit": 2,
+      "pages": [
+        { "page": 1, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9900, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 2, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9900, "multiColumn": false, "tableRisk": false, "formulaRisk": false },
+        { "page": 3, "textChars": 0, "replacementChars": 0, "positionedGlyphs": 0, "imageCoverageBp": 9900, "multiColumn": false, "tableRisk": false, "formulaRisk": false }
+      ],
+      "expected": { "route": "blocked", "text": [], "layout": [], "ocr": [1, 2, 3] }
+    }
+  ]
+}

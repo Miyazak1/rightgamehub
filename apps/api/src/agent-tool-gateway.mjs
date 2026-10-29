@@ -1,12 +1,13 @@
 import { normalizeActionDefinition } from './agent-runtime-contracts.mjs';
 
 export class AgentToolGatewayError extends Error {
-  constructor(code, { retryable = false, uncertain = false, cause = null } = {}) {
+  constructor(code, { retryable = false, uncertain = false, backoffSeconds = null, cause = null } = {}) {
     super(code, cause ? { cause } : undefined);
     this.name = 'AgentToolGatewayError';
     this.code = code;
     this.retryable = retryable;
     this.uncertain = uncertain;
+    this.backoffSeconds = backoffSeconds;
   }
 }
 
@@ -91,7 +92,7 @@ export function createAgentToolGateway({
           errorCode: errorCode(error), errorMessage: errorMessage(error),
         });
         fail(errorCode(error), { cause: error, retryable: error?.retryable === true,
-          uncertain: failure.status === 'uncertain' });
+          uncertain: failure.status === 'uncertain', backoffSeconds: error?.backoffSeconds ?? null });
       }
       if (!receipt || typeof receipt.receiptId !== 'string' || !receipt.receiptId) {
         const failure = await toolRepository.failBeforeAcknowledgement(reserved.callId, {
