@@ -34,6 +34,8 @@ test('R1.9 admin panel renders health, metrics and reason-gated recovery',()=>{
   assert.match(admin,/getAdminAgentPaperResearchOperations/);
   assert.match(admin,/reason\.trim\(\)\.length<10/);
   assert.match(admin,/recoverAdminAgentPaperResearchExpiredStage/);
+  assert.match(admin,/visibilityState!==\'hidden\'/);
+  assert.match(admin,/\},4000\)/);
 });
 
 test('R1.10 persists alert episodes, weekly reports and retention audits without a second scheduler',()=>{

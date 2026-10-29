@@ -1,4 +1,6 @@
 import { createAgentBlogPrivateCanaryRuntime } from './agent-blog-private-canary-runtime.mjs';
+import { ARXIV_PAPER_READ_TOOL } from './agent-arxiv-paper-tool.mjs';
+import { PostgresAgentToolGatewayRepository } from './agent-tool-gateway-repository.mjs';
 
 if (process.env.AGENT_PAPER_RESEARCH_WORKER_ENABLED !== 'true') {
   throw new Error('AGENT_PAPER_RESEARCH_WORKER_DISABLED');
@@ -49,10 +51,18 @@ try {
     FROM agent_accounts WHERE user_id=$1 AND status='active'`,
   [runtime.config.agentUserId])).rows[0];
   if (!identity?.operator_user_id) throw new Error('AGENT_PAPER_RESEARCH_IDENTITY_NOT_READY');
+  // The durable worker owns this prerequisite. Registering it idempotently at
+  // startup prevents a healthy worker from accepting Runs whose arXiv tool was
+  // omitted by an older or publication-only bootstrap.
+  const arxivTool = await new PostgresAgentToolGatewayRepository(runtime.pool)
+    .registerTool(ARXIV_PAPER_READ_TOOL);
+  if (arxivTool.status !== 'active') throw new Error('AGENT_PAPER_RESEARCH_ARXIV_TOOL_NOT_ACTIVE');
   await runtime.paperResearch.canary.register(identity.operator_user_id);
   process.stdout.write(`${JSON.stringify({ service: 'agent-paper-research-worker',
     event: 'ready', agentUserId: runtime.config.agentUserId,
-    workflowKey: 'paper.private.research' })}\n`);
+    workflowKey: 'paper.private.research',
+    tool: { toolKey: arxivTool.toolKey, contractVersion: arxivTool.contractVersion,
+      existing: arxivTool.existing === true } })}\n`);
   await inspectOperations();
   operationsTimer=setInterval(()=>void inspectOperations(),operationsIntervalMs);
   operationsTimer.unref?.();

@@ -87,6 +87,7 @@ test('public bootstrap registers the public workflow without creating a Run or c
   }).run();
   assert.deepEqual(workflows, ['blog.project.discovery-shadow', 'blog.project.single',
     'paper.article.draft-shadow']);
+  assert.equal(receipt.tools.some(tool => tool.toolKey === 'research.paper.arxiv.read'), true);
   assert.equal(receipt.tools.some(tool => tool.toolKey === 'research.paper.analysis.read'), true);
   assert.equal(DEEPSEEK_FLASH_PRIVATE_CANARY_CATALOG.catalogVersion, 1);
   assert.equal(DEEPSEEK_FLASH_PUBLIC_RUNTIME_CATALOG.catalogVersion, 2);

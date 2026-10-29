@@ -41,6 +41,8 @@ test('R1.8 routes, worker and compose stay private and recoverable', () => {
   assert.match(execution, /publicationAttempted:\s*false/);
   assert.doesNotMatch(execution, /blog_articles|publishArticle|blog\.article\.publish/);
   assert.match(worker, /AGENT_PAPER_RESEARCH_ARXIV_CONTACT_REQUIRED/);
+  assert.match(worker, /registerTool\(ARXIV_PAPER_READ_TOOL\)/);
+  assert.match(worker, /AGENT_PAPER_RESEARCH_ARXIV_TOOL_NOT_ACTIVE/);
   assert.match(compose, /agent-paper-research-worker:/);
   assert.match(compose, /restart:\s*unless-stopped/);
 });
