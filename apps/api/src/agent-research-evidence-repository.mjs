@@ -334,7 +334,18 @@ export class PostgresAgentResearchEvidenceRepository {
       if (existing) {
         if (existing.run_id !== runId || existing.action_id !== actionId
           || existing.content_sha256 !== row.content_sha256) fail('AGENT_RESEARCH_EVIDENCE_BINDING_CONFLICT');
-        return { ...bindingView(existing), evidenceCount: Number(existing.evidence_count), existing: true };
+        const paper = (await client.query(`SELECT version.id,version.paper_identity_id,
+            assessment.reliability_grade,assessment.reason_codes,assessment.assessment_sha256
+          FROM agent_paper_versions version
+          LEFT JOIN agent_paper_parse_assessments assessment ON assessment.paper_version_id=version.id
+          WHERE version.research_source_version_id=$1`, [existing.research_source_version_id])).rows[0];
+        if (!paper) fail('AGENT_RESEARCH_EVIDENCE_BINDING_CONFLICT');
+        return { ...bindingView(existing), evidenceCount: Number(existing.evidence_count), existing: true,
+          paperIdentityId: paper.paper_identity_id, paperVersionId: paper.id,
+          parseQuality: paper.assessment_sha256 ? {
+            grade: paper.reliability_grade, reasonCodes: paper.reason_codes,
+            assessmentSha256: paper.assessment_sha256,
+          } : null };
       }
       const output = validateArxivPaperReadOutput(row.content_json);
       if (stableHash(output) !== row.content_sha256) fail('AGENT_RESEARCH_EVIDENCE_ARTIFACT_HASH_MISMATCH');

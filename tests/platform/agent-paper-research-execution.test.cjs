@@ -17,7 +17,10 @@ test('R1.8 paper research is bounded, private and has no publication capability'
     'extract-semantics', 'verify-semantics', 'persist-analysis', 'finalize-queue',
   ]);
   assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.defaultBudget.providerCalls, 1);
-  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.defaultBudget.toolCalls, 1);
+  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.workflowVersion, 2);
+  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.defaultBudget.toolCalls, 3);
+  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.stages.find(stage => stage.key === 'acquire-source')
+    .maxAttempts, 3);
   assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.requiredCapabilities
     .some(capability => capability.key === 'blog.article.publish'), false);
   const input = { schemaVersion: 'paper-private-research-input-v1',
@@ -38,6 +41,8 @@ test('R1.8 routes, worker and compose stay private and recoverable', () => {
   assert.match(routes, /paper-research-executions\/:executionId\/retry/);
   assert.match(routes, /paper-research-executions\/:executionId\/cancel/);
   assert.match(execution, /PAPER_RESEARCH_USER_PDF_EXTERNAL_PROCESSING_FORBIDDEN/);
+  assert.match(execution,
+    /paper-research-acquire:\$\{context\.run\.id\}:\$\{context\.stage\.attempt\}/);
   assert.match(execution, /publicationAttempted:\s*false/);
   assert.doesNotMatch(execution, /blog_articles|publishArticle|blog\.article\.publish/);
   assert.match(worker, /AGENT_PAPER_RESEARCH_ARXIV_CONTACT_REQUIRED/);

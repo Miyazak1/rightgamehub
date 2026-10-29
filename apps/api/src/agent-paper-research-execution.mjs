@@ -4,11 +4,12 @@ import { ARXIV_PAPER_READ_TOOL } from './agent-arxiv-paper-tool.mjs';
 import { PAPER_SEMANTIC_WORKFLOW_KEY } from './agent-paper-semantic-contracts.mjs';
 
 export const PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY = 'paper.private.research';
+const ARXIV_ACQUISITION_MAX_ATTEMPTS = 3;
 
 export const PAPER_RESEARCH_EXECUTION_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY,
-  workflowVersion: 1,
+  workflowVersion: 2,
   inputSchema: 'paper-private-research-input-v1',
   outputSchema: 'paper-private-research-output-v1',
   requiredCapabilities: [
@@ -16,12 +17,13 @@ export const PAPER_RESEARCH_EXECUTION_WORKFLOW = Object.freeze({
     { key: 'provider.text.generate', version: 1 },
     { key: 'research.paper.analyze', version: 1 },
   ],
-  defaultBudget: { providerCalls: 1, toolCalls: 1, inputTokens: 60000,
+  // Failed read-only calls consume budget too; reserve one call per bounded attempt.
+  defaultBudget: { providerCalls: 1, toolCalls: ARXIV_ACQUISITION_MAX_ATTEMPTS, inputTokens: 60000,
     outputTokens: 7000, wallClockSeconds: 1800 },
   stages: [
     { key: 'resolve-source', kind: 'deterministic', dependsOn: [], maxAttempts: 1,
       timeoutSeconds: 60 },
-    { key: 'acquire-source', kind: 'tool', dependsOn: ['resolve-source'], maxAttempts: 3,
+    { key: 'acquire-source', kind: 'tool', dependsOn: ['resolve-source'], maxAttempts: ARXIV_ACQUISITION_MAX_ATTEMPTS,
       timeoutSeconds: 180, capability: { key: 'research.paper.read', version: 2 },
       idempotencyMode: 'key' },
     { key: 'verify-eligibility', kind: 'deterministic', dependsOn: ['acquire-source'],
@@ -228,7 +230,10 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
           workerId: execution.workerId, leaseToken: execution.leaseToken,
           action: { actionKey: 'acquire-arxiv-open-fulltext', actionKind: 'tool',
             capabilityKey: 'research.paper.read', contractVersion: 2, riskLevel: 'L1' },
-          idempotencyKey: `paper-research-acquire:${context.run.id}`,
+          // A failed read-only acquisition may be retried by the same durable stage. Keep each
+          // stage attempt idempotent in isolation so a terminal tool call from the previous
+          // attempt is not mistaken for an action that is still in progress.
+          idempotencyKey: `paper-research-acquire:${context.run.id}:${context.stage.attempt}`,
           resource: { type: 'paper.arxiv', owner: 'public', id: source.arxivId },
           tool: { toolKey: ARXIV_PAPER_READ_TOOL.toolKey,
             contractVersion: ARXIV_PAPER_READ_TOOL.contractVersion },
@@ -236,7 +241,8 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
         if (result.status !== 'succeeded') fail('PAPER_RESEARCH_ACQUISITION_INCOMPLETE',
           { retryable: true });
         const archived = await evidenceRepository.archiveSourceArtifact({ runId: context.run.id,
-          stageId: context.stage.id, actionId: result.actionId, toolArtifactId: result.artifactId,
+          stageId: context.stage.id, actionId: result.actionId,
+          toolArtifactId: result.artifactId ?? result.responseRef?.artifactId,
           workerId: execution.workerId, leaseToken: execution.leaseToken });
         if (!UUID.test(archived.paperVersionId ?? '')) fail('PAPER_RESEARCH_ARCHIVE_INCOMPLETE');
         const { row } = await executionContext(pool, context);
