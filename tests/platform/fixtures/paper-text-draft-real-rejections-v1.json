@@ -1,0 +1,293 @@
+{
+  "schemaVersion": "paper-text-draft-real-rejections-v1",
+  "controls": [
+    {
+      "sourceUrl": "https://arxiv.org/abs/1301.3781v3",
+      "sourceSha256": "a44d7e22d2005752271c9cc1929c6462d4c8270916b063977992a883e3a54362",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED"
+        ],
+        "metrics": {
+          "pageCount": 12,
+          "textPageCount": 12,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 37605,
+          "evidencePageCount": 12,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 1,
+          "multiColumnPageCount": 10,
+          "tableRiskPageCount": 8,
+          "formulaRiskPageCount": 5,
+          "imagePageCount": 0
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/abs/1412.6980v9",
+      "sourceSha256": "eab9c73ae2ceda884b94830bda99312254bac4806f6c9f045cbab90721ecda31",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED"
+        ],
+        "metrics": {
+          "pageCount": 15,
+          "textPageCount": 15,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 39581,
+          "evidencePageCount": 15,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 1,
+          "multiColumnPageCount": 15,
+          "tableRiskPageCount": 12,
+          "formulaRiskPageCount": 10,
+          "imagePageCount": 0
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/abs/1512.03385v1",
+      "sourceSha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "blocked",
+        "permittedUses": [],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED"
+        ],
+        "metrics": {
+          "pageCount": 12,
+          "textPageCount": 12,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 57208,
+          "evidencePageCount": 12,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 12,
+          "multiColumnPageCount": 12,
+          "tableRiskPageCount": 11,
+          "formulaRiskPageCount": 11,
+          "imagePageCount": 0
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/abs/1810.04805v2",
+      "sourceSha256": "5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "blocked",
+        "permittedUses": [],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED",
+          "IMAGE_CONTENT_UNREAD"
+        ],
+        "metrics": {
+          "pageCount": 16,
+          "textPageCount": 16,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 61570,
+          "evidencePageCount": 16,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 16,
+          "multiColumnPageCount": 16,
+          "tableRiskPageCount": 15,
+          "formulaRiskPageCount": 8,
+          "imagePageCount": 2
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/pdf/1707.06347v2",
+      "sourceSha256": "e78feadadbdbb0b601b3c2bcc81404722cd431a489b307545f9b7bea1e8c4f5b",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED",
+          "IMAGE_CONTENT_UNREAD"
+        ],
+        "metrics": {
+          "pageCount": 12,
+          "textPageCount": 12,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 25734,
+          "evidencePageCount": 12,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 1,
+          "multiColumnPageCount": 11,
+          "tableRiskPageCount": 10,
+          "formulaRiskPageCount": 7,
+          "imagePageCount": 1
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/pdf/1711.05101v3",
+      "sourceSha256": "9d5af48931e773d6983d167e15c06ef594475b751c1f263827f5ed3c7a00d0d8",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED",
+          "IMAGE_CONTENT_UNREAD"
+        ],
+        "metrics": {
+          "pageCount": 19,
+          "textPageCount": 19,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 45594,
+          "evidencePageCount": 19,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 1,
+          "multiColumnPageCount": 13,
+          "tableRiskPageCount": 8,
+          "formulaRiskPageCount": 9,
+          "imagePageCount": 9
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/pdf/1910.07467v1",
+      "sourceSha256": "a38ab771022fc10525d2b6b23de40307b2ca7b2bf463f5219da6a0ba1c41225f",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED"
+        ],
+        "metrics": {
+          "pageCount": 14,
+          "textPageCount": 14,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 44944,
+          "evidencePageCount": 14,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 1,
+          "multiColumnPageCount": 12,
+          "tableRiskPageCount": 9,
+          "formulaRiskPageCount": 8,
+          "imagePageCount": 0
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    },
+    {
+      "sourceUrl": "https://arxiv.org/pdf/2106.09685v2",
+      "sourceSha256": "e9a0d3128767db616085dc0f4e6e455e672e89af823e8ed1282793682787395a",
+      "quality": {
+        "schemaVersion": "paper-parse-quality-v1",
+        "policyVersion": "paper-text-layer-gate-v1",
+        "parserVersion": "pdfjs-dist@6.4.299:text-layer-v2",
+        "grade": "limited-text",
+        "permittedUses": [
+          "analysis"
+        ],
+        "reasonCodes": [
+          "READING_ORDER_UNCERTAIN",
+          "MULTI_COLUMN_LAYOUT",
+          "TABLE_STRUCTURE_UNSUPPORTED",
+          "FORMULA_STRUCTURE_UNSUPPORTED",
+          "IMAGE_CONTENT_UNREAD"
+        ],
+        "metrics": {
+          "pageCount": 26,
+          "textPageCount": 26,
+          "emptyPageCount": 0,
+          "scannedPageCount": 0,
+          "textChars": 79038,
+          "evidencePageCount": 26,
+          "textCoverageBp": 10000,
+          "evidenceCoverageBp": 10000,
+          "lowDensityPageCount": 0,
+          "orderRiskPageCount": 3,
+          "multiColumnPageCount": 26,
+          "tableRiskPageCount": 24,
+          "formulaRiskPageCount": 22,
+          "imagePageCount": 5
+        }
+      },
+      "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT"
+    }
+  ]
+}

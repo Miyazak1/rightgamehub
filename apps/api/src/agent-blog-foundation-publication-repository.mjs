@@ -94,7 +94,10 @@ export class PostgresAgentBlogFoundationPublicationRepository {
         client, action.agent_user_id, 'foundation');
       const draft = (await client.query(`SELECT mapping.*,article.publication_state,
           article.working_revision_id,article.published_revision_id,
-          revision.revision_state,revision.content_hash
+          revision.revision_state,revision.content_hash,
+          EXISTS(SELECT 1 FROM agent_tool_artifacts source_artifact
+            WHERE source_artifact.id=ANY(mapping.source_artifact_ids)
+              AND source_artifact.content_json->'readingScope'->>'mode'='text-only-draft') AS text_only_draft
         FROM agent_blog_foundation_drafts mapping
         JOIN blog_articles article ON article.id=mapping.article_id
         JOIN blog_article_revisions revision
@@ -103,6 +106,7 @@ export class PostgresAgentBlogFoundationPublicationRepository {
           AND mapping.article_id=$3 AND mapping.revision_id=$4
         FOR UPDATE OF article,revision`,
       [action.run_id, action.agent_user_id, articleId, revisionId])).rows[0];
+      if (draft?.text_only_draft === true) fail('AGENT_BLOG_PUBLICATION_MANUAL_REVIEW_REQUIRED');
       if (!draft || draft.verification_artifact_id == null || draft.composition_artifact_id == null
         || draft.content_sha256 !== contentSha256 || draft.content_hash !== contentSha256
         || draft.publication_state !== 'draft' || draft.revision_state !== 'working'

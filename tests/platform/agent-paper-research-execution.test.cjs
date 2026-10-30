@@ -17,7 +17,7 @@ test('R1.8 paper research is bounded, private and has no publication capability'
     'extract-semantics', 'verify-semantics', 'persist-analysis', 'finalize-queue',
   ]);
   assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.defaultBudget.providerCalls, 1);
-  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.workflowVersion, 2);
+  assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.workflowVersion, 3);
   assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.defaultBudget.toolCalls, 3);
   assert.equal(PAPER_RESEARCH_EXECUTION_WORKFLOW.stages.find(stage => stage.key === 'acquire-source')
     .maxAttempts, 3);

@@ -40,6 +40,9 @@ export class PostgresAgentPaperFollowUpRepository {
       JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
       WHERE analysis.id=$1 AND analysis.agent_user_id=$2`, [analysisId, agentUserId])).rows[0];
     if (!row) fail('AGENT_PAPER_FOLLOW_UP_ANALYSIS_NOT_FOUND');
+    if (row.section_manifest?.readingScope?.mode === 'text-only-draft') {
+      fail('AGENT_PAPER_FOLLOW_UP_TEXT_DRAFT_ONLY');
+    }
     uuid(runId);
     const quota = (await this.pool.query(`SELECT current.id,count(candidate.id)::int AS ordinal
       FROM agent_runs current

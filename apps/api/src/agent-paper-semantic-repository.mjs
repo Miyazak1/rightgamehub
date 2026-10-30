@@ -3,6 +3,8 @@ import { withTransaction } from './database.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { PAPER_SEMANTIC_WORKFLOW_KEY } from './agent-paper-semantic-contracts.mjs';
 import { validatePaperArticleEvidencePack } from './agent-paper-article-generation.mjs';
+import { isTextOnlyDraftQuality, selectTextOnlyDraftEvidence, validateTextOnlyDraftScope,
+  assertTextOnlyDraftFindings } from './agent-paper-text-draft.mjs';
 
 export class AgentPaperSemanticRepositoryError extends Error {
   constructor(code) {
@@ -35,7 +37,7 @@ export class PostgresAgentPaperSemanticRepository {
         source.source_type,source.publisher,source.authority_tier,
         identity.canonical_id,identity.title,identity.authors,identity.publication_year,identity.venue,
         layout.manifest_json,layout.content_sha256 AS layout_sha256,
-        assessment.reliability_grade,assessment.permitted_uses,assessment.reason_codes,
+        assessment.reliability_grade,assessment.permitted_uses,assessment.reason_codes,assessment.metrics_json,
         assessment.assessment_sha256,assessment.policy_version AS parse_policy_version
       FROM agent_paper_versions version
       JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
@@ -50,17 +52,21 @@ export class PostgresAgentPaperSemanticRepository {
       || !/^https:\/\/arxiv\.org\//u.test(paper.source_url)) {
       fail('AGENT_PAPER_SEMANTIC_EXTERNAL_PROCESSING_FORBIDDEN');
     }
-    if (paper.reliability_grade !== 'trusted-text'
+    const textOnly = isTextOnlyDraftQuality(paper);
+    if (!textOnly && (paper.reliability_grade !== 'trusted-text'
       || stableHash(paper.permitted_uses ?? []) !== stableHash(['analysis', 'citation', 'comparison'])
-      || (paper.reason_codes ?? []).length !== 0) fail('AGENT_PAPER_SEMANTIC_QUALITY_BLOCKED');
+      || (paper.reason_codes ?? []).length !== 0)) fail('AGENT_PAPER_SEMANTIC_QUALITY_BLOCKED');
     const rows = (await this.pool.query(`SELECT evidence.*
       FROM tool_research_evidence evidence
       WHERE evidence.source_version_id=$1 AND evidence.locator->>'kind'='paper.layout'
-        AND evidence.allowed_uses @> ARRAY['analysis','citation','comparison']::text[]
-      ORDER BY COALESCE((evidence.locator->'pages'->>0)::integer,2147483647),evidence.id
-      LIMIT 97`, [paper.research_source_version_id])).rows;
+        AND evidence.allowed_uses @> $2::text[]
+      ORDER BY COALESCE((evidence.locator->'pages'->>0)::integer,2147483647),
+        substring(evidence.locator->'blockIds'->>0 from 'b([0-9]+)$')::integer NULLS LAST,evidence.id
+      LIMIT 97`, [paper.research_source_version_id, textOnly ? ['analysis'] : ['analysis', 'citation', 'comparison']])).rows;
     if (rows.length < 1 || rows.length > 96) fail('AGENT_PAPER_SEMANTIC_EVIDENCE_INVALID');
-    const evidence = rows.map((row, index) => evidenceView(row, index + 1));
+    const allEvidence = rows.map((row, index) => evidenceView(row, index + 1));
+    const selected = textOnly ? selectTextOnlyDraftEvidence(allEvidence, paper) : { evidence: allEvidence };
+    const { evidence } = selected;
     return Object.freeze({
       schemaVersion: 'paper-semantic-source-v1', paperVersionId: paper.paper_version_id,
       researchSourceVersionId: paper.research_source_version_id,
@@ -70,6 +76,7 @@ export class PostgresAgentPaperSemanticRepository {
       externalProcessingClass: 'public-arxiv-open-fulltext', contentSha256: paper.content_sha256,
       layoutSha256: paper.layout_sha256, parseAssessmentSha256: paper.assessment_sha256,
       parsePolicyVersion: paper.parse_policy_version, evidence,
+      ...(selected.readingScope ? { readingScope: selected.readingScope } : {}),
       evidenceManifestSha256: stableHash(evidence.map(item => ({ index: item.index,
         id: item.id, quoteHash: item.quoteHash }))),
     });
@@ -85,7 +92,9 @@ export class PostgresAgentPaperSemanticRepository {
       JOIN agent_paper_identities identity ON identity.id=version.paper_identity_id
       WHERE analysis.id=$1 AND analysis.agent_user_id=$2`, [analysisId, agentUserId])).rows[0];
     if (!row) fail('AGENT_PAPER_SEMANTIC_ANALYSIS_NOT_FOUND');
-    const findings = structuredClone(row.findings ?? []);
+    const readingScope = row.section_manifest?.readingScope;
+    const findings = structuredClone(row.findings ?? []).filter(item => !readingScope || item.kind !== 'unknown');
+    if (readingScope) assertTextOnlyDraftFindings(findings);
     const indexByEvidence = new Map();
     for (const finding of findings) {
       for (const relation of finding.relations ?? []) {
@@ -104,15 +113,17 @@ export class PostgresAgentPaperSemanticRepository {
     const evidenceRows = (await this.pool.query(`SELECT id,quote_text,quote_hash,evidence_kind,
         locator,allowed_uses FROM tool_research_evidence
       WHERE source_version_id=$1 AND id=ANY($2::uuid[])
-        AND allowed_uses @> ARRAY['citation']::text[]`,
-    [row.research_source_version_id, evidenceIds])).rows;
+        AND allowed_uses @> $3::text[]`,
+    [row.research_source_version_id, evidenceIds, readingScope ? ['analysis'] : ['citation']])).rows;
     if (evidenceRows.length !== evidenceIds.length) fail('AGENT_PAPER_SEMANTIC_EVIDENCE_INVALID');
     const evidence = evidenceRows.map(item => ({ index: indexByEvidence.get(item.id), id: item.id,
       quoteText: item.quote_text, quoteHash: item.quote_hash, evidenceKind: item.evidence_kind,
       locator: item.locator, allowedUses: item.allowed_uses ?? [] }))
       .sort((left, right) => left.index - right.index);
+    if (readingScope) validateTextOnlyDraftScope(readingScope, evidence);
     return validatePaperArticleEvidencePack({
-      schemaVersion: 'paper-article-evidence-v1', analysisId: row.id,
+      schemaVersion: readingScope ? 'paper-article-evidence-v2' : 'paper-article-evidence-v1',
+      ...(readingScope ? { readingScope } : {}), analysisId: row.id,
       analysisSha256: row.analysis_sha256, paperVersionId: row.paper_version_id,
       paper: { title: row.title, authors: row.authors ?? [], year: row.publication_year,
         venue: row.venue, sourceUrl: row.source_url }, findings,
@@ -146,7 +157,7 @@ export class PostgresAgentPaperSemanticRepository {
         WHERE action.id=$1 FOR UPDATE OF action,run,stage`, [actionId])).rows[0];
       if (!action || action.action_kind !== 'domain-write'
         || action.capability_key !== 'research.paper.analyze' || action.contract_version !== 1
-        || action.risk_level !== 'L2' || action.workflow_key !== PAPER_SEMANTIC_WORKFLOW_KEY) {
+        || action.risk_level !== 'L2' || ![PAPER_SEMANTIC_WORKFLOW_KEY, 'paper.private.research'].includes(action.workflow_key)) {
         fail('AGENT_PAPER_SEMANTIC_ACTION_INVALID');
       }
       const existing = (await client.query('SELECT * FROM agent_paper_semantic_analyses WHERE action_id=$1',
@@ -181,11 +192,27 @@ export class PostgresAgentPaperSemanticRepository {
         JOIN tool_research_sources source ON source.id=source_version.source_id
         WHERE version.id=$1 AND identity.agent_user_id=$2 FOR SHARE OF version,identity,assessment`,
       [analysis.paperVersionId, action.agent_user_id])).rows[0];
-      if (!paper || paper.reliability_grade !== 'trusted-text'
+      const readingScope = analysis.readingScope;
+      if (readingScope) {
+        const current = await new PostgresAgentPaperSemanticRepository(client).loadTrustedPaper({
+          agentUserId: action.agent_user_id, paperVersionId: analysis.paperVersionId });
+        if (stableHash(current.readingScope ?? null) !== stableHash(readingScope)
+          || stableHash(analysis.sectionManifest?.readingScope ?? null) !== stableHash(readingScope)
+          || current.evidenceManifestSha256 !== analysis.evidenceManifestSha256) {
+          fail('AGENT_PAPER_SEMANTIC_VERIFICATION_INVALID');
+        }
+        validateTextOnlyDraftScope(readingScope, current.evidence);
+        assertTextOnlyDraftFindings(analysis.findings);
+        if (analysis.findings.some(finding => finding.relations.some(relation =>
+          !current.evidence.some(item => item.id === relation.evidenceId && item.index === relation.evidenceIndex)))) {
+          fail('AGENT_PAPER_SEMANTIC_EVIDENCE_INVALID');
+        }
+      }
+      if (!paper || (!readingScope && paper.reliability_grade !== 'trusted-text')
         || paper.access_level !== 'fulltext-open' || paper.source_type !== 'pdf'
         || paper.publisher !== 'arXiv' || paper.authority_tier !== 'official-primary'
         || !/^https:\/\/arxiv\.org\//u.test(paper.source_url)
-        || stableHash(paper.permitted_uses ?? []) !== stableHash(['analysis', 'citation', 'comparison'])) {
+        || stableHash(paper.permitted_uses ?? []) !== stableHash(readingScope ? ['analysis'] : ['analysis', 'citation', 'comparison'])) {
         fail('AGENT_PAPER_SEMANTIC_QUALITY_BLOCKED');
       }
       const relations = analysis.findings.flatMap(finding => finding.relations.map(relation => ({
@@ -194,8 +221,8 @@ export class PostgresAgentPaperSemanticRepository {
       const evidenceIds = [...new Set(relations.map(item => item.evidenceId))];
       const validEvidence = evidenceIds.length === 0 ? 0 : Number((await client.query(`SELECT count(*)::int AS n
         FROM tool_research_evidence WHERE source_version_id=$1 AND id=ANY($2::uuid[])
-          AND allowed_uses @> ARRAY['analysis','citation','comparison']::text[]`,
-      [paper.research_source_version_id, evidenceIds])).rows[0].n);
+          AND allowed_uses @> $3::text[]`,
+      [paper.research_source_version_id, evidenceIds, readingScope ? ['analysis'] : ['analysis', 'citation', 'comparison']])).rows[0].n);
       if (validEvidence !== evidenceIds.length) fail('AGENT_PAPER_SEMANTIC_EVIDENCE_INVALID');
       const provider = String(analysis.provider ?? '').trim();
       const modelId = String(analysis.modelId ?? '').trim();

@@ -4,7 +4,7 @@ import { PAPER_SEMANTIC_WORKFLOW_KEY } from './agent-paper-semantic-contracts.mj
 export const PAPER_SINGLE_SEMANTIC_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: PAPER_SEMANTIC_WORKFLOW_KEY,
-  workflowVersion: 1,
+  workflowVersion: 2,
   inputSchema: 'paper-semantic-run-input-v1',
   outputSchema: 'paper-semantic-analysis-output-v1',
   requiredCapabilities: [
@@ -50,7 +50,7 @@ export function normalizePaperSemanticRunInput(value) {
   return structuredClone(value);
 }
 
-export function reconstructPaperSections(evidence) {
+export function reconstructPaperSections(evidence, readingScope = null) {
   if (!Array.isArray(evidence) || evidence.length < 1 || evidence.length > 96
     || evidence.some((item, index) => item?.index !== index + 1 || !Array.isArray(item?.locator?.pages)
       || item.locator.pages.length < 1 || item.locator.pages.some(page => !Number.isSafeInteger(page) || page < 1))) {
@@ -76,7 +76,7 @@ export function reconstructPaperSections(evidence) {
     });
   }
   const manifest = { schemaVersion: 'paper-section-manifest-v1', method: 'deterministic-page-window',
-    sections };
+    sections, ...(readingScope ? { readingScope } : {}) };
   return Object.freeze({ ...manifest, manifestSha256: stableHash(manifest) });
 }
 

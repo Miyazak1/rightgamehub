@@ -207,7 +207,7 @@ for (const failureCount of [1, 2, 3]) {
         }
         const run = (await admin.query('SELECT workflow_version,budget_json,usage_json,status FROM agent_runs WHERE id=$1',
           [execution.runtimeRunId])).rows[0];
-        assert.equal(run.workflow_version, 2);
+        assert.equal(run.workflow_version, 3);
         assert.equal(run.budget_json.toolCalls, 3);
         assert.equal(run.budget_json.providerCalls, 1);
         assert.equal(run.usage_json.toolCalls, attempts);

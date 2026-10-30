@@ -3,14 +3,16 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const harness = require('./support/researcher-qa-db.cjs');
 
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname,
   'fixtures/paper-semantic-eval-v1.json'), 'utf8'));
 
 test('trusted public arXiv paper completes one private immutable semantic analysis',
-  { skip: !harness.enabled }, async () => {
+  { skip: !harness.enabled }, async t => {
     const { admin } = await harness.setup();
+    t.after(() => admin.end());
     const { createAgentAccountService } = await harness.load('agent-account-service.mjs');
     const { PostgresAgentAccountRepository } = await harness.load('agent-account-repository.mjs');
     const { PostgresAgentRuntimeRepository } = await harness.load('agent-runtime-repository.mjs');
@@ -283,5 +285,24 @@ test('trusted public arXiv paper completes one private immutable semantic analys
     await assert.rejects(semanticRepository.loadTrustedPaper({ agentUserId: account.agentUserId,
       paperVersionId: restrictedVersion }), error =>
       error?.code === 'AGENT_PAPER_SEMANTIC_EXTERNAL_PROCESSING_FORBIDDEN');
-    await admin.end();
+    await t.test('real PDF and recorded live outputs complete a draft with a fresh missing preview directory', async subtest => {
+      const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-text-draft-db-'));
+      const previewDirectory = path.join(temporaryRoot, '.runtime', 'paper-layout-audit');
+      subtest.after(() => {
+        const resolved = path.resolve(temporaryRoot);
+        assert.ok(resolved.startsWith(path.resolve(os.tmpdir()) + path.sep));
+        assert.ok(path.basename(resolved).startsWith('paper-text-draft-db-'));
+        fs.rmSync(resolved, { recursive: true, force: true });
+      });
+      assert.equal(fs.existsSync(previewDirectory), false);
+      const recordedProvider = JSON.parse(fs.readFileSync(path.join(__dirname,
+        'fixtures/paper-text-draft-recorded-success-v1.json'), 'utf8'));
+      await require('./support/paper-text-draft-db.cjs')({ admin, account, operatorId, runtime,
+        policyService, governance, vault, canary, recordedProvider, previewDirectory });
+      const preview = JSON.parse(fs.readFileSync(path.join(previewDirectory, 'text-only-draft-preview.json'), 'utf8'));
+      assert.equal(preview.recordedLiveReplay, true);
+      assert.equal(preview.sourceSha256, recordedProvider.sourceSha256);
+      assert.equal(preview.publicationState, 'draft');
+      assert.match(preview.blocks[0].text, /待审草稿/u);
+    });
   });

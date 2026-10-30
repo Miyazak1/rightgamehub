@@ -4,9 +4,10 @@ import { PAPER_SEMANTIC_EXTRACTION_SCHEMA, PAPER_SEMANTIC_VERIFICATION_SCHEMA,
   verifyPaperSemanticExtraction } from './agent-paper-semantic-contracts.mjs';
 import { normalizePaperSemanticRunInput, reconstructPaperSections }
   from './agent-paper-semantic-workflow.mjs';
+import { TEXT_DRAFT_NOTICE, assertTextOnlyDraftFindings, textOnlyDraftExcerpt } from './agent-paper-text-draft.mjs';
 
-export const PAPER_SEMANTIC_POLICY_VERSION = 'paper-semantic-evidence-gate-v1';
-export const PAPER_SEMANTIC_PROMPT_VERSION = 'paper-semantic-reader-v1';
+export const PAPER_SEMANTIC_POLICY_VERSION = 'paper-semantic-evidence-gate-v2';
+export const PAPER_SEMANTIC_PROMPT_VERSION = 'paper-semantic-reader-v2';
 
 export class AgentPaperSemanticRuntimeError extends Error {
   constructor(code) {
@@ -25,7 +26,15 @@ const PAPER_SEMANTIC_PROMPT = `你是小墨鱼的私有论文阅读器。输入�
 2. 非 unknown 结论必须引用一个或多个 evidenceIndex，并至少有一条 supports 关系；conflict 还必须有 contradicts。
 3. 不得创造证据编号、链接、数字、论文结构或作者结论。
 4. sections 必须原样复述 suppliedSections 的 key、title、level、evidenceIndexes；这些只是确定性页窗，不代表真实语义标题。
-5. 输出 3 到 8 个可继续研究的问题。回答使用简体中文，但 JSON key 不得改变。`;
+5. 输出 3 到 8 个可继续研究的问题。回答使用简体中文，但 JSON key 不得改变。
+根对象必须且只能包含 schemaVersion、sections、findings、limitations、followUpQuestions。
+schemaVersion 固定为 "paper-semantic-extraction-v1"。sections 原样复制 suppliedSections。
+findings 是非空数组，每项必须且只能包含：
+{"key":"author-claim-example","kind":"author_claim","text":"作者明确提出的定性主张","evidenceIndexes":[1],"relations":[{"evidenceIndex":1,"relation":"supports"}],"confidence":"low"}。
+示例中的证据编号只说明格式，实际编号必须来自输入。key 必须唯一、以小写字母开头，仅含小写字母、数字或连字符，长度为二至八十个字符。
+confidence 只能是 high、medium 或 low；relation 只能是 supports、weakens、contradicts 或 context。unknown 的 evidenceIndexes 和 relations 必须均为空数组。
+limitations 是数组（无可证限制时为空），每项必须且只能包含 key、text、evidenceIndexes；不得把未提供的证据补写为论文限制。
+followUpQuestions 是三至八个互不重复的非空问题字符串。不得添加额外字段或 JSON 外文字。`;
 
 function prerequisite(context, stageKey) {
   const stage = context.prerequisites.find(item => item.stageKey === stageKey && item.status === 'succeeded');
@@ -66,6 +75,7 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
         layoutSha256: source.layoutSha256, parseAssessmentSha256: source.parseAssessmentSha256,
         evidenceManifestSha256: source.evidenceManifestSha256,
         evidenceCount: source.evidence.length, eligible: true,
+        ...(source.readingScope ? { readingScope: source.readingScope } : {}),
         externalProcessingClass: source.externalProcessingClass,
         publicPublicationEnabled: false } };
     },
@@ -80,8 +90,9 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
         || eligible.sourceContentSha256 !== source.contentSha256 || eligible.layoutSha256 !== source.layoutSha256
         || eligible.parseAssessmentSha256 !== source.parseAssessmentSha256
         || eligible.evidenceManifestSha256 !== source.evidenceManifestSha256
-        || eligible.evidenceCount !== source.evidence.length) fail('AGENT_PAPER_SEMANTIC_SOURCE_DRIFT');
-      const manifest = reconstructPaperSections(source.evidence);
+        || eligible.evidenceCount !== source.evidence.length
+        || stableHash(eligible.readingScope ?? null) !== stableHash(source.readingScope ?? null)) fail('AGENT_PAPER_SEMANTIC_SOURCE_DRIFT');
+      const manifest = reconstructPaperSections(source.evidence, source.readingScope);
       return { outputRef: { ...manifest, paperVersionId: source.paperVersionId,
         evidenceManifestSha256: source.evidenceManifestSha256 } };
     },
@@ -94,28 +105,32 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
       if (source.externalProcessingClass !== 'public-arxiv-open-fulltext') {
         fail('AGENT_PAPER_SEMANTIC_EXTERNAL_PROCESSING_FORBIDDEN');
       }
-      const sectionManifest = reconstructPaperSections(source.evidence);
+      const sectionManifest = reconstructPaperSections(source.evidence, source.readingScope);
       if (sectionRef.paperVersionId !== source.paperVersionId
         || sectionRef.evidenceManifestSha256 !== source.evidenceManifestSha256
         || sectionRef.manifestSha256 !== sectionManifest.manifestSha256) fail('AGENT_PAPER_SEMANTIC_SOURCE_DRIFT');
       const requestPayload = { schemaVersion: 'paper-semantic-provider-request-v1',
         externalProcessingClass: source.externalProcessingClass, paper: source.identity,
+        ...(source.readingScope ? { readingScope: source.readingScope, readingNotice: TEXT_DRAFT_NOTICE } : {}),
         suppliedSections: sectionProjection(sectionManifest.sections),
         evidence: source.evidence.map(item => ({ evidenceIndex: item.index,
-          quoteText: Array.from(item.quoteText).slice(0, 1200).join(''), locator: item.locator })) };
+          quoteText: source.readingScope ? textOnlyDraftExcerpt(item.quoteText)
+            : Array.from(item.quoteText).slice(0, 1200).join(''), locator: item.locator })) };
       const result = await providerGateway.invoke({ runId: context.run.id, stageId: context.stage.id,
         workerId: execution.workerId, leaseToken: execution.leaseToken,
         action: { actionKey: 'extract-semantics', actionKind: 'provider',
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `paper-semantic:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context), promptTemplate: { key: 'paper.semantic.reader', version: 1 },
+        modelPolicy: modelPolicy(context), promptTemplate: { key: 'paper.semantic.reader', version: 2 },
         responseSchema: PAPER_SEMANTIC_EXTRACTION_SCHEMA,
-        request: { messages: [{ role: 'system', content: PAPER_SEMANTIC_PROMPT },
+        request: { messages: [{ role: 'system', content: PAPER_SEMANTIC_PROMPT + (source.readingScope
+          ? '\n当前是仅正文待审模式：只能提取定性的 author_claim 或 unknown；不得输出 observed_result、推断、数值、效果比较或推导。不得将正文筛选当作全文质量核验。仅提取研究问题、动机和方法概念。不要提取操作数、复杂度、计算成本或性能比较。findings 的 text 中不得出现任何阿拉伯数字，包括模型名称中的数字；遇到这种名称应改用“已有模型”等泛称。只输出当前证据能明确支持的主张，数量少也可以，不要凑结论。' : '') },
           { role: 'user', content: JSON.stringify(requestPayload) }], temperature: 0.1 },
         tokenCeiling: 7000, timeoutSeconds: 540, estimatedInputTokens: estimatedTokens(requestPayload) });
       if (result.status !== 'succeeded') fail('AGENT_PAPER_SEMANTIC_PROVIDER_INCOMPLETE');
       const extraction = validatePaperSemanticExtractionV1(result.output);
+      if (source.readingScope) assertTextOnlyDraftFindings(extraction.findings);
       if (stableHash(extraction.sections) !== stableHash(sectionProjection(sectionManifest.sections))) {
         fail('AGENT_PAPER_SEMANTIC_SECTION_DRIFT');
       }
@@ -135,15 +150,19 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
       const extracted = prerequisite(context, 'extract-semantics');
       const source = await repository.loadTrustedPaper({ agentUserId: context.run.agentUserId,
         paperVersionId: input.paperVersionId });
-      const sectionManifest = reconstructPaperSections(source.evidence);
+      const sectionManifest = reconstructPaperSections(source.evidence, source.readingScope);
       if (extracted.artifactKey !== 'paper.semantic-extraction'
         || extracted.evidenceManifestSha256 !== source.evidenceManifestSha256
         || extracted.sectionManifestSha256 !== sectionManifest.manifestSha256) fail('AGENT_PAPER_SEMANTIC_SOURCE_DRIFT');
       const artifact = await artifactRepository.read({ runId: context.run.id,
         artifactId: extracted.artifactId, expectedArtifactKey: 'paper.semantic-extraction' });
       const verified = verifyPaperSemanticExtraction({ extraction: artifact.content, evidence: source.evidence });
+      if (source.readingScope) assertTextOnlyDraftFindings(verified.findings);
       const { analysisSha256: ignored, ...verifiedBody } = verified;
-      const proofBody = { ...verifiedBody, paperVersionId: source.paperVersionId, sectionManifest,
+      const proofBody = { ...verifiedBody,
+        ...(source.readingScope ? { readingScope: source.readingScope,
+          limitations: [...verifiedBody.limitations, { key: 'text-only-reading-scope', text: TEXT_DRAFT_NOTICE, evidenceIndexes: [] }] } : {}),
+        paperVersionId: source.paperVersionId, sectionManifest,
         provider: extracted.provider, modelId: extracted.modelId,
         policyVersion: PAPER_SEMANTIC_POLICY_VERSION, promptVersion: PAPER_SEMANTIC_PROMPT_VERSION,
         externalProcessingClass: source.externalProcessingClass, publicPublicationEnabled: false };
@@ -172,6 +191,7 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
         leaseToken: execution.leaseToken, verificationArtifactId: artifact.id, analysis: artifact.content });
       if (!saved?.id) fail('AGENT_PAPER_SEMANTIC_PERSIST_INCOMPLETE');
       return { outputRef: { analysisId: saved.id, paperVersionId: saved.paperVersionId,
+        ...(artifact.content.readingScope ? { readingMode: 'text-only-draft', manualReviewRequired: true } : {}),
         analysisSha256: saved.analysisSha256, private: true, publicationAttempted: false },
       runOutput: { type: 'paper.semantic-analysis', id: saved.id } };
     },

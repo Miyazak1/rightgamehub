@@ -1,0 +1,297 @@
+{
+  "schemaVersion": "paper-text-draft-recorded-live-success-v1",
+  "provider": "deepseek",
+  "modelId": "deepseek-flash",
+  "sourceSha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+  "sourceUrl": "https://arxiv.org/abs/1706.03762v7",
+  "extraction": {
+    "schemaVersion": "paper-semantic-extraction-v1",
+    "sections": [
+      {
+        "key": "page-window-01",
+        "title": "第 2 页",
+        "level": 1,
+        "evidenceIndexes": [
+          1,
+          2
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "key": "author-claim-recurrence-limits-parallelization",
+        "kind": "author_claim",
+        "text": "作者主张循环模型沿输入与输出序列的符号位置分解计算，这种固有的顺序性阻碍了训练样本内部的并行化，并在序列较长时因内存限制而影响跨样本批处理。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-attention-models-dependencies",
+        "kind": "author_claim",
+        "text": "作者主张注意力机制已成为多种任务中序列建模与转导模型的重要组成部分，能够建模输入或输出序列中不受距离限制的依赖关系。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-attention-usually-with-recurrence",
+        "kind": "author_claim",
+        "text": "作者主张除少数情况外，现有工作中的注意力机制通常与循环网络结合使用。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      },
+      {
+        "key": "author-claim-propose-transformer",
+        "kind": "author_claim",
+        "text": "作者提出一种名为 Transformer 的模型架构，主张其摒弃循环，转而完全依赖注意力机制来建立输入与输出之间的全局依赖。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-self-attention-definition",
+        "kind": "author_claim",
+        "text": "作者主张自注意力（有时称为内部注意力）是一种关联单一序列不同位置以计算该序列表示的注意力机制。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-self-attention-applications",
+        "kind": "author_claim",
+        "text": "作者主张自注意力已被成功用于阅读理解、抽象摘要、文本蕴含以及学习任务无关的句子表示等多种任务。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      },
+      {
+        "key": "author-claim-memory-networks-recurrent-attention",
+        "kind": "author_claim",
+        "text": "作者主张端到端记忆网络基于循环注意力机制而非序列对齐的循环，并已在简单语言问答与语言建模任务上表现良好。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "limitations": [
+      {
+        "key": "limited-text-scope",
+        "text": "当前仅依据正文页窗证据提取，未核验复杂表格、公式与图示，结论不构成对实验数值或效果比较的确认。",
+        "evidenceIndexes": [
+          1,
+          2
+        ]
+      }
+    ],
+    "followUpQuestions": [
+      "作者如何界定“完全依赖注意力”与既有循环注意力机制之间的概念边界？",
+      "自注意力在单一序列内部关联不同位置的具体机制概念是如何被描述的？",
+      "作者为何认为循环结构的顺序性会限制训练样本内部的并行化？",
+      "端到端记忆网络的循环注意力与本文提出的注意力机制在概念上有何区别？",
+      "作者列举的自注意力成功应用任务之间共享的建模假设是什么？",
+      "在仅依据正文证据的情况下，哪些关于模型架构的主张仍需图表或公式证据补充？"
+    ]
+  },
+  "composition": {
+    "title": "从循环到注意力：一篇论文提出的建模新思路",
+    "summary": "本文围绕一篇讨论序列建模的论文，说明作者为何质疑循环结构的顺序性，以及如何提出一种完全依赖注意力机制的模型架构。文中只概述作者提出的研究问题与方法概念，不涉及实验数值、效果比较或推导，并说明本次阅读与核验的边界。",
+    "blocks": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "论文想解决什么问题"
+      },
+      {
+        "type": "paragraph",
+        "text": "这篇论文从一个建模难题出发：处理序列数据时，常见做法是让模型按顺序一步步读取输入、再一步步生成输出。作者指出，这种循环式的计算方式沿着序列位置展开，天然带有先后次序。论文关注的正是这种顺序性带来的约束，以及能否换一种思路来建立输入与输出之间的联系。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者的主张是，循环模型把计算分解到输入与输出序列的各个符号位置上，这种固有的顺序性会妨碍训练样本内部的并行化；当序列较长时，还会因内存方面的限制影响跨样本的批处理。论文由此提出一个值得追问的问题：如果不依赖循环，序列建模还能依靠什么来捕捉位置之间的关系。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "作者提出的替代思路"
+      },
+      {
+        "type": "paragraph",
+        "text": "论文给出的回答是注意力机制。作者认为，注意力机制已经成为多种任务中序列建模与转导模型的重要组成部分，能够建模输入或输出序列中不受距离限制的依赖关系。也就是说，序列中相隔较远的位置之间，也可以通过注意力建立联系，而不必依赖逐步传递。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "不过作者也指出，在既有工作中，注意力机制除少数情况外通常与循环网络结合使用。论文的切入点正在这里：它提出一种名为 Transformer 的模型架构，主张摒弃循环，转而完全依赖注意力机制来建立输入与输出之间的全局依赖。这是作者提出的架构主张，属于方法层面的设想与描述。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "自注意力与相关工作的定位"
+      },
+      {
+        "type": "paragraph",
+        "text": "论文进一步界定了自注意力的概念。作者主张，自注意力有时也被称为内部注意力，是一种关联单一序列不同位置、并据此计算该序列表示的注意力机制。按论文的表述，它关注的是同一个序列内部各位置之间的关系，而不是两个不同序列之间的对应。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者还列举了自注意力已被成功用于的若干任务，包括阅读理解、抽象摘要、文本蕴含，以及学习与任务无关的句子表示。论文用这些既有应用来说明自注意力并非全新概念，但这些列举属于作者对相关工作的概括，文中并未在本次可见范围内展开这些任务的具体做法。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在与循环式注意力相关的工作方面，作者提到端到端记忆网络基于循环注意力机制而非序列对齐的循环，并称其已在简单语言问答与语言建模任务上表现良好。论文借此说明，减少对序列对齐循环的依赖已有先例，而作者提出的架构则更进一步，主张完全以注意力承担建立依赖的角色。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "如何理解论文的结论边界"
+      },
+      {
+        "type": "paragraph",
+        "text": "需要区分的是，论文报告的是作者提出的问题判断与架构主张，而不是经过本次核验的实验结论。作者关于循环结构顺序性妨碍并行化、关于注意力能够建模不受距离限制的依赖关系等说法，都是论文中的论述；本次阅读并未核验支撑这些论述的推导、表格或图示，因此不宜把它们当作已被独立确认的定量结论。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "同样，论文提出完全依赖注意力的架构，属于方法概念层面的主张。文中并未在本次可见范围内说明该架构各组成部分如何具体运作，也未呈现效果比较。读者可以把这篇论文理解为提出了一种建模思路并给出概念界定，而不是一份可以直接引用的性能结论清单。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "本次阅读的范围与限制"
+      },
+      {
+        "type": "paragraph",
+        "text": "本次仅依据可用正文形成概述，未核验复杂表格、公式及图示，也未核对实验数值、效果比较或推导过程。因此，论文中涉及架构细节、训练设置与结果表现的诸多内容，本次未核验；这不等于论文没有相应内容，而是本次阅读没有覆盖。发布前仍需人工对照原文逐项核对。",
+        "citationIndexes": [
+          1
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "对普通读者而言，较稳妥的阅读方式是：把作者对循环结构顺序性的质疑、对注意力机制作用的描述，以及对自注意力概念的界定，视为论文提出的研究问题与方法思路；把完全依赖注意力的架构视为作者的主张。至于这些主张在多大范围内成立、证据支持到什么程度，需要回到原文的完整材料中核对。",
+        "citationIndexes": [
+          1
+        ]
+      }
+    ],
+    "followUpQuestions": [
+      "作者如何界定完全依赖注意力与既有循环注意力机制之间的概念边界？",
+      "论文对自注意力在单一序列内部关联不同位置的描述，具体包含哪些概念要素？",
+      "在仅依据正文的情况下，哪些关于架构的主张仍需图表或公式证据补充？"
+    ]
+  },
+  "recordedReceipts": [
+    {
+      "stage": "extract-semantics",
+      "requestSha256": "b14bc61958ff015520feebac46a1780599ab0755a755dfeced05bc054c4c5385",
+      "providerRequestId": "deepseek-unreported:9db13291a5bbfda44107b2e9f6861c79",
+      "responseRef": {
+        "protocol": "deepseek-chat-completion-v1",
+        "providerRequestId": "deepseek-unreported:9db13291a5bbfda44107b2e9f6861c79",
+        "httpStatus": 200,
+        "finishReason": "stop"
+      },
+      "usage": {
+        "providerCalls": 1,
+        "inputTokens": 1461,
+        "outputTokens": 735,
+        "costMicrousd": 0
+      },
+      "responseSha256": "5756c735e3293f3b4f404d9bc76acc49d1ef22cfcc7099e8942af64b06d30461"
+    },
+    {
+      "stage": "compose",
+      "requestSha256": "73d249800e37832c0675abad8b6d90f73858ff9fdcd837b066ae2d6e6f5f44ff",
+      "providerRequestId": "deepseek-unreported:ea29ec5e22992f7c6300be1f1fd955aa",
+      "responseRef": {
+        "protocol": "deepseek-chat-completion-v1",
+        "providerRequestId": "deepseek-unreported:ea29ec5e22992f7c6300be1f1fd955aa",
+        "httpStatus": 200,
+        "finishReason": "stop"
+      },
+      "usage": {
+        "providerCalls": 1,
+        "inputTokens": 2275,
+        "outputTokens": 1118,
+        "costMicrousd": 0
+      },
+      "responseSha256": "536e32f6ec6e99402a05d396045eb43cd82232c3751d3a31e32222eff10c11a1"
+    }
+  ]
+}

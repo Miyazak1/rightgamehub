@@ -1,0 +1,26 @@
+{
+  "sourceUrl": "https://arxiv.org/abs/1409.3215",
+  "sourceSha256": "5c74e1db863e2d61b869c9b0603494b34c41fb05db1a4fa7f9a83d5a42b7350f",
+  "evidence": {
+    "index": 1,
+    "id": "6df5927c-e848-471b-86dc-9066cd29df40",
+    "quoteText": "Type Sentence Our model Ulrich UNK , membre du conseil d’ administration du constructeur automobile Audi , affirme qu’ il s’ agit d’ une pratique courante depuis des ann´ ees pour que les t´ el´ ephones portables puissent ˆ etre collect´ es avant les r´ eunions du conseil d’ administration afin qu’ ils ne soient pas utilis´ es comme appareils d’ ´ ecoute ` a distance . Truth Ulrich Hackenberg , membre du conseil d’ administration du constructeur automobile Audi , d´ eclare que la collecte des t´ el´ ephones portables avant les r´ eunions du conseil , afin qu’ ils ne puissent pas ˆ etre utilis´ es comme appareils d’ ´ ecoute ` a distance , est une pratique courante depuis des ann´ ees . Our model “ Les t´ el´ ephones cellulaires , qui sont vraiment une question , non seulement parce qu’ ils pourraient potentiellement causer des interf´ erences avec les appareils de navigation , mais nous savons , selon la FCC , qu’ ils pourraient interf´ erer avec les tours de t´ el´ ephone cellulaire lorsqu’ ils sont dans l’ air ” , dit UNK . Truth “ Les t´ el´ ephones portables sont v´ eritablement un probl` eme , non seulement parce qu’ ils pourraient ´ eventuellement cr´ eer des interf´ erences avec les instruments de navigation , mais parce que nous savons , d’ apr` es la FCC , qu’ ils pourraient perturber les antennes-relais de t´ el´ ephonie mobile s’ ils sont utilis´ es ` a bord ” , a d´ eclar´ e Rosenker . Our model Avec la cr´ emation , il y a un “ sentiment de violence contre le corps d’ un ˆ etre cher ” , qui sera “ r´ eduit ` a une pile de cendres ” en tr` es peu de temps au lieu d’ un processus de d´ ecomposition “ qui accompagnera les ´ etapes du deuil ” . Truth Il y a , avec la cr´ emation , “ une violence faite au corps aim´ e ” , qui va ˆ etre “ r´ eduit ` a un tas de",
+    "quoteHash": "45e87cd3d0f78444ab96771eaf4522d993766f250cf5343c092657a9acfe8614",
+    "evidenceKind": "direct-quote",
+    "locator": {
+      "kind": "paper.layout",
+      "pages": [
+        7
+      ],
+      "sectionPath": [],
+      "blockIds": [
+        "p7-b1"
+      ],
+      "objectLabel": null
+    },
+    "allowedUses": [
+      "analysis"
+    ],
+    "providerExcerpt": "Type Sentence Our model Ulrich UNK , membre du conseil d’ administration du constructeur automobile Audi , affirme qu’ il s’ agit d’ une pratique courante depuis des ann´ ees pour que les t´ el´ ephones portables puissent ˆ etre collect´ es avant les r´ eunions du conseil d’ administration afin qu’ ils ne soient pas utilis´ es comme appareils d’ ´ ecoute ` a distance . Truth Ulrich Hackenberg , membre du conseil d’ administration du constructeur automobile Audi , d´ eclare que la collecte des t´ el´ ephones portables avant les r´ eunions du conseil , afin qu’ ils ne puissent pas ˆ etre utilis´ es comme appareils d’ ´ ecoute ` a distance , est une pratique courante depuis des ann´ ees . Our model “ Les t´ el´ ephones cellulaires , qui sont vraiment une question , non seulement parce qu’ ils pourraient potentiellement causer des interf´ erences avec les appareils de navigation , mais nous savons , selon la FCC , qu’ ils pourraient interf´ erer avec les tours de t´ el´ ephone cellulaire lorsqu’ ils sont dans l’ air ” , dit UNK ."
+  }
+}

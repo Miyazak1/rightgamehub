@@ -9,7 +9,7 @@ const ARXIV_ACQUISITION_MAX_ATTEMPTS = 3;
 export const PAPER_RESEARCH_EXECUTION_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY,
-  workflowVersion: 2,
+  workflowVersion: 3,
   inputSchema: 'paper-private-research-input-v1',
   outputSchema: 'paper-private-research-output-v1',
   requiredCapabilities: [
@@ -188,10 +188,13 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
     fail('PAPER_RESEARCH_DEPENDENCY_REQUIRED');
   }
   const withSemanticInput = async (stageKey, context, execution) => {
-    const acquired = prerequisite(context, 'acquire-source');
-    if (!UUID.test(acquired.paperVersionId ?? '')) fail('PAPER_RESEARCH_VERSION_REQUIRED');
+    // Runtime contexts contain direct prerequisites, not every ancestor stage.
+    // Acquisition durably binds the version to this execution for later stages.
+    const { row } = await executionContext(pool, context);
+    const paperVersionId = row.paper_version_id;
+    if (!UUID.test(paperVersionId ?? '')) fail('PAPER_RESEARCH_VERSION_REQUIRED');
     const input = { schemaVersion: 'paper-semantic-run-input-v1',
-      paperVersionId: acquired.paperVersionId, purpose: 'private-research' };
+      paperVersionId, purpose: 'private-research' };
     const result = await semantic(stageKey)({ ...context,
       run: { ...context.run, input, inputSha256: stableHash(input) } }, execution);
     return stageKey === 'persist-analysis' ? { outputRef: result.outputRef } : result;
@@ -222,7 +225,12 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
     [`${PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY}:acquire-source`]: wrapStage(pool,
       'acquire-source', async (context, execution) => {
         const source = prerequisite(context, 'resolve-source');
-        if (UUID.test(source.paperVersionId ?? '')) return { outputRef: source };
+        if (UUID.test(source.paperVersionId ?? '')) {
+          const { row } = await executionContext(pool, context);
+          await pool.query(`UPDATE agent_paper_research_executions
+            SET paper_version_id=$2,access_level='fulltext-open' WHERE id=$1`, [row.id, source.paperVersionId]);
+          return { outputRef: source };
+        }
         if (source.mode !== 'acquire-arxiv-open-fulltext' || !source.arxivId) {
           fail('PAPER_RESEARCH_FULLTEXT_REQUIRED');
         }
@@ -264,14 +272,14 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
     [`${PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY}:finalize-queue`]: wrapStage(pool,
       'finalize-queue', async context => {
         const saved = prerequisite(context, 'persist-analysis');
-        const acquired = prerequisite(context, 'acquire-source');
-        if (!UUID.test(saved.analysisId ?? '') || !UUID.test(acquired.paperVersionId ?? '')) {
+        if (!UUID.test(saved.analysisId ?? '') || !UUID.test(saved.paperVersionId ?? '')) {
           fail('PAPER_RESEARCH_FINALIZATION_INVALID');
         }
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
           const { row } = await executionContext(client, context, { lock: true });
+          if (row.paper_version_id !== saved.paperVersionId) fail('PAPER_RESEARCH_FINALIZATION_INVALID');
           if (row.status === 'succeeded') {
             await client.query('COMMIT');
             return { outputRef: row.result_json,
@@ -279,14 +287,15 @@ export function createAgentPaperResearchExecutionHandlers({ pool, toolGateway,
           }
           if (row.queue_state !== 'queued') fail('PAPER_RESEARCH_QUEUE_NOT_READY');
           const result = { schemaVersion: 'paper-private-research-result-v1',
+            ...(saved.readingMode ? { readingMode: saved.readingMode, manualReviewRequired: true } : {}),
             executionId: row.id, queueItemId: row.queue_item_id,
-            paperVersionId: acquired.paperVersionId, analysisId: saved.analysisId,
+            paperVersionId: saved.paperVersionId, analysisId: saved.analysisId,
             analysisSha256: saved.analysisSha256, private: true,
             publicationAttempted: false };
           await client.query(`UPDATE agent_paper_research_executions SET status='succeeded',
             stage_key='finalize-queue',paper_version_id=$2,access_level='fulltext-open',
             result_json=$3,error_code=NULL,finished_at=now() WHERE id=$1`,
-          [row.id, acquired.paperVersionId, json(result)]);
+          [row.id, saved.paperVersionId, json(result)]);
           await client.query(`UPDATE agent_paper_research_queue_items
             SET state='completed',reason='private research completed' WHERE id=$1`,
           [row.queue_item_id]);

@@ -1,0 +1,145 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "expectedError": "AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT",
+  "output": {
+    "schemaVersion": "paper-semantic-extraction-v1",
+    "sections": [
+      {
+        "key": "page-window-01",
+        "title": "第 2 页",
+        "level": 1,
+        "evidenceIndexes": [
+          1,
+          2
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "key": "author-claim-transformer-eschews-recurrence",
+        "kind": "author_claim",
+        "text": "作者明确提出 Transformer 是一种摒弃循环结构、完全依赖注意力机制来建立输入与输出之间全局依赖的模型架构。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-sequential-nature-limits-parallelization",
+        "kind": "author_claim",
+        "text": "作者主张循环模型沿输入输出序列的符号位置分解计算，这种固有的序列性阻碍了训练样本内部的并行化，在序列较长时尤为关键。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "high"
+      },
+      {
+        "key": "author-claim-attention-usually-paired-with-recurrence",
+        "kind": "author_claim",
+        "text": "作者指出除少数情况外，注意力机制通常与循环网络结合使用。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      },
+      {
+        "key": "author-claim-constant-operations-via-multihead",
+        "kind": "author_claim",
+        "text": "作者主张 Transformer 将关联任意两个位置所需操作数降为常数，但代价是注意力加权位置平均带来的有效分辨率下降，并称以多头注意力抵消该效应。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      },
+      {
+        "key": "author-claim-convolutional-models-distant-dependency-difficulty",
+        "kind": "author_claim",
+        "text": "作者主张在 ConvS2S 与 ByteNet 等卷积模型中，关联两个任意位置所需操作数随距离增长，使学习远距离位置间依赖更困难。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      },
+      {
+        "key": "author-claim-self-attention-definition",
+        "kind": "author_claim",
+        "text": "作者将自注意力（有时称内部注意力）界定为关联单一序列不同位置以计算该序列表示的注意力机制。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports"
+          }
+        ],
+        "confidence": "medium"
+      }
+    ],
+    "limitations": [
+      {
+        "key": "limited-text-scope",
+        "text": "当前为仅正文待审模式，未核验复杂表格、公式及图示，结论仅限定性主张。",
+        "evidenceIndexes": []
+      }
+    ],
+    "followUpQuestions": [
+      "作者如何界定“完全依赖注意力”与保留位置编码等非循环组件之间的关系？",
+      "多头注意力抵消有效分辨率下降的具体机制在正文中如何被论证？",
+      "作者对循环模型并行化限制的论述是否区分了训练与推理阶段？",
+      "卷积模型中操作数随距离增长的说法在正文中是否有形式化定义支撑？",
+      "自注意力与内部注意力的术语使用在文中是否保持一致？",
+      "作者为何将注意力与循环网络结合视为需要被替代的常规做法？"
+    ]
+  },
+  "unsupportedHistoricalParagraph": "从普通读者的角度看，这篇论文的价值首先在于它提出了一个清晰的问题框架：如果顺序计算是限制并行化的根本原因，那么能否设计一种不依赖顺序的架构来建立全局依赖？作者给出的答案是让注意力承担核心角色。这一思路后来影响深远，但就本文可用证据而言，我们只能确认作者提出了这一主张，而不能确认其实际效果。",
+  "invalidCitationIndexes": [
+    2
+  ],
+  "complexityFinding": {
+    "key": "author-claim-distant-dependency-difficulty",
+    "kind": "author_claim",
+    "text": "作者主张在相关卷积模型中，关联任意两个位置信号所需操作数随位置距离增长，这使学习远距离位置之间的依赖更加困难。",
+    "evidenceIndexes": [
+      2
+    ],
+    "relations": [
+      {
+        "evidenceIndex": 2,
+        "relation": "supports"
+      }
+    ],
+    "confidence": "medium"
+  }
+}

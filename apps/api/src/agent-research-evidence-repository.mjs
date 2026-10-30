@@ -265,7 +265,7 @@ export class PostgresAgentResearchEvidenceRepository {
       const output = validatePaperAnalysisReadOutput(row.content_json);
       if (stableHash(output) !== row.content_sha256) fail('AGENT_RESEARCH_EVIDENCE_ARTIFACT_HASH_MISMATCH');
       const analysis = (await client.query(`SELECT analysis.id,analysis.analysis_sha256,
-          analysis.paper_version_id,version.research_source_version_id,source_version.source_id
+          analysis.paper_version_id,analysis.section_manifest,version.research_source_version_id,source_version.source_id
         FROM agent_paper_semantic_analyses analysis
         JOIN agent_paper_versions version ON version.id=analysis.paper_version_id
         JOIN tool_research_source_versions source_version ON source_version.id=version.research_source_version_id
@@ -273,11 +273,14 @@ export class PostgresAgentResearchEvidenceRepository {
       [output.analysisId, row.agent_user_id])).rows[0];
       if (!analysis || analysis.analysis_sha256 !== output.analysisSha256
         || analysis.paper_version_id !== output.paperVersionId) fail('AGENT_RESEARCH_EVIDENCE_INPUT_INVALID');
+      if (stableHash(analysis.section_manifest?.readingScope ?? null) !== stableHash(output.readingScope ?? null)) {
+        fail('AGENT_RESEARCH_EVIDENCE_INPUT_INVALID');
+      }
       const evidenceIds = [...new Set(output.evidence.map(item => item.id))];
       const validEvidence = (await client.query(`SELECT id FROM tool_research_evidence
         WHERE source_version_id=$1 AND id=ANY($2::uuid[])
-          AND allowed_uses @> ARRAY['citation']::text[] ORDER BY id`,
-      [analysis.research_source_version_id, evidenceIds])).rows;
+          AND allowed_uses @> $3::text[] ORDER BY id`,
+      [analysis.research_source_version_id, evidenceIds, output.readingScope ? ['analysis'] : ['citation']])).rows;
       if (validEvidence.length !== evidenceIds.length) fail('AGENT_RESEARCH_EVIDENCE_INPUT_INVALID');
       const binding = (await client.query(`INSERT INTO agent_research_artifact_bindings(
           id,agent_user_id,run_id,stage_id,action_id,tool_artifact_id,research_source_id,

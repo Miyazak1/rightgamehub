@@ -5,7 +5,7 @@ import { createAgentPaperArticleGenerationHandlers } from './agent-paper-article
 export const PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'paper.article.draft-shadow',
-  workflowVersion: 1,
+  workflowVersion: 2,
   inputSchema: 'paper-article-draft-input-v1',
   outputSchema: 'blog-private-draft-output-v1',
   requiredCapabilities: [
@@ -145,6 +145,7 @@ export function createAgentPaperArticleDraftHandlers({ toolGateway, providerGate
         fail('AGENT_PAPER_ARTICLE_DRAFT_INCOMPLETE');
       }
       return { outputRef: { articleId: draft.articleId, revisionId: draft.revisionId,
+        ...(proof.manualReviewRequired ? { manualReviewRequired: true, readingMode: 'text-only-draft' } : {}),
         publicationState: 'draft', verificationArtifactId: verification.id,
         compositionArtifactId: composition.id, sourceArtifactIds: packageContent.sourceToolArtifactIds,
         contentSha256: draft.contentSha256 },
