@@ -93,6 +93,45 @@ test('text-only findings cannot claim verified observations, comparisons or nume
     blocks: [{ type: 'paragraph', text: '这已经得到普遍证明。' }] }));
 });
 
+test('qualified comparison disclaimers are accepted without admitting affirmative or double-negated claims', async () => {
+  const { assertTextOnlyDraftComposition: check, assertTextOnlyDraftFindings } = await load('agent-paper-text-draft.mjs');
+  const real = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/paper-text-draft-negated-comparison-v1.json'), 'utf8'));
+  const draft = text => ({ title: '论文阅读概述', summary: '正文待审', blocks: [{ type: 'paragraph', text }] });
+  for (const text of [real.text,
+    '论文提醒，不应直接解读为对该模型全面优于其他模型的结论。',
+    '作者提醒：不可视为对这种模型普遍优于已有模型的结论。']) {
+    const value = draft(text), before = structuredClone(value);
+    check(value);
+    assert.deepEqual(value, before);
+  }
+  for (const text of [
+    '论文表明该模型全面优于其他模型。',
+    '论文不能否认该模型全面优于其他模型。',
+    '论文提醒，并非不能直接读成对某种模型全面优于其他模型的定论。',
+    '作者指出，不应否认该模型全面优于其他模型。',
+    '论文提醒，不能直接读成对某种模型全面优于其他模型的定论，但作者确认该模型优于其他模型。',
+    '论文提醒，不能直接读成对某种模型全面优于其他模型的定论不成立。',
+    real.text + '作者报告准确率提升90%。',
+    real.text + '作者认为效果超过基线。',
+    real.text + '作者认为这是最好的模型。',
+    real.text + '作者声称这项工作后来影响深远。',
+    '不能直接读成对某种模型全面优于其他模型的定论。',
+  ]) assert.throws(() => check(draft(text)), { code: 'AGENT_PAPER_TEXT_DRAFT_INSUFFICIENT' }, text);
+  // A disclaimer cannot borrow text from another field to excuse a heading.
+  assert.throws(() => check({ ...draft(real.text), title: '不能直接读成对',
+    summary: '某种模型全面优于其他模型的定论' }));
+  assert.throws(() => check({ ...draft(real.text), blocks: [
+    { type: 'paragraph', text: '论文提醒，不能直接读成对' },
+    { type: 'heading', level: 2, text: '某种模型全面优于其他模型的定论' },
+  ] }));
+  assert.throws(() => check({ ...draft(real.text), blocks: [
+    { type: 'heading', level: 2, text: '模型全面优于其他模型' },
+    ...draft(real.text).blocks,
+  ] }));
+  // Findings remain strict; this exception only covers article reading notes.
+  assert.throws(() => assertTextOnlyDraftFindings([{ kind: 'author_claim', text: real.text }]));
+});
+
 test('actual live-model numerical, complexity and external-impact outputs remain rejected', async () => {
   const real = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/paper-text-draft-live-rejection-v1.json'), 'utf8'));
   const { assertTextOnlyDraftFindings, assertTextOnlyDraftComposition, selectTextOnlyDraftEvidence,
@@ -208,6 +247,21 @@ test('text-only article retains its notice and cannot strip scope or invent a me
   output = provider.composition(); output.blocks[1].citationIndexes = real.invalidCitationIndexes;
   await assert.rejects(handlers['paper.article.draft-shadow:compose'](composeContext, execution),
     { code: 'AGENT_PAPER_ARTICLE_CITATION_INVALID' });
+  await t.test('compose and verify preserve the production comparison disclaimer and private review flags', async () => {
+    const disclaimer = JSON.parse(fs.readFileSync(path.join(__dirname,
+      'fixtures/paper-text-draft-negated-comparison-v1.json'), 'utf8')).text;
+    output = provider.composition();
+    output.blocks[1].text = disclaimer;
+    const accepted = await handlers['paper.article.draft-shadow:compose'](composeContext, execution);
+    const acceptedContent = stored.get(accepted.outputRef.artifactId).content.content;
+    assert.equal(acceptedContent.blocks.some(block => block.text === disclaimer), true);
+    assert.equal(acceptedContent.blocks[0].text, TEXT_DRAFT_NOTICE);
+    const verified = await handlers['paper.article.draft-shadow:verify']({ ...context,
+      prerequisites: [{ stageKey: 'compose', status: 'succeeded', outputRef: accepted.outputRef }] }, execution);
+    const proof = stored.get(verified.outputRef.artifactId).content;
+    assert.equal(proof.manualReviewRequired, true);
+    assert.equal(proof.publicPublicationEnabled, false);
+  });
   for (const heading of ['实验准确率提升90%', '实验效果优于基线', '这项研究后来影响深远']) {
     await t.test(`compose rejects heading: ${heading}`, async () => {
       output = provider.composition();

@@ -7,6 +7,9 @@ const fail = () => { const error = new Error('AGENT_PAPER_TEXT_DRAFT_INSUFFICIEN
   error.code = error.message; error.retryable = false; throw error; };
 // A scope notice does not make unsupported later historical impact acceptable.
 const historicalImpact = /后来.{0,24}(?:成为|得到广泛应用)|影响深远|深远影响|奠定了.{0,12}基础|改变了.{0,12}格局/u;
+// Only a complete, clause-initial caution about a generic model comparison is
+// exempt. Arbitrary negation, concrete results and double negatives are not.
+const comparisonDisclaimer = /(^|[。！？!?；;，,：:\n])\s*(?:不能|不可|不应)(?:直接)?(?:读成|解读为|理解为|视为)对(?:某种|某个|某一|该|这种|一种)?模型(?:全面|普遍|必然)?优于(?:其他|其它|现有|已有|所有其他)?模型的(?:定论|结论)(?=$|[。！？!?；;，,：:\n])/gu;
 
 export function textOnlyDraftExcerpt(text) {
   // Intake chunks may start/end in a sentence. Send only bounded complete
@@ -108,9 +111,15 @@ export function assertTextOnlyDraftComposition(content) {
   const blocks = content.blocks.filter(block => ['paragraph', 'list'].includes(block.type));
   // Headings can carry factual claims too; author attribution is only required
   // in prose/list items, so neutral section labels remain valid.
-  const text = [content.title, content.summary, ...content.blocks.flatMap(b => b.items ?? [b.text])].join(' ');
+  const fields = [content.title, content.summary, ...content.blocks.flatMap(b => b.items ?? [b.text])];
+  const text = fields.join(' ');
+  // This is a validation-only copy, evaluated per field to prevent a disclaimer
+  // in one block from excusing a positive claim in another. Keep stored text.
+  const comparisonText = fields.map(value => String(value ?? '').replace(comparisonDisclaimer,
+    match => match.replace('优于', '[比较]'))).join(' ');
   if (historicalImpact.test(text)
-    || /\d|百分|百分点|倍于|优于|超过|最好|显著提升|操作数|计算复杂度|时间复杂度|空间复杂度|outperform|accuracy|bleu/iu.test(text)
+    || /\d|百分|百分点|操作数|计算复杂度|时间复杂度|空间复杂度|outperform|accuracy|bleu/iu.test(text)
+    || /倍于|优于|超过|最好|显著提升/iu.test(comparisonText)
     || blocks.some(block => !(block.items ?? [block.text]).every(value => value === TEXT_DRAFT_NOTICE
       || /作者|论文|文中/u.test(value)))) fail();
 }

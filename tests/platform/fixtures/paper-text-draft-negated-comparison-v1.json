@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "paper-text-draft-negated-comparison-regression-v1",
+  "captureKind": "user-provided-production-diagnostic",
+  "articleRequestId": "1c4ef05b-ac4b-4b1b-a3b6-9b916a9fa8b9",
+  "analysisId": "be2cf066-ca55-4ed7-a6d1-f42dc3a9c855",
+  "field": "blocks[8].text",
+  "text": "阅读这篇论文时，需要区分作者的主张与证据能够支持的范围。论文报告的是作者对循环模型顺序性限制的判断，以及对注意力机制作用的概括；作者据此提出完全依赖注意力的架构。就本次可用的正文而言，这些属于作者提出的问题框架与概念主张，不能直接读成对某种模型全面优于其他模型的定论。"
+}
