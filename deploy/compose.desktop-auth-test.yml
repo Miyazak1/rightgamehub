@@ -1,0 +1,71 @@
+name: mooyu-desktop-auth-test
+
+x-auth: &auth
+  image: mooyu-desktop-auth-test:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.api
+  environment:
+    DESKTOP_AUTH_TEST_INSTANCE: isolated-auth-only
+    DESKTOP_AUTH_TEST_PUBLIC_ORIGIN: ${DESKTOP_AUTH_TEST_PUBLIC_ORIGIN:?Set test public origin}
+    DATABASE_URL: postgresql://desktop_auth_test:${DESKTOP_AUTH_TEST_DB_PASSWORD:?Generate isolated credentials}@auth-postgres:5432/desktop_auth_test
+    REDIS_URL: redis://auth-redis:6379
+    OTP_HMAC_KEY: ${DESKTOP_AUTH_TEST_OTP_HMAC_KEY:?Generate isolated credentials}
+    GITHUB_CLIENT_ID: ${DESKTOP_AUTH_TEST_GITHUB_CLIENT_ID:-}
+    GITHUB_CLIENT_SECRET: ${DESKTOP_AUTH_TEST_GITHUB_CLIENT_SECRET:-}
+    GITHUB_CALLBACK_URL: ${DESKTOP_AUTH_TEST_GITHUB_CALLBACK_URL:-}
+  networks: [auth-data, auth-egress]
+
+services:
+  auth-postgres:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_USER: desktop_auth_test
+      POSTGRES_DB: desktop_auth_test
+      POSTGRES_PASSWORD: ${DESKTOP_AUTH_TEST_DB_PASSWORD:?Generate isolated credentials}
+    networks: [auth-data]
+    volumes: [auth-postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U desktop_auth_test -d desktop_auth_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  auth-redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, 'yes']
+    networks: [auth-data]
+    volumes: [auth-redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  auth-migrate:
+    <<: *auth
+    command: [node, apps/api/src/desktop-auth-test-server.mjs, --migrate]
+    depends_on:
+      auth-postgres: {condition: service_healthy}
+      auth-redis: {condition: service_healthy}
+
+  auth-api:
+    <<: *auth
+    command: [node, apps/api/src/desktop-auth-test-server.mjs]
+    depends_on:
+      auth-migrate: {condition: service_completed_successfully}
+    ports: ['127.0.0.1:${DESKTOP_AUTH_TEST_PORT:-39090}:3090']
+    volumes: [auth-api-data:/data/avatars]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3090/ready-desktop-auth').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 8s
+      retries: 30
+
+volumes:
+  auth-postgres-data:
+  auth-redis-data:
+  auth-api-data:
+networks:
+  auth-data: {internal: true}
+  auth-egress:

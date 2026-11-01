@@ -1,0 +1,1967 @@
+{
+  "schemaVersion": "mooyu-desktop-web-inventory-v1",
+  "scope": "current-worktree-static-sources-not-production-feature-verification",
+  "caveats": [
+    "Route branches are not page or feature counts.",
+    "Lexical API and browser usage scans supplement the reviewed feature matrix; dynamic calls require manual review.",
+    "Implemented source routes are not evidence of production availability, runtime permissions or successful desktop execution."
+  ],
+  "summary": {
+    "routeBranchCount": 43,
+    "sharedClientModuleCount": 98,
+    "referencedApiMethodCount": 346,
+    "declaredApiMethodCandidateCount": 392,
+    "communityEnabled": false,
+    "officialToolModules": [
+      "knowledge-map",
+      "pdf-reader",
+      "privacy-redactor",
+      "document-compare",
+      "spreadsheet-audit"
+    ]
+  },
+  "routeBranches": [
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1953,
+      "condition": "if (parts[0] === 'blog' && parts[1])",
+      "components": [
+        "BlogArticlePage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1954,
+      "condition": "else if (route === '/blog')",
+      "components": [
+        "BlogIndexPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1955,
+      "condition": "else if (parts[0] === 'works' && parts[1])",
+      "components": [
+        "DetailPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1956,
+      "condition": "else if (parts[0] === 'discover' && parts[1] === 'c' && parts[2])",
+      "components": [
+        "DiscoveryCampaignPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1957,
+      "condition": "else if (parts[0] === 'u' && parts[1])",
+      "components": [
+        "PublicProfilePage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1958,
+      "condition": "else if (parts[0] === 's' && parts[1])",
+      "components": [
+        "GameSharePage",
+        "PlayerPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1959,
+      "condition": "else if (parts[0] === 'play' && parts[1])",
+      "components": [
+        "PlayerPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1960,
+      "condition": "else if (['/saves','/creator/save-health','/admin/saves'].includes(route))",
+      "components": [
+        "StatePanel"
+      ],
+      "sourceStatus": "local-save-notice"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1961,
+      "condition": "else if (route === '/account')",
+      "components": [
+        "AccountPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1963,
+      "condition": "else if (route.startsWith('/creator/import'))",
+      "components": [
+        "GitHubImportPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1964,
+      "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit')",
+      "components": [
+        "WorkEditPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1965,
+      "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'development')",
+      "components": [
+        "DevelopmentLogPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1966,
+      "condition": "else if (route === '/creator/tools')",
+      "components": [
+        "CreatorToolsPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1967,
+      "condition": "else if (route === '/creator/works/new')",
+      "components": [
+        "NewWorkPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1968,
+      "condition": "else if (route === '/creator/works/manual/new')",
+      "components": [
+        "NewWorkPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1969,
+      "condition": "else if (parts[0] === 'creator' && parts[1] === 'studio' && parts[2])",
+      "components": [
+        "RetiredStudioPage"
+      ],
+      "sourceStatus": "retired-notice"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1970,
+      "condition": "else if (parts[0] === 'creator' && parts[1] === 'drafts' && parts[2])",
+      "components": [
+        "CreatorDraftReviewPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1971,
+      "condition": "else if (route === '/creator/multiplayer/submit')",
+      "components": [
+        "MultiplayerRuleSubmissionPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1972,
+      "condition": "else if (route === '/creator/multiplayer/docs')",
+      "components": [
+        "MultiplayerDeveloperCenter"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1973,
+      "condition": "else if (route === '/creator/leaderboards/docs')",
+      "components": [
+        "CompetitionDeveloperCenter"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1974,
+      "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'ai' && ['multiplayer','leaderboards'].includes(parts[4]))",
+      "components": [
+        "CreatorAiTaskPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1975,
+      "condition": "else if (route === '/creator/multiplayer')",
+      "components": [
+        "CreatorAiTaskPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1976,
+      "condition": "else if (route === '/creator/leaderboards')",
+      "components": [
+        "CreatorAiTaskPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1977,
+      "condition": "else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload')",
+      "components": [
+        "UploadPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1978,
+      "condition": "else if (parts[0] === 'creator' && parts[2] && parts[3] === 'builds')",
+      "components": [
+        "SourceBuildPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1979,
+      "condition": "else if (parts[0] === 'creator')",
+      "components": [
+        "CreatorPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1980,
+      "condition": "else if (parts[0] === 'admin')",
+      "components": [
+        "AdminPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1981,
+      "condition": "else if (route === '/install')",
+      "components": [
+        "InstallPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1982,
+      "condition": "else if (route === '/learn')",
+      "components": [
+        "LearningPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1983,
+      "condition": "else if (route === '/apps/change-radar')",
+      "components": [
+        "ChangeRadarAppPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1984,
+      "condition": "else if (route === '/tools/change-radar')",
+      "components": [
+        "LegacyChangeRadarRedirect"
+      ],
+      "sourceStatus": "legacy-redirect"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1985,
+      "condition": "else if (route === '/tools')",
+      "components": [
+        "ToolsPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1986,
+      "condition": "else if (parts[0] === 'tools' && parts[1])",
+      "components": [
+        "OfficialToolHost"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1987,
+      "condition": "else if (route === '/library')",
+      "components": [
+        "LibraryPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1988,
+      "condition": "else if (route === '/games/guess-baike/community')",
+      "components": [
+        "DetailPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1989,
+      "condition": "else if (parts[0] === 'community' && parts[1] === 'projects' && parts[2] === 'tasks')",
+      "components": [
+        "CommunityShell",
+        "ContributionCenterPage"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1990,
+      "condition": "else if (parts[0] === 'community' && parts[1] === 'projects')",
+      "components": [
+        "CommunityProjects",
+        "CommunityShell"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1991,
+      "condition": "else if (parts[0] === 'community' && parts[1] === 'events')",
+      "components": [
+        "CommunityEvents",
+        "CommunityShell"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1992,
+      "condition": "else if (parts[0] === 'community' && parts[1] === 'parties')",
+      "components": [
+        "CommunityParties",
+        "CommunityShell"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1993,
+      "condition": "else if (route === '/community/me')",
+      "components": [
+        "CommunityParticipation",
+        "CommunityShell"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1994,
+      "condition": "else if (route === '/community')",
+      "components": [
+        "CommunityHome",
+        "CommunityPage",
+        "CommunityShell"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1995,
+      "condition": "else if (route === '/social' || parts[0] === 'community')",
+      "components": [
+        "CommunityPage"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1996,
+      "condition": "else if (route === '/contribute' || /^\\/contribute\\/[^/]+$/.test(route))",
+      "components": [
+        "CommunityShell",
+        "ContributionCenterPage"
+      ],
+      "sourceStatus": "paused-by-community-flag"
+    }
+  ],
+  "fallback": {
+    "source": "packages/platform-client/src/App.jsx",
+    "line": 1997,
+    "component": "DiscoverPage",
+    "note": "Includes /discover and unmatched routes; not a separate router branch."
+  },
+  "apiMethodCandidates": [
+    "abandonCompetitionRun",
+    "abortAdminMultiplayerMatch",
+    "acceptGuessBaikeChallenge",
+    "addResearchTopicSource",
+    "applyAdminAgentPaperResearchRetention",
+    "applyForCreator",
+    "askAdminAgentPaperFollowUp",
+    "askBlogQuestion",
+    "avatarUrl",
+    "blockUser",
+    "bootstrapSession",
+    "buildCreatorDraft",
+    "cancelAdminAgentPaperResearchExecution",
+    "cancelCapabilityHostRun",
+    "cancelProjectClaim",
+    "cancelResearcherJob",
+    "checkChangeWatch",
+    "claimContributionTask",
+    "communityCapabilities",
+    "communityComplete",
+    "communityDecide",
+    "communityEvent",
+    "communityEventCreate",
+    "communityEventRegister",
+    "communityEventUnregister",
+    "communityEventUpdate",
+    "communityEvents",
+    "communityInteract",
+    "communityList",
+    "communityMediaStatus",
+    "communityMember",
+    "communityOverview",
+    "communityParticipation",
+    "communityParticipationNotificationRead",
+    "communityParties",
+    "communityParty",
+    "communityPartyCreate",
+    "communityPartyFinish",
+    "communityPartyJoin",
+    "communityPartyLeave",
+    "communityPartyReady",
+    "communityPartyStart",
+    "communityPost",
+    "communityProject",
+    "communityProjectApply",
+    "communityProjectCreate",
+    "communityProjectDecide",
+    "communityProjectLeave",
+    "communityProjectUpdate",
+    "communityProjects",
+    "communityReport",
+    "communityReserve",
+    "communityReview",
+    "communitySave",
+    "communitySubmit",
+    "communityUpload",
+    "communityWithdraw",
+    "compareResearchTopicMetric",
+    "completeGitHubSourceInstall",
+    "completeGuessBaikeChallenge",
+    "completeUpload",
+    "createAdminAgent",
+    "createBlogDraft",
+    "createChallenge",
+    "createChangeWatch",
+    "createContributionIssueDraft",
+    "createContributionTaskFromFeedback",
+    "createCreatorDraft",
+    "createCreatorFeedback",
+    "createCreatorFeedbackIssueDraft",
+    "createDevelopmentEntry",
+    "createDiscoveryCampaign",
+    "createGameSession",
+    "createGameShare",
+    "createGitHubImportedDraft",
+    "createGuessBaikeChallenge",
+    "createMultiplayerInvite",
+    "createMultiplayerMode",
+    "createMultiplayerRoom",
+    "createMultiplayerRuleSubmission",
+    "createMultiplayerRuleUploadGrant",
+    "createProjectClaim",
+    "createRealtimeTicket",
+    "createResearchContract",
+    "createResearchTopic",
+    "createResearchTopicBillingReconciliation",
+    "createResearchTopicCandidateEvaluationDataset",
+    "createResearchTopicDerivedMetric",
+    "createResearchTopicEntity",
+    "createResearchTopicExternalBenchmarkCase",
+    "createResearchTopicGap",
+    "createResearchTopicMethodTemplate",
+    "createResearchTopicMetricView",
+    "createResearcherNode",
+    "createSourceBuild",
+    "createUpload",
+    "createUploadGrant",
+    "createWork",
+    "cutoverAdminAgentPublication",
+    "decideCreatorApplication",
+    "decideProjectClaim",
+    "decideReport",
+    "deleteAdminAgentProviderKey",
+    "deleteChangeWatch",
+    "deleteGameSave",
+    "deleteResearchTopicMetricView",
+    "disconnectGitHubSourceConnection",
+    "discoverAdminAgentPaper",
+    "discoveryCampaignShareCardUrl",
+    "downloadAdminMultiplayerRuleBuild",
+    "downloadAdminMultiplayerRulePackage",
+    "evaluateResearchTopicDerivedMetric",
+    "finishCompetitionRun",
+    "followUser",
+    "generateResearchTopicQualitySamples",
+    "getAdminAgentBehaviorProfile",
+    "getAdminAgentFoundationDraft",
+    "getAdminAgentPaperAnalysis",
+    "getAdminAgentPaperResearchOperations",
+    "getAdminAgentPublicationCutoverPreflight",
+    "getAdminAgentRuntimeOverview",
+    "getAdminAgentRuntimeTimeline",
+    "getAdminAnalytics",
+    "getAdminMultiplayerOverview",
+    "getAdminMultiplayerRuleSubmission",
+    "getAdminStorage",
+    "getBlogArticle",
+    "getCapabilityHostArtifactContent",
+    "getCapabilityHostArtifactOpenDirective",
+    "getCapabilityHostRun",
+    "getCapabilityHostSnapshot",
+    "getChangeWatch",
+    "getCompetitionRun",
+    "getContributionTask",
+    "getCreatorAnalytics",
+    "getCreatorApplication",
+    "getCreatorDraft",
+    "getDiscoveryCampaign",
+    "getGameSaveMetadata",
+    "getGameSavePolicy",
+    "getGameSaveWriteReceipt",
+    "getGameSession",
+    "getGameShare",
+    "getGitHubSourceAdminOverview",
+    "getGuessBaikeAutomationStatus",
+    "getGuessBaikeChallenge",
+    "getGuessBaikeDaily",
+    "getGuessBaikeLeaderboard",
+    "getLaunch",
+    "getLibraryState",
+    "getMultiplayerMatch",
+    "getMultiplayerReplay",
+    "getMultiplayerRoom",
+    "getMultiplayerRuleSubmission",
+    "getMyBlogArticle",
+    "getNotificationPreferences",
+    "getPlayerRetention",
+    "getProfile",
+    "getPublicProfile",
+    "getPublicProjectClaim",
+    "getPublicUserProfile",
+    "getResearchNewsSourceCatalog",
+    "getResearchTopic",
+    "getResearchTopicCandidateEvaluation",
+    "getResearchTopicClaim",
+    "getResearchTopicDiscoveryStats",
+    "getResearchTopicFactTimeline",
+    "getResearchTopicOperationsSummary",
+    "getResearchTopicQualitySummary",
+    "getResearchTopicStorageAssessment",
+    "getResearcherCapabilities",
+    "getSaveAdminAudit",
+    "getSaveCapacity",
+    "getSaveHealth",
+    "getSaveLibraryHistory",
+    "getSocialProfile",
+    "getSourceBuild",
+    "getUpload",
+    "getWork",
+    "getWorkLeaderboard",
+    "getWorkSource",
+    "importResearchTopicCandidateEvaluationDataset",
+    "inspectResearchTopicSource",
+    "joinMultiplayerRoom",
+    "joinMultiplayerRoomScoped",
+    "leaveMultiplayerRoom",
+    "linkResearchTopicEventEntity",
+    "linkResearchTopicWatch",
+    "listAdminAgentBlogRuns",
+    "listAdminAgentPaperDiscoveries",
+    "listAdminAgentPaperFollowUps",
+    "listAdminAgentPaperIntakes",
+    "listAdminAgentPaperResearchExecutions",
+    "listAdminAgentPaperResearchQueue",
+    "listAdminAgentProviderModels",
+    "listAdminAgentRuntimeRuns",
+    "listAdminAgents",
+    "listAdminDiscoveryCampaigns",
+    "listAdminGuessBaikePuzzles",
+    "listAdminMultiplayerAudit",
+    "listAdminMultiplayerMatches",
+    "listAdminMultiplayerRuleSubmissions",
+    "listAdminProjectClaimEvents",
+    "listAdminProjectClaims",
+    "listAdminWorkProvenance",
+    "listAdminWorkProvenanceEvents",
+    "listAuthorOutreach",
+    "listAuthorOutreachEvents",
+    "listBlogArticles",
+    "listCapabilityHostRunArtifacts",
+    "listChangeEvents",
+    "listChangeWatchSnapshots",
+    "listChangeWatches",
+    "listCompetitionModes",
+    "listContributionNotifications",
+    "listContributionTasks",
+    "listCreatorApplications",
+    "listCreatorContributionTasks",
+    "listCreatorDrafts",
+    "listCreatorFeedback",
+    "listCreatorWorks",
+    "listDevelopmentEntries",
+    "listDevices",
+    "listDiscoveryCampaigns",
+    "listGameSaveHistory",
+    "listGameSaves",
+    "listGitHubSourceAudit",
+    "listGitHubSourceConnections",
+    "listGitHubSourceRepositories",
+    "listGuessBaikeChallenges",
+    "listLibrary",
+    "listModerationAudit",
+    "listMultiplayerMatchEvents",
+    "listMultiplayerModes",
+    "listMultiplayerRooms",
+    "listMultiplayerRuleSubmissions",
+    "listMyBlogArticles",
+    "listMyProjectClaims",
+    "listReports",
+    "listResearchRunActions",
+    "listResearchRunSources",
+    "listResearchTopicBillingReconciliations",
+    "listResearchTopicCandidateEvaluationDatasets",
+    "listResearchTopicCandidateEvaluationPredictions",
+    "listResearchTopicCandidateEvaluationRuns",
+    "listResearchTopicClaimReviewSignals",
+    "listResearchTopicClaims",
+    "listResearchTopicDerivedMetrics",
+    "listResearchTopicDiscoveries",
+    "listResearchTopicEntities",
+    "listResearchTopicEntityStatusReviews",
+    "listResearchTopicEventClusterDiagnostics",
+    "listResearchTopicEvents",
+    "listResearchTopicEvidence",
+    "listResearchTopicExternalBenchmarkCases",
+    "listResearchTopicGaps",
+    "listResearchTopicMethodTemplates",
+    "listResearchTopicMetricViews",
+    "listResearchTopicMetrics",
+    "listResearchTopicNotifications",
+    "listResearchTopicQualitySamples",
+    "listResearchTopicReports",
+    "listResearchTopicRuns",
+    "listResearchTopicSourceAuthorityReviews",
+    "listResearchTopicSourceRelationships",
+    "listResearchTopicSourceStatusReviews",
+    "listResearchTopicSources",
+    "listResearchTopicWatches",
+    "listResearchTopics",
+    "listResearcherJobs",
+    "listResearcherNodes",
+    "listSaveLibrary",
+    "listSocialNotifications",
+    "listSourceBuilds",
+    "listWorkLeaderboards",
+    "listWorkReleases",
+    "listWorkRemixes",
+    "listWorkTimeline",
+    "listWorks",
+    "logout",
+    "logoutAll",
+    "logoutOthers",
+    "maintainGameSaves",
+    "markChangeEventRead",
+    "markResearchEventRead",
+    "markSocialNotificationsRead",
+    "matrixResearchTopicMetrics",
+    "pauseSavePolicy",
+    "pollGitHubDevice",
+    "pollGitHubWeb",
+    "previewAdminAgentPaperResearchRetention",
+    "previewCreatorDraft",
+    "previewGitHubSourceImport",
+    "publishBlogArticle",
+    "publishSourceBuild",
+    "publishWorkRelease",
+    "queueResearcherJob",
+    "reactToGuessBaikeResult",
+    "readCompetitionLeaderboard",
+    "readContributionNotification",
+    "readGameSave",
+    "readSaveLibraryRevision",
+    "recordPlay",
+    "recoverAdminAgentPaperResearchExpiredStage",
+    "registerAdminAgentPaperDoi",
+    "registerAdminCapabilityHostBinding",
+    "releaseContributionTask",
+    "releaseDownloadUrl",
+    "removeFromLibrary",
+    "removeGuessBaikeReaction",
+    "renewContributionTask",
+    "reportWork",
+    "resolveResearchClaimReviewSignal",
+    "resolveResearchTopicQualityCorrection",
+    "restoreGameSave",
+    "restoreSaveLibraryRevision",
+    "retireResearchTopicMethodTemplate",
+    "retryAdminAgentPaperResearchExecution",
+    "reviewAdminMultiplayerRuleSubmission",
+    "reviewResearchTopicBillingReconciliation",
+    "reviewResearchTopicClaim",
+    "reviewResearchTopicDiscovery",
+    "reviewResearchTopicExternalBenchmarkCase",
+    "reviewResearchTopicQualitySample",
+    "reviewResearchTopicSourceAuthority",
+    "reviewResearchTopicSourceRelationship",
+    "revokeDevice",
+    "revokeGameSession",
+    "revokeGameShare",
+    "revokeResearcherNode",
+    "rollbackAdminAgentPublication",
+    "runAdminAgentBlogNow",
+    "runAdminAgentFoundationNow",
+    "runResearchTopicCandidateEvaluationDataset",
+    "saveGuessBaikeResult",
+    "saveToLibrary",
+    "scheduleGuessBaikePuzzle",
+    "selectAvatar",
+    "setAdminAgentPaperResearchOperationsPolicy",
+    "setAdminAgentPaperResearchQueueState",
+    "setAdminAgentProviderKey",
+    "setAdminAgentPublicSchedule",
+    "setMultiplayerReady",
+    "setSaveCapacity",
+    "startAdminAgentPaperResearchExecution",
+    "startCompetitionRun",
+    "startGitHubDevice",
+    "startGitHubSourceInstall",
+    "startGitHubWeb",
+    "startMultiplayerRoom",
+    "submitCapabilityHostRun",
+    "submitContributionTask",
+    "submitMultiplayerRuleSubmission",
+    "suspendAdminAgent",
+    "syncAuthorOutreach",
+    "trackAnalytics",
+    "trendResearchTopicMetric",
+    "triggerResearchTopicRun",
+    "unblockUser",
+    "unfollowUser",
+    "unlinkResearchTopicWatch",
+    "updateAdminAgentBehaviorProfile",
+    "updateAdminAgentBlogAutomation",
+    "updateAdminGuessBaikePuzzle",
+    "updateAdminWorkProvenance",
+    "updateAuthorOutreach",
+    "updateBlogDraft",
+    "updateChangeWatch",
+    "updateCreatorContributionTask",
+    "updateCreatorDraft",
+    "updateCreatorFeedback",
+    "updateDevelopmentEntry",
+    "updateDiscoveryCampaign",
+    "updateNotificationPreferences",
+    "updateProfile",
+    "updatePublicUserProfile",
+    "updateResearchTopic",
+    "updateResearchTopicEntity",
+    "updateResearchTopicSource",
+    "updateSocialProfile",
+    "updateWork",
+    "uploadAdminAgentPaperPdf",
+    "uploadAvatar",
+    "uploadWorkCover",
+    "verifyChallenge",
+    "withdrawAdminAgentBlogArticle",
+    "withdrawBlogArticle",
+    "withdrawContributionTask",
+    "withdrawWork",
+    "workShareCardUrl",
+    "workXhsPromoUrl",
+    "writeGameSave"
+  ],
+  "modules": [
+    {
+      "source": "packages/platform-client/src/AgentAdmin.jsx",
+      "sha256": "19d033d709c689f1c14352a8eae1f8024fe49797067c6e84a7127e992463bdbb",
+      "apiCalls": [
+        "applyAdminAgentPaperResearchRetention",
+        "askAdminAgentPaperFollowUp",
+        "cancelAdminAgentPaperResearchExecution",
+        "createAdminAgent",
+        "cutoverAdminAgentPublication",
+        "deleteAdminAgentProviderKey",
+        "discoverAdminAgentPaper",
+        "getAdminAgentBehaviorProfile",
+        "getAdminAgentFoundationDraft",
+        "getAdminAgentPaperAnalysis",
+        "getAdminAgentPaperResearchOperations",
+        "getAdminAgentPublicationCutoverPreflight",
+        "getAdminAgentRuntimeOverview",
+        "getAdminAgentRuntimeTimeline",
+        "listAdminAgentBlogRuns",
+        "listAdminAgentPaperDiscoveries",
+        "listAdminAgentPaperIntakes",
+        "listAdminAgentPaperResearchExecutions",
+        "listAdminAgentPaperResearchQueue",
+        "listAdminAgentProviderModels",
+        "listAdminAgentRuntimeRuns",
+        "listAdminAgents",
+        "previewAdminAgentPaperResearchRetention",
+        "recoverAdminAgentPaperResearchExpiredStage",
+        "registerAdminAgentPaperDoi",
+        "retryAdminAgentPaperResearchExecution",
+        "runAdminAgentBlogNow",
+        "runAdminAgentFoundationNow",
+        "setAdminAgentPaperResearchOperationsPolicy",
+        "setAdminAgentPaperResearchQueueState",
+        "setAdminAgentProviderKey",
+        "setAdminAgentPublicSchedule",
+        "startAdminAgentPaperResearchExecution",
+        "updateAdminAgentBehaviorProfile",
+        "updateAdminAgentBlogAutomation",
+        "uploadAdminAgentPaperPdf",
+        "withdrawAdminAgentBlogArticle"
+      ],
+      "browserDependencies": [
+        "Worker"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/AgentDisclosure.jsx",
+      "sha256": "1150aa9b3e4908bc6c65497f344950c3a43ad014479926b41f18c7286700bb8f",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "sha256": "58d308c073e30d814bde90ec2d4badc54ae044a677c69336c4e68a41a7036000",
+      "apiCalls": [
+        "acceptGuessBaikeChallenge",
+        "applyForCreator",
+        "blockUser",
+        "buildCreatorDraft",
+        "cancelProjectClaim",
+        "completeGitHubSourceInstall",
+        "completeUpload",
+        "createChallenge",
+        "createCreatorDraft",
+        "createCreatorFeedback",
+        "createCreatorFeedbackIssueDraft",
+        "createGitHubImportedDraft",
+        "createGuessBaikeChallenge",
+        "createProjectClaim",
+        "createSourceBuild",
+        "createUpload",
+        "createUploadGrant",
+        "createWork",
+        "decideCreatorApplication",
+        "decideProjectClaim",
+        "decideReport",
+        "disconnectGitHubSourceConnection",
+        "followUser",
+        "getAdminAnalytics",
+        "getAdminStorage",
+        "getCreatorAnalytics",
+        "getCreatorApplication",
+        "getCreatorDraft",
+        "getGitHubSourceAdminOverview",
+        "getGuessBaikeAutomationStatus",
+        "getGuessBaikeChallenge",
+        "getGuessBaikeLeaderboard",
+        "getLaunch",
+        "getLibraryState",
+        "getNotificationPreferences",
+        "getPlayerRetention",
+        "getProfile",
+        "getPublicProjectClaim",
+        "getPublicUserProfile",
+        "getSocialProfile",
+        "getUpload",
+        "getWork",
+        "getWorkSource",
+        "listAdminGuessBaikePuzzles",
+        "listAdminProjectClaimEvents",
+        "listAdminProjectClaims",
+        "listAdminWorkProvenance",
+        "listAdminWorkProvenanceEvents",
+        "listBlogArticles",
+        "listCreatorApplications",
+        "listCreatorContributionTasks",
+        "listCreatorDrafts",
+        "listCreatorFeedback",
+        "listCreatorWorks",
+        "listDevices",
+        "listGitHubSourceAudit",
+        "listGitHubSourceConnections",
+        "listGitHubSourceRepositories",
+        "listGuessBaikeChallenges",
+        "listLibrary",
+        "listModerationAudit",
+        "listMyProjectClaims",
+        "listReports",
+        "listSocialNotifications",
+        "listSourceBuilds",
+        "listWorkReleases",
+        "listWorkRemixes",
+        "listWorkTimeline",
+        "listWorks",
+        "logout",
+        "logoutAll",
+        "logoutOthers",
+        "markSocialNotificationsRead",
+        "pollGitHubDevice",
+        "pollGitHubWeb",
+        "previewCreatorDraft",
+        "previewGitHubSourceImport",
+        "publishSourceBuild",
+        "publishWorkRelease",
+        "reactToGuessBaikeResult",
+        "recordPlay",
+        "releaseDownloadUrl",
+        "removeFromLibrary",
+        "removeGuessBaikeReaction",
+        "reportWork",
+        "revokeDevice",
+        "saveToLibrary",
+        "selectAvatar",
+        "startGitHubDevice",
+        "startGitHubSourceInstall",
+        "startGitHubWeb",
+        "unfollowUser",
+        "updateAdminGuessBaikePuzzle",
+        "updateAdminWorkProvenance",
+        "updateCreatorDraft",
+        "updateCreatorFeedback",
+        "updateNotificationPreferences",
+        "updateProfile",
+        "updatePublicUserProfile",
+        "updateSocialProfile",
+        "uploadAvatar",
+        "uploadContent",
+        "uploadWorkCover",
+        "verifyChallenge",
+        "withdrawWork"
+      ],
+      "browserDependencies": [
+        "localStorage",
+        "sessionStorage",
+        "createObjectURL",
+        "navigator.share",
+        "clipboard",
+        "requestFullscreen"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/AuthorOutreachQueue.jsx",
+      "sha256": "ce18f2538a5b86eb0993caf2ce6c459bebeb0ebe3d085137746d0cb02b32634d",
+      "apiCalls": [
+        "listAuthorOutreach",
+        "listAuthorOutreachEvents",
+        "syncAuthorOutreach",
+        "updateAuthorOutreach"
+      ],
+      "browserDependencies": [
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/AvatarView.jsx",
+      "sha256": "e3aae1e92ca1835a70b0f448d4098d425fc23129a604747581910be24ac9f81c",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/BlogPages.jsx",
+      "sha256": "841bd5e5155a31695a1c85937268a758e88c0fe58edbed692640074e37497ee1",
+      "apiCalls": [
+        "askBlogQuestion",
+        "createBlogDraft",
+        "getBlogArticle",
+        "getMyBlogArticle",
+        "listBlogArticles",
+        "listMyBlogArticles",
+        "publishBlogArticle",
+        "updateBlogDraft",
+        "withdrawBlogArticle"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CapabilityTaskPanel.jsx",
+      "sha256": "ae6227d57faca5ba98314d36f04280182d22589375a65c8ff782de3732286f24",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/ChangeRadarAppPage.jsx",
+      "sha256": "0a6e1593186f36f290cb48202b2334abc21fe1cbf87380e43480470df4c66b78",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/ChangeRadarTool.jsx",
+      "sha256": "a5f04eae8e3558693d0a39bd7d704e823a3783b73f18420fd2a035cda0027d2a",
+      "apiCalls": [
+        "addResearchTopicSource",
+        "cancelResearcherJob",
+        "checkChangeWatch",
+        "compareResearchTopicMetric",
+        "createChangeWatch",
+        "createResearchContract",
+        "createResearchTopic",
+        "createResearchTopicBillingReconciliation",
+        "createResearchTopicCandidateEvaluationDataset",
+        "createResearchTopicDerivedMetric",
+        "createResearchTopicEntity",
+        "createResearchTopicExternalBenchmarkCase",
+        "createResearchTopicGap",
+        "createResearchTopicMethodTemplate",
+        "createResearchTopicMetricView",
+        "createResearcherNode",
+        "deleteChangeWatch",
+        "deleteResearchTopicMetricView",
+        "evaluateResearchTopicDerivedMetric",
+        "generateResearchTopicQualitySamples",
+        "getResearchTopicCandidateEvaluation",
+        "getResearchTopicClaim",
+        "getResearchTopicDiscoveryStats",
+        "getResearchTopicFactTimeline",
+        "getResearchTopicOperationsSummary",
+        "getResearchTopicQualitySummary",
+        "getResearchTopicStorageAssessment",
+        "getResearcherCapabilities",
+        "importResearchTopicCandidateEvaluationDataset",
+        "inspectResearchTopicSource",
+        "linkResearchTopicEventEntity",
+        "linkResearchTopicWatch",
+        "listChangeEvents",
+        "listChangeWatchSnapshots",
+        "listChangeWatches",
+        "listResearchRunActions",
+        "listResearchRunSources",
+        "listResearchTopicBillingReconciliations",
+        "listResearchTopicCandidateEvaluationDatasets",
+        "listResearchTopicClaimReviewSignals",
+        "listResearchTopicClaims",
+        "listResearchTopicDerivedMetrics",
+        "listResearchTopicDiscoveries",
+        "listResearchTopicEntities",
+        "listResearchTopicEntityStatusReviews",
+        "listResearchTopicEventClusterDiagnostics",
+        "listResearchTopicEvents",
+        "listResearchTopicEvidence",
+        "listResearchTopicExternalBenchmarkCases",
+        "listResearchTopicGaps",
+        "listResearchTopicMethodTemplates",
+        "listResearchTopicMetricViews",
+        "listResearchTopicMetrics",
+        "listResearchTopicNotifications",
+        "listResearchTopicQualitySamples",
+        "listResearchTopicReports",
+        "listResearchTopicRuns",
+        "listResearchTopicSourceAuthorityReviews",
+        "listResearchTopicSourceRelationships",
+        "listResearchTopicSourceStatusReviews",
+        "listResearchTopicSources",
+        "listResearchTopicWatches",
+        "listResearchTopics",
+        "listResearcherJobs",
+        "markChangeEventRead",
+        "markResearchEventRead",
+        "matrixResearchTopicMetrics",
+        "queueResearcherJob",
+        "resolveResearchClaimReviewSignal",
+        "resolveResearchTopicQualityCorrection",
+        "retireResearchTopicMethodTemplate",
+        "reviewResearchTopicBillingReconciliation",
+        "reviewResearchTopicClaim",
+        "reviewResearchTopicDiscovery",
+        "reviewResearchTopicExternalBenchmarkCase",
+        "reviewResearchTopicQualitySample",
+        "reviewResearchTopicSourceAuthority",
+        "reviewResearchTopicSourceRelationship",
+        "revokeResearcherNode",
+        "runResearchTopicCandidateEvaluationDataset",
+        "trendResearchTopicMetric",
+        "triggerResearchTopicRun",
+        "unlinkResearchTopicWatch",
+        "updateChangeWatch",
+        "updateResearchTopic",
+        "updateResearchTopicEntity",
+        "updateResearchTopicSource"
+      ],
+      "browserDependencies": [
+        "sessionStorage",
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/CloudSaveLibrary.jsx",
+      "sha256": "8ffd3ea0752c60ec6f8295ebfbd4f15c723beb0f22528790905f44a937605d93",
+      "apiCalls": [
+        "getSaveLibraryHistory",
+        "listSaveLibrary"
+      ],
+      "browserDependencies": [
+        "createObjectURL"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/CloudSaveStatus.jsx",
+      "sha256": "c0a42b77e909d477a53f7aabc9a726dea8706e9744d1acee4f77df3973adc6f0",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityEvents.jsx",
+      "sha256": "39d00ddbb640c63f8ceca4692aa2714315f8c276e865cb812d4a493a10746d1c",
+      "apiCalls": [
+        "communityEvent",
+        "communityEventCreate",
+        "communityEventRegister",
+        "communityEventUnregister",
+        "communityEventUpdate",
+        "communityEvents"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityHome.jsx",
+      "sha256": "2a52b52dd4ddb35f95e5aed58ab7ed8fb3d1771c27d35c6ff1b6dc7cded534db",
+      "apiCalls": [
+        "communityOverview"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityIcon.jsx",
+      "sha256": "6ae7392f78b1212e4bd4d2d020270b34f2203fd28908aa9a2a267e73d52fc585",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityIdentity.jsx",
+      "sha256": "73f476cd28012043b86c304d3bb76408c1c15c47e2ab491c4c0c7036b94f42f5",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityPage.jsx",
+      "sha256": "6d1bc8f6ebd713e6f96bbbcb5829a08cbec1d9005dae37cbfdbfd465a1eb5a4a",
+      "apiCalls": [
+        "communityCapabilities",
+        "communityComplete",
+        "communityDecide",
+        "communityImage",
+        "communityInteract",
+        "communityList",
+        "communityMediaStatus",
+        "communityMember",
+        "communityPost",
+        "communityProjects",
+        "communityReport",
+        "communityReserve",
+        "communityReview",
+        "communitySave",
+        "communitySubmit",
+        "communityUpload",
+        "communityWithdraw"
+      ],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/CommunityParticipation.jsx",
+      "sha256": "38a77ca71bd2565218be03c3d0f0cb44f4a5dffb5c7356d0ef5bbe7898d8bd24",
+      "apiCalls": [
+        "communityParticipation",
+        "communityParticipationNotificationRead"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityParties.jsx",
+      "sha256": "5b28cc01d444322b1e75f211c05aacbeb15a88219219d14aa9bd1bd0df309ccd",
+      "apiCalls": [
+        "communityParties",
+        "communityParty",
+        "communityPartyCreate",
+        "communityPartyFinish",
+        "communityPartyJoin",
+        "communityPartyLeave",
+        "communityPartyReady",
+        "communityPartyStart",
+        "joinMultiplayerRoomScoped",
+        "listMultiplayerModes",
+        "listWorks"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityProjects.jsx",
+      "sha256": "9db606e38e12d083f5c6e8662426d6dc9671b96604bc6fe78ae0c48df87878e6",
+      "apiCalls": [
+        "communityProject",
+        "communityProjectApply",
+        "communityProjectCreate",
+        "communityProjectDecide",
+        "communityProjectLeave",
+        "communityProjectUpdate",
+        "communityProjects"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CommunityShell.jsx",
+      "sha256": "5d6f76d4d1bcfa33ce1b42b68cff5ed3c795b5a7112ed805300aa100e5191bca",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CompetitionDeveloperCenter.jsx",
+      "sha256": "f02aa7a6cb23700769bad98e2a26fe94ae660e1ff00bfdbcdc012a7d126eb60d",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/ContributionCenter.jsx",
+      "sha256": "30737316acdaa8ef0d74322fe9de2324300eafb91e5de07147e5abbc65329507",
+      "apiCalls": [
+        "communityProjects",
+        "createContributionIssueDraft",
+        "createContributionTaskFromFeedback",
+        "getContributionTask",
+        "listContributionNotifications",
+        "listContributionTasks",
+        "listCreatorContributionTasks",
+        "readContributionNotification",
+        "submitContributionTask",
+        "updateCreatorContributionTask"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/CreatorAiTaskPage.jsx",
+      "sha256": "4b4431d8cbfcf5ad5e94747c75b528455fed49df6d2c34663a344e9b1fb4680f",
+      "apiCalls": [
+        "listCreatorWorks",
+        "listWorkReleases"
+      ],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/DevelopmentLogPage.jsx",
+      "sha256": "d373d81aceac32f08a70224955f62bf2e1630681b011e7a1bf5538cdaae16b79",
+      "apiCalls": [
+        "createDevelopmentEntry",
+        "listCreatorWorks",
+        "listDevelopmentEntries",
+        "listWorkReleases",
+        "updateDevelopmentEntry"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/DiscoverPage.jsx",
+      "sha256": "558b535048071a8b1ed6bc54c80c7d80dc38d197a7ffe7e156ad67a36cfeb0d4",
+      "apiCalls": [
+        "listLibrary",
+        "listWorks"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/DiscoveryCampaigns.jsx",
+      "sha256": "2d12b15cad6c76110ce1787756e5b8d51f09730e8f6a288c044702c769f69c51",
+      "apiCalls": [
+        "createDiscoveryCampaign",
+        "discoveryCampaignShareCardUrl",
+        "getDiscoveryCampaign",
+        "listAdminDiscoveryCampaigns",
+        "listDiscoveryCampaigns",
+        "listWorks",
+        "updateDiscoveryCampaign"
+      ],
+      "browserDependencies": [
+        "navigator.share",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/DocumentCompareTool.css",
+      "sha256": "9c21ceabaa5b8fe6870b2315a7dcda895a66b5ae854a5a7be64dee7bfe2d7fb5",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/DocumentCompareTool.jsx",
+      "sha256": "311e0b099bb6569a52ec088a3258d8ef54b513b500c4e4faed17013bbb251d71",
+      "apiCalls": [],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/GameSharePage.jsx",
+      "sha256": "303d6f16b4a700e40d7a6bc25d42207ccf80335258b7b51ce43461799197aa0a",
+      "apiCalls": [
+        "getGameShare"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/GrowthContentStudio.jsx",
+      "sha256": "2f8dd765bee23a0604434df4f4e0261ae79eb9a6de511c776a165a1b80f4f5bd",
+      "apiCalls": [
+        "listWorks",
+        "workXhsPromoUrl"
+      ],
+      "browserDependencies": [
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/GuessBaikeGame.jsx",
+      "sha256": "b0d61b0a3f12f9ce3c9407946dd23f142332e53b9717fdda2098fb26a610d315",
+      "apiCalls": [
+        "completeGuessBaikeChallenge",
+        "getGuessBaikeDaily",
+        "saveGuessBaikeResult"
+      ],
+      "browserDependencies": [
+        "localStorage",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/I18n.jsx",
+      "sha256": "2469f0453b13d5c621990c00bf6a0b62787084d14fba59a97a909c944d029020",
+      "apiCalls": [],
+      "browserDependencies": [
+        "localStorage"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/KnowledgeMapTool.css",
+      "sha256": "d6a451c38670b07c2afa7cf8745c4a1e7a950a6476192e261cb4d361753de2b5",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/KnowledgeMapTool.jsx",
+      "sha256": "d23ce0faa0b072c059ea756f4a3fb91a25a5fea125ca24e9a97ea2f18c716e72",
+      "apiCalls": [],
+      "browserDependencies": [
+        "localStorage",
+        "createObjectURL",
+        "clipboard",
+        "postMessage"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/LearningPage.jsx",
+      "sha256": "ad49953800b97eb09ac00158ff3bd6b11d2aaf2d23c5182bdf78334c43df4061",
+      "apiCalls": [
+        "listWorks"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/MultiplayerDeveloperCenter.jsx",
+      "sha256": "e09ede800d94b17bfed2b9b0ec41666c6ee47f55072b4952cbf43ff746979bf4",
+      "apiCalls": [],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/MultiplayerRuleReviewQueue.jsx",
+      "sha256": "a358c1e149f8855702c21dde61ca5bb614066e54dba91a8565dcde4c34d4f8fc",
+      "apiCalls": [
+        "downloadAdminMultiplayerRuleBuild",
+        "downloadAdminMultiplayerRulePackage",
+        "listAdminMultiplayerRuleSubmissions",
+        "reviewAdminMultiplayerRuleSubmission"
+      ],
+      "browserDependencies": [
+        "createObjectURL"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/MultiplayerRuleSubmissionPage.jsx",
+      "sha256": "73254fdeb34d68a4cefa5a5055616778f3b41ff17a81ce5efdc6a768d38cd9e2",
+      "apiCalls": [
+        "createMultiplayerRuleSubmission",
+        "createMultiplayerRuleUploadGrant",
+        "listMultiplayerRuleSubmissions",
+        "submitMultiplayerRuleSubmission",
+        "uploadMultiplayerRulePackage"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/PdfPrivacyPanel.jsx",
+      "sha256": "42f4a18705e3e3baf687f01c81ec1c071170306558d51f77e73a6805342487cc",
+      "apiCalls": [],
+      "browserDependencies": [
+        "Worker",
+        "createObjectURL"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/PdfReaderTool.css",
+      "sha256": "0d1ba33fdc4d9219cb774377a039b525e059c1c16ee72454b228462c75b497c5",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/PdfReaderTool.jsx",
+      "sha256": "4e513700be44f9a09f10e5e160bda7705f7765af03dc325a2de33223e6ae57d4",
+      "apiCalls": [],
+      "browserDependencies": [
+        "localStorage",
+        "Worker",
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/PlatformNavigation.jsx",
+      "sha256": "f0cc3bf9f4be25a6a8aaf850746323efde3b49de359174846510f2a0b5cbdc19",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/PrivacyRedactorTool.css",
+      "sha256": "4fdc12d2eba1baa6e77df73a425d2dcb0eddfa9c890806c1ee66a16d23c55384",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/PrivacyRedactorTool.jsx",
+      "sha256": "d6a1d781fb7de146a42c85b3ceabd8c5a2e134c719433fdf2bb9d22aab545a14",
+      "apiCalls": [],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/SaveManager.jsx",
+      "sha256": "c45d30394800908753f748d1e2e0d2c7b7a6298f1b06054a040b8673ddef4495",
+      "apiCalls": [],
+      "browserDependencies": [
+        "createObjectURL"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/SaveOperationsPage.jsx",
+      "sha256": "0fa32c8fc71205c7bbf09d53c45e89c06b8eac46b39c4f009f02065c283dbdb0",
+      "apiCalls": [
+        "getSaveAdminAudit",
+        "getSaveCapacity",
+        "getSaveHealth",
+        "maintainGameSaves",
+        "pauseSavePolicy",
+        "setSaveCapacity"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/SpreadsheetAuditTool.css",
+      "sha256": "9fd72b0f20669af7d09aba03c26b26c1d1632738ff4e5291bb8bea13021327b0",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/SpreadsheetAuditTool.jsx",
+      "sha256": "7929bebcd53bb1e345dc82a691c400a09b59e8f91287aead220fe5252d377b59",
+      "apiCalls": [],
+      "browserDependencies": [
+        "createObjectURL",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/ToolsPage.jsx",
+      "sha256": "ee689bb7e7184ff6268a97da1e4001ca7528c8c661684483300a31d1d3e74be6",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/UploadStatus.jsx",
+      "sha256": "8296f4497b6cb52b8cf7078c7a5ae367acce6dbff068501e1be8a9a30af960f2",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/WorkEditPage.jsx",
+      "sha256": "7e82e3a06f25e73248a08b279e138ee4051dde04a571df79cc1830db0bd739da",
+      "apiCalls": [
+        "listCreatorWorks",
+        "listWorks",
+        "updateWork"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/WorkLeaderboard.jsx",
+      "sha256": "6d32fba272d0225d32b98928f710d3ee54d6583fd092862491826e6e423fcbc4",
+      "apiCalls": [
+        "listWorkLeaderboards",
+        "readCompetitionLeaderboard"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/WorkMetadataFields.jsx",
+      "sha256": "a306eed101f48b754494d39273b5a809c78059ac44aac1d5069685cf86597cd8",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/account-bootstrap.mjs",
+      "sha256": "107345dc9b9b7026080b2e408dd6e7d56d63318341f622d5e4ecfdb7b7cce2bf",
+      "apiCalls": [
+        "bootstrapSession"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/agent-admin-settings.mjs",
+      "sha256": "62902812ed5faec3c7d8af16eb03c0a0cefe96bb8a1cbca1319a09659b78a825",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/agent-tool-bridge.mjs",
+      "sha256": "1cccf13de90e01ea771a9619c388396a56c12608f4b8a49e36ae142696cda4ae",
+      "apiCalls": [],
+      "browserDependencies": [
+        "postMessage"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/analytics-attribution.mjs",
+      "sha256": "f204a91435ae1f0043344332691dfc4272e9ab8e1bdcb13f6dddcdd3b5ed2e85",
+      "apiCalls": [],
+      "browserDependencies": [
+        "sessionStorage"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/analytics-delivery.mjs",
+      "sha256": "25298b4d30de09cb458ac8bf1944f4878039e61d2ef87557889903da25e0ddbb",
+      "apiCalls": [
+        "trackAnalytics"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/auth-client-kind.mjs",
+      "sha256": "40f488a28f692711d03170509bab926ea466f5b2c9eb170f2848ef087df3744f",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/author-outreach-copy.mjs",
+      "sha256": "debdd4b7c8da218cf71245e7ec4977d98870293dcc272f70f9deec21b7f836c6",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/capability-task-panel.mjs",
+      "sha256": "26f661e998f039a51e13e8ddd9d1e2872235403805129a268bda34368ee2445f",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/cloud-save-library.mjs",
+      "sha256": "0907b3336089235fa71432048aa070a0644441252afde53ecdf824ed23f41956",
+      "apiCalls": [
+        "getSaveLibraryHistory",
+        "readSaveLibraryRevision",
+        "restoreSaveLibraryRevision"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/community-availability.mjs",
+      "sha256": "bd0162943d3bc95ef93c54a99ffdae8a17410150252672e2ce7fca9ed33e80ae",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/community-share.mjs",
+      "sha256": "fc101ecd310a33b65d36294ee7e01d33ada60181e2c9859062feb5e5fdf55d4e",
+      "apiCalls": [],
+      "browserDependencies": [
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/creator-ai-task.mjs",
+      "sha256": "817b46525b2e099f029282ef3165d1efd14b1c4aa5a1748abd61080cf336712a",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/demo.mjs",
+      "sha256": "38d4d763b7ac56a9e8ca54b66db499d61d835e4a44862358d598a0593ad95b72",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/document-diff.mjs",
+      "sha256": "fa54f81da3629f3f3e13242cb153eac1626beb52f100ce79177637e3d0595def",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/document-reader.mjs",
+      "sha256": "81dcc573a59ee985ca5aa5a4114510d5da12a0e023d35983e6bddfb94b6a5a14",
+      "apiCalls": [],
+      "browserDependencies": [
+        "Worker"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/file-export-prompt.mjs",
+      "sha256": "9fb359424f6b947925175ae960bb0c4ec43bcfe31e732aca2d8be1c181804de1",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/game-session-manager.mjs",
+      "sha256": "6ffaa82f125a19c3202d71139641a3960058113180aafeb7ea56b807699a7779",
+      "apiCalls": [
+        "createGameSession",
+        "revokeGameSession"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/generated-learning-items.mjs",
+      "sha256": "732de410c1436d81b7c2400535174ca88321e69a9393f031d39201083276dba1",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/growth-content-copy.mjs",
+      "sha256": "1185dde9ef2b3d618801ab80b0cec318943e6e389acd27dc794c2508ed5974a9",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/guess-baike-policy.mjs",
+      "sha256": "3303f7998335d818b8605d82322427446062c3d6b9ee6160b11d6d8bd04c65a9",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/i18n.mjs",
+      "sha256": "f1eb19dea32ab80345645c6e5c7dbf9c67873f98b691a2769753bc890471c5a0",
+      "apiCalls": [],
+      "browserDependencies": [
+        "Worker",
+        "WebSocket",
+        "clipboard"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/knowledge-map-model.mjs",
+      "sha256": "6b79a74dbc9f8d81b500172aa03a528c89107ba50b15ea2f0666a9c6841fd231",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/learning-catalog.mjs",
+      "sha256": "461d13d1108d99c6b2b973ed33cf0fdcc2ba2a787eb26dfd3c7933408afad944",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/multiplayer-session.mjs",
+      "sha256": "4af6d4bb126d24ac5e2ab3e7935b75fd235c41efd4f7489033b36ecd4404ba0f",
+      "apiCalls": [
+        "createRealtimeTicket"
+      ],
+      "browserDependencies": [
+        "WebSocket"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/official-tools.mjs",
+      "sha256": "1247acd613c380f2f1c555874d360f2d7508df97431776aafcd388b465af1d2a",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/pdf-reader-model.mjs",
+      "sha256": "c241933c68df0c070c22dd43dc20cd24fdc6eef5030b5be23d5c8880c5e2211c",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/pdf-reader-ocr.mjs",
+      "sha256": "c9b093b6389b391799936416d1517e15d5696351fac1c6bf57051bd36e9bc249",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/pdf-reader-workspace.mjs",
+      "sha256": "72569ef7f3e1b1c99b7939e60178ffd5d85cbf150574b879e975a1f80ac9076f",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/player-runtime-options.mjs",
+      "sha256": "8e2af27451e5cd07253788e1900c11fcd1e03425620b56b5eadd55625dc95505",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/privacy-redactor.mjs",
+      "sha256": "af5836a06e66165133189afaf028771f47961935f194e9f6e3858da6990a0e60",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/public-work-route.mjs",
+      "sha256": "07003139dc0304f09ffec31692a4fc0f56d55427bdf5bf87c7be1dde24c0c3c2",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/save-management.mjs",
+      "sha256": "ac45a6f7fde7bd8ac886ec21c5b709857637b54abd51cd8f33d38124bfac29e8",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/spreadsheet-audit.mjs",
+      "sha256": "9ec479e3dcf78e931ac39c2cf8ae677f75f634d37a0f187e2c94057e6ba98733",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/spreadsheet-reader.mjs",
+      "sha256": "6396c0cbe26558dbd06e78f135b2b7b8f745a0712240a2f065427b6cd181526a",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/styles.css",
+      "sha256": "f0107a29d7ee75dc5b8f1c365dcd0f83f8c852e969bf4aef6350a3a59a4cfa58",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/upload-display.mjs",
+      "sha256": "fa4e4044a41a03f0a59aa40f4098455437c71f837308aa39f941991ef9d48490",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-cloud-save-handlers.mjs",
+      "sha256": "5cf621b96bde504bb98f57ee68ff02cba26bcc72aeaf1645d7cbc4ebdd8bd0fb",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-competition-handlers.mjs",
+      "sha256": "719cd742c939b6179df071555135211381df6606bd782a7d4b9331f4472da6d7",
+      "apiCalls": [
+        "abandonCompetitionRun",
+        "finishCompetitionRun",
+        "getCompetitionRun",
+        "listCompetitionModes",
+        "readCompetitionLeaderboard",
+        "startCompetitionRun"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-host.mjs",
+      "sha256": "9bbb122f22cd07dc5839c008162109ed9df506b415d7e36404d336686bd2a25f",
+      "apiCalls": [
+        "getProfile"
+      ],
+      "browserDependencies": [
+        "postMessage"
+      ]
+    },
+    {
+      "source": "packages/platform-client/src/web-game-local-save-handlers.mjs",
+      "sha256": "13e68eee65dfbfe837a2c49c3cb5bf7b8aa4b292106f74a03947a5ae60053451",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-multiplayer-handlers.mjs",
+      "sha256": "a0d8f54e3615201add3d2dd38e5ef3bee8a355270e03eb12d63ea0b7f5340c5c",
+      "apiCalls": [
+        "createMultiplayerInvite",
+        "createMultiplayerRoom",
+        "getMultiplayerMatch",
+        "getMultiplayerRoom",
+        "joinMultiplayerRoomScoped",
+        "leaveMultiplayerRoom",
+        "listMultiplayerModes",
+        "listMultiplayerRooms",
+        "setMultiplayerReady",
+        "startMultiplayerRoom"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-multiplayer-host.mjs",
+      "sha256": "337c5b3c9d40ad54ad1175be53946950c2eca9e7c5f775b1ba7b12c4539fdd03",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/web-game-sharing-handlers.mjs",
+      "sha256": "c7b65560d489d9913a1ac34c07e8c20728eb060db20732e059b07e9b5f270ed1",
+      "apiCalls": [
+        "createGameShare",
+        "getGameShare",
+        "getLaunch"
+      ],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/work-leaderboards.mjs",
+      "sha256": "46264c8ef72c72c5c9302780a6bad11cd7be633f42465c6ea1ca4688635d8542",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/work-metadata.mjs",
+      "sha256": "7512ed5c8ddf73bb2b94fe999bc3bec56f0b2a59025c08c36c05fd24ff6512f7",
+      "apiCalls": [],
+      "browserDependencies": []
+    }
+  ],
+  "sourceReferences": [
+    {
+      "source": "apps/web/package.json",
+      "sha256": "c9f7891d70557d48e7d839272068c0072647c644f4692e3c4779deb493562604"
+    },
+    {
+      "source": "apps/web/src/main.jsx",
+      "sha256": "293bfb6d0476f8eee97dbf5e53e77a6e9ae55a23755dcb927c04c134808b0a92"
+    },
+    {
+      "source": "apps/web/vite.config.mjs",
+      "sha256": "141ee78c5ac66befa6ffdbe363b41a31cb48fcfef965156cf75768b696b5eed4"
+    },
+    {
+      "source": "packages/platform-client/package.json",
+      "sha256": "08ad1aa5d5e5964f93b7e989ebb2a7cc271846752b98f74b0447333eb9327ba2"
+    },
+    {
+      "source": "packages/host-contract/src/index.mjs",
+      "sha256": "2165096ea5a1ccf0cac368307d3f7d05d32ee730bbe051f613d1690a27cd31c4"
+    },
+    {
+      "source": "packages/host-contract/src/browser-account.mjs",
+      "sha256": "e6ce237ecec82417bb2723e094a15b742d6e361a7e60045087fbec4876d36e55"
+    },
+    {
+      "source": "packages/platform-api-client/src/index.mjs",
+      "sha256": "6ce8151427dd03d359db956da0b9761798bd4dd3dbae76e088e5b63064bf9487"
+    },
+    {
+      "source": "packages/platform-api-client/src/community.mjs",
+      "sha256": "5f100601106e6bf632b91a20151359a0d58d438f1261c5a35aaaecf85e05fb34"
+    },
+    {
+      "source": "packages/player-core/src/index.mjs",
+      "sha256": "1415a997d8b6eeb62dc850445256b5fde90074cf085f2ad49974eb27e0fbd0ec"
+    },
+    {
+      "source": "apps/api/src/app.mjs",
+      "sha256": "cc664a446f2cc114fc5823ca1b23706f9a9f872e53e0aceac030127fa14907ce"
+    },
+    {
+      "source": "apps/capability-executor/src/desktop-release-contracts.mjs",
+      "sha256": "8b25458e3044b9ea35fb09ba23454ab2b18af4e3cb335d01986baaf61caebb18"
+    },
+    {
+      "source": "apps/capability-executor/src/desktop-product-manager.mjs",
+      "sha256": "cd6b7e925217aca67584f2d64745e8a1f9412dbfb90070bf9eb59d325aa1c821"
+    },
+    {
+      "source": "apps/capability-executor/src/desktop-shell-ipc.mjs",
+      "sha256": "029c77c19e7d7da43a7e4105ec1b876ffa391835a0ee6fcdb454faf7d785153d"
+    },
+    {
+      "source": "apps/capability-executor/src/desktop-file-grants.mjs",
+      "sha256": "a08b8e2f6f1ec8d236396966d2ddd8e8b4c54ad2f8c60ba3df790f17a6ef67e5"
+    },
+    {
+      "source": "apps/capability-executor/src/desktop-node-supervisor.mjs",
+      "sha256": "4e6510329dbf4d12dfb2bd51cb7e054a0275d75668cc7369db0be84bb18a06cd"
+    },
+    {
+      "source": "apps/capability-executor/src/windows-desktop-updater.mjs",
+      "sha256": "84896bf3cc3c7b33799685365bcf2a4a9e3da211c7fa56bea0d7aeb4d7d56f7a"
+    },
+    {
+      "source": "apps/capability-executor/src/credential-vault.mjs",
+      "sha256": "a7a5b2fd54612086444e2c552dab7836b39b960f371688fa63d5203320414c6b"
+    },
+    {
+      "source": "scripts/windows-desktop-product-host.mjs",
+      "sha256": "a27618f744845e4687b825e8e1a6cad943dbc36eead5f7ea0ac857f445936a78"
+    }
+  ]
+}

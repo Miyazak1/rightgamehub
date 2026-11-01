@@ -1,0 +1,17 @@
+# Merge only with the existing production Compose. Apply only service web.
+# Use the same override on later web updates, until deliberately rolled back.
+services:
+  web:
+    image: ${DESKTOP_AUTH_CADDY_IMAGE:?Pin a retained copy of the current gateway image}
+    volumes:
+      - type: bind
+        source: ${DESKTOP_AUTH_CADDY_FILE:?Set absolute prepared Caddyfile}
+        target: /etc/caddy/Caddyfile
+        read_only: true
+    networks:
+      backend:
+      desktop-auth-ingress:
+networks:
+  desktop-auth-ingress:
+    external: true
+    name: ${DESKTOP_AUTH_INGRESS_NETWORK:-mooyu-desktop-auth-test-ingress}

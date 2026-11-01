@@ -63,6 +63,7 @@ const icons = {
 
 const hostIdentities = {
   browser: { id: 'browser', label: 'Web', short: 'WEB' },
+  'desktop-app': { id: 'desktop-app', label: 'Windows', short: 'WIN' },
   'mcp-app': { id: 'mcp-app', label: 'MCP App', short: 'MCP' },
   codex: { id: 'codex', label: 'Codex', short: 'CX' },
   cursor: { id: 'cursor', label: 'Cursor', short: 'CU' },
@@ -160,15 +161,19 @@ function ImageIcon() {
   return <svg className="gamehub-action-icon" viewBox="0 0 16 16" aria-hidden="true" shapeRendering="crispEdges"><path fill="currentColor" d="M1 2h14v12H1zm2 2v7l3-3 2 2 2-3 3 4V4z"/><path fill="var(--gh-raised)" d="M10 5h2v2h-2z"/></svg>;
 }
 
-function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, accountProfile, accountStatus, api }) {
+function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdentity, accountProfile, accountStatus, api, chrome }) {
   const { t } = useI18n();
   const creator = route === '/creator' || route.startsWith('/creator/');
-  return <header className="header">
+  const player = /^\/(play|s)\//u.test(route);
+  const Leading = chrome?.Leading, Actions = chrome?.Actions;
+  return <header className={`header${chrome ? ' header--desktop' : ''}`}>
+    {Leading && <Leading themeMode={themeMode}/>}
     <button className="brand-button" onClick={() => go('/discover')}><Logo /></button>
-    {creator ? <span className="header__workspace-label">{t('navigation.creatorSpace')}</span> : <PlayerNavigation route={route} go={go}/>}
+    {creator ? <span className="header__workspace-label">{t('navigation.creatorSpace')}</span> : player && chrome ? <span className="desktop-drag-space"/> : <PlayerNavigation route={route} go={go}/>}
+    {chrome && <span className="desktop-title-grip" aria-hidden="true"/>}
     <div className="header__tools">
-      <button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>{t('navigation.addAgent')}</button>
-      <div className="host-chip" aria-label={t('navigation.hostCurrent',{host:hostIdentity.label})} title={t('navigation.hostTheme',{host:hostIdentity.label})}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div>
+      {Actions ? <Actions go={go} route={route}/> : <><button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>{t('navigation.addAgent')}</button>
+      <div className="host-chip" aria-label={t('navigation.hostCurrent',{host:hostIdentity.label})} title={t('navigation.hostTheme',{host:hostIdentity.label})}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div></>}
       <LanguageSwitch />
       <button className="icon-button" disabled={!canChangeTheme} onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'high-contrast' : 'dark')} aria-label={t(canChangeTheme?'navigation.themeSwitch':'navigation.themeFollowing',{theme:themeMode})} title={canChangeTheme?t('navigation.switchTheme'):t('navigation.hostTheme',{host:hostIdentity.label})}>{themeMode === 'light' ? '☼' : themeMode === 'high-contrast' ? '◐' : '☾'}</button>
       <AccountMenu route={route} go={go} profile={accountProfile} status={accountStatus} avatar={<AvatarView avatar={accountProfile?.avatar} api={api} alt=""/>}/>
@@ -472,6 +477,16 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
     const next = demo ? demoAccountProfile : (await api.getProfile()).data;
     commitProfile(next); setDisplayName(next.displayName); setPhase('settings');
   };
+  const cancelGitHubLogin = () => {
+    void Promise.resolve(host.account?.cancelLogin?.()).catch(() => {});
+    setPhase('email'); setGithubChallenge(null); setError('');
+  };
+  useEffect(() => () => { void Promise.resolve(host.account?.cancelLogin?.()).catch(() => {}); }, [host]);
+  const reopenGitHub = event => {
+    if (!host.navigation?.openExternal) return;
+    event.preventDefault();
+    void host.navigation.openExternal(githubChallenge.authorizeUrl).catch(caught => setError(caught.message || t('account.error.githubWeb')));
+  };
   useEffect(() => {
     if (phase !== 'github-web' || !githubChallenge?.challengeId) return undefined;
     let active = true; let timer;
@@ -518,6 +533,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
       else if (authWindow && data.authorizeUrl) { authWindow.location.replace(data.authorizeUrl); authWindow.opener = null; }
     } catch (caught) {
       authWindow?.close();
+      cancelGitHubLogin();
       setError(caught.message || t('account.error.githubWeb'));
     } finally { setBusy(false); }
   };
@@ -643,7 +659,7 @@ function AccountPage({ api, host, demo, go, themeMode, setThemeMode, canChangeTh
   const title = t(phase === 'code' ? 'account.codeTitle' : phase === 'github-web' ? 'account.githubWaitTitle' : phase === 'github-device' ? 'account.githubConnectTitle' : 'account.signInTitle');
   const description = phase === 'code' ? t('account.codeSent',{email}) : t(phase === 'github-web' ? 'account.githubWaitLead' : phase === 'github-device' ? 'account.githubDeviceLead' : 'account.signInLead');
 
-  return <main className="page narrow-page"><section className="account-card"><div className="account-art"><Logo /><h1>{t('account.heroLine1')}<br/>{t('account.heroLine2')}</h1><p>{t('account.heroLead')}</p></div><form className="account-form" onSubmit={submit}><span className="kicker">MOOYU.FUN ACCOUNT</span><h2>{title}</h2><p>{description}</p>{phase === 'github-web' ? <><div className="github-device github-web-waiting"><span>SECURE REDIRECT</span><strong>···</strong><small>{t(demo?'account.demoRedirect':'account.completeGithub')}</small></div>{error && <p className="form-error" role="alert">{error}</p>}{githubChallenge?.authorizeUrl && <a className="button button--primary github-open" href={githubChallenge.authorizeUrl} target="_blank" rel="noopener noreferrer"><span>{t('account.reopenGithub')}</span></a>}<button type="button" className="text-button" onClick={startGitHubDevice}>{t('account.useDeviceCode')}</button><button type="button" className="text-button" onClick={() => { setPhase('email'); setGithubChallenge(null); setError(''); }}>{t('account.otherMethod')}</button></> : phase === 'github-device' ? <><div className="github-device"><span>ONE-TIME CODE</span><strong>{githubChallenge?.userCode}</strong><small>{t('account.deviceHint')}</small></div>{error && <p className="form-error" role="alert">{error}</p>}<a className="button button--primary github-open" href={githubChallenge?.verificationUri} target="_blank" rel="noopener noreferrer"><span>{t('account.continueGithub')}</span></a><Button type="button" kind="secondary" disabled={busy} onClick={pollGitHubDevice}>{t(busy?'account.checking':'account.authorized')}</Button><button type="button" className="text-button" onClick={() => { setPhase('email'); setGithubChallenge(null); setError(''); }}>{t('account.otherMethod')}</button></> : <>{phase === 'email' && <><Button type="button" kind="github" className="github-login" icon={<GitHubLogo />} disabled={busy} onClick={startGitHub}>{t('account.githubLogin')}</Button><div className="login-divider"><span>{t('account.orEmail')}</span></div></>}<label>{t(phase === 'code' ? 'account.codeLabel' : 'account.emailLabel')}<input required disabled={busy} value={phase === 'code' ? code : email} onChange={event => phase === 'code' ? setCode(event.target.value.replace(/\D/g, '').slice(0, 6)) : setEmail(event.target.value)} inputMode={phase === 'code' ? 'numeric' : 'email'} maxLength={phase === 'code' ? 6 : undefined} placeholder={phase === 'code' ? '000000' : 'you@example.com'} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" disabled={busy || (phase === 'code' && code.length !== 6)}>{t(busy?'account.wait':phase === 'code'?'account.verify':'account.sendCode')}</Button>{phase === 'code' && <button type="button" className="text-button" onClick={() => { setPhase('email'); setCode(''); setError(''); }}>{t('account.otherEmail')}</button>}{persistence && <small className="credential-note">{persistence}</small>}</>}</form></section></main>;
+  return <main className="page narrow-page"><section className="account-card"><div className="account-art"><Logo /><h1>{t('account.heroLine1')}<br/>{t('account.heroLine2')}</h1><p>{t('account.heroLead')}</p></div><form className="account-form" onSubmit={submit}><span className="kicker">MOOYU.FUN ACCOUNT</span><h2>{title}</h2><p>{description}</p>{phase === 'github-web' ? <><div className="github-device github-web-waiting"><span>SECURE REDIRECT</span><strong>···</strong><small>{t(demo?'account.demoRedirect':'account.completeGithub')}</small></div>{error && <p className="form-error" role="alert">{error}</p>}{githubChallenge?.authorizeUrl && <a className="button button--primary github-open" href={githubChallenge.authorizeUrl} onClick={reopenGitHub} target="_blank" rel="noopener noreferrer"><span>{t('account.reopenGithub')}</span></a>}{host.account?.githubDeviceAvailable !== false && <button type="button" className="text-button" onClick={startGitHubDevice}>{t('account.useDeviceCode')}</button>}<button type="button" className="text-button" onClick={cancelGitHubLogin}>{t('account.otherMethod')}</button></> : phase === 'github-device' ? <><div className="github-device"><span>ONE-TIME CODE</span><strong>{githubChallenge?.userCode}</strong><small>{t('account.deviceHint')}</small></div>{error && <p className="form-error" role="alert">{error}</p>}<a className="button button--primary github-open" href={githubChallenge?.verificationUri} target="_blank" rel="noopener noreferrer"><span>{t('account.continueGithub')}</span></a><Button type="button" kind="secondary" disabled={busy} onClick={pollGitHubDevice}>{t(busy?'account.checking':'account.authorized')}</Button><button type="button" className="text-button" onClick={cancelGitHubLogin}>{t('account.otherMethod')}</button></> : <>{phase === 'email' && <><Button type="button" kind="github" className="github-login" icon={<GitHubLogo />} disabled={busy} onClick={startGitHub}>{t('account.githubLogin')}</Button><div className="login-divider"><span>{t('account.orEmail')}</span></div></>}<label>{t(phase === 'code' ? 'account.codeLabel' : 'account.emailLabel')}<input required disabled={busy} value={phase === 'code' ? code : email} onChange={event => phase === 'code' ? setCode(event.target.value.replace(/\D/g, '').slice(0, 6)) : setEmail(event.target.value)} inputMode={phase === 'code' ? 'numeric' : 'email'} maxLength={phase === 'code' ? 6 : undefined} placeholder={phase === 'code' ? '000000' : 'you@example.com'} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" disabled={busy || (phase === 'code' && code.length !== 6)}>{t(busy?'account.wait':phase === 'code'?'account.verify':'account.sendCode')}</Button>{phase === 'code' && <button type="button" className="text-button" onClick={() => { setPhase('email'); setCode(''); setError(''); }}>{t('account.otherEmail')}</button>}{persistence && <small className="credential-note">{persistence}</small>}</>}</form></section></main>;
 }
 
 function CreatorInsights({ state, days, onDays }) {
@@ -1981,7 +1997,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play' || parts[0] === 's';
   const creator = parts[0] === 'creator';
-  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}`} data-host={hostIdentity.id}>{!player && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<div className="notice-region" aria-live="polite"/></div>;
+  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<div className="notice-region" aria-live="polite"/></div>;
 }
 
 export default function App(props) {

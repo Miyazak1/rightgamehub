@@ -186,6 +186,8 @@ export function createApp(dependencies) {
     ajv: { customOptions: { removeAdditional: false } },
   });
   const corsOrigins = new Set(config.corsOrigins ?? []);
+  // Optional deployment boundary, evaluated before body parsing and authentication.
+  if (dependencies.requestGuard) app.addHook('onRequest', dependencies.requestGuard);
   app.addHook('onRequest', async (request, reply) => {
     const origin = request.headers.origin;
     const trustedEditorWebview = (config.nodeEnv === 'development' || config.trustEditorWebviews) && /^vscode-webview:\/\/[a-z0-9-]+$/i.test(origin ?? '');

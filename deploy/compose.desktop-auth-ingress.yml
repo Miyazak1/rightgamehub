@@ -1,0 +1,12 @@
+# Merge only with compose.desktop-auth-test.yml, never with compose.prod.yml.
+services:
+  auth-api:
+    networks:
+      auth-data:
+      auth-egress:
+      desktop-auth-ingress:
+        aliases: [desktop-auth-test-api]
+networks:
+  desktop-auth-ingress:
+    external: true
+    name: ${DESKTOP_AUTH_INGRESS_NETWORK:-mooyu-desktop-auth-test-ingress}
