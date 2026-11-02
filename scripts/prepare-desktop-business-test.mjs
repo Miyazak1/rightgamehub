@@ -1,0 +1,14 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('../', import.meta.url));
+if (process.argv.length > 5) throw Error('Usage: prepare-desktop-business-test.mjs [relative .runtime env file] [API port] [runtime port]');
+const file = path.resolve(root, process.argv[2] ?? '.runtime/desktop-business-test/instance.env');
+const relative = path.relative(path.join(root, '.runtime'), file);
+if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw Error('OUTPUT_MUST_BE_INSIDE_RUNTIME');
+const port = Number(process.argv[3] ?? 39190), runtimePort = Number(process.argv[4] ?? 39192);
+if (![port, runtimePort].every(p => Number.isInteger(p) && p >= 1024 && p <= 65535) || port === runtimePort) throw Error('TEST_PORT_INVALID');
+await fs.mkdir(path.dirname(file), { recursive: true });
+await fs.writeFile(file, `DESKTOP_BUSINESS_TEST_PORT=${port}\nDESKTOP_BUSINESS_TEST_RUNTIME_PORT=${runtimePort}\nDESKTOP_BUSINESS_TEST_DB_PASSWORD=${crypto.randomBytes(32).toString('hex')}\nDESKTOP_BUSINESS_TEST_OTP_HMAC_KEY=${crypto.randomBytes(32).toString('hex')}\n`, { flag: 'wx', mode: 0o600 });
+console.log(JSON.stringify({ prepared: true, configFile: file, publicOrigin: `http://127.0.0.1:${port}`, deployed: false }));

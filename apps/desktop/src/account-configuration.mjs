@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { localBusinessRuntime } from './runtime-policy.mjs';
 
 const fail = code => { throw Object.assign(new Error(code), { code }); };
 export function accountOrigin(value, environment = 'local-test') {
@@ -55,7 +56,7 @@ export async function bindIsolatedAccountProfile(directory, origin) { return bin
 export async function prepareDesktopAccountProfile(directory, origin, environment) { return prepareDesktopAccountProfileSync(directory, origin, environment); }
 
 export function desktopAccountLaunchOptions(args, root) {
-  const allowed = new Set(['--account-api', '--test-account-api', '--profile-root']);
+  const allowed = new Set(['--account-api', '--test-account-api', '--profile-root', '--test-runtime-origin']);
   const values = {};
   for (let i = 0; i < args.length; i += 2) {
     if (!allowed.has(args[i]) || !args[i + 1] || values[args[i]] !== undefined) fail('DESKTOP_LAUNCH_OPTIONS_INVALID');
@@ -64,9 +65,16 @@ export function desktopAccountLaunchOptions(args, root) {
   if (values['--account-api'] && values['--test-account-api']) fail('DESKTOP_LAUNCH_OPTIONS_INVALID');
   const accountEnvironment = values['--test-account-api'] ? 'isolated-test' : 'local-test';
   const accountApiOrigin = accountOrigin(values['--test-account-api'] || values['--account-api'], accountEnvironment);
+  let businessRuntime = null;
+  if (values['--test-runtime-origin']) {
+    let runtime; try { runtime = new URL(values['--test-runtime-origin']); } catch { fail('DESKTOP_RUNTIME_DENIED'); }
+    if (runtime.protocol !== 'http:' || runtime.hostname !== 'localhost' || runtime.username || runtime.password ||
+      runtime.pathname !== '/' || runtime.search || runtime.hash) fail('DESKTOP_RUNTIME_DENIED');
+    businessRuntime = localBusinessRuntime({ scheme: 'http', domain: 'localhost', port: Number(runtime.port) }, accountApiOrigin);
+  }
   const base = values['--profile-root'] ?? path.join(root, '.runtime/desktop-shell', accountEnvironment === 'isolated-test' ? 'profiles' : 'profile');
   if (!path.isAbsolute(base)) fail('DESKTOP_PROFILE_PATH_INVALID');
   return { accountApiOrigin, accountEnvironment,
     profileRoot: accountEnvironment === 'isolated-test' ? isolatedAccountProfile(base, accountApiOrigin) : base,
-    dedicatedConfig: Boolean(values['--profile-root'] || accountEnvironment === 'isolated-test') };
+    dedicatedConfig: Boolean(values['--profile-root'] || accountEnvironment === 'isolated-test'), ...(businessRuntime ? { businessRuntime } : {}) };
 }

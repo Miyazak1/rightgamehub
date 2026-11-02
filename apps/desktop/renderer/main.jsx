@@ -6,12 +6,14 @@ import { createPreviewApi } from './preview-api.mjs';
 import './preview.css';
 import { DesktopLeading, DesktopActions } from './DesktopChrome.jsx';
 import { createDesktopAccountAdapter } from './account-adapter.mjs';
+import { createDesktopBusinessApi } from './business-api.mjs';
 
 const browser = createBrowserHostAdapter({ host: 'desktop-app', surface: 'desktop-window' });
 const env = await globalThis.mooyuDesktop.environment();
-const previewApi = createPreviewApi({ fixtureOrigin: env.fixtureOrigin });
+const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooyuDesktop.account, env.accountApiOrigin)
+  : createPreviewApi({ fixtureOrigin: env.fixtureOrigin });
 const session = env.accountConfigured ? createDesktopAccountAdapter(globalThis.mooyuDesktop.account) : null;
-const api = session ? new Proxy(previewApi, { get(target, key) { return Object.hasOwn(session.api, key) ? session.api[key] : target[key]; } }) : previewApi;
+const api = session ? new Proxy(baseApi, { get(target, key) { return Object.hasOwn(session.api, key) ? session.api[key] : target[key]; } }) : baseApi;
 const Actions = props => <DesktopActions {...props} environment={env}/>;
 const host = { ...browser, ...(session ? { account: session.account, navigation: session.navigation } : {}), chrome: { Leading: DesktopLeading, Actions }, apiBaseUrl: env.fixtureOrigin, runtimeDomain: 'localhost', async getCapabilities() {
   const capabilities = await browser.getCapabilities();

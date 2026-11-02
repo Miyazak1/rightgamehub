@@ -1,4 +1,5 @@
 import AgentDisclosure from './AgentDisclosure.jsx';
+import {apiLoadError} from './api-load-error.mjs';
 import {COMMUNITY_ENABLED,visiblePlatformRoute} from './community-availability.mjs';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -279,7 +280,7 @@ function DetailPage({ workId, api, host, hostKind, demo, go, accountProfile, boa
   const [timeline,setTimeline]=useState([]);
   const [library, setLibrary] = useState(null); const [libraryBusy, setLibraryBusy] = useState(false);
   const [reporting, setReporting] = useState(false); const [feedbackOpen, setFeedbackOpen] = useState(false); const [claimOpen, setClaimOpen] = useState(false); const [shareOpen,setShareOpen]=useState(false); const [claim, setClaim] = useState(null); const [nativeBusy, setNativeBusy] = useState(false); const [nativeMessage, setNativeMessage] = useState(''); const [nativeDownload, setNativeDownload] = useState({ phase: 'idle', percent: 0 });
-  useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.find(w => w.id === workId) : (await api.getWork(workId)).data; if (live) setState(data ? { status: 'ready', data } : { status: 'missing' }); } catch { if (live) setState({ status: 'error' }); } })(); return () => { live = false; }; }, [workId, demo]);
+  useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.find(w => w.id === workId) : (await api.getWork(workId)).data; if (live) setState(data ? { status: 'ready', data } : { status: 'missing' }); } catch (error) { if (live) setState({ status: 'error', error }); } })(); return () => { live = false; }; }, [workId, demo, api]);
   useEffect(() => { let live = true; if (demo) { setLibrary({ savedAt: null }); return undefined; } api.getLibraryState(workId).then(({ data }) => { if (live) setLibrary(data); }).catch(() => {}); return () => { live = false; }; }, [workId, demo, api]);
   useEffect(() => { let live=true; if(demo){setClaim({workId,ingestionMethod:'zip_upload',attributionKind:'community_catalog',eligible:true,status:'unclaimed'});return undefined;} api.getPublicProjectClaim(workId).then(({data})=>{if(live)setClaim(data);}).catch(()=>{if(live)setClaim(null);}); return()=>{live=false;}; },[workId,demo,api]);
   useEffect(()=>{let live=true;(demo?Promise.resolve({data:[]}):api.listWorkRemixes(workId)).then(({data})=>{if(live)setRemixes(data);}).catch(()=>{if(live)setRemixes([]);});return()=>{live=false;};},[workId,demo,api]);
@@ -300,7 +301,7 @@ function DetailPage({ workId, api, host, hostKind, demo, go, accountProfile, boa
     return () => { live = false; };
   }, [state.status, state.data, host]);
   if (state.status === 'loading') return <main className="page"><LoadingCards /></main>;
-  if (state.status !== 'ready') return <main className="page"><StatePanel title={t(state.status === 'missing' ? 'detail.missing' : 'detail.openFailed')} body={t('detail.otherWorks')} action={t('common.backDiscover')} onAction={() => go('/discover')} /></main>;
+  if (state.status !== 'ready') return <main className="page"><StatePanel title={t(state.status === 'missing' ? 'detail.missing' : 'detail.openFailed')} body={apiLoadError(state.error,t('detail.otherWorks'))} action={t('common.backDiscover')} onAction={() => go('/discover')} /></main>;
   const work = state.data; const builtIn = work.id === GUESS_BAIKE_WORK_ID; const web = builtIn ? { currentReleaseId: '' } : work.targets.find(x => x.targetKey === 'web' && x.currentReleaseId); const windows = builtIn ? null : work.targets.find(x => x.targetKey === 'windows-x64' && x.currentReleaseId);
   const managedWindows = Boolean(host?.desktop?.prepareRelease && host?.desktop?.launchRelease);
   const windowsDownloadUrl = windows ? api.releaseDownloadUrl(work.id, windows.currentReleaseId) : null;
@@ -1314,9 +1315,9 @@ function UploadPage(props) { return props.demo ? <DemoUploadPage {...props}/> : 
 function LibraryPage({ api, go, demo }) {
   const { t } = useI18n();
   const [state, setState] = useState({ status: 'loading', items: [] });
-  useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.slice(0,2).map((work,index) => ({ work, savedAt: index ? null : new Date().toISOString(), lastPlayedAt: new Date().toISOString(), playCount: 1 })) : (await api.listLibrary()).data; if (live) setState({ status: 'ready', items: data }); } catch (caught) { if (live) setState({ status: caught.status === 401 ? 'auth' : 'error', items: [] }); } })(); return () => { live = false; }; }, [api,demo]);
+  useEffect(() => { let live = true; (async () => { try { const data = demo ? demoWorks.slice(0,2).map((work,index) => ({ work, savedAt: index ? null : new Date().toISOString(), lastPlayedAt: new Date().toISOString(), playCount: 1 })) : (await api.listLibrary()).data; if (live) setState({ status: 'ready', items: data }); } catch (caught) { if (live) setState({ status: caught.status === 401 ? 'auth' : 'error', items: [], error: caught }); } })(); return () => { live = false; }; }, [api,demo]);
   const saved = state.items.filter(item => item.savedAt); const recent = state.items.filter(item => item.lastPlayedAt);
-  return <main className="page library-page"><div className="section-heading"><div><span className="kicker">YOUR SPACE</span><h1>{t('library.title')}</h1><p>{t('library.lead')}</p></div></div>{state.status === 'loading' ? <LoadingCards/> : state.status === 'auth' ? <StatePanel title={t('library.signInTitle')} body={t('library.signInLead')} action={t('library.signIn')} onAction={() => go('/account')}/> : state.status === 'error' ? <StatePanel title={t('library.failedTitle')} body={t('library.failedLead')}/> : !state.items.length ? <StatePanel title={t('library.emptyTitle')} body={t('library.emptyLead')} action={t('library.discover')} onAction={() => go('/discover')}/> : <>{!!saved.length && <section className="library-section"><h2>{t('library.saved')}</h2><div className="work-grid">{saved.map(item => <WorkCard key={item.workId} work={item.work} go={go}/>)}</div></section>}{!!recent.length && <section className="library-section"><h2>{t('library.recent')}</h2><div className="quiet-work-list">{recent.map(item => <QuietWorkRow key={item.workId} work={item.work} go={go}/>)}</div></section>}</>}</main>;
+  return <main className="page library-page"><div className="section-heading"><div><span className="kicker">YOUR SPACE</span><h1>{t('library.title')}</h1><p>{t('library.lead')}</p></div></div>{state.status === 'loading' ? <LoadingCards/> : state.status === 'auth' ? <StatePanel title={t('library.signInTitle')} body={t('library.signInLead')} action={t('library.signIn')} onAction={() => go('/account')}/> : state.status === 'error' ? <StatePanel title={t('library.failedTitle')} body={apiLoadError(state.error,t('library.failedLead'))}/> : !state.items.length ? <StatePanel title={t('library.emptyTitle')} body={t('library.emptyLead')} action={t('library.discover')} onAction={() => go('/discover')}/> : <>{!!saved.length && <section className="library-section"><h2>{t('library.saved')}</h2><div className="work-grid">{saved.map(item => <WorkCard key={item.workId} work={item.work} go={go}/>)}</div></section>}{!!recent.length && <section className="library-section"><h2>{t('library.recent')}</h2><div className="quiet-work-list">{recent.map(item => <QuietWorkRow key={item.workId} work={item.work} go={go}/>)}</div></section>}</>}</main>;
 }
 
 const profileLinkKinds = { github: 'profile.link.github', website: 'profile.link.website', portfolio: 'profile.link.portfolio', bilibili: 'profile.link.bilibili', other: 'profile.link.other' };
@@ -1368,7 +1369,7 @@ function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
       const articles=demo?[]:await api.listBlogArticles({author:profile.handle,limit:20}).then(response=>response.data.items).catch(()=>[]);
       setState({ status: 'ready', profile, articles });
       setDraft(profileDraft(profile));
-    } catch (caught) { setState({ status: caught.status === 404 ? 'missing' : 'error', profile: null, articles: [] }); }
+    } catch (caught) { setState({ status: caught.status === 404 && !['DESKTOP_AUTH_TEST_ROUTE_DISABLED','DESKTOP_BUSINESS_ACCOUNT_ONLY'].includes(caught.code) ? 'missing' : 'error', profile: null, articles: [], error: caught }); }
   };
   useEffect(() => { load(); }, [handle, api, demo]);
   useEffect(() => { globalThis.scrollTo?.({ top: 0, behavior: 'smooth' }); }, [editing]);
@@ -1414,7 +1415,7 @@ function PublicProfilePage({ handle, api, demo, go, onProfileChange }) {
   const toggleGitHubRepository = repositoryId => setDraft(current => ({ ...current, githubRepositoryIds: current.githubRepositoryIds.includes(repositoryId) ? current.githubRepositoryIds.filter(id => id !== repositoryId) : current.githubRepositoryIds.length < 6 ? [...current.githubRepositoryIds, repositoryId] : current.githubRepositoryIds }));
   if (state.status === 'loading') return <main className="page public-profile-page"><LoadingCards/></main>;
   if (state.status === 'missing') return <main className="page"><StatePanel title={t('profile.missing')} body={t('profile.missingLead')} action={t('common.backDiscover')} onAction={() => go('/discover')}/></main>;
-  if (state.status === 'error') return <main className="page"><StatePanel title={t('profile.loadFailed')} body={t('profile.loadFailedLead')} action={t('common.retry')} onAction={load}/></main>;
+  if (state.status === 'error') return <main className="page"><StatePanel title={t('profile.loadFailed')} body={apiLoadError(state.error,t('profile.loadFailedLead'))} action={t('common.retry')} onAction={load}/></main>;
   const profile = state.profile; const featuredIds = new Set(profile.featuredWorks.map(work => work.id)); const remaining = profile.works.filter(work => !featuredIds.has(work.id));
   return <main className={`page public-profile-page ${editing ? 'is-editing' : 'is-viewing'}`}>
     <button className="back-link" onClick={() => go('/discover')}>{icons.back} {t('common.backDiscover')}</button>
@@ -1984,7 +1985,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (route === '/tools/change-radar') content = <LegacyChangeRadarRedirect go={go}/>;
   else if (route === '/tools') content = <ToolsPage go={go}/>;
   else if (parts[0] === 'tools' && parts[1]) content = <OfficialToolHost toolId={parts[1]} go={go} api={api} accountProfile={accountProfile}/>;
-  else if (route === '/library') content = <LibraryPage api={api} go={go} demo={demo}/>;
+  else if (route === '/library') content = <LibraryPage key={accountProfile?.id ?? 'anonymous'} api={api} go={go} demo={demo}/>;
   else if (route === '/games/guess-baike/community') content = <DetailPage workId={GUESS_BAIKE_WORK_ID} api={api} host={host} hostKind={hostReady ? hostIdentity.id : null} demo={demo} go={go} accountProfile={accountProfile} focusBoard/>;
   else if (parts[0] === 'community' && parts[1] === 'projects' && parts[2] === 'tasks') content = <CommunityShell route={route} go={go}><ContributionCenterPage api={api} go={go} demo={demo} accountProfile={accountProfile} AvatarView={AvatarView} taskId={parts[3]} embedded/></CommunityShell>;
   else if (parts[0] === 'community' && parts[1] === 'projects') content = <CommunityShell route={route} go={go}><CommunityProjects api={api} go={go} demo={demo} accountProfile={accountProfile} AvatarView={AvatarView} projectId={parts[2]&&parts[2]!=='new'?parts[2]:null} startCreating={parts[2]==='new'}/></CommunityShell>;

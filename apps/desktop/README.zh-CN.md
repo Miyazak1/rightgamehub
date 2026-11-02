@@ -90,3 +90,7 @@ node scripts/verify-desktop-clean.mjs
 脚本从 HEAD 导出独立源码目录，仅叠加 scripts/desktop-auth-scope.json 中的候选文件，复用本机已安装的第三方依赖并将工作区依赖重新指向独立目录。先检查候选功能清单，再运行账号、HTTPS、网关与窗口回归并构建共享桌面界面；不带入未提交论文实现，不执行 Docker、真实授权、模型调用或部署。最新报告索引为 `.runtime/desktop-auth-clean/latest.json`。
 
 本轮 P2 修复新增 Caddy 运行日志过滤与专用 Redis readiness；正式 Redis store 保持原状。相关回归共 70 项，隔离 Docker 的 15 项检查覆盖 Redis 停止/恢复/关闭、回调连接失败与响应头超时、日志脱敏和原始参数转发。公网证书签发、真实 GitHub App 与发行安装包仍未验收。
+
+## 业务 API 接入（本地验证）
+
+联网模式现已将已支持的业务请求交给同一账号服务器，不再回退到本地样本。发现、日志、课件、主页及游戏库的范围、安全边界和验收命令见 [业务 API 接入](../../docs/mooyu-desktop-business-api.zh-CN.md)。现有远程账号测试实例仍只提供账号接口，本轮没有部署业务服务器，也没有连接生产环境。

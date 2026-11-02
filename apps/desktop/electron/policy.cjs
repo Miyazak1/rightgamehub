@@ -10,12 +10,13 @@ const matches = (value, origin) => {
 const ui = value => matches(value, UI);
 const csp = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const gameCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
-function allowedRequest({ url, resourceType }, fixtureOrigin = null) {
-  if (ui(url) || fixtureOrigin && matches(url, fixtureOrigin)) return true;
+function allowedRequest({ url, resourceType }, fixtureOrigin = null, runtimeOrigins = new Set()) {
+  if (ui(url) || fixtureOrigin && matches(url, fixtureOrigin) || [...runtimeOrigins].some(origin => matches(url, origin))) return true;
   return ['image', 'font', 'media'].includes(resourceType) && (/^data:/u.test(url) || url.startsWith('blob:' + UI + '/'));
 }
-async function assetResponse(request, root, origin, spa, fixtureOrigin = null) {
-  const headers = { 'Content-Security-Policy': spa ? (fixtureOrigin ? csp.replace("frame-src 'none'", 'frame-src ' + fixtureOrigin) : csp) : gameCsp, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' };
+async function assetResponse(request, root, origin, spa, fixtureOrigin = null, runtimeSource = null) {
+  const frames = [fixtureOrigin, runtimeSource].filter(Boolean).join(' ');
+  const headers = { 'Content-Security-Policy': spa ? (frames ? csp.replace("frame-src 'none'", 'frame-src ' + frames) : csp) : gameCsp, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' };
   if (!matches(request.url, origin)) return new Response('Origin denied', { status: 403, headers });
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method denied', { status: 405, headers });
   const url = new URL(request.url);

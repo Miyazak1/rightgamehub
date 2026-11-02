@@ -5,6 +5,7 @@ const http = require('node:http');
 const { app, BrowserWindow, session, protocol, ipcMain, screen, dialog, shell: systemShell } = require('electron');
 const policy = require('./policy.cjs');
 const { accountOrigin, prepareDesktopAccountProfileSync } = require('../src/account-configuration.mjs');
+const { localBusinessRuntime } = require('../src/runtime-policy.mjs');
 const { restoredWindowState, createWindowStateStore, titleBarPalette, validateAction, windowShortcut } = require('./window-state.cjs');
 protocol.registerSchemesAsPrivileged(['mooyu-app'].map(scheme => ({ scheme,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
@@ -13,6 +14,8 @@ async function createShell(config) {
   if (!path.isAbsolute(config.assetRoot ?? '') || !path.isAbsolute(config.profileRoot ?? '')) throw Error('DESKTOP_CONFIG_INVALID');
   const accountEnvironment = config.accountEnvironment ?? 'local-test';
   const accountApiOrigin = accountOrigin(config.accountApiOrigin, accountEnvironment);
+  const businessRuntime = localBusinessRuntime(config.businessRuntime, accountApiOrigin);
+  const runtimeOrigins = new Set();
   prepareDesktopAccountProfileSync(config.profileRoot, accountApiOrigin, accountEnvironment);
   fsSync.accessSync(path.join(config.assetRoot, 'index.html'));
   const assetRoot = fsSync.realpathSync(config.assetRoot);
@@ -42,7 +45,7 @@ async function createShell(config) {
   app.once('before-quit', () => { fixture.close(); fixture.closeAllConnections?.(); });
   const blocked = [];
   ses.webRequest.onBeforeRequest((details, done) => {
-    const allowed = policy.allowedRequest(details, fixtureOrigin);
+    const allowed = policy.allowedRequest(details, fixtureOrigin, runtimeOrigins);
     if (!allowed && blocked.length < 100) blocked.push({ scheme: String(details.url).split(':')[0], resourceType: details.resourceType });
     done({ cancel: !allowed });
   });
@@ -50,7 +53,15 @@ async function createShell(config) {
   ses.setPermissionCheckHandler(() => false);
   ses.on('will-download', event => event.preventDefault());
   ses.protocol.handle('mooyu-app', async request => {
-    try { return await policy.assetResponse(request, assetRoot, policy.UI, true, fixtureOrigin); }
+    if (new URL(request.url).pathname === '/__desktop-media') {
+      if (!policy.ui(request.url) || !['GET', 'HEAD'].includes(request.method) || !accountSession) return new Response('Denied', { status: 403 });
+      try {
+        const response = await accountSession.media(new URL(request.url).searchParams.get('path'));
+        return request.method === 'HEAD' ? new Response(null, { headers: response.headers }) : response;
+      } catch { return new Response('Image unavailable', { status: 404 }); }
+    }
+    try { return await policy.assetResponse(request, assetRoot, policy.UI, true, fixtureOrigin,
+      businessRuntime ? `http://*.localhost:${businessRuntime.port}` : null); }
     catch (error) { process.stderr.write('DESKTOP_PROTOCOL_FAILED ' + error.name + ': ' + error.message + '\n'); return new Response('Protocol failed', { status: 500 }); }
   });
   let window;
@@ -66,6 +77,7 @@ async function createShell(config) {
     const { createDesktopAccountSession } = await import('../src/account-session.mjs');
     const { createWindowsDpapiCredentialVault } = await import('../../capability-executor/src/credential-vault.mjs');
     accountSession = await createDesktopAccountSession({ apiOrigin: accountApiOrigin, environment: accountEnvironment,
+      businessRuntime, onRuntimeOrigin: origin => runtimeOrigins.add(origin),
       openExternal: url => systemShell.openExternal(url, {activate:true}),
       vault: createWindowsDpapiCredentialVault({ directory: path.join(config.profileRoot, 'account-vault') }),
       onChanged: value => { if (window && !window.isDestroyed()) window.webContents.send('mooyu:account-state', value); } });
@@ -114,7 +126,7 @@ async function createShell(config) {
     window.webContents.on('will-attach-webview', event => event.preventDefault());
     window.webContents.on('will-navigate', event => { if (!policy.ui(event.url)) event.preventDefault(); });
     window.webContents.on('will-frame-navigate', event => {
-      if (event.isMainFrame ? !policy.ui(event.url) : !policy.matches(event.url, fixtureOrigin)) event.preventDefault();
+      if (event.isMainFrame ? !policy.ui(event.url) : !policy.matches(event.url, fixtureOrigin) && ![...runtimeOrigins].some(origin => policy.matches(event.url, origin))) event.preventDefault();
     });
     await window.loadURL(policy.UI + route);
     trace('window-loaded');
@@ -136,7 +148,11 @@ async function createShell(config) {
       return { ok: true, value: await accountSession.call(method, args) };
     } catch (error) {
       const code = /^[A-Z][A-Z0-9_]{2,100}$/.test(error.code ?? '') ? error.code : 'DESKTOP_ACCOUNT_FAILED';
-      return { ok: false, error: { code, status: Number.isInteger(error.status) ? error.status : 503, message: `账号请求未完成（${code}）。` } };
+      const message = code === 'DESKTOP_BUSINESS_ACCOUNT_ONLY' ? '当前测试服务器仅开放账号接口，尚未开放业务内容；不是网络故障。'
+        : code === 'DESKTOP_RUNTIME_NOT_CONFIGURED' ? '当前桌面测试会话尚未配置游戏运行服务。'
+        : code === 'DESKTOP_RUNTIME_DENIED' ? '游戏运行地址未通过当前测试环境的校验。'
+        : `请求未完成（${code}）。`;
+      return { ok: false, error: { code, status: Number.isInteger(error.status) ? error.status : 503, message } };
     }
   });
   ipcMain.handle('mooyu:chrome-state-get', event => { trusted(event); return state(); });

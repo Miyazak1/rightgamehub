@@ -4,7 +4,7 @@ import { createAuthService, AuthError } from '../../apps/api/src/auth-service.mj
 
 // In-memory repository + mail capture. Uses the product authentication service;
 // no database, SMTP, real account, production config or external credentials.
-export async function createIsolatedAccountApi({ onMail = () => {}, onGitHubChallenge = () => {}, onBrowserVisit = () => {}, automaticOAuth = false } = {}) {
+export async function createIsolatedAccountApi({ onMail = () => {}, onGitHubChallenge = () => {}, onBrowserVisit = () => {}, automaticOAuth = false, handleBusinessRequest = async () => false } = {}) {
   const profile = { id: '31e033b2-13d6-4b81-b214-21b3f25dca60', displayName: '桌面隔离测试用户',
     role: 'user', canPublish: false, createdAt: '2026-11-01T00:00:00Z', profileHandle: null,
     avatar: { kind: 'preset', presetKey: 'cat' }, linkedAccounts: [] };
@@ -83,6 +83,7 @@ export async function createIsolatedAccountApi({ onMail = () => {}, onGitHubChal
     try {
       if (offline) throw new AuthError('TEST_OFFLINE', 503, 'Local fixture offline');
       if (redirect) { redirect = false; res.writeHead(302, { Location: 'http://127.0.0.1:9/redirect-denied' }); res.end(); return; }
+      if (await handleBusinessRequest(req, res, url, () => auth.authenticateBearer(req.headers.authorization))) return;
       if(req.method==='GET' && url.pathname==='/__github/authorize') {
         const state=url.searchParams.get('state')||'', c=webChallenges.get(state.split('.')[0]);
         if(!c || !equal(c.stateHash,crypto.createHash('sha256').update(state).digest()))throw new AuthError('GITHUB_STATE_INVALID',400,'Invalid fixture state');

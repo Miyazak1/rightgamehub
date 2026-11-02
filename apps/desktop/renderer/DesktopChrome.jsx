@@ -63,7 +63,7 @@ export function DesktopActions({ go, route, environment }) {
     </div>
     <dialog ref={info} className="desktop-info" onClick={event => { if (event.target === info.current) info.current.close(); }}>
       <h2>{en ? 'MOOYU desktop preview' : '墨鱼工坊桌面开发预览'}</h2>
-      <p>{remoteTest ? (en ? 'Account is configured for an isolated HTTPS test API. Other pages still use local samples; publishing and background execution are not connected.' : '账号配置为独立 HTTPS 测试 API。其他页面仍使用本地样本，发布与后台执行尚未接通。') : accountTest ? (en ? 'Account uses a local isolated test API. Other pages still use local samples; publishing and background execution are not connected.' : '账号连接本地隔离测试 API。其他页面仍使用本地样本，发布与后台执行尚未接通。') : (en ? 'Local samples only. Account, server features, publishing and background execution are not connected.' : '当前只使用本地样本。账号、服务器业务、发布与后台执行尚未接通。')}</p>
+      <p>{accountTest ? (en ? 'Account and supported business pages use the same test API. Server content never falls back to local samples. Account-only servers cannot provide business content. Publishing and background execution are not connected.' : '账号与已接通的业务页面使用同一测试 API，服务器内容不会回退到本地样本。仅开放账号接口的服务器无法提供业务内容。发布与后台执行尚未接通。') : (en ? 'Local samples only. Account, server features, publishing and background execution are not connected.' : '当前只使用本地样本。账号、服务器业务、发布与后台执行尚未接通。')}</p>
       {remoteTest && <p data-desktop-test-origin>{environment.accountApiOrigin}</p>}
       <p>{en ? 'Closing this window exits the preview. Window size and position are restored next time. Local documents follow each tool’s existing save rules.' : '关闭窗口会退出预览，窗口尺寸和位置将在下次启动时恢复。本地文档仍按各工具已有的保存规则处理。'}</p>
       <button className="button button--primary" autoFocus onClick={() => info.current.close()}>{en ? 'Done' : '知道了'}</button>

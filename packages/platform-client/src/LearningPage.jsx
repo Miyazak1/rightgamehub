@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from 'react';
 import {demoWorks} from './demo.mjs';
 import {useI18n} from './I18n.jsx';
 import {builtInLearningItems,learningCategories,learningSubjects} from './learning-catalog.mjs';
+import {apiLoadError} from './api-load-error.mjs';
 
 const playable=work=>work.targets?.some(target=>target.targetKey==='web'&&target.currentReleaseId);
 const action=work=>playable(work)?`/play/${work.id}`:`/works/${work.id}`;
@@ -63,7 +64,7 @@ export default function LearningPage({api,demo,go,Art}){
     const controller=new AbortController();
     setState({status:'loading',items:[]});
     const request=demo?Promise.resolve({data:demoWorks.filter(work=>work.kind==='courseware')}):api.listWorks({kind:'courseware',limit:50},{signal:controller.signal});
-    request.then(({data})=>{if(!controller.signal.aborted)setState({status:'ready',items:data.map(normalizeWork)});}).catch(()=>{if(!controller.signal.aborted)setState({status:'error',items:[]});});
+    request.then(({data})=>{if(!controller.signal.aborted)setState({status:'ready',items:data.map(normalizeWork)});}).catch(error=>{if(!controller.signal.aborted)setState({status:'error',items:[],error});});
     return()=>controller.abort();
   },[api,demo,retry]);
   const allItems=useMemo(()=>[...builtInLearningItems,...state.items.filter(item=>!builtInLearningItems.some(builtIn=>builtIn.id===item.id))],[state.items]);
@@ -93,7 +94,7 @@ export default function LearningPage({api,demo,go,Art}){
     <section className="learning-catalog" aria-labelledby="learning-catalog-title">
       <div className="learning-catalog__head"><div><span className="learning-kicker">{category==='simulations'?'SIMULATION LIBRARY':'LEARNING LIBRARY'}</span><h2 id="learning-catalog-title">{localized(currentCategory.title,locale)}</h2><p>{localized(currentCategory.description,locale)}</p></div><label><span className="sr-only">{t('learning.searchLabel')}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('learning.searchPlaceholder')}/></label></div>
       {category==='simulations'&&<div className="learning-subjects" role="group" aria-label={t('learning.subjectsAria')}>{learningSubjects.map(item=><button key={item.id} type="button" aria-pressed={subject===item.id} onClick={()=>setSubject(item.id)}>{localized(item.label,locale)}</button>)}</div>}
-      {state.status==='error'&&category==='simulations'&&<div className="learning-catalog__notice" role="status"><span>{t('learning.communityFailed')}</span><button onClick={()=>setRetry(value=>value+1)}>{t('common.retry')}</button></div>}
+      {state.status==='error'&&category==='simulations'&&<div className="learning-catalog__notice" role="status"><span>{apiLoadError(state.error,t('learning.communityFailed'),locale)}</span><button onClick={()=>setRetry(value=>value+1)}>{t('common.retry')}</button></div>}
       {items.length?<div className="learning-grid">{items.map(item=><LearningCard key={item.id} item={item} go={go} Art={Art} locale={locale}/>)}</div>:<div className="learning-state"><span aria-hidden="true">{currentCategory.icon}</span><h3>{t(query?'learning.noMatch':'learning.categoryEmpty')}</h3><p>{t(query?'learning.noMatchLead':'learning.categoryEmptyLead')}</p>{query&&<button onClick={()=>setQuery('')}>{t('learning.clear')}</button>}</div>}
     </section>
   </main>;

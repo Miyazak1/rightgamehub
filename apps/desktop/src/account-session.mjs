@@ -1,9 +1,21 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createApiClient, ApiError } from '../../../packages/platform-api-client/src/index.mjs';
 import { resolveAuthClientKind } from '../../../packages/platform-client/src/auth-client-kind.mjs';
 import { accountOrigin } from './account-configuration.mjs';
+import { businessArguments, businessMediaPath, rewriteBusinessMedia } from './business-contract.mjs';
+import { localBusinessRuntime, validateDesktopLaunch } from './runtime-policy.mjs';
+import { createBusinessRequests } from './business-requests.mjs';
 
 const fail = (code, status = 400) => { throw new ApiError({ code, status, message: code, retryable: status >= 500 }); };
+const abortable = (work, signal) => new Promise((resolve, reject) => {
+  const stop = () => reject(signal.reason);
+  signal.addEventListener('abort', stop, { once: true });
+  Promise.resolve().then(() => { signal.throwIfAborted(); return work(); }).then(
+    value => { signal.removeEventListener('abort', stop); resolve(value); },
+    error => { signal.removeEventListener('abort', stop); reject(error); });
+  if (signal.aborted) stop();
+});
 export function localAccountOrigin(value) {
   return accountOrigin(value, 'local-test');
 }
@@ -21,12 +33,16 @@ export function validateGitHubAuthorizeUrl(value, challengeId, origin) {
   return url.href;
 }
 
-export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
+export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
   const origin = accountOrigin(apiOrigin, environment);
+  const runtimePolicy = localBusinessRuntime(businessRuntime, origin);
   if (!origin) fail('DESKTOP_ACCOUNT_NOT_CONFIGURED', 503);
   if (environment === 'isolated-test' && process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') fail('DESKTOP_ACCOUNT_TLS_REQUIRED');
   const key = 'desktop-shell-account:' + createHash('sha256').update(origin).digest('hex');
   let tokens = null, sessionId = null, vaultError = null, tail = Promise.resolve();
+  const operation = new AsyncLocalStorage();
+  let epoch = 0, sessionAbort = new AbortController(), vaultTail = Promise.resolve(), refreshTail = Promise.resolve(), businessRequests;
+  const current = () => !operation.getStore() || operation.getStore().epoch === epoch;
   let githubAttempt = null, githubGrant = null, githubGeneration = 0;
   const cancelledGrants = [];
   const cancelGitHub = () => {
@@ -45,23 +61,46 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
   } catch { vaultError = 'DESKTOP_ACCOUNT_VAULT_UNAVAILABLE'; }
   const persist = async value => {
     if (!validTokens(value)) fail('DESKTOP_ACCOUNT_RESPONSE_INVALID', 502);
-    await vault.store(key, JSON.stringify({ origin, tokens: value })); tokens = value; vaultError = null;
+    const expected = operation.getStore()?.epoch ?? epoch;
+    const write = vaultTail.then(async () => {
+      if (expected !== epoch) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+      await vault.store(key, JSON.stringify({ origin, tokens: value }));
+      if (expected !== epoch) { await vault.remove(key); fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409); }
+      tokens = value; vaultError = null;
+    });
+    vaultTail = write.catch(() => {}); return write;
   };
   const clear = async () => {
+    if (!current()) return;
+    epoch++; sessionAbort.abort(Object.assign(new Error('Session changed'), { code: 'DESKTOP_ACCOUNT_SESSION_CHANGED', status: 409 }));
+    sessionAbort = new AbortController(); businessRequests?.abortAll(operation.getStore()?.requestId);
     tokens = null; sessionId = null;
-    try { await vault.remove(key); } finally { onChanged(state()); }
+    refreshTail = Promise.resolve();
+    api = makeApi(); // A new login must not join the retired client's refresh.
+    onChanged(state());
+    const remove = vaultTail.then(() => vault.remove(key));
+    vaultTail = remove.catch(() => {}); return remove;
   };
   let verifiedInstance = false;
   const transport = async (url, options = {}) => {
     const target = new URL(url);
     if (target.origin !== origin || target.username || target.password || !target.pathname.startsWith('/v1/')) fail('DESKTOP_ACCOUNT_ORIGIN_DENIED');
-    const send = (address, settings) => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit',
-      signal: settings?.signal ? AbortSignal.any([settings.signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000) });
+    if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+    const context = operation.getStore();
+    const send = (address, settings) => {
+      // Refresh is shared by concurrent private reads. Cancelling one page must
+      // not cancel another page's refresh; logout still cancels the session.
+      const refresh = new URL(address).pathname === '/v1/auth/refresh';
+      const signals = refresh ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
+      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : 20000), ...signals.filter(Boolean)]);
+      return abortable(() => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit', signal }), signal);
+    };
     if (environment === 'isolated-test' && !verifiedInstance) {
       const response = await send(origin + '/ready-desktop-auth', { method: 'GET' });
       if (!response.ok || response.redirected) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
       let data; try { data = (await response.json()).data; } catch { fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503); }
-      if (data?.status !== 'ready' || data.instance !== 'isolated-auth-only' || data.backgroundTasksEnabled !== false ||
+      if (data?.status !== 'ready' || !['isolated-auth-only', 'isolated-business'].includes(data.instance) || data.backgroundTasksEnabled !== false ||
+          data.instance === 'isolated-business' && (data.publishingEnabled !== false || data.modelCallsEnabled !== false) ||
           data.database !== true || data.redis !== true || data.migrations?.ready !== true) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
       verifiedInstance = true;
     }
@@ -69,8 +108,13 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     if (response.redirected || response.status >= 300 && response.status < 400) fail('DESKTOP_ACCOUNT_REDIRECT_DENIED', 502);
     return response;
   };
-  const api = createApiClient({ baseUrl: origin, fetchImpl: transport,
-    getAccessToken: () => tokens?.accessToken, getRefreshToken: () => tokens?.refreshToken, setTokens: persist });
+  const withCredentialRefresh = callback => {
+    const result = refreshTail.then(() => { if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409); return callback(); });
+    refreshTail = result.catch(() => {}); return result;
+  };
+  const makeApi = () => createApiClient({ baseUrl: origin, fetchImpl: transport, withRefreshLock: withCredentialRefresh,
+    getAccessToken: () => current() ? tokens?.accessToken : null, getRefreshToken: () => current() ? tokens?.refreshToken : null, setTokens: persist });
+  let api = makeApi();
   const marker = () => ({ desktopSessionId: sessionId });
   const revokeGitHubTokens = async value => {
     try { await createApiClient({baseUrl:origin,fetchImpl:transport,getAccessToken:()=>value.accessToken}).logout(); } catch {}
@@ -79,6 +123,25 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
   const text = (value, max) => { if (typeof value !== 'string' || !value.length || value.length>max) fail('DESKTOP_ACCOUNT_INPUT_INVALID'); return value; };
   async function dispatch(method, args, generation) {
     if (method === 'state') return state();
+    if (method === 'business') {
+      const request = object(args[0]);
+      const values = businessArguments(request.method, request.args);
+      if (request.method === 'getLaunch' && !runtimePolicy) fail('DESKTOP_RUNTIME_NOT_CONFIGURED', 503);
+      try {
+        const signal = operation.getStore()?.signal;
+        // Transport applies the page signal to ordinary I/O. Do not give it to
+        // the client's shared refresh promise, which belongs to the session.
+        const response = await api[request.method](...values);
+        signal?.throwIfAborted();
+        if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+        if (request.method === 'getLaunch') onRuntimeOrigin(validateDesktopLaunch(response.data, runtimePolicy, ...values));
+        return rewriteBusinessMedia(response, origin);
+      }
+      catch (error) {
+        if (error.code === 'DESKTOP_AUTH_TEST_ROUTE_DISABLED') fail('DESKTOP_BUSINESS_ACCOUNT_ONLY', 503);
+        throw error;
+      }
+    }
     if (method === 'cancelGitHub') return { cancelled: true };
     if (method === 'openGitHub') {
       if (!githubAttempt || githubAttempt.generation !== generation || Date.now()>=githubAttempt.expiresAt
@@ -141,11 +204,13 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       return { data: marker() };
     }
     if (method === 'bootstrapSession') {
-      if (!tokens) return { data: { authenticated: false, profile: null } };
-      const result = await api.bootstrapSession(tokens.refreshToken);
-      if (!result.data?.authenticated || !result.data.profile) { await clear(); return { data: { authenticated: false, profile: null } }; }
-      if (result.data.tokens) await persist(result.data.tokens);
-      return { data: { authenticated: true, profile: result.data.profile, tokens: marker() } };
+      return withCredentialRefresh(async () => {
+        if (!tokens) return { data: { authenticated: false, profile: null } };
+        const result = await api.bootstrapSession(tokens.refreshToken);
+        if (!result.data?.authenticated || !result.data.profile) { await clear(); return { data: { authenticated: false, profile: null } }; }
+        if (result.data.tokens) await persist(result.data.tokens);
+        return { data: { authenticated: true, profile: result.data.profile, tokens: marker() } };
+      });
     }
     if (!tokens) fail('AUTH_REQUIRED', 401);
     if (method === 'logout' || method === 'logoutAll') {
@@ -156,23 +221,95 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     if (method === 'revokeDevice') return api.revokeDevice(text(args[0], 100));
     return api[method]();
   }
+  businessRequests = createBusinessRequests({ timeoutMs: businessTimeoutMs, concurrency: businessConcurrency,
+    run: item => operation.run({ epoch: item.epoch, requestId: item.id, signal: item.controller.signal, sessionSignal: item.sessionSignal }, async () => {
+      if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+      try { return await dispatch('business', [item.request]); }
+      catch (error) { if (error.status === 401 && tokens && current() && !item.controller.signal.aborted) await clear(); throw error; }
+    }) });
+  const exitSession = async method => {
+    const retiring = tokens;
+    const abandoned = cancelledGrants.splice(0);
+    const removed = clear();
+    const expected = epoch, signal = sessionAbort.signal;
+    const finish = async () => {
+      await removed;
+      await Promise.all(abandoned.map(revokeGitHubTokens));
+      if (method === 'clear' || !retiring) return state();
+      // Revoke only the retiring grant. Late results never write the vault or
+      // use a newer login's tokens. New auth mutations wait for this barrier.
+      return operation.run({ epoch: expected, sessionSignal: signal }, async () => {
+        let revokedTokens = retiring;
+        const revoker = createApiClient({ baseUrl: origin, fetchImpl: transport,
+          getAccessToken: () => revokedTokens.accessToken, getRefreshToken: () => revokedTokens.refreshToken,
+          setTokens: value => { revokedTokens = value; } });
+        return revoker[method]();
+      });
+    };
+    const result = finish();
+    tail = Promise.allSettled([tail, result]).then(() => {});
+    return result;
+  };
   return {
     state,
-    // Serialize auth mutations and refreshes. A queued logout wins over in-flight login/refresh.
+    async media(value) {
+      const pathname = businessMediaPath(value, origin);
+      if (!pathname) fail('DESKTOP_MEDIA_DENIED', 403);
+      const response = await transport(origin + pathname, { method: 'GET' });
+      const type = response.headers.get('content-type')?.split(';')[0];
+      if (!response.ok || !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(type)) fail('DESKTOP_MEDIA_UNAVAILABLE', 404);
+      const reader = response.body.getReader(), chunks = []; let size = 0;
+      try {
+        for (;;) { const { done, value: chunk } = await reader.read(); if (done) break;
+          size += chunk.length; if (size > 8 * 1024 * 1024) fail('DESKTOP_MEDIA_TOO_LARGE', 413); chunks.push(chunk); }
+      } finally { await reader.cancel().catch(() => {}); }
+      return new Response(Buffer.concat(chunks), { headers: { 'Content-Type': type,
+        'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' } });
+    },
+    // Auth mutations stay ordered. Business work has a bounded, cancellable
+    // queue; state/cancellation/local sign-out never wait behind business I/O.
     call(method, args = []) {
       if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>4096) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
       if (['startGitHubWeb','cancelGitHub','createChallenge','verifyChallenge','clear','logout','logoutAll'].includes(method)) cancelGitHub();
+      if (method === 'state') return Promise.resolve(state());
+      if (method === 'cancelGitHub') return Promise.all(cancelledGrants.splice(0).map(revokeGitHubTokens)).then(() => ({ cancelled: true }));
+      if (method === 'cancelBusiness') {
+        try { return Promise.resolve(businessRequests.cancel(args[0])); } catch (error) { return Promise.reject(error); }
+      }
+      if (method === 'business') {
+        try { const request = object(args[0]); businessArguments(request.method, request.args);
+          return businessRequests.submit(request, epoch, sessionAbort.signal); }
+        catch (error) { return Promise.reject(error); }
+      }
+      if (['clear', 'logout', 'logoutAll'].includes(method)) return exitSession(method);
       const generation=githubGeneration;
-      const run = tail.then(async () => {
+      const context = { epoch, signal: sessionAbort.signal, sessionSignal: sessionAbort.signal };
+      const run = tail.then(() => operation.run(context, async () => {
         try {
+          if (!current()) {
+            if (method === 'bootstrapSession') return { data: { authenticated: false, profile: null } };
+            fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+          }
+          // Reserve the login epoch after earlier auth/remote-revoke barriers,
+          // but before its own network/vault I/O. Retire anonymous page work.
+          if (!tokens && (method === 'verifyChallenge' || method === 'accept' && githubGrant?.id === args[0]?.desktopSessionId)) {
+            clear().catch(() => {});
+            context.epoch = epoch; context.signal = sessionAbort.signal; context.sessionSignal = sessionAbort.signal;
+          }
           while(cancelledGrants.length) await revokeGitHubTokens(cancelledGrants.shift());
-          return await dispatch(method, args, generation);
+          const result = method === 'bootstrapSession'
+            ? await abortable(() => dispatch(method, args, generation), context.signal)
+            : await dispatch(method, args, generation);
+          if (!current() && method === 'bootstrapSession') return { data: { authenticated: false, profile: null } };
+          if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
+          return result;
         }
         catch (error) {
           if (method==='pollGitHubWeb' && [400,401].includes(error.status) && generation===githubGeneration) cancelGitHub();
-          if (error.status === 401) await clear(); throw error;
+          if (!current() && method === 'bootstrapSession') return { data: { authenticated: false, profile: null } };
+          if (error.status === 401 && tokens && current()) await clear(); throw error;
         }
-      });
+      }));
       tail = run.catch(() => {}); return run;
     },
   };

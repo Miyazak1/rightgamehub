@@ -1,0 +1,85 @@
+name: mooyu-desktop-business-test
+x-business: &business
+  image: mooyu-desktop-business-test:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.api
+  environment:
+    DESKTOP_BUSINESS_TEST_INSTANCE: isolated-business
+    DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: http://127.0.0.1:${DESKTOP_BUSINESS_TEST_PORT:?Set loopback API port}
+    DESKTOP_BUSINESS_TEST_RUNTIME_PORT: ${DESKTOP_BUSINESS_TEST_RUNTIME_PORT:?Set loopback runtime port}
+    DATABASE_URL: postgresql://desktop_business_test:${DESKTOP_BUSINESS_TEST_DB_PASSWORD:?Generate isolated password}@business-postgres:5432/desktop_business_test
+    REDIS_URL: redis://business-redis:6379
+    OTP_HMAC_KEY: ${DESKTOP_BUSINESS_TEST_OTP_HMAC_KEY:?Generate isolated key}
+  # /data already belongs to the image's unprivileged node user. Mounting a
+  # previously absent nested path would create a root-owned empty volume.
+  volumes: [business-data:/data]
+  networks: [business-internal]
+services:
+  business-postgres:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_USER: desktop_business_test
+      POSTGRES_DB: desktop_business_test
+      POSTGRES_PASSWORD: ${DESKTOP_BUSINESS_TEST_DB_PASSWORD:?Generate isolated password}
+    volumes: [business-postgres-data:/var/lib/postgresql/data]
+    networks: [business-internal]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U desktop_business_test -d desktop_business_test']
+      interval: 2s
+      timeout: 3s
+      retries: 40
+  business-redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes: [business-redis-data:/data]
+    networks: [business-internal]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 40
+  business-migrate:
+    <<: *business
+    command: [node, apps/api/src/desktop-business-test-server.mjs, --migrate]
+    depends_on:
+      business-postgres: {condition: service_healthy}
+      business-redis: {condition: service_healthy}
+  business-seed:
+    <<: *business
+    command: [node, apps/api/src/desktop-business-test-server.mjs, --seed]
+    depends_on:
+      business-migrate: {condition: service_completed_successfully}
+  business-api:
+    <<: *business
+    command: [node, apps/api/src/desktop-business-test-server.mjs]
+    depends_on:
+      business-seed: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3090/ready-desktop-business').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 8s
+      retries: 40
+  business-gateway:
+    image: mooyu-desktop-business-test:local
+    command: [node, apps/api/src/desktop-business-test-gateway.mjs]
+    environment:
+      DESKTOP_BUSINESS_TEST_GATEWAY: loopback-fixed-upstream
+    networks: [business-internal, business-loopback]
+    ports:
+      - '127.0.0.1:${DESKTOP_BUSINESS_TEST_PORT}:3090'
+      - '127.0.0.1:${DESKTOP_BUSINESS_TEST_RUNTIME_PORT}:3092'
+    depends_on:
+      business-api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3090/ready-desktop-business').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+volumes:
+  business-data:
+  business-postgres-data:
+  business-redis-data:
+networks:
+  business-internal: {internal: true}
+  business-loopback:
