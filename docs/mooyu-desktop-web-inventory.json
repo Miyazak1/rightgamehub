@@ -7,8 +7,8 @@
     "Implemented source routes are not evidence of production availability, runtime permissions or successful desktop execution."
   ],
   "summary": {
-    "routeBranchCount": 43,
-    "sharedClientModuleCount": 99,
+    "routeBranchCount": 44,
+    "sharedClientModuleCount": 102,
     "referencedApiMethodCount": 346,
     "declaredApiMethodCandidateCount": 392,
     "communityEnabled": false,
@@ -23,7 +23,7 @@
   "routeBranches": [
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1954,
+      "line": 1956,
       "condition": "if (parts[0] === 'blog' && parts[1])",
       "components": [
         "BlogArticlePage"
@@ -32,7 +32,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1955,
+      "line": 1957,
       "condition": "else if (route === '/blog')",
       "components": [
         "BlogIndexPage"
@@ -41,7 +41,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1956,
+      "line": 1958,
       "condition": "else if (parts[0] === 'works' && parts[1])",
       "components": [
         "DetailPage"
@@ -50,7 +50,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1957,
+      "line": 1959,
       "condition": "else if (parts[0] === 'discover' && parts[1] === 'c' && parts[2])",
       "components": [
         "DiscoveryCampaignPage"
@@ -59,7 +59,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1958,
+      "line": 1960,
       "condition": "else if (parts[0] === 'u' && parts[1])",
       "components": [
         "PublicProfilePage"
@@ -68,7 +68,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1959,
+      "line": 1961,
       "condition": "else if (parts[0] === 's' && parts[1])",
       "components": [
         "GameSharePage",
@@ -78,7 +78,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1960,
+      "line": 1962,
       "condition": "else if (parts[0] === 'play' && parts[1])",
       "components": [
         "PlayerPage"
@@ -87,7 +87,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1961,
+      "line": 1963,
       "condition": "else if (['/saves','/creator/save-health','/admin/saves'].includes(route))",
       "components": [
         "StatePanel"
@@ -96,7 +96,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1962,
+      "line": 1964,
       "condition": "else if (route === '/account')",
       "components": [
         "AccountPage"
@@ -105,7 +105,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1964,
+      "line": 1966,
       "condition": "else if (route.startsWith('/creator/import'))",
       "components": [
         "GitHubImportPage"
@@ -114,7 +114,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1965,
+      "line": 1967,
       "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'edit')",
       "components": [
         "WorkEditPage"
@@ -123,7 +123,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1966,
+      "line": 1968,
       "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'development')",
       "components": [
         "DevelopmentLogPage"
@@ -132,7 +132,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1967,
+      "line": 1969,
       "condition": "else if (route === '/creator/tools')",
       "components": [
         "CreatorToolsPage"
@@ -141,7 +141,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1968,
+      "line": 1970,
       "condition": "else if (route === '/creator/works/new')",
       "components": [
         "NewWorkPage"
@@ -150,7 +150,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1969,
+      "line": 1971,
       "condition": "else if (route === '/creator/works/manual/new')",
       "components": [
         "NewWorkPage"
@@ -159,7 +159,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1970,
+      "line": 1972,
       "condition": "else if (parts[0] === 'creator' && parts[1] === 'studio' && parts[2])",
       "components": [
         "RetiredStudioPage"
@@ -168,7 +168,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1971,
+      "line": 1973,
       "condition": "else if (parts[0] === 'creator' && parts[1] === 'drafts' && parts[2])",
       "components": [
         "CreatorDraftReviewPage"
@@ -177,7 +177,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1972,
+      "line": 1974,
       "condition": "else if (route === '/creator/multiplayer/submit')",
       "components": [
         "MultiplayerRuleSubmissionPage"
@@ -186,7 +186,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1973,
+      "line": 1975,
       "condition": "else if (route === '/creator/multiplayer/docs')",
       "components": [
         "MultiplayerDeveloperCenter"
@@ -195,7 +195,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1974,
+      "line": 1976,
       "condition": "else if (route === '/creator/leaderboards/docs')",
       "components": [
         "CompetitionDeveloperCenter"
@@ -204,7 +204,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1975,
+      "line": 1977,
       "condition": "else if (parts[0] === 'creator' && parts[1] === 'works' && parts[3] === 'ai' && ['multiplayer','leaderboards'].includes(parts[4]))",
       "components": [
         "CreatorAiTaskPage"
@@ -213,7 +213,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1976,
+      "line": 1978,
       "condition": "else if (route === '/creator/multiplayer')",
       "components": [
         "CreatorAiTaskPage"
@@ -222,7 +222,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1977,
+      "line": 1979,
       "condition": "else if (route === '/creator/leaderboards')",
       "components": [
         "CreatorAiTaskPage"
@@ -231,7 +231,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1978,
+      "line": 1980,
       "condition": "else if (parts[0] === 'creator' && parts[2] && parts[3] === 'upload')",
       "components": [
         "UploadPage"
@@ -240,7 +240,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1979,
+      "line": 1981,
       "condition": "else if (parts[0] === 'creator' && parts[2] && parts[3] === 'builds')",
       "components": [
         "SourceBuildPage"
@@ -249,7 +249,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1980,
+      "line": 1982,
       "condition": "else if (parts[0] === 'creator')",
       "components": [
         "CreatorPage"
@@ -258,7 +258,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1981,
+      "line": 1983,
       "condition": "else if (parts[0] === 'admin')",
       "components": [
         "AdminPage"
@@ -267,7 +267,16 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1982,
+      "line": 1984,
+      "condition": "else if (route === '/download')",
+      "components": [
+        "DesktopDownloadPage"
+      ],
+      "sourceStatus": "implemented-route"
+    },
+    {
+      "source": "packages/platform-client/src/App.jsx",
+      "line": 1985,
       "condition": "else if (route === '/install')",
       "components": [
         "InstallPage"
@@ -276,7 +285,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1983,
+      "line": 1986,
       "condition": "else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin)",
       "components": [
         "LearningPage"
@@ -285,7 +294,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1984,
+      "line": 1987,
       "condition": "else if (route === '/apps/change-radar')",
       "components": [
         "ChangeRadarAppPage"
@@ -294,7 +303,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1985,
+      "line": 1988,
       "condition": "else if (route === '/tools/change-radar')",
       "components": [
         "LegacyChangeRadarRedirect"
@@ -303,7 +312,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1986,
+      "line": 1989,
       "condition": "else if (route === '/tools')",
       "components": [
         "ToolsPage"
@@ -312,7 +321,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1987,
+      "line": 1990,
       "condition": "else if (parts[0] === 'tools' && parts[1])",
       "components": [
         "OfficialToolHost"
@@ -321,7 +330,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1988,
+      "line": 1991,
       "condition": "else if (route === '/library')",
       "components": [
         "LibraryPage"
@@ -330,7 +339,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1989,
+      "line": 1992,
       "condition": "else if (route === '/games/guess-baike/community')",
       "components": [
         "DetailPage"
@@ -339,7 +348,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1990,
+      "line": 1993,
       "condition": "else if (parts[0] === 'community' && parts[1] === 'projects' && parts[2] === 'tasks')",
       "components": [
         "CommunityShell",
@@ -349,7 +358,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1991,
+      "line": 1994,
       "condition": "else if (parts[0] === 'community' && parts[1] === 'projects')",
       "components": [
         "CommunityProjects",
@@ -359,7 +368,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1992,
+      "line": 1995,
       "condition": "else if (parts[0] === 'community' && parts[1] === 'events')",
       "components": [
         "CommunityEvents",
@@ -369,7 +378,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1993,
+      "line": 1996,
       "condition": "else if (parts[0] === 'community' && parts[1] === 'parties')",
       "components": [
         "CommunityParties",
@@ -379,7 +388,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1994,
+      "line": 1997,
       "condition": "else if (route === '/community/me')",
       "components": [
         "CommunityParticipation",
@@ -389,7 +398,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1995,
+      "line": 1998,
       "condition": "else if (route === '/community')",
       "components": [
         "CommunityHome",
@@ -400,7 +409,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1996,
+      "line": 1999,
       "condition": "else if (route === '/social' || parts[0] === 'community')",
       "components": [
         "CommunityPage"
@@ -409,7 +418,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "line": 1997,
+      "line": 2000,
       "condition": "else if (route === '/contribute' || /^\\/contribute\\/[^/]+$/.test(route))",
       "components": [
         "CommunityShell",
@@ -420,7 +429,7 @@
   ],
   "fallback": {
     "source": "packages/platform-client/src/App.jsx",
-    "line": 1998,
+    "line": 2001,
     "component": "DiscoverPage",
     "note": "Includes /discover and unmatched routes; not a separate router branch."
   },
@@ -873,7 +882,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "sha256": "5cab2294562c68ee86ece0e8558d44a49e196a5c549f8b5eec836eeedba4fb34",
+      "sha256": "ec5bda8f7290c71b91f4d1da643406934073daef7a05c52387751deff7d72f13",
       "apiCalls": [
         "acceptGuessBaikeChallenge",
         "applyForCreator",
@@ -1295,6 +1304,12 @@
       ]
     },
     {
+      "source": "packages/platform-client/src/DesktopDownloadPage.jsx",
+      "sha256": "5d5e32b020d7296119619c7221519b721e96abd2c63660a08c312e93c8662545",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
       "source": "packages/platform-client/src/DevelopmentLogPage.jsx",
       "sha256": "d373d81aceac32f08a70224955f62bf2e1630681b011e7a1bf5538cdaae16b79",
       "apiCalls": [
@@ -1665,6 +1680,18 @@
       "browserDependencies": []
     },
     {
+      "source": "packages/platform-client/src/desktop-download.css",
+      "sha256": "bdb390cf69c9a28ce8ca429e1250491533051317916b2dea399610ab668b16ee",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
+      "source": "packages/platform-client/src/desktop-download.mjs",
+      "sha256": "a7bbf7c77e54075d05f7e0380742273d5aa50b1ea9cfd621e05f368690544f08",
+      "apiCalls": [],
+      "browserDependencies": []
+    },
+    {
       "source": "packages/platform-client/src/document-diff.mjs",
       "sha256": "fa54f81da3629f3f3e13242cb153eac1626beb52f100ce79177637e3d0595def",
       "apiCalls": [],
@@ -1713,7 +1740,7 @@
     },
     {
       "source": "packages/platform-client/src/i18n.mjs",
-      "sha256": "f1eb19dea32ab80345645c6e5c7dbf9c67873f98b691a2769753bc890471c5a0",
+      "sha256": "c9254ba53c92109a80ca385931b79a141a6231a234d15b267c45af5925f18e8f",
       "apiCalls": [],
       "browserDependencies": [
         "Worker",

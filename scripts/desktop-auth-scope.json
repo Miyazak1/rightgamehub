@@ -151,7 +151,19 @@
     "scripts/lib/desktop-builder-worker.mjs",
     "tests/desktop/builder-failure-fixture.mjs",
     "tests/platform/desktop-windows-guards.test.mjs",
-    "scripts/verify-desktop-windows-package-guards.mjs"
+    "scripts/verify-desktop-windows-package-guards.mjs",
+    "config/desktop-download-release.json",
+    "deploy/Caddyfile",
+    "deploy/compose.desktop-downloads.yml",
+    "packages/platform-client/src/DesktopDownloadPage.jsx",
+    "packages/platform-client/src/desktop-download.css",
+    "packages/platform-client/src/desktop-download.mjs",
+    "packages/platform-client/src/i18n.mjs",
+    "scripts/lib/desktop-downloads.mjs",
+    "scripts/prepare-desktop-downloads.mjs",
+    "scripts/verify-desktop-downloads.mjs",
+    "tests/platform/desktop-downloads.test.mjs",
+    "docs/mooyu-desktop-downloads.md"
   ],
   "deferred": [
     "apps/desktop/native/MooyuWorkbench.cs",
@@ -192,6 +204,7 @@
     "tests/platform/desktop-game-io.test.mjs",
     "tests/platform/desktop-game-io-lifecycle.test.mjs",
     "tests/platform/desktop-windows-package.test.mjs",
-    "tests/platform/desktop-windows-guards.test.mjs"
+    "tests/platform/desktop-windows-guards.test.mjs",
+    "tests/platform/desktop-downloads.test.mjs"
   ]
 }

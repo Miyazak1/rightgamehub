@@ -1,0 +1,11 @@
+# Optional web-only overlay. Append to the CURRENT gateway Compose file list;
+# preserve existing desktop test-domain overlays and network attachments.
+services:
+  web:
+    volumes:
+      - type: bind
+        source: ${DESKTOP_DOWNLOADS_DIR:?Set an absolute prepared desktop-download directory}
+        target: /srv/desktop-downloads
+        read_only: true
+        bind:
+          create_host_path: false

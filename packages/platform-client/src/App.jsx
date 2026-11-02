@@ -1,4 +1,5 @@
 import AgentDisclosure from './AgentDisclosure.jsx';
+import DesktopDownloadPage,{DesktopDownloadFooter} from './DesktopDownloadPage.jsx';
 import {apiLoadError} from './api-load-error.mjs';
 import {COMMUNITY_ENABLED,visiblePlatformRoute} from './community-availability.mjs';
 
@@ -173,7 +174,7 @@ function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdenti
     {creator ? <span className="header__workspace-label">{t('navigation.creatorSpace')}</span> : player && chrome ? <span className="desktop-drag-space"/> : <PlayerNavigation route={route} go={go}/>}
     {chrome && <span className="desktop-title-grip" aria-hidden="true"/>}
     <div className="header__tools">
-      {Actions ? <Actions go={go} route={route}/> : <><button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>{t('navigation.addAgent')}</button>
+      {Actions ? <Actions go={go} route={route}/> : <>{hostIdentity.id==='browser'&&<button className="header-desktop-cta" aria-current={route==='/download'?'page':undefined} onClick={()=>go('/download')}>{t('navigation.downloadDesktop')}</button>}<button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>{t('navigation.addAgent')}</button>
       <div className="host-chip" aria-label={t('navigation.hostCurrent',{host:hostIdentity.label})} title={t('navigation.hostTheme',{host:hostIdentity.label})}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div></>}
       <LanguageSwitch />
       <button className="icon-button" disabled={!canChangeTheme} onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'high-contrast' : 'dark')} aria-label={t(canChangeTheme?'navigation.themeSwitch':'navigation.themeFollowing',{theme:themeMode})} title={canChangeTheme?t('navigation.switchTheme'):t('navigation.hostTheme',{host:hostIdentity.label})}>{themeMode === 'light' ? '☼' : themeMode === 'high-contrast' ? '◐' : '☾'}</button>
@@ -1680,6 +1681,7 @@ function InstallPage({ go, hostIdentity }) {
   };
   const detected = targets.find(item => item.id === hostIdentity.id);
   return <main className="page install-page">
+    {hostIdentity.id==='browser'&&<aside className="install-desktop-link"><span>{locale==='en'?'Looking for the standalone Windows app?':'想使用独立的 Windows 客户端？'}</span><button className="button button--secondary" onClick={()=>go('/download')}>{locale==='en'?'Download desktop app':'下载桌面客户端'} →</button></aside>}
     <section className="install-hero">
       <div><span className="kicker">MOOYU.FUN EVERYWHERE</span><h1>{labels.title}</h1><p>{labels.lead}</p></div>
       <div className="install-detected"><span>{labels.environment}</span><strong>{hostIdentity.label}</strong><small>{detected ? `${detected.badge} · ${detected.state}` : labels.webState}</small></div>
@@ -1979,6 +1981,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'creator' && parts[2] && parts[3] === 'builds') content = <SourceBuildPage workId={parts[2]} api={api} demo={demo} go={go}/>;
   else if (parts[0] === 'creator') content = <CreatorPage api={api} demo={demo} go={go} savedWork={savedWork} route={route}/>;
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go} hostIdentity={hostIdentity} hostAdapter={host}/>;
+  else if (route === '/download') content = <DesktopDownloadPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin) content = <LearningPage api={api} demo={demo} go={go} Art={Art} runtimeOrigin={host.learningRuntimeOrigin} courseId={parts[1]}/>;
   else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;
@@ -1998,7 +2001,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play' || parts[0] === 's';
   const creator = parts[0] === 'creator';
-  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<div className="notice-region" aria-live="polite"/></div>;
+  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<DesktopDownloadFooter hostIdentity={hostIdentity} visible={!player&&!creator}/><div className="notice-region" aria-live="polite"/></div>;
 }
 
 export default function App(props) {

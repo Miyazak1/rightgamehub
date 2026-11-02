@@ -75,6 +75,42 @@
     file_server
   }
 
+  # mooyu-desktop-downloads begin
+  @desktop_downloads path /downloads/desktop /downloads/desktop/*
+  handle @desktop_downloads {
+    uri strip_prefix /downloads/desktop
+    root * /srv/desktop-downloads
+    header {
+      Cache-Control "no-store"
+      X-Content-Type-Options "nosniff"
+    }
+    @desktop_method not method GET HEAD
+    handle @desktop_method {
+      respond "Method not allowed" 405
+    }
+    @desktop_manifest path /manifest.json
+    handle @desktop_manifest {
+      file_server
+    }
+    @desktop_release path_regexp desktop_release ^/[0-9]+\.[0-9]+\.[0-9]+-preview\.[1-9][0-9]*/(MooyuWorkshop-[0-9]+\.[0-9]+\.[0-9]+-preview\.[1-9][0-9]*-x64-Setup\.exe|SHA256SUMS\.txt|release\.json)$
+    handle @desktop_release {
+      header Cache-Control "public, max-age=31536000, immutable" {
+        match status 200 206 304
+      }
+      @desktop_exe path *.exe
+      header @desktop_exe {
+        Content-Type "application/octet-stream"
+        Content-Disposition "attachment"
+        match status 200 206 304
+      }
+      file_server
+    }
+    handle {
+      respond "Not found" 404
+    }
+  }
+  # mooyu-desktop-downloads end
+
   # Dedicated shell used only by the MCP Apps widget. Keep the main site
   # protected from framing and allow only the known OpenAI sandbox surfaces.
   handle /mcp-app {

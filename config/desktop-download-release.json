@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0-preview.3",
+  "releaseDate": "2026-11-02",
+  "notes": {
+    "zh-CN": [
+      "提供 Windows 独立安装包，复用网页版账号与线上内容。",
+      "支持覆盖升级，默认卸载保留本机数据。",
+      "完善安装包完整性检查与本地安装验证。"
+    ],
+    "en": [
+      "A standalone Windows installer using your existing web account and online content.",
+      "Install over an older version; uninstalling keeps local app data by default.",
+      "Improved package integrity checks and local installation verification."
+    ]
+  }
+}
