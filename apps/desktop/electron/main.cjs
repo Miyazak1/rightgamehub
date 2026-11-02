@@ -61,7 +61,7 @@ async function createShell(config) {
       } catch { return new Response('Image unavailable', { status: 404 }); }
     }
     try { return await policy.assetResponse(request, assetRoot, policy.UI, true, fixtureOrigin,
-      businessRuntime ? `http://*.localhost:${businessRuntime.port}` : null); }
+      businessRuntime ? `${businessRuntime.scheme}://*.${businessRuntime.domain}:${businessRuntime.port}` : null); }
     catch (error) { process.stderr.write('DESKTOP_PROTOCOL_FAILED ' + error.name + ': ' + error.message + '\n'); return new Response('Protocol failed', { status: 500 }); }
   });
   let window;
@@ -138,7 +138,7 @@ async function createShell(config) {
   ipcMain.handle('mooyu:preview-environment', event => {
     trusted(event);
     return { host: 'desktop-app', surface: 'desktop-window', mode: 'local-preview', connected: !!accountSession,
-      accountConfigured: !!accountSession, accountApiOrigin, accountEnvironment,
+      accountConfigured: !!accountSession, accountApiOrigin, accountEnvironment, businessRuntime,
       version: '0.2.0-dev', fixtureOrigin };
   });
   ipcMain.handle('mooyu:account-call', async (event, method, args) => {

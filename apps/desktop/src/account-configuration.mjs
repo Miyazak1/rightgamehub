@@ -68,9 +68,10 @@ export function desktopAccountLaunchOptions(args, root) {
   let businessRuntime = null;
   if (values['--test-runtime-origin']) {
     let runtime; try { runtime = new URL(values['--test-runtime-origin']); } catch { fail('DESKTOP_RUNTIME_DENIED'); }
-    if (runtime.protocol !== 'http:' || runtime.hostname !== 'localhost' || runtime.username || runtime.password ||
+    if (!['http:', 'https:'].includes(runtime.protocol) || runtime.username || runtime.password ||
       runtime.pathname !== '/' || runtime.search || runtime.hash) fail('DESKTOP_RUNTIME_DENIED');
-    businessRuntime = localBusinessRuntime({ scheme: 'http', domain: 'localhost', port: Number(runtime.port) }, accountApiOrigin);
+    businessRuntime = localBusinessRuntime({ scheme: runtime.protocol.slice(0, -1), domain: runtime.hostname,
+      port: Number(runtime.port || (runtime.protocol === 'https:' ? 443 : 80)) }, accountApiOrigin);
   }
   const base = values['--profile-root'] ?? path.join(root, '.runtime/desktop-shell', accountEnvironment === 'isolated-test' ? 'profiles' : 'profile');
   if (!path.isAbsolute(base)) fail('DESKTOP_PROFILE_PATH_INVALID');

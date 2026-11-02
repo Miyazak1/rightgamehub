@@ -1,0 +1,15 @@
+# Add after ALL currently active gateway overrides. Apply ONLY service web.
+services:
+  web:
+    image: ${DESKTOP_BUSINESS_CADDY_IMAGE:?Pin current retained gateway image}
+    volumes:
+      - type: bind
+        source: ${DESKTOP_BUSINESS_CADDY_FILE:?Absolute prepared Caddyfile}
+        target: /etc/caddy/Caddyfile
+        read_only: true
+    networks:
+      desktop-business-ingress:
+networks:
+  desktop-business-ingress:
+    external: true
+    name: ${DESKTOP_BUSINESS_INGRESS_NETWORK:?Set dedicated business ingress}

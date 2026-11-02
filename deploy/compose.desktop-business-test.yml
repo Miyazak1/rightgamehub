@@ -1,12 +1,17 @@
 name: mooyu-desktop-business-test
 x-business: &business
-  image: mooyu-desktop-business-test:local
+  image: ${DESKTOP_BUSINESS_TEST_IMAGE:-mooyu-desktop-business-test:local}
   build:
     context: ..
     dockerfile: deploy/Dockerfile.api
   environment:
     DESKTOP_BUSINESS_TEST_INSTANCE: isolated-business
-    DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: http://127.0.0.1:${DESKTOP_BUSINESS_TEST_PORT:?Set loopback API port}
+    DESKTOP_BUSINESS_TEST_MODE: ${DESKTOP_BUSINESS_TEST_MODE:-loopback}
+    DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: ${DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN:-http://127.0.0.1:${DESKTOP_BUSINESS_TEST_PORT:?Set loopback API port}}
+    DESKTOP_BUSINESS_TEST_RUNTIME_ORIGIN: ${DESKTOP_BUSINESS_TEST_RUNTIME_ORIGIN:-}
+    GITHUB_CLIENT_ID: ${DESKTOP_BUSINESS_TEST_GITHUB_CLIENT_ID:-}
+    GITHUB_CLIENT_SECRET: ${DESKTOP_BUSINESS_TEST_GITHUB_CLIENT_SECRET:-}
+    GITHUB_CALLBACK_URL: ${DESKTOP_BUSINESS_TEST_GITHUB_CALLBACK_URL:-}
     DESKTOP_BUSINESS_TEST_RUNTIME_PORT: ${DESKTOP_BUSINESS_TEST_RUNTIME_PORT:?Set loopback runtime port}
     DATABASE_URL: postgresql://desktop_business_test:${DESKTOP_BUSINESS_TEST_DB_PASSWORD:?Generate isolated password}@business-postgres:5432/desktop_business_test
     REDIS_URL: redis://business-redis:6379
@@ -61,7 +66,7 @@ services:
       timeout: 8s
       retries: 40
   business-gateway:
-    image: mooyu-desktop-business-test:local
+    image: ${DESKTOP_BUSINESS_TEST_IMAGE:-mooyu-desktop-business-test:local}
     command: [node, apps/api/src/desktop-business-test-gateway.mjs]
     environment:
       DESKTOP_BUSINESS_TEST_GATEWAY: loopback-fixed-upstream

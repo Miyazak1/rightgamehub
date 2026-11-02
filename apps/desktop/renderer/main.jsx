@@ -15,7 +15,7 @@ const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooy
 const session = env.accountConfigured ? createDesktopAccountAdapter(globalThis.mooyuDesktop.account) : null;
 const api = session ? new Proxy(baseApi, { get(target, key) { return Object.hasOwn(session.api, key) ? session.api[key] : target[key]; } }) : baseApi;
 const Actions = props => <DesktopActions {...props} environment={env}/>;
-const host = { ...browser, ...(session ? { account: session.account, navigation: session.navigation } : {}), chrome: { Leading: DesktopLeading, Actions }, apiBaseUrl: env.fixtureOrigin, runtimeDomain: 'localhost', async getCapabilities() {
+const host = { ...browser, ...(session ? { account: session.account, navigation: session.navigation } : {}), chrome: { Leading: DesktopLeading, Actions }, apiBaseUrl: env.accountApiOrigin || env.fixtureOrigin, runtimeDomain: env.businessRuntime?.domain || 'localhost', async getCapabilities() {
   const capabilities = await browser.getCapabilities();
   if (session) delete capabilities.unavailableReasons.canPersistCredential;
   return { ...capabilities, host: env.host, hostVersion: env.version, uiDevice: 'desktop', surface: 'desktop-window',

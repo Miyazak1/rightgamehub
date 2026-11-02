@@ -1,0 +1,15 @@
+# Merge with compose.desktop-business-test.yml in its own project, never prod.
+services:
+  business-api:
+    networks:
+      business-internal:
+      business-egress:
+      desktop-business-ingress:
+        aliases: [desktop-business-test-api]
+  business-gateway:
+    profiles: [disabled-loopback-gateway]
+networks:
+  business-egress:
+  desktop-business-ingress:
+    external: true
+    name: ${DESKTOP_BUSINESS_INGRESS_NETWORK:?Set dedicated business ingress}

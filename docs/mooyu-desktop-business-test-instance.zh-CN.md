@@ -1,5 +1,7 @@
 # 桌面完整业务的本地隔离实例
 
+本文描述回环模式。新增的 HTTPS 远程隔离模式、游戏测试域、备份与回滚见[远程完整业务测试方案](mooyu-desktop-business-remote.zh-CN.md)；本次仍不部署远程实例。
+
 该实例补齐真实数据库验证，不再用 HTTP 契约夹具代替 PostgreSQL 业务行为。复用现有 createApp、认证、目录、日志、公开主页、游戏库、封面和 Runtime Edge 服务；只组合本阶段需要的服务，不调用正式 server/runtime 入口，不构造模型提供方或后台 worker。
 
 ## 隔离边界

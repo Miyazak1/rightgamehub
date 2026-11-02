@@ -7,6 +7,7 @@ import { applyMigrations, migrationStatus } from './migrations.mjs';
 import { createApp } from './app.mjs';
 import { PostgresAuthRepository } from './auth-repository.mjs';
 import { createAuthService } from './auth-service.mjs';
+import { createGitHubOAuthClient } from './github-oauth-client.mjs';
 import { LocalAvatarStore } from './local-avatar-store.mjs';
 import { LocalCoverStore } from './local-cover-store.mjs';
 import { LocalRuntimeStore } from './local-runtime-store.mjs';
@@ -36,15 +37,19 @@ export function createDesktopBusinessTestRuntime(env) {
   const readiness = createDesktopAuthReadiness({ database, migrations, redisUrl: settings.env.REDIS_URL });
   const authService = createAuthService({ repository: new PostgresAuthRepository(database.pool, new LocalAvatarStore(config.avatarRoot)),
     otpHmacKey: config.otpHmacKey, loginEmailAllowlist: config.loginEmailAllowlist,
+    githubClient: settings.githubConfigured ? createGitHubOAuthClient({ clientId: config.githubClientId,
+      clientSecret: config.githubClientSecret, callbackUrl: config.githubCallbackUrl }) : undefined,
     mailer: { async sendVerificationCode({ email, code }) {
       if (email !== 'desktop-reader@example.test') throw Error('TEST_EMAIL_NOT_ALLOWED');
+      if (settings.remote) throw Error('REMOTE_TEST_EMAIL_DISABLED');
       const file = '/data/desktop-business/test-mail.json';
       await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.writeFile(file, JSON.stringify({ email, code }), { mode: 0o600 });
     } } });
   const coverStore = new LocalCoverStore(config.coverRoot), runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
   const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config });
-  const app = createApp({ config, database, migrations, authService, requestGuard: desktopBusinessTestGuard,
+  const app = createApp({ config, database, migrations, authService,
+    requestGuard: (request, reply) => desktopBusinessTestGuard(request, reply, settings),
     catalogService, workService: createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) }),
     engagementService: createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService }),
     publicProfileService: createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool) }),
@@ -58,9 +63,10 @@ export function createDesktopBusinessTestRuntime(env) {
   const ready = async (_request, reply) => {
     const health = await readiness.check();
     return reply.code(health.status === 'ready' ? 200 : 503).send({ data: { ...health,
-      instance: 'isolated-business', githubConfigured: false, emailConfigured: true, emailDelivery: 'local-capture',
+      instance: 'isolated-business', githubConfigured: settings.githubConfigured, emailConfigured: !settings.remote,
+      emailDelivery: settings.remote ? 'disabled' : 'local-capture',
       backgroundTasksEnabled: false, publishingEnabled: false, modelCallsEnabled: false,
-      runtime: { domain: 'localhost', scheme: 'http', port: settings.runtimePort } } });
+      runtime: settings.runtime } });
   };
   app.get('/ready-desktop-business', ready);
   app.get('/ready-desktop-auth', ready);

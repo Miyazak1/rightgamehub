@@ -102,6 +102,8 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       if (data?.status !== 'ready' || !['isolated-auth-only', 'isolated-business'].includes(data.instance) || data.backgroundTasksEnabled !== false ||
           data.instance === 'isolated-business' && (data.publishingEnabled !== false || data.modelCallsEnabled !== false) ||
           data.database !== true || data.redis !== true || data.migrations?.ready !== true) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
+      if (runtimePolicy && (data.instance !== 'isolated-business' || data.runtime?.domain !== runtimePolicy.domain ||
+        data.runtime?.scheme !== runtimePolicy.scheme || data.runtime?.port !== runtimePolicy.port)) fail('DESKTOP_RUNTIME_DENIED', 503);
       verifiedInstance = true;
     }
     const response = await send(url, options);

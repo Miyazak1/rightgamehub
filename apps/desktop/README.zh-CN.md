@@ -13,7 +13,7 @@ node scripts/start-desktop-shell.mjs
 
 构建后也可双击 `.runtime/desktop-shell/MooyuDesktopPreview.exe`。该小型原生文件仅负责启动 Electron，不绘制产品界面。开发预览使用本机既有且核对摘要的 `E:\CODE\Right\.runtime\electron-v44.4.5-win32-x64` 运行时；不自动下载运行时，不是可分发安装包。
 
-本地构建、配置、缓存和诊断记录位于 `.runtime/desktop-shell/`。主界面使用固定 `mooyu-app://client` origin；游戏兼容样本由进程自建的随机端口 `127.0.0.1` 静态服务承载。仅允许这两个本地来源，不开放通用网络代理；未修改生产播放器的来源校验。
+本地构建、配置、缓存和诊断记录位于 `.runtime/desktop-shell/`。主界面使用固定 `mooyu-app://client` origin；游戏兼容样本由进程自建的随机端口 `127.0.0.1` 静态服务承载。离线预览仅允许这两个本地来源；联网测试只额外允许可信启动描述符对应的游戏 origin，不开放通用网络代理。
 
 验证命令：
 
@@ -49,7 +49,7 @@ node scripts/start-desktop-account-test.mjs
 
 测试脚本启动随机 `127.0.0.1` 端口的内存认证服务和独立 profile，进入原有登录页面。可输入 `desktop@example.test`，本地模拟邮箱验证码显示在启动终端中，不发送真实邮件。关闭窗口后该测试服务退出，内存账户失效；它不代表跨新建测试服务的会话恢复。自动验收在同一隔离服务存活期间执行完整 Electron 进程重启。
 
-如已有本机测试 API，可运行 `node scripts/start-desktop-shell.mjs --account-api http://127.0.0.1:端口`，该参数保持只接受 loopback HTTP。远程隔离测试另用 `--test-account-api https://测试域名`，会先验证测试实例标识，并按精确 origin 派生独立 profile；不能同时使用两种参数。两者都拒绝路径、查询、凭据和账号 API 跳转，HTTPS 测试拒绝已知正式站点。默认入口仍不连接 API。上传头像及其他业务页面尚未接入；其他页面继续使用本地样本，不因登录而打开发布或后台执行。详见 [测试地址与独立会话](../../docs/mooyu-desktop-auth-test-instance.zh-CN.md#桌面测试地址与独立会话)。
+如已有本机测试 API，可运行 `node scripts/start-desktop-shell.mjs --account-api http://127.0.0.1:端口`，该参数保持只接受 loopback HTTP。远程隔离测试另用 `--test-account-api https://测试域名`，会先验证测试实例标识，并按精确 origin 派生独立 profile；不能同时使用两种参数。两者都拒绝路径、查询、凭据和账号 API 跳转，HTTPS 测试拒绝已知正式站点。默认入口仍不连接 API。联网业务页面复用同一测试 API，账号专用实例会明确提示业务未开放，不回退本地样本。上传头像、发布和后台执行尚未接入。详见 [测试地址与独立会话](../../docs/mooyu-desktop-auth-test-instance.zh-CN.md#桌面测试地址与独立会话)。
 
 ```powershell
 node --test tests/platform/desktop-account-session.test.mjs tests/client/account-bootstrap.test.cjs
@@ -94,3 +94,5 @@ node scripts/verify-desktop-clean.mjs
 ## 业务 API 接入（本地验证）
 
 联网模式现已将已支持的业务请求交给同一账号服务器，不再回退到本地样本。发现、日志、课件、主页及游戏库的范围、安全边界和验收命令见 [业务 API 接入](../../docs/mooyu-desktop-business-api.zh-CN.md)。现有远程账号测试实例仍只提供账号接口，本轮没有部署业务服务器，也没有连接生产环境。
+
+远程完整业务测试需要同时配置 `--test-account-api https://desktop-test.example.org --test-runtime-origin https://desktop-runtime-test.example.org`，只接受配对的 HTTPS 测试命名空间，不能混用 localhost 或正式运行域。服务端准备、独立数据库/Redis、Caddy 和回滚见[远程业务测试方案](../../docs/mooyu-desktop-business-remote.zh-CN.md)。
