@@ -38,6 +38,10 @@ try{
   const base='http://127.0.0.1:'+port;report.localOrigin=base;
   let ready=false;for(let i=0;i<40;i++){try{if((await fetch(base+'/download')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,150));}assert.ok(ready,'Caddy startup');
   const latest=await checked(base+'/downloads/desktop/manifest.json');assert.equal(latest.status,200);assert.match(latest.headers.get('cache-control'),/no-store/);assert.deepEqual(await latest.json(),manifest);
+  const signedFeed=path.join(data,'updates/preview.json');
+  if(await fs.access(signedFeed).then(()=>true,()=>false)){
+    const response=await checked(base+'/downloads/desktop/updates/preview.json');assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/application\/json/);assert.match(response.headers.get('cache-control'),/no-store/);assert.deepEqual(await response.json(),JSON.parse(await fs.readFile(signedFeed,'utf8')));report.signedUpdateFeedServed=true;
+  }
   const url=base+release.url,head=await checked(url,{method:'HEAD'});assert.equal(head.status,200);assert.equal(Number(head.headers.get('content-length')),release.sizeBytes);assert.equal(head.headers.get('accept-ranges'),'bytes');assert.match(head.headers.get('content-disposition'),/attachment/);assert.equal(head.headers.get('x-content-type-options'),'nosniff');assert.match(head.headers.get('cache-control'),/immutable/);
   const hash=crypto.createHash('sha256'),full=await checked(url);assert.equal(full.status,200);let size=0;for await(const chunk of full.body){hash.update(chunk);size+=chunk.length;}assert.equal(size,release.sizeBytes);assert.equal(hash.digest('hex'),release.sha256);report.fullDownloadHashPassed=true;
   const resumed=crypto.createHash('sha256'),split=1048576;for(const [start,end] of [[0,split-1],[split,release.sizeBytes-1]]){const response=await checked(url,{headers:{Range:`bytes=${start}-${end}`}});assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),`bytes ${start}-${end}/${release.sizeBytes}`);for await(const chunk of response.body)resumed.update(chunk);}assert.equal(resumed.digest('hex'),release.sha256);report.resumeHashPassed=true;

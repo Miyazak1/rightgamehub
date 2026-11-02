@@ -88,7 +88,7 @@
     handle @desktop_method {
       respond "Method not allowed" 405
     }
-    @desktop_manifest path /manifest.json
+    @desktop_manifest path /manifest.json /updates/preview.json /updates/stable.json
     handle @desktop_manifest {
       file_server
     }

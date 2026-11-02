@@ -47,7 +47,7 @@ async function createShell(config) {
   await new Promise((resolve, reject) => { fixture.once('error', reject); fixture.listen(0, '127.0.0.1', resolve); });
   fixtureOrigin = 'http://127.0.0.1:' + fixture.address().port;
   trace('fixture-ready');
-  app.once('before-quit', () => { fixture.close(); fixture.closeAllConnections?.(); });
+  app.once('will-quit', () => { fixture.close(); fixture.closeAllConnections?.(); });
   const blocked = [];
   ses.webRequest.onBeforeRequest((details, done) => {
     const allowed = policy.allowedRequest(details, fixtureOrigin, runtimeOrigins);
@@ -81,7 +81,20 @@ async function createShell(config) {
   let accountSession = null;
   let realtimeBridge = null, fileExports = null;
   const retireGameIO = () => { realtimeBridge?.closeAll(); fileExports?.cancelAll(); };
-  app.once('before-quit', retireGameIO);
+  app.once('will-quit', retireGameIO);
+  const { createDesktopUpdater } = await import('../src/update-service.mjs');
+  const updates = await createDesktopUpdater({configuration: ['production','local-test'].includes(accountEnvironment) ? config.updateTrust : null,
+    localTest: accountEnvironment === 'local-test', app, appRoot: app.getAppPath(), profileRoot: config.profileRoot,
+    engineFactory: options => require('../src/update-engine.cjs').createUpdateEngine(options),
+    prepareInstall: async (installer,payload) => (await import('../src/update-handoff.mjs')).prepareUpdateHandoff({app,profileRoot:config.profileRoot,installer,payload}),
+    fetchImpl: (...args) => session.fromPartition('mooyu-update-downloads', {cache:false}).fetch(...args),
+    onState: value => { if (window && !window.isDestroyed()) window.webContents.send('mooyu:update-state', value); },
+    isBusy: () => /^\/(play|s|challenge|learn)\//.test(new URL(window?.webContents.getURL() || policy.UI).pathname),
+    confirmInstall: async () => accountEnvironment === 'local-test' && typeof config.confirmUpdateInstall === 'function' ? config.confirmUpdateInstall() : (await dialog.showMessageBox(window, {type:'question',buttons:['稍后','重启并更新'],defaultId:0,cancelId:0,message:'现在重启并安装已验证的更新？',detail:'请先保存当前工作。账号会话、本地存档和设置会保留。'})).response === 1 });
+  app.once('will-quit', () => updates.dispose());
+  // The trusted installed entry is the only source of update configuration.
+  // Development previews have no feed and never contact the public server.
+  if (config.updateTrust) { const timer = setTimeout(() => updates.run('check').then(value => value.status === 'available' ? updates.run('download') : null).catch(() => {}), 15000); timer.unref(); }
   if (accountApiOrigin) {
     const { createDesktopAccountSession } = await import('../src/account-session.mjs');
     const { createDesktopNetworkTransport } = await import('../src/network-transport.mjs');
@@ -154,7 +167,7 @@ async function createShell(config) {
     window.webContents.on('will-prevent-unload', event => {
       const choice = dialog.showMessageBoxSync(window, { type: 'question', buttons: ['继续编辑', '退出'], defaultId: 0, cancelId: 0,
         message: '页面有尚未完成的操作，仍要退出吗？', detail: '退出可能丢失尚未保存的内容。' });
-      if (choice === 1) event.preventDefault();
+      if (choice === 1) event.preventDefault(); else updates.cancelInstall();
     });
     window.setMenuBarVisibility(false);
     window.setMenu(null);
@@ -192,6 +205,11 @@ async function createShell(config) {
     }
   });
   ipcMain.handle('mooyu:chrome-state-get', event => { trusted(event); return state(); });
+  ipcMain.handle('mooyu:update-call', (event, action) => {
+    trusted(event);
+    if (!['state','check','download','cancel','install'].includes(action)) throw Error('DESKTOP_UPDATE_ACTION_DENIED');
+    return action === 'state' ? updates.state() : updates.run(action);
+  });
   const gameResult = async task => {
     try { return { ok: true, value: await task() }; }
     catch (error) { const code = /^[A-Z][A-Z0-9_]{2,100}$/.test(error.code ?? '') ? error.code : 'DESKTOP_GAME_IO_FAILED'; return { ok: false, error: { code, message: `操作未完成（${code}）。` } }; }
@@ -201,7 +219,7 @@ async function createShell(config) {
   ipcMain.handle('mooyu:file-cancel', (event, id) => { trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
   ipcMain.handle('mooyu:chrome-action', (event, action) => { trusted(event); perform(action); return { accepted: true }; });
   ipcMain.handle('mooyu:chrome-theme', (event, mode) => { trusted(event); window.setTitleBarOverlay(titleBarPalette(mode)); currentTheme = mode; publish(); return { applied: mode }; });
-  return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore };
+  return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore, updates };
 }
 
 async function main() {

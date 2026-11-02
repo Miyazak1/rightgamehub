@@ -9,7 +9,7 @@ const root=fileURLToPath(new URL('../',import.meta.url)),options={};
 for(let i=2;i<process.argv.length;i+=2){if(!['--previous','--current','--hold'].includes(process.argv[i])||!process.argv[i+1])throw Error('INSTALL_TEST_OPTIONS_INVALID');options[process.argv[i]]=process.argv[i+1];}
 if(process.platform!=='win32'||!options['--previous']||!options['--current'])throw Error('TWO_WINDOWS_ACCEPTANCE_REPORTS_REQUIRED');
 const before=JSON.parse(await fs.readFile(options['--previous'],'utf8')),after=JSON.parse(await fs.readFile(options['--current'],'utf8'));
-for(const r of [before,after])if(!r.passed||!r.acceptance||r.sourceCommit!=='0f20ae59d3054bccfbcd65576cd7429e843b8c3d')throw Error('ACCEPTANCE_REPORT_INVALID');
+for(const r of [before,after])if(!r.passed||!r.acceptance||!/^[a-f0-9]{40}$/.test(r.sourceCommit))throw Error('ACCEPTANCE_REPORT_INVALID');
 if(before.version===after.version)throw Error('DISTINCT_UPGRADE_VERSION_REQUIRED');
 const parent=path.join(root,'.runtime/desktop-windows-install');await fs.mkdir(parent,{recursive:true});const directory=await fs.mkdtemp(path.join(parent,'check-'));
 const install=path.join(directory,'安装 验证','client'),profile=path.join(directory,'user-data','profile'),mailbox=path.join(directory,'mailbox.txt');

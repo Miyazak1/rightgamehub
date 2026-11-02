@@ -1,0 +1,4 @@
+.desktop-update-badge{border:1px solid var(--gh-action);background:var(--gh-panel);color:var(--gh-action);min-height:32px;padding:5px 9px;font:inherit;font-size:11px;white-space:nowrap;-webkit-app-region:no-drag}
+.desktop-update-info progress{width:100%;accent-color:var(--gh-action)}
+.desktop-update-code{font-size:12px;overflow-wrap:anywhere;color:var(--gh-warning)}
+.desktop-update-actions{display:flex;gap:8px;flex-wrap:wrap}

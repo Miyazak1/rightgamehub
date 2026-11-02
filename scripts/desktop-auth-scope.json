@@ -163,7 +163,20 @@
     "scripts/prepare-desktop-downloads.mjs",
     "scripts/verify-desktop-downloads.mjs",
     "tests/platform/desktop-downloads.test.mjs",
-    "docs/mooyu-desktop-downloads.md"
+    "docs/mooyu-desktop-downloads.md",
+    "apps/desktop/src/update-manifest.mjs",
+    "apps/desktop/src/update-version.mjs",
+    "apps/desktop/src/update-service.mjs",
+    "apps/desktop/src/update-engine.cjs",
+    "apps/desktop/renderer/DesktopUpdates.jsx",
+    "apps/desktop/renderer/desktop-updates.css",
+    "scripts/prepare-desktop-updates.mjs",
+    "scripts/verify-desktop-updates.mjs",
+    "docs/mooyu-desktop-auto-update.md",
+    "tests/platform/desktop-updates.test.mjs",
+    "apps/desktop/native/MooyuUpdateRunner.cs",
+    "apps/desktop/src/update-handoff.mjs",
+    "tests/desktop/electron-updates-ui.cjs"
   ],
   "deferred": [
     "apps/desktop/native/MooyuWorkbench.cs",
@@ -205,6 +218,7 @@
     "tests/platform/desktop-game-io-lifecycle.test.mjs",
     "tests/platform/desktop-windows-package.test.mjs",
     "tests/platform/desktop-windows-guards.test.mjs",
-    "tests/platform/desktop-downloads.test.mjs"
+    "tests/platform/desktop-downloads.test.mjs",
+    "tests/platform/desktop-updates.test.mjs"
   ]
 }

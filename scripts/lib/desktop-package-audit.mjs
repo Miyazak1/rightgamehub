@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {sha256File} from './desktop-runtime.mjs';
+import crypto from 'node:crypto';
 
 export function auditDesktopArchive(asar,archive,{acceptance=false}={}) {
   const files=asar.listPackage(archive).map(file=>file.replace(/^[\\/]+/,''))
@@ -10,6 +11,12 @@ export function auditDesktopArchive(asar,archive,{acceptance=false}={}) {
   const code=asar.extractFile(archive,'main.cjs').toString('utf8');
   if(!acceptance&&(/acceptance-config|installer-fixture@example\.test|createIsolatedAccountApi/.test(code)||files.some(f=>f.endsWith('install-save-probe.js'))))throw Error('TEST_ENTRY_IN_PREVIEW');
   if(/[A-Z]:[\\/](?:Users|CODE)[\\/]|github_pat_[A-Za-z0-9_]{40,}|gh[pousr]_[A-Za-z0-9]{30,}/.test(code))throw Error('MACHINE_PATH_OR_SECRET_IN_PACKAGE');
+  if(code.includes('DESKTOP_UPDATE_HELPER_INTEGRITY')){
+    if(!files.includes('update-runner.exe')||!files.includes('build-info.json'))throw Error('DESKTOP_UPDATE_HELPER_MISSING');
+    const info=JSON.parse(asar.extractFile(archive,'build-info.json').toString('utf8'));
+    const digest=crypto.createHash('sha256').update(asar.extractFile(archive,'update-runner.exe')).digest('hex');
+    if(digest!==info.updateRunnerSha256)throw Error('DESKTOP_UPDATE_HELPER_INTEGRITY');
+  }
   return {archiveFiles:files.length,packageFileAuditPassed:true};
 }
 

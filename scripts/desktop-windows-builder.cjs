@@ -4,7 +4,7 @@ module.exports=function windowsBuilder({appDirectory,output,icon,version,accepta
     productName:acceptance?'墨鱼工坊安装验收':'墨鱼工坊',executableName:acceptance?'MooyuWorkshopAcceptance':'MooyuWorkshop',
     directories:{app:appDirectory,output},asar:true,npmRebuild:false,
     publish:null,forceCodeSigning:false,
-    files:['main.cjs','preload.cjs','web/**/*','build-info.json','package.json'],
+    files:['main.cjs','preload.cjs','web/**/*','build-info.json','package.json','update-runner.exe'],
     extraMetadata:{version},win:{target:[{target:'nsis',arch:['x64']}],icon,
       signAndEditExecutable:true,signExecutable:false,verifyUpdateCodeSignature:false},
     nsis:{oneClick:false,perMachine:false,allowElevation:false,allowToChangeInstallationDirectory:true,

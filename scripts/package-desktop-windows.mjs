@@ -7,10 +7,11 @@ import {spawn} from 'node:child_process';
 import {auditDesktopArchive} from './lib/desktop-package-audit.mjs';
 import {prepareDesktopRuntime} from './lib/desktop-runtime.mjs';
 import {runDesktopBuilder} from './lib/desktop-builder-runner.mjs';
+import {updateTrust} from '../apps/desktop/src/update-manifest.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const manifest=JSON.parse(await fs.readFile(path.join(root,'scripts/desktop-windows-package.json'),'utf8'));
-const options={};for(let i=2;i<process.argv.length;i+=2){const key=process.argv[i];if(!['--version','--acceptance','--tools','--electron'].includes(key)||!process.argv[i+1]||options[key])throw Error('PACKAGE_OPTIONS_INVALID');options[key]=process.argv[i+1];}
-const version=options['--version']??'0.2.0-preview.3',acceptance=options['--acceptance']==='true';
+const options={};for(let i=2;i<process.argv.length;i+=2){const key=process.argv[i];if(!['--version','--acceptance','--tools','--electron','--update-config'].includes(key)||!process.argv[i+1]||options[key])throw Error('PACKAGE_OPTIONS_INVALID');options[key]=process.argv[i+1];}
+const version=options['--version']??'0.2.0-preview.4',acceptance=options['--acceptance']==='true';
 if(!/^0\.2\.0-preview\.[1-9]\d*$/.test(version)||options['--acceptance']&&!['true','false'].includes(options['--acceptance']))throw Error('PACKAGE_VERSION_INVALID');
 if(process.platform!=='win32')throw Error('WINDOWS_BUILD_REQUIRED');
 const tools=path.resolve(options['--tools']??path.join(root,'.runtime/windows-packaging-tools'));
@@ -26,6 +27,8 @@ async function run(command,args,cwd,log){return new Promise((resolve,reject)=>{c
 const exists=async p=>fs.access(p).then(()=>true,()=>false);
 const inside=(base,target)=>{const r=path.relative(base,target);return r!== '..'&&!r.startsWith('..'+path.sep)&&!path.isAbsolute(r);};
 try{
+  const configuredUpdates=options['--update-config']?updateTrust(JSON.parse(await fs.readFile(path.resolve(options['--update-config']),'utf8')),{localTest:acceptance}):null;
+  if(toolRequire('electron-updater/package.json').version!==manifest.updaterVersion)throw Error('UPDATER_VERSION_MISMATCH');
   const preparedRuntime=await prepareDesktopRuntime({runtime,destination:path.join(directory,'electron'),manifest});
   report.runtimeArchiveSha256=preparedRuntime.archiveSha256;
   await run('git',['archive','--format=tar','--output='+path.join(directory,'base.tar'),manifest.sourceCommit],root,'archive');
@@ -41,13 +44,15 @@ try{
   await fs.mkdir(appDirectory);
   const projectRequire=createRequire(path.join(source,'package.json')),{build}=projectRequire('esbuild');
   const entry=acceptance?'tests/desktop/electron-installed-acceptance.cjs':'apps/desktop/electron/installed.cjs';
-  const bundled=await build({absWorkingDir:source,entryPoints:[entry],bundle:true,platform:'node',format:'cjs',target:'node22',outfile:path.join(appDirectory,'main.cjs'),external:['electron','bufferutil','utf-8-validate','kerberos'],nodePaths:[path.join(source,'apps/desktop/node_modules'),path.join(source,'apps/realtime/node_modules')],metafile:true,sourcemap:false,legalComments:'inline'});
+  const bundled=await build({absWorkingDir:source,entryPoints:[entry],bundle:true,platform:'node',format:'cjs',target:'node22',outfile:path.join(appDirectory,'main.cjs'),external:['electron','bufferutil','utf-8-validate','kerberos'],nodePaths:[path.join(source,'apps/desktop/node_modules'),path.join(source,'apps/realtime/node_modules'),path.join(tools,'node_modules')],metafile:true,sourcemap:false,legalComments:'inline'});
   const inputs=Object.keys(bundled.metafile.inputs);if(inputs.some(f=>/agent-paper-|desktop-workbench|paper-review|MooyuWorkbench/.test(f)))throw Error('DEFERRED_CODE_IN_BUNDLE');
   report.bundleInputCount=inputs.length;
   await fs.copyFile(path.join(source,'apps/desktop/electron/preload.cjs'),path.join(appDirectory,'preload.cjs'));
   await fs.cp(path.join(source,'.runtime/desktop-shell/web'),path.join(appDirectory,'web'),{recursive:true,filter:from=>!from.endsWith('.map')});
   if(acceptance)await build({absWorkingDir:source,entryPoints:['packages/save-cache/src/indexeddb-store.mjs'],bundle:true,platform:'browser',format:'esm',target:'es2022',outfile:path.join(appDirectory,'web/install-save-probe.js')});
-  const info={sourceCommit:manifest.sourceCommit,version,acceptance,electronVersion:manifest.electronVersion};
+  await run(path.join(process.env.WINDIR,'Microsoft.NET/Framework64/v4.0.30319/csc.exe'),['/nologo','/target:winexe','/platform:x64','/reference:System.Web.Extensions.dll','/out:'+path.join(appDirectory,'update-runner.exe'),path.join(source,'apps/desktop/native/MooyuUpdateRunner.cs')],source,'update-runner-build');
+  const updateRunnerSha256=hash(await fs.readFile(path.join(appDirectory,'update-runner.exe')));
+  const info={updateRunnerSha256,sourceCommit:manifest.sourceCommit,version,acceptance,electronVersion:manifest.electronVersion,updateTrust:configuredUpdates,updaterCacheDirName:'mooyu-updates'};
   await fs.writeFile(path.join(appDirectory,'build-info.json'),JSON.stringify(info,null,2));
   await fs.writeFile(path.join(appDirectory,'package.json'),JSON.stringify({name:acceptance?'mooyu-workshop-acceptance':'mooyu-workshop',productName:acceptance?'墨鱼工坊安装验收':'墨鱼工坊',version,main:'main.cjs',description:'墨鱼工坊 Windows 客户端',author:'Mooyu Workshop',private:true},null,2));
   const {default:configuration}=await import(pathToFileURL(path.join(root,'scripts/desktop-windows-builder.cjs')).href);

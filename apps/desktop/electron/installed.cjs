@@ -7,6 +7,7 @@ else {
   // NSIS/Windows may pass no user arguments. Custom endpoints and profile paths
   // are development-only; an installed build always uses the shared service.
   const config=installedDesktopConfig(app.getPath('appData'),app.getAppPath(),args);
+  config.updateTrust=require(require('node:path').join(app.getAppPath(),'build-info.json')).updateTrust;
   createShell(config).then(shell=>shell?.createWindow(config.initialRoute)).catch(()=>{
     dialog.showErrorBox('墨鱼工坊','客户端启动失败。账号和本地存档仍保留，请重新启动。');app.exit(70);
   });

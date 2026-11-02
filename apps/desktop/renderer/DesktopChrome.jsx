@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../../../packages/platform-client/src/I18n.jsx';
 import { PlayerNavigation } from '../../../packages/platform-client/src/PlatformNavigation.jsx';
+import DesktopUpdates from './DesktopUpdates.jsx';
 
 const chrome = globalThis.mooyuDesktop.chrome;
 export function DesktopLeading({ themeMode }) {
@@ -29,7 +30,7 @@ export function DesktopActions({ go, route, environment }) {
   const remoteTest = accountTest && environment.accountEnvironment === 'isolated-test';
   const production = accountTest && environment.accountEnvironment === 'production';
   const [open, setOpen] = useState(false), [error, setError] = useState('');
-  const root = useRef(null), trigger = useRef(null), menu = useRef(null), info = useRef(null);
+  const root = useRef(null), trigger = useRef(null), menu = useRef(null), info = useRef(null), updates = useRef(null);
   const visibleItems = () => [...(menu.current?.querySelectorAll('button') ?? [])].filter(item => item.getClientRects().length);
   const close = (focus = false) => { setOpen(false); if (focus) trigger.current?.focus(); };
   useEffect(() => {
@@ -57,6 +58,7 @@ export function DesktopActions({ go, route, environment }) {
         <button role="menuitem" onClick={() => { close(true); go('/install'); }}>{en ? 'Integrations and Agents' : '集成与 Agent'}</button>
         <button role="menuitem" onClick={() => action('reload')}>{en ? 'Reload page' : '重新加载页面'}<kbd>Ctrl+R</kbd></button>
         <button role="menuitem" onClick={() => action('toggle-fullscreen')}>{en ? 'Toggle full screen' : '切换应用全屏'}<kbd>F11</kbd></button>
+        <button role="menuitem" onClick={() => { close(); updates.current.open(); }}>{en ? 'Check for updates' : '检查更新'}</button>
         <button role="menuitem" onClick={about}>{en ? 'About this preview' : '关于本地预览'}</button>
         <div className="desktop-menu__note">{en ? 'Closing the window exits this preview.' : '关闭窗口即退出当前预览。'}</div>
         <button role="menuitem" onClick={() => action('quit')}>{en ? 'Quit MOOYU' : '退出墨鱼工坊'}<kbd>Ctrl+Q</kbd></button>
@@ -69,6 +71,7 @@ export function DesktopActions({ go, route, environment }) {
       <p>{en ? 'Closing this window exits the preview. Window size and position are restored next time. Local documents follow each tool’s existing save rules.' : '关闭窗口会退出预览，窗口尺寸和位置将在下次启动时恢复。本地文档仍按各工具已有的保存规则处理。'}</p>
       <button className="button button--primary" autoFocus onClick={() => info.current.close()}>{en ? 'Done' : '知道了'}</button>
     </dialog>
+    <DesktopUpdates ref={updates}/>
     {error && <span className="desktop-chrome-error" role="status">{error}</span>}
   </>;
 }

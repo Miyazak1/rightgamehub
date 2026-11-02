@@ -1,6 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 if (process.isMainFrame) contextBridge.exposeInMainWorld('mooyuDesktop', Object.freeze({
   environment: () => ipcRenderer.invoke('mooyu:preview-environment'),
+  updates: Object.freeze({call: action => ipcRenderer.invoke('mooyu:update-call', action),
+    onState(listener) {
+      if (typeof listener !== 'function') throw Error('DESKTOP_LISTENER_INVALID');
+      const handler = (_event, value) => listener(value); ipcRenderer.on('mooyu:update-state', handler);
+      return () => ipcRenderer.removeListener('mooyu:update-state', handler);
+    }}),
   files: Object.freeze({ save: input => ipcRenderer.invoke('mooyu:file-save', input), cancel: id => ipcRenderer.invoke('mooyu:file-cancel', id) }),
   realtime: Object.freeze({
     call: (method, input) => ipcRenderer.invoke('mooyu:realtime-call', method, input),
