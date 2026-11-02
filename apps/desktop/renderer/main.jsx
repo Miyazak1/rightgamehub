@@ -7,6 +7,8 @@ import './preview.css';
 import { DesktopLeading, DesktopActions } from './DesktopChrome.jsx';
 import { createDesktopAccountAdapter } from './account-adapter.mjs';
 import { createDesktopBusinessApi } from './business-api.mjs';
+import { createDesktopMultiplayerFactory } from './realtime-adapter.mjs';
+import { createDesktopFileExporter } from './file-adapter.mjs';
 
 const browser = createBrowserHostAdapter({ host: 'desktop-app', surface: 'desktop-window' });
 const env = await globalThis.mooyuDesktop.environment();
@@ -15,7 +17,7 @@ const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooy
 const session = env.accountConfigured ? createDesktopAccountAdapter(globalThis.mooyuDesktop.account) : null;
 const api = session ? new Proxy(baseApi, { get(target, key) { return Object.hasOwn(session.api, key) ? session.api[key] : target[key]; } }) : baseApi;
 const Actions = props => <DesktopActions {...props} environment={env}/>;
-const host = { ...browser, ...(session ? { account: session.account, navigation: session.navigation } : {}), chrome: { Leading: DesktopLeading, Actions }, apiBaseUrl: env.accountApiOrigin || env.fixtureOrigin, runtimeDomain: env.businessRuntime?.domain || 'localhost', async getCapabilities() {
+const host = { ...browser, files: createDesktopFileExporter(globalThis.mooyuDesktop.files), multiplayerSessionFactory: createDesktopMultiplayerFactory(globalThis.mooyuDesktop.realtime, env.accountApiOrigin || env.fixtureOrigin), saveOrigin: env.accountApiOrigin || env.fixtureOrigin, learningRuntimeOrigin: env.fixtureOrigin, ...(session ? { account: session.account, navigation: session.navigation } : {}), chrome: { Leading: DesktopLeading, Actions }, apiBaseUrl: env.accountApiOrigin || env.fixtureOrigin, runtimeDomain: env.businessRuntime?.domain || 'localhost', async getCapabilities() {
   const capabilities = await browser.getCapabilities();
   if (session) delete capabilities.unavailableReasons.canPersistCredential;
   return { ...capabilities, host: env.host, hostVersion: env.version, uiDevice: 'desktop', surface: 'desktop-window',

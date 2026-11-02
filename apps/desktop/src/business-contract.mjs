@@ -1,13 +1,17 @@
 // Fixed operations, not a renderer-controlled HTTP tunnel. Product API methods
 // still own endpoint construction, authentication and refresh behavior.
+import { GAME_METHODS, gameArgument } from './game-api-contract.mjs';
 export const BUSINESS_METHODS = Object.freeze({
+  ...GAME_METHODS,
   listWorks: ['query'], listDiscoveryCampaigns: ['limit'], getDiscoveryCampaign: ['id'],
   getWork: ['id'], listWorkLeaderboards: ['id'], getWorkLeaderboard: ['id', 'query'],
+  readCompetitionLeaderboard: ['id', 'id', 'query'],
   listWorkRemixes: ['id'], listWorkTimeline: ['id'], getPublicProjectClaim: ['id'],
   listBlogArticles: ['query'], getBlogArticle: ['id'],
   getPublicUserProfile: ['id'], getPublicProfile: ['id'],
   listLibrary: ['query'], getLibraryState: ['id'], saveToLibrary: ['id'], removeFromLibrary: ['id'],
   getLaunch: ['id', 'optional-id'], recordPlay: ['id'],
+  getGuessBaikeDaily: [],
 });
 const queryKeys = new Set(['limit', 'offset', 'q', 'kind', 'openSource', 'remixable', 'claimable',
   'runtime', 'source', 'cursor', 'locale', 'author', 'recent', 'date', 'puzzleId']);
@@ -18,6 +22,7 @@ export function businessArguments(method, args = []) {
   if (args.length > spec.length) denied();
   return spec.map((kind, index) => {
     const value = args[index];
+    if (Object.hasOwn(GAME_METHODS, method)) return gameArgument(kind, value);
     if (kind === 'optional-id' && value === undefined) return undefined;
     if (kind === 'id' || kind === 'optional-id') {
       if (typeof value !== 'string' || !value.length || value.length > 200 || /[\u0000-\u001f\\/]/u.test(value)) denied();

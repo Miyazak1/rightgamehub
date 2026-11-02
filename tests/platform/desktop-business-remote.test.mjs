@@ -15,6 +15,7 @@ import { createAuthService } from '../../apps/api/src/auth-service.mjs';
 import { loadConfig } from '../../apps/api/src/config.mjs';
 import { desktopBusinessTestGuard } from '../../apps/api/src/desktop-business-test-policy.mjs';
 import { createHash } from 'node:crypto';
+import { createCatalogService } from '../../apps/api/src/catalog-service.mjs';
 const api = 'https://desktop-test.example.org', runtime = 'https://desktop-runtime-test.example.org';
 const env = () => ({ DESKTOP_BUSINESS_TEST_INSTANCE: 'isolated-business', DESKTOP_BUSINESS_TEST_MODE: 'remote-https',
   DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: api, DESKTOP_BUSINESS_TEST_RUNTIME_ORIGIN: runtime, DESKTOP_BUSINESS_TEST_RUNTIME_PORT: '443',
@@ -61,6 +62,26 @@ test('desktop uses trusted remote runtime and exact minted release origins, pres
   assert.equal(policy.allowedRequest({ url: origin + '/game.js', resourceType: 'script' }), false);
   assert.equal(policy.allowedRequest({ url: origin + '/game.js', resourceType: 'script' }, null, new Set([origin])), true);
   assert.equal(policy.allowedRequest({ url: api + '/v1/me', resourceType: 'xhr' }, null, new Set([origin])), false);
+});
+
+test('real catalog HTTPS descriptors with explicit default port pass desktop validation without widening origin trust', async () => {
+  const workId = 'd7b00000-0000-4000-8000-000000000002', releaseId = 'd7b00000-0000-4000-8000-000000000003';
+  const settings = desktopBusinessTestConfig(env());
+  const catalog = createCatalogService({ config: loadConfig(settings.env), repository: {
+    async getLaunch() { return { id: releaseId, entry_path: 'index.html', manifest_json: { entry: 'index.html' }, approved_capabilities: [] }; },
+  } });
+  const launch = await catalog.launch(workId, releaseId);
+  assert.match(launch.runtimeOrigin, /:443$/);
+  const expected = 'https://r-' + releaseId.replaceAll('-', '') + '.desktop-runtime-test.example.org';
+  assert.equal(validateDesktopLaunch(launch, settings.runtime, workId, releaseId), expected);
+  for (const entryExplicit of [false, true]) for (const originExplicit of [false, true]) {
+    assert.equal(validateDesktopLaunch({ ...launch, entryUrl: expected + (entryExplicit ? ':443' : '') + '/index.html',
+      runtimeOrigin: expected + (originExplicit ? ':443' : '') }, settings.runtime, workId, releaseId), expected);
+  }
+  for (const runtimeOrigin of [expected + ':444', expected + '/other', expected + '?', expected + '#',
+    expected.replace('https:', 'http:'), expected.replace('://', '://user@'), expected + '.evil.invalid'])
+    assert.throws(() => validateDesktopLaunch({ ...launch, runtimeOrigin }, settings.runtime, workId, releaseId));
+  assert.throws(() => validateDesktopLaunch({ ...launch, entryUrl: expected + ':444/index.html' }, settings.runtime, workId, releaseId));
 });
 test('Caddy upgrade preserves current baseline and redaction, switches only test upstream and adds restricted runtime', () => {
   const original = '{\n  email test@example.org\n}\nmain.example.org { respond "existing" }\n';

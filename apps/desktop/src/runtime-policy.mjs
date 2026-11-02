@@ -1,7 +1,12 @@
 const fail = () => { throw Object.assign(new Error('DESKTOP_RUNTIME_DENIED'), { code: 'DESKTOP_RUNTIME_DENIED', status: 403 }); };
 import { isolatedBusinessOrigins } from '../../../packages/contracts/src/isolated-business-origins.mjs';
-export function localBusinessRuntime(value, apiOrigin) {
+import { PRODUCTION_API_ORIGIN, PRODUCTION_RUNTIME } from './production-configuration.mjs';
+export function localBusinessRuntime(value, apiOrigin, environment = 'local-test') {
   if (value == null) return null;
+  if (environment === 'production') {
+    if (apiOrigin !== PRODUCTION_API_ORIGIN || value.scheme !== PRODUCTION_RUNTIME.scheme || value.domain !== PRODUCTION_RUNTIME.domain || value.port !== PRODUCTION_RUNTIME.port) fail();
+    return PRODUCTION_RUNTIME;
+  }
   let api; try { api = new URL(apiOrigin); } catch { fail(); }
   if (value.scheme === 'https') {
     try {
@@ -22,8 +27,10 @@ export function validateDesktopLaunch(descriptor, policy, workId, releaseId) {
   const expected = `${policy.scheme}://r-${descriptor.releaseId.replaceAll('-', '')}.${policy.domain}${policy.port === 443 && policy.scheme === 'https' ? '' : ':' + policy.port}`;
   // Check the raw input before URL parsing normalizes dot segments/backslashes.
   if (typeof descriptor.entryUrl !== 'string' || /%2f|%5c|%2e|[\\?#]|\/\.{1,2}(?:\/|$)/i.test(descriptor.entryUrl)) fail();
-  let entry; try { entry = new URL(descriptor.entryUrl); } catch { fail(); }
-  if (entry.origin !== expected || descriptor.runtimeOrigin !== expected || entry.username || entry.password || entry.search || entry.hash ||
+  if (typeof descriptor.runtimeOrigin !== 'string' || /[\\?#]/.test(descriptor.runtimeOrigin)) fail();
+  let entry, runtime; try { entry = new URL(descriptor.entryUrl); runtime = new URL(descriptor.runtimeOrigin); } catch { fail(); }
+  if (entry.origin !== expected || runtime.origin !== expected || runtime.pathname !== '/' || runtime.username || runtime.password ||
+    runtime.search || runtime.hash || entry.username || entry.password || entry.search || entry.hash ||
     !entry.pathname.endsWith('.html') || /%2f|%5c|%2e/i.test(entry.pathname)) fail();
   return expected;
 }

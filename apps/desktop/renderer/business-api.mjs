@@ -29,6 +29,6 @@ export function createDesktopBusinessApi(bridge, origin) {
   return new Proxy(api, { get(target, key) {
     if (typeof key !== 'string' || ['then', 'toJSON'].includes(key)) return undefined;
     if (Object.hasOwn(target, key)) return target[key];
-    return async () => { throw Object.assign(new Error('此桌面测试版本尚未接通该操作。'), { code: 'DESKTOP_BUSINESS_OPERATION_UNAVAILABLE', status: 503 }); };
+    return async () => { throw Object.assign(new Error('此桌面版本尚未接通该操作。'), { code: 'DESKTOP_BUSINESS_OPERATION_UNAVAILABLE', status: 503 }); };
   } });
 }

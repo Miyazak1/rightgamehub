@@ -35,11 +35,11 @@ function CoursewareCover({item,Art}){
   </div>;
 }
 
-function LearningCard({item,go,Art,locale}){
+function LearningCard({item,go,Art,locale,onBuiltIn}){
   const {t}=useI18n();
   const title=localized(item.title,locale,item.work?.title);
   const description=localized(item.description,locale,item.work?.description);
-  const open=()=>item.runtimeUrl?globalThis.location.assign(item.runtimeUrl):go(action(item.work));
+  const open=()=>item.runtimeUrl?(onBuiltIn?onBuiltIn(item):globalThis.location.assign(item.runtimeUrl)):go(action(item.work));
   const subject=localized(item.subjectLabel,locale,item.subject||t('learning.interactive'));
   return <article className="learning-card">
     <button className="learning-card__cover" onClick={open} aria-label={t('learning.view',{title})}><CoursewareCover item={item} Art={Art}/><span className="learning-card__open" aria-hidden="true">↗</span></button>
@@ -53,7 +53,7 @@ function LearningCard({item,go,Art,locale}){
   </article>;
 }
 
-export default function LearningPage({api,demo,go,Art}){
+export default function LearningPage({api,demo,go,Art,runtimeOrigin,courseId}){
   const {t,locale}=useI18n();
   const [state,setState]=useState({status:'loading',items:[]});
   const [category,setCategory]=useState('simulations');
@@ -78,6 +78,8 @@ export default function LearningPage({api,demo,go,Art}){
       ].join(' ').toLowerCase().includes(needle));
   },[allItems,category,locale,query,subject]);
   const selectCategory=id=>{setCategory(id);setSubject('all');setQuery('');};
+  const active=runtimeOrigin&&builtInLearningItems.find(item=>item.id===courseId);
+  if(active)return <main className="page desktop-courseware"><button className="text-button" onClick={()=>go('/learn')}>← {t('learning.catalog')}</button><h1>{localized(active.title,locale)}</h1><iframe key={active.id} title={localized(active.title,locale)} src={runtimeOrigin+active.runtimeUrl} sandbox="allow-scripts" referrerPolicy="no-referrer"/></main>;
   return <main className="page learning-page">
     <header className="learning-hero"><div><span className="learning-kicker">MOOYU.FUN LEARNING</span><h1>{t('learning.title')}</h1><p>{t('learning.lead')}</p></div><div className="learning-hero__mark" aria-hidden="true"><span>∿</span><i/><i/><i/></div></header>
     <section className="learning-categories" aria-labelledby="learning-categories-title">
@@ -95,7 +97,7 @@ export default function LearningPage({api,demo,go,Art}){
       <div className="learning-catalog__head"><div><span className="learning-kicker">{category==='simulations'?'SIMULATION LIBRARY':'LEARNING LIBRARY'}</span><h2 id="learning-catalog-title">{localized(currentCategory.title,locale)}</h2><p>{localized(currentCategory.description,locale)}</p></div><label><span className="sr-only">{t('learning.searchLabel')}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('learning.searchPlaceholder')}/></label></div>
       {category==='simulations'&&<div className="learning-subjects" role="group" aria-label={t('learning.subjectsAria')}>{learningSubjects.map(item=><button key={item.id} type="button" aria-pressed={subject===item.id} onClick={()=>setSubject(item.id)}>{localized(item.label,locale)}</button>)}</div>}
       {state.status==='error'&&category==='simulations'&&<div className="learning-catalog__notice" role="status"><span>{apiLoadError(state.error,t('learning.communityFailed'),locale)}</span><button onClick={()=>setRetry(value=>value+1)}>{t('common.retry')}</button></div>}
-      {items.length?<div className="learning-grid">{items.map(item=><LearningCard key={item.id} item={item} go={go} Art={Art} locale={locale}/>)}</div>:<div className="learning-state"><span aria-hidden="true">{currentCategory.icon}</span><h3>{t(query?'learning.noMatch':'learning.categoryEmpty')}</h3><p>{t(query?'learning.noMatchLead':'learning.categoryEmptyLead')}</p>{query&&<button onClick={()=>setQuery('')}>{t('learning.clear')}</button>}</div>}
+      {items.length?<div className="learning-grid">{items.map(item=><LearningCard key={item.id} item={item} go={go} Art={Art} locale={locale} onBuiltIn={runtimeOrigin?item=>go('/learn/'+item.id):null}/>)}</div>:<div className="learning-state"><span aria-hidden="true">{currentCategory.icon}</span><h3>{t(query?'learning.noMatch':'learning.categoryEmpty')}</h3><p>{t(query?'learning.noMatchLead':'learning.categoryEmptyLead')}</p>{query&&<button onClick={()=>setQuery('')}>{t('learning.clear')}</button>}</div>}
     </section>
   </main>;
 }

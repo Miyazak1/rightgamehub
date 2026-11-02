@@ -31,7 +31,7 @@ export function createMultiplayerHandlers({ apiClient, workId, initialRoomId = n
   const ensureSession = () => {
     if (signal?.aborted) throw Object.assign(new Error('Bridge closed.'), { code: 'BRIDGE_CLOSED' });
     if (session) return session;
-    session = sessionFactory({ apiClient,logger });
+    session = sessionFactory({ apiClient,logger,workId });
     sessionOff = [
       session.on('status', value => sendEvent('multiplayer.status', { status: value })),
       session.on('room', room => { trackRoom(room).then(value => sendEvent('multiplayer.room', value)).catch(error => logger?.warn?.({ error }, 'Rejected cross-game room event')); }),

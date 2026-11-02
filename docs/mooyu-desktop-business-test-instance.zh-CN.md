@@ -34,6 +34,12 @@ node scripts/stop-desktop-business-test.mjs
 
 ## 游戏运行边界
 
+内置的 6 个模拟课件由桌面构建按已跟踪模板和模块锁打包，不依赖网页版 public 目录的本机生成产物。桌面入口保留主页面和标题栏，用 `/learn/:courseId` 路由打开固定目录中的课件；课件经专用回环资源入口运行在仅允许脚本的 iframe 内，不授予同源、桌面桥或 Node 权限。其内联启动脚本和模块锁读取策略仅适用于打包课件，主页面和普通游戏的 CSP 不放宽；主页面协议拒绝直接读取课件路径，返回和前进仍由桌面路由处理。
+
+作品详情复用正式 API 的排行榜读取服务：`GET /v1/works/:workId/leaderboards` 对未配置榜单的作品返回 `200` 和空数组，不能用路由不存在的 `404` 代替；选中榜单通过 `GET /v1/works/:workId/leaderboards/:boardId` 读取，未知榜单保留 `COMPETITION_BOARD_NOT_FOUND`。包含猜百科日榜的兼容读取。桌面桥开放固定的 `readCompetitionLeaderboard` 方法，仍校验作品、榜单和查询参数，不开放任意 HTTP。隔离服务不装配比赛写服务或游戏会话授权，成绩提交、管理、发布、模型和后台任务保持关闭。
+
+本地数据库验收同时检查空榜单、临时注册榜单、匿名/登录后的日榜读取，以及匿名和登录后均拒绝成绩写入；临时榜单仅写入新建隔离数据库，随该测试项目清理。HTTPS 验收通过本机 Caddy 和本机测试证书重复检查排行榜读取，不访问远程生产网关。
+
 测试游戏来自 `http://r-<release-id去连字符>.localhost:<回环运行端口>`。Electron 需要显式的本地 businessRuntime 配置；主进程校验启动描述的 workId、releaseId、入口、scheme 和端口后，才准许对应 origin。未获准的域名、生产 API、任意 URL 和 HTTPS 账号环境混接本机运行域都会被拒绝。
 
 父窗口仍使用严格 CSP、sandbox/contextIsolation/webSecurity；游戏 iframe 仅允许脚本，不允许同源权限，不能读取桌面桥、Node 或父窗口存储。所有图片代理限制仍保留。这个验收仅覆盖本机自有游戏运行，不代表已接入公网游戏运行域、Windows 安装包、多人游戏、云存档或模型功能。

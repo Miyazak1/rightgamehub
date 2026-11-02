@@ -13,6 +13,8 @@ node scripts/start-desktop-shell.mjs
 
 构建后也可双击 `.runtime/desktop-shell/MooyuDesktopPreview.exe`。该小型原生文件仅负责启动 Electron，不绘制产品界面。开发预览使用本机既有且核对摘要的 `E:\CODE\Right\.runtime\electron-v44.4.5-win32-x64` 运行时；不自动下载运行时，不是可分发安装包。
 
+桌面图标直接复用网页版 `apps/web/public/favicon.svg`：构建生成 16–256 像素 PNG 和多尺寸 ICO，窗口与任务栏使用 Logo，原生启动器嵌入同一 ICO。生成文件位于 `.runtime/desktop-shell/web/desktop-icons`；不修改或重签已有 Electron 运行时。修改网站 Logo 后重新构建即可同步。
+
 本地构建、配置、缓存和诊断记录位于 `.runtime/desktop-shell/`。主界面使用固定 `mooyu-app://client` origin；游戏兼容样本由进程自建的随机端口 `127.0.0.1` 静态服务承载。离线预览仅允许这两个本地来源；联网测试只额外允许可信启动描述符对应的游戏 origin，不开放通用网络代理。
 
 验证命令：
@@ -96,3 +98,23 @@ node scripts/verify-desktop-clean.mjs
 联网模式现已将已支持的业务请求交给同一账号服务器，不再回退到本地样本。发现、日志、课件、主页及游戏库的范围、安全边界和验收命令见 [业务 API 接入](../../docs/mooyu-desktop-business-api.zh-CN.md)。现有远程账号测试实例仍只提供账号接口，本轮没有部署业务服务器，也没有连接生产环境。
 
 远程完整业务测试需要同时配置 `--test-account-api https://desktop-test.example.org --test-runtime-origin https://desktop-runtime-test.example.org`，只接受配对的 HTTPS 测试命名空间，不能混用 localhost 或正式运行域。服务端准备、独立数据库/Redis、Caddy 和回滚见[远程业务测试方案](../../docs/mooyu-desktop-business-remote.zh-CN.md)。
+
+## 正式服务模式（本地准备，尚未实连验收）
+
+正式桌面端复用网页版账号、目录、游戏库、日志和资源 API，不创建第二套用户或内容数据库。需要显式使用 --production-api https://mooyu.fun；API 固定为该 canonical origin，运行域按现有客户端配置固定为 runtime.mooyu.fun、HTTPS 443。不能同时提供测试账号地址或测试运行域。默认无参数启动仍是离线预览，不会自动连接正式服务。
+
+启动器会派生 production- 前缀的独立 profile，并在读取 Chromium 或 DPAPI 凭据前绑定环境和 origin。不能复用隔离测试 profile、迁移测试账号，或把测试库改名当作正式库。GitHub 登录仍使用现有网站的 /v1/auth/github/web 与同源回调，结果由正式 API 映射到现有网站用户；本设备只新增独立会话。
+
+首次业务请求先验证正式 /ready，不依赖测试实例标记。TLS 校验关闭、非 canonical API、错误运行域、跳转、测试实例响应或服务未就绪均拒绝。正式模式不服务兼容测试小游戏；远程业务始终使用已配置的业务客户端，错误不回退到本地样本。内置课件仍使用与网页版相同的受控模板资源。
+
+本地自动回归使用完全内存化的传输响应，覆盖账号标识、目录/游戏库来源、游戏描述、GitHub 回调、会话恢复与退出，不向正式域名发请求。它不能证明线上 OAuth、用户数据或资源已经验收。实际服务器检查需另行授权，先核对匿名目录与运行资源，再由用户在系统浏览器操作 GitHub；不迁移数据库、不创建文章、不发布、不调用模型或启动后台任务。
+
+目前仍只接通桌面桥中明确列出的业务操作；未接通的操作会明确报错。该配置准备不代表所有网页写操作已经在桌面端验收。
+
+## 桌面网络与公开资源缓存
+
+主进程的账号/业务请求和图片代理使用独立 Chromium 网络会话，复用其代理、TLS 和 HTTP 实现。Cookie 始终省略；会话与 origin/profile 绑定，凭据仍由主进程显式提供。账号、认证、JSON、头像和带凭据的请求强制 no-store。只有匿名公开封面及活动分享图允许 Chromium 按服务器的缓存头复用，不自行延长有效期。界面协议上的媒体响应仍不缓存。图片流式转发并保留 8 MB 上限，导航取消向上游传播。
+
+同一轮并发启动请求共用一次就绪检查；取消单个页面不取消其他页面的检查，失败可重试，退出账号会隔离旧请求。运行 node scripts/verify-desktop-network.mjs 可在全新本地会话验证缓存、私有响应与 Cookie 边界，不接触正式账号或服务。
+
+游戏多人、分享和 PNG/JSON 文件导出复用网页版协议及 API，通过主进程限制实时端点和原生保存路径。接入边界、本机契约回归及独立窗口启动命令见[桌面游戏能力接入](../../docs/mooyu-desktop-game-io.zh-CN.md)。本机通过不代表已部署或完成正式多人对局验收。

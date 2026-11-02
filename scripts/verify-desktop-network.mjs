@@ -1,0 +1,20 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {spawn} from 'node:child_process';
+if(process.argv.length!==2)throw Error('Local-only network verification takes no remote address');
+const root=fileURLToPath(new URL('../',import.meta.url));
+const clean=JSON.parse(await fs.readFile(path.join(root,'.runtime/desktop-auth-clean/latest.json')));
+if(!clean.passed)throw Error('Run clean-directory regression first');
+const parent=path.join(root,'.runtime/desktop-network-tests');await fs.mkdir(parent,{recursive:true});
+const dir=await fs.mkdtemp(path.join(parent,'check-')),file=path.join(dir,'config.json');
+const report=path.join(dir,'report.json'),profileRoot=path.join(dir,'profile');await fs.mkdir(profileRoot);
+await fs.writeFile(file,JSON.stringify({profileRoot,report}));
+const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
+await new Promise((resolve,reject)=>{
+  const child=spawn(path.resolve(root,'../../.runtime/electron-v44.4.5-win32-x64/electron.exe'),[path.join(clean.directory,'source/tests/desktop/electron-network-acceptance.cjs'),'--config',file],{cwd:root,env,windowsHide:true,stdio:['ignore','pipe','pipe']});
+  child.stdout.pipe(process.stdout);child.stderr.pipe(process.stderr);
+  const timer=setTimeout(()=>{child.kill();reject(Error('LOCAL_NETWORK_CHECK_TIMEOUT'));},60000);
+  child.once('error',e=>{clearTimeout(timer);reject(e);});child.once('exit',code=>{clearTimeout(timer);code===0?resolve():reject(Error('LOCAL_NETWORK_CHECK_FAILED'));});
+});
+const result=JSON.parse(await fs.readFile(report));await fs.writeFile(path.join(parent,'latest.json'),JSON.stringify({...result,directory:dir},null,2));

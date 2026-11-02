@@ -6,6 +6,7 @@ import { accountOrigin } from './account-configuration.mjs';
 import { businessArguments, businessMediaPath, rewriteBusinessMedia } from './business-contract.mjs';
 import { localBusinessRuntime, validateDesktopLaunch } from './runtime-policy.mjs';
 import { createBusinessRequests } from './business-requests.mjs';
+import { createDesktopGameAuthority } from './game-api-contract.mjs';
 
 const fail = (code, status = 400) => { throw new ApiError({ code, status, message: code, retryable: status >= 500 }); };
 const abortable = (work, signal) => new Promise((resolve, reject) => {
@@ -35,14 +36,15 @@ export function validateGitHubAuthorizeUrl(value, challengeId, origin) {
 
 export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
   const origin = accountOrigin(apiOrigin, environment);
-  const runtimePolicy = localBusinessRuntime(businessRuntime, origin);
+  const runtimePolicy = localBusinessRuntime(businessRuntime, origin, environment);
   if (!origin) fail('DESKTOP_ACCOUNT_NOT_CONFIGURED', 503);
-  if (environment === 'isolated-test' && process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') fail('DESKTOP_ACCOUNT_TLS_REQUIRED');
+  if (environment !== 'local-test' && process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') fail('DESKTOP_ACCOUNT_TLS_REQUIRED');
   const key = 'desktop-shell-account:' + createHash('sha256').update(origin).digest('hex');
   let tokens = null, sessionId = null, vaultError = null, tail = Promise.resolve();
   const operation = new AsyncLocalStorage();
   let epoch = 0, sessionAbort = new AbortController(), vaultTail = Promise.resolve(), refreshTail = Promise.resolve(), businessRequests;
   const current = () => !operation.getStore() || operation.getStore().epoch === epoch;
+  const gameAuthority = createDesktopGameAuthority();
   let githubAttempt = null, githubGrant = null, githubGeneration = 0;
   const cancelledGrants = [];
   const cancelGitHub = () => {
@@ -53,7 +55,7 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
   const validTokens = value => value && ['accessToken', 'refreshToken'].every(k => typeof value[k] === 'string' && value[k].length>0 && value[k].length<16384);
   const state = () => ({ authenticated: !!tokens, desktopSessionId: sessionId, errorCode: vaultError,
     persistence: vaultError ? { kind: 'unavailable', description: '本地凭据无法读取，请重新登录；保存成功后会恢复加密持久化。' }
-      : { kind: 'os-keychain', description: '登录凭据由 Windows 当前用户 DPAPI 加密保存，并绑定此测试服务器。' } });
+      : { kind: 'os-keychain', description: environment === 'production' ? '登录凭据由 Windows 当前用户 DPAPI 加密保存，并绑定墨鱼工坊正式服务器。' : '登录凭据由 Windows 当前用户 DPAPI 加密保存，并绑定此测试服务器。' } });
   try {
     const raw = await vault.load(key), saved = raw ? JSON.parse(raw) : null;
     if (saved && saved.origin === origin && validTokens(saved.tokens)) { tokens = saved.tokens; sessionId = randomUUID(); }
@@ -75,36 +77,59 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     epoch++; sessionAbort.abort(Object.assign(new Error('Session changed'), { code: 'DESKTOP_ACCOUNT_SESSION_CHANGED', status: 409 }));
     sessionAbort = new AbortController(); businessRequests?.abortAll(operation.getStore()?.requestId);
     tokens = null; sessionId = null;
+    gameAuthority.clear();
     refreshTail = Promise.resolve();
+    readiness = null; readinessEpoch = -1;
     api = makeApi(); // A new login must not join the retired client's refresh.
     onChanged(state());
     const remove = vaultTail.then(() => vault.remove(key));
     vaultTail = remove.catch(() => {}); return remove;
   };
-  let verifiedInstance = false;
+  let verifiedInstance = false, readiness = null, readinessEpoch = -1;
   const transport = async (url, options = {}) => {
     const target = new URL(url);
     if (target.origin !== origin || target.username || target.password || !target.pathname.startsWith('/v1/')) fail('DESKTOP_ACCOUNT_ORIGIN_DENIED');
     if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
     const context = operation.getStore();
-    const send = (address, settings) => {
+    const send = (address, settings, shared = false) => {
       // Refresh is shared by concurrent private reads. Cancelling one page must
       // not cancel another page's refresh; logout still cancels the session.
       const refresh = new URL(address).pathname === '/v1/auth/refresh';
-      const signals = refresh ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
+      const signals = refresh || shared ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
       const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : 20000), ...signals.filter(Boolean)]);
       return abortable(() => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit', signal }), signal);
     };
-    if (environment === 'isolated-test' && !verifiedInstance) {
-      const response = await send(origin + '/ready-desktop-auth', { method: 'GET' });
-      if (!response.ok || response.redirected) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
-      let data; try { data = (await response.json()).data; } catch { fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503); }
-      if (data?.status !== 'ready' || !['isolated-auth-only', 'isolated-business'].includes(data.instance) || data.backgroundTasksEnabled !== false ||
-          data.instance === 'isolated-business' && (data.publishingEnabled !== false || data.modelCallsEnabled !== false) ||
-          data.database !== true || data.redis !== true || data.migrations?.ready !== true) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
-      if (runtimePolicy && (data.instance !== 'isolated-business' || data.runtime?.domain !== runtimePolicy.domain ||
-        data.runtime?.scheme !== runtimePolicy.scheme || data.runtime?.port !== runtimePolicy.port)) fail('DESKTOP_RUNTIME_DENIED', 503);
-      verifiedInstance = true;
+    const verify = async () => {
+      if (environment === 'production') {
+        const response = await send(origin + '/ready', {method:'GET'}, true);
+        if (!response.ok || response.redirected) fail('DESKTOP_PRODUCTION_UNAVAILABLE',503);
+        let data; try { const body=await response.json(); data=body.data??body; } catch { fail('DESKTOP_PRODUCTION_UNAVAILABLE',503); }
+        if (data?.status !== 'ready' || data.database !== true || data.migrations?.ready !== true || data.instance) fail('DESKTOP_PRODUCTION_UNAVAILABLE',503);
+      }
+      if (environment === 'isolated-test') {
+        const response = await send(origin + '/ready-desktop-auth', { method: 'GET' }, true);
+        if (!response.ok || response.redirected) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
+        let data; try { data = (await response.json()).data; } catch { fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503); }
+        if (data?.status !== 'ready' || !['isolated-auth-only', 'isolated-business'].includes(data.instance) || data.backgroundTasksEnabled !== false ||
+            data.instance === 'isolated-business' && (data.publishingEnabled !== false || data.modelCallsEnabled !== false) ||
+            data.database !== true || data.redis !== true || data.migrations?.ready !== true) fail('DESKTOP_ACCOUNT_TEST_INSTANCE_REQUIRED', 503);
+        if (runtimePolicy && (data.instance !== 'isolated-business' || data.runtime?.domain !== runtimePolicy.domain ||
+          data.runtime?.scheme !== runtimePolicy.scheme || data.runtime?.port !== runtimePolicy.port)) fail('DESKTOP_RUNTIME_DENIED', 503);
+      }
+    };
+    if (environment !== 'local-test' && !verifiedInstance) {
+      if (!readiness || readinessEpoch !== epoch) {
+        const expected = epoch;
+        const checking = verify().then(() => {
+          if (expected !== epoch) fail('DESKTOP_ACCOUNT_SESSION_CHANGED',409);
+          verifiedInstance = true;
+        });
+        readiness = checking; readinessEpoch = expected;
+        checking.catch(() => { if (readiness === checking) readiness = null; });
+      }
+      const pending = readiness;
+      await abortable(() => pending, AbortSignal.any([options.signal,context?.signal,context?.sessionSignal].filter(Boolean)));
+      if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED',409);
     }
     const response = await send(url, options);
     if (response.redirected || response.status >= 300 && response.status < 400) fail('DESKTOP_ACCOUNT_REDIRECT_DENIED', 502);
@@ -129,6 +154,7 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       const request = object(args[0]);
       const values = businessArguments(request.method, request.args);
       if (request.method === 'getLaunch' && !runtimePolicy) fail('DESKTOP_RUNTIME_NOT_CONFIGURED', 503);
+      gameAuthority.before(request.method, values);
       try {
         const signal = operation.getStore()?.signal;
         // Transport applies the page signal to ordinary I/O. Do not give it to
@@ -136,7 +162,11 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
         const response = await api[request.method](...values);
         signal?.throwIfAborted();
         if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
-        if (request.method === 'getLaunch') onRuntimeOrigin(validateDesktopLaunch(response.data, runtimePolicy, ...values));
+        if (request.method === 'getLaunch') {
+          onRuntimeOrigin(validateDesktopLaunch(response.data, runtimePolicy, ...values));
+          gameAuthority.launched(response.data);
+        }
+        gameAuthority.completed(request.method, values, response);
         return rewriteBusinessMedia(response, origin);
       }
       catch (error) {
@@ -254,24 +284,53 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
   };
   return {
     state,
-    async media(value) {
+    gameContext(workId, capability, descriptor) {
+      if (descriptor) gameAuthority.assertLaunch(descriptor, capability);
+      else if (!tokens || !gameAuthority.hasLaunch(workId, capability)) fail('DESKTOP_GAME_SESSION_DENIED', 403);
+      const expected = epoch;
+      return () => { if (expected !== epoch) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409); };
+    },
+    assertRealtime: (workId, message) => gameAuthority.assertRealtime(workId, message),
+    receiveRealtime: (workId, message) => gameAuthority.receiveRealtime(workId, message),
+    async realtimeTicket() {
+      if (!tokens) fail('AUTH_REQUIRED', 401);
+      return operation.run({ epoch, signal: sessionAbort.signal, sessionSignal: sessionAbort.signal }, async () => {
+        const result = await api.createRealtimeTicket(); if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409); return result.data;
+      });
+    },
+    async media(value, options = {}) {
       const pathname = businessMediaPath(value, origin);
       if (!pathname) fail('DESKTOP_MEDIA_DENIED', 403);
-      const response = await transport(origin + pathname, { method: 'GET' });
+      const response = await transport(origin + pathname, { method: 'GET', signal:options.signal });
       const type = response.headers.get('content-type')?.split(';')[0];
       if (!response.ok || !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(type)) fail('DESKTOP_MEDIA_UNAVAILABLE', 404);
-      const reader = response.body.getReader(), chunks = []; let size = 0;
-      try {
-        for (;;) { const { done, value: chunk } = await reader.read(); if (done) break;
-          size += chunk.length; if (size > 8 * 1024 * 1024) fail('DESKTOP_MEDIA_TOO_LARGE', 413); chunks.push(chunk); }
-      } finally { await reader.cancel().catch(() => {}); }
-      return new Response(Buffer.concat(chunks), { headers: { 'Content-Type': type,
+      if (Number(response.headers.get('content-length')) > 8*1024*1024) {
+        await response.body?.cancel().catch(()=>{}); fail('DESKTOP_MEDIA_TOO_LARGE',413);
+      }
+      const reader = response.body.getReader(); let size = 0, finished = false;
+      const stop = async reason => { if (finished) return; finished = true;
+        await reader.cancel(reason).catch(()=>{}); try { reader.releaseLock(); } catch {} };
+      const body = new ReadableStream({
+        async pull(controller) {
+          try {
+            const part = await reader.read(); if (finished) return;
+            if (part.done) { finished=true; reader.releaseLock(); controller.close(); return; }
+            size += part.value.length;
+            if (size > 8*1024*1024) fail('DESKTOP_MEDIA_TOO_LARGE',413);
+            controller.enqueue(part.value);
+          } catch (error) { if (!finished) { await stop(error); controller.error(error); } }
+        },
+        cancel: stop,
+      });
+      // The anonymous Chromium transport caches eligible public images. Keep
+      // the UI-scheme response uncached so account/private media never persist.
+      return new Response(body, { headers: { 'Content-Type': type,
         'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' } });
     },
     // Auth mutations stay ordered. Business work has a bounded, cancellable
     // queue; state/cancellation/local sign-out never wait behind business I/O.
     call(method, args = []) {
-      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>4096) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
+      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>(method === 'business' ? 32768 : 4096)) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
       if (['startGitHubWeb','cancelGitHub','createChallenge','verifyChallenge','clear','logout','logoutAll'].includes(method)) cancelGitHub();
       if (method === 'state') return Promise.resolve(state());
       if (method === 'cancelGitHub') return Promise.all(cancelledGrants.splice(0).map(revokeGitHubTokens)).then(() => ({ cancelled: true }));

@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import { desktopAuthCaddyfile } from './prepare-desktop-auth-caddy.mjs';
 import { desktopBusinessCaddyfile } from './prepare-desktop-business-caddy.mjs';
+import { validateDesktopLaunch } from '../apps/desktop/src/runtime-policy.mjs';
 
 if (process.argv.length !== 2) throw Error('Local-only verification takes no remote address');
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -166,6 +167,14 @@ networks:
     for (const id of ['d7b00000-0000-4000-8000-000000000002', 'd7b00000-0000-4000-8000-000000000004'])
       assert.ok(works.some(work => work.id === id));
     assert.equal((await request(apiHost, '/v1/blog/articles/desktop-business-fixture')).status, 200);
+    for (const id of ['d7b00000-0000-4000-8000-000000000002', 'd7b00000-0000-4000-8000-000000000004']) {
+      const boards = await request(apiHost, '/v1/works/' + id + '/leaderboards');
+      assert.equal(boards.status, 200); assert.deepEqual(JSON.parse(boards.text).data, []);
+    }
+    const definitions = await request(apiHost, '/v1/works/gamehub-guess-baike/leaderboards');
+    assert.equal(definitions.status, 200); assert.equal(JSON.parse(definitions.text).data[0].id, 'daily');
+    const daily = await request(apiHost, '/v1/works/gamehub-guess-baike/leaderboards/daily');
+    assert.equal(daily.status, 200); assert.equal(JSON.parse(daily.text).data.total, 0);
     assert.equal((await request(apiHost, '/v1/me/library')).status, 401);
     await assert.rejects(request('wrong.example.org', '/ready-desktop-business'), error =>
       error.code === 'ERR_TLS_CERT_ALTNAME_INVALID' || error.code === 'EPROTO' && /TLS|SSL/i.test(error.message));
@@ -261,6 +270,7 @@ networks:
   await check('HTTPS launch binds release host; game assets and sandbox CSP work; invalid host, method and publication are denied', async () => {
     const work = 'd7b00000-0000-4000-8000-000000000002';
     const launch = JSON.parse((await request(apiHost, '/v1/works/' + work + '/launch')).text).data;
+    assert.equal(validateDesktopLaunch(launch, { domain: runtimeDomain, scheme: 'https', port: 443 }, work), new URL(launch.entryUrl).origin);
     const url = new URL(launch.entryUrl); assert.equal(url.protocol, 'https:'); assert.ok(url.hostname.endsWith('.' + runtimeDomain));
     const html = await request(url.hostname, url.pathname); assert.equal(html.status, 200); assert.match(html.headers['content-security-policy'], /sandbox allow-scripts/);
     const js = await request(url.hostname, '/game.js', 'GET', { Cookie: 'test=private', Authorization: 'Bearer private' });

@@ -8,6 +8,7 @@ import policy from '../../apps/desktop/electron/policy.cjs';
 import { loadConfig } from '../../apps/api/src/config.mjs';
 import { createDesktopAccountSession } from '../../apps/desktop/src/account-session.mjs';
 import { createMemoryCredentialVault } from '../../apps/capability-executor/src/credential-vault.mjs';
+import { createDesktopBusinessTestRuntime } from '../../apps/api/src/desktop-business-test-server.mjs';
 
 const valid = () => ({ DESKTOP_BUSINESS_TEST_INSTANCE: 'isolated-business',
   DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: 'http://127.0.0.1:39190', DESKTOP_BUSINESS_TEST_RUNTIME_PORT: '39192',
@@ -42,6 +43,37 @@ test('runtime origins require explicit loopback configuration and a matching rel
     assert.throws(() => validateDesktopLaunch({ ...descriptor, ...patch }, rules, 'test-work', release));
   assert.throws(() => validateDesktopLaunch(descriptor, null, 'test-work'));
   for (const source of ['https://mooyu.fun', 'https://desktop-test.mooyu.fun']) assert.throws(() => localBusinessRuntime(rules, source));
+});
+
+test('leaderboard whitelist permits public reads only, including built-in daily boards', () => {
+  const paths = ['/v1/works/gamehub-guess-baike/leaderboards', '/v1/works/gamehub-guess-baike/leaderboards/daily',
+    '/v1/works/d7b00000-0000-4000-8000-000000000002/leaderboards/score-board?limit=10'];
+  for (const remote of [false, true]) for (const url of paths) {
+    for (const method of ['GET', 'HEAD']) assert.equal(desktopBusinessTestRequestAllowed(method, url, { remote }), true);
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.equal(desktopBusinessTestRequestAllowed(method, url, { remote }), false);
+  }
+  for (const url of ['/v1/competition/runs', '/v1/competition/modes', '/v1/works/gamehub-other/leaderboards',
+    paths[1] + '/finish', '/v1/admin/competition/runs/d7b00000-0000-4000-8000-000000000002/decision'])
+    for (const method of ['GET', 'POST']) assert.equal(desktopBusinessTestRequestAllowed(method, url), false);
+});
+
+test('isolated runtime registers real leaderboard reads without enabling score writes', async t => {
+  const runtime = createDesktopBusinessTestRuntime(valid());
+  t.after(() => runtime.app.close());
+  const queries = [];
+  runtime.database.pool.query = async sql => { queries.push(sql); return { rows: [] }; };
+  const id = 'd7b00000-0000-4000-8000-000000000002';
+  const response = await runtime.app.inject({ method: 'GET', url: '/v1/works/' + id + '/leaderboards' });
+  assert.equal(response.statusCode, 200); assert.deepEqual(response.json(), { data: [] });
+  assert.ok(queries.some(sql => sql.includes('competition_boards')));
+  const builtin = await runtime.app.inject('/v1/works/gamehub-guess-baike/leaderboards');
+  assert.equal(builtin.statusCode, 200); assert.equal(builtin.json().data[0].id, 'daily');
+  const missing = await runtime.app.inject('/v1/works/' + id + '/leaderboards/missing');
+  assert.equal(missing.statusCode, 404); assert.equal(missing.json().error.code, 'COMPETITION_BOARD_NOT_FOUND');
+  for (const url of ['/v1/competition/runs', '/v1/competition/runs/' + id + '/finish']) {
+    const denied = await runtime.app.inject({ method: 'POST', url, payload: {} });
+    assert.equal(denied.statusCode, 404); assert.equal(denied.json().error.code, 'DESKTOP_BUSINESS_TEST_ROUTE_DISABLED');
+  }
 });
 test('launch options do not widen HTTPS account sessions to a loopback runtime', () => {
   const options = desktopAccountLaunchOptions(['--account-api', 'http://127.0.0.1:39190', '--test-runtime-origin', 'http://localhost:39192'], process.cwd());

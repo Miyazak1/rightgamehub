@@ -277,7 +277,7 @@
     {
       "source": "packages/platform-client/src/App.jsx",
       "line": 1983,
-      "condition": "else if (route === '/learn')",
+      "condition": "else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin)",
       "components": [
         "LearningPage"
       ],
@@ -873,7 +873,7 @@
     },
     {
       "source": "packages/platform-client/src/App.jsx",
-      "sha256": "4d3fed2c62843e6d6de70be4389ee62abdb6ccf0ddd537980b159e03f63a4f2c",
+      "sha256": "5cab2294562c68ee86ece0e8558d44a49e196a5c549f8b5eec836eeedba4fb34",
       "apiCalls": [
         "acceptGuessBaikeChallenge",
         "applyForCreator",
@@ -1406,7 +1406,7 @@
     },
     {
       "source": "packages/platform-client/src/LearningPage.jsx",
-      "sha256": "59870cfa9c7e6779540bc3b97fcf225e6f8fb01c3f5725e0803692df9811a870",
+      "sha256": "7a9143b4857bd9f3e7dc8629cd9c5cf54e981feba86883481174085f4b3b085f",
       "apiCalls": [
         "listWorks"
       ],
@@ -1606,7 +1606,7 @@
     },
     {
       "source": "packages/platform-client/src/api-load-error.mjs",
-      "sha256": "2d06db4d0934c5d2a4ca873b327d334c17a47e07d21bae3f8a7aa8bd7061b226",
+      "sha256": "feee79ec7337e9bd448077678a4fd22f00323fe08bf1f094e1a78a896cc73abf",
       "apiCalls": [],
       "browserDependencies": []
     },
@@ -1852,7 +1852,7 @@
     },
     {
       "source": "packages/platform-client/src/web-game-multiplayer-handlers.mjs",
-      "sha256": "a0d8f54e3615201add3d2dd38e5ef3bee8a355270e03eb12d63ea0b7f5340c5c",
+      "sha256": "dd79c3fd47f5fe711ab890187cecd24eac2198bce63ecbc13d9a4caf4aa9a445",
       "apiCalls": [
         "createMultiplayerInvite",
         "createMultiplayerRoom",

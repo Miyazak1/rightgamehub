@@ -48,6 +48,7 @@ export function desktopBusinessTestRequestAllowed(method, rawUrl, settings = {})
     /^\/(?:health|ready|ready-desktop-business|ready-desktop-auth)$/,
     /^\/v1\/works$/,
     new RegExp(`^/v1/works/${uuid}(?:/(?:cover|launch|remixes|timeline|claim|leaderboards))?$`),
+    new RegExp(`^/v1/works/(?:${uuid}|gamehub-guess-baike)/leaderboards(?:/[a-zA-Z0-9_-]{1,48})?$`),
     /^\/v1\/blog\/articles(?:\/[a-z0-9-]+)?$/,
     /^\/v1\/discovery\/campaigns(?:\/[a-z0-9-]+)?$/,
     /^\/v1\/profiles\/[a-z][a-z0-9-]{2,31}$/,

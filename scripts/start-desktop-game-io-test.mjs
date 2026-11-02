@@ -1,0 +1,15 @@
+import fs from 'node:fs/promises';import path from 'node:path';import {createHash} from 'node:crypto';import {createReadStream} from 'node:fs';import {spawn} from 'node:child_process';import {fileURLToPath} from 'node:url';
+import {createGameIoFixture} from '../tests/desktop/game-io-fixture.mjs';import {createWindowsDpapiCredentialVault} from '../apps/capability-executor/src/credential-vault.mjs';import {prepareDesktopAccountProfile} from '../apps/desktop/src/account-configuration.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),latest=JSON.parse(await fs.readFile(path.join(root,'.runtime/desktop-auth-clean/latest.json'),'utf8')),source=path.join(latest.directory,'source');
+if(!latest.passed)throw Error('DESKTOP_CLEAN_CHECK_REQUIRED');
+const directory=await fs.mkdtemp(path.join(root,'.runtime/desktop-game-io-live-')),profileRoot=path.join(directory,'profile');
+const fixture=await createGameIoFixture();
+try {
+const executable=path.resolve(root,'../../.runtime/electron-v44.4.5-win32-x64/electron.exe'),hash=createHash('sha256');for await(const chunk of createReadStream(executable))hash.update(chunk);if(hash.digest('hex')!=='bd14928e0728366fd3f41499cb398ff3f4304dab259a3e605077899a6f8c748e')throw Error('DESKTOP_RUNTIME_HASH_MISMATCH');
+await prepareDesktopAccountProfile(profileRoot,fixture.origin,'local-test');
+const vault=createWindowsDpapiCredentialVault({directory:path.join(profileRoot,'account-vault')});await vault.store('desktop-shell-account:'+createHash('sha256').update(fixture.origin).digest('hex'),JSON.stringify({origin:fixture.origin,tokens:{accessToken:'local-fixture-access',refreshToken:'local-fixture-refresh'}}));
+const config={assetRoot:path.join(source,'.runtime/desktop-shell/web'),profileRoot,accountApiOrigin:fixture.origin,accountEnvironment:'local-test',businessRuntime:{scheme:'http',domain:'localhost',port:fixture.runtimePort},initialRoute:'/play/'+fixture.workId+'?lang=zh-CN',electronExecutable:executable,electronEntry:path.join(source,'apps/desktop/electron/main.cjs')};const file=path.join(directory,'launch.json');await fs.writeFile(file,JSON.stringify(config,null,2));
+await fs.writeFile(path.join(root,'.runtime/desktop-game-io-live-latest.json'),JSON.stringify({directory,config:file,origin:fixture.origin,workId:fixture.workId,shareCode:fixture.shareCode,productionConnected:false},null,2));
+const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;const child=spawn(executable,[config.electronEntry,'--config',file],{cwd:source,env,windowsHide:false,stdio:['ignore','ignore','ignore']});console.log(JSON.stringify({directory,pid:child.pid,productionConnected:false}));
+let finished=false;const finish=async code=>{if(finished)return;finished=true;await fs.writeFile(path.join(directory,'result.json'),JSON.stringify({exitCode:code,ticketCount:fixture.ticketCount,calls:fixture.calls,commands:fixture.commands.map(x=>x.type),productionConnected:false},null,2));await fixture.close();};child.once('exit',finish);child.once('error',()=>finish(70));
+} catch(error) { await fixture.close(); throw error; }

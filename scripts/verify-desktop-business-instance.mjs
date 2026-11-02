@@ -5,7 +5,7 @@ import { createServer } from 'node:net';
 import crypto from 'node:crypto';
 import http from 'node:http';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DESKTOP_BUSINESS_FIXTURE as f } from '../apps/api/src/desktop-business-test-seed.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -30,7 +30,7 @@ async function docker(args) {
   return new Promise((resolve, reject) => {
     const child = spawn('docker', endpoint ? ['--host', endpoint, ...args] : args, { cwd: source, env: dockerEnv, windowsHide: true });
     let out = '', err = '';
-    const timer = setTimeout(() => { child.kill(); reject(Error('Docker verification timed out')); }, 240000);
+    const timer = setTimeout(() => { child.kill(); reject(Error('Docker verification timed out')); }, 360000);
     child.stdout.on('data', c => { out += c; }); child.stderr.on('data', c => { err += c; });
     child.once('error', e => { clearTimeout(timer); reject(e); });
     child.once('close', code => { clearTimeout(timer); code === 0 ? resolve(out) : reject(Error(redact((err + out).slice(-5000)))); });
@@ -66,12 +66,15 @@ try {
     assert.deepEqual(Object.keys(service.networks).sort(), name === 'business-gateway' ? ['business-internal', 'business-loopback'] : ['business-internal']);
     if (name !== 'business-gateway') assert.equal(service.ports, undefined);
     else assert.ok(service.ports.every(p => p.host_ip === '127.0.0.1'));
-    assert.ok(!Object.keys(service.environment ?? {}).some(key => /DEEPSEEK|CLIENT_SECRET|ALIYUN|AWS_SECRET/.test(key)));
+    assert.ok(!Object.entries(service.environment ?? {}).some(([key, value]) =>
+      /DEEPSEEK|CLIENT_SECRET|ALIYUN|AWS_SECRET/.test(key) && !(key === 'GITHUB_CLIENT_SECRET' && value === '')));
+    for (const key of ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_CALLBACK_URL'])
+      assert.ok(service.environment?.[key] === undefined || service.environment[key] === '');
   }
   console.log('Building clean-source local business image...');
   await fs.writeFile(path.join(directory, 'build.log'), redact(await compose('build', 'business-api')));
   started = true;
-  try { await compose('up', '-d', '--no-build', '--wait', '--wait-timeout', '180'); }
+  try { await compose('up', '-d', '--no-build', '--wait', '--wait-timeout', '300'); }
   catch (error) { await fs.writeFile(path.join(directory, 'startup.log'), redact(await compose('logs', '--no-color', '--tail', '100'))); throw error; }
   await check('fresh PostgreSQL migrations, Redis and business readiness; no publishing/model/background tasks', async () => {
     const { status, body: { data: d } } = await request('/ready-desktop-business');
@@ -96,6 +99,36 @@ try {
     assert.equal(cover.status, 200); assert.match(cover.headers.get('content-type'), /image\/webp/);
   });
   let accessToken;
+  await check('public leaderboard routes return empty lists for unconfigured works and real board data through the desktop bridge', async () => {
+    for (const id of [f.gameId, f.courseId]) {
+      const result = await request('/v1/works/' + id + '/leaderboards');
+      assert.equal(result.status, 200); assert.deepEqual(result.body.data, []);
+    }
+    const builtin = await request('/v1/works/gamehub-guess-baike/leaderboards');
+    assert.equal(builtin.status, 200); assert.equal(builtin.body.data[0].id, 'daily');
+    const daily = await request('/v1/works/gamehub-guess-baike/leaderboards/daily');
+    assert.equal(daily.status, 200); assert.equal(daily.body.data.total, 0);
+    const missing = await request('/v1/works/' + f.gameId + '/leaderboards/missing');
+    assert.equal(missing.status, 404); assert.equal(missing.body.error.code, 'COMPETITION_BOARD_NOT_FOUND');
+    await compose('exec', '-T', 'business-api', 'node', '--input-type=module', '-e',
+      `import {createDesktopBusinessTestRuntime} from './apps/api/src/desktop-business-test-server.mjs';
+       import {registerCompetitionRelease} from './apps/api/src/competition-service.mjs';
+       import {withTransaction} from './apps/api/src/database.mjs';
+       const r=createDesktopBusinessTestRuntime(process.env);try{await withTransaction(r.database.pool,c=>registerCompetitionRelease(c,{
+       workId:'${f.gameId}',releaseId:'${f.gameReleaseId}',ownerUserId:'${f.authorId}',competition:{version:1,boards:[{
+       key:'score',title:'隔离测试榜',modeKey:'counter',rulesetVersion:1,period:'all-time',verification:'client_reported',
+       metrics:[{key:'score',label:'计数',unit:'次',min:0,max:1000}],ranking:[{metric:'score',direction:'desc'}]}]}}));}finally{await r.app.close();}`);
+    const { createDesktopAccountSession } = await import(pathToFileURL(path.join(source, 'apps/desktop/src/account-session.mjs')));
+    const { createMemoryCredentialVault } = await import(pathToFileURL(path.join(source, 'apps/capability-executor/src/credential-vault.mjs')));
+    const { createDesktopBusinessApi } = await import(pathToFileURL(path.join(source, 'apps/desktop/renderer/business-api.mjs')));
+    const session = await createDesktopAccountSession({ apiOrigin: origin, vault: createMemoryCredentialVault() });
+    const api = createDesktopBusinessApi({ async call(method,args) { return {ok:true,value:await session.call(method,args)}; } },origin);
+    const definition = (await api.listWorkLeaderboards(f.gameId)).data[0];
+    assert.equal(definition.title, '隔离测试榜');
+    const board = (await api.readCompetitionLeaderboard(f.gameId, definition.id, {limit:10,offset:0})).data;
+    assert.equal(board.boardId, definition.id); assert.deepEqual(board.entries, []); assert.equal(board.myEntry, null);
+    assert.equal((await request('/v1/competition/runs', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).body.error.code,'DESKTOP_BUSINESS_TEST_ROUTE_DISABLED');
+  });
   await check('real synthetic-email login and authenticated library save/remove/recent writes use the independent database', async () => {
     assert.equal((await request('/v1/me/library')).status, 401);
     const challenge = await request('/v1/auth/email/challenges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'desktop-reader@example.test', clientKind: 'browser', locale: 'zh-CN' }) });
@@ -104,6 +137,8 @@ try {
     const verified = await request('/v1/auth/email/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ challengeId: challenge.body.data.challengeId, code, deviceLabel: 'Local business regression' }) });
     assert.equal(verified.status, 200); accessToken = verified.body.data.accessToken;
     const headers = { Authorization: 'Bearer ' + accessToken };
+    const daily = await request('/v1/works/gamehub-guess-baike/leaderboards/daily', { headers });
+    assert.equal(daily.status, 200); assert.equal(daily.body.data.myEntry, null);
     assert.equal((await request('/v1/me/library/' + f.gameId, { method: 'PUT', headers })).status, 200);
     assert.equal((await request('/v1/me/library', { headers })).body.data[0].work.id, f.gameId);
     assert.equal((await request('/v1/me/recent/' + f.gameId, { method: 'POST', headers })).status, 200);
@@ -111,7 +146,8 @@ try {
     assert.equal((await request('/v1/me/library/' + f.gameId, { method: 'DELETE', headers })).body.data.savedAt, null);
   });
   await check('HTTP publishing, model, admin, worker, upload and OAuth operations remain denied even with a valid session', async () => {
-    for (const route of ['/v1/me/blog/articles/' + f.articleId + '/publish', '/v1/creator/works', '/v1/admin/agents', '/v1/research/topics', '/v1/uploads', '/v1/auth/github/web']) {
+    for (const route of ['/v1/me/blog/articles/' + f.articleId + '/publish', '/v1/creator/works', '/v1/admin/agents', '/v1/research/topics', '/v1/uploads', '/v1/auth/github/web',
+      '/v1/competition/runs', '/v1/competition/runs/' + f.gameId + '/finish', '/v1/games/guess-baike/results']) {
       const result = await request(route, { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: '{}' });
       assert.equal(result.status, 404); assert.equal(result.body.error.code, 'DESKTOP_BUSINESS_TEST_ROUTE_DISABLED');
     }

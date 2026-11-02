@@ -38,6 +38,19 @@ test('product API methods return server catalog, filters, journal, courseware an
   assert.deepEqual((await api.listBlogArticles()).data.items, []);
 });
 
+test('renderer reads a selected leaderboard through the origin-bound product client', async () => {
+  const origin = 'http://127.0.0.1:39190', calls = [];
+  const session = await createDesktopAccountSession({ apiOrigin: origin, vault: createMemoryCredentialVault(),
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return Response.json({ data: { entries: [], total: 0 } }); } });
+  const api = createDesktopBusinessApi({ async call(method, args) { return { ok: true, value: await session.call(method, args) }; } }, origin);
+  assert.equal((await api.readCompetitionLeaderboard('gamehub-guess-baike', 'daily', { date: '2026-11-01', limit: 10, offset: 0 })).data.total, 0);
+  const url = new URL(calls[0].url);
+  assert.equal(url.origin, origin); assert.equal(url.pathname, '/v1/works/gamehub-guess-baike/leaderboards/daily');
+  assert.equal(url.searchParams.get('date'), '2026-11-01'); assert.equal(calls[0].options.redirect, 'error');
+  assert.throws(() => businessArguments('readCompetitionLeaderboard', ['work', '../me', {}]));
+  assert.throws(() => businessArguments('readCompetitionLeaderboard', ['work', 'daily', { headers: {} }]));
+});
+
 test('library uses the managed account, survives refresh, and refuses private reads after logout', async t => {
   const { api, backend, session, login } = await setup(t);
   await assert.rejects(api.listLibrary(), { status: 401 });

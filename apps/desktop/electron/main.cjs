@@ -7,6 +7,7 @@ const policy = require('./policy.cjs');
 const { accountOrigin, prepareDesktopAccountProfileSync } = require('../src/account-configuration.mjs');
 const { localBusinessRuntime } = require('../src/runtime-policy.mjs');
 const { restoredWindowState, createWindowStateStore, titleBarPalette, validateAction, windowShortcut } = require('./window-state.cjs');
+const { attachGameIoNavigation } = require('./game-io-navigation.cjs');
 protocol.registerSchemesAsPrivileged(['mooyu-app'].map(scheme => ({ scheme,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
 
@@ -14,14 +15,16 @@ async function createShell(config) {
   if (!path.isAbsolute(config.assetRoot ?? '') || !path.isAbsolute(config.profileRoot ?? '')) throw Error('DESKTOP_CONFIG_INVALID');
   const accountEnvironment = config.accountEnvironment ?? 'local-test';
   const accountApiOrigin = accountOrigin(config.accountApiOrigin, accountEnvironment);
-  const businessRuntime = localBusinessRuntime(config.businessRuntime, accountApiOrigin);
+  const businessRuntime = localBusinessRuntime(config.businessRuntime, accountApiOrigin, accountEnvironment);
+  if (accountEnvironment === 'production' && !businessRuntime) throw Error('DESKTOP_RUNTIME_NOT_CONFIGURED');
   const runtimeOrigins = new Set();
   prepareDesktopAccountProfileSync(config.profileRoot, accountApiOrigin, accountEnvironment);
   fsSync.accessSync(path.join(config.assetRoot, 'index.html'));
   const assetRoot = fsSync.realpathSync(config.assetRoot);
   fsSync.mkdirSync(config.profileRoot, { recursive: true });
   fsSync.mkdirSync(path.join(config.profileRoot, 'session-data'), { recursive: true });
-  app.setName('墨鱼工坊开发预览');
+  app.setName(accountEnvironment === 'production' ? '墨鱼工坊' : '墨鱼工坊开发预览');
+  if (process.platform === 'win32') app.setAppUserModelId('fun.mooyu.desktop');
   app.setPath('userData', config.profileRoot);
   app.setPath('sessionData', path.join(config.profileRoot, 'session-data'));
   app.commandLine.appendSwitch('disk-cache-dir', path.join(config.profileRoot, 'cache'));
@@ -35,7 +38,9 @@ async function createShell(config) {
   let fixtureOrigin;
   const fixture = http.createServer(async (req, res) => {
     try {
-      const response = await policy.assetResponse({ url: fixtureOrigin + req.url, method: req.method }, path.resolve(__dirname, '../fixtures/game'), fixtureOrigin, false);
+      const lesson = req.url.startsWith('/learning/courseware/');
+      if (accountEnvironment === 'production' && !lesson) { res.writeHead(404); res.end(); return; }
+      const response = await policy.assetResponse({ url: fixtureOrigin + (lesson ? req.url.slice('/learning/courseware'.length) : req.url), method: req.method }, lesson ? path.join(assetRoot, 'learning/courseware') : path.resolve(__dirname, '../fixtures/game'), fixtureOrigin, false, null, null, lesson);
       res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer()));
     } catch { res.writeHead(500); res.end(); }
   });
@@ -56,8 +61,9 @@ async function createShell(config) {
     if (new URL(request.url).pathname === '/__desktop-media') {
       if (!policy.ui(request.url) || !['GET', 'HEAD'].includes(request.method) || !accountSession) return new Response('Denied', { status: 403 });
       try {
-        const response = await accountSession.media(new URL(request.url).searchParams.get('path'));
-        return request.method === 'HEAD' ? new Response(null, { headers: response.headers }) : response;
+        const response = await accountSession.media(new URL(request.url).searchParams.get('path'), {signal:request.signal});
+        if (request.method === 'HEAD') { await response.body?.cancel(); return new Response(null, {headers:response.headers}); }
+        return response;
       } catch { return new Response('Image unavailable', { status: 404 }); }
     }
     try { return await policy.assetResponse(request, assetRoot, policy.UI, true, fixtureOrigin,
@@ -73,14 +79,41 @@ async function createShell(config) {
     closeBehavior: 'quit-preview', backgroundTasksSupported: false, theme: currentTheme });
   const publish = () => { setImmediate(() => { if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('mooyu:chrome-state', state()); }); };
   let accountSession = null;
+  let realtimeBridge = null, fileExports = null;
+  const retireGameIO = () => { realtimeBridge?.closeAll(); fileExports?.cancelAll(); };
+  app.once('before-quit', retireGameIO);
   if (accountApiOrigin) {
     const { createDesktopAccountSession } = await import('../src/account-session.mjs');
+    const { createDesktopNetworkTransport } = await import('../src/network-transport.mjs');
     const { createWindowsDpapiCredentialVault } = await import('../../capability-executor/src/credential-vault.mjs');
+    const network = session.fromPartition('persist:mooyu-network-' + require('node:crypto').createHash('sha256').update(accountApiOrigin).digest('hex').slice(0,24));
+    network.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
+    network.setPermissionCheckHandler(()=>false);
     accountSession = await createDesktopAccountSession({ apiOrigin: accountApiOrigin, environment: accountEnvironment,
+      fetchImpl: createDesktopNetworkTransport(accountApiOrigin,network.fetch.bind(network)),
       businessRuntime, onRuntimeOrigin: origin => runtimeOrigins.add(origin),
       openExternal: url => systemShell.openExternal(url, {activate:true}),
       vault: createWindowsDpapiCredentialVault({ directory: path.join(config.profileRoot, 'account-vault') }),
-      onChanged: value => { if (window && !window.isDestroyed()) window.webContents.send('mooyu:account-state', value); } });
+      onChanged: value => { retireGameIO(); if (window && !window.isDestroyed()) window.webContents.send('mooyu:account-state', value); } });
+    const { createDesktopRealtime } = await import('../src/realtime-bridge.mjs');
+    const { createDesktopProxyResolver } = await import('../src/websocket-proxy.mjs');
+    const { createDesktopFileExports } = await import('../src/file-exports.mjs');
+    const WebSocket = require('node:module').createRequire(path.resolve(__dirname, '../../realtime/package.json'))('ws');
+    realtimeBridge = createDesktopRealtime({ account: accountSession, origin: accountApiOrigin, WebSocketImpl: WebSocket,
+      getProxyRoute: createDesktopProxyResolver(network.resolveProxy.bind(network)),
+      onEvent: value => { if (window && !window.isDestroyed()) window.webContents.send('mooyu:realtime-event', value); } });
+    fileExports = createDesktopFileExports({
+      context: descriptor => accountSession.gameContext(descriptor.workId, 'fileExport', descriptor),
+      verify: async descriptor => {
+        await accountSession.call('business', [{ method: 'getLaunch', args: [descriptor.workId, descriptor.releaseId] }]);
+        accountSession.gameContext(descriptor.workId, 'fileExport', descriptor);
+      },
+      choosePath: async file => {
+        const result = await dialog.showSaveDialog(window, { title: '保存游戏文件', defaultPath: file.filename,
+          filters: [{ name: file.mimeType === 'image/png' ? 'PNG 图片' : 'JSON 数据', extensions: [file.mimeType === 'image/png' ? 'png' : 'json'] }] });
+        return result.canceled ? null : result.filePath;
+      },
+    });
   }
   const perform = action => {
     validateAction(action);
@@ -96,7 +129,8 @@ async function createShell(config) {
     if (typeof route !== 'string' || !route.startsWith('/') || route.startsWith('//') || route.length > 1000) throw Error('DESKTOP_ROUTE_INVALID');
     const restore = restoredWindowState(stateStore.read(), screen.getAllDisplays().map(display => display.workArea));
     window = new BrowserWindow({ ...restore.bounds, minWidth: restore.minWidth, minHeight: restore.minHeight,
-      title: '墨鱼工坊 · 本地开发预览', backgroundColor: '#0c0b11', show: config.visible !== false,
+      icon: path.join(assetRoot, 'desktop-icons/mooyu-256.png'),
+      title: accountEnvironment === 'production' ? '墨鱼工坊' : '墨鱼工坊 · 本地开发预览', backgroundColor: '#0c0b11', show: config.visible !== false,
       titleBarStyle: 'hidden', titleBarOverlay: titleBarPalette('dark'),
       webPreferences: { session: ses, preload: path.join(__dirname, 'preload.cjs'), sandbox: true,
         contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false,
@@ -108,6 +142,8 @@ async function createShell(config) {
     for (const event of ['resize', 'move']) window.on(event, () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveWindow, 200); });
     window.on('close', () => { clearTimeout(saveTimer); saveWindow(); });
     window.on('closed', () => clearTimeout(saveTimer));
+    window.on('closed', retireGameIO);
+    attachGameIoNavigation(window.webContents, retireGameIO);
     for (const event of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'focus', 'blur']) window.on(event, publish);
     for (const event of ['did-navigate', 'did-navigate-in-page', 'did-finish-load']) window.webContents.on(event, publish);
     window.webContents.on('before-input-event', (event, input) => {
@@ -137,7 +173,7 @@ async function createShell(config) {
   };
   ipcMain.handle('mooyu:preview-environment', event => {
     trusted(event);
-    return { host: 'desktop-app', surface: 'desktop-window', mode: 'local-preview', connected: !!accountSession,
+    return { host: 'desktop-app', surface: 'desktop-window', mode: accountEnvironment === 'production' ? 'production' : 'local-preview', connected: !!accountSession,
       accountConfigured: !!accountSession, accountApiOrigin, accountEnvironment, businessRuntime,
       version: '0.2.0-dev', fixtureOrigin };
   });
@@ -156,6 +192,13 @@ async function createShell(config) {
     }
   });
   ipcMain.handle('mooyu:chrome-state-get', event => { trusted(event); return state(); });
+  const gameResult = async task => {
+    try { return { ok: true, value: await task() }; }
+    catch (error) { const code = /^[A-Z][A-Z0-9_]{2,100}$/.test(error.code ?? '') ? error.code : 'DESKTOP_GAME_IO_FAILED'; return { ok: false, error: { code, message: `操作未完成（${code}）。` } }; }
+  };
+  ipcMain.handle('mooyu:realtime-call', (event, method, input) => { trusted(event); return gameResult(() => { if (!realtimeBridge) throw Error('unconfigured'); return realtimeBridge.call(method, input); }); });
+  ipcMain.handle('mooyu:file-save', (event, input) => { trusted(event); return gameResult(() => { if (!fileExports) throw Error('unconfigured'); return fileExports.save(input); }); });
+  ipcMain.handle('mooyu:file-cancel', (event, id) => { trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
   ipcMain.handle('mooyu:chrome-action', (event, action) => { trusted(event); perform(action); return { accepted: true }; });
   ipcMain.handle('mooyu:chrome-theme', (event, mode) => { trusted(event); window.setTitleBarOverlay(titleBarPalette(mode)); currentTheme = mode; publish(); return { applied: mode }; });
   return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore };

@@ -15,6 +15,9 @@ import { PostgresWorkRepository } from './work-repository.mjs';
 import { createWorkService } from './work-service.mjs';
 import { PostgresCatalogRepository } from './catalog-repository.mjs';
 import { createCatalogService } from './catalog-service.mjs';
+import { createCompetitionService } from './competition-service.mjs';
+import { PostgresSocialRepository } from './social-repository.mjs';
+import { readWorkLeaderboard } from './work-leaderboard.mjs';
 import { PostgresEngagementRepository } from './engagement-repository.mjs';
 import { createEngagementService } from './engagement-service.mjs';
 import { PostgresPublicProfileRepository } from './public-profile-repository.mjs';
@@ -48,9 +51,14 @@ export function createDesktopBusinessTestRuntime(env) {
     } } });
   const coverStore = new LocalCoverStore(config.coverRoot), runtimeStore = new LocalRuntimeStore(config.runtimeRoot);
   const catalogService = createCatalogService({ repository: new PostgresCatalogRepository(database.pool), config });
+  const socialRepository = new PostgresSocialRepository(database.pool);
+  const competition = createCompetitionService({ pool: database.pool,
+    socialService: { workLeaderboard: (actor, input) => readWorkLeaderboard(socialRepository, actor, input, new Date()) } });
+  // Reuse public read semantics, without game-session authority or score writes.
+  const competitionService = { boards: competition.boards, leaderboard: competition.leaderboard };
   const app = createApp({ config, database, migrations, authService,
     requestGuard: (request, reply) => desktopBusinessTestGuard(request, reply, settings),
-    catalogService, workService: createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) }),
+    catalogService, competitionService, workService: createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) }),
     engagementService: createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService }),
     publicProfileService: createPublicProfileService({ repository: new PostgresPublicProfileRepository(database.pool) }),
     blogService: createBlogService({ repository: new PostgresBlogRepository(database.pool) }),
