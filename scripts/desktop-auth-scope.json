@@ -134,7 +134,24 @@
     "tests/desktop/proxy-websocket-fixture.mjs",
     "tests/platform/desktop-game-io-lifecycle.test.mjs",
     "tests/desktop/electron-game-io-lifecycle.cjs",
-    "scripts/verify-desktop-game-io-lifecycle.mjs"
+    "scripts/verify-desktop-game-io-lifecycle.mjs",
+    "apps/desktop/electron/installed.cjs",
+    "apps/desktop/src/installed-configuration.mjs",
+    "scripts/desktop-windows-package.json",
+    "scripts/desktop-windows-builder.cjs",
+    "scripts/package-desktop-windows.mjs",
+    "scripts/verify-desktop-windows-install.mjs",
+    "scripts/lib/desktop-package-audit.mjs",
+    "tests/desktop/electron-installed-acceptance.cjs",
+    "tests/platform/desktop-windows-package.test.mjs",
+    "docs/mooyu-desktop-windows-installer.zh-CN.md",
+    "scripts/verify-desktop-windows-preview.mjs",
+    "scripts/lib/desktop-runtime.mjs",
+    "scripts/lib/desktop-builder-runner.mjs",
+    "scripts/lib/desktop-builder-worker.mjs",
+    "tests/desktop/builder-failure-fixture.mjs",
+    "tests/platform/desktop-windows-guards.test.mjs",
+    "scripts/verify-desktop-windows-package-guards.mjs"
   ],
   "deferred": [
     "apps/desktop/native/MooyuWorkbench.cs",
@@ -173,6 +190,8 @@
     "tests/platform/desktop-icons.test.mjs",
     "tests/platform/desktop-game-api.test.mjs",
     "tests/platform/desktop-game-io.test.mjs",
-    "tests/platform/desktop-game-io-lifecycle.test.mjs"
+    "tests/platform/desktop-game-io-lifecycle.test.mjs",
+    "tests/platform/desktop-windows-package.test.mjs",
+    "tests/platform/desktop-windows-guards.test.mjs"
   ]
 }

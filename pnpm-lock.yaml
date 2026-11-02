@@ -86,6 +86,9 @@ importers:
       socks-proxy-agent:
         specifier: 10.1.0
         version: 10.1.0
+      ws:
+        specifier: 8.22.0
+        version: 8.22.0
 
   apps/realtime:
     dependencies:

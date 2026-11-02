@@ -1,5 +1,7 @@
 # 墨鱼工坊桌面客户端开发预览
 
+Windows 本地 NSIS 安装预览已增加独立打包入口。按当前用户安装，升级与卸载保留安装目录之外的会话和存档；默认包不携带开发配置或测试凭据。构建、隔离安装验收和数据目录说明见 [Windows 安装包](../../docs/mooyu-desktop-windows-installer.zh-CN.md)。尚未签名、发布或部署，不自动导入旧开发预览 profile。
+
 ## Electron 共享界面预览
 
 当前正式推进的方向是 Electron 外壳直接挂载 `packages/platform-client` 的 App 和 styles.css。默认只加载本地构建与明确标注的本地样本，不连接服务器；可显式接入本机隔离账号 API 或独立 HTTPS 测试 API，邮箱登录、GitHub 系统浏览器登录与会话恢复已接通。发布、下载导出与后台执行尚未接通。现有 Windows 执行内核保留，未在本阶段替换。

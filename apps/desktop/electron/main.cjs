@@ -98,7 +98,7 @@ async function createShell(config) {
     const { createDesktopRealtime } = await import('../src/realtime-bridge.mjs');
     const { createDesktopProxyResolver } = await import('../src/websocket-proxy.mjs');
     const { createDesktopFileExports } = await import('../src/file-exports.mjs');
-    const WebSocket = require('node:module').createRequire(path.resolve(__dirname, '../../realtime/package.json'))('ws');
+    const WebSocket = require('ws');
     realtimeBridge = createDesktopRealtime({ account: accountSession, origin: accountApiOrigin, WebSocketImpl: WebSocket,
       getProxyRoute: createDesktopProxyResolver(network.resolveProxy.bind(network)),
       onEvent: value => { if (window && !window.isDestroyed()) window.webContents.send('mooyu:realtime-event', value); } });
@@ -175,7 +175,7 @@ async function createShell(config) {
     trusted(event);
     return { host: 'desktop-app', surface: 'desktop-window', mode: accountEnvironment === 'production' ? 'production' : 'local-preview', connected: !!accountSession,
       accountConfigured: !!accountSession, accountApiOrigin, accountEnvironment, businessRuntime,
-      version: '0.2.0-dev', fixtureOrigin };
+      version: app.isPackaged ? app.getVersion() : '0.2.0-dev', fixtureOrigin };
   });
   ipcMain.handle('mooyu:account-call', async (event, method, args) => {
     trusted(event);

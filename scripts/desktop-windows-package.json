@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "0f20ae59d3054bccfbcd65576cd7429e843b8c3d",
+  "electronVersion": "44.4.5",
+  "electronArchiveSha256": "11c395820a5aaa8ebcc0686b476d0ac98a730274ebfbdc8cf5538a7c2815cb5d",
+  "electronExecutableSha256": "bd14928e0728366fd3f41499cb398ff3f4304dab259a3e605077899a6f8c748e",
+  "builderVersion": "26.18.1",
+  "overlay": [
+    "apps/desktop/electron/main.cjs",
+    "apps/desktop/electron/installed.cjs",
+    "apps/desktop/src/installed-configuration.mjs",
+    "apps/desktop/package.json",
+    "pnpm-lock.yaml",
+    "tests/desktop/electron-installed-acceptance.cjs"
+  ]
+}
