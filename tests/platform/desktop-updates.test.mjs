@@ -12,6 +12,7 @@ import {createDesktopUpdater} from '../../apps/desktop/src/update-service.mjs';
 import {createUpdateEngine} from '../../apps/desktop/src/update-engine.cjs';
 import {prepareDesktopUpdate} from '../../scripts/prepare-desktop-updates.mjs';
 import {prepareUpdateHandoff} from '../../apps/desktop/src/update-handoff.mjs';
+import {createDesktopTray} from '../../apps/desktop/electron/tray.cjs';
 
 function signedFixture(origin='http://127.0.0.1:31234',bytes=Buffer.from('MZ isolated test installer, never execute')){
   const {publicKey,privateKey}=crypto.generateKeyPairSync('ed25519'),version='0.2.0-preview.5',now=Date.now();
@@ -33,11 +34,15 @@ async function fixture(t){
   const appRoot=path.join(directory,'app'),profileRoot=path.join(directory,'profile');await fs.mkdir(appRoot);await fs.mkdir(profileRoot);
   await fs.writeFile(path.join(appRoot,'build-info.json'),JSON.stringify({updaterCacheDirName:'isolated-updates'}));
   await fs.writeFile(path.join(profileRoot,'session-sentinel'),'retained');
-  const app=new EventEmitter();let installs=0,quits=0,engine,busy=false,allow=true,cancelQuit=false;
-  Object.assign(app,{getVersion:()=> '0.2.0-preview.4',getPath:()=>path.join(appRoot,'app.exe'),whenReady:async()=>{},quit(){quits++;if(cancelQuit){controller.cancelInstall();return;}app.emit('will-quit');app.emit('quit');}});
+  const app=new EventEmitter();let installs=0,quits=0,engine,busy=false,allow=true,cancelQuit=false,tray,panelRequests=0;
+  const window={visible:false,isDestroyed:()=>false,isMinimized:()=>false,show(){this.visible=true;},focus(){},hide(){throw Error('UPDATE_HIDDEN_INSTEAD_OF_EXIT');}};
+  Object.assign(app,{getVersion:()=> '0.2.0-preview.4',getPath:()=>path.join(appRoot,'app.exe'),whenReady:async()=>{},quit(){quits++;app.emit('before-quit');if(cancelQuit){controller.cancelInstall();tray.cancelQuit();return;}const event={preventDefault(){throw Error('TRAY_BLOCKED_UPDATE_EXIT');}};tray.close(event);app.emit('will-quit');app.emit('quit');}});
   const controller=await createDesktopUpdater({configuration:f.configuration,localTest:true,app,appRoot,profileRoot,engineFactory:options=>{engine=createUpdateEngine(options);return engine;},prepareInstall:async()=>()=>{installs++;},confirmInstall:async()=>allow,isBusy:()=>busy});
   app.once('will-quit',()=>controller.dispose());t.after(()=>controller.dispose());
-  return {...f,directory,appRoot,profileRoot,controller,get installer(){return engine.installerPath;},get installs(){return installs;},get quits(){return quits;},get downloads(){return downloads;},mode:value=>mode=value,busy:value=>busy=value,confirm:value=>allow=value,cancelQuit:value=>cancelQuit=value};
+  class Tray extends EventEmitter {setToolTip(){}setContextMenu(){}isDestroyed(){return !!this.dead;}destroy(){this.dead=true;}}
+  tray=createDesktopTray({app,Tray,Menu:{buildFromTemplate:value=>value},assetRoot:appRoot,updates:controller,getWindow:()=>window,onCheckUpdates(){assert.equal(window.visible,true);panelRequests++;}});
+  t.after(()=>tray.dispose());
+  return {...f,directory,appRoot,profileRoot,controller,tray,window,get panelRequests(){return panelRequests;},get installer(){return engine.installerPath;},get installs(){return installs;},get quits(){return quits;},get downloads(){return downloads;},mode:value=>mode=value,busy:value=>busy=value,confirm:value=>allow=value,cancelQuit:value=>cancelQuit=value};
 }
 test('signed metadata binds product, channel, platform, canonical same-origin path, hashes and expiry',()=>{
   const f=signedFixture();assert.equal(verifyUpdateEnvelope(f.envelope,f.trust).payload.version,f.payload.version);
@@ -59,6 +64,23 @@ test('real NSIS engine checks and downloads over loopback, installs only after e
   const f=await fixture(t);assert.equal((await f.controller.run('check')).status,'available');assert.equal((await f.controller.run('download')).status,'ready');assert.equal(f.installs,0);assert.equal(f.downloads,1);
   f.confirm(false);assert.equal((await f.controller.run('install')).status,'ready');assert.equal(f.quits,0);
   f.confirm(true);assert.equal((await f.controller.run('install')).status,'installing');assert.equal(f.installs,1);assert.equal(f.quits,1);assert.equal(await fs.readFile(path.join(f.profileRoot,'session-sentinel'),'utf8'),'retained');
+});
+test('tray checks restore the panel and retain a verified ready installer for confirmed installation',async t=>{
+  const f=await fixture(t);
+  await f.tray.checkForUpdates();assert.equal(f.controller.state().status,'available');
+  await f.controller.run('download');const ready=f.controller.state(),installer=f.installer;
+  for(let i=0;i<2;i++){
+    f.window.visible=false;await f.tray.checkForUpdates();
+    assert.equal(f.window.visible,true);assert.deepEqual(f.controller.state(),ready);assert.equal(f.installer,installer);
+  }
+  assert.equal(f.panelRequests,3);assert.equal(f.downloads,1);assert.equal(f.installs,0);
+  assert.equal((await f.controller.run('install')).status,'installing');assert.equal(f.installs,1);assert.equal(f.quits,1);
+});
+test('tray check after a cancelled installation preserves readiness but cannot bypass final feed validation',async t=>{
+  const f=await fixture(t);await f.tray.checkForUpdates();await f.controller.run('download');
+  f.cancelQuit(true);assert.equal((await f.controller.run('install')).status,'ready');f.cancelQuit(false);
+  await f.tray.checkForUpdates();assert.equal(f.controller.state().status,'ready');assert.equal(f.downloads,1);
+  f.mode('withdraw');assert.equal((await f.controller.run('install')).status,'error');assert.equal(f.installs,0);assert.equal(f.quits,1);
 });
 for(const mode of ['corrupt','redirect'])test('download '+mode+' is rejected without quitting or executing',async t=>{const f=await fixture(t);await f.controller.run('check');f.mode(mode);assert.equal((await f.controller.run('download')).status,'error');assert.equal(f.quits,0);assert.equal(f.installs,0);});
 for(const mode of ['cache','withdraw','busy'])test('install rejects '+mode+' without executing',async t=>{const f=await fixture(t);await f.controller.run('check');assert.equal((await f.controller.run('download')).status,'ready');if(mode==='cache')await fs.appendFile(f.installer,'tampered');if(mode==='withdraw')f.mode('withdraw');if(mode==='busy')f.busy(true);assert.equal((await f.controller.run('install')).status,'error');assert.equal(f.installs,0);assert.equal(f.quits,0);});

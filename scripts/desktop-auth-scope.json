@@ -181,7 +181,11 @@
     "apps/desktop/renderer/startup.css",
     "tests/platform/desktop-startup.test.mjs",
     "tests/desktop/electron-startup-acceptance.cjs",
-    "scripts/verify-desktop-startup.mjs"
+    "scripts/verify-desktop-startup.mjs",
+    "apps/desktop/electron/tray.cjs",
+    "tests/platform/desktop-tray.test.mjs",
+    "tests/desktop/electron-tray-acceptance.cjs",
+    "scripts/verify-desktop-tray.mjs"
   ],
   "deferred": [
     "apps/desktop/native/MooyuWorkbench.cs",
@@ -225,6 +229,7 @@
     "tests/platform/desktop-windows-guards.test.mjs",
     "tests/platform/desktop-downloads.test.mjs",
     "tests/platform/desktop-updates.test.mjs",
-    "tests/platform/desktop-startup.test.mjs"
+    "tests/platform/desktop-startup.test.mjs",
+    "tests/platform/desktop-tray.test.mjs"
   ]
 }

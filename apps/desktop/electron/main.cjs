@@ -2,13 +2,14 @@ const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { app, BrowserWindow, session, protocol, ipcMain, screen, dialog, shell: systemShell } = require('electron');
+const { app, BrowserWindow, session, protocol, ipcMain, screen, dialog, Tray, Menu, shell: systemShell } = require('electron');
 const policy = require('./policy.cjs');
 const { accountOrigin, prepareDesktopAccountProfileSync } = require('../src/account-configuration.mjs');
 const { localBusinessRuntime } = require('../src/runtime-policy.mjs');
 const { restoredWindowState, createWindowStateStore, titleBarPalette, validateAction, windowShortcut } = require('./window-state.cjs');
 const { attachGameIoNavigation } = require('./game-io-navigation.cjs');
 const { createStartupTask } = require('../src/startup-task.cjs');
+const { createDesktopTray } = require('./tray.cjs');
 protocol.registerSchemesAsPrivileged(['mooyu-app'].map(scheme => ({ scheme,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
 
@@ -72,13 +73,13 @@ async function createShell(config) {
       businessRuntime ? `${businessRuntime.scheme}://*.${businessRuntime.domain}:${businessRuntime.port}` : null); }
     catch (error) { process.stderr.write('DESKTOP_PROTOCOL_FAILED ' + error.name + ': ' + error.message + '\n'); return new Response('Protocol failed', { status: 500 }); }
   });
-  let window;
+  let window, desktopTray, updateOpenRequested = false;
   let currentTheme = 'dark';
   const stateStore = createWindowStateStore(config.profileRoot);
   const state = () => ({ canGoBack: Boolean(window?.webContents.navigationHistory.canGoBack()),
     canGoForward: Boolean(window?.webContents.navigationHistory.canGoForward()),
     maximized: window?.isMaximized() ?? false, fullScreen: window?.isFullScreen() ?? false,
-    closeBehavior: 'quit-preview', backgroundTasksSupported: false, theme: currentTheme });
+    ...desktopTray?.state(), backgroundTasksSupported: false, theme: currentTheme });
   const publish = () => { setImmediate(() => { if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('mooyu:chrome-state', state()); }); };
   let accountSession = null;
   let realtimeBridge = null, fileExports = null;
@@ -94,6 +95,9 @@ async function createShell(config) {
     isBusy: () => /^\/(play|s|challenge|learn)\//.test(new URL(window?.webContents.getURL() || policy.UI).pathname),
     confirmInstall: async () => accountEnvironment === 'local-test' && typeof config.confirmUpdateInstall === 'function' ? config.confirmUpdateInstall() : (await dialog.showMessageBox(window, {type:'question',buttons:['稍后','重启并更新'],defaultId:0,cancelId:0,message:'现在重启并安装已验证的更新？',detail:'请先保存当前工作。账号会话、本地存档和设置会保留。'})).response === 1 });
   app.once('will-quit', () => updates.dispose());
+  desktopTray = createDesktopTray({app,Tray,Menu,assetRoot,updates,getWindow:() => window,
+    name:accountEnvironment === 'production' ? '墨鱼工坊' : '墨鱼工坊 · 本地测试',
+    onCheckUpdates:() => { updateOpenRequested = true; if (window && !window.isDestroyed()) window.webContents.send('mooyu:updates-open'); }});
   // The trusted installed entry is the only source of update configuration.
   // Development previews have no feed and never contact the public server.
   if (config.updateTrust) { const timer = setTimeout(() => updates.run('check').then(value => value.status === 'available' ? updates.run('download') : null).catch(() => {}), 15000); timer.unref(); }
@@ -138,10 +142,10 @@ async function createShell(config) {
     if (action === 'forward' && window.webContents.navigationHistory.canGoForward()) window.webContents.navigationHistory.goForward();
     if (action === 'reload') window.webContents.reload();
     if (action === 'toggle-fullscreen') window.setFullScreen(!window.isFullScreen());
-    if (action === 'quit') app.quit();
+    if (action === 'quit') desktopTray.quit();
   };
   app.on('window-all-closed', () => app.quit());
-  app.on('second-instance', () => { if (window && !window.isDestroyed()) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); } });
+  app.on('second-instance', () => desktopTray.restore());
   const createWindow = async (route = '/discover') => {
     if (typeof route !== 'string' || !route.startsWith('/') || route.startsWith('//') || route.length > 1000) throw Error('DESKTOP_ROUTE_INVALID');
     const restore = restoredWindowState(stateStore.read(), screen.getAllDisplays().map(display => display.workArea));
@@ -160,6 +164,8 @@ async function createShell(config) {
     let saveTimer;
     for (const event of ['resize', 'move']) window.on(event, () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveWindow, 200); });
     window.on('close', () => { clearTimeout(saveTimer); saveWindow(); });
+    window.on('close', event => desktopTray.close(event));
+    window.on('query-session-end', () => desktopTray.markQuitting());
     window.on('closed', () => clearTimeout(saveTimer));
     window.on('closed', retireGameIO);
     attachGameIoNavigation(window.webContents, retireGameIO);
@@ -173,7 +179,7 @@ async function createShell(config) {
     window.webContents.on('will-prevent-unload', event => {
       const choice = dialog.showMessageBoxSync(window, { type: 'question', buttons: ['继续编辑', '退出'], defaultId: 0, cancelId: 0,
         message: '页面有尚未完成的操作，仍要退出吗？', detail: '退出可能丢失尚未保存的内容。' });
-      if (choice === 1) event.preventDefault(); else updates.cancelInstall();
+      if (choice === 1) event.preventDefault(); else { updates.cancelInstall(); desktopTray.cancelQuit(); }
     });
     window.setMenuBarVisibility(false);
     window.setMenu(null);
@@ -217,6 +223,7 @@ async function createShell(config) {
   ipcMain.handle('mooyu:chrome-state-get', event => { trusted(event); return state(); });
   ipcMain.handle('mooyu:update-call', (event, action) => {
     trusted(event);
+    if (action === 'consume-open') { const requested = updateOpenRequested; updateOpenRequested = false; return requested; }
     if (!['state','check','download','cancel','install'].includes(action)) throw Error('DESKTOP_UPDATE_ACTION_DENIED');
     return action === 'state' ? updates.state() : updates.run(action);
   });
@@ -229,7 +236,7 @@ async function createShell(config) {
   ipcMain.handle('mooyu:file-cancel', async (event, id) => { trusted(event); await accountStartup.run(); trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
   ipcMain.handle('mooyu:chrome-action', (event, action) => { trusted(event); perform(action); return { accepted: true }; });
   ipcMain.handle('mooyu:chrome-theme', (event, mode) => { trusted(event); window.setTitleBarOverlay(titleBarPalette(mode)); currentTheme = mode; publish(); return { applied: mode }; });
-  return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore, updates };
+  return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore, updates, desktopTray };
 }
 
 async function main() {

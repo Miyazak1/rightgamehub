@@ -60,18 +60,17 @@ export function DesktopActions({ go, route, environment }) {
         <button role="menuitem" onClick={() => action('toggle-fullscreen')}>{en ? 'Toggle full screen' : '切换应用全屏'}<kbd>F11</kbd></button>
         <button role="menuitem" onClick={() => { close(); updates.current.open(); }}>{en ? 'Check for updates' : '检查更新'}</button>
         <button role="menuitem" onClick={about}>{en ? 'About this preview' : '关于本地预览'}</button>
-        <div className="desktop-menu__note">{en ? 'Closing the window exits this preview.' : '关闭窗口即退出当前预览。'}</div>
-        <button role="menuitem" onClick={() => action('quit')}>{en ? 'Quit MOOYU' : '退出墨鱼工坊'}<kbd>Ctrl+Q</kbd></button>
+        <div className="desktop-menu__note">{en ? 'Closing hides the window to the tray. Use Quit in the tray or Ctrl+Q to exit.' : '关闭窗口收起到托盘，完全退出请使用托盘“退出”或 Ctrl+Q。'}</div>
       </div>}
     </div>
     <dialog ref={info} className="desktop-info" onClick={event => { if (event.target === info.current) info.current.close(); }}>
       <h2>{en ? 'MOOYU desktop preview' : '墨鱼工坊桌面开发预览'}</h2>
       <p>{production ? (en ? 'Uses the website account, catalog and resource services. This device keeps its own encrypted session; server failures never fall back to test content.' : '与网页版共用账号、目录和资源服务。本设备独立保存加密会话，服务器请求失败不会回退到测试内容。') : accountTest ? (en ? 'Account and supported business pages use the same test API. Server content never falls back to local samples. Account-only servers cannot provide business content. Publishing and background execution are not connected.' : '账号与已接通的业务页面使用同一测试 API，服务器内容不会回退到本地样本。仅开放账号接口的服务器无法提供业务内容。发布与后台执行尚未接通。') : (en ? 'Local samples only. Account, server features, publishing and background execution are not connected.' : '当前只使用本地样本。账号、服务器业务、发布与后台执行尚未接通。')}</p>
       {(remoteTest || production) && <p data-desktop-test-origin>{environment.accountApiOrigin}</p>}
-      <p>{en ? 'Closing this window exits the preview. Window size and position are restored next time. Local documents follow each tool’s existing save rules.' : '关闭窗口会退出预览，窗口尺寸和位置将在下次启动时恢复。本地文档仍按各工具已有的保存规则处理。'}</p>
+      <p>{en ? 'Closing hides the window to the tray. Use Quit in the tray or Ctrl+Q to exit. If the tray is unavailable, closing minimizes to the taskbar. Window size and position are restored next time. Local documents follow each tool’s save rules.' : '关闭窗口直接收起到托盘，托盘“退出”或 Ctrl+Q 完全退出。托盘不可用时会最小化到任务栏。窗口尺寸和位置将在下次启动时恢复，本地文档仍按各工具已有的保存规则处理。'}</p>
       <button className="button button--primary" autoFocus onClick={() => info.current.close()}>{en ? 'Done' : '知道了'}</button>
     </dialog>
-    <DesktopUpdates ref={updates}/>
+    <DesktopUpdates ref={updates} environment={environment}/>
     {error && <span className="desktop-chrome-error" role="status">{error}</span>}
   </>;
 }

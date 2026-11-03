@@ -25,7 +25,8 @@
     "apps/desktop/src/startup-task.cjs",
     "apps/desktop/renderer/index.html",
     "apps/desktop/renderer/main.jsx",
-    "apps/desktop/renderer/startup.css"
+    "apps/desktop/renderer/startup.css",
+    "apps/desktop/electron/tray.cjs"
   ],
   "updaterVersion": "6.8.12"
 }

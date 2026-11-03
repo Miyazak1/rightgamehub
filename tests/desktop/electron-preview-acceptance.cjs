@@ -56,7 +56,7 @@ async function run() {
       assert.equal(await js("(()=>{const header=document.querySelector('.header--desktop').getBoundingClientRect();return [...document.querySelectorAll('.desktop-history,.brand-button,.desktop-nav,.header__tools')].every(el=>{const r=el.getBoundingClientRect();return r.top>=header.top && r.bottom<=header.bottom+1})})()"), true);
       assert.equal(await js("!!document.querySelector('.desktop-preview-banner,.header-agent-cta,.host-chip')"), false);
       assert.ok(await js("!!document.querySelector('[data-desktop-preview]') && !!document.querySelector('[data-desktop-menu]')"));
-      assert.equal((await js('window.mooyuDesktop.chrome.state()')).closeBehavior, 'quit-preview');
+      assert.equal((await js('window.mooyuDesktop.chrome.state()')).closeBehavior, 'tray');
       assert.equal((await js('window.mooyuDesktop.chrome.state()')).backgroundTasksSupported, false);
       assert.equal(await js("window.mooyuDesktop.chrome.action('open-file').then(()=>false,()=>true)"), true);
       assert.equal(await js("window.mooyuDesktop.chrome.theme('__proto__').then(()=>false,()=>true)"), true);

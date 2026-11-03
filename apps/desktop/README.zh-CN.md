@@ -42,7 +42,11 @@ node scripts/verify-desktop-shell.mjs --paper 'E:\绝对路径\论文.pdf'
 
 桌面页面和工具内部采用 8px 滚动区、6px 可见圆角滑块，透明轨道、不显示两端箭头，悬停及拖动时使用主题强调色。三种主题同步调整颜色，高对比模式增强可见性。保留原生滚轮、触控板、键盘和滑块拖动；不修改网页版样式或游戏 iframe 内部样式。
 
-当前预览关闭窗口即退出，不在托盘或后台继续执行。窗口位置、尺寸和最大化状态写入本地 profile 下的 `window-state.json`，重新启动时恢复，并将失效的显示器位置调整回可见工作区。页面已有的 `beforeunload` 阻止退出时，保留继续编辑/退出选择；这不代表已实现全局未保存内容检测或自动保存。文档仍遵循各工具已有保存规则。
+Windows 托盘使用现有 Logo，提供打开客户端、检查更新和退出。点叉直接收起到托盘，不显示关闭选择弹窗，也不需要配置关闭行为；完全退出使用托盘“退出”或 Ctrl+Q。托盘不可用时改为最小化到任务栏，避免窗口无法找回。更新重启不会被隐藏逻辑拦截。收起到托盘仅保持现有进程，不代表已接入新的后台任务或开机自启。
+
+窗口位置、尺寸和最大化状态写入 `window-state.json`，重新启动时恢复，并将失效的显示器位置调整回可见工作区。页面已有的 `beforeunload` 阻止退出时，保留继续编辑/退出选择；取消退出会恢复正常托盘关闭规则。这不代表已实现全局未保存内容检测或自动保存，文档仍遵循各工具已有保存规则。
+
+运行 `node scripts/verify-desktop-clean.mjs` 后，可执行 `node scripts/verify-desktop-tray.mjs` 检查本地真实托盘、窗口隐藏恢复、检查更新及退出。加 `--native-close` 会等待人工或 computer-use 实点叉，之后自动完成其余阶段；`--native` 还会等待手动操作托盘“检查更新”。本地开发预览会明确显示“非安装版”，不把 Electron 运行时版本当作客户端版本。测试使用独立 profile，不操作正式客户端；报告保存在 `.runtime/desktop-tray-acceptance`。
 
 ## Electron 本地账号验证
 
@@ -55,7 +59,7 @@ node scripts/build-desktop-shell.mjs
 node scripts/start-desktop-account-test.mjs
 ```
 
-测试脚本启动随机 `127.0.0.1` 端口的内存认证服务和独立 profile，进入原有登录页面。可输入 `desktop@example.test`，本地模拟邮箱验证码显示在启动终端中，不发送真实邮件。关闭窗口后该测试服务退出，内存账户失效；它不代表跨新建测试服务的会话恢复。自动验收在同一隔离服务存活期间执行完整 Electron 进程重启。
+测试脚本启动随机 `127.0.0.1` 端口的内存认证服务和独立 profile，进入原有登录页面。可输入 `desktop@example.test`，本地模拟邮箱验证码显示在启动终端中，不发送真实邮件。完全退出客户端后该测试服务退出，内存账户失效；它不代表跨新建测试服务的会话恢复。自动验收在同一隔离服务存活期间执行完整 Electron 进程重启。
 
 如已有本机测试 API，可运行 `node scripts/start-desktop-shell.mjs --account-api http://127.0.0.1:端口`，该参数保持只接受 loopback HTTP。远程隔离测试另用 `--test-account-api https://测试域名`，会先验证测试实例标识，并按精确 origin 派生独立 profile；不能同时使用两种参数。两者都拒绝路径、查询、凭据和账号 API 跳转，HTTPS 测试拒绝已知正式站点。默认入口仍不连接 API。联网业务页面复用同一测试 API，账号专用实例会明确提示业务未开放，不回退本地样本。上传头像、发布和后台执行尚未接入。详见 [测试地址与独立会话](../../docs/mooyu-desktop-auth-test-instance.zh-CN.md#桌面测试地址与独立会话)。
 

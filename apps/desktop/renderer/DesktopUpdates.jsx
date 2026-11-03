@@ -2,10 +2,11 @@ import React,{forwardRef,useEffect,useImperativeHandle,useRef,useState} from 're
 import {useI18n} from '../../../packages/platform-client/src/I18n.jsx';
 import './desktop-updates.css';
 
-export default forwardRef(function DesktopUpdates(_props,ref){
+export default forwardRef(function DesktopUpdates({environment},ref){
   const {locale}=useI18n(),en=locale==='en',dialog=useRef(null),bridge=globalThis.mooyuDesktop.updates;
   const [state,setState]=useState({status:'disabled'});
-  useEffect(()=>{let live=true;const off=bridge.onState(value=>{if(live)setState(value);});bridge.call('state').then(value=>{if(live)setState(value);}).catch(()=>{});return()=>{live=false;off();};},[]);
+  const localPreview=environment?.version==='0.2.0-dev';
+  useEffect(()=>{let live=true;const off=bridge.onState(value=>{if(live)setState(value);});const consumeOpen=()=>bridge.call('consume-open').then(requested=>{if(live&&requested)open();}).catch(()=>{});const offOpen=bridge.onOpen(consumeOpen);consumeOpen();bridge.call('state').then(value=>{if(live)setState(value);}).catch(()=>{});return()=>{live=false;off();offOpen();};},[]);
   const open=()=>{if(!dialog.current.open)dialog.current.showModal();};useImperativeHandle(ref,()=>({open}));
   const action=method=>bridge.call(method).then(setState).catch(()=>setState(value=>({...value,status:'error',code:'DESKTOP_UPDATE_FAILED'})));
   const labels=en?{disabled:'This build has no trusted update source. Use the official download page for now.',idle:'Ready to check for updates.',checking:'Checking for updates…',available:'An update is available.',current:'You are up to date.',downloading:'Downloading in the background…',ready:'Update verified and ready to install.',installing:'Restarting to install…',error:'Update did not finish. You can continue using this version.'}:{disabled:'此版本尚未配置受信更新源，请通过官网下载新版。',idle:'可以检查是否有新版。',checking:'正在检查更新…',available:'发现可用更新。',current:'当前已是最新版本。',downloading:'正在后台下载…',ready:'更新已验证，可重启安装。',installing:'正在退出并安装更新…',error:'更新未完成，可以继续使用当前版本。'};
@@ -27,8 +28,8 @@ export default forwardRef(function DesktopUpdates(_props,ref){
     {pending&&<button className="desktop-update-badge" onClick={open} title={en?'Application update':'客户端更新'}>{state.status==='downloading'?`${state.percent??0}%`:en?'Update':'更新'}</button>}
     <dialog className="desktop-info desktop-update-info" ref={dialog} onClick={event=>{if(event.target===dialog.current)dialog.current.close();}}>
       <h2>{en?'Application updates':'客户端更新'}</h2>
-      <p>{en?'Installed version: ':'当前版本：'}{state.currentVersion??'—'}{state.version&&<> · {en?'New version: ':'可用版本：'}{state.version}</>}</p>
-      <p role="status" aria-live="polite">{labels[state.status]}</p>
+      <p>{localPreview?(en?'Local development preview (not an installed release)':'本地开发预览（非安装版）'):<>{en?'Installed version: ':'当前版本：'}{state.currentVersion??'—'}</>}{state.version&&<> · {en?'New version: ':'可用版本：'}{state.version}</>}</p>
+      <p role="status" aria-live="polite">{state.status==='disabled'&&localPreview?(en?'This local preview does not use the production update feed. Installed releases use their embedded trusted update configuration.':'本地预览未接入正式更新源；官网下载的安装版使用其内置的受信更新配置。'):labels[state.status]}</p>
       {state.status==='downloading'&&<progress max="100" value={state.percent??0} aria-label={en?'Download progress':'下载进度'}/>}
       {state.code&&<p className="desktop-update-code">{reasons[state.code]??(en?'The update service is temporarily unavailable. Please try again later.':'更新服务暂时不可用，请稍后重试。')}</p>}
       <p>{en?'Updates keep your account session, local saves and settings. Installation only starts after you confirm a restart.':'更新保留账号会话、本地存档和设置，确认重启后才会开始安装。'}</p>
