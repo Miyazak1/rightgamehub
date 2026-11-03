@@ -17,6 +17,7 @@ for (const phase of ['initial', 'restore']) {
     accountApiOrigin: report.origin, accountEnvironment: 'local-test',
     businessRuntime: { domain: 'localhost', scheme: 'http', port: Number(new URL(report.runtimeOrigin).port) },
     profileRoot: path.join(directory, 'profile'), phase, report: path.join(directory, phase + '.json') }));
+  if(report.paperStudyEnabled){const config=JSON.parse(await fs.readFile(file));config.paper=true;config.pdf=path.join(root,'.runtime/paper-layout-audit/1706.03762v7.pdf');await fs.writeFile(file,JSON.stringify(config));}
   await new Promise((resolve, reject) => {
     const child = spawn(executable, [path.join(root, 'tests/desktop/electron-business-database.cjs'), '--config', file],
       { cwd: root, env: environment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });

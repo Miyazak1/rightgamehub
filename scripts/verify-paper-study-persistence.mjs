@@ -25,9 +25,9 @@ try{
   const output=await new Promise((resolve,reject)=>{
     const child=spawn(process.execPath,['--test','--test-concurrency=1','tests/platform/paper-study-persistence-db.test.cjs'],{cwd:root,env:testEnv,windowsHide:true,stdio:['ignore','pipe','pipe']});let text='';
     const timeout=setTimeout(()=>{child.kill();reject(Error('PAPER_TEST_TIMEOUT'));},240000);
-    child.stdout.on('data',b=>text+=b);child.stderr.on('data',b=>text+=b);child.once('error',reject);child.once('exit',c=>{clearTimeout(timeout);code=c??1;resolve(text);});
+    child.stdout.on('data',b=>{text+=b;process.stdout.write(b);});child.stderr.on('data',b=>{text+=b;process.stderr.write(b);});child.once('error',reject);child.once('exit',c=>{clearTimeout(timeout);code=c??1;resolve(text);});
   });
-  await fs.writeFile(path.join(directory,'tests.log'),output);console.log(output);
+  await fs.writeFile(path.join(directory,'tests.log'),output);
   report.passed=code===0;report.tests=Number(/# tests (\d+)/.exec(output)?.[1]);report.failed=Number(/# fail (\d+)/.exec(output)?.[1]);
 }catch(e){report.error=e.message;console.error(e.message);}
 finally{

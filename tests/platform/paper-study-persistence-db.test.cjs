@@ -38,6 +38,30 @@ test('persistent private paper workspace uses existing auth/runtime, with models
     assert.equal((await request('/v1/me/paper-studies/'+documentId+'/draft','POST',{})).json().error.code,'PAPER_STUDY_MODELS_DISABLED');
     assert.equal((await admin.query('SELECT count(*)::int AS n FROM paper_study_tasks WHERE document_id=$1',[documentId])).rows[0].n,1);
   });
+  await t.test('real HTTP and loopback proxy preserve the complete authenticated PDF response',async()=>{
+    const {createDesktopBusinessTestProxy}=await load('desktop-business-test-gateway.mjs');
+    const address=await app.listen({host:'127.0.0.1',port:0});
+    const proxy=createDesktopBusinessTestProxy({hostname:'127.0.0.1',port:Number(new URL(address).port)});
+    await new Promise(r=>proxy.listen(0,'127.0.0.1',r));
+    try{
+      for(const origin of [address,'http://127.0.0.1:'+proxy.address().port]){
+        const endpoint=origin+'/v1/me/paper-studies';
+        const denied=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(denied.status,401);await denied.text();
+        // A fetch implementation may cancel a large body when its early 401
+        // arrives. Use raw HTTP to verify the incomplete-upload boundary itself.
+        const http=require('node:http');
+        const early=await new Promise((resolve,reject)=>{
+          const request=http.request(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Content-Length':2*1024*1024}},response=>{
+            response.resume();response.on('end',()=>{resolve({status:response.statusCode,connection:response.headers.connection});request.destroy();});
+          });request.on('error',reject);request.write(Buffer.alloc(1024));
+        });assert.deepEqual(early,{status:401,connection:'close'});
+        await Promise.all(Array.from({length:3},async()=>{const r=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+tokens.accessToken,'Content-Type':'application/json'},body:JSON.stringify(input)});assert.equal(r.status,202);await r.json();}));
+        const detail=await fetch(endpoint+'/'+documentId,{headers:{Authorization:'Bearer '+tokens.accessToken,'Content-Type':'application/json'}});await detail.json();
+        const r=await fetch(origin+'/v1/me/paper-studies/'+documentId+'/source',{headers:{Authorization:'Bearer '+tokens.accessToken,'Content-Type':'application/json'},signal:AbortSignal.timeout(10000)});
+        assert.equal(r.status,200);assert.equal((await r.json()).data.pdfBase64,input.pdfBase64);
+      }
+    }finally{proxy.closeAllConnections();await new Promise(r=>proxy.close(r));}
+  });
   await t.test('crash after the durable checkpoint recovers without parsing twice; old leases cannot overwrite results',async()=>{
     await Promise.all([workspace.dispatch(),workspace.dispatch()]);
     const run=(await admin.query('SELECT runtime_run_id FROM paper_study_tasks WHERE document_id=$1',[documentId])).rows[0].runtime_run_id;

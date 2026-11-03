@@ -31,10 +31,12 @@ import { PostgresRuntimeEdgeRepository } from './runtime-edge-repository.mjs';
 import { createRuntimeEdgeApp } from './runtime-edge-app.mjs';
 import { createDesktopAuthReadiness } from './desktop-auth-readiness.mjs';
 import { desktopBusinessTestConfig, desktopBusinessTestGuard } from './desktop-business-test-policy.mjs';
+import {createDesktopPaperStudyService} from './desktop-paper-study.mjs';
 
 export function createDesktopBusinessTestRuntime(env) {
   const settings = desktopBusinessTestConfig(env), config = loadConfig(settings.env);
   const database = createDatabase(config);
+  const paperStudy=settings.paperStudyEnabled?createDesktopPaperStudyService({pool:database.pool,redisUrl:settings.env.REDIS_URL}):null;
   const directory = fileURLToPath(new URL('../migrations/', import.meta.url));
   const migrations = { apply: () => applyMigrations(database.pool, directory), status: () => migrationStatus(database.pool, directory) };
   const readiness = createDesktopAuthReadiness({ database, migrations, redisUrl: settings.env.REDIS_URL });
@@ -57,6 +59,7 @@ export function createDesktopBusinessTestRuntime(env) {
   // Reuse public read semantics, without game-session authority or score writes.
   const competitionService = { boards: competition.boards, leaderboard: competition.leaderboard };
   const app = createApp({ config, database, migrations, authService,
+    paperStudyService:paperStudy?.service,
     requestGuard: (request, reply) => desktopBusinessTestGuard(request, reply, settings),
     catalogService, competitionService, workService: createWorkService({ repository: new PostgresWorkRepository(database.pool, coverStore) }),
     engagementService: createEngagementService({ repository: new PostgresEngagementRepository(database.pool), catalogService }),
@@ -70,7 +73,10 @@ export function createDesktopBusinessTestRuntime(env) {
     runtimeDomain: config.runtimeDomain, logger: false });
   const ready = async (_request, reply) => {
     const health = await readiness.check();
-    return reply.code(health.status === 'ready' ? 200 : 503).send({ data: { ...health,
+    const paperReady=paperStudy?await paperStudy.service.ready():true;
+    return reply.code(health.status === 'ready'&&paperReady ? 200 : 503).send({ data: { ...health,
+      status:health.status==='ready'&&paperReady?'ready':'not-ready',
+      paperStudy:{enabled:!!paperStudy,ready:paperReady,modelCallsEnabled:false,publishingEnabled:false},
       instance: 'isolated-business', githubConfigured: settings.githubConfigured, emailConfigured: !settings.remote,
       emailDelivery: settings.remote ? 'disabled' : 'local-capture',
       backgroundTasksEnabled: false, publishingEnabled: false, modelCallsEnabled: false,
@@ -79,7 +85,7 @@ export function createDesktopBusinessTestRuntime(env) {
   app.get('/ready-desktop-business', ready);
   app.get('/ready-desktop-auth', ready);
   app.addHook('preClose', async () => readiness.close());
-  app.addHook('onClose', async () => { await runtimeEdgeApp.close(); await database.close(); });
+  app.addHook('onClose', async () => { await runtimeEdgeApp.close();await paperStudy?.close(); await database.close(); });
   return { app, runtimeEdgeApp, database, migrations, config, coverStore, runtimeStore };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -92,7 +98,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   } else {
     await runtime.runtimeEdgeApp.listen({ host: '0.0.0.0', port: 3092 });
     await runtime.app.listen({ host: runtime.config.host, port: runtime.config.port });
-    console.log('Isolated desktop business API and runtime listening; publishing, model calls and workers disabled.');
+    console.log('Isolated desktop business API listening; publishing, model calls and autonomous business workers disabled.');
     for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, async () => { await runtime.app.close(); process.exitCode = 0; });
   }
 }

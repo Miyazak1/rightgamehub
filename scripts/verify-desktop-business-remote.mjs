@@ -11,7 +11,8 @@ import { desktopAuthCaddyfile } from './prepare-desktop-auth-caddy.mjs';
 import { desktopBusinessCaddyfile } from './prepare-desktop-business-caddy.mjs';
 import { validateDesktopLaunch } from '../apps/desktop/src/runtime-policy.mjs';
 
-if (process.argv.length !== 2) throw Error('Local-only verification takes no remote address');
+const paper=process.argv.length===3&&process.argv[2]==='--paper';
+if (process.argv.length !== 2&&!paper) throw Error('Local-only verification takes only optional --paper, never a remote address');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const clean = JSON.parse(await fs.readFile(path.join(root, '.runtime/desktop-auth-clean/latest.json')));
 if (!clean.passed) throw Error('Run clean directory regression first');
@@ -44,9 +45,12 @@ const docker = args => {
     waitIndex < 0 ? 240000 : Number(args[waitIndex + 1]) * 1000 + 30000);
 };
 const override = path.join(directory, 'gateway.yml');
+const ephemeralDb=path.join(directory,'ephemeral-db.yml');
+await fs.writeFile(ephemeralDb,'services:\n  business-postgres:\n    volumes: !override\n      - type: tmpfs\n        target: /var/lib/postgresql/data\n');
 const compose = (...args) => docker(['compose', '-p', project, '--env-file', envFile,
   '-f', path.join(source, 'deploy/compose.desktop-business-test.yml'),
-  '-f', path.join(source, 'deploy/compose.desktop-business-remote.yml'), '-f', override, ...args]);
+  '-f', path.join(source, 'deploy/compose.desktop-business-remote.yml'),
+  ...(paper?['-f',path.join(source,'deploy/compose.desktop-paper-study-test.yml')]:[]), '-f', override,'-f',ephemeralDb, ...args]);
 const freePort = async () => { const server = createServer(); await new Promise(r => server.listen(0, '127.0.0.1', r));
   const port = server.address().port; await new Promise(r => server.close(r)); return port; };
 let tlsPort, mainPort, ca;
@@ -145,6 +149,10 @@ networks:
       assert.equal(model.services[name].ports, undefined);
       assert.deepEqual(Object.keys(model.services[name].networks), ['business-internal']);
     }
+    if(paper)for(const name of ['business-paper-prepare','business-paper-worker']){
+      assert.equal(model.services[name].ports,undefined);assert.deepEqual(Object.keys(model.services[name].networks),['business-internal']);
+      assert.equal(model.services[name].environment.GITHUB_CLIENT_SECRET,'');assert.equal(model.services[name].environment.PAPER_STUDY_MODELS_ENABLED,'false');
+    }
     assert.equal(model.services['business-api'].ports, undefined);
     assert.equal(model.networks['business-internal'].internal, true);
     assert.equal(model.services['business-gateway'], undefined);
@@ -211,6 +219,20 @@ networks:
     const call = (method, route, payload, token) => request(apiHost, route, method,
       { ...(token ? { Authorization: 'Bearer ' + token } : {}), ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       payload === undefined ? null : JSON.stringify(payload));
+    if(paper){
+      const base='/v1/me/paper-studies';
+      const bytes=await fs.readFile(path.join(root,'.runtime/paper-layout-audit/1706.03762v7.pdf'));
+      const body={filename:'paper.pdf',title:'HTTPS isolated paper',rightsConfirmed:true,pdfBase64:bytes.toString('base64')};
+      assert.equal((await call('GET',base)).status,401);assert.equal((await call('POST',base,body)).status,401);
+      const imported=await call('POST',base,body,owner.accessToken);assert.equal(imported.status,202);const id=JSON.parse(imported.text).data.id;
+      assert.equal((await call('GET',base+'/'+id,undefined,other.accessToken)).status,404);
+      assert.equal((await call('GET',base+'/'+id+'/source',undefined,other.accessToken)).status,404);
+      let doc;for(let i=0;i<80;i++){doc=JSON.parse((await call('GET',base+'/'+id,undefined,owner.accessToken)).text).data;if(doc.status==='imported')break;assert.notEqual(doc.status,'failed');await new Promise(r=>setTimeout(r,250));}
+      assert.equal(doc.pageCount,15);assert.equal(doc.status,'imported');assert.equal(doc.modelCallsEnabled,false);
+      assert.equal(JSON.parse((await call('GET',base+'/'+id+'/source',undefined,owner.accessToken)).text).data.pdfBase64,body.pdfBase64);
+      for(const suffix of ['/analyze','/draft','/publish'])assert.equal((await call('POST',base+'/'+id+suffix,{},owner.accessToken)).status,404);
+      report.checks.push('local HTTPS paper import/read, anonymous/cross-account rejection and closed generation');
+    }
     for (const token of [undefined, 'invalid'.repeat(6)]) for (const [method, route, payload] of [
       ['PATCH', '/v1/me', { displayName: 'Unauthorized' }], ['PATCH', '/v1/me/avatar', { presetKey: 'wizard' }],
       ['DELETE', '/v1/me/devices/' + target.grantId],
@@ -250,10 +272,11 @@ networks:
       'pg_dump -U desktop_business_test -d desktop_business_test -Fc > /tmp/business-check.dump; ' +
       'pg_restore --list /tmp/business-check.dump > /tmp/business-check.list; ' +
       'createdb -U desktop_business_test desktop_business_restore_check; ' +
-      'pg_restore -U desktop_business_test -d desktop_business_restore_check --no-owner --exit-on-error /tmp/business-check.dump');
+      'pg_restore -U desktop_business_test -d desktop_business_restore_check --no-owner --exit-on-error --single-transaction /tmp/business-check.dump');
     const rows = (await compose('exec', '-T', 'business-postgres', 'psql', '-X', '-At', '-U', 'desktop_business_test',
       '-d', 'desktop_business_restore_check', '-c', "SELECT (SELECT count(*) FROM works WHERE id IN ('d7b00000-0000-4000-8000-000000000002','d7b00000-0000-4000-8000-000000000004')), (SELECT count(*) FROM schema_migrations);")).trim();
-    assert.equal(rows, '2|158');
+    const migrationCount=(await fs.readdir(path.join(source,'apps/api/migrations'))).filter(name=>name.endsWith('.sql')).length;
+    assert.equal(rows, '2|'+migrationCount);
     await compose('exec', '-T', 'business-postgres', 'dropdb', '-U', 'desktop_business_test', 'desktop_business_restore_check');
     await compose('exec', '-T', 'business-redis', 'redis-cli', 'SET', 'desktop-local-backup-check', 'preserved');
     await compose('exec', '-T', 'business-redis', 'redis-cli', 'SAVE');

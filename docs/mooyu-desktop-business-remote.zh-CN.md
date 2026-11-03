@@ -15,6 +15,8 @@
 
 ## 本地复验
 
+论文持久化导入/阅读使用独立的显式覆盖文件及 worker，见 [论文隔离服务说明](./mooyu-desktop-paper-study-test.zh-CN.md)。不合并该覆盖文件时，本服务仍关闭论文接口。新增 `verify-desktop-business-remote.mjs --paper` 仅在本地临时 HTTPS 项目中验证该覆盖文件，不访问实际测试域名或生产服务。
+
 在仓库根目录运行：
 
 ```powershell

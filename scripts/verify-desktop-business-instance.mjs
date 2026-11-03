@@ -10,7 +10,8 @@ import { DESKTOP_BUSINESS_FIXTURE as f } from '../apps/api/src/desktop-business-
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const keep = process.argv.includes('--keep');
-if (process.argv.slice(2).some(arg => arg !== '--keep')) throw Error('Usage: verify-desktop-business-instance.mjs [--keep]');
+const paper = process.argv.includes('--paper');
+if (process.argv.slice(2).some(arg => !['--keep','--paper'].includes(arg))) throw Error('Usage: verify-desktop-business-instance.mjs [--keep] [--paper]');
 const clean = JSON.parse(await fs.readFile(path.join(root, '.runtime/desktop-auth-clean/latest.json'), 'utf8'));
 if (!clean.passed) throw Error('Run the clean directory regression first');
 const source = path.join(clean.directory, 'source');
@@ -21,6 +22,10 @@ const freePort = async () => { const s = createServer(); await new Promise(resol
 const port = await freePort(); let runtimePort; do { runtimePort = await freePort(); } while (runtimePort === port);
 const secret = crypto.randomBytes(32).toString('hex'), otp = crypto.randomBytes(32).toString('hex');
 const envFile = path.join(directory, 'instance.env');
+// Disposable local verification only. Deployment keeps its named PostgreSQL
+// volume. Keep fsync enabled while avoiding Docker Desktop VHD commit latency.
+const ephemeralDb=path.join(directory,'ephemeral-db.yml');
+await fs.writeFile(ephemeralDb,'services:\n  business-postgres:\n    volumes: !override\n      - type: tmpfs\n        target: /var/lib/postgresql/data\n');
 await fs.writeFile(envFile, `DESKTOP_BUSINESS_TEST_PORT=${port}\nDESKTOP_BUSINESS_TEST_RUNTIME_PORT=${runtimePort}\nDESKTOP_BUSINESS_TEST_DB_PASSWORD=${secret}\nDESKTOP_BUSINESS_TEST_OTP_HMAC_KEY=${otp}\n`, { mode: 0o600 });
 let endpoint, started = false;
 const dockerEnv = { ...process.env };
@@ -36,11 +41,14 @@ async function docker(args) {
     child.once('close', code => { clearTimeout(timer); code === 0 ? resolve(out) : reject(Error(redact((err + out).slice(-5000)))); });
   });
 }
-const compose = (...args) => docker(['compose', '-p', project, '--env-file', envFile, '-f', path.join(source, 'deploy/compose.desktop-business-test.yml'), ...args]);
+const compose = (...args) => docker(['compose', '-p', project, '--env-file', envFile, '-f', path.join(source, 'deploy/compose.desktop-business-test.yml'),
+  ...(paper?['-f',path.join(source,'deploy/compose.desktop-paper-study-test.yml')]:[]),'-f',ephemeralDb, ...args]);
 const origin = `http://127.0.0.1:${port}`;
 async function request(route, options = {}) {
-  const r = await fetch(origin + route, { ...options, redirect: 'error', signal: AbortSignal.timeout(20000) });
-  return { status: r.status, body: await r.json() };
+  const started=Date.now();
+  try{const r = await fetch(origin + route, { ...options, redirect: 'error', signal: AbortSignal.timeout(20000) });
+  return { status: r.status, body: await r.json() };}
+  catch(error){throw Error('LOCAL_HTTP_FAILED '+(options.method??'GET')+' '+route+' '+(error.cause?.code??error.code??error.name)+' elapsedMs='+(Date.now()-started)+' bytesRead='+(error.cause?.socket?.bytesRead??'unknown'),{cause:error});}
 }
 const runtimeRequest = (route, host) => new Promise((resolve, reject) => {
   // fetch may replace a supplied Host header. Explicit HTTP is needed to test
@@ -54,6 +62,7 @@ const runtimeRequest = (route, host) => new Promise((resolve, reject) => {
   req.setTimeout(15000, () => req.destroy(Error('Runtime request timeout'))); req.on('error', reject);
 });
 const report = { project, directory, origin, runtimeOrigin: `http://localhost:${runtimePort}`, source,
+  paperStudyEnabled:paper,
   productionConnected: false, realGitHubInvoked: false, modelInvoked: false, deployed: false, checks: [] };
 const check = async (name, fn) => { await fn(); report.checks.push(name); console.log('PASS ' + name); };
 try {
@@ -152,6 +161,34 @@ try {
       assert.equal(result.status, 404); assert.equal(result.body.error.code, 'DESKTOP_BUSINESS_TEST_ROUTE_DISABLED');
     }
   });
+  if(paper)await check('private paper HTTP import/read survives API, worker and Redis restart with zero model or publication actions',async()=>{
+    const route='/v1/me/paper-studies',headers={Authorization:'Bearer '+accessToken,'Content-Type':'application/json'};
+    const pdf=await fs.readFile(path.join(root,'.runtime/paper-layout-audit/1706.03762v7.pdf'));
+    const input={filename:'paper.pdf',title:'隔离论文阅读验收',rightsConfirmed:true,pdfBase64:pdf.toString('base64')};
+    assert.equal((await request(route)).status,401);
+    assert.equal((await request(route,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,401);
+    const imports=await Promise.all(Array.from({length:3},()=>request(route,{method:'POST',headers,body:JSON.stringify(input)})));
+    imports.forEach(r=>assert.equal(r.status,202));const id=imports[0].body.data.id;
+    assert.ok(imports.every(r=>r.body.data.id===id));
+    let doc;
+    for(let i=0;i<80;i++){doc=(await request(route+'/'+id,{headers})).body.data;if(doc.status==='imported')break;assert.notEqual(doc.status,'failed');await new Promise(r=>setTimeout(r,250));}
+    assert.equal(doc.status,'imported');assert.equal(doc.pageCount,15);assert.ok(doc.pages.some(p=>p.text.length>100));assert.equal(doc.modelCallsEnabled,false);
+    try{assert.equal((await request(route+'/'+id+'/source',{headers})).body.data.pdfBase64,input.pdfBase64);}
+    catch(error){
+      const probe=await compose('exec','-T','business-api','node','--input-type=module','-e',
+        `for(const host of ['127.0.0.1','business-gateway']){try{const r=await fetch('http://'+host+':3090${route}/${id}/source',{headers:{Authorization:${JSON.stringify('Bearer '+accessToken)}},signal:AbortSignal.timeout(10000)});console.log(JSON.stringify({host,status:r.status,bytes:(await r.text()).length}));}catch(e){console.log(JSON.stringify({host,error:e.cause?.code??e.code??e.name}));}}`);
+      await fs.writeFile(path.join(directory,'source-probe.jsonl'),probe);throw error;
+    }
+    for(const suffix of ['/analyze','/draft','/publish'])assert.equal((await request(route+'/'+id+suffix,{method:'POST',headers,body:'{}'})).status,404);
+    const prep=JSON.parse(await compose('exec','-T','business-api','node','apps/api/src/desktop-paper-study-worker.mjs','--prepare'));assert.equal(prep.prepared,true);
+    await compose('restart','business-paper-worker','business-redis','business-api');
+    let ready=false;for(let i=0;i<80;i++){try{const r=await request('/ready-desktop-business');if(r.status===200){assert.equal(r.body.data.paperStudy.enabled,true);ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,250));}assert.equal(ready,true);
+    const restored=(await request(route+'/'+id,{headers})).body.data;assert.equal(restored.id,id);assert.equal(restored.sourceSha256,doc.sourceSha256);assert.equal(restored.status,'imported');
+    assert.equal((await request(route+'/'+id+'/source',{headers})).body.data.pdfBase64,input.pdfBase64);
+    const state=JSON.parse(await compose('exec','-T','business-api','node','--input-type=module','-e',
+      `import {createDesktopBusinessTestRuntime} from './apps/api/src/desktop-business-test-server.mjs';const r=createDesktopBusinessTestRuntime(process.env);try{console.log(JSON.stringify((await r.database.pool.query("SELECT (SELECT count(*)::int FROM paper_study_tasks) AS tasks,(SELECT count(*)::int FROM agent_provider_calls) AS calls,(SELECT count(*)::int FROM agent_run_actions) AS actions,(SELECT count(*)::int FROM paper_study_documents WHERE analysis_json IS NOT NULL OR draft_json IS NOT NULL) AS generated")).rows[0]));}finally{await r.app.close();}`));
+    assert.deepEqual(state,{tasks:1,calls:0,actions:0,generated:0});
+  });
   await check('product Runtime Edge serves manifest-verified game and course assets and rejects wrong hosts, traversal and mutations', async () => {
     const descriptor = (await request('/v1/works/' + f.gameId + '/launch')).body.data;
     const entry = new URL(descriptor.entryUrl);
@@ -193,6 +230,7 @@ try {
   report.verified = true;
 } catch (error) { report.verified = false; report.error = redact(error.stack ?? error.message); console.error(report.error); process.exitCode = 1; }
 finally {
+  if(started&&!report.verified){try{await fs.writeFile(path.join(directory,'failure-services.log'),redact(await compose('logs','--no-color','--tail','80')));}catch{}}
   if (started && (!keep || !report.verified)) {
     try { await compose('down', '--volumes', '--remove-orphans'); report.cleanedUp = true; }
     catch (error) { report.cleanedUp = false; report.cleanupError = redact(error.message); process.exitCode = 1; }

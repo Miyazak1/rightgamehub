@@ -14,6 +14,20 @@ const valid = () => ({ DESKTOP_BUSINESS_TEST_INSTANCE: 'isolated-business',
   DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN: 'http://127.0.0.1:39190', DESKTOP_BUSINESS_TEST_RUNTIME_PORT: '39192',
   DATABASE_URL: 'postgresql://desktop_business_test:' + 'a'.repeat(64) + '@business-postgres:5432/desktop_business_test',
   REDIS_URL: 'redis://business-redis:6379', OTP_HMAC_KEY: 'b'.repeat(64) });
+
+test('paper study explicitly opts into import/read only; model, mutation and public paths stay denied',()=>{
+  const id='d7b00000-0000-4000-8000-000000000002';
+  assert.equal(desktopBusinessTestConfig(valid()).paperStudyEnabled,false);
+  const settings=desktopBusinessTestConfig({...valid(),DESKTOP_BUSINESS_TEST_PAPER_ENABLED:'true',PAPER_STUDY_MODELS_ENABLED:'false',PAPER_STUDY_PUBLISH_ENABLED:'false',DEEPSEEK_API_KEY:'discarded'});
+  assert.equal(settings.paperStudyEnabled,true);assert.equal(settings.env.DEEPSEEK_API_KEY,undefined);
+  for(const patch of [{DESKTOP_BUSINESS_TEST_PAPER_ENABLED:'yes'},{PAPER_STUDY_MODELS_ENABLED:'true'},{PAPER_STUDY_PUBLISH_ENABLED:'true'}])assert.throws(()=>desktopBusinessTestConfig({...valid(),...patch}));
+  for(const [method,path]of [['POST','/v1/me/paper-studies'],['GET','/v1/me/paper-studies'],['GET','/v1/me/paper-studies/'+id],['HEAD','/v1/me/paper-studies/'+id+'/source']]){
+    assert.equal(desktopBusinessTestRequestAllowed(method,path,settings),true);
+    assert.equal(desktopBusinessTestRequestAllowed(method,path,{}),false);
+  }
+  for(const method of ['POST','PATCH','PUT','DELETE'])for(const suffix of ['/'+id,'/'+id+'/source','/'+id+'/analyze','/'+id+'/draft','/'+id+'/publish'])assert.equal(desktopBusinessTestRequestAllowed(method,'/v1/me/paper-studies'+suffix,settings),false);
+  for(const path of ['/v1/me/paper-studies/invalid','/v1/paper-studies/'+id,'/v1/me/paper-studies/'+id+'/source/extra','/v1/admin/agents'])assert.equal(desktopBusinessTestRequestAllowed('GET',path,settings),false);
+});
 test('business instance only accepts the dedicated database, Redis and loopback origin, with fresh environment', () => {
   const settings = desktopBusinessTestConfig({ ...valid(), DEEPSEEK_API_KEY: 'must-not-leak', GITHUB_CLIENT_SECRET: 'must-not-leak', AWS_SECRET_ACCESS_KEY: 'must-not-leak' });
   assert.equal(settings.env.DEEPSEEK_API_KEY, undefined); assert.equal(settings.env.GITHUB_CLIENT_SECRET, undefined);

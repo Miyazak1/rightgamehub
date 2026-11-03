@@ -2,6 +2,9 @@ import { isolatedBusinessOrigins } from '../../../packages/contracts/src/isolate
 const reject = () => { throw Error('DESKTOP_BUSINESS_TEST_CONFIGURATION_REJECTED'); };
 export function desktopBusinessTestConfig(env) {
   if (env.DESKTOP_BUSINESS_TEST_INSTANCE !== 'isolated-business') reject();
+  if (env.DESKTOP_BUSINESS_TEST_PAPER_ENABLED != null && !['true','false'].includes(env.DESKTOP_BUSINESS_TEST_PAPER_ENABLED)) reject();
+  for (const key of ['PAPER_STUDY_MODELS_ENABLED','PAPER_STUDY_PUBLISH_ENABLED']) if (env[key] && env[key] !== 'false') reject();
+  const paperStudyEnabled=env.DESKTOP_BUSINESS_TEST_PAPER_ENABLED==='true';
   let database, redis, origin;
   try { database = new URL(env.DATABASE_URL); redis = new URL(env.REDIS_URL); origin = new URL(env.DESKTOP_BUSINESS_TEST_PUBLIC_ORIGIN); } catch { reject(); }
   if (database.protocol !== 'postgresql:' || database.hostname !== 'business-postgres' || database.port !== '5432' ||
@@ -26,7 +29,7 @@ export function desktopBusinessTestConfig(env) {
   // Fresh allowlisted configuration: no SMTP, OAuth secrets, provider keys,
   // object storage, production connection strings or worker configuration.
   return { publicOrigin: origin.origin, runtimePort, runtime: { domain: runtime.domain, scheme: runtime.scheme, port: runtime.port },
-    remote, githubConfigured: github.length === 3 && github.every(Boolean), env: {
+    remote, paperStudyEnabled, githubConfigured: github.length === 3 && github.every(Boolean), env: {
     NODE_ENV: 'production', API_HOST: '0.0.0.0', API_PORT: '3090',
     DATABASE_URL: database.href, REDIS_URL: redis.href, OTP_HMAC_KEY: env.OTP_HMAC_KEY,
     MAIL_PROVIDER: 'disabled', LOGIN_EMAIL_ALLOWLIST: 'desktop-reader@example.test',
@@ -36,11 +39,16 @@ export function desktopBusinessTestConfig(env) {
     RUNTIME_ROOT: '/data/desktop-business/runtime', COVER_ROOT: '/data/desktop-business/covers',
     AVATAR_ROOT: '/data/desktop-business/avatars', GAME_SHARE_SITE_ORIGIN: origin.origin,
     GUESS_BAIKE_AUTOMATION_ENABLED: 'false', CLOUD_SAVE_ENABLED: 'false',
+    PAPER_STUDY_MODELS_ENABLED:'false', PAPER_STUDY_PUBLISH_ENABLED:'false',
   } };
 }
 const uuid = '[a-f0-9-]{36}';
 export function desktopBusinessTestRequestAllowed(method, rawUrl, settings = {}) {
   const pathname = rawUrl.split('?')[0];
+  if(settings.paperStudyEnabled){
+    if(method==='POST'&&pathname==='/v1/me/paper-studies')return true;
+    if(['GET','HEAD'].includes(method)&&new RegExp(`^/v1/me/paper-studies(?:/${uuid}(?:/source)?)?$`).test(pathname))return true;
+  }
   if (settings.remote && pathname.startsWith('/v1/auth/email/')) return false;
   if (settings.githubConfigured && ((method === 'GET' && pathname === '/v1/auth/github/web/callback') ||
     method === 'POST' && (pathname === '/v1/auth/github/web' || /^\/v1\/auth\/github\/web\/[a-f0-9-]{36}\/poll$/.test(pathname)))) return true;

@@ -43,7 +43,14 @@ export function registerPaperStudyRoutes(app, { service, requireAuth }) {
       return reply.code(e.statusCode??409).send({error:{code:e.code,message:'论文操作未完成，请检查文档或服务状态。',retryable:false}});
     }
   };
-  const options={onRequest:requireAuth};
+  const options={onRequest:async(request,reply)=>{
+    try{await requireAuth(request);}catch(error){
+      // Reject uploads before parsing their body, but never reuse a socket with
+      // an unfinished request body after an early authentication response.
+      if(request.method==='POST')reply.header('Connection','close');
+      throw error;
+    }
+  }};
   const idOptions={...options,schema:{params:{type:'object',required:['id'],properties:{id:{type:'string',format:'uuid'}},additionalProperties:false}}};
   app.get(prefix,options,run(r=>service.list(r.actor)));
   app.post(prefix,{...options,bodyLimit:Math.ceil(PAPER_STUDY_MAX_BYTES/3)*4+4096},run(r=>service.import(r.actor,r.body),202));

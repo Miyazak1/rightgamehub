@@ -1,0 +1,38 @@
+# Opt-in overlay for the independent desktop business test project only.
+# Merge after compose.desktop-business-test.yml (and remote overlay if used).
+services:
+  business-paper-prepare:
+    extends:
+      file: compose.desktop-business-test.yml
+      service: business-migrate
+    command: [node, apps/api/src/desktop-paper-study-worker.mjs, --prepare]
+    environment: &paper-environment
+      DESKTOP_BUSINESS_TEST_PAPER_ENABLED: 'true'
+      PAPER_STUDY_MODELS_ENABLED: 'false'
+      PAPER_STUDY_PUBLISH_ENABLED: 'false'
+      GITHUB_CLIENT_ID: ''
+      GITHUB_CLIENT_SECRET: ''
+      GITHUB_CALLBACK_URL: ''
+    depends_on:
+      business-seed: {condition: service_completed_successfully}
+  business-paper-worker:
+    extends:
+      file: compose.desktop-business-test.yml
+      service: business-migrate
+    command: [node, apps/api/src/desktop-paper-study-worker.mjs, --worker]
+    environment: *paper-environment
+    depends_on:
+      business-paper-prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, apps/api/src/desktop-paper-study-worker.mjs, --health]
+      interval: 3s
+      timeout: 8s
+      start_period: 310s
+      retries: 5
+  business-api:
+    environment:
+      DESKTOP_BUSINESS_TEST_PAPER_ENABLED: 'true'
+      PAPER_STUDY_MODELS_ENABLED: 'false'
+      PAPER_STUDY_PUBLISH_ENABLED: 'false'
+    depends_on:
+      business-paper-worker: {condition: service_healthy}

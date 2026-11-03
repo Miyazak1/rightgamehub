@@ -31,6 +31,13 @@ seeds.push('apps/api/src/runtime.mjs','apps/api/src/paper-study-worker-cli.mjs',
   'tests/platform/paper-study-persistence.test.mjs','tests/platform/paper-study-persistence-db.test.cjs');
 legacyTests.push('tests/platform/paper-study-persistence.test.mjs','tests/platform/paper-study-persistence-db.test.cjs','tests/platform/paper-study-worker-loop.test.mjs');
 seeds.push('tests/platform/paper-study-worker-loop.test.mjs');
+seeds.push('apps/api/src/desktop-business-test-server.mjs','apps/api/src/desktop-paper-study-worker.mjs',
+  'deploy/compose.desktop-business-test.yml','deploy/compose.desktop-business-remote.yml','deploy/compose.desktop-paper-study-test.yml',
+  'scripts/verify-desktop-business-instance.mjs','scripts/verify-desktop-business-remote.mjs','tests/platform/desktop-business-test-instance.test.mjs','tests/platform/desktop-business-remote.test.mjs');
+seeds.push('scripts/verify-desktop-business-database.mjs','tests/desktop/electron-business-database.cjs');
+seeds.push('tests/platform/desktop-paper-study.test.mjs');legacyTests.push('tests/platform/desktop-paper-study.test.mjs');
+seeds.push('tests/platform/desktop-business-proxy.test.mjs');legacyTests.push('tests/platform/desktop-business-proxy.test.mjs');
+legacyTests.push('tests/platform/desktop-business-test-instance.test.mjs','tests/platform/desktop-business-remote.test.mjs');
 async function visit(relative){
   relative=relative.replaceAll('\\','/');if(files.has(relative))return;
   if(relative.startsWith('../')||path.isAbsolute(relative)||relative.includes('node_modules')||relative.startsWith('.runtime/')||/MooyuWorkbench|desktop\/src\/(?:workbench-service|paper-review)/.test(relative))throw Error('PAPER_STUDY_CLEAN_SCOPE_DENIED');
@@ -47,7 +54,10 @@ async function visit(relative){
   if (relative.startsWith('tests/platform/')) for (const match of text.matchAll(/['"](?:fixtures\/)?(paper-[\w.-]+\.json)['"]/g))
     await visit('tests/platform/fixtures/' + match[1]);
   for(const match of text.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)['"](\.[^'"]+)['"]/g)){
-    const dependency=path.normalize(path.join(path.dirname(relative),match[1].split('?')[0]));
+    // Compose verification embeds node -e imports rooted at the container's
+    // /app cwd, rather than at the host verification script directory.
+    const dependency=relative.startsWith('scripts/verify-desktop-business-')&&match[1].startsWith('./apps/')
+      ? match[1].slice(2) : path.normalize(path.join(path.dirname(relative),match[1].split('?')[0]));
     await visit(dependency);
   }
 }
