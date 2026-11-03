@@ -4,6 +4,10 @@ Windows 本地 NSIS 安装预览已增加独立打包入口。按当前用户安
 
 ## Electron 共享界面预览
 
+启动窗口先显示 Logo 和准备状态，再按需恢复加密账号凭据。恢复完成前，账号、媒体、多人连接和文件导出接口等待同一个初始化任务；15 秒超时会显示启动失败提示，关闭客户端会取消等待。启动日志 `startup.ndjson` 只记录阶段、进程 ID 和耗时，不记录账号、令牌或接口响应。
+
+运行 `node scripts/verify-desktop-clean.mjs` 后，可用 `node scripts/verify-desktop-startup.mjs` 验证打包 ASAR 的真实窗口、DPAPI 测试凭据和账号恢复。测试使用独立 profile 与本地 API，不访问正式账号；首次绘制指标不包含 Windows 加载可执行文件之前的系统检查开销。
+
 当前正式推进的方向是 Electron 外壳直接挂载 `packages/platform-client` 的 App 和 styles.css。默认只加载本地构建与明确标注的本地样本，不连接服务器；可显式接入本机隔离账号 API 或独立 HTTPS 测试 API，邮箱登录、GitHub 系统浏览器登录与会话恢复已接通。发布、下载导出与后台执行尚未接通。现有 Windows 执行内核保留，未在本阶段替换。
 
 在仓库根目录运行 `start-mooyu-desktop-preview.bat`，或：

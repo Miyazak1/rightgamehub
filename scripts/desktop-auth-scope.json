@@ -176,7 +176,12 @@
     "tests/platform/desktop-updates.test.mjs",
     "apps/desktop/native/MooyuUpdateRunner.cs",
     "apps/desktop/src/update-handoff.mjs",
-    "tests/desktop/electron-updates-ui.cjs"
+    "tests/desktop/electron-updates-ui.cjs",
+    "apps/desktop/src/startup-task.cjs",
+    "apps/desktop/renderer/startup.css",
+    "tests/platform/desktop-startup.test.mjs",
+    "tests/desktop/electron-startup-acceptance.cjs",
+    "scripts/verify-desktop-startup.mjs"
   ],
   "deferred": [
     "apps/desktop/native/MooyuWorkbench.cs",
@@ -219,6 +224,7 @@
     "tests/platform/desktop-windows-package.test.mjs",
     "tests/platform/desktop-windows-guards.test.mjs",
     "tests/platform/desktop-downloads.test.mjs",
-    "tests/platform/desktop-updates.test.mjs"
+    "tests/platform/desktop-updates.test.mjs",
+    "tests/platform/desktop-startup.test.mjs"
   ]
 }

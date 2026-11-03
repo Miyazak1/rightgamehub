@@ -1,0 +1,7 @@
+/* Visible before the renderer bundle and account recovery finish. */
+.desktop-startup-drag{position:fixed;top:0;left:0;right:140px;height:40px;-webkit-app-region:drag}
+.desktop-startup{box-sizing:border-box;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0;background:#0c0b11;color:#f2efff;font-family:system-ui,sans-serif}
+.desktop-startup img{image-rendering:pixelated}
+.desktop-startup h1{margin:20px 0 8px;font-size:24px}
+.desktop-startup p{margin:0;color:#b8b0cb;font-size:14px}
+.desktop-startup-drag{z-index:1}

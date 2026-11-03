@@ -8,6 +8,7 @@ const { accountOrigin, prepareDesktopAccountProfileSync } = require('../src/acco
 const { localBusinessRuntime } = require('../src/runtime-policy.mjs');
 const { restoredWindowState, createWindowStateStore, titleBarPalette, validateAction, windowShortcut } = require('./window-state.cjs');
 const { attachGameIoNavigation } = require('./game-io-navigation.cjs');
+const { createStartupTask } = require('../src/startup-task.cjs');
 protocol.registerSchemesAsPrivileged(['mooyu-app'].map(scheme => ({ scheme,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
 
@@ -28,7 +29,7 @@ async function createShell(config) {
   app.setPath('userData', config.profileRoot);
   app.setPath('sessionData', path.join(config.profileRoot, 'session-data'));
   app.commandLine.appendSwitch('disk-cache-dir', path.join(config.profileRoot, 'cache'));
-  const trace = event => fsSync.appendFileSync(path.join(config.profileRoot, 'startup.ndjson'), JSON.stringify({ event }) + '\n');
+  const trace = event => { try { fsSync.appendFileSync(path.join(config.profileRoot, 'startup.ndjson'), JSON.stringify({ event, pid: process.pid, elapsedMs: Math.round(process.uptime() * 1000) }) + '\n'); } catch {} };
   trace('profile-prepared');
   if (!app.requestSingleInstanceLock()) { trace('existing-instance'); app.exit(0); return null; }
   trace('instance-acquired');
@@ -59,8 +60,9 @@ async function createShell(config) {
   ses.on('will-download', event => event.preventDefault());
   ses.protocol.handle('mooyu-app', async request => {
     if (new URL(request.url).pathname === '/__desktop-media') {
-      if (!policy.ui(request.url) || !['GET', 'HEAD'].includes(request.method) || !accountSession) return new Response('Denied', { status: 403 });
+      if (!policy.ui(request.url) || !['GET', 'HEAD'].includes(request.method) || !accountApiOrigin) return new Response('Denied', { status: 403 });
       try {
+        await accountStartup.run();
         const response = await accountSession.media(new URL(request.url).searchParams.get('path'), {signal:request.signal});
         if (request.method === 'HEAD') { await response.body?.cancel(); return new Response(null, {headers:response.headers}); }
         return response;
@@ -95,7 +97,8 @@ async function createShell(config) {
   // The trusted installed entry is the only source of update configuration.
   // Development previews have no feed and never contact the public server.
   if (config.updateTrust) { const timer = setTimeout(() => updates.run('check').then(value => value.status === 'available' ? updates.run('download') : null).catch(() => {}), 15000); timer.unref(); }
-  if (accountApiOrigin) {
+  const accountStartup = createStartupTask(async () => {
+    if (!accountApiOrigin) return;
     const { createDesktopAccountSession } = await import('../src/account-session.mjs');
     const { createDesktopNetworkTransport } = await import('../src/network-transport.mjs');
     const { createWindowsDpapiCredentialVault } = await import('../../capability-executor/src/credential-vault.mjs');
@@ -127,7 +130,8 @@ async function createShell(config) {
         return result.canceled ? null : result.filePath;
       },
     });
-  }
+  }, state => trace('account-startup-' + state));
+  app.once('will-quit', () => accountStartup.dispose());
   const perform = action => {
     validateAction(action);
     if (action === 'back' && window.webContents.navigationHistory.canGoBack()) window.webContents.navigationHistory.goBack();
@@ -149,6 +153,8 @@ async function createShell(config) {
         contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false,
         webSecurity: true, allowRunningInsecureContent: false, spellcheck: false } });
     trace(config.visible === false ? 'hidden-window-created' : 'visible-window-created');
+    window.webContents.once('dom-ready', () => trace('window-dom-ready'));
+    window.once('ready-to-show', () => trace('window-ready-to-show'));
     if (restore.maximized) window.maximize();
     const saveWindow = () => { if (!window.isDestroyed()) stateStore.write({ schemaVersion: 1, bounds: window.getNormalBounds(), maximized: window.isMaximized() }); };
     let saveTimer;
@@ -184,7 +190,9 @@ async function createShell(config) {
   const trusted = event => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !policy.ui(event.senderFrame.url)) throw Error('DESKTOP_SENDER_DENIED');
   };
-  ipcMain.handle('mooyu:preview-environment', event => {
+  ipcMain.handle('mooyu:preview-environment', async event => {
+    trusted(event);
+    await accountStartup.run();
     trusted(event);
     return { host: 'desktop-app', surface: 'desktop-window', mode: accountEnvironment === 'production' ? 'production' : 'local-preview', connected: !!accountSession,
       accountConfigured: !!accountSession, accountApiOrigin, accountEnvironment, businessRuntime,
@@ -193,6 +201,8 @@ async function createShell(config) {
   ipcMain.handle('mooyu:account-call', async (event, method, args) => {
     trusted(event);
     try {
+      await accountStartup.run();
+      trusted(event);
       if (!accountSession) throw Object.assign(new Error(), { code: 'DESKTOP_ACCOUNT_NOT_CONFIGURED', status: 503 });
       return { ok: true, value: await accountSession.call(method, args) };
     } catch (error) {
@@ -214,9 +224,9 @@ async function createShell(config) {
     try { return { ok: true, value: await task() }; }
     catch (error) { const code = /^[A-Z][A-Z0-9_]{2,100}$/.test(error.code ?? '') ? error.code : 'DESKTOP_GAME_IO_FAILED'; return { ok: false, error: { code, message: `操作未完成（${code}）。` } }; }
   };
-  ipcMain.handle('mooyu:realtime-call', (event, method, input) => { trusted(event); return gameResult(() => { if (!realtimeBridge) throw Error('unconfigured'); return realtimeBridge.call(method, input); }); });
-  ipcMain.handle('mooyu:file-save', (event, input) => { trusted(event); return gameResult(() => { if (!fileExports) throw Error('unconfigured'); return fileExports.save(input); }); });
-  ipcMain.handle('mooyu:file-cancel', (event, id) => { trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
+  ipcMain.handle('mooyu:realtime-call', (event, method, input) => { trusted(event); return gameResult(async () => { await accountStartup.run(); trusted(event); if (!realtimeBridge) throw Error('unconfigured'); return realtimeBridge.call(method, input); }); });
+  ipcMain.handle('mooyu:file-save', (event, input) => { trusted(event); return gameResult(async () => { await accountStartup.run(); trusted(event); if (!fileExports) throw Error('unconfigured'); return fileExports.save(input); }); });
+  ipcMain.handle('mooyu:file-cancel', async (event, id) => { trusted(event); await accountStartup.run(); trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
   ipcMain.handle('mooyu:chrome-action', (event, action) => { trusted(event); perform(action); return { accepted: true }; });
   ipcMain.handle('mooyu:chrome-theme', (event, mode) => { trusted(event); window.setTitleBarOverlay(titleBarPalette(mode)); currentTheme = mode; publish(); return { applied: mode }; });
   return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore, updates };

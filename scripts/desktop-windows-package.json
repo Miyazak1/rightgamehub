@@ -21,7 +21,11 @@
     "apps/desktop/renderer/DesktopUpdates.jsx",
     "apps/desktop/renderer/desktop-updates.css",
     "apps/desktop/native/MooyuUpdateRunner.cs",
-    "apps/desktop/src/update-handoff.mjs"
+    "apps/desktop/src/update-handoff.mjs",
+    "apps/desktop/src/startup-task.cjs",
+    "apps/desktop/renderer/index.html",
+    "apps/desktop/renderer/main.jsx",
+    "apps/desktop/renderer/startup.css"
   ],
   "updaterVersion": "6.8.12"
 }

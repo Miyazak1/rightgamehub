@@ -1305,7 +1305,7 @@
     },
     {
       "source": "packages/platform-client/src/DesktopDownloadPage.jsx",
-      "sha256": "5d5e32b020d7296119619c7221519b721e96abd2c63660a08c312e93c8662545",
+      "sha256": "1380d13404019c25e9e5643d361e851e8e1974cfda94c1deb7a8433aeca1083e",
       "apiCalls": [],
       "browserDependencies": []
     },

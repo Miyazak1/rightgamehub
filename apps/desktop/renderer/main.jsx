@@ -11,7 +11,13 @@ import { createDesktopMultiplayerFactory } from './realtime-adapter.mjs';
 import { createDesktopFileExporter } from './file-adapter.mjs';
 
 const browser = createBrowserHostAdapter({ host: 'desktop-app', surface: 'desktop-window' });
-const env = await globalThis.mooyuDesktop.environment();
+let env;
+try { env = await globalThis.mooyuDesktop.environment(); }
+catch (error) {
+  const message = document.querySelector('[data-startup-message]');
+  if (message) { message.textContent = '客户端启动未完成，请关闭后重新打开。'; message.setAttribute('role', 'alert'); }
+  throw error;
+}
 const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooyuDesktop.account, env.accountApiOrigin)
   : createPreviewApi({ fixtureOrigin: env.fixtureOrigin });
 const session = env.accountConfigured ? createDesktopAccountAdapter(globalThis.mooyuDesktop.account) : null;
