@@ -5,7 +5,7 @@ import { createAgentPaperArticleGenerationHandlers } from './agent-paper-article
 export const PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'paper.article.draft-shadow',
-  workflowVersion: 2,
+  workflowVersion: 9,
   inputSchema: 'paper-article-draft-input-v1',
   outputSchema: 'blog-private-draft-output-v1',
   requiredCapabilities: [
@@ -13,14 +13,14 @@ export const PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
     { key: 'provider.text.generate', version: 1 },
     { key: 'blog.article.draft', version: 1 },
   ],
-  defaultBudget: { providerCalls: 2, toolCalls: 2, inputTokens: 60000,
-    outputTokens: 8000, wallClockSeconds: 1200 },
+  defaultBudget: { providerCalls: 65, toolCalls: 2, inputTokens: 130000,
+    outputTokens: 103200, wallClockSeconds: 6720 },
   stages: [
     { key: 'freeze-input', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
     { key: 'collect-evidence', kind: 'tool', dependsOn: ['freeze-input'], maxAttempts: 2,
       timeoutSeconds: 60, capability: { key: 'research.paper.read', version: 1 }, idempotencyMode: 'key' },
     { key: 'compose', kind: 'provider', dependsOn: ['collect-evidence'], maxAttempts: 2,
-      timeoutSeconds: 600, capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
+      timeoutSeconds: 6420, capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
     { key: 'verify', kind: 'deterministic', dependsOn: ['compose'], maxAttempts: 1, timeoutSeconds: 120 },
     { key: 'persist-draft', kind: 'domain-write', dependsOn: ['verify'], maxAttempts: 1,
       timeoutSeconds: 60, capability: { key: 'blog.article.draft', version: 1 }, idempotencyMode: 'queryable' },

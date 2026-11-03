@@ -13,11 +13,11 @@ test('official Agent capabilities are strict, immutable and uniquely addressable
 
   assert.equal(snapshot.revision, 'official-tools-v1');
   assert.equal(snapshot.schemaVersion, 1);
-  assert.equal(snapshot.capabilities.length, 6);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.id)).size, 6);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.toolId)).size, 6);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.mcp.toolName)).size, 6);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.launch.route)).size, 6);
+  assert.equal(snapshot.capabilities.length, 7);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.id)).size, 7);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.toolId)).size, 7);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.mcp.toolName)).size, 7);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.launch.route)).size, 7);
 
   for (const capability of snapshot.capabilities) {
     assert.equal(capability.format, registry.AGENT_CAPABILITY_FORMAT);

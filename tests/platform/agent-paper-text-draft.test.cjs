@@ -225,10 +225,13 @@ test('text-only article retains its notice and cannot strip scope or invent a me
       assert.deepEqual(payload.verifiedPaper.evidence.map(e => e.quoteHash), s.evidence.map(e => e.quoteHash));
       assert.equal(payload.verifiedPaper.findings.every(f => !Object.hasOwn(f, 'confidence')), true);
       assert.equal(Object.hasOwn(payload.verifiedPaper.readingScope, 'reasonCodes'), false);
-      assert.deepEqual(payload.verifiedPaper.limitations, [{ text: TEXT_DRAFT_NOTICE }]);
+      assert.deepEqual(payload.verifiedPaper.limitations, []);
+      assert.equal(Object.hasOwn(payload.verifiedPaper, 'readingNotice'), false);
+      assert.equal(payload.writingPlan.scopeNoticeHandledByServer, true);
       return { actionId: crypto.randomUUID(), output };
     } } });
-  const run = { id: crypto.randomUUID(), agentUserId: crypto.randomUUID(), input: {}, configSnapshot: {} };
+  // Replay the archived single-call v3 contract; current content-first v4 is covered separately.
+  const run = { id: crypto.randomUUID(), agentUserId: crypto.randomUUID(), workflowVersion: 3, input: {}, configSnapshot: {} };
   const execution = { workerId: 'text-draft-test', leaseToken: crypto.randomUUID() };
   const composeContext = { run, stage: { id: crypto.randomUUID() }, prerequisites: [{ stageKey: 'collect-evidence',
     status: 'succeeded', outputRef: { artifactIds: [toolId] } }] };
@@ -251,6 +254,7 @@ test('text-only article retains its notice and cannot strip scope or invent a me
     const disclaimer = JSON.parse(fs.readFileSync(path.join(__dirname,
       'fixtures/paper-text-draft-negated-comparison-v1.json'), 'utf8')).text;
     output = provider.composition();
+    output.blocks.push(structuredClone(output.blocks[1]));
     output.blocks[1].text = disclaimer;
     const accepted = await handlers['paper.article.draft-shadow:compose'](composeContext, execution);
     const acceptedContent = stored.get(accepted.outputRef.artifactId).content.content;

@@ -9,7 +9,7 @@ const ARXIV_ACQUISITION_MAX_ATTEMPTS = 3;
 export const PAPER_RESEARCH_EXECUTION_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: PAPER_RESEARCH_EXECUTION_WORKFLOW_KEY,
-  workflowVersion: 3,
+  workflowVersion: 4,
   inputSchema: 'paper-private-research-input-v1',
   outputSchema: 'paper-private-research-output-v1',
   requiredCapabilities: [

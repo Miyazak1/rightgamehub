@@ -6,6 +6,7 @@ export const TOOL_DOCUMENT_SCHEMA_VERSION=1;
 const toolLoaders=Object.freeze({
   'knowledge-map':()=>import('./KnowledgeMapTool.jsx'),
   'pdf-reader':()=>import('./PdfReaderTool.jsx'),
+  'paper-study':()=>import('./PaperStudyTool.jsx'),
   'privacy-redactor':()=>import('./PrivacyRedactorTool.jsx'),
   'document-compare':()=>import('./DocumentCompareTool.jsx'),
   'spreadsheet-audit':()=>import('./SpreadsheetAuditTool.jsx'),

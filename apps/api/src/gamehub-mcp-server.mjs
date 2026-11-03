@@ -314,6 +314,15 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
     }
   });
 
+  const paperStudyTool = officialTool('paper-study');
+  registerAppTool(server, paperStudyTool.toolName, {
+    ...createOfficialAppToolOptions(paperStudyTool, uiResourceUri), inputSchema: {},
+    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+  }, async () => {
+    const path = paperStudyTool.route, url = new URL('/mcp-app', origin);
+    url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+    return { content: [{ type: 'text', text: 'Opened paper study. Sign in and explicitly import a PDF in the workspace. Opening this tool uploads nothing, invokes no model and never publishes.' }], structuredContent: { view: { path, url: url.href } } };
+  });
   const pdfReaderTool = officialTool('pdf-reader');
   registerAppTool(server, pdfReaderTool.toolName, {
     ...createOfficialAppToolOptions(pdfReaderTool, uiResourceUri),

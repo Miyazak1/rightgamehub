@@ -1,0 +1,30 @@
+{
+  "captureKind": "unmodified-paper-study-live-awkward-attribution",
+  "originalPassed": true,
+  "workflowVersion": 9,
+  "promptVersion": 16,
+  "response": "{\"sectionKey\":\"section-04\",\"paragraphId\":\"paragraph-01\",\"text\":\"注意力函数在论文作者那里被描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。实践中，一组查询会同时打包成矩阵 Q 来计算注意力函数，键和值也分别打包成矩阵 K 和 V。论文作者指出，两种最常用的注意力函数是加性注意力和点积（乘性）注意力。\",\"heading\":\"注意力函数与连接方式\",\"article\":null}",
+  "responseSha256": "a27f7fde1408bc249ed0dc23ca7d7a4c2f9b19062f600a9a6032eb50edea4f38",
+  "claims": [
+    {
+      "text": "将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+      "narrativeRole": "method-relation",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "实践中把一组查询同时打包成矩阵 Q 来计算注意力函数，键和值也分别打包成矩阵 K 和 V。",
+      "narrativeRole": "method-relation",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+      "narrativeRole": "supported-fact",
+      "attribution": "论文作者",
+      "usage": "explain"
+    }
+  ],
+  "topic": "attention",
+  "requiredHeading": "注意力函数与连接方式"
+}

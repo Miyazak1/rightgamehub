@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import { paragraphTextLayerBlocks, textLayerSectionPaths, textLayerHierarchyContinuations } from './agent-paper-text-layer-blocks.mjs';
+import { isNarrativeDraftEvidence } from './agent-paper-text-draft.mjs';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { validatePaperEvidenceSpanV1, validatePaperIdentityV1, validatePaperLayoutManifestV1,
@@ -12,7 +14,7 @@ const MAX_PAGES = 80;
 const MAX_TEXT_CHARS = 160000;
 const MAX_BLOCK_CHARS = 1800;
 const MAX_EVIDENCE = 96;
-const PARSER_VERSION = 'pdfjs-dist@6.4.299:text-layer-v2';
+const PARSER_VERSION = 'pdfjs-dist@6.4.299:text-layer-v5';
 const MODERN_ID = /^\d{4}\.\d{4,5}(?:v\d+)?$/u;
 const LEGACY_ID = /^[a-z][a-z0-9.-]*\/[0-9]{7}(?:v\d+)?$/iu;
 
@@ -219,7 +221,9 @@ export async function extractPaperPdf(bytes, artifactVersionId, pdfLoader = getD
       const pageText = normalizePageText(content.items ?? []);
       totalChars += Array.from(pageText).length;
       if (totalChars > MAX_TEXT_CHARS) fail('AGENT_ARXIV_PDF_TEXT_TOO_LARGE');
-      const blocks = splitBlocks(pageText).map((text, index) => ({
+      const blocks = paragraphTextLayerBlocks(content.items ?? [], { page: pageNumber,
+        width: Number(viewport.width), height: Number(viewport.height), maxChars: MAX_BLOCK_CHARS })
+        ?? splitBlocks(pageText).map((text, index) => ({
         id: `p${pageNumber}-b${index + 1}`, kind: 'paragraph',
         bbox: [0, 0, Number(viewport.width), Number(viewport.height)], text,
         confidence: 0.9, extractionMethod: 'text-layer',
@@ -239,7 +243,19 @@ export async function extractPaperPdf(bytes, artifactVersionId, pdfLoader = getD
     }
     await document.destroy?.();
     if (totalChars === 0) fail('AGENT_ARXIV_PDF_TEXT_EMPTY');
-    const candidates = pages.flatMap(page => page.blocks.map(block => ({ page, block })));
+    // Keep page coverage, then distribute remaining evidence across the paper.
+    // A dense first page must not consume the entire evidence budget.
+    const candidates = [];
+    const rankedPages = pages.map(page => ({ page, blocks: [...page.blocks].sort((a, b) => {
+      const narrative = block => isNarrativeDraftEvidence({ quoteText: block.text,
+        quoteHash: stableHash(block.text), allowedUses: ['analysis'],
+        locator: { kind: 'paper.layout', pages: [page.page], blockIds: [block.id],
+          objectLabel: block.kind === 'paragraph' ? null : block.kind } });
+      return Number(narrative(b)) - Number(narrative(a));
+    }) }));
+    for (let index = 0; index < Math.max(...pages.map(page => page.blocks.length)); index += 1) {
+      for (const { page, blocks } of rankedPages) if (blocks[index]) candidates.push({ page, block: blocks[index] });
+    }
     const selected = [];
     for (const page of pages) {
       const first = page.blocks[0];
@@ -249,11 +265,15 @@ export async function extractPaperPdf(bytes, artifactVersionId, pdfLoader = getD
       if (selected.length >= MAX_EVIDENCE) break;
       if (!selected.some(item => item.block.id === candidate.block.id)) selected.push(candidate);
     }
-    const evidence = selected.slice(0, MAX_EVIDENCE).map(({ page, block }) => ({ artifactVersionId,
-      locator: { kind: 'paper.layout', pages: [page.page], sectionPath: [],
-        blockIds: [block.id], objectLabel: null },
-      quoteText: block.text, quoteHash: stableHash(block.text), extractionMethod: 'text-layer',
-      confidence: 0.9 }));
+    const sectionPaths = textLayerSectionPaths(pages);
+    const continuations = textLayerHierarchyContinuations(pages);
+    const evidence = selected.slice(0, MAX_EVIDENCE).map(({ page, block }) => {
+      const continuation = continuations.get(block.id), quoteText = continuation?.quoteText ?? block.text;
+      return { artifactVersionId,
+      locator: { kind: 'paper.layout', pages: [page.page], sectionPath: sectionPaths.get(block.id) ?? [],
+        blockIds: continuation?.blockIds ?? [block.id], objectLabel: block.kind === 'paragraph' ? null : block.kind },
+      quoteText, quoteHash: stableHash(quoteText), extractionMethod: 'text-layer', confidence: 0.9 };
+    });
     if (evidence.length === 0) fail('AGENT_ARXIV_PDF_TEXT_EMPTY');
     const qualityAssessment = assessPaperParseQuality({ parserVersion: PARSER_VERSION, pageSignals,
       evidencePages: evidence.flatMap(span => span.locator.pages) });

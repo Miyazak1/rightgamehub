@@ -4,10 +4,11 @@ import { PAPER_SEMANTIC_EXTRACTION_SCHEMA, PAPER_SEMANTIC_VERIFICATION_SCHEMA,
   verifyPaperSemanticExtraction } from './agent-paper-semantic-contracts.mjs';
 import { normalizePaperSemanticRunInput, reconstructPaperSections }
   from './agent-paper-semantic-workflow.mjs';
-import { TEXT_DRAFT_NOTICE, assertTextOnlyDraftFindings, textOnlyDraftExcerpt } from './agent-paper-text-draft.mjs';
+import { TEXT_DRAFT_NOTICE, assertTextOnlyDraftFindings, assertTextOnlyDraftFindingContext,
+  textOnlyDraftExcerpt, textOnlyDraftReadingGuide } from './agent-paper-text-draft.mjs';
 
-export const PAPER_SEMANTIC_POLICY_VERSION = 'paper-semantic-evidence-gate-v2';
-export const PAPER_SEMANTIC_PROMPT_VERSION = 'paper-semantic-reader-v2';
+export const PAPER_SEMANTIC_POLICY_VERSION = 'paper-semantic-evidence-gate-v11';
+export const PAPER_SEMANTIC_PROMPT_VERSION = 'paper-semantic-reader-v10';
 
 export class AgentPaperSemanticRuntimeError extends Error {
   constructor(code) {
@@ -27,6 +28,8 @@ const PAPER_SEMANTIC_PROMPT = `你是小墨鱼的私有论文阅读器。输入�
 3. 不得创造证据编号、链接、数字、论文结构或作者结论。
 4. sections 必须原样复述 suppliedSections 的 key、title、level、evidenceIndexes；这些只是确定性页窗，不代表真实语义标题。
 5. 输出 3 到 8 个可继续研究的问题。回答使用简体中文，但 JSON key 不得改变。
+6. 保留通常、除少数情况外等限定。某方法通常与循环网络结合使用，不等于该方法不能独立承担序列建模，也不能改成只能或必须与循环结合。相邻的问题与方法不自动证明目的或因果关系。
+7. 严格保留整体、每层、子层的层级。Each layer has two sub-layers 表示每层两个子层，不表示整个编码器只有两个子层；必须写编码器每层。只有提供的正文明确给出层级时才断言，主体或层级前提不完整时不要猜测，可以省略计数，仅描述明确支持的组件或用 unknown。
 根对象必须且只能包含 schemaVersion、sections、findings、limitations、followUpQuestions。
 schemaVersion 固定为 "paper-semantic-extraction-v1"。sections 原样复制 suppliedSections。
 findings 是非空数组，每项必须且只能包含：
@@ -111,7 +114,8 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
         || sectionRef.manifestSha256 !== sectionManifest.manifestSha256) fail('AGENT_PAPER_SEMANTIC_SOURCE_DRIFT');
       const requestPayload = { schemaVersion: 'paper-semantic-provider-request-v1',
         externalProcessingClass: source.externalProcessingClass, paper: source.identity,
-        ...(source.readingScope ? { readingScope: source.readingScope, readingNotice: TEXT_DRAFT_NOTICE } : {}),
+        ...(source.readingScope ? { readingScope: source.readingScope, readingNotice: TEXT_DRAFT_NOTICE,
+          readingGuide: textOnlyDraftReadingGuide(source.evidence) } : {}),
         suppliedSections: sectionProjection(sectionManifest.sections),
         evidence: source.evidence.map(item => ({ evidenceIndex: item.index,
           quoteText: source.readingScope ? textOnlyDraftExcerpt(item.quoteText)
@@ -122,15 +126,19 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `paper-semantic:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context), promptTemplate: { key: 'paper.semantic.reader', version: 2 },
+        modelPolicy: modelPolicy(context), promptTemplate: { key: 'paper.semantic.reader', version: 10 },
         responseSchema: PAPER_SEMANTIC_EXTRACTION_SCHEMA,
         request: { messages: [{ role: 'system', content: PAPER_SEMANTIC_PROMPT + (source.readingScope
-          ? '\n当前是仅正文待审模式：只能提取定性的 author_claim 或 unknown；不得输出 observed_result、推断、数值、效果比较或推导。不得将正文筛选当作全文质量核验。仅提取研究问题、动机和方法概念。不要提取操作数、复杂度、计算成本或性能比较。findings 的 text 中不得出现任何阿拉伯数字，包括模型名称中的数字；遇到这种名称应改用“已有模型”等泛称。只输出当前证据能明确支持的主张，数量少也可以，不要凑结论。' : '') },
+          ? '\n先按 readingGuide 核对候选研究问题和方法关系，再整理其余主张。若正文明确写出已有方法面临的约束，单独提取作者对该问题的描述，不能只提取新架构而丢掉问题；问题与方法相邻不自动证明作者的选择原因。把明确的查询来源、可访问范围、位置编码的目的等关系各自保留，区分同类组件；不得从位置推导收益。候选正文没有相关说明时不要补造背景。按问题、提出的方法、关键定义和部件关系组织 findings，仍逐条绑定支持它的 evidenceIndex。' : '') + (source.readingScope
+          ? '\n当前是仅正文待审模式：只能提取定性的 author_claim 或 unknown；不得输出 observed_result、推断、数值、效果比较或推导。不得将正文筛选当作全文质量核验。尽量覆盖各页可用正文中的研究问题、动机、方法组成及各部分关系、作者明确说明的限制和后续研究计划；只在对应证据明确支持时提取，每个可独立解释的概念单列一条主张并绑定正确的 evidenceIndex，不要把跨页方法压成一句摘要，也不要遗漏后半部分的安全正文。不要提取操作数、复杂度、计算成本或性能比较。findings 的 text 中不得出现任何阿拉伯数字，包括模型名称中的数字；遇到这种名称应改用“已有模型”等泛称。locator.sectionPath 只提供同页原文明示的标题或标签上下文。以 The first 等代词开头的片段，只有正文或明确标签给出主语时才能归属到编码器或解码器；宽泛标题同时提到两个组件不等于确定了片段主语。主语不明时用 unknown，不猜测。描述掩蔽机制时，只采用证据直接说明的位置访问范围，完整保留范围限定；需要依赖图示方向约定才能理解的表述应省略，无法确定时用 unknown，不猜测方向，也不把局部访问限制写成全面阻断。仅有组件放置位置的证据时，只说明放置位置；只有证据明确说明目的或作用，才提取相应目的或作用。来源没有正面支持的主题不进入主张。只输出当前证据能明确支持的主张，数量少也可以，不要凑结论。' : '') },
           { role: 'user', content: JSON.stringify(requestPayload) }], temperature: 0.1 },
         tokenCeiling: 7000, timeoutSeconds: 540, estimatedInputTokens: estimatedTokens(requestPayload) });
       if (result.status !== 'succeeded') fail('AGENT_PAPER_SEMANTIC_PROVIDER_INCOMPLETE');
       const extraction = validatePaperSemanticExtractionV1(result.output);
-      if (source.readingScope) assertTextOnlyDraftFindings(extraction.findings);
+      if (source.readingScope) {
+        assertTextOnlyDraftFindings(extraction.findings);
+        assertTextOnlyDraftFindingContext(extraction.findings, source.evidence);
+      }
       if (stableHash(extraction.sections) !== stableHash(sectionProjection(sectionManifest.sections))) {
         fail('AGENT_PAPER_SEMANTIC_SECTION_DRIFT');
       }
@@ -157,7 +165,10 @@ export function createAgentPaperSemanticHandlers({ repository, providerGateway,
       const artifact = await artifactRepository.read({ runId: context.run.id,
         artifactId: extracted.artifactId, expectedArtifactKey: 'paper.semantic-extraction' });
       const verified = verifyPaperSemanticExtraction({ extraction: artifact.content, evidence: source.evidence });
-      if (source.readingScope) assertTextOnlyDraftFindings(verified.findings);
+      if (source.readingScope) {
+        assertTextOnlyDraftFindings(verified.findings);
+        assertTextOnlyDraftFindingContext(verified.findings, source.evidence);
+      }
       const { analysisSha256: ignored, ...verifiedBody } = verified;
       const proofBody = { ...verifiedBody,
         ...(source.readingScope ? { readingScope: source.readingScope,

@@ -1,0 +1,4727 @@
+{
+  "captureKind": "recorded-live-complete-private-review-assembly-unmodified",
+  "sourceSha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+  "evidencePack": {
+    "schemaVersion": "paper-article-evidence-v2",
+    "analysisId": "c5dce347-1f54-4b39-96f3-dfe10e9d5332",
+    "analysisSha256": "31b3e328f1e7534bdc36faa937f9a80fe8edad0c68b94206037ccec2d9583f78",
+    "paperVersionId": "28b8c48b-98ac-49a5-a8e1-2984f4d2be4f",
+    "paper": {
+      "title": "Attention Is All You Need",
+      "authors": [
+        "Ashish Vaswani",
+        "Noam Shazeer",
+        "Niki Parmar",
+        "Jakob Uszkoreit",
+        "Llion Jones",
+        "Aidan N. Gomez",
+        "Łukasz Kaiser",
+        "Illia Polosukhin"
+      ],
+      "year": 2017,
+      "venue": "arXiv",
+      "sourceUrl": "https://arxiv.org/abs/1706.03762v7"
+    },
+    "findings": [
+      {
+        "key": "sequential-computation-constraint",
+        "kind": "author_claim",
+        "text": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports",
+            "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+        ]
+      },
+      {
+        "key": "attention-usually-with-recurrence",
+        "kind": "author_claim",
+        "text": "作者指出，除少数情况外，此类注意力机制通常与循环网络结合使用。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports",
+            "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+        ]
+      },
+      {
+        "key": "transformer-eschews-recurrence",
+        "kind": "author_claim",
+        "text": "作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports",
+            "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+        ]
+      },
+      {
+        "key": "self-attention-definition",
+        "kind": "author_claim",
+        "text": "作者将自注意力（有时称为内部注意力）定义为一种将单个序列的不同位置相互关联以计算该序列表示的注意力机制。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports",
+            "evidenceId": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1"
+        ]
+      },
+      {
+        "key": "autoregressive-generation",
+        "kind": "author_claim",
+        "text": "作者说明模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+        "evidenceIndexes": [
+          3
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 3,
+            "relation": "supports",
+            "evidenceId": "57c579ab-76ce-45c6-aa81-7bc150621732"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "57c579ab-76ce-45c6-aa81-7bc150621732"
+        ]
+      },
+      {
+        "key": "encoder-layer-two-sublayers",
+        "kind": "author_claim",
+        "text": "作者说明编码器的每层有两个子层：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；并在每个子层周围使用残差连接，随后进行层归一化。",
+        "evidenceIndexes": [
+          4
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 4,
+            "relation": "supports",
+            "evidenceId": "af0f9de7-91b4-466c-9a06-ec0ad249172c"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "af0f9de7-91b4-466c-9a06-ec0ad249172c"
+        ]
+      },
+      {
+        "key": "decoder-residual-and-masking",
+        "kind": "author_claim",
+        "text": "作者说明与编码器类似，在解码器每个子层周围使用残差连接并随后进行层归一化；同时修改解码器堆叠中的自注意力子层，以阻止位置关注后续位置。",
+        "evidenceIndexes": [
+          5
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 5,
+            "relation": "supports",
+            "evidenceId": "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+        ]
+      },
+      {
+        "key": "masking-with-offset-constraint",
+        "kind": "author_claim",
+        "text": "作者说明这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+        "evidenceIndexes": [
+          5
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 5,
+            "relation": "supports",
+            "evidenceId": "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+        ]
+      },
+      {
+        "key": "attention-function-definition",
+        "kind": "author_claim",
+        "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+        "evidenceIndexes": [
+          6
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 6,
+            "relation": "supports",
+            "evidenceId": "291e9bb8-98a3-404f-a37c-666e0819f6c0"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "291e9bb8-98a3-404f-a37c-666e0819f6c0"
+        ]
+      },
+      {
+        "key": "batched-query-computation",
+        "kind": "author_claim",
+        "text": "作者说明实践中在一组查询上同时计算注意力函数，这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+        "evidenceIndexes": [
+          7
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 7,
+            "relation": "supports",
+            "evidenceId": "fe2c51ac-5383-428b-af6f-1732b4539a5e"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "fe2c51ac-5383-428b-af6f-1732b4539a5e"
+        ]
+      },
+      {
+        "key": "two-common-attention-functions",
+        "kind": "author_claim",
+        "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+        "evidenceIndexes": [
+          8
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 8,
+            "relation": "supports",
+            "evidenceId": "742749a3-f682-4fb4-9cb3-0bd81669f87e"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "742749a3-f682-4fb4-9cb3-0bd81669f87e"
+        ]
+      },
+      {
+        "key": "encoder-decoder-attention-sources",
+        "kind": "author_claim",
+        "text": "作者说明在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出；这使解码器的每个位置都能关注输入序列的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "8db4db59-d494-4539-b1ab-1db619e9aa83"
+        ]
+      },
+      {
+        "key": "encoder-self-attention-scope",
+        "kind": "author_claim",
+        "text": "作者说明编码器包含自注意力层，其中所有键、值和查询都来自同一处，即编码器前一层的输出；编码器的每个位置都能关注编码器前一层的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "8db4db59-d494-4539-b1ab-1db619e9aa83"
+        ]
+      },
+      {
+        "key": "decoder-self-attention-scope",
+        "kind": "author_claim",
+        "text": "作者说明解码器中的自注意力层允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "8db4db59-d494-4539-b1ab-1db619e9aa83"
+        ]
+      },
+      {
+        "key": "position-wise-feed-forward",
+        "kind": "author_claim",
+        "text": "作者说明除注意力子层外，编码器和解码器的每层都包含一个全连接前馈网络，该网络对每个位置分别且相同地应用，由两个线性变换及其中间的 ReLU 激活组成。",
+        "evidenceIndexes": [
+          10
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 10,
+            "relation": "supports",
+            "evidenceId": "5a74d9f2-91c0-4281-a706-9d6113250a32"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "5a74d9f2-91c0-4281-a706-9d6113250a32"
+        ]
+      },
+      {
+        "key": "feed-forward-parameters-per-layer",
+        "kind": "author_claim",
+        "text": "作者说明这些线性变换在不同位置之间相同，但不同层之间使用不同的参数。",
+        "evidenceIndexes": [
+          11
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 11,
+            "relation": "supports",
+            "evidenceId": "20234d0b-afd8-43dd-92f9-60a5bdab2858"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "20234d0b-afd8-43dd-92f9-60a5bdab2858"
+        ]
+      },
+      {
+        "key": "shared-embedding-weights",
+        "kind": "author_claim",
+        "text": "作者说明模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+        "evidenceIndexes": [
+          12
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 12,
+            "relation": "supports",
+            "evidenceId": "233b48d4-378d-454d-91e7-fdb950dbe01f"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "233b48d4-378d-454d-91e7-fdb950dbe01f"
+        ]
+      },
+      {
+        "key": "positional-encoding-purpose",
+        "kind": "author_claim",
+        "text": "作者说明由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息；为此在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+        "evidenceIndexes": [
+          13
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 13,
+            "relation": "supports",
+            "evidenceId": "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+        ]
+      },
+      {
+        "key": "positional-encoding-choices",
+        "kind": "author_claim",
+        "text": "作者指出位置编码有多种选择，包括学习得到的和固定的。",
+        "evidenceIndexes": [
+          13
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 13,
+            "relation": "supports",
+            "evidenceId": "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+        ]
+      },
+      {
+        "key": "residual-dropout-placement",
+        "kind": "author_claim",
+        "text": "作者说明对每个子层的输出应用 dropout，位置在该输出被加到子层输入并归一化之前；此外对编码器和解码器中嵌入与位置编码之和应用 dropout。",
+        "evidenceIndexes": [
+          14
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 14,
+            "relation": "supports",
+            "evidenceId": "3a95725f-6198-4715-8348-0f464945c937"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "3a95725f-6198-4715-8348-0f464945c937"
+        ]
+      },
+      {
+        "key": "conclusion-attention-only-model",
+        "kind": "author_claim",
+        "text": "作者总结提出 Transformer，一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。",
+        "evidenceIndexes": [
+          15
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 15,
+            "relation": "supports",
+            "evidenceId": "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+        ]
+      },
+      {
+        "key": "future-work-plan",
+        "kind": "author_claim",
+        "text": "作者表示计划将注意力模型应用于其他任务，把 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出；使生成更少顺序性也是其研究目标之一。",
+        "evidenceIndexes": [
+          15
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 15,
+            "relation": "supports",
+            "evidenceId": "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+        ]
+      }
+    ],
+    "limitations": [
+      {
+        "key": "text-only-draft-scope",
+        "text": "当前为仅正文待审模式，未核验复杂表格、公式及图示，不构成对实验数值、效果比较或推导的确认。",
+        "evidenceIndexes": []
+      },
+      {
+        "key": "text-only-reading-scope",
+        "text": "阅读范围：本文是仅依据可用正文生成的待审草稿，未核验复杂表格、公式及图示；不构成对实验数值、效果比较或推导的确认。发布前须人工核对原文。",
+        "evidenceIndexes": []
+      }
+    ],
+    "followUpQuestions": [
+      "作者所述顺序计算的根本约束在何种任务设定下仍然成立？",
+      "自注意力与循环网络结合使用的常见做法在哪些任务上被作者认为存在例外？",
+      "编码器每层两个子层的残差连接与层归一化顺序如何影响各子层的信息流？",
+      "解码器掩蔽与输出嵌入偏移一个位置如何共同限定位置 i 的预测所依赖的已知输出范围？",
+      "编码器-解码器注意力层中查询来自解码器前层、键值来自编码器输出的安排如何影响跨序列位置访问？",
+      "位置编码的学习式与固定式选择分别适用于哪些输入输出模态？",
+      "作者计划研究的局部、受限注意力机制与当前全局注意力在访问范围上有何区别？",
+      "使生成更少顺序性的研究目标可能涉及哪些解码过程改动？"
+    ],
+    "evidence": [
+      {
+        "index": 1,
+        "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+        "quoteText": "Recurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation [35, 2, 5]. Numerous efforts have since continued to push the boundaries of recurrent language models and encoder-decoder architectures [38, 24, 15]. Recurrent models typically factor computation along the symbol positions of the input and output sequences. Aligning the positions to steps in computation time, they generate a sequence of hidden states h t , as a function of the previous hidden state h t − 1 and the input for position t . This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths, as memory constraints limit batching across examples. Recent work has achieved significant improvements in computational efficiency through factorization tricks [21] and conditional computation [32], while also improving model performance in case of the latter. The fundamental constraint of sequential computation, however, remains. Attention mechanisms have become an integral part of compelling sequence modeling and transduc- tion models in various tasks, allowing modeling of dependencies without regard to their distance in the input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms are used in conjunction with a recurrent network. In this work we propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output.",
+        "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Introduction"
+          ],
+          "blockIds": [
+            "p2-b2"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 2,
+        "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+        "quoteText": "The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU [16], ByteNet [18] and ConvS2S [9], all of which use convolutional neural networks as basic building block, computing hidden representations in parallel for all input and output positions. In these models, the number of operations required to relate signals from two arbitrary input or output positions grows in the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes it more difficult to learn dependencies between distant positions [12]. In the Transformer this is reduced to a constant number of operations, albeit at the cost of reduced effective resolution due to averaging attention-weighted positions, an effect we counteract with Multi-Head Attention as described in section 3.2. Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, however, the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence- aligned RNNs or convolution. In the following sections, we will describe the Transformer, motivate",
+        "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Background"
+          ],
+          "blockIds": [
+            "p2-b5"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 3,
+        "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+        "quoteText": "sequence ( y 1 , ..., y m ) of symbols one element at a time. At each step the model is auto-regressive [10], consuming the previously generated symbols as additional input when generating the next.",
+        "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Model Architecture"
+          ],
+          "blockIds": [
+            "p2-b10"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 4,
+        "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+        "quoteText": "Each layer has two sub-layers. The first is a multi-head self-attention mechanism, and the second is a simple, position- wise fully connected feed-forward network. We employ a residual connection [11] around each of the two sub-layers, followed by layer normalization [1]. That is, the output of each sub-layer is LayerNorm( x + Sublayer( x )) , where Sublayer( x ) is the function implemented by the sub-layer itself. To facilitate these residual connections, all sub-layers in the model, as well as the embedding",
+        "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Encoder and Decoder Stacks",
+            "Encoder"
+          ],
+          "blockIds": [
+            "p3-b4",
+            "p3-b5"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 5,
+        "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+        "quoteText": "sub-layers in each encoder layer, the decoder inserts a third sub-layer, which performs multi-head attention over the output of the encoder stack. Similar to the encoder, we employ residual connections around each of the sub-layers, followed by layer normalization. We also modify the self-attention sub-layer in the decoder stack to prevent positions from attending to subsequent positions. This masking, combined with fact that the output embeddings are offset by one position, ensures that the predictions for position i can depend only on the known outputs at positions less than i .",
+        "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Encoder and Decoder Stacks",
+            "Decoder"
+          ],
+          "blockIds": [
+            "p3-b8"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 6,
+        "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+        "quoteText": "An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. The output is computed as a weighted sum",
+        "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Attention"
+          ],
+          "blockIds": [
+            "p3-b10"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 7,
+        "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+        "quoteText": "values. In practice, we compute the attention function on a set of queries simultaneously, packed together into a matrix Q . The keys and values are also packed together into matrices K and V . We compute the matrix of outputs as:",
+        "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            4
+          ],
+          "sectionPath": [
+            "Scaled Dot-Product Attention"
+          ],
+          "blockIds": [
+            "p4-b9"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 8,
+        "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+        "quoteText": "The two most commonly used attention functions are additive attention [2], and dot-product (multi- plicative) attention. Dot-product attention is identical to our algorithm, except for the scaling factor of",
+        "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            4
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p4-b16"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 9,
+        "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+        "quoteText": "• In \"encoder-decoder attention\" layers, the queries come from the previous decoder layer, and the memory keys and values come from the output of the encoder. This allows every position in the decoder to attend over all positions in the input sequence. This mimics the typical encoder-decoder attention mechanisms in sequence-to-sequence models such as [38, 2, 9]. • The encoder contains self-attention layers. In a self-attention layer all of the keys, values and queries come from the same place, in this case, the output of the previous layer in the encoder. Each position in the encoder can attend to all positions in the previous layer of the encoder. • Similarly, self-attention layers in the decoder allow each position in the decoder to attend to all positions in the decoder up to and including that position. We need to prevent leftward information flow in the decoder to preserve the auto-regressive property. We implement this",
+        "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Applications of Attention in our Model"
+          ],
+          "blockIds": [
+            "p5-b33"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 10,
+        "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+        "quoteText": "In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully connected feed-forward network, which is applied to each position separately and identically. This consists of two linear transformations with a ReLU activation in between.",
+        "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Position-wise Feed-Forward Networks"
+          ],
+          "blockIds": [
+            "p5-b37"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 11,
+        "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+        "quoteText": "While the linear transformations are the same across different positions, they use different parameters from layer to layer. Another way of describing this is as two convolutions with kernel size 1.",
+        "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p5-b39"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 12,
+        "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+        "quoteText": "Similarly to other sequence transduction models, we use learned embeddings to convert the input tokens and output tokens to vectors of dimension d model . We also use the usual learned linear transfor- mation and softmax function to convert the decoder output to predicted next-token probabilities. In our model, we share the same weight matrix between the two embedding layers and the pre-softmax linear transformation, similar to [30]. In the embedding layers, we multiply those weights by",
+        "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Embeddings and Softmax"
+          ],
+          "blockIds": [
+            "p5-b43"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 13,
+        "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+        "quoteText": "Since our model contains no recurrence and no convolution, in order for the model to make use of the order of the sequence, we must inject some information about the relative or absolute position of the tokens in the sequence. To this end, we add \"positional encodings\" to the input embeddings at the bottoms of the encoder and decoder stacks. The positional encodings have the same dimension d model as the embeddings, so that the two can be summed. There are many choices of positional encodings, learned and fixed [9]. In this work, we use sine and cosine functions of different frequencies:",
+        "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            6
+          ],
+          "sectionPath": [
+            "Positional Encoding"
+          ],
+          "blockIds": [
+            "p6-b16"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 14,
+        "id": "3a95725f-6198-4715-8348-0f464945c937",
+        "quoteText": "Residual Dropout We apply dropout [33] to the output of each sub-layer, before it is added to the sub-layer input and normalized. In addition, we apply dropout to the sums of the embeddings and the positional encodings in both the encoder and decoder stacks. For the base model, we use a rate of",
+        "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            8
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p8-b35"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 15,
+        "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+        "quoteText": "In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commonly used in encoder-decoder architectures with multi-headed self-attention. For translation tasks, the Transformer can be trained significantly faster than architectures based on recurrent or convolutional layers. On both WMT 2014 English-to-German and WMT 2014 English-to-French translation tasks, we achieve a new state of the art. In the former task our best model outperforms even all previously reported ensembles. We are excited about the future of attention-based models and plan to apply them to other tasks. We plan to extend the Transformer to problems involving input and output modalities other than text and to investigate local, restricted attention mechanisms to efficiently handle large inputs and outputs such as images, audio and video. Making generation less sequential is another research goals of ours. The code we used to train and evaluate our models is available at https://github.com/ tensorflow/tensor2tensor .",
+        "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            10
+          ],
+          "sectionPath": [
+            "Conclusion"
+          ],
+          "blockIds": [
+            "p10-b19"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      }
+    ],
+    "readingScope": {
+      "schemaVersion": "paper-text-only-draft-scope-v1",
+      "mode": "text-only-draft",
+      "originalGrade": "limited-text",
+      "reasonCodes": [
+        "MULTI_COLUMN_LAYOUT",
+        "TABLE_STRUCTURE_UNSUPPORTED",
+        "FORMULA_STRUCTURE_UNSUPPORTED",
+        "IMAGE_CONTENT_UNREAD"
+      ],
+      "parseAssessmentSha256": "362e67131a97d849487ba5cfc7f38518c5fca44e66cca65e44b8e8a808c8cf2e",
+      "layoutSha256": "0c8b817543aeb29ab0a8fca769c4f8f2dd7cef7310c6d74066f8d7f0cb9c4def",
+      "selectedEvidence": [
+        {
+          "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+          "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+          "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+        },
+        {
+          "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+          "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+          "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+        },
+        {
+          "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+          "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+          "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+        },
+        {
+          "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+          "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+          "locatorSha256": "6f15a8d6589a13942fd99d761c74ec10777579aa32e64d15ac84edadeb14e382"
+        },
+        {
+          "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+          "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+          "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+        },
+        {
+          "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+          "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+          "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+        },
+        {
+          "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+          "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+          "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+        },
+        {
+          "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+          "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+        },
+        {
+          "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+          "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+          "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+        },
+        {
+          "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+          "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+          "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+        },
+        {
+          "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+          "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+        },
+        {
+          "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+          "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+          "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+        },
+        {
+          "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+          "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+          "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+        },
+        {
+          "id": "3a95725f-6198-4715-8348-0f464945c937",
+          "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+        },
+        {
+          "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+          "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+          "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+        }
+      ],
+      "manualReviewRequired": true,
+      "publicPublicationEnabled": false
+    },
+    "accessedAt": "2026-10-31T11:46:54.180Z"
+  },
+  "artifacts": [
+    {
+      "id": "db05d1a1-da73-4ef4-8350-f1715436eed1",
+      "artifactKey": "paper.semantic-extraction",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "fc3ad292-87fd-4091-ac2a-ebd2e1f9d2bb",
+      "actionId": "420da307-b39e-43f2-b7c8-247f0f58d442",
+      "content": {
+        "schemaVersion": "paper-semantic-extraction-v1",
+        "sections": [
+          {
+            "key": "page-window-01",
+            "title": "第 2 页",
+            "level": 1,
+            "evidenceIndexes": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "key": "page-window-02",
+            "title": "第 3 页",
+            "level": 1,
+            "evidenceIndexes": [
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "key": "page-window-03",
+            "title": "第 4 页",
+            "level": 1,
+            "evidenceIndexes": [
+              7,
+              8
+            ]
+          },
+          {
+            "key": "page-window-04",
+            "title": "第 5 页",
+            "level": 1,
+            "evidenceIndexes": [
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "key": "page-window-05",
+            "title": "第 6 页",
+            "level": 1,
+            "evidenceIndexes": [
+              13
+            ]
+          },
+          {
+            "key": "page-window-06",
+            "title": "第 8 页",
+            "level": 1,
+            "evidenceIndexes": [
+              14
+            ]
+          },
+          {
+            "key": "page-window-07",
+            "title": "第 10 页",
+            "level": 1,
+            "evidenceIndexes": [
+              15
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "key": "sequential-computation-constraint",
+            "kind": "author_claim",
+            "text": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "attention-usually-with-recurrence",
+            "kind": "author_claim",
+            "text": "作者指出，除少数情况外，此类注意力机制通常与循环网络结合使用。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "transformer-eschews-recurrence",
+            "kind": "author_claim",
+            "text": "作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "self-attention-definition",
+            "kind": "author_claim",
+            "text": "作者将自注意力（有时称为内部注意力）定义为一种将单个序列的不同位置相互关联以计算该序列表示的注意力机制。",
+            "evidenceIndexes": [
+              2
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 2,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "autoregressive-generation",
+            "kind": "author_claim",
+            "text": "作者说明模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+            "evidenceIndexes": [
+              3
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 3,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "encoder-layer-two-sublayers",
+            "kind": "author_claim",
+            "text": "作者说明编码器的每层有两个子层：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；并在每个子层周围使用残差连接，随后进行层归一化。",
+            "evidenceIndexes": [
+              4
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 4,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "decoder-residual-and-masking",
+            "kind": "author_claim",
+            "text": "作者说明与编码器类似，在解码器每个子层周围使用残差连接并随后进行层归一化；同时修改解码器堆叠中的自注意力子层，以阻止位置关注后续位置。",
+            "evidenceIndexes": [
+              5
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 5,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "masking-with-offset-constraint",
+            "kind": "author_claim",
+            "text": "作者说明这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+            "evidenceIndexes": [
+              5
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 5,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "attention-function-definition",
+            "kind": "author_claim",
+            "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+            "evidenceIndexes": [
+              6
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 6,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "batched-query-computation",
+            "kind": "author_claim",
+            "text": "作者说明实践中在一组查询上同时计算注意力函数，这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+            "evidenceIndexes": [
+              7
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 7,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "two-common-attention-functions",
+            "kind": "author_claim",
+            "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+            "evidenceIndexes": [
+              8
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 8,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "encoder-decoder-attention-sources",
+            "kind": "author_claim",
+            "text": "作者说明在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出；这使解码器的每个位置都能关注输入序列的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "encoder-self-attention-scope",
+            "kind": "author_claim",
+            "text": "作者说明编码器包含自注意力层，其中所有键、值和查询都来自同一处，即编码器前一层的输出；编码器的每个位置都能关注编码器前一层的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "decoder-self-attention-scope",
+            "kind": "author_claim",
+            "text": "作者说明解码器中的自注意力层允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "position-wise-feed-forward",
+            "kind": "author_claim",
+            "text": "作者说明除注意力子层外，编码器和解码器的每层都包含一个全连接前馈网络，该网络对每个位置分别且相同地应用，由两个线性变换及其中间的 ReLU 激活组成。",
+            "evidenceIndexes": [
+              10
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 10,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "feed-forward-parameters-per-layer",
+            "kind": "author_claim",
+            "text": "作者说明这些线性变换在不同位置之间相同，但不同层之间使用不同的参数。",
+            "evidenceIndexes": [
+              11
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 11,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "shared-embedding-weights",
+            "kind": "author_claim",
+            "text": "作者说明模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+            "evidenceIndexes": [
+              12
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 12,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "positional-encoding-purpose",
+            "kind": "author_claim",
+            "text": "作者说明由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息；为此在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+            "evidenceIndexes": [
+              13
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 13,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "positional-encoding-choices",
+            "kind": "author_claim",
+            "text": "作者指出位置编码有多种选择，包括学习得到的和固定的。",
+            "evidenceIndexes": [
+              13
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 13,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "residual-dropout-placement",
+            "kind": "author_claim",
+            "text": "作者说明对每个子层的输出应用 dropout，位置在该输出被加到子层输入并归一化之前；此外对编码器和解码器中嵌入与位置编码之和应用 dropout。",
+            "evidenceIndexes": [
+              14
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 14,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "conclusion-attention-only-model",
+            "kind": "author_claim",
+            "text": "作者总结提出 Transformer，一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。",
+            "evidenceIndexes": [
+              15
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 15,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          },
+          {
+            "key": "future-work-plan",
+            "kind": "author_claim",
+            "text": "作者表示计划将注意力模型应用于其他任务，把 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出；使生成更少顺序性也是其研究目标之一。",
+            "evidenceIndexes": [
+              15
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 15,
+                "relation": "supports"
+              }
+            ],
+            "confidence": "high"
+          }
+        ],
+        "limitations": [
+          {
+            "key": "text-only-draft-scope",
+            "text": "当前为仅正文待审模式，未核验复杂表格、公式及图示，不构成对实验数值、效果比较或推导的确认。",
+            "evidenceIndexes": []
+          }
+        ],
+        "followUpQuestions": [
+          "作者所述顺序计算的根本约束在何种任务设定下仍然成立？",
+          "自注意力与循环网络结合使用的常见做法在哪些任务上被作者认为存在例外？",
+          "编码器每层两个子层的残差连接与层归一化顺序如何影响各子层的信息流？",
+          "解码器掩蔽与输出嵌入偏移一个位置如何共同限定位置 i 的预测所依赖的已知输出范围？",
+          "编码器-解码器注意力层中查询来自解码器前层、键值来自编码器输出的安排如何影响跨序列位置访问？",
+          "位置编码的学习式与固定式选择分别适用于哪些输入输出模态？",
+          "作者计划研究的局部、受限注意力机制与当前全局注意力在访问范围上有何区别？",
+          "使生成更少顺序性的研究目标可能涉及哪些解码过程改动？"
+        ]
+      },
+      "contentSha256": "1c54165b6c38fc44a720b7ff58192ef5815e1c0fa3ae0568fe20191a03ae4c85"
+    },
+    {
+      "id": "a2992169-29ad-4da6-b60e-530459a34988",
+      "artifactKey": "paper.semantic-verification",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "397ed446-d6d0-49d9-888e-c69a368d35c5",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-semantic-verification-v1",
+        "approved": true,
+        "sections": [
+          {
+            "key": "page-window-01",
+            "title": "第 2 页",
+            "level": 1,
+            "evidenceIndexes": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "key": "page-window-02",
+            "title": "第 3 页",
+            "level": 1,
+            "evidenceIndexes": [
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "key": "page-window-03",
+            "title": "第 4 页",
+            "level": 1,
+            "evidenceIndexes": [
+              7,
+              8
+            ]
+          },
+          {
+            "key": "page-window-04",
+            "title": "第 5 页",
+            "level": 1,
+            "evidenceIndexes": [
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "key": "page-window-05",
+            "title": "第 6 页",
+            "level": 1,
+            "evidenceIndexes": [
+              13
+            ]
+          },
+          {
+            "key": "page-window-06",
+            "title": "第 8 页",
+            "level": 1,
+            "evidenceIndexes": [
+              14
+            ]
+          },
+          {
+            "key": "page-window-07",
+            "title": "第 10 页",
+            "level": 1,
+            "evidenceIndexes": [
+              15
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "key": "sequential-computation-constraint",
+            "kind": "author_claim",
+            "text": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports",
+                "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+            ]
+          },
+          {
+            "key": "attention-usually-with-recurrence",
+            "kind": "author_claim",
+            "text": "作者指出，除少数情况外，此类注意力机制通常与循环网络结合使用。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports",
+                "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+            ]
+          },
+          {
+            "key": "transformer-eschews-recurrence",
+            "kind": "author_claim",
+            "text": "作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+            "evidenceIndexes": [
+              1
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 1,
+                "relation": "supports",
+                "evidenceId": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "f9571b2a-abe4-4f08-b7d6-a552e8ae0091"
+            ]
+          },
+          {
+            "key": "self-attention-definition",
+            "kind": "author_claim",
+            "text": "作者将自注意力（有时称为内部注意力）定义为一种将单个序列的不同位置相互关联以计算该序列表示的注意力机制。",
+            "evidenceIndexes": [
+              2
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 2,
+                "relation": "supports",
+                "evidenceId": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1"
+            ]
+          },
+          {
+            "key": "autoregressive-generation",
+            "kind": "author_claim",
+            "text": "作者说明模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+            "evidenceIndexes": [
+              3
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 3,
+                "relation": "supports",
+                "evidenceId": "57c579ab-76ce-45c6-aa81-7bc150621732"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "57c579ab-76ce-45c6-aa81-7bc150621732"
+            ]
+          },
+          {
+            "key": "encoder-layer-two-sublayers",
+            "kind": "author_claim",
+            "text": "作者说明编码器的每层有两个子层：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；并在每个子层周围使用残差连接，随后进行层归一化。",
+            "evidenceIndexes": [
+              4
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 4,
+                "relation": "supports",
+                "evidenceId": "af0f9de7-91b4-466c-9a06-ec0ad249172c"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "af0f9de7-91b4-466c-9a06-ec0ad249172c"
+            ]
+          },
+          {
+            "key": "decoder-residual-and-masking",
+            "kind": "author_claim",
+            "text": "作者说明与编码器类似，在解码器每个子层周围使用残差连接并随后进行层归一化；同时修改解码器堆叠中的自注意力子层，以阻止位置关注后续位置。",
+            "evidenceIndexes": [
+              5
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 5,
+                "relation": "supports",
+                "evidenceId": "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+            ]
+          },
+          {
+            "key": "masking-with-offset-constraint",
+            "kind": "author_claim",
+            "text": "作者说明这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+            "evidenceIndexes": [
+              5
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 5,
+                "relation": "supports",
+                "evidenceId": "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "d00b32c9-58e8-4c27-a192-738c67e5c1b6"
+            ]
+          },
+          {
+            "key": "attention-function-definition",
+            "kind": "author_claim",
+            "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+            "evidenceIndexes": [
+              6
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 6,
+                "relation": "supports",
+                "evidenceId": "291e9bb8-98a3-404f-a37c-666e0819f6c0"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "291e9bb8-98a3-404f-a37c-666e0819f6c0"
+            ]
+          },
+          {
+            "key": "batched-query-computation",
+            "kind": "author_claim",
+            "text": "作者说明实践中在一组查询上同时计算注意力函数，这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+            "evidenceIndexes": [
+              7
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 7,
+                "relation": "supports",
+                "evidenceId": "fe2c51ac-5383-428b-af6f-1732b4539a5e"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "fe2c51ac-5383-428b-af6f-1732b4539a5e"
+            ]
+          },
+          {
+            "key": "two-common-attention-functions",
+            "kind": "author_claim",
+            "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+            "evidenceIndexes": [
+              8
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 8,
+                "relation": "supports",
+                "evidenceId": "742749a3-f682-4fb4-9cb3-0bd81669f87e"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "742749a3-f682-4fb4-9cb3-0bd81669f87e"
+            ]
+          },
+          {
+            "key": "encoder-decoder-attention-sources",
+            "kind": "author_claim",
+            "text": "作者说明在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出；这使解码器的每个位置都能关注输入序列的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports",
+                "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "8db4db59-d494-4539-b1ab-1db619e9aa83"
+            ]
+          },
+          {
+            "key": "encoder-self-attention-scope",
+            "kind": "author_claim",
+            "text": "作者说明编码器包含自注意力层，其中所有键、值和查询都来自同一处，即编码器前一层的输出；编码器的每个位置都能关注编码器前一层的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports",
+                "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "8db4db59-d494-4539-b1ab-1db619e9aa83"
+            ]
+          },
+          {
+            "key": "decoder-self-attention-scope",
+            "kind": "author_claim",
+            "text": "作者说明解码器中的自注意力层允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+            "evidenceIndexes": [
+              9
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 9,
+                "relation": "supports",
+                "evidenceId": "8db4db59-d494-4539-b1ab-1db619e9aa83"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "8db4db59-d494-4539-b1ab-1db619e9aa83"
+            ]
+          },
+          {
+            "key": "position-wise-feed-forward",
+            "kind": "author_claim",
+            "text": "作者说明除注意力子层外，编码器和解码器的每层都包含一个全连接前馈网络，该网络对每个位置分别且相同地应用，由两个线性变换及其中间的 ReLU 激活组成。",
+            "evidenceIndexes": [
+              10
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 10,
+                "relation": "supports",
+                "evidenceId": "5a74d9f2-91c0-4281-a706-9d6113250a32"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "5a74d9f2-91c0-4281-a706-9d6113250a32"
+            ]
+          },
+          {
+            "key": "feed-forward-parameters-per-layer",
+            "kind": "author_claim",
+            "text": "作者说明这些线性变换在不同位置之间相同，但不同层之间使用不同的参数。",
+            "evidenceIndexes": [
+              11
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 11,
+                "relation": "supports",
+                "evidenceId": "20234d0b-afd8-43dd-92f9-60a5bdab2858"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "20234d0b-afd8-43dd-92f9-60a5bdab2858"
+            ]
+          },
+          {
+            "key": "shared-embedding-weights",
+            "kind": "author_claim",
+            "text": "作者说明模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+            "evidenceIndexes": [
+              12
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 12,
+                "relation": "supports",
+                "evidenceId": "233b48d4-378d-454d-91e7-fdb950dbe01f"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "233b48d4-378d-454d-91e7-fdb950dbe01f"
+            ]
+          },
+          {
+            "key": "positional-encoding-purpose",
+            "kind": "author_claim",
+            "text": "作者说明由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息；为此在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+            "evidenceIndexes": [
+              13
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 13,
+                "relation": "supports",
+                "evidenceId": "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+            ]
+          },
+          {
+            "key": "positional-encoding-choices",
+            "kind": "author_claim",
+            "text": "作者指出位置编码有多种选择，包括学习得到的和固定的。",
+            "evidenceIndexes": [
+              13
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 13,
+                "relation": "supports",
+                "evidenceId": "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "0aab351d-e591-4f07-a6e9-45af05cc4b64"
+            ]
+          },
+          {
+            "key": "residual-dropout-placement",
+            "kind": "author_claim",
+            "text": "作者说明对每个子层的输出应用 dropout，位置在该输出被加到子层输入并归一化之前；此外对编码器和解码器中嵌入与位置编码之和应用 dropout。",
+            "evidenceIndexes": [
+              14
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 14,
+                "relation": "supports",
+                "evidenceId": "3a95725f-6198-4715-8348-0f464945c937"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "3a95725f-6198-4715-8348-0f464945c937"
+            ]
+          },
+          {
+            "key": "conclusion-attention-only-model",
+            "kind": "author_claim",
+            "text": "作者总结提出 Transformer，一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。",
+            "evidenceIndexes": [
+              15
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 15,
+                "relation": "supports",
+                "evidenceId": "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+            ]
+          },
+          {
+            "key": "future-work-plan",
+            "kind": "author_claim",
+            "text": "作者表示计划将注意力模型应用于其他任务，把 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出；使生成更少顺序性也是其研究目标之一。",
+            "evidenceIndexes": [
+              15
+            ],
+            "relations": [
+              {
+                "evidenceIndex": 15,
+                "relation": "supports",
+                "evidenceId": "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+              }
+            ],
+            "confidence": "high",
+            "evidenceIds": [
+              "770b99f8-f048-44cf-8289-6af0fda4e7cf"
+            ]
+          }
+        ],
+        "limitations": [
+          {
+            "key": "text-only-draft-scope",
+            "text": "当前为仅正文待审模式，未核验复杂表格、公式及图示，不构成对实验数值、效果比较或推导的确认。",
+            "evidenceIndexes": []
+          },
+          {
+            "key": "text-only-reading-scope",
+            "text": "阅读范围：本文是仅依据可用正文生成的待审草稿，未核验复杂表格、公式及图示；不构成对实验数值、效果比较或推导的确认。发布前须人工核对原文。",
+            "evidenceIndexes": []
+          }
+        ],
+        "followUpQuestions": [
+          "作者所述顺序计算的根本约束在何种任务设定下仍然成立？",
+          "自注意力与循环网络结合使用的常见做法在哪些任务上被作者认为存在例外？",
+          "编码器每层两个子层的残差连接与层归一化顺序如何影响各子层的信息流？",
+          "解码器掩蔽与输出嵌入偏移一个位置如何共同限定位置 i 的预测所依赖的已知输出范围？",
+          "编码器-解码器注意力层中查询来自解码器前层、键值来自编码器输出的安排如何影响跨序列位置访问？",
+          "位置编码的学习式与固定式选择分别适用于哪些输入输出模态？",
+          "作者计划研究的局部、受限注意力机制与当前全局注意力在访问范围上有何区别？",
+          "使生成更少顺序性的研究目标可能涉及哪些解码过程改动？"
+        ],
+        "evidenceManifestSha256": "b7bd6940942ca7c33d154f2e73d64847e862e23706ed4575ca83fa6d937ae00e",
+        "readingScope": {
+          "schemaVersion": "paper-text-only-draft-scope-v1",
+          "mode": "text-only-draft",
+          "originalGrade": "limited-text",
+          "reasonCodes": [
+            "MULTI_COLUMN_LAYOUT",
+            "TABLE_STRUCTURE_UNSUPPORTED",
+            "FORMULA_STRUCTURE_UNSUPPORTED",
+            "IMAGE_CONTENT_UNREAD"
+          ],
+          "parseAssessmentSha256": "362e67131a97d849487ba5cfc7f38518c5fca44e66cca65e44b8e8a808c8cf2e",
+          "layoutSha256": "0c8b817543aeb29ab0a8fca769c4f8f2dd7cef7310c6d74066f8d7f0cb9c4def",
+          "selectedEvidence": [
+            {
+              "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+              "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+              "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+            },
+            {
+              "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+              "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+              "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+            },
+            {
+              "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+              "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+              "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+            },
+            {
+              "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+              "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+              "locatorSha256": "6f15a8d6589a13942fd99d761c74ec10777579aa32e64d15ac84edadeb14e382"
+            },
+            {
+              "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+              "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+              "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+            },
+            {
+              "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+              "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+              "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+            },
+            {
+              "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+              "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+              "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+            },
+            {
+              "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+              "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+            },
+            {
+              "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+              "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+              "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+            },
+            {
+              "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+              "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+              "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+            },
+            {
+              "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+              "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+            },
+            {
+              "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+              "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+              "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+            },
+            {
+              "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+              "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+              "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+            },
+            {
+              "id": "3a95725f-6198-4715-8348-0f464945c937",
+              "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+            },
+            {
+              "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+              "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+              "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+            }
+          ],
+          "manualReviewRequired": true,
+          "publicPublicationEnabled": false
+        },
+        "paperVersionId": "28b8c48b-98ac-49a5-a8e1-2984f4d2be4f",
+        "sectionManifest": {
+          "schemaVersion": "paper-section-manifest-v1",
+          "method": "deterministic-page-window",
+          "sections": [
+            {
+              "key": "page-window-01",
+              "title": "第 2 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                2,
+                2
+              ],
+              "evidenceIndexes": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "key": "page-window-02",
+              "title": "第 3 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                3,
+                3
+              ],
+              "evidenceIndexes": [
+                4,
+                5,
+                6
+              ]
+            },
+            {
+              "key": "page-window-03",
+              "title": "第 4 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                4,
+                4
+              ],
+              "evidenceIndexes": [
+                7,
+                8
+              ]
+            },
+            {
+              "key": "page-window-04",
+              "title": "第 5 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                5,
+                5
+              ],
+              "evidenceIndexes": [
+                9,
+                10,
+                11,
+                12
+              ]
+            },
+            {
+              "key": "page-window-05",
+              "title": "第 6 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                6,
+                6
+              ],
+              "evidenceIndexes": [
+                13
+              ]
+            },
+            {
+              "key": "page-window-06",
+              "title": "第 8 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                8,
+                8
+              ],
+              "evidenceIndexes": [
+                14
+              ]
+            },
+            {
+              "key": "page-window-07",
+              "title": "第 10 页",
+              "level": 1,
+              "kind": "page-window",
+              "pageRange": [
+                10,
+                10
+              ],
+              "evidenceIndexes": [
+                15
+              ]
+            }
+          ],
+          "readingScope": {
+            "schemaVersion": "paper-text-only-draft-scope-v1",
+            "mode": "text-only-draft",
+            "originalGrade": "limited-text",
+            "reasonCodes": [
+              "MULTI_COLUMN_LAYOUT",
+              "TABLE_STRUCTURE_UNSUPPORTED",
+              "FORMULA_STRUCTURE_UNSUPPORTED",
+              "IMAGE_CONTENT_UNREAD"
+            ],
+            "parseAssessmentSha256": "362e67131a97d849487ba5cfc7f38518c5fca44e66cca65e44b8e8a808c8cf2e",
+            "layoutSha256": "0c8b817543aeb29ab0a8fca769c4f8f2dd7cef7310c6d74066f8d7f0cb9c4def",
+            "selectedEvidence": [
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+              },
+              {
+                "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+                "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+                "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+              },
+              {
+                "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+                "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+                "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+              },
+              {
+                "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+                "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+                "locatorSha256": "6f15a8d6589a13942fd99d761c74ec10777579aa32e64d15ac84edadeb14e382"
+              },
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+              },
+              {
+                "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+                "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+                "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+              },
+              {
+                "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+                "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+                "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+              },
+              {
+                "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+                "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+              },
+              {
+                "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+                "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+                "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+              },
+              {
+                "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+                "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+                "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+              },
+              {
+                "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+                "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+              },
+              {
+                "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+                "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+                "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+              },
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+              },
+              {
+                "id": "3a95725f-6198-4715-8348-0f464945c937",
+                "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+              },
+              {
+                "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+                "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+                "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+              }
+            ],
+            "manualReviewRequired": true,
+            "publicPublicationEnabled": false
+          },
+          "manifestSha256": "f317c9568ed9b716b9f9259eea3c2072d893881f6658cafc887cf5c8729e8409"
+        },
+        "provider": "deepseek",
+        "modelId": "deepseek-flash",
+        "policyVersion": "paper-semantic-evidence-gate-v11",
+        "promptVersion": "paper-semantic-reader-v10",
+        "externalProcessingClass": "public-arxiv-open-fulltext",
+        "publicPublicationEnabled": false,
+        "analysisSha256": "31b3e328f1e7534bdc36faa937f9a80fe8edad0c68b94206037ccec2d9583f78"
+      },
+      "contentSha256": "ac0a4127c2cd74df03b8ff3435aaf012457df80750db91f4cd0deb78361ae09d"
+    },
+    {
+      "id": "3cb44023-0630-4c2d-a3fe-67d16bc760b3",
+      "artifactKey": "paper.article.paragraph.section-01.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "adaad544-8a77-43ee-b629-de25ccc1e504",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-01",
+          "paragraphId": "paragraph-01",
+          "text": "作者在文中指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。作者同时说明，除少数情况外，此类注意力机制通常与循环网络结合使用。在此基础上，作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+          "heading": "从循环约束到纯注意力架构",
+          "article": {
+            "title": "从循环约束到纯注意力架构",
+            "summary": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在；除少数情况外，此类注意力机制通常与循环网络结合使用。作者据此提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。"
+          }
+        },
+        "sectionPlanSha256": "05a522903257e76b05d822c94df90135f88b98965599d38775b3a2bb00a05973",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1,
+            2,
+            3
+          ],
+          "primaryClaimIndexes": [
+            1,
+            2,
+            3
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "5f282e5722cf4494fb13af7da05d5639f657b3642de19eef975885d5067a95d7",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "sequential-computation-constraint",
+              "attention-usually-with-recurrence",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "3db82948e96a3bd2f65ad6cc0a5dda981115886c67bad460fe3ee38c5bd1f20e"
+    },
+    {
+      "id": "fd4b1365-d1f7-4334-8223-159929a1ffaa",
+      "artifactKey": "paper.article.section-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "05a522903257e76b05d822c94df90135f88b98965599d38775b3a2bb00a05973",
+        "response": {
+          "sectionKey": "section-01",
+          "heading": "从循环约束到纯注意力架构",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者在文中指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。作者同时说明，除少数情况外，此类注意力机制通常与循环网络结合使用。在此基础上，作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。"
+            }
+          ],
+          "article": {
+            "title": "从循环约束到纯注意力架构",
+            "summary": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在；除少数情况外，此类注意力机制通常与循环网络结合使用。作者据此提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。"
+          }
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "从循环约束到纯注意力架构"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者在文中指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。作者同时说明，除少数情况外，此类注意力机制通常与循环网络结合使用。在此基础上，作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "sequential-computation-constraint",
+              "attention-usually-with-recurrence",
+              "transformer-eschews-recurrence"
+            ]
+          }
+        ],
+        "metadata": {
+          "title": "从循环约束到纯注意力架构",
+          "summary": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在；除少数情况外，此类注意力机制通常与循环网络结合使用。作者据此提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+          "claimIndexes": [
+            1,
+            2,
+            3
+          ]
+        },
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "sequential-computation-constraint",
+              "attention-usually-with-recurrence",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 142,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1,
+                2,
+                3
+              ],
+              "primaryClaimIndexes": [
+                1,
+                2,
+                3
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1,
+            2,
+            3
+          ]
+        },
+        "paragraphPlanSha256": "3b36962b857f6ab954b5b86b8ae0afe77e8ef81a05cb71bd384a3e9c1a8a5854",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "3cb44023-0630-4c2d-a3fe-67d16bc760b3",
+            "contentSha256": "3db82948e96a3bd2f65ad6cc0a5dda981115886c67bad460fe3ee38c5bd1f20e"
+          }
+        ]
+      },
+      "contentSha256": "055ac8a8b779f404e678746f26a8b0026b084a31d89ed8582422e3cd8c2a4578"
+    },
+    {
+      "id": "1a9226f9-c083-44dc-a898-4c74d4b193c3",
+      "artifactKey": "paper.article.paragraph.section-02.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "6e9c4055-fc10-4db7-a13d-c7f38fed9ac1",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-02",
+          "paragraphId": "paragraph-01",
+          "text": "作者在文中把自注意力（有时称为内部注意力）界定为一种注意力机制：它把单个序列的不同位置相互关联起来，以计算该序列的表示。",
+          "heading": "自注意力的含义",
+          "article": null
+        },
+        "sectionPlanSha256": "a538d93838ea8c7d40980694e71f708dceeea3c364333a74b29e3f7322ca5a2b",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1
+          ],
+          "primaryClaimIndexes": [
+            1
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "3b168492cbe90441defa8125d24841a0e045042f58157f1f182ba721dffe84f2",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "self-attention-definition"
+            ],
+            "evidence": [
+              {
+                "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+                "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "605ffe6a8d8bdbc41f40d445205db04a06655f6fcbcf81fb7067dd8fb8362a66"
+    },
+    {
+      "id": "a4baa069-d3a7-4126-a821-fafcde9bf0d6",
+      "artifactKey": "paper.article.paragraph.section-02.paragraph-02",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "cc24a1de-8b31-4764-8caa-55f229e6ede2",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-02",
+          "paragraphId": "paragraph-02",
+          "text": "作者提出 Transformer，这是一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。作者同时说明，模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "a538d93838ea8c7d40980694e71f708dceeea3c364333a74b29e3f7322ca5a2b",
+        "assignment": {
+          "paragraphId": "paragraph-02",
+          "claimIndexes": [
+            2,
+            6
+          ],
+          "primaryClaimIndexes": [
+            2
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "b7df96e3f9d40498f1e962317cdd0a1ed2d50521b62b7d703ef0d58255ad9c9a",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "autoregressive-generation",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+                "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+                "pages": [
+                  2
+                ]
+              },
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "f2f20550ccf2c9240c68a1e22db41d8cbe8bd2d2d849166f909b876eb985d2e7"
+    },
+    {
+      "id": "3b7b50e2-70c1-4293-95d7-abcb28da51a3",
+      "artifactKey": "paper.article.paragraph.section-02.paragraph-03",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "a9553c89-1713-414c-b367-3cf17f20a00e",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-02",
+          "paragraphId": "paragraph-03",
+          "text": "作者说明，编码器的每一层由两个子层组成：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；每个子层周围都使用残差连接，随后进行层归一化。解码器同样在每个子层周围使用残差连接并随后进行层归一化；此外，作者对解码器堆叠中的自注意力子层作了修改，以阻止位置关注后续位置。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "a538d93838ea8c7d40980694e71f708dceeea3c364333a74b29e3f7322ca5a2b",
+        "assignment": {
+          "paragraphId": "paragraph-03",
+          "claimIndexes": [
+            3,
+            4
+          ],
+          "primaryClaimIndexes": [
+            3,
+            4
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "6513161a4526c8349b4570a4f76c17801e0fbb95f371faa1d94903bfdf4ac6e5",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "encoder-layer-two-sublayers",
+              "decoder-residual-and-masking"
+            ],
+            "evidence": [
+              {
+                "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+                "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+                "pages": [
+                  3
+                ]
+              },
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "2391a36549000f7f96248a64462308cc7d18c4e5121d255772fb8e08aa4e67e8"
+    },
+    {
+      "id": "777f490a-0861-43e3-8065-797e783171ed",
+      "artifactKey": "paper.article.section-02",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "a538d93838ea8c7d40980694e71f708dceeea3c364333a74b29e3f7322ca5a2b",
+        "response": {
+          "sectionKey": "section-02",
+          "heading": "自注意力的含义",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者在文中把自注意力（有时称为内部注意力）界定为一种注意力机制：它把单个序列的不同位置相互关联起来，以计算该序列的表示。"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "text": "作者提出 Transformer，这是一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。作者同时说明，模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "text": "作者说明，编码器的每一层由两个子层组成：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；每个子层周围都使用残差连接，随后进行层归一化。解码器同样在每个子层周围使用残差连接并随后进行层归一化；此外，作者对解码器堆叠中的自注意力子层作了修改，以阻止位置关注后续位置。"
+            }
+          ],
+          "article": null
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "自注意力的含义"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者在文中把自注意力（有时称为内部注意力）界定为一种注意力机制：它把单个序列的不同位置相互关联起来，以计算该序列的表示。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "self-attention-definition"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者提出 Transformer，这是一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。作者同时说明，模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "autoregressive-generation",
+              "transformer-eschews-recurrence"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，编码器的每一层由两个子层组成：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；每个子层周围都使用残差连接，随后进行层归一化。解码器同样在每个子层周围使用残差连接并随后进行层归一化；此外，作者对解码器堆叠中的自注意力子层作了修改，以阻止位置关注后续位置。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "encoder-layer-two-sublayers",
+              "decoder-residual-and-masking"
+            ]
+          }
+        ],
+        "metadata": null,
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "self-attention-definition"
+            ],
+            "evidence": [
+              {
+                "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+                "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 2,
+            "findingKeys": [
+              "autoregressive-generation",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+                "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+                "pages": [
+                  2
+                ]
+              },
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 3,
+            "findingKeys": [
+              "encoder-layer-two-sublayers",
+              "decoder-residual-and-masking"
+            ],
+            "evidence": [
+              {
+                "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+                "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+                "pages": [
+                  3
+                ]
+              },
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 298,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1
+              ],
+              "primaryClaimIndexes": [
+                1
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "claimIndexes": [
+                2,
+                6
+              ],
+              "primaryClaimIndexes": [
+                2
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "claimIndexes": [
+                3,
+                4
+              ],
+              "primaryClaimIndexes": [
+                3,
+                4
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1
+          ]
+        },
+        "paragraphPlanSha256": "082eef9bda3d2a3dff7dd36a6ff56b4fefdb0241895b4a5b2670b7abfcfc79a5",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "1a9226f9-c083-44dc-a898-4c74d4b193c3",
+            "contentSha256": "605ffe6a8d8bdbc41f40d445205db04a06655f6fcbcf81fb7067dd8fb8362a66"
+          },
+          {
+            "paragraphId": "paragraph-02",
+            "artifactId": "a4baa069-d3a7-4126-a821-fafcde9bf0d6",
+            "contentSha256": "f2f20550ccf2c9240c68a1e22db41d8cbe8bd2d2d849166f909b876eb985d2e7"
+          },
+          {
+            "paragraphId": "paragraph-03",
+            "artifactId": "3b7b50e2-70c1-4293-95d7-abcb28da51a3",
+            "contentSha256": "2391a36549000f7f96248a64462308cc7d18c4e5121d255772fb8e08aa4e67e8"
+          }
+        ]
+      },
+      "contentSha256": "1e4fadf014c99fe881c14a62408b95b13de01808468dad15cfbc8a79bea97d2d"
+    },
+    {
+      "id": "55d61483-b471-4ca6-9732-2905aa5c9f1b",
+      "artifactKey": "paper.article.paragraph.section-03.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "dc4d8d8e-4dc1-45a2-8e34-c6cb0c3f1c16",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-03",
+          "paragraphId": "paragraph-01",
+          "text": "作者说明，这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+          "heading": "掩蔽与输出嵌入偏移的配合",
+          "article": null
+        },
+        "sectionPlanSha256": "50e01315984f11aa4c44682e661b6e34532f204eb6150e5718af22581bf15493",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1
+          ],
+          "primaryClaimIndexes": [
+            1
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "3b168492cbe90441defa8125d24841a0e045042f58157f1f182ba721dffe84f2",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "masking-with-offset-constraint"
+            ],
+            "evidence": [
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "1869521ac51094af96ac0accccfe48407f7f04e5827d47e758050cdc75b7b77d"
+    },
+    {
+      "id": "965d47d7-097e-4bc0-b840-d8b53fce142b",
+      "artifactKey": "paper.article.paragraph.section-03.paragraph-02",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "6ec23c0d-98a4-40e4-97f9-ae769aff4496",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-03",
+          "paragraphId": "paragraph-02",
+          "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "50e01315984f11aa4c44682e661b6e34532f204eb6150e5718af22581bf15493",
+        "assignment": {
+          "paragraphId": "paragraph-02",
+          "claimIndexes": [
+            2
+          ],
+          "primaryClaimIndexes": [
+            2
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "d6af6c73a8907bf22432bef2767080ba038291cb620240cc8626499e5a28f3d0",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "attention-function-definition"
+            ],
+            "evidence": [
+              {
+                "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+                "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "f54700476554d11690ca7e273039f9dcdaed2641ea3f3b7e00b089433e34d3e9"
+    },
+    {
+      "id": "aa526ab9-8262-41de-9800-efaab55ca6c7",
+      "artifactKey": "paper.article.paragraph.section-03.paragraph-03",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "4ef709d7-0333-4124-aa23-8a74fdcdbaba",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-03",
+          "paragraphId": "paragraph-03",
+          "text": "作者说明，实践中会在一组查询上同时计算注意力函数：这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "50e01315984f11aa4c44682e661b6e34532f204eb6150e5718af22581bf15493",
+        "assignment": {
+          "paragraphId": "paragraph-03",
+          "claimIndexes": [
+            3
+          ],
+          "primaryClaimIndexes": [
+            3
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "9715e4b022e5383dced03935472357855b9769c5f0066d4001884d3df32e7b35",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "batched-query-computation"
+            ],
+            "evidence": [
+              {
+                "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+                "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "34b46caaf094239ab4f57a03fc863d3e4c589cc16b0cd648f4e7c0c767ab4279"
+    },
+    {
+      "id": "5c0cd8c7-1f84-4030-89fa-0d8a0b0ec0a1",
+      "artifactKey": "paper.article.paragraph.section-03.paragraph-04",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "51079dfd-7132-4d51-91a0-a0bd7d23dfe2",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-03",
+          "paragraphId": "paragraph-04",
+          "text": "作者指出，两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "50e01315984f11aa4c44682e661b6e34532f204eb6150e5718af22581bf15493",
+        "assignment": {
+          "paragraphId": "paragraph-04",
+          "claimIndexes": [
+            4
+          ],
+          "primaryClaimIndexes": [
+            4
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "7148b18da69376a45a5f24fc2c577833d8bc48a7745af2f3fc7faf048691ae1a",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "two-common-attention-functions"
+            ],
+            "evidence": [
+              {
+                "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+                "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "66da8e8226533b1ef0c24f256fc29c5ac2b122dccfb194ac58c66ccd6e7543e9"
+    },
+    {
+      "id": "0044d80f-e5ab-4abb-813a-667d85a4576d",
+      "artifactKey": "paper.article.section-03",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "50e01315984f11aa4c44682e661b6e34532f204eb6150e5718af22581bf15493",
+        "response": {
+          "sectionKey": "section-03",
+          "heading": "掩蔽与输出嵌入偏移的配合",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者说明，这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "text": "作者说明，实践中会在一组查询上同时计算注意力函数：这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。"
+            },
+            {
+              "paragraphId": "paragraph-04",
+              "text": "作者指出，两种最常用的注意力函数是加性注意力和点积（乘性）注意力。"
+            }
+          ],
+          "article": null
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "掩蔽与输出嵌入偏移的配合"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "masking-with-offset-constraint"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "attention-function-definition"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，实践中会在一组查询上同时计算注意力函数：这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "batched-query-computation"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者指出，两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "two-common-attention-functions"
+            ]
+          }
+        ],
+        "metadata": null,
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "masking-with-offset-constraint"
+            ],
+            "evidence": [
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 2,
+            "findingKeys": [
+              "attention-function-definition"
+            ],
+            "evidence": [
+              {
+                "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+                "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 3,
+            "findingKeys": [
+              "batched-query-computation"
+            ],
+            "evidence": [
+              {
+                "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+                "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 4,
+            "findingKeys": [
+              "two-common-attention-functions"
+            ],
+            "evidence": [
+              {
+                "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+                "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 187,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1
+              ],
+              "primaryClaimIndexes": [
+                1
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "claimIndexes": [
+                2
+              ],
+              "primaryClaimIndexes": [
+                2
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "claimIndexes": [
+                3
+              ],
+              "primaryClaimIndexes": [
+                3
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-04",
+              "claimIndexes": [
+                4
+              ],
+              "primaryClaimIndexes": [
+                4
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1
+          ]
+        },
+        "paragraphPlanSha256": "c3476a6811dbc1c6a286664b9ef1ed120cbf073796cc392dd4e57ec516c95cd8",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "55d61483-b471-4ca6-9732-2905aa5c9f1b",
+            "contentSha256": "1869521ac51094af96ac0accccfe48407f7f04e5827d47e758050cdc75b7b77d"
+          },
+          {
+            "paragraphId": "paragraph-02",
+            "artifactId": "965d47d7-097e-4bc0-b840-d8b53fce142b",
+            "contentSha256": "f54700476554d11690ca7e273039f9dcdaed2641ea3f3b7e00b089433e34d3e9"
+          },
+          {
+            "paragraphId": "paragraph-03",
+            "artifactId": "aa526ab9-8262-41de-9800-efaab55ca6c7",
+            "contentSha256": "34b46caaf094239ab4f57a03fc863d3e4c589cc16b0cd648f4e7c0c767ab4279"
+          },
+          {
+            "paragraphId": "paragraph-04",
+            "artifactId": "5c0cd8c7-1f84-4030-89fa-0d8a0b0ec0a1",
+            "contentSha256": "66da8e8226533b1ef0c24f256fc29c5ac2b122dccfb194ac58c66ccd6e7543e9"
+          }
+        ]
+      },
+      "contentSha256": "0a54d329987ee87c2230127d551cafb897fe77033b34fee90ff38141718fea53"
+    },
+    {
+      "id": "467fe92f-7784-449e-8812-c9c9a2113ffc",
+      "artifactKey": "paper.article.paragraph.section-04.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "be8ae4d9-cb21-47fe-83af-e65f659d4671",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-04",
+          "paragraphId": "paragraph-01",
+          "text": "作者在文中说明了编码器与解码器中注意力层的连接方式。编码器-解码器注意力层的查询来自前一个解码器层，而记忆所用的键和值来自编码器的输出，因此解码器的每个位置都能关注输入序列的所有位置。编码器自身包含自注意力层，其中所有的键、值和查询都来自同一处，即编码器前一层的输出，由此编码器的每个位置都能关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+          "heading": "编码器与解码器中的注意力连接",
+          "article": null
+        },
+        "sectionPlanSha256": "2dfe99b763298698bef16e649af1d45b65e4ff923fd9532327db193eead196f8",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1,
+            2,
+            3
+          ],
+          "primaryClaimIndexes": [
+            1,
+            2,
+            3
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "5f282e5722cf4494fb13af7da05d5639f657b3642de19eef975885d5067a95d7",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "encoder-decoder-attention-sources",
+              "encoder-self-attention-scope",
+              "decoder-self-attention-scope"
+            ],
+            "evidence": [
+              {
+                "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+                "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "7fc9112bcaf8b9afba139f654fa7e643fec7b3d65d82bca7bf9a83f558d8111e"
+    },
+    {
+      "id": "a8fcb374-ee1f-4b86-ab05-d8c33443f3eb",
+      "artifactKey": "paper.article.section-04",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "2dfe99b763298698bef16e649af1d45b65e4ff923fd9532327db193eead196f8",
+        "response": {
+          "sectionKey": "section-04",
+          "heading": "编码器与解码器中的注意力连接",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者在文中说明了编码器与解码器中注意力层的连接方式。编码器-解码器注意力层的查询来自前一个解码器层，而记忆所用的键和值来自编码器的输出，因此解码器的每个位置都能关注输入序列的所有位置。编码器自身包含自注意力层，其中所有的键、值和查询都来自同一处，即编码器前一层的输出，由此编码器的每个位置都能关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。"
+            }
+          ],
+          "article": null
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "编码器与解码器中的注意力连接"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者在文中说明了编码器与解码器中注意力层的连接方式。编码器-解码器注意力层的查询来自前一个解码器层，而记忆所用的键和值来自编码器的输出，因此解码器的每个位置都能关注输入序列的所有位置。编码器自身包含自注意力层，其中所有的键、值和查询都来自同一处，即编码器前一层的输出，由此编码器的每个位置都能关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "encoder-decoder-attention-sources",
+              "encoder-self-attention-scope",
+              "decoder-self-attention-scope"
+            ]
+          }
+        ],
+        "metadata": null,
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "encoder-decoder-attention-sources",
+              "encoder-self-attention-scope",
+              "decoder-self-attention-scope"
+            ],
+            "evidence": [
+              {
+                "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+                "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 201,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1,
+                2,
+                3
+              ],
+              "primaryClaimIndexes": [
+                1,
+                2,
+                3
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1,
+            2,
+            3
+          ]
+        },
+        "paragraphPlanSha256": "3b36962b857f6ab954b5b86b8ae0afe77e8ef81a05cb71bd384a3e9c1a8a5854",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "467fe92f-7784-449e-8812-c9c9a2113ffc",
+            "contentSha256": "7fc9112bcaf8b9afba139f654fa7e643fec7b3d65d82bca7bf9a83f558d8111e"
+          }
+        ]
+      },
+      "contentSha256": "fa37a6b49580512cad99f204b1dc938b0b009cb46d789a6f4bb5437927a9a9c2"
+    },
+    {
+      "id": "1aa5ae6b-6b8b-4175-aff6-5c85f4738513",
+      "artifactKey": "paper.article.paragraph.section-05.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "a730673d-47ca-4570-bac1-50b028e43cb2",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-05",
+          "paragraphId": "paragraph-01",
+          "text": "作者指出，除注意力子层之外，编码器和解码器的每一层还包含一个全连接前馈网络。这个网络对每个位置分别且相同地应用，由两个线性变换以及两者之间的 ReLU 激活组成。",
+          "heading": "逐位置前馈网络",
+          "article": null
+        },
+        "sectionPlanSha256": "6a303f4344c240967d21f65d9c066feb07e4fe873a19d8f442d92f19d01a2601",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1
+          ],
+          "primaryClaimIndexes": [
+            1
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "3b168492cbe90441defa8125d24841a0e045042f58157f1f182ba721dffe84f2",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "position-wise-feed-forward"
+            ],
+            "evidence": [
+              {
+                "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+                "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "3f9a207ac3275de3483f68ec6f160e84977fc427c2a74b18a7aaf44b13943600"
+    },
+    {
+      "id": "0f258e27-dd8d-40df-a327-54b7b2569781",
+      "artifactKey": "paper.article.paragraph.section-05.paragraph-02",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "2248b99c-1be7-45cf-b30e-6570c68cc646",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-05",
+          "paragraphId": "paragraph-02",
+          "text": "作者说明，这些线性变换在不同位置之间是相同的，但不同层之间使用不同的参数。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "6a303f4344c240967d21f65d9c066feb07e4fe873a19d8f442d92f19d01a2601",
+        "assignment": {
+          "paragraphId": "paragraph-02",
+          "claimIndexes": [
+            2
+          ],
+          "primaryClaimIndexes": [
+            2
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "d6af6c73a8907bf22432bef2767080ba038291cb620240cc8626499e5a28f3d0",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "feed-forward-parameters-per-layer"
+            ],
+            "evidence": [
+              {
+                "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+                "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "800454943754096d7ed99a7a09c1c97bc78a72d06be2ae626e0a5f0476cd049f"
+    },
+    {
+      "id": "af87d9de-2174-4936-99ff-0bd02d2f26fc",
+      "artifactKey": "paper.article.paragraph.section-05.paragraph-03",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "c02a3790-6192-4b2c-8266-8a204e97cec8",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-05",
+          "paragraphId": "paragraph-03",
+          "text": "作者说明，模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "6a303f4344c240967d21f65d9c066feb07e4fe873a19d8f442d92f19d01a2601",
+        "assignment": {
+          "paragraphId": "paragraph-03",
+          "claimIndexes": [
+            3
+          ],
+          "primaryClaimIndexes": [
+            3
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "9715e4b022e5383dced03935472357855b9769c5f0066d4001884d3df32e7b35",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "shared-embedding-weights"
+            ],
+            "evidence": [
+              {
+                "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+                "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "2638f0f8759c6b10cf37425db802cb5ca7a9b2cb39d1054dc0a90707780dac89"
+    },
+    {
+      "id": "01577a83-0848-4a55-9d14-84a6f82aa8e7",
+      "artifactKey": "paper.article.paragraph.section-05.paragraph-04",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "83c1a13d-4e7e-479a-8f04-d6daf9f1c646",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-05",
+          "paragraphId": "paragraph-04",
+          "text": "作者指出，由于该模型既不含循环也不含卷积，要让模型利用序列顺序，就必须注入关于词元相对或绝对位置的信息。为此，作者在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "6a303f4344c240967d21f65d9c066feb07e4fe873a19d8f442d92f19d01a2601",
+        "assignment": {
+          "paragraphId": "paragraph-04",
+          "claimIndexes": [
+            4
+          ],
+          "primaryClaimIndexes": [
+            4
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "7148b18da69376a45a5f24fc2c577833d8bc48a7745af2f3fc7faf048691ae1a",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "positional-encoding-purpose"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "d0a70cf6e0d9a775d9ca9ae5c293084ea11c24376021867391b45ab9a939e62c"
+    },
+    {
+      "id": "4c611350-a997-4e90-8118-566f4e1de4a2",
+      "artifactKey": "paper.article.section-05",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "6a303f4344c240967d21f65d9c066feb07e4fe873a19d8f442d92f19d01a2601",
+        "response": {
+          "sectionKey": "section-05",
+          "heading": "逐位置前馈网络",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者指出，除注意力子层之外，编码器和解码器的每一层还包含一个全连接前馈网络。这个网络对每个位置分别且相同地应用，由两个线性变换以及两者之间的 ReLU 激活组成。"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "text": "作者说明，这些线性变换在不同位置之间是相同的，但不同层之间使用不同的参数。"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "text": "作者说明，模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。"
+            },
+            {
+              "paragraphId": "paragraph-04",
+              "text": "作者指出，由于该模型既不含循环也不含卷积，要让模型利用序列顺序，就必须注入关于词元相对或绝对位置的信息。为此，作者在编码器和解码器堆叠底部的输入嵌入中加入位置编码。"
+            }
+          ],
+          "article": null
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "逐位置前馈网络"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者指出，除注意力子层之外，编码器和解码器的每一层还包含一个全连接前馈网络。这个网络对每个位置分别且相同地应用，由两个线性变换以及两者之间的 ReLU 激活组成。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "position-wise-feed-forward"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，这些线性变换在不同位置之间是相同的，但不同层之间使用不同的参数。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "feed-forward-parameters-per-layer"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "shared-embedding-weights"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者指出，由于该模型既不含循环也不含卷积，要让模型利用序列顺序，就必须注入关于词元相对或绝对位置的信息。为此，作者在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "positional-encoding-purpose"
+            ]
+          }
+        ],
+        "metadata": null,
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "position-wise-feed-forward"
+            ],
+            "evidence": [
+              {
+                "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+                "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 2,
+            "findingKeys": [
+              "feed-forward-parameters-per-layer"
+            ],
+            "evidence": [
+              {
+                "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+                "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 3,
+            "findingKeys": [
+              "shared-embedding-weights"
+            ],
+            "evidence": [
+              {
+                "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+                "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 4,
+            "findingKeys": [
+              "positional-encoding-purpose"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 240,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1
+              ],
+              "primaryClaimIndexes": [
+                1
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "claimIndexes": [
+                2
+              ],
+              "primaryClaimIndexes": [
+                2
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "claimIndexes": [
+                3
+              ],
+              "primaryClaimIndexes": [
+                3
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-04",
+              "claimIndexes": [
+                4
+              ],
+              "primaryClaimIndexes": [
+                4
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1
+          ]
+        },
+        "paragraphPlanSha256": "c3476a6811dbc1c6a286664b9ef1ed120cbf073796cc392dd4e57ec516c95cd8",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "1aa5ae6b-6b8b-4175-aff6-5c85f4738513",
+            "contentSha256": "3f9a207ac3275de3483f68ec6f160e84977fc427c2a74b18a7aaf44b13943600"
+          },
+          {
+            "paragraphId": "paragraph-02",
+            "artifactId": "0f258e27-dd8d-40df-a327-54b7b2569781",
+            "contentSha256": "800454943754096d7ed99a7a09c1c97bc78a72d06be2ae626e0a5f0476cd049f"
+          },
+          {
+            "paragraphId": "paragraph-03",
+            "artifactId": "af87d9de-2174-4936-99ff-0bd02d2f26fc",
+            "contentSha256": "2638f0f8759c6b10cf37425db802cb5ca7a9b2cb39d1054dc0a90707780dac89"
+          },
+          {
+            "paragraphId": "paragraph-04",
+            "artifactId": "01577a83-0848-4a55-9d14-84a6f82aa8e7",
+            "contentSha256": "d0a70cf6e0d9a775d9ca9ae5c293084ea11c24376021867391b45ab9a939e62c"
+          }
+        ]
+      },
+      "contentSha256": "39aecc2343d7b2045ef39f8af3d85409da7355722db5aef65a36941147bded5e"
+    },
+    {
+      "id": "dc1f63c2-e315-4c0e-a6ba-749712ca13ae",
+      "artifactKey": "paper.article.paragraph.section-06.paragraph-01",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "09a1615e-a8e3-4171-ab2f-bd300cae6ecf",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-06",
+          "paragraphId": "paragraph-01",
+          "text": "作者在文中指出，位置编码存在多种选择，既可以是学习得到的，也可以是固定的。",
+          "heading": "位置编码的多种选择",
+          "article": null
+        },
+        "sectionPlanSha256": "09af5de8113ffd1ded0ad86a061ac1fd63ae500d495c153be34f9e8c7f8babb1",
+        "assignment": {
+          "paragraphId": "paragraph-01",
+          "claimIndexes": [
+            1
+          ],
+          "primaryClaimIndexes": [
+            1
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "3b168492cbe90441defa8125d24841a0e045042f58157f1f182ba721dffe84f2",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "positional-encoding-choices"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "8a1a5c7b11cd0102db5899eaea3fa23bde6d94eb28ed6e390b2f84d0e6b295c0"
+    },
+    {
+      "id": "788b5773-138a-4bbf-b7a4-aef0340a8b62",
+      "artifactKey": "paper.article.paragraph.section-06.paragraph-02",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "5b96c0df-214f-4846-8cbb-0ea048cd6de6",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-06",
+          "paragraphId": "paragraph-02",
+          "text": "作者说明，对每个子层的输出都会应用 dropout，位置在该输出被加到子层输入并归一化之前；此外，编码器和解码器中嵌入与位置编码之和也会应用 dropout。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "09af5de8113ffd1ded0ad86a061ac1fd63ae500d495c153be34f9e8c7f8babb1",
+        "assignment": {
+          "paragraphId": "paragraph-02",
+          "claimIndexes": [
+            2
+          ],
+          "primaryClaimIndexes": [
+            2
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "d6af6c73a8907bf22432bef2767080ba038291cb620240cc8626499e5a28f3d0",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "residual-dropout-placement"
+            ],
+            "evidence": [
+              {
+                "id": "3a95725f-6198-4715-8348-0f464945c937",
+                "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832",
+                "pages": [
+                  8
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "c0559a9a6f3496f098c7ccccf3e38401ec4a81e5795d8b21eeb25a7fc9f42ef1"
+    },
+    {
+      "id": "065a4f7f-8359-4bd6-9bd9-235ee5799154",
+      "artifactKey": "paper.article.paragraph.section-06.paragraph-03",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": "c26d4db2-719f-493e-bb34-6e1c3d4d28b4",
+      "content": {
+        "schemaVersion": "paper-article-isolated-paragraph-v1",
+        "response": {
+          "sectionKey": "section-06",
+          "paragraphId": "paragraph-03",
+          "text": "作者在文中总结说，他们提出了 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者还表示，计划把注意力模型应用于其他任务，将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制，以便高效处理图像、音频和视频等大规模输入输出；让生成更少顺序性也是其研究目标之一。",
+          "heading": null,
+          "article": null
+        },
+        "sectionPlanSha256": "09af5de8113ffd1ded0ad86a061ac1fd63ae500d495c153be34f9e8c7f8babb1",
+        "assignment": {
+          "paragraphId": "paragraph-03",
+          "claimIndexes": [
+            3,
+            4
+          ],
+          "primaryClaimIndexes": [
+            3,
+            4
+          ],
+          "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+        },
+        "assignmentSha256": "6513161a4526c8349b4570a4f76c17801e0fbb95f371faa1d94903bfdf4ac6e5",
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "conclusion-attention-only-model",
+              "future-work-plan"
+            ],
+            "evidence": [
+              {
+                "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+                "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+                "pages": [
+                  10
+                ]
+              }
+            ]
+          }
+        ],
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "74b2d287ffba49b9ff3ebd58fb1d4ad504bccb67c43df8327d83e9503a29bd5d"
+    },
+    {
+      "id": "3aac5163-5cfa-4e68-a83a-50156c89ad16",
+      "artifactKey": "paper.article.section-06",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "paper-article-isolated-section-v1",
+        "planSha256": "09af5de8113ffd1ded0ad86a061ac1fd63ae500d495c153be34f9e8c7f8babb1",
+        "response": {
+          "sectionKey": "section-06",
+          "heading": "位置编码的多种选择",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "text": "作者在文中指出，位置编码存在多种选择，既可以是学习得到的，也可以是固定的。"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "text": "作者说明，对每个子层的输出都会应用 dropout，位置在该输出被加到子层输入并归一化之前；此外，编码器和解码器中嵌入与位置编码之和也会应用 dropout。"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "text": "作者在文中总结说，他们提出了 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者还表示，计划把注意力模型应用于其他任务，将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制，以便高效处理图像、音频和视频等大规模输入输出；让生成更少顺序性也是其研究目标之一。"
+            }
+          ],
+          "article": null
+        },
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "位置编码的多种选择"
+          },
+          {
+            "type": "paragraph",
+            "text": "作者在文中指出，位置编码存在多种选择，既可以是学习得到的，也可以是固定的。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "positional-encoding-choices"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者说明，对每个子层的输出都会应用 dropout，位置在该输出被加到子层输入并归一化之前；此外，编码器和解码器中嵌入与位置编码之和也会应用 dropout。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "residual-dropout-placement"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "作者在文中总结说，他们提出了 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者还表示，计划把注意力模型应用于其他任务，将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制，以便高效处理图像、音频和视频等大规模输入输出；让生成更少顺序性也是其研究目标之一。",
+            "citationIndexes": [
+              1
+            ],
+            "findingKeys": [
+              "conclusion-attention-only-model",
+              "future-work-plan"
+            ]
+          }
+        ],
+        "metadata": null,
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "positional-encoding-choices"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 2,
+            "findingKeys": [
+              "residual-dropout-placement"
+            ],
+            "evidence": [
+              {
+                "id": "3a95725f-6198-4715-8348-0f464945c937",
+                "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832",
+                "pages": [
+                  8
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 3,
+            "findingKeys": [
+              "conclusion-attention-only-model",
+              "future-work-plan"
+            ],
+            "evidence": [
+              {
+                "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+                "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+                "pages": [
+                  10
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 300,
+        "paragraphPlan": {
+          "schemaVersion": "paper-article-paragraph-plan-v1",
+          "paragraphs": [
+            {
+              "paragraphId": "paragraph-01",
+              "claimIndexes": [
+                1
+              ],
+              "primaryClaimIndexes": [
+                1
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-02",
+              "claimIndexes": [
+                2
+              ],
+              "primaryClaimIndexes": [
+                2
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            },
+            {
+              "paragraphId": "paragraph-03",
+              "claimIndexes": [
+                3,
+                4
+              ],
+              "primaryClaimIndexes": [
+                3,
+                4
+              ],
+              "task": "讲清集合中的事实及明确支持的联系，不引入集合外事实，也不靠重复扩充篇幅"
+            }
+          ],
+          "metadataClaimIndexes": [
+            1
+          ]
+        },
+        "paragraphPlanSha256": "3ff731bb14932eb57615a0439e6c67bdc14af80c146064a015378dd5ee950570",
+        "bindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "responseOrigin": "validated-paragraph-assembly",
+        "paragraphEntries": [
+          {
+            "paragraphId": "paragraph-01",
+            "artifactId": "dc1f63c2-e315-4c0e-a6ba-749712ca13ae",
+            "contentSha256": "8a1a5c7b11cd0102db5899eaea3fa23bde6d94eb28ed6e390b2f84d0e6b295c0"
+          },
+          {
+            "paragraphId": "paragraph-02",
+            "artifactId": "788b5773-138a-4bbf-b7a4-aef0340a8b62",
+            "contentSha256": "c0559a9a6f3496f098c7ccccf3e38401ec4a81e5795d8b21eeb25a7fc9f42ef1"
+          },
+          {
+            "paragraphId": "paragraph-03",
+            "artifactId": "065a4f7f-8359-4bd6-9bd9-235ee5799154",
+            "contentSha256": "74b2d287ffba49b9ff3ebd58fb1d4ad504bccb67c43df8327d83e9503a29bd5d"
+          }
+        ]
+      },
+      "contentSha256": "d858885b19cec72564dcd414ebe2096d7328ff609ff237da86ea783b7057f34f"
+    },
+    {
+      "id": "40a8a15f-4aca-4143-b8b7-927d4e31a128",
+      "artifactKey": "blog.composition",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "cacc7d95-f4cf-44ea-84e7-25758370a44f",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "blog-article-composition-v1",
+        "selection": {
+          "mode": "paper",
+          "analysisId": "c5dce347-1f54-4b39-96f3-dfe10e9d5332",
+          "readingScope": {
+            "schemaVersion": "paper-text-only-draft-scope-v1",
+            "mode": "text-only-draft",
+            "originalGrade": "limited-text",
+            "reasonCodes": [
+              "MULTI_COLUMN_LAYOUT",
+              "TABLE_STRUCTURE_UNSUPPORTED",
+              "FORMULA_STRUCTURE_UNSUPPORTED",
+              "IMAGE_CONTENT_UNREAD"
+            ],
+            "parseAssessmentSha256": "362e67131a97d849487ba5cfc7f38518c5fca44e66cca65e44b8e8a808c8cf2e",
+            "layoutSha256": "0c8b817543aeb29ab0a8fca769c4f8f2dd7cef7310c6d74066f8d7f0cb9c4def",
+            "selectedEvidence": [
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+              },
+              {
+                "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+                "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+                "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+              },
+              {
+                "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+                "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+                "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+              },
+              {
+                "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+                "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+                "locatorSha256": "6f15a8d6589a13942fd99d761c74ec10777579aa32e64d15ac84edadeb14e382"
+              },
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+              },
+              {
+                "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+                "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+                "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+              },
+              {
+                "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+                "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+                "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+              },
+              {
+                "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+                "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+              },
+              {
+                "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+                "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+                "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+              },
+              {
+                "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+                "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+                "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+              },
+              {
+                "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+                "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+              },
+              {
+                "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+                "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+                "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+              },
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+              },
+              {
+                "id": "3a95725f-6198-4715-8348-0f464945c937",
+                "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+              },
+              {
+                "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+                "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+                "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+              }
+            ],
+            "manualReviewRequired": true,
+            "publicPublicationEnabled": false
+          },
+          "paperVersionId": "28b8c48b-98ac-49a5-a8e1-2984f4d2be4f",
+          "citedPages": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            8,
+            10
+          ]
+        },
+        "content": {
+          "slug": "paper-research-469b0494133040de830d1953",
+          "locale": "zh-CN",
+          "title": "从循环约束到纯注意力架构",
+          "summary": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在；除少数情况外，此类注意力机制通常与循环网络结合使用。作者据此提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "阅读范围：本文是仅依据可用正文生成的待审草稿，未核验复杂表格、公式及图示；不构成对实验数值、效果比较或推导的确认。发布前须人工核对原文。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "从循环约束到纯注意力架构"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者在文中指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。作者同时说明，除少数情况外，此类注意力机制通常与循环网络结合使用。在此基础上，作者提出 Transformer，一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "自注意力的含义"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者在文中把自注意力（有时称为内部注意力）界定为一种注意力机制：它把单个序列的不同位置相互关联起来，以计算该序列的表示。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者提出 Transformer，这是一种不使用循环、而完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。作者同时说明，模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，编码器的每一层由两个子层组成：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；每个子层周围都使用残差连接，随后进行层归一化。解码器同样在每个子层周围使用残差连接并随后进行层归一化；此外，作者对解码器堆叠中的自注意力子层作了修改，以阻止位置关注后续位置。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "掩蔽与输出嵌入偏移的配合"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，这种掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者将注意力函数描述为把一个查询和一组键值对映射到一个输出，其中查询、键、值和输出都是向量。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，实践中会在一组查询上同时计算注意力函数：这些查询被打包成矩阵 Q，键和值也分别被打包成矩阵 K 和 V。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者指出，两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "编码器与解码器中的注意力连接"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者在文中说明了编码器与解码器中注意力层的连接方式。编码器-解码器注意力层的查询来自前一个解码器层，而记忆所用的键和值来自编码器的输出，因此解码器的每个位置都能关注输入序列的所有位置。编码器自身包含自注意力层，其中所有的键、值和查询都来自同一处，即编码器前一层的输出，由此编码器的每个位置都能关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器的每个位置关注解码器中截至并包括该位置的所有位置。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "逐位置前馈网络"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者指出，除注意力子层之外，编码器和解码器的每一层还包含一个全连接前馈网络。这个网络对每个位置分别且相同地应用，由两个线性变换以及两者之间的 ReLU 激活组成。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，这些线性变换在不同位置之间是相同的，但不同层之间使用不同的参数。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者指出，由于该模型既不含循环也不含卷积，要让模型利用序列顺序，就必须注入关于词元相对或绝对位置的信息。为此，作者在编码器和解码器堆叠底部的输入嵌入中加入位置编码。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "位置编码的多种选择"
+            },
+            {
+              "type": "paragraph",
+              "text": "作者在文中指出，位置编码存在多种选择，既可以是学习得到的，也可以是固定的。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者说明，对每个子层的输出都会应用 dropout，位置在该输出被加到子层输入并归一化之前；此外，编码器和解码器中嵌入与位置编码之和也会应用 dropout。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "作者在文中总结说，他们提出了 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者还表示，计划把注意力模型应用于其他任务，将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制，以便高效处理图像、音频和视频等大规模输入输出；让生成更少顺序性也是其研究目标之一。",
+              "citationIds": [
+                "a13c288d-9087-565d-a67d-fc04321e945a"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "继续追问"
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                "作者所述顺序计算的根本约束在何种任务设定下仍然成立？",
+                "自注意力与循环网络结合使用的常见做法在哪些任务上被作者认为存在例外？",
+                "编码器每层两个子层的残差连接与层归一化顺序如何影响各子层的信息流？"
+              ]
+            }
+          ],
+          "citations": [
+            {
+              "id": "a13c288d-9087-565d-a67d-fc04321e945a",
+              "label": "可用正文（待审）",
+              "title": "Attention Is All You Need",
+              "url": "https://arxiv.org/abs/1706.03762v7",
+              "publisher": "arXiv",
+              "publishedAt": null,
+              "accessedAt": "2026-10-31T11:46:54.180Z",
+              "excerpt": "Numerous efforts have since continued to push the boundaries of recurrent language models and encoder-decoder architectures [38, 24, 15]. Recurrent models typically factor computation along the symbol positions of the input and output sequences. The fundamental constraint of sequential computation, however, remains. Attention mechanisms have become an integral part of compelling sequence modeling and transduc- tion models in various tasks, allowing modeling of dependencies without regard to their distance in the input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms are used in conjunction with a recurrent network. In this work we propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output. Self-attention, sometimes called intra-at",
+              "locator": "第 2、3、4、5、6、8、10 页"
+            }
+          ]
+        },
+        "followUpQuestions": [
+          "作者所述顺序计算的根本约束在何种任务设定下仍然成立？",
+          "自注意力与循环网络结合使用的常见做法在哪些任务上被作者认为存在例外？",
+          "编码器每层两个子层的残差连接与层归一化顺序如何影响各子层的信息流？"
+        ],
+        "paragraphEvidenceBindings": [
+          {
+            "blockIndex": 1,
+            "findingKeys": [
+              "sequential-computation-constraint",
+              "attention-usually-with-recurrence",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 3,
+            "findingKeys": [
+              "self-attention-definition"
+            ],
+            "evidence": [
+              {
+                "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+                "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 4,
+            "findingKeys": [
+              "autoregressive-generation",
+              "transformer-eschews-recurrence"
+            ],
+            "evidence": [
+              {
+                "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+                "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+                "pages": [
+                  2
+                ]
+              },
+              {
+                "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+                "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+                "pages": [
+                  2
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 5,
+            "findingKeys": [
+              "encoder-layer-two-sublayers",
+              "decoder-residual-and-masking"
+            ],
+            "evidence": [
+              {
+                "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+                "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+                "pages": [
+                  3
+                ]
+              },
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 7,
+            "findingKeys": [
+              "masking-with-offset-constraint"
+            ],
+            "evidence": [
+              {
+                "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+                "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 8,
+            "findingKeys": [
+              "attention-function-definition"
+            ],
+            "evidence": [
+              {
+                "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+                "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+                "pages": [
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 9,
+            "findingKeys": [
+              "batched-query-computation"
+            ],
+            "evidence": [
+              {
+                "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+                "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 10,
+            "findingKeys": [
+              "two-common-attention-functions"
+            ],
+            "evidence": [
+              {
+                "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+                "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263",
+                "pages": [
+                  4
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 12,
+            "findingKeys": [
+              "encoder-decoder-attention-sources",
+              "encoder-self-attention-scope",
+              "decoder-self-attention-scope"
+            ],
+            "evidence": [
+              {
+                "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+                "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 14,
+            "findingKeys": [
+              "position-wise-feed-forward"
+            ],
+            "evidence": [
+              {
+                "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+                "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 15,
+            "findingKeys": [
+              "feed-forward-parameters-per-layer"
+            ],
+            "evidence": [
+              {
+                "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+                "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 16,
+            "findingKeys": [
+              "shared-embedding-weights"
+            ],
+            "evidence": [
+              {
+                "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+                "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+                "pages": [
+                  5
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 17,
+            "findingKeys": [
+              "positional-encoding-purpose"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 19,
+            "findingKeys": [
+              "positional-encoding-choices"
+            ],
+            "evidence": [
+              {
+                "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+                "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+                "pages": [
+                  6
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 20,
+            "findingKeys": [
+              "residual-dropout-placement"
+            ],
+            "evidence": [
+              {
+                "id": "3a95725f-6198-4715-8348-0f464945c937",
+                "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832",
+                "pages": [
+                  8
+                ]
+              }
+            ]
+          },
+          {
+            "blockIndex": 21,
+            "findingKeys": [
+              "conclusion-attention-only-model",
+              "future-work-plan"
+            ],
+            "evidence": [
+              {
+                "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+                "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+                "pages": [
+                  10
+                ]
+              }
+            ]
+          }
+        ],
+        "bodyCharacters": 1368,
+        "sourceToolArtifactIds": [
+          "87f8251b-ed02-449f-b993-75b9ac88a354"
+        ],
+        "lengthPolicy": "content-first-v1",
+        "generationMode": "isolated-paragraphs-v1",
+        "sectionManifest": {
+          "schemaVersion": "paper-article-section-manifest-v1",
+          "plansSha256": "98fefcbfd13458a2e3a054035d2b98112bfebfa92c3a3b43d3d8aa4e8f1f6437",
+          "entries": [
+            {
+              "sectionKey": "section-01",
+              "artifactId": "fd4b1365-d1f7-4334-8223-159929a1ffaa",
+              "contentSha256": "055ac8a8b779f404e678746f26a8b0026b084a31d89ed8582422e3cd8c2a4578",
+              "blockOffset": 0,
+              "blockCount": 2
+            },
+            {
+              "sectionKey": "section-02",
+              "artifactId": "777f490a-0861-43e3-8065-797e783171ed",
+              "contentSha256": "1e4fadf014c99fe881c14a62408b95b13de01808468dad15cfbc8a79bea97d2d",
+              "blockOffset": 2,
+              "blockCount": 4
+            },
+            {
+              "sectionKey": "section-03",
+              "artifactId": "0044d80f-e5ab-4abb-813a-667d85a4576d",
+              "contentSha256": "0a54d329987ee87c2230127d551cafb897fe77033b34fee90ff38141718fea53",
+              "blockOffset": 6,
+              "blockCount": 5
+            },
+            {
+              "sectionKey": "section-04",
+              "artifactId": "a8fcb374-ee1f-4b86-ab05-d8c33443f3eb",
+              "contentSha256": "fa37a6b49580512cad99f204b1dc938b0b009cb46d789a6f4bb5437927a9a9c2",
+              "blockOffset": 11,
+              "blockCount": 2
+            },
+            {
+              "sectionKey": "section-05",
+              "artifactId": "4c611350-a997-4e90-8118-566f4e1de4a2",
+              "contentSha256": "39aecc2343d7b2045ef39f8af3d85409da7355722db5aef65a36941147bded5e",
+              "blockOffset": 13,
+              "blockCount": 5
+            },
+            {
+              "sectionKey": "section-06",
+              "artifactId": "3aac5163-5cfa-4e68-a83a-50156c89ad16",
+              "contentSha256": "d858885b19cec72564dcd414ebe2096d7328ff609ff237da86ea783b7057f34f",
+              "blockOffset": 18,
+              "blockCount": 4
+            }
+          ]
+        },
+        "paragraphBindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review"
+      },
+      "contentSha256": "f3507cffe7e0bbe6f442b03ea1ea0e8621fccec4919d0ac6e7c712b186f0964e"
+    },
+    {
+      "id": "03bfea17-3ebb-4fe4-97ab-320ff640fbcd",
+      "artifactKey": "blog.verification",
+      "runId": "469b0494-1330-40de-830d-195315d25e9c",
+      "stageId": "c903ccba-9e82-43df-b568-f1fc465b98cf",
+      "actionId": null,
+      "content": {
+        "schemaVersion": "blog-article-verification-v1",
+        "approved": true,
+        "paragraphBindingOrigin": "server-plan-before-generation",
+        "coverageCheck": "targeted-signatures-with-manual-review",
+        "manualReviewRequired": true,
+        "publicPublicationEnabled": false,
+        "readingScope": {
+          "schemaVersion": "paper-text-only-draft-scope-v1",
+          "mode": "text-only-draft",
+          "originalGrade": "limited-text",
+          "reasonCodes": [
+            "MULTI_COLUMN_LAYOUT",
+            "TABLE_STRUCTURE_UNSUPPORTED",
+            "FORMULA_STRUCTURE_UNSUPPORTED",
+            "IMAGE_CONTENT_UNREAD"
+          ],
+          "parseAssessmentSha256": "362e67131a97d849487ba5cfc7f38518c5fca44e66cca65e44b8e8a808c8cf2e",
+          "layoutSha256": "0c8b817543aeb29ab0a8fca769c4f8f2dd7cef7310c6d74066f8d7f0cb9c4def",
+          "selectedEvidence": [
+            {
+              "id": "f9571b2a-abe4-4f08-b7d6-a552e8ae0091",
+              "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+              "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+            },
+            {
+              "id": "19d53c8b-85a4-41ed-ab7b-7e736fb42ab1",
+              "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+              "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+            },
+            {
+              "id": "57c579ab-76ce-45c6-aa81-7bc150621732",
+              "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+              "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+            },
+            {
+              "id": "af0f9de7-91b4-466c-9a06-ec0ad249172c",
+              "quoteHash": "502978e1aa3614275b01669a695ee8a95336fb3e9d05c63b0257c1f0202450be",
+              "locatorSha256": "6f15a8d6589a13942fd99d761c74ec10777579aa32e64d15ac84edadeb14e382"
+            },
+            {
+              "id": "d00b32c9-58e8-4c27-a192-738c67e5c1b6",
+              "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+              "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+            },
+            {
+              "id": "291e9bb8-98a3-404f-a37c-666e0819f6c0",
+              "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+              "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+            },
+            {
+              "id": "fe2c51ac-5383-428b-af6f-1732b4539a5e",
+              "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+              "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+            },
+            {
+              "id": "742749a3-f682-4fb4-9cb3-0bd81669f87e",
+              "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+            },
+            {
+              "id": "8db4db59-d494-4539-b1ab-1db619e9aa83",
+              "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+              "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+            },
+            {
+              "id": "5a74d9f2-91c0-4281-a706-9d6113250a32",
+              "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+              "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+            },
+            {
+              "id": "20234d0b-afd8-43dd-92f9-60a5bdab2858",
+              "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+            },
+            {
+              "id": "233b48d4-378d-454d-91e7-fdb950dbe01f",
+              "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+              "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+            },
+            {
+              "id": "0aab351d-e591-4f07-a6e9-45af05cc4b64",
+              "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+              "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+            },
+            {
+              "id": "3a95725f-6198-4715-8348-0f464945c937",
+              "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+            },
+            {
+              "id": "770b99f8-f048-44cf-8289-6af0fda4e7cf",
+              "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+              "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+            }
+          ],
+          "manualReviewRequired": true,
+          "publicPublicationEnabled": false
+        },
+        "compositionArtifactId": "40a8a15f-4aca-4143-b8b7-927d4e31a128",
+        "contentSha256": "f3507cffe7e0bbe6f442b03ea1ea0e8621fccec4919d0ac6e7c712b186f0964e",
+        "sourceToolArtifactIds": [
+          "87f8251b-ed02-449f-b993-75b9ac88a354"
+        ],
+        "checks": {
+          "titleHasNoLatinLetters": true,
+          "everyFactualBlockCited": true,
+          "oneVerifiedPaperSource": true,
+          "pageEvidencePresent": true,
+          "normalizedBlogContract": true
+        }
+      },
+      "contentSha256": "5540bcdb1c3c9b5b0d35040c251197a941d72670740d72abfc3252a65e4e4e2a"
+    }
+  ]
+}

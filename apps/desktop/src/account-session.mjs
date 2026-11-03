@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createApiClient, ApiError } from '../../../packages/platform-api-client/src/index.mjs';
 import { resolveAuthClientKind } from '../../../packages/platform-client/src/auth-client-kind.mjs';
 import { accountOrigin } from './account-configuration.mjs';
-import { businessArguments, businessMediaPath, rewriteBusinessMedia } from './business-contract.mjs';
+import { businessArguments, businessMediaPath, rewriteBusinessMedia, businessRequestLimit } from './business-contract.mjs';
 import { localBusinessRuntime, validateDesktopLaunch } from './runtime-policy.mjs';
 import { createBusinessRequests } from './business-requests.mjs';
 import { createDesktopGameAuthority } from './game-api-contract.mjs';
@@ -330,7 +330,7 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     // Auth mutations stay ordered. Business work has a bounded, cancellable
     // queue; state/cancellation/local sign-out never wait behind business I/O.
     call(method, args = []) {
-      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>(method === 'business' ? 32768 : 4096)) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
+      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>(method === 'business' ? businessRequestLimit(args[0]) : 4096)) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
       if (['startGitHubWeb','cancelGitHub','createChallenge','verifyChallenge','clear','logout','logoutAll'].includes(method)) cancelGitHub();
       if (method === 'state') return Promise.resolve(state());
       if (method === 'cancelGitHub') return Promise.all(cancelledGrants.splice(0).map(revokeGitHubTokens)).then(() => ({ cancelled: true }));

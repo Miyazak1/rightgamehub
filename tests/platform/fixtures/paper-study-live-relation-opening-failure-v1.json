@@ -1,0 +1,28 @@
+{
+  "captureKind": "unmodified-paper-study-live-relation-opening-failure",
+  "workflowVersion": 9,
+  "promptVersion": 15,
+  "response": "{\"sectionKey\":\"section-04\",\"paragraphId\":\"paragraph-02\",\"text\":\"论文作者说明，在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出，这使解码器每个位置都能关注输入序列的所有位置。编码器包含自注意力层，其中所有键、值和查询来自同一处，即编码器前一层的输出；编码器中每个位置都能关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器每个位置关注解码器中截至并包括该位置的所有位置。\",\"heading\":null,\"article\":null}",
+  "responseSha256": "bea2191e07532c1dbe08b9fac38dce79f2effffe8cef8c9ebe1613ea30e75ce6",
+  "claims": [
+    {
+      "text": "在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出；这使解码器每个位置都能关注输入序列的所有位置。",
+      "narrativeRole": "method-relation",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "编码器包含自注意力层，其中所有键、值和查询来自同一处，即编码器前一层的输出；编码器中每个位置都能关注编码器前一层的所有位置。",
+      "narrativeRole": "method-relation",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "解码器中的自注意力层允许解码器每个位置关注解码器中截至并包括该位置的所有位置。",
+      "narrativeRole": "supported-fact",
+      "attribution": "论文作者",
+      "usage": "explain"
+    }
+  ],
+  "topic": "attention"
+}

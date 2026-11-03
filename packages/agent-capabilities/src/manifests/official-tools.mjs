@@ -25,6 +25,17 @@ const base = ({ toolId, title, summary, discovery, titleKey, descriptionKey, mar
 
 export const officialToolCapabilities = Object.freeze([
   base({
+    toolId: 'paper-study', titleKey: 'tools.paperStudy.title', descriptionKey: 'tools.paperStudy.description', mark: '▥',
+    title: { 'zh-CN': '论文研读', en: 'Paper Study' },
+    summary: { 'zh-CN': '阅读论文原文，核对分析与引用证据，整理私有待审稿。', en: 'Read papers, inspect evidence-bound analysis and prepare private drafts.' },
+    discovery: { tags: ['paper', 'research', 'evidence'], intents: ['study_paper', 'review_paper_draft'] },
+    capabilities: ['document.read', 'document.import', 'document.cite'],
+    operation: { effect: 'ui-open', confirmation: 'none' },
+    mcp: { toolName: 'open_paper_study', title: 'Open Paper Study', description: 'Open the paper study workspace. Import and analysis are explicit authenticated UI actions; opening the workspace uploads nothing and never publishes.',
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, invoking: 'Opening paper study…', invoked: 'Paper study opened.' },
+    dataPolicy: { localFirst: false, retention: 'account-private', prohibitedToolInputs: ['raw-pdf', 'secrets'], agentContext: 'bounded-disclosed' },
+  }),
+  base({
     toolId: 'knowledge-map', titleKey: 'tools.knowledgeMap.title', descriptionKey: 'tools.knowledgeMap.description', mark: '◇',
     title: { 'zh-CN': '墨鱼知识图', en: 'MOOYU Knowledge Map' },
     summary: { 'zh-CN': '把对话、计划、研究或 Markdown 整理成可编辑的交互知识图。', en: 'Turn conversations, plans, research, or Markdown into an editable interactive knowledge map.' },

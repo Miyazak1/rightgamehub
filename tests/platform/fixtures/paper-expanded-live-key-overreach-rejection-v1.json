@@ -1,0 +1,1045 @@
+{
+  "schemaVersion": "paper-expanded-live-key-overreach-rejection-v1",
+  "captureKind": "real-provider-output",
+  "composition": {
+    "title": "注意力如何取代循环：一篇论文的核心思路",
+    "summary": "这篇论文提出一种完全依赖注意力机制、放弃循环结构的模型架构。它用自注意力关联序列内不同位置，用编码器与解码器堆叠处理输入输出，并通过掩蔽、位置编码和权重共享等安排，在保持自回归生成的同时建立全局依赖。",
+    "blocks": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "从循环到注意力：模型的基本主张"
+      },
+      {
+        "type": "paragraph",
+        "text": "作者提出的核心架构名为 Transformer，其最显著的特点是放弃循环结构，转而完全依赖注意力机制来建立输入与输出之间的全局依赖。论文明确将这一架构作为主张提出，意味着模型不再通过循环单元逐步传递信息，而是让注意力机制承担起连接序列中不同位置的角色。这一主张构成了整篇论文的出发点，后续关于编码器、解码器以及各种子层的描述，都是围绕“完全依赖注意力”这一前提展开的。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "propose-transformer-eschering-recurrence"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在论文的界定中，自注意力是一种注意力机制，它关联单个序列的不同位置，以计算该序列的表示。论文有时也把自注意力称为内部注意力。这个定义的关键在于“单个序列”和“不同位置”：自注意力处理的是一个序列内部各位置之间的关系，而不是两个不同序列之间的对应。作者将自注意力作为模型的基本组件之一，正是因为它能够在序列内部建立位置间的直接联系，这与放弃循环结构后仍需捕捉序列内依赖的需求相呼应。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "self-attention-definition"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "尽管模型架构不含循环结构，作者说明该模型在生成方式上仍然是自回归的：在每一步生成下一个符号时，模型会把先前生成的符号作为额外输入。这里需要区分两个层面：模型内部没有循环单元，不等于生成过程可以一次性输出全部符号；论文明确保留了逐步生成的含义，每一步都依赖此前已经生成的符号。这一生成方式与后续解码器中的掩蔽安排直接相关，因为要保证某一步只使用该步之前已知的输出，就需要对解码器自注意力的可访问范围加以限制。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "model-autoregressive"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "编码器与解码器的子层结构"
+      },
+      {
+        "type": "paragraph",
+        "text": "论文说明编码器由两个子层组成：一个是多头自注意力机制，另一个是简单的逐位置全连接前馈网络。作者在每个子层周围使用残差连接，随后进行层归一化。这一描述给出了编码器的基本组成单元和连接方式：自注意力子层负责在序列内部建立联系，前馈网络对每个位置分别处理，残差连接与层归一化则围绕每个子层组织信息流。编码器的这一结构为后续理解解码器的对应安排提供了参照。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-sub-layers"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "解码器中的自注意力子层被作者修改，以防止某个位置关注后续位置。论文进一步说明，这种掩蔽与输出嵌入偏移一位相结合，使某个位置的预测只能依赖该位置之前已知的输出。这里的关键是位置访问范围的限定：解码器自注意力并非让每个位置随意关注所有位置，而是通过掩蔽把可访问范围限制在该位置之前已知的输出上。这一安排与模型每一步自回归生成、把先前生成符号作为额外输入的方式相配合，保证生成过程中不会提前使用尚未产生的符号。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "decoder-masking-scope"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "论文将注意力函数描述为把查询和一组键值对映射到输出，其中查询、键、值和输出都是向量。这个定义是理解模型中各种注意力应用的基础：无论查询、键、值来自何处，注意力函数的基本操作都是依据查询与键的匹配关系，对值进行加权组合，从而得到输出。作者在给出这一定义后，进一步讨论了注意力函数的具体形式和在模型中的不同应用场景，编码器自注意力、解码器自注意力以及编码器-解码器注意力都可以看作这一定义在不同来源配置下的体现。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "attention-function-mapping"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "注意力的计算形式与三种应用场景"
+      },
+      {
+        "type": "paragraph",
+        "text": "论文说明，在实践中会把一组查询同时打包成矩阵来计算注意力函数，键和值也分别打包成矩阵。这一做法把原本逐个查询的计算组织成矩阵运算，使得注意力函数可以同时处理一组查询。作者在描述注意力函数时给出这一实践安排，说明模型中的注意力计算并非孤立地处理单个查询，而是以矩阵形式批量进行。这为理解多头注意力等后续机制提供了计算层面的背景。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "attention-matrix-packing"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。论文在给出注意力函数的一般定义之后，并列列出这两种常见形式，说明注意力函数的具体实现可以有不同选择。加性注意力和点积注意力都是将查询与键值对映射为输出的具体方式，作者在论文中对这两种形式进行了对照讨论。这一并列关系表明，模型所依赖的注意力机制并不局限于某一种具体函数形式，而是可以在常见实现中进行选择。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "two-common-attention-functions"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在编码器-解码器注意力层中，作者说明查询来自前一个解码器层，而记忆的键和值来自编码器输出。这一配置使解码器每个位置都能关注输入序列的所有位置。与之相对，编码器包含自注意力层，其中所有键、值和查询都来自同一处，即编码器前一层的输出，编码器每个位置都能关注编码器前一层的所有位置。这两类注意力在来源上的区别很明确：编码器自注意力的查询、键、值同源，编码器-解码器注意力的查询来自解码器而键和值来自编码器，因此前者在编码器内部建立联系，后者把解码器位置与输入序列的全部位置连接起来。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-decoder-attention-sources",
+          "encoder-self-attention-sources"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "解码器自注意力的范围与前馈网络"
+      },
+      {
+        "type": "paragraph",
+        "text": "论文说明解码器中的自注意力层允许解码器每个位置关注解码器中截至并包括该位置的所有位置。这一范围限定与前面提到的掩蔽安排直接相关：掩蔽防止位置关注后续位置，而解码器自注意力层的可访问范围正是截至并包括当前位置。作者把这一范围作为解码器自注意力的特征加以说明，它与编码器自注意力“每个位置都能关注前一层所有位置”的范围形成对照，也与编码器-解码器注意力“解码器每个位置都能关注输入序列所有位置”的范围不同。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "decoder-self-attention-scope"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者说明编码器和解码器的每一层除注意力子层外还包含全连接前馈网络，该网络对每个位置分别且相同地应用，由两个线性变换及其中间的 ReLU 激活组成。这一描述表明前馈网络是逐位置操作的：同一个变换独立地作用于每个位置，位置之间不进行交互。前馈网络与注意力子层并列存在于每一层中，注意力子层负责位置间的信息关联，前馈网络则对每个位置的表征进行相同的非线性变换。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "position-wise-feed-forward"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "论文进一步说明，这些线性变换在不同位置之间相同，但不同层使用不同参数。也就是说，前馈网络在同一层内对所有位置共享同一组变换参数，而不同层之间的参数则各不相同。这一安排与逐位置应用的方式相配合：同一层内每个位置经历相同的线性变换和 ReLU 激活，不同层则各自拥有独立的参数。作者在描述前馈网络时明确区分了“位置之间相同”和“层与层之间不同”这两个层面。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "feed-forward-parameters-per-layer"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "权重共享、位置编码与训练安排"
+      },
+      {
+        "type": "paragraph",
+        "text": "作者说明模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。这一共享涉及三个位置：输入嵌入层、输出嵌入层以及 softmax 之前的线性变换。论文将这三处的权重矩阵统一为同一个，意味着嵌入空间与输出空间在参数上存在直接关联。这一安排与前面讨论的前馈网络参数形成对照：前馈网络的线性变换在不同层使用不同参数，而嵌入层与 softmax 前线性变换则共享同一权重矩阵。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "shared-weight-matrix"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者说明，由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息，为此在编码器和解码器栈底部的输入嵌入中加入位置编码。这一说明直接回应了放弃循环结构带来的问题：没有循环单元逐步传递顺序信息，模型本身不包含序列顺序的线索，因此需要通过位置编码把位置信息注入输入。位置编码被加在编码器和解码器栈底部的输入嵌入中，与嵌入一起进入后续层。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "positional-encoding-purpose"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者说明对每个子层的输出应用 dropout，位置在该输出被加到子层输入并归一化之前；此外对编码器和解码器栈中嵌入与位置编码之和也应用 dropout。这一描述给出了 dropout 在模型中的具体放置位置：子层输出在进入残差连接和归一化之前经过 dropout，嵌入与位置编码相加之后也经过 dropout。这些安排属于训练时的正则化手段，作者在描述模型结构时一并说明了这些操作的位置。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "residual-dropout-placement"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "作者展望的后续方向"
+      },
+      {
+        "type": "paragraph",
+        "text": "作者在结论中表示计划将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出，同时把使生成更少序列化列为研究目标。这些是作者提出的后续计划，而非已经完成的结果。其中，局部、受限的注意力机制针对的是图像、音频和视频等大规模输入输出场景；使生成更少序列化则与模型当前每一步自回归生成、把先前生成符号作为额外输入的方式形成对照，作者将其列为研究目标，说明生成过程的序列化程度是后续探索的方向之一。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "conclusion-future-work"
+        ]
+      }
+    ],
+    "followUpQuestions": [
+      "论文提出的完全依赖注意力机制，在编码器和解码器的各个子层中分别承担什么角色，与放弃循环结构后的全局依赖建立有何关系？",
+      "解码器自注意力的掩蔽安排限定了怎样的位置访问范围，这一范围与编码器自注意力及编码器-解码器注意力的访问范围有何结构差异？",
+      "位置编码被加入编码器和解码器栈底部输入嵌入的设计，如何回应模型不含循环也不含卷积这一前提？"
+    ]
+  },
+  "evidencePack": {
+    "schemaVersion": "paper-article-evidence-v2",
+    "analysisId": "cab6b0f9-be19-450d-9051-f4812da5b92d",
+    "analysisSha256": "ba1522e5b56ca0cd3043656d8d7bdbc4a4071de567bf46430b1100fa23529440",
+    "paperVersionId": "d285fcaa-79e1-4e51-8579-6ff7688cdaa3",
+    "paper": {
+      "title": "Attention Is All You Need",
+      "authors": [
+        "Ashish Vaswani",
+        "Noam Shazeer",
+        "Niki Parmar",
+        "Jakob Uszkoreit",
+        "Llion Jones",
+        "Aidan N. Gomez",
+        "Łukasz Kaiser",
+        "Illia Polosukhin"
+      ],
+      "year": 2017,
+      "venue": "arXiv",
+      "sourceUrl": "https://arxiv.org/abs/1706.03762v7"
+    },
+    "findings": [
+      {
+        "key": "propose-transformer-eschewing-recurrence",
+        "kind": "author_claim",
+        "text": "作者提出 Transformer 模型架构，放弃循环结构，转而完全依赖注意力机制来建立输入与输出之间的全局依赖。",
+        "evidenceIndexes": [
+          1
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 1,
+            "relation": "supports",
+            "evidenceId": "8e5ea329-889c-4859-9b5c-eb74d07b1f74"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "8e5ea329-889c-4859-9b5c-eb74d07b1f74"
+        ]
+      },
+      {
+        "key": "self-attention-definition",
+        "kind": "author_claim",
+        "text": "作者将自注意力（有时称为内部注意力）描述为一种注意力机制，它关联单个序列的不同位置，以计算该序列的表示。",
+        "evidenceIndexes": [
+          2
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 2,
+            "relation": "supports",
+            "evidenceId": "eea0044e-f934-48be-bc7d-f2a904833a8a"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "eea0044e-f934-48be-bc7d-f2a904833a8a"
+        ]
+      },
+      {
+        "key": "model-autoregressive",
+        "kind": "author_claim",
+        "text": "作者说明该模型在每一步是自回归的，在生成下一个符号时把先前生成的符号作为额外输入。",
+        "evidenceIndexes": [
+          3
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 3,
+            "relation": "supports",
+            "evidenceId": "83af2169-1f04-48a5-8ffd-345f8534e430"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "83af2169-1f04-48a5-8ffd-345f8534e430"
+        ]
+      },
+      {
+        "key": "encoder-sub-layers",
+        "kind": "author_claim",
+        "text": "作者说明编码器由两个子层组成：多头自注意力机制与简单的逐位置全连接前馈网络，并在每个子层周围使用残差连接，随后进行层归一化。",
+        "evidenceIndexes": [
+          4
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 4,
+            "relation": "supports",
+            "evidenceId": "82b46e3a-1b47-4655-af6d-2ae09ec5ada2"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "82b46e3a-1b47-4655-af6d-2ae09ec5ada2"
+        ]
+      },
+      {
+        "key": "decoder-masking-scope",
+        "kind": "author_claim",
+        "text": "作者说明解码器自注意力子层被修改以防止位置关注后续位置，这种掩蔽与输出嵌入偏移一位相结合，使某位置的预测只能依赖该位置之前已知的输出。",
+        "evidenceIndexes": [
+          5
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 5,
+            "relation": "supports",
+            "evidenceId": "abc33475-3990-45ba-b5a8-0b5d828ee970"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "abc33475-3990-45ba-b5a8-0b5d828ee970"
+        ]
+      },
+      {
+        "key": "attention-function-mapping",
+        "kind": "author_claim",
+        "text": "作者将注意力函数描述为把查询和一组键值对映射到输出，其中查询、键、值和输出都是向量。",
+        "evidenceIndexes": [
+          6
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 6,
+            "relation": "supports",
+            "evidenceId": "ef71b8e3-dd08-4728-a21b-372b16111945"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "ef71b8e3-dd08-4728-a21b-372b16111945"
+        ]
+      },
+      {
+        "key": "attention-matrix-packing",
+        "kind": "author_claim",
+        "text": "作者说明实践中把一组查询同时打包成矩阵来计算注意力函数，键和值也分别打包成矩阵。",
+        "evidenceIndexes": [
+          7
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 7,
+            "relation": "supports",
+            "evidenceId": "8b66c94f-387a-4bdf-a41a-472df2fdf72d"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "8b66c94f-387a-4bdf-a41a-472df2fdf72d"
+        ]
+      },
+      {
+        "key": "two-common-attention-functions",
+        "kind": "author_claim",
+        "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。",
+        "evidenceIndexes": [
+          8
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 8,
+            "relation": "supports",
+            "evidenceId": "fb5a5a8b-976e-4cbd-b0f7-be0da2bfcf8c"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "fb5a5a8b-976e-4cbd-b0f7-be0da2bfcf8c"
+        ]
+      },
+      {
+        "key": "encoder-decoder-attention-sources",
+        "kind": "author_claim",
+        "text": "作者说明在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器输出，这使解码器每个位置都能关注输入序列的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+        ]
+      },
+      {
+        "key": "encoder-self-attention-sources",
+        "kind": "author_claim",
+        "text": "作者说明编码器包含自注意力层，其中所有键、值和查询都来自同一处，即编码器前一层的输出，编码器每个位置都能关注编码器前一层的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+        ]
+      },
+      {
+        "key": "decoder-self-attention-scope",
+        "kind": "author_claim",
+        "text": "作者说明解码器中的自注意力层允许解码器每个位置关注解码器中截至并包括该位置的所有位置。",
+        "evidenceIndexes": [
+          9
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 9,
+            "relation": "supports",
+            "evidenceId": "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "cd22703b-67e2-42ac-91c4-99ed67e049c0"
+        ]
+      },
+      {
+        "key": "position-wise-feed-forward",
+        "kind": "author_claim",
+        "text": "作者说明编码器和解码器的每一层除注意力子层外还包含全连接前馈网络，该网络对每个位置分别且相同地应用，由两个线性变换及其中间的 ReLU 激活组成。",
+        "evidenceIndexes": [
+          10
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 10,
+            "relation": "supports",
+            "evidenceId": "2eb96198-ea5e-4f51-8654-0581c3e18a9e"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "2eb96198-ea5e-4f51-8654-0581c3e18a9e"
+        ]
+      },
+      {
+        "key": "feed-forward-parameters-per-layer",
+        "kind": "author_claim",
+        "text": "作者说明这些线性变换在不同位置之间相同，但不同层使用不同参数。",
+        "evidenceIndexes": [
+          11
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 11,
+            "relation": "supports",
+            "evidenceId": "b2fd4f5a-e3fe-4abb-9a30-6b2bf2244676"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "b2fd4f5a-e3fe-4abb-9a30-6b2bf2244676"
+        ]
+      },
+      {
+        "key": "shared-weight-matrix",
+        "kind": "author_claim",
+        "text": "作者说明模型在两个嵌入层与 softmax 前的线性变换之间共享同一权重矩阵。",
+        "evidenceIndexes": [
+          12
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 12,
+            "relation": "supports",
+            "evidenceId": "cc4412f2-4cf9-4225-9971-a65fe69b7656"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "cc4412f2-4cf9-4225-9971-a65fe69b7656"
+        ]
+      },
+      {
+        "key": "positional-encoding-purpose",
+        "kind": "author_claim",
+        "text": "作者说明由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息，为此在编码器和解码器栈底部的输入嵌入中加入位置编码。",
+        "evidenceIndexes": [
+          13
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 13,
+            "relation": "supports",
+            "evidenceId": "b0503eb9-db16-4fa5-b9bf-df921385fbf1"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "b0503eb9-db16-4fa5-b9bf-df921385fbf1"
+        ]
+      },
+      {
+        "key": "residual-dropout-placement",
+        "kind": "author_claim",
+        "text": "作者说明对每个子层的输出应用 dropout，位置在该输出被加到子层输入并归一化之前；此外对编码器和解码器栈中嵌入与位置编码之和也应用 dropout。",
+        "evidenceIndexes": [
+          14
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 14,
+            "relation": "supports",
+            "evidenceId": "9e05d840-6ce8-4d0e-8143-cdb33232adfb"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "9e05d840-6ce8-4d0e-8143-cdb33232adfb"
+        ]
+      },
+      {
+        "key": "conclusion-future-work",
+        "kind": "author_claim",
+        "text": "作者在结论中表示计划将 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出，同时把使生成更少序列化列为研究目标。",
+        "evidenceIndexes": [
+          15
+        ],
+        "relations": [
+          {
+            "evidenceIndex": 15,
+            "relation": "supports",
+            "evidenceId": "7750a4cd-e1fd-46a8-a4fc-1c2c23457f76"
+          }
+        ],
+        "confidence": "high",
+        "evidenceIds": [
+          "7750a4cd-e1fd-46a8-a4fc-1c2c23457f76"
+        ]
+      }
+    ],
+    "limitations": [
+      {
+        "key": "text-only-draft-scope",
+        "text": "当前为仅正文待审模式，未核验复杂表格、公式及图示，不能据此确认实验数值、效果比较或推导。",
+        "evidenceIndexes": []
+      },
+      {
+        "key": "text-only-reading-scope",
+        "text": "阅读范围：本文是仅依据可用正文生成的待审草稿，未核验复杂表格、公式及图示；不构成对实验数值、效果比较或推导的确认。发布前须人工核对原文。",
+        "evidenceIndexes": []
+      }
+    ],
+    "followUpQuestions": [
+      "作者提出的“完全依赖注意力”在编码器与解码器各子层中具体如何分工，与循环结构的替代关系如何界定？",
+      "解码器掩蔽机制所限定的位置访问范围，与编码器自注意力及编码器-解码器注意力的访问范围有何结构性差异？",
+      "位置编码被加入编码器和解码器栈底部输入嵌入的设计，如何与模型不含循环和卷积的前提相配合？",
+      "前馈网络在不同位置共享变换但逐层使用不同参数，这一安排与注意力子层的关系在作者论述中如何体现？",
+      "嵌入层与 softmax 前线性变换共享权重矩阵的做法，作者给出了怎样的动机说明？",
+      "作者提出的局部、受限注意力机制设想，针对的是哪类输入输出模态与规模问题？",
+      "作者把使生成更少序列化列为后续目标，这一目标与模型自回归生成方式之间存在何种张力？"
+    ],
+    "evidence": [
+      {
+        "index": 1,
+        "id": "8e5ea329-889c-4859-9b5c-eb74d07b1f74",
+        "quoteText": "Recurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation [35, 2, 5]. Numerous efforts have since continued to push the boundaries of recurrent language models and encoder-decoder architectures [38, 24, 15]. Recurrent models typically factor computation along the symbol positions of the input and output sequences. Aligning the positions to steps in computation time, they generate a sequence of hidden states h t , as a function of the previous hidden state h t − 1 and the input for position t . This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths, as memory constraints limit batching across examples. Recent work has achieved significant improvements in computational efficiency through factorization tricks [21] and conditional computation [32], while also improving model performance in case of the latter. The fundamental constraint of sequential computation, however, remains. Attention mechanisms have become an integral part of compelling sequence modeling and transduc- tion models in various tasks, allowing modeling of dependencies without regard to their distance in the input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms are used in conjunction with a recurrent network. In this work we propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output.",
+        "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Introduction"
+          ],
+          "blockIds": [
+            "p2-b2"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 2,
+        "id": "eea0044e-f934-48be-bc7d-f2a904833a8a",
+        "quoteText": "The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU [16], ByteNet [18] and ConvS2S [9], all of which use convolutional neural networks as basic building block, computing hidden representations in parallel for all input and output positions. In these models, the number of operations required to relate signals from two arbitrary input or output positions grows in the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes it more difficult to learn dependencies between distant positions [12]. In the Transformer this is reduced to a constant number of operations, albeit at the cost of reduced effective resolution due to averaging attention-weighted positions, an effect we counteract with Multi-Head Attention as described in section 3.2. Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, however, the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence- aligned RNNs or convolution. In the following sections, we will describe the Transformer, motivate",
+        "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Background"
+          ],
+          "blockIds": [
+            "p2-b5"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 3,
+        "id": "83af2169-1f04-48a5-8ffd-345f8534e430",
+        "quoteText": "sequence ( y 1 , ..., y m ) of symbols one element at a time. At each step the model is auto-regressive [10], consuming the previously generated symbols as additional input when generating the next.",
+        "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            2
+          ],
+          "sectionPath": [
+            "Model Architecture"
+          ],
+          "blockIds": [
+            "p2-b10"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 4,
+        "id": "82b46e3a-1b47-4655-af6d-2ae09ec5ada2",
+        "quoteText": "sub-layers. The first is a multi-head self-attention mechanism, and the second is a simple, position- wise fully connected feed-forward network. We employ a residual connection [11] around each of the two sub-layers, followed by layer normalization [1]. That is, the output of each sub-layer is LayerNorm( x + Sublayer( x )) , where Sublayer( x ) is the function implemented by the sub-layer itself. To facilitate these residual connections, all sub-layers in the model, as well as the embedding",
+        "quoteHash": "b214149c6daea3d431b3503a1ffd7900dd2864526bb097a7763f18da2d79b1d1",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Encoder and Decoder Stacks",
+            "Encoder"
+          ],
+          "blockIds": [
+            "p3-b5"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 5,
+        "id": "abc33475-3990-45ba-b5a8-0b5d828ee970",
+        "quoteText": "sub-layers in each encoder layer, the decoder inserts a third sub-layer, which performs multi-head attention over the output of the encoder stack. Similar to the encoder, we employ residual connections around each of the sub-layers, followed by layer normalization. We also modify the self-attention sub-layer in the decoder stack to prevent positions from attending to subsequent positions. This masking, combined with fact that the output embeddings are offset by one position, ensures that the predictions for position i can depend only on the known outputs at positions less than i .",
+        "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Encoder and Decoder Stacks",
+            "Decoder"
+          ],
+          "blockIds": [
+            "p3-b8"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 6,
+        "id": "ef71b8e3-dd08-4728-a21b-372b16111945",
+        "quoteText": "An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. The output is computed as a weighted sum",
+        "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            3
+          ],
+          "sectionPath": [
+            "Attention"
+          ],
+          "blockIds": [
+            "p3-b10"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 7,
+        "id": "8b66c94f-387a-4bdf-a41a-472df2fdf72d",
+        "quoteText": "values. In practice, we compute the attention function on a set of queries simultaneously, packed together into a matrix Q . The keys and values are also packed together into matrices K and V . We compute the matrix of outputs as:",
+        "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            4
+          ],
+          "sectionPath": [
+            "Scaled Dot-Product Attention"
+          ],
+          "blockIds": [
+            "p4-b9"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 8,
+        "id": "fb5a5a8b-976e-4cbd-b0f7-be0da2bfcf8c",
+        "quoteText": "The two most commonly used attention functions are additive attention [2], and dot-product (multi- plicative) attention. Dot-product attention is identical to our algorithm, except for the scaling factor of",
+        "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            4
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p4-b16"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 9,
+        "id": "cd22703b-67e2-42ac-91c4-99ed67e049c0",
+        "quoteText": "• In \"encoder-decoder attention\" layers, the queries come from the previous decoder layer, and the memory keys and values come from the output of the encoder. This allows every position in the decoder to attend over all positions in the input sequence. This mimics the typical encoder-decoder attention mechanisms in sequence-to-sequence models such as [38, 2, 9]. • The encoder contains self-attention layers. In a self-attention layer all of the keys, values and queries come from the same place, in this case, the output of the previous layer in the encoder. Each position in the encoder can attend to all positions in the previous layer of the encoder. • Similarly, self-attention layers in the decoder allow each position in the decoder to attend to all positions in the decoder up to and including that position. We need to prevent leftward information flow in the decoder to preserve the auto-regressive property. We implement this",
+        "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Applications of Attention in our Model"
+          ],
+          "blockIds": [
+            "p5-b33"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 10,
+        "id": "2eb96198-ea5e-4f51-8654-0581c3e18a9e",
+        "quoteText": "In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully connected feed-forward network, which is applied to each position separately and identically. This consists of two linear transformations with a ReLU activation in between.",
+        "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Position-wise Feed-Forward Networks"
+          ],
+          "blockIds": [
+            "p5-b37"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 11,
+        "id": "b2fd4f5a-e3fe-4abb-9a30-6b2bf2244676",
+        "quoteText": "While the linear transformations are the same across different positions, they use different parameters from layer to layer. Another way of describing this is as two convolutions with kernel size 1.",
+        "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p5-b39"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 12,
+        "id": "cc4412f2-4cf9-4225-9971-a65fe69b7656",
+        "quoteText": "Similarly to other sequence transduction models, we use learned embeddings to convert the input tokens and output tokens to vectors of dimension d model . We also use the usual learned linear transfor- mation and softmax function to convert the decoder output to predicted next-token probabilities. In our model, we share the same weight matrix between the two embedding layers and the pre-softmax linear transformation, similar to [30]. In the embedding layers, we multiply those weights by",
+        "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            5
+          ],
+          "sectionPath": [
+            "Embeddings and Softmax"
+          ],
+          "blockIds": [
+            "p5-b43"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 13,
+        "id": "b0503eb9-db16-4fa5-b9bf-df921385fbf1",
+        "quoteText": "Since our model contains no recurrence and no convolution, in order for the model to make use of the order of the sequence, we must inject some information about the relative or absolute position of the tokens in the sequence. To this end, we add \"positional encodings\" to the input embeddings at the bottoms of the encoder and decoder stacks. The positional encodings have the same dimension d model as the embeddings, so that the two can be summed. There are many choices of positional encodings, learned and fixed [9]. In this work, we use sine and cosine functions of different frequencies:",
+        "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            6
+          ],
+          "sectionPath": [
+            "Positional Encoding"
+          ],
+          "blockIds": [
+            "p6-b16"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 14,
+        "id": "9e05d840-6ce8-4d0e-8143-cdb33232adfb",
+        "quoteText": "Residual Dropout We apply dropout [33] to the output of each sub-layer, before it is added to the sub-layer input and normalized. In addition, we apply dropout to the sums of the embeddings and the positional encodings in both the encoder and decoder stacks. For the base model, we use a rate of",
+        "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            8
+          ],
+          "sectionPath": [],
+          "blockIds": [
+            "p8-b35"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      },
+      {
+        "index": 15,
+        "id": "7750a4cd-e1fd-46a8-a4fc-1c2c23457f76",
+        "quoteText": "In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commonly used in encoder-decoder architectures with multi-headed self-attention. For translation tasks, the Transformer can be trained significantly faster than architectures based on recurrent or convolutional layers. On both WMT 2014 English-to-German and WMT 2014 English-to-French translation tasks, we achieve a new state of the art. In the former task our best model outperforms even all previously reported ensembles. We are excited about the future of attention-based models and plan to apply them to other tasks. We plan to extend the Transformer to problems involving input and output modalities other than text and to investigate local, restricted attention mechanisms to efficiently handle large inputs and outputs such as images, audio and video. Making generation less sequential is another research goals of ours. The code we used to train and evaluate our models is available at https://github.com/ tensorflow/tensor2tensor .",
+        "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+        "evidenceKind": "direct-quote",
+        "locator": {
+          "kind": "paper.layout",
+          "pages": [
+            10
+          ],
+          "sectionPath": [
+            "Conclusion"
+          ],
+          "blockIds": [
+            "p10-b19"
+          ],
+          "objectLabel": null
+        },
+        "allowedUses": [
+          "analysis"
+        ]
+      }
+    ],
+    "readingScope": {
+      "schemaVersion": "paper-text-only-draft-scope-v1",
+      "mode": "text-only-draft",
+      "originalGrade": "limited-text",
+      "reasonCodes": [
+        "MULTI_COLUMN_LAYOUT",
+        "TABLE_STRUCTURE_UNSUPPORTED",
+        "FORMULA_STRUCTURE_UNSUPPORTED",
+        "IMAGE_CONTENT_UNREAD"
+      ],
+      "parseAssessmentSha256": "9855bb08ed388f87ef7d8caecbea139052320fd7eafd2b6e8d1b7473bc6b1269",
+      "layoutSha256": "1bf7df4a344d71690957ae14bd92864fb7c28ae28e9734a13016f2b102a7e6e5",
+      "selectedEvidence": [
+        {
+          "id": "8e5ea329-889c-4859-9b5c-eb74d07b1f74",
+          "quoteHash": "f8dc768732adb896d183edac46d013ef385f7a8a85db3c80201c7b2a8da18d49",
+          "locatorSha256": "ff7406d0f474e6bf512656a1306f8b5c59994def359f695f7b006c324d9f571a"
+        },
+        {
+          "id": "eea0044e-f934-48be-bc7d-f2a904833a8a",
+          "quoteHash": "cdb93e418235ee7b001e1b21869ff8db0b8fc374955b8713f881bda6c2d22435",
+          "locatorSha256": "5ad7fe522166f10b87fbaa2b369b4f1f1ec5e3963b4d349286ae94ac955680be"
+        },
+        {
+          "id": "83af2169-1f04-48a5-8ffd-345f8534e430",
+          "quoteHash": "4a271f7b8c9528ea7d60d995a47256443c28ef7b1e10aa31296050dbcd1442c6",
+          "locatorSha256": "23bc8abf16455f868119396a54db9bf8f4cfd7d5d9bde8086f2cb7c3e397cee2"
+        },
+        {
+          "id": "82b46e3a-1b47-4655-af6d-2ae09ec5ada2",
+          "quoteHash": "b214149c6daea3d431b3503a1ffd7900dd2864526bb097a7763f18da2d79b1d1",
+          "locatorSha256": "bd8369d96da95c99d9e16e4dc737753ee75526e0a29e28a0cac7a907a448d536"
+        },
+        {
+          "id": "abc33475-3990-45ba-b5a8-0b5d828ee970",
+          "quoteHash": "822c812b471fbdf571904eed16ba6b58a98fd36c431f6a634142a21f84414ea0",
+          "locatorSha256": "9ca021337c63675af88cf5690e7605a8f3b1beffc42f3e0b15577fb9a61cb4bf"
+        },
+        {
+          "id": "ef71b8e3-dd08-4728-a21b-372b16111945",
+          "quoteHash": "62a25ebef1cbb90514314ba158d4fe9b86232bb9ac6bc3a15372c958b69981ef",
+          "locatorSha256": "146d345b482e57b1eaeeb187d12d2992f46e291caea95c25effd9d38dbef0cfb"
+        },
+        {
+          "id": "8b66c94f-387a-4bdf-a41a-472df2fdf72d",
+          "quoteHash": "3df5f5ce56ceae3a8343fb00b7d84e60439584b1b5177475a3c8376abb7c2fcb",
+          "locatorSha256": "0dc0d3a6e9e31a38df9b465de15e7f341d5e371cd9139b83cc2e4e61c57d513a"
+        },
+        {
+          "id": "fb5a5a8b-976e-4cbd-b0f7-be0da2bfcf8c",
+          "quoteHash": "d132aa73675d6499a3710002eecd91faffbb4ba3763b361bb07d77d2cc5b0263"
+        },
+        {
+          "id": "cd22703b-67e2-42ac-91c4-99ed67e049c0",
+          "quoteHash": "a67db8207bcca75920122500d9982b34d08a743faffd000d389842d254593ca3",
+          "locatorSha256": "da4ba8eaf9cf79a2e0bc676877a7f625c15a7f01d8948db903ac6e5f0c844e56"
+        },
+        {
+          "id": "2eb96198-ea5e-4f51-8654-0581c3e18a9e",
+          "quoteHash": "85d3a5be4f1e9dc1ee3ec50fdd0be2c883c31a787eb497f4c36d0ac1e981c3c7",
+          "locatorSha256": "560bb3e7d30d8628c09684c1125461dd2b725886217c53c7e038ab9141c4a6b9"
+        },
+        {
+          "id": "b2fd4f5a-e3fe-4abb-9a30-6b2bf2244676",
+          "quoteHash": "fd42ae1078dd719f2e61f33d9a7b1867c8042fb7a1cd94b42f9bbc3b73c55ad2"
+        },
+        {
+          "id": "cc4412f2-4cf9-4225-9971-a65fe69b7656",
+          "quoteHash": "23939b75c67914d9c892268cb2979fb901b443f00fabfe87d2551ab6f895e0f1",
+          "locatorSha256": "feed20189c03c2b5707a759845db5117c3c621455578636e93dfe4a7fce9d83a"
+        },
+        {
+          "id": "b0503eb9-db16-4fa5-b9bf-df921385fbf1",
+          "quoteHash": "fa7a386305ca411a73cf6b2bcb45d4ede5b92fb6efc62966f16ba7285bd20b9e",
+          "locatorSha256": "dfc4d36a957c4a7dc5bc99b844aeea71ef1baff13331056a829f6afb23008fc8"
+        },
+        {
+          "id": "9e05d840-6ce8-4d0e-8143-cdb33232adfb",
+          "quoteHash": "c1739d64a9cdf74fdba6109489b4e9a480fefdb01c28dbf9da2771bb9dc51832"
+        },
+        {
+          "id": "7750a4cd-e1fd-46a8-a4fc-1c2c23457f76",
+          "quoteHash": "adfdd965a554039b9b2cc97989bf857adc84f820c1a0423b3b5c3acb9b718205",
+          "locatorSha256": "118a179fa3e48b3fa4e59219062114ec38fa0307492f494ca677d3d6a0c4d768"
+        }
+      ],
+      "manualReviewRequired": true,
+      "publicPublicationEnabled": false
+    },
+    "accessedAt": "2026-10-31T05:32:54.107Z"
+  },
+  "recordedReceipts": [
+    {
+      "stage": "extract-semantics",
+      "requestSha256": "bc6434c28e7ffc19179e357faac83b7af0c690f0aefd0ba21dbc46d32b726f06",
+      "providerRequestId": "deepseek-unreported:bb3a5cb002a7aa33b08aae07b7e0a0ca",
+      "responseRef": {
+        "protocol": "deepseek-chat-completion-v1",
+        "providerRequestId": "deepseek-unreported:bb3a5cb002a7aa33b08aae07b7e0a0ca",
+        "httpStatus": 200,
+        "finishReason": "stop"
+      },
+      "usage": {
+        "providerCalls": 1,
+        "inputTokens": 4657,
+        "outputTokens": 1740,
+        "costMicrousd": 0
+      },
+      "responseSha256": "0525b0742d496268068d474832f72679fd85e98b9c0bee232de96aaaff169a19"
+    },
+    {
+      "stage": "compose",
+      "requestSha256": "df2b0cd6bda3ed653b70f6e14e593a6166c05d7c309c26b0a4b82e42fea06066",
+      "providerRequestId": "deepseek-unreported:044bd733f53ce89c9689abbf9eb781b1",
+      "responseRef": {
+        "protocol": "deepseek-chat-completion-v1",
+        "providerRequestId": "deepseek-unreported:044bd733f53ce89c9689abbf9eb781b1",
+        "httpStatus": 200,
+        "finishReason": "stop"
+      },
+      "usage": {
+        "providerCalls": 1,
+        "inputTokens": 8970,
+        "outputTokens": 2749,
+        "costMicrousd": 0
+      },
+      "responseSha256": "c434de57ad6cfac63a14f0eb65fc4b95b0cc25678a147f70d1646ef767c0bf83"
+    }
+  ]
+}

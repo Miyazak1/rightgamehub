@@ -1,0 +1,185 @@
+{
+  "captureKind": "unmodified-paper-study-live-editorial-regression",
+  "modelId": "deepseek-flash",
+  "workflowVersion": 8,
+  "sourceSha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+  "findings": [
+    {
+      "key": "sequential-computation-constraint",
+      "kind": "author_claim",
+      "text": "作者指出，循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。"
+    },
+    {
+      "key": "attention-usually-with-recurrence",
+      "kind": "author_claim",
+      "text": "作者指出，除少数情况外，此类注意力机制通常与循环网络结合使用。"
+    },
+    {
+      "key": "attention-distance-modeling",
+      "kind": "author_claim",
+      "text": "作者指出，注意力机制使依赖关系的建模不受其在输入或输出序列中距离的影响。"
+    },
+    {
+      "key": "proposed-transformer-no-recurrence",
+      "kind": "author_claim",
+      "text": "作者提出 Transformer，一种不使用循环、完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。"
+    },
+    {
+      "key": "self-attention-definition",
+      "kind": "author_claim",
+      "text": "作者将自注意力（有时称为内部注意力）定义为关联单一序列不同位置以计算该序列表示的注意力机制。"
+    },
+    {
+      "key": "autoregressive-generation",
+      "kind": "author_claim",
+      "text": "作者说明模型在每一步是自回归的，生成下一个符号时把先前生成的符号作为额外输入。"
+    },
+    {
+      "key": "encoder-layer-two-sublayers",
+      "kind": "author_claim",
+      "text": "作者说明编码器每层有两个子层：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；并在两个子层周围使用残差连接，随后进行层归一化。"
+    },
+    {
+      "key": "decoder-residual-and-masking",
+      "kind": "author_claim",
+      "text": "作者说明与编码器类似，在解码器每个子层周围使用残差连接并随后进行层归一化；同时修改解码器堆叠中的自注意力子层，以阻止位置关注后续位置。"
+    },
+    {
+      "key": "masking-position-dependency",
+      "kind": "author_claim",
+      "text": "作者说明该掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。"
+    },
+    {
+      "key": "attention-function-definition",
+      "kind": "author_claim",
+      "text": "作者将注意力函数描述为把查询和一组键值对映射到输出，其中查询、键、值和输出均为向量。"
+    },
+    {
+      "key": "attention-matrix-computation",
+      "kind": "author_claim",
+      "text": "作者说明实践中同时对一组查询计算注意力函数，将其打包为矩阵 Q，键和值也分别打包为矩阵 K 和 V。"
+    },
+    {
+      "key": "two-common-attention-functions",
+      "kind": "author_claim",
+      "text": "作者指出两种最常用的注意力函数是加性注意力和点积（乘性）注意力。"
+    },
+    {
+      "key": "encoder-decoder-attention-sources",
+      "kind": "author_claim",
+      "text": "作者说明在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出，这使解码器每个位置都能关注输入序列的所有位置。"
+    },
+    {
+      "key": "encoder-self-attention-scope",
+      "kind": "author_claim",
+      "text": "作者说明编码器包含自注意力层，其中所有键、值和查询来自同一处，即编码器前一层的输出；编码器每个位置可关注编码器前一层的所有位置。"
+    },
+    {
+      "key": "decoder-self-attention-scope",
+      "kind": "author_claim",
+      "text": "作者说明解码器中的自注意力层允许解码器每个位置关注解码器中截至并包括该位置的所有位置。"
+    },
+    {
+      "key": "position-wise-feed-forward",
+      "kind": "author_claim",
+      "text": "作者说明除注意力子层外，编码器和解码器的每层都包含一个全连接前馈网络，该网络对每个位置分别且相同地应用，由两次线性变换及中间的 ReLU 激活组成。"
+    },
+    {
+      "key": "feed-forward-parameters-per-layer",
+      "kind": "author_claim",
+      "text": "作者说明线性变换在不同位置间相同，但不同层使用不同参数。"
+    },
+    {
+      "key": "embedding-weight-sharing",
+      "kind": "author_claim",
+      "text": "作者说明使用通常的学习线性变换和 softmax 函数把解码器输出转换为预测下一词元的概率，并在两个嵌入层与 softmax 前线性变换之间共享同一权重矩阵。"
+    },
+    {
+      "key": "positional-encoding-purpose",
+      "kind": "author_claim",
+      "text": "作者说明由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入关于词元相对或绝对位置的信息；为此在编码器和解码器堆叠底部的输入嵌入中加入位置编码。"
+    },
+    {
+      "key": "positional-encoding-choices",
+      "kind": "author_claim",
+      "text": "作者指出位置编码有多种选择，包括学习的和固定的。"
+    },
+    {
+      "key": "residual-dropout-placement",
+      "kind": "author_claim",
+      "text": "作者说明对每个子层的输出应用 dropout，在将其加到子层输入并归一化之前；此外对编码器和解码器堆叠中嵌入与位置编码之和应用 dropout。"
+    },
+    {
+      "key": "conclusion-transformer-claim",
+      "kind": "author_claim",
+      "text": "作者总结提出 Transformer，一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。"
+    },
+    {
+      "key": "future-work-plan",
+      "kind": "author_claim",
+      "text": "作者计划将注意力模型应用于其他任务，把 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制以高效处理图像、音频和视频等大规模输入输出；使生成更少顺序性也是其研究目标之一。"
+    }
+  ],
+  "paragraphResponses": [
+    {
+      "stage": "compose-section-01-paragraph-01",
+      "response": "{\"sectionKey\":\"section-01\",\"paragraphId\":\"paragraph-01\",\"text\":\"循环模型通常沿输入与输出序列的符号位置分解计算，但论文作者指出，顺序计算这一根本约束仍然存在。除少数情况外，此类注意力机制通常与循环网络结合使用。作者提出 Transformer，这是一种不使用循环、完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。\",\"heading\":\"研究问题与核心思路\",\"article\":null}",
+      "sourceResponseSha256": "3b4eb07271c7e687d8fc8923f9a1e7a64c06e46f11d6be8a0d4bbbe9d97ebd2f"
+    },
+    {
+      "stage": "compose-section-02-paragraph-01",
+      "response": "{\"sectionKey\":\"section-02\",\"paragraphId\":\"paragraph-01\",\"text\":\"自注意力，有时也被称为内部注意力，在论文作者的定义中是一种注意力机制：它关联单一序列中的不同位置，并据此计算该序列的表示。\",\"heading\":\"自注意力与生成顺序\",\"article\":null}",
+      "sourceResponseSha256": "91f698f78282be31c4a37b83d985ef573e3c9ff673db2b3d5c340e73a4c7bca5"
+    },
+    {
+      "stage": "compose-section-02-paragraph-02",
+      "response": "{\"sectionKey\":\"section-02\",\"paragraphId\":\"paragraph-02\",\"text\":\"模型架构方面，论文作者说明该模型不使用循环。逐步生成过程方面，模型在每一步是自回归的，生成下一个符号时把先前生成的符号作为额外输入。\",\"heading\":null,\"article\":null}",
+      "sourceResponseSha256": "5ad7d7e586b0406ad41d382d800aa037efbf95fde0c62694f7606be6a1667250"
+    },
+    {
+      "stage": "compose-section-03-paragraph-01",
+      "response": "{\"sectionKey\":\"section-03\",\"paragraphId\":\"paragraph-01\",\"text\":\"编码器的每一层包含两个子层：第一个是多头自注意力机制，第二个是简单的逐位置全连接前馈网络；论文作者在两个子层周围使用残差连接，随后进行层归一化。解码器与编码器类似，每个子层周围同样使用残差连接并随后进行层归一化；论文作者还修改了解码器堆叠中的自注意力子层，以阻止位置关注后续位置。这一掩蔽与输出嵌入偏移一个位置相结合，确保位置 i 的预测只能依赖位置小于 i 的已知输出。\",\"heading\":\"编码器与解码器的层内结构\",\"article\":null}",
+      "sourceResponseSha256": "6c1f9d904ed8bd1e7941d43de3631f8f4e867b8717f55f22af4f53f043f08e42"
+    },
+    {
+      "stage": "compose-section-04-paragraph-01",
+      "response": "{\"sectionKey\":\"section-04\",\"paragraphId\":\"paragraph-01\",\"text\":\"注意力函数在论文作者的描述中，是把查询和一组键值对映射到输出的函数，查询、键、值和输出都是向量。实践中，注意力函数会同时对一组查询计算，这些查询被打包成矩阵 Q，键和值也分别打包成矩阵 K 和 V。论文作者指出，最常用的注意力函数有两种：加性注意力和点积（乘性）注意力。\",\"heading\":\"注意力函数与连接方式\",\"article\":null}",
+      "sourceResponseSha256": "19e68ee4a083cde24a8986b5e761a15e55044e231d1095b35d55a49c13781d83"
+    },
+    {
+      "stage": "compose-section-04-paragraph-02",
+      "response": "{\"sectionKey\":\"section-04\",\"paragraphId\":\"paragraph-02\",\"text\":\"在编码器-解码器注意力层中，查询来自前一个解码器层，记忆的键和值来自编码器的输出，论文作者指出，这使解码器每个位置都能关注输入序列的所有位置。编码器包含自注意力层，其中所有键、值和查询来自同一处，即编码器前一层的输出；编码器每个位置可关注编码器前一层的所有位置。解码器中的自注意力层则允许解码器每个位置关注解码器中截至并包括该位置的所有位置。\",\"heading\":null,\"article\":null}",
+      "sourceResponseSha256": "01a01187d83f3b21b10a70bf877fdabf6ca6eff0dce7f6535336202058d4021e"
+    },
+    {
+      "stage": "compose-section-05-paragraph-01",
+      "response": "{\"sectionKey\":\"section-05\",\"paragraphId\":\"paragraph-01\",\"text\":\"编码器和解码器的每一层在注意力子层之外，还包含一个全连接前馈网络。论文作者说明，该前馈网络对每个位置分别且相同地应用，由两次线性变换以及中间的 ReLU 激活组成。线性变换在不同位置之间相同，但不同层使用不同参数。\",\"heading\":\"前馈网络与参数安排\",\"article\":null}",
+      "sourceResponseSha256": "9a871a8d45c3c229f1551dc4f155b40603c6f85b88d03da0a2aae957d256a6ff"
+    },
+    {
+      "stage": "compose-section-05-paragraph-02",
+      "response": "{\"sectionKey\":\"section-05\",\"paragraphId\":\"paragraph-02\",\"text\":\"解码器输出要转换为预测下一词元的概率，论文作者采用通常的学习线性变换与 softmax 函数来完成这一转换；同时，两个嵌入层与 softmax 前的线性变换共享同一权重矩阵。\",\"heading\":null,\"article\":null}",
+      "sourceResponseSha256": "b78290d0606ecc0cce8211f4a3491d8fa712410425d2f4bcca46931f37b1803d"
+    },
+    {
+      "stage": "compose-section-06-paragraph-01",
+      "response": "{\"sectionKey\":\"section-06\",\"paragraphId\":\"paragraph-01\",\"text\":\"位置编码在论文作者的设计中承担向模型注入词元相对或绝对位置信息的作用。由于模型不含循环也不含卷积，为使模型利用序列顺序，必须注入这类位置信息；作者在编码器和解码器堆叠底部的输入嵌入中加入位置编码。位置编码有多种选择，包括学习的和固定的。\",\"heading\":\"位置编码与子层输出处理\",\"article\":null}",
+      "sourceResponseSha256": "2a25aad5829d22564bd4fd35b4c905a238412292066c1a7c8cd6560ed761f286"
+    },
+    {
+      "stage": "compose-section-06-paragraph-02",
+      "response": "{\"sectionKey\":\"section-06\",\"paragraphId\":\"paragraph-02\",\"text\":\"dropout 在论文作者描述的 Transformer 结构中用于两类位置：每个子层的输出在加到该子层输入并进行归一化之前，会先经过 dropout；编码器和解码器堆叠中，嵌入与位置编码之和也会经过 dropout。\",\"heading\":null,\"article\":null}",
+      "sourceResponseSha256": "a08d0d2c69c51626e2c6feac2decd45e1fb41da4aead0414f89ee8238d08a4fe"
+    },
+    {
+      "stage": "compose-section-07-paragraph-01",
+      "response": "{\"sectionKey\":\"section-07\",\"paragraphId\":\"paragraph-01\",\"text\":\"论文作者提出 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者计划将注意力模型应用于其他任务，把 Transformer 扩展到涉及文本以外输入输出模态的问题，并研究局部、受限的注意力机制，以高效处理图像、音频和视频等大规模输入输出；使生成更少顺序性也是其研究目标之一。\",\"heading\":\"结论与后续研究\",\"article\":null}",
+      "sourceResponseSha256": "53092937aab509166624a3fe9c1c15af68768b11dd7d1538920aadc3b85377fc"
+    },
+    {
+      "stage": "compose-section-08-paragraph-01",
+      "response": "{\"sectionKey\":\"section-08\",\"paragraphId\":\"paragraph-01\",\"text\":\"注意力机制使依赖关系的建模不受其在输入或输出序列中距离的影响，这是论文作者所强调的一点。\",\"heading\":\"其他可核对的主张\",\"article\":null}",
+      "sourceResponseSha256": "f4047d41b3d80edc4c395ffb82fdd76196103308e3d7ed1772c5a37e818a1700"
+    }
+  ]
+}

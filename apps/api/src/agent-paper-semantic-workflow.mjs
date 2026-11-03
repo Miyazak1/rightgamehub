@@ -4,7 +4,7 @@ import { PAPER_SEMANTIC_WORKFLOW_KEY } from './agent-paper-semantic-contracts.mj
 export const PAPER_SINGLE_SEMANTIC_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: PAPER_SEMANTIC_WORKFLOW_KEY,
-  workflowVersion: 2,
+  workflowVersion: 3,
   inputSchema: 'paper-semantic-run-input-v1',
   outputSchema: 'paper-semantic-analysis-output-v1',
   requiredCapabilities: [

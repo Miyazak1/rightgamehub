@@ -47,11 +47,11 @@ test('private canary bootstrap registers private blog and paper workflows with a
   }).run();
   assert.deepEqual(registered.map(item => [item.manifest.workflowKey, item.manifest.workflowVersion]), [
     ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 2],
-    ['paper.single.semantic-shadow', 2], ['paper.private.research', 3],
+    ['paper.single.semantic-shadow', 3], ['paper.private.research', 4],
   ]);
   assert.deepEqual(activated, [
     ['blog.project.discovery-shadow', 3], ['blog.project.single.draft-shadow', 2],
-    ['paper.single.semantic-shadow', 2], ['paper.private.research', 3],
+    ['paper.single.semantic-shadow', 3], ['paper.private.research', 4],
   ]);
   assert.deepEqual(tools.map(item => [item.toolKey, item.contractVersion]), [
     ['research.github.repository.search', 1], ['research.github.repository.read', 1],

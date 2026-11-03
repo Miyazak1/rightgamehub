@@ -1,0 +1,23 @@
+{
+  "captureKind": "unmodified-paper-study-live-outlook-reporting-failure",
+  "workflowVersion": 9,
+  "promptVersion": 14,
+  "sourceSha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+  "response": "{\"sectionKey\":\"section-08\",\"paragraphId\":\"paragraph-01\",\"text\":\"论文作者提出 Transformer，这是一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。作者计划将注意力模型应用于其他任务，把 Transformer 扩展到文本以外的输入输出模态，并研究局部受限的注意力机制，以高效处理图像、音频和视频等大输入输出，同时使生成过程更少顺序性。\",\"heading\":\"结论与后续研究\",\"article\":null}",
+  "responseSha256": "5f70afd9e6711b094cd7ff151c8ac1d632f2f07246f604a40951b1a90a6921d2",
+  "claims": [
+    {
+      "text": "提出 Transformer，一种完全基于注意力的序列转换模型，用多头自注意力替代编码器-解码器架构中最常用的循环层。",
+      "narrativeRole": "proposal",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "计划将注意力模型应用于其他任务，把 Transformer 扩展到文本以外的输入输出模态，研究局部受限的注意力机制以高效处理图像、音频和视频等大输入输出，并使生成过程更少顺序性。",
+      "narrativeRole": "supported-fact",
+      "attribution": "论文作者",
+      "usage": "explain"
+    }
+  ],
+  "requiredHeading": "结论与后续研究"
+}

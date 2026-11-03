@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const scope = JSON.parse(await fs.readFile(path.join(root, 'scripts/desktop-auth-scope.json'), 'utf8'));
+const scopeArgument = process.argv.length === 4 && process.argv[2] === '--scope' ? path.resolve(process.argv[3]) : null;
+if (process.argv.length !== 2 && !scopeArgument) throw Error('CLEAN_CHECK_ARGUMENTS');
+if (scopeArgument && !scopeArgument.startsWith(root + path.sep) && !scopeArgument.startsWith(root)) throw Error('CLEAN_SCOPE_OUTSIDE_WORKSPACE');
+const scope = JSON.parse(await fs.readFile(scopeArgument ?? path.join(root, 'scripts/desktop-auth-scope.json'), 'utf8'));
 const parent = path.join(root, '.runtime/desktop-auth-clean');
 await fs.mkdir(parent, { recursive: true });
 const directory = await fs.mkdtemp(path.join(parent, 'check-'));
@@ -13,7 +16,9 @@ await fs.mkdir(clean);
 const report = { passed: false, directory, files: scope.files.length, productionConnected: false };
 async function run(command, args, cwd, logName) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const env = { ...process.env };
+    if (scope.offlinePaperTests === true) for (const key of ['QA_LEDGER_TEST_ISOLATED', 'QA_LEDGER_TEST_URL', 'DATABASE_URL', 'DEEPSEEK_API_KEY', 'DEEPSEEK_MODEL']) delete env[key];
+    const child = spawn(command, args, { cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
     const timer = setTimeout(() => { child.kill(); reject(Error('CLEAN_CHECK_TIMEOUT: ' + logName)); }, 180000);
     child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { output += chunk; });
@@ -37,6 +42,11 @@ try {
     const target = path.resolve(clean, file);
     if (!inside(clean, target) || file.startsWith('.runtime/') || unique.has(file) || scope.deferred.includes(file)) throw Error('CLEAN_SCOPE_INVALID');
     unique.add(file); await fs.mkdir(path.dirname(target), { recursive: true }); await fs.copyFile(path.join(root, file), target);
+  }
+  for (const exclusion of scope.excludeLines ?? []) {
+    if (!unique.has(exclusion.file) || !Array.isArray(exclusion.lines)) throw Error('CLEAN_EXCLUSION_INVALID');
+    const file = path.join(clean, exclusion.file), text = await fs.readFile(file, 'utf8');
+    await fs.writeFile(file, text.split(/\r?\n/).filter(line => !exclusion.lines.includes(line.trim())).join('\n'));
   }
   // Vendor code may be reused. Internal workspace packages must resolve to the
   // exported tree, never to unrelated uncommitted sources through a junction.
@@ -63,11 +73,13 @@ try {
       } else await link(path.join(source, item.name), path.join(target, item.name));
     }
   }
+  if (scope.regenerateInventory === true) await run(process.execPath, ['scripts/audit-desktop-web-reuse.mjs'], clean, 'inventory-generate');
   await run(process.execPath, ['scripts/audit-desktop-web-reuse.mjs', '--check'], clean, 'inventory');
   report.inventoryPassed = true;
   const output = await run(process.execPath, ['--test', ...scope.tests], clean, 'tests');
   report.tests = Number(/^# tests (\d+)/m.exec(output)?.[1]);
   report.failed = Number(/^# fail (\d+)/m.exec(output)?.[1]);
+  report.skipped = Number(/^# skipped (\d+)/m.exec(output)?.[1]);
   await run(process.execPath, ['scripts/build-desktop-shell.mjs'], clean, 'build');
   report.buildPassed = true; report.passed = report.failed === 0;
 } catch (error) { report.error = error.message; process.exitCode = 1; }

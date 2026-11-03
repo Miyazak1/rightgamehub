@@ -1,0 +1,29 @@
+{
+  "captureKind": "unmodified-paper-study-live-reporting-failure",
+  "workflowVersion": 9,
+  "promptVersion": 13,
+  "sourceSha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+  "response": "{\"sectionKey\":\"section-01\",\"paragraphId\":\"paragraph-01\",\"text\":\"循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。论文作者指出，注意力机制已成为序列建模与转导模型的重要组成部分，可在不考虑输入或输出序列中距离的情况下建模依赖；但除少数情况外，这类注意力机制通常与循环网络结合使用。作者提出 Transformer，一种摒弃循环、完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。\",\"heading\":\"研究问题与核心思路\",\"article\":null}",
+  "responseSha256": "b535734e15c4bf58c1ceba83e95424559632b1feb43643563fc096239f85becf",
+  "claims": [
+    {
+      "text": "循环模型通常沿输入与输出序列的符号位置分解计算，但顺序计算这一根本约束仍然存在。",
+      "narrativeRole": "research-problem",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "注意力机制已成为序列建模与转导模型的重要组成部分，可在不考虑输入或输出序列中距离的情况下建模依赖；但除少数情况外，这类注意力机制通常与循环网络结合使用。",
+      "narrativeRole": "supported-fact",
+      "attribution": "论文作者",
+      "usage": "explain"
+    },
+    {
+      "text": "提出 Transformer，一种摒弃循环、完全依赖注意力机制在输入与输出之间建立全局依赖的模型架构。",
+      "narrativeRole": "proposal",
+      "attribution": "论文作者",
+      "usage": "explain"
+    }
+  ],
+  "requiredHeading": "研究问题与核心思路"
+}

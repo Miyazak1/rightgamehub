@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "paper-expanded-reviewed-composition-v1",
+  "captureKind": "local-editorial-revision-for-regression",
+  "originalResponseFixture": "paper-expanded-live-bound-short-v1.json",
+  "notANewProviderResponse": true,
+  "composition": {
+    "title": "只靠注意力：一篇论文如何重新组织序列转换模型",
+    "summary": "论文提出完全依赖注意力的序列转换架构。本文围绕自注意力、编码器与解码器的分工、位置访问范围和逐位置变换，逐步解释作者如何组织模型，并区分架构描述与后续研究计划。",
+    "blocks": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "论文想改变怎样的信息组织方式"
+      },
+      {
+        "type": "paragraph",
+        "text": "这篇论文提出的架构选择，是放弃循环结构，完全依赖注意力机制建立输入与输出之间的全局依赖。作者同时指出，除少数情况外，注意力机制通常与循环网络结合使用。把这两条主张放在一起，研究方向就清楚了：论文讨论的并非只是在原有循环网络旁增加一个部件，而是让注意力承担组织模型的主要角色。这首先是关于架构如何安排的主张，后文对各个部件的说明都围绕这一安排展开。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "propose-transformer-eschewing-recurrence",
+          "attention-used-with-recurrence"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "要沿着这个思路阅读，先看作者如何定义自注意力。论文把它描述为关联单一序列不同位置、据此计算该序列表示的注意力机制。这里有两个值得分开的对象：被关联的是同一序列中的位置，所形成的是对该序列的表示。把这一定义记清楚，后面再看不同层从哪里取得信息，就能把一个机制的名称与它在具体结构中的用法联系起来，而不必只记住名称。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "self-attention-definition"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者还明确说明，模型在每一步是自回归的：生成下一个符号时，先前生成的符号会作为额外输入。这个说明谈的是输出如何一步步生成；完全依赖注意力、放弃循环结构的主张，谈的则是模型采用怎样的内部架构。论文把这两种安排放在同一个模型中描述。因而阅读时需要把生成步骤与内部结构分开理解，不能把不用循环结构直接理解成输出没有先后步骤。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "autoregressive-generation",
+          "propose-transformer-eschewing-recurrence"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在这些主张之间，论文给出了一条可以逐步展开的线索：先确立以注意力组织模型的总体选择，再说明序列位置怎样关联，以及生成下一个符号时会使用什么已有内容。作者对自注意力的定义和对自回归生成的说明，分别回答了其中的一部分。接下来的编码器、解码器和注意力函数，便是把这种总体选择落实为具体部件的方式。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "propose-transformer-eschewing-recurrence",
+          "self-attention-definition",
+          "autoregressive-generation"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "编码器与解码器的子层怎样安排"
+      },
+      {
+        "type": "paragraph",
+        "text": "作者描述编码器时，先交代了每层的组成：多头自注意力机制和逐位置全连接前馈网络构成两个子层。论文还说明，每个子层周围都使用残差连接，随后进行层归一化。这段说明包含了组成与放置顺序两个层次。组成告诉读者这一层有哪些部件，放置顺序则说明残差连接和层归一化如何围绕这些部件安排；二者合在一起，才构成作者描述的编码器层。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-sublayers-residual-layernorm"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "解码器的说明把注意力放到了生成过程的访问限制中。作者修改自注意力子层，使位置不能关注后续位置，并把这种掩蔽与输出嵌入偏移结合起来。论文给出的约束是，某个位置的预测只能依赖该位置之前已知的输出。这一点与自回归生成的说明相接：先前生成的符号可以作为输入，预测所依赖的内容也应保持在已经知道的范围内。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "decoder-masking-restricts-subsequent-positions",
+          "autoregressive-generation"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "为了说明各层怎样使用注意力，论文先给出函数层面的共同描述：注意力函数把查询和一组键值对映射到输出，其中查询、键、值和输出都是向量。这个描述把函数的输入与输出对象列了出来，也为讨论信息来源提供了一套名称。作者随后使用查询、键和值这些名称说明具体层的安排。阅读时可以先抓住这种输入与输出的关系，再去看对象分别来自模型的哪个部分。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "attention-function-mapping"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在实际组织计算对象时，作者将一组查询同时打包为矩阵，键和值也分别打包为矩阵。这里描述的是同类对象如何成组安排：一组查询有自己的组织方式，键的集合和值的集合也各自组织起来。论文还指出，加性注意力与点积注意力是两种常用的注意力函数。函数的输入输出对象、对象成组的安排和函数的类别，是这段正文中不同的说明层次，阅读时可以逐层辨认。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "attention-function-mapping",
+          "attention-computed-on-query-set",
+          "two-common-attention-functions"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "三类注意力分别从哪里取得信息"
+      },
+      {
+        "type": "paragraph",
+        "text": "在编码器—解码器注意力层中，作者说明查询来自前一个解码器层，记忆的键和值来自编码器输出。论文据此描述了解码器每个位置可以关注输入序列的所有位置。这种用法把两个部分联系起来：查询来自解码器一侧，键和值来自编码器一侧，能够被关注的是输入序列的位置。与解码器自注意力截至当前位置的可见范围相比，这里的访问对象与范围都有各自明确的界定。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-decoder-attention-sources",
+          "decoder-self-attention-scope"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "编码器自注意力的安排不同。作者说明，键、值和查询都来自同一处，也就是编码器前一层的输出；编码器每个位置可以关注前一层的所有位置。在这一描述中，同一处来源和全部位置的可见范围都很重要。与编码器—解码器注意力把查询、键和值分配到两个部分的用法放在一起看，可以发现作者是通过这些对象的来源，具体说明注意力在不同层中的组织方式。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-self-attention-scope",
+          "encoder-decoder-attention-sources"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "解码器自注意力又有自己的可见范围。论文说明，每个位置可以关注解码器中截至并包括该位置的所有位置。作者对掩蔽的另一条说明，则强调预测只能依赖此前已知的输出，并把这种约束与输出嵌入偏移相联系。前一条描述子层能够关注哪些位置，后一条描述预测可以依赖哪些已知内容。保持各自的对象和范围，能让读者更清楚地理解解码器的安排。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "decoder-self-attention-scope",
+          "decoder-masking-restricts-subsequent-positions"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "把三类用法连起来看，论文并没有只用一个注意力名称代替所有细节。编码器自注意力从编码器前一层取得查询、键和值；编码器—解码器注意力把解码器的查询与编码器输出的键和值联系起来；解码器自注意力则具有截至当前位置的可见范围。作者分别说明来源与范围，使读者能够逐一辨认各层的职责，而不是把不同部件的访问方式混成同一条描述。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "encoder-self-attention-scope",
+          "encoder-decoder-attention-sources",
+          "decoder-self-attention-scope"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "逐位置变换、输出与位置信息"
+      },
+      {
+        "type": "paragraph",
+        "text": "注意力之外，作者还说明编码器和解码器的各层包含全连接前馈网络。它对每个位置分别且相同地应用，由两个线性变换以及中间的 ReLU 激活组成。这里的逐位置安排，可以与注意力关联不同位置的描述分开理解：逐位置变换交代同一类变换如何应用到各个位置，注意力交代序列位置之间如何发生关联。论文通过这些不同的部件说明层的组成，每个部件的描述都有自己的关注对象。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "position-wise-feed-forward",
+          "self-attention-definition"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "作者进一步区分了位置与层两个层次：前馈网络的线性变换在不同位置相同，但不同层使用不同参数。这句话的范围是前馈网络中的变换安排，不能直接扩大成整个模型都采用某种统一的参数共享规则。论文另有关于嵌入层和输出前线性变换共享权重矩阵的说明。把两处安排分开看，便能同时保留作者对不同层使用不同参数、以及特定部件共享权重的具体描述。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "feed-forward-parameters-per-layer",
+          "position-wise-feed-forward",
+          "shared-weight-matrix-embeddings-softmax"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在输出端，作者使用学习到的线性变换和 softmax 函数，把解码器输出转换为预测下一词元的概率。论文还说明，两个嵌入层与 softmax 前的线性变换共享同一权重矩阵。这一段将输出怎样形成概率预测，以及哪些部件共享权重放在一起交代。它与自回归生成的说明相接：模型在每一步面对下一个符号的生成，输出端给出的对象则是对下一词元的概率预测。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "shared-weight-matrix-embeddings-softmax",
+          "autoregressive-generation"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "位置信息回应的是作者明确提出的另一项需要。论文说明，模型不含循环也不含卷积，因此要使模型利用序列顺序，就必须注入词元相对或绝对位置的信息。作者为此在编码器和解码器栈底部的输入嵌入中加入位置编码。这里同时说明了目的与加入位置：让顺序信息进入模型，并在输入嵌入处完成这一安排。它与以注意力组织架构的总体选择相联系，使序列顺序也有明确的输入途径。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "positional-encoding-injection",
+          "propose-transformer-eschewing-recurrence"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "子层周围的处理与后续研究计划"
+      },
+      {
+        "type": "paragraph",
+        "text": "作者还交代了 dropout 的具体放置位置。它应用于每个子层的输出，发生在该输出被加到子层输入并归一化之前；编码器和解码器栈中嵌入与位置编码之和也会应用 dropout。论文在这里分别指出了子层输出与输入嵌入处的安排。把这些位置与前文对子层组成的说明放在一起，读者可以区分部件本身是什么，以及围绕部件还安排了哪些处理步骤。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "residual-dropout-placement",
+          "encoder-sublayers-residual-layernorm"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "在结论中，作者将提出的架构总结为完全基于注意力的序列转换模型，以多头自注意力替代编码器—解码器架构中常用的循环层。这与论文开头的总体主张相呼应。前文逐步说明的子层组成、不同注意力层的来源与范围、输出端的安排和位置信息，最终都回到如何组织一个模型的问题上。作者的总结收束的是这项架构选择，读者也可以沿着这一线索回看各部分之间的联系。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "conclusion-attention-only-model",
+          "propose-transformer-eschewing-recurrence"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "论文最后列出了继续研究的方向。作者计划把模型扩展到涉及文本以外输入输出模态的问题，并研究局部受限的注意力机制，以高效处理图像、音频和视频等大型输入输出；让生成过程更少顺序化，也被列为研究目标。这些内容应当保持为作者提出的计划。尤其是更少顺序化的目标，需要与前文模型逐步自回归生成的说明区分开来，不能把计划直接写成已经完成的结果。",
+        "citationIndexes": [
+          1
+        ],
+        "findingKeys": [
+          "future-work-other-modalities",
+          "future-work-less-sequential-generation",
+          "autoregressive-generation"
+        ]
+      }
+    ],
+    "followUpQuestions": [
+      "不同注意力层的查询、键和值分别来自哪里？",
+      "解码器的位置访问范围怎样与自回归生成相联系？",
+      "前馈网络的参数安排与特定部件共享权重有什么区别？"
+    ]
+  }
+}

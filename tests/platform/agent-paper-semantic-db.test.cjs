@@ -305,4 +305,38 @@ test('trusted public arXiv paper completes one private immutable semantic analys
       assert.equal(preview.publicationState, 'draft');
       assert.match(preview.blocks[0].text, /待审草稿/u);
     });
+    for (const [fixtureName, plannedParagraphs, isolatedParagraphs = false, topicSections = false] of [['paper-sectioned-editorial-v1.json', false],
+      ['paper-sectioned-problem-relations-editorial-v1.json', false],
+      ['paper-sectioned-research-callback-editorial-v1.json', false],
+      ['paper-sectioned-research-callback-editorial-v1.json', true],
+      ['paper-sectioned-research-callback-editorial-v1.json', true, true],
+      ['paper-sectioned-research-callback-editorial-v1.json', true, true, true]]) {
+    await t.test(`native PDF evidence and one private draft: ${fixtureName}, planned=${plannedParagraphs}, isolated=${isolatedParagraphs}, topics=${topicSections}`, async subtest => {
+      const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-sectioned-db-'));
+      subtest.after(() => {
+        const resolved = path.resolve(temporaryRoot);
+        assert.ok(resolved.startsWith(path.resolve(os.tmpdir()) + path.sep));
+        assert.ok(path.basename(resolved).startsWith('paper-sectioned-db-'));
+        fs.rmSync(resolved, { recursive: true, force: true });
+      });
+      const fresh = await createAgentAccountService({ repository: new PostgresAgentAccountRepository(admin),
+        authorizeOperator: async () => true }).provision({ userId: operatorId }, {
+        provisionKey: `paper-sectioned-${crypto.randomUUID()}`, displayName: 'Sectioned regression',
+        handle: `paper-sectioned-${crypto.randomBytes(5).toString('hex')}`, badgeLabel: 'AI 助手',
+        operatorLabel: 'Isolated sectioned test', capabilities: ['blog:auto-publish'], metadata: {},
+      });
+      const secret = vault.encrypt(fresh.agentUserId, 'deepseek', 'offline-sectioned-fixture-secret');
+      await admin.query(`INSERT INTO agent_provider_secrets(agent_user_id,provider,ciphertext,nonce,auth_tag,
+        key_fingerprint,key_last_four,updated_by_user_id) VALUES($1,'deepseek',$2,$3,$4,$5,$6,$7)`,
+      [fresh.agentUserId, secret.ciphertext, secret.nonce, secret.authTag, secret.fingerprint, secret.lastFour, operatorId]);
+      const sectionedFixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', fixtureName)));
+      const previewDirectory = path.join(temporaryRoot, 'new-preview');
+      await require('./support/paper-text-draft-db.cjs')({ admin, account: fresh, operatorId, runtime,
+        policyService, governance, vault, canary, sectionedFixture, plannedParagraphs, isolatedParagraphs, topicSections, previewDirectory });
+      const preview = JSON.parse(fs.readFileSync(path.join(previewDirectory, 'text-only-draft-preview.json')));
+      assert.equal(preview.sectionedOfflineRegression, true);
+      assert.equal(preview.liveProviderCalls, 0);
+      assert.equal(preview.publicationState, 'draft');
+    });
+    }
   });

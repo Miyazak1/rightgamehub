@@ -4,7 +4,7 @@ export const AGENT_CAPABILITY_SCHEMA_VERSION = 1;
 const IDENTIFIER = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/u;
 const SEMVER = /^\d+\.\d+\.\d+$/u;
 const EFFECTS = new Set(['read', 'ui-open', 'local-ui-write']);
-const DATA_RETENTION = new Set(['none', 'device-local']);
+const DATA_RETENTION = new Set(['none', 'device-local', 'account-private']);
 const LAYOUTS = new Set(['sidebar', 'canvas']);
 const LOCALES = ['zh-CN', 'en'];
 

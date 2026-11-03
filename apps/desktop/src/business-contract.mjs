@@ -1,8 +1,11 @@
 // Fixed operations, not a renderer-controlled HTTP tunnel. Product API methods
 // still own endpoint construction, authentication and refresh behavior.
 import { GAME_METHODS, gameArgument } from './game-api-contract.mjs';
+import { PAPER_STUDY_METHODS, PAPER_STUDY_IMPORT_LIMIT, paperStudyImport } from '../../../packages/platform-client/src/paper-study-contract.mjs';
+export const businessRequestLimit = request => request?.method === 'importPaperStudy' ? PAPER_STUDY_IMPORT_LIMIT + 2048 : 32768;
 export const BUSINESS_METHODS = Object.freeze({
   ...GAME_METHODS,
+  ...PAPER_STUDY_METHODS,
   listWorks: ['query'], listDiscoveryCampaigns: ['limit'], getDiscoveryCampaign: ['id'],
   getWork: ['id'], listWorkLeaderboards: ['id'], getWorkLeaderboard: ['id', 'query'],
   readCompetitionLeaderboard: ['id', 'id', 'query'],
@@ -22,6 +25,7 @@ export function businessArguments(method, args = []) {
   if (args.length > spec.length) denied();
   return spec.map((kind, index) => {
     const value = args[index];
+    if (kind === 'paper-import') return paperStudyImport(value);
     if (Object.hasOwn(GAME_METHODS, method)) return gameArgument(kind, value);
     if (kind === 'optional-id' && value === undefined) return undefined;
     if (kind === 'id' || kind === 'optional-id') {

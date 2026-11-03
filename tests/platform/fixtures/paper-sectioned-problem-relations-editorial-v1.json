@@ -1,0 +1,98 @@
+{
+  "captureKind": "local-editorial-problem-and-relation-revision-not-new-provider",
+  "sourceFixture": "paper-sectioned-live-component-rejection-v1.json",
+  "addedFinding": {
+    "key": "recurrent-sequential-computation-problem",
+    "kind": "author_claim",
+    "text": "作者指出，循环模型通常沿输入和输出序列的符号位置分解计算，顺序计算的约束仍然存在。",
+    "sourceEvidenceIndex": 1,
+    "literalSourceSentences": [
+      "Recurrent models typically factor computation along the symbol positions of the input and output sequences.",
+      "The fundamental constraint of sequential computation, however, remains."
+    ]
+  },
+  "article": {
+    "title": "从循环模型的问题到注意力架构",
+    "summary": "作者从循环模型的顺序计算约束出发，提出放弃循环结构、完全依赖注意力的架构。自注意力关联同一序列中的不同位置，为理解模型内部的信息组织提供了一个基本概念。",
+    "findingKeys": ["recurrent-sequential-computation-problem", "author-claim-transformer-eschews-recurrence", "author-claim-self-attention-definition"]
+  },
+  "sections": [
+    {
+      "heading": "论文从什么问题出发",
+      "paragraphs": [
+        {
+          "text": "循环模型通常沿输入和输出序列的符号位置分解计算。作者指出，顺序计算的约束仍然存在，并在这一背景下提出 Transformer：放弃循环结构，完全依赖注意力机制建立输入与输出之间的全局依赖。",
+          "findingKeys": ["recurrent-sequential-computation-problem", "author-claim-transformer-eschews-recurrence"]
+        },
+        {
+          "text": "理解这个架构，可以先看自注意力处理什么。论文把自注意力称为关联单个序列中不同位置、计算该序列表示的机制；它讨论的是同一序列内部的位置关系。",
+          "findingKeys": ["author-claim-self-attention-definition"]
+        }
+      ]
+    },
+    {
+      "heading": "内部组成与输出顺序",
+      "paragraphs": [
+        {
+          "text": "编码器内部，论文安排了多头自注意力和逐位置全连接前馈网络两个子层。每个子层周围使用残差连接，随后进行层归一化。",
+          "findingKeys": ["author-claim-encoder-sublayers"]
+        },
+        {
+          "text": "解码器的访问范围还要联系输出顺序来看。作者说明模型逐步生成符号，把先前生成的符号作为下一步的额外输入；解码器自注意力阻止位置关注后续位置，并结合输出嵌入偏移，使预测只依赖该位置之前已知的输出。解码器的子层周围同样使用残差连接并进行层归一化。",
+          "findingKeys": ["author-claim-autoregressive-generation", "author-claim-decoder-masking"]
+        },
+        {
+          "text": "注意力函数的输入与输出则有一个共同定义：论文把查询和一组键值对映射到输出，查询、键、值与输出都是向量。这个定义给出了后续讨论信息来源时使用的对象。",
+          "findingKeys": ["author-claim-attention-function-mapping"]
+        }
+      ]
+    },
+    {
+      "heading": "查询与键值分别来自哪里",
+      "paragraphs": [
+        {
+          "text": "在实际计算的组织上，作者把一组查询打包为矩阵，键和值也分别打包为矩阵。谈到注意力函数的类别，论文列出了常用的加性注意力与点积注意力。",
+          "findingKeys": ["author-claim-attention-matrix-computation", "author-claim-two-attention-functions"]
+        },
+        {
+          "text": "信息从哪里来，需要区分具体的注意力层。作者说明，编码器—解码器注意力的查询来自前一个解码器层，键和值来自编码器输出，每个解码器位置可以关注整个输入序列。编码器自注意力的查询、键和值都来自编码器前一层的输出，每个编码器位置可以关注该前一层的所有位置。两类层的查询来源不同，不能把它们笼统视为同一种来源安排。",
+          "findingKeys": ["author-claim-encoder-decoder-attention-sources", "author-claim-encoder-self-attention-scope"]
+        }
+      ]
+    },
+    {
+      "heading": "访问范围与参数安排",
+      "paragraphs": [
+        {
+          "text": "解码器自注意力有自己的访问边界。作者说明，每个位置可以关注解码器中截至并包括该位置的所有位置。",
+          "findingKeys": ["author-claim-decoder-self-attention-scope"]
+        },
+        {
+          "text": "除了注意力，论文在编码器和解码器每层都安排了逐位置应用的全连接前馈网络，由两次线性变换和中间的 ReLU 激活组成。前馈变换在不同位置之间相同，但不同层使用不同参数，位置与层的参数安排需要区分。",
+          "findingKeys": ["author-claim-position-wise-feed-forward", "author-claim-feed-forward-parameters-per-layer"]
+        },
+        {
+          "text": "另一处参数关系出现在嵌入与输出变换之间。作者使用学习的线性变换和 softmax 把解码器输出转换为下一个词元的预测概率，并让两个嵌入层与 softmax 前的线性变换共享同一权重矩阵。",
+          "findingKeys": ["author-claim-embedding-weight-sharing"]
+        }
+      ]
+    },
+    {
+      "heading": "顺序信息与后续计划",
+      "paragraphs": [
+        {
+          "text": "顺序信息有单独的输入安排。作者说明，由于模型不含循环或卷积，为了利用序列顺序，需要注入词元相对或绝对位置的信息，因此在编码器和解码器栈底部的输入嵌入中加入位置编码。",
+          "findingKeys": ["author-claim-positional-encoding-purpose"]
+        },
+        {
+          "text": "论文还说明了 dropout 的放置：子层输出在加到输入并归一化之前应用 dropout，编码器和解码器中的嵌入与位置编码之和也应用 dropout。",
+          "findingKeys": ["author-claim-residual-dropout-placement"]
+        },
+        {
+          "text": "作者在结论中把模型概括为完全基于注意力、用多头自注意力取代循环层的序列转导模型。接下来的方向被明确写成计划：扩展到文本以外的输入输出模态，研究局部受限注意力，并探索更少顺序化的生成。这些计划不能当作已经完成的结果。",
+          "findingKeys": ["author-claim-conclusion-attention-only-model", "author-claim-future-work-plan"]
+        }
+      ]
+    }
+  ]
+}
