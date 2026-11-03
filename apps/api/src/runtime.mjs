@@ -1,3 +1,4 @@
+import { createPaperStudyDurableRuntime } from './paper-study-durable-runtime.mjs';
 import {createCompetitionService} from './competition-service.mjs';
 import {createSaveOperationsService} from './save-operations-service.mjs';
 import {createSaveHealthMetrics} from './save-health-metrics.mjs';
@@ -306,7 +307,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const saveOperationsService=config.cloudSaveEnabled ? createSaveOperationsService({repository:gameSaveRepository,metrics:saveMetrics}) : null;
   const gameSaveService = config.cloudSaveEnabled ? createGameSaveService({ repository: gameSaveRepository, gameSessionService, metrics:saveMetrics }) : null;
   const saveLibraryService = config.cloudSaveEnabled ? createSaveLibraryService({ repository: gameSaveRepository }) : null;
+  const paperStudyRuntime = config.paperStudy.enabled ? createPaperStudyDurableRuntime({pool:database.pool,redisUrl:config.redisUrl,executionAgentUserId:config.paperStudy.executionAgentUserId}) : null;
   const app = createApp({
+    paperStudyService: paperStudyRuntime?.service,
     gameSaveService,
     saveLibraryService,
     saveOperationsService,
@@ -367,7 +370,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     logger: config.nodeEnv !== 'test',
   });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await database.close(); });
+  app.addHook('onClose', async () => { agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await paperStudyRuntime?.close(); await database.close(); });
   return {
     config,
     database,

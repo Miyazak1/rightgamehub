@@ -94,6 +94,7 @@ export function createAgentRuntimeWorker({
   recoveryBatch = 25,
   outboxBatch = 25,
   targetRunId = null,
+  scopeRecoveryToHandlers = false,
   metadata = {},
   logger = false,
 } = {}) {
@@ -231,10 +232,10 @@ export function createAgentRuntimeWorker({
         ? [{ examined: 0, requeued: 0, failed: 0, uncertain: 0 },
           { examined: 0, requeued: 0, failed: 0 }]
         : await Promise.all([
-          repository.recoverExpiredStages({ workerId, limit: recoveryBatch }),
-          repository.recoverExpiredOutbox({ limit: recoveryBatch }),
+          repository.recoverExpiredStages({ workerId, limit: recoveryBatch, ...(scopeRecoveryToHandlers ? { supportedRoutes: [...routes.keys()] } : {}) }),
+          scopeRecoveryToHandlers ? Promise.resolve({ examined: 0, requeued: 0, failed: 0 }) : repository.recoverExpiredOutbox({ limit: recoveryBatch }),
         ]);
-      const outbox = isolated ? { delivered: 0, failed: 0 } : await dispatchOutbox();
+      const outbox = isolated || scopeRecoveryToHandlers ? { delivered: 0, failed: 0 } : await dispatchOutbox();
       const claimed = await repository.claimNextStage(workerId, leaseSeconds, [...routes.keys()], targetRunId);
       if (!claimed) {
         await repository.heartbeatWorker({ workerId, instanceId, status: 'idle', currentStageId: null });

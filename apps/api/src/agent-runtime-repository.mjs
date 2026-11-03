@@ -149,6 +149,8 @@ export class PostgresAgentRuntimeRepository {
   }) {
     return withTransaction(this.pool, async client => {
       handoff = normalizeRunHandoff(handoff);
+      // Serialize identical run requests across processes before the lookup/insert.
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', ['agent-run:'+agentUserId+':'+workflowKey+':'+idempotencyKey]);
       const workflow = (await client.query(`SELECT * FROM agent_workflow_definitions
         WHERE workflow_key=$1 AND workflow_version=$2 AND status='active' FOR SHARE`, [workflowKey, workflowVersion])).rows[0];
       if (!workflow) fail('AGENT_WORKFLOW_NOT_ACTIVE');
@@ -810,7 +812,7 @@ export class PostgresAgentRuntimeRepository {
   }
 
   async recoverExpiredStages({ workerId = 'agent-runtime-recovery', limit = 25,
-    baseBackoffSeconds = 1, stageId = null } = {}) {
+    baseBackoffSeconds = 1, stageId = null, supportedRoutes = null } = {}) {
     workerIdentifier(workerId);
     boundedInteger(limit, 1, 200, 'AGENT_RUNTIME_RECOVERY_LIMIT_INVALID');
     boundedInteger(baseBackoffSeconds, 0, 300, 'AGENT_RUNTIME_BACKOFF_INVALID');
@@ -818,11 +820,12 @@ export class PostgresAgentRuntimeRepository {
       fail('AGENT_RUNTIME_STAGE_ID_INVALID');
     }
     return withTransaction(this.pool, async client => {
-      const rows = (await client.query(`SELECT * FROM agent_run_stages
-        WHERE ($2::uuid IS NULL OR id=$2) AND status IN ('leased','running') AND (lease_until<=now()
-          OR attempt_started_at+(timeout_seconds*interval '1 second')<=now())
-        ORDER BY least(lease_until,attempt_started_at+(timeout_seconds*interval '1 second')),id
-        FOR UPDATE SKIP LOCKED LIMIT $1`, [limit, stageId])).rows;
+      const rows = (await client.query(`SELECT stage.* FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id
+        WHERE ($2::uuid IS NULL OR stage.id=$2) AND stage.status IN ('leased','running') AND (stage.lease_until<=now()
+          OR stage.attempt_started_at+(stage.timeout_seconds*interval '1 second')<=now())
+          AND ($3::text[] IS NULL OR (run.workflow_key||':'||stage.stage_key)=ANY($3))
+        ORDER BY least(stage.lease_until,stage.attempt_started_at+(stage.timeout_seconds*interval '1 second')),stage.id
+        FOR UPDATE OF stage SKIP LOCKED LIMIT $1`, [limit, stageId, routeKeys(supportedRoutes)])).rows;
       const result = { examined: rows.length, requeued: 0, failed: 0, uncertain: 0 };
       for (const stage of rows) {
         const exposed = (await client.query(`SELECT id FROM agent_run_actions WHERE stage_id=$1

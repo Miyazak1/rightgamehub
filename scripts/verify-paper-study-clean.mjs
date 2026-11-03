@@ -25,6 +25,12 @@ const legacyTests = [
 ];
 seeds.push('apps/api/src/agent-paper-research-execution.mjs', ...legacyTests, 'tests/platform/support/paper-text-draft-db.cjs', 'scripts/verify-paper-study-live.mjs');
 const files=new Set();
+seeds.push('apps/api/src/runtime.mjs','apps/api/src/paper-study-worker-cli.mjs',
+  'apps/api/migrations/0159_paper_study_private_workspace.sql',
+  'scripts/verify-paper-study-persistence.mjs','tests/desktop/paper-study-crash-worker.mjs',
+  'tests/platform/paper-study-persistence.test.mjs','tests/platform/paper-study-persistence-db.test.cjs');
+legacyTests.push('tests/platform/paper-study-persistence.test.mjs','tests/platform/paper-study-persistence-db.test.cjs','tests/platform/paper-study-worker-loop.test.mjs');
+seeds.push('tests/platform/paper-study-worker-loop.test.mjs');
 async function visit(relative){
   relative=relative.replaceAll('\\','/');if(files.has(relative))return;
   if(relative.startsWith('../')||path.isAbsolute(relative)||relative.includes('node_modules')||relative.startsWith('.runtime/')||/MooyuWorkbench|desktop\/src\/(?:workbench-service|paper-review)/.test(relative))throw Error('PAPER_STUDY_CLEAN_SCOPE_DENIED');

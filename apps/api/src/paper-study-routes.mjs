@@ -30,3 +30,27 @@ export function createPaperStudyHttpHandler({ service, authenticate }) {
     return true;
   };
 }
+
+// Formal Fastify adapter: uses the application's existing bearer session hook.
+// Never install the local test authentication server in the formal application.
+export function registerPaperStudyRoutes(app, { service, requireAuth }) {
+  const prefix='/v1/me/paper-studies';
+  const run=(handler,status=200)=>async(request,reply)=>{
+    reply.header('Cache-Control','no-store');reply.header('X-Content-Type-Options','nosniff');
+    if(Object.keys(request.query??{}).length)return reply.code(400).send({error:{code:'PAPER_STUDY_INPUT_INVALID',message:'论文参数无效。'}});
+    try{const data=await handler(request);reply.code(status);return {data};}catch(e){
+      if(!/^PAPER_STUDY_[A-Z_]+$/.test(e.code??''))throw e;
+      return reply.code(e.statusCode??409).send({error:{code:e.code,message:'论文操作未完成，请检查文档或服务状态。',retryable:false}});
+    }
+  };
+  const options={onRequest:requireAuth};
+  const idOptions={...options,schema:{params:{type:'object',required:['id'],properties:{id:{type:'string',format:'uuid'}},additionalProperties:false}}};
+  app.get(prefix,options,run(r=>service.list(r.actor)));
+  app.post(prefix,{...options,bodyLimit:Math.ceil(PAPER_STUDY_MAX_BYTES/3)*4+4096},run(r=>service.import(r.actor,r.body),202));
+  app.get(prefix+'/:id',idOptions,run(r=>service.read(r.actor,r.params.id)));
+  app.get(prefix+'/:id/source',idOptions,run(r=>service.source(r.actor,r.params.id)));
+  for(const [action,method]of [['analyze','analyze'],['draft','draft']])app.post(prefix+'/:id/'+action,idOptions,run(r=>{
+    if(!r.body||Array.isArray(r.body)||typeof r.body!=='object'||Object.keys(r.body).length)throw Object.assign(Error(),{code:'PAPER_STUDY_INPUT_INVALID',statusCode:400});
+    return service[method](r.actor,r.params.id);
+  },202));
+}

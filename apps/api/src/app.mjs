@@ -1,3 +1,4 @@
+import { registerPaperStudyRoutes } from './paper-study-routes.mjs';
 import {registerResearchQaHttpRoutes} from './researcher-qa-http-routes.mjs';
 import { GameShareError } from './game-share-service.mjs';
 import { registerGameShareRoutes } from './game-share-routes.mjs';
@@ -220,10 +221,10 @@ export function createApp(dependencies) {
   app.get('/health', async () => envelope({ status: 'ok' }));
   app.get('/ready', async (_request, reply) => {
     try {
-      const [databaseOk, migration, realtimeOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true]);
+      const [databaseOk, migration, realtimeOk, paperStudyOk] = await Promise.all([database.ping(), migrations.status(), realtimeTicketService?.ready?.() ?? true, dependencies.paperStudyService?.ready?.() ?? true]);
       const researchScheduler=researchTopicWorker?.status?.()??null;
       const researchSchedulerOk=researchScheduler?.healthy??true;
-      if (!databaseOk || !migration.ready || !realtimeOk || !researchSchedulerOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk, researchScheduler }));
+      if (!databaseOk || !migration.ready || !realtimeOk || !researchSchedulerOk || !paperStudyOk) return reply.status(503).send(envelope({ status: 'not-ready', database: databaseOk, migrations: migration, realtime: realtimeOk, researchScheduler }));
       const mcpUi = describeGameHubMcpWidget(config.gameShareSiteOrigin || 'https://mooyu.fun');
       return envelope({ status: 'ready', database: true, migrations: migration, realtime: realtimeOk, researchScheduler, rules: rulesStatus ?? rulesRegistry?.describe?.() ?? null, mcpUi, saves: { mode: config.cloudSaveEnabled === true ? 'cloud' : 'local', cloudEnabled: config.cloudSaveEnabled === true } });
     } catch {
@@ -314,6 +315,7 @@ export function createApp(dependencies) {
   });
 
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
+  if (dependencies.paperStudyService) registerPaperStudyRoutes(app,{service:dependencies.paperStudyService,requireAuth});
   if (researchQaHttpGateway) registerResearchQaHttpRoutes(app,{gateway:researchQaHttpGateway,requireAuth});
   const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
   registerPublicSeoRoutes(app,{siteOrigin,catalogService,campaignService:discoveryCampaignService,blogService});

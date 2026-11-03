@@ -1,3 +1,4 @@
+import { loadPaperStudyConfig } from './paper-study-config.mjs';
 import {loadSaveStorageProtection} from './save-storage-protection.mjs';
 import crypto from 'node:crypto';
 import { parseTrustedRulesKeys } from '@gamehub/rules-sdk';
@@ -192,6 +193,7 @@ export function loadConfig(env = process.env, { allowMissingDatabase = false, al
     mailProvider,
     resendApiKey: env.RESEND_API_KEY?.trim() || null,
     mailFrom: env.MAIL_FROM?.trim() || null,
+    paperStudy: loadPaperStudyConfig(env),
     requestBodyLimit: integer(env.REQUEST_BODY_LIMIT, 64 * 1024, 'REQUEST_BODY_LIMIT', 1024, 1024 * 1024),
     quarantineRoot: env.QUARANTINE_ROOT ?? '.runtime/platform/quarantine',
     avatarRoot: env.AVATAR_ROOT ?? '.runtime/platform/avatars',

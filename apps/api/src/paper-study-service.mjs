@@ -6,7 +6,8 @@ import { TEXT_DRAFT_NOTICE } from './agent-paper-text-draft.mjs';
 
 const fail = (code, status = 422) => { throw Object.assign(Error(code), { code, status }); };
 const copy = value => structuredClone(value);
-export const PAPER_STUDY_MAX_BYTES = 20 * 1024 * 1024;
+import { decodePaperStudyInput } from './paper-study-input.mjs';
+export { PAPER_STUDY_MAX_BYTES } from './paper-study-input.mjs';
 // Explicit ephemeral repository for local/isolated instances. Never registered
 // by the production application; a durable repository must be supplied there.
 export function createPaperStudyMemoryRepository() {
@@ -41,14 +42,7 @@ export function createPaperStudyService({ repository, processor, extract = extra
     import(actor, input) {
       if (!actor?.userId) fail('AUTH_REQUIRED', 401);
       if (repository.list(actor.userId).length >= 20) fail('PAPER_STUDY_LIBRARY_LIMIT', 429);
-      if (!input || Object.keys(input).some(k => !['pdfBase64', 'filename', 'title', 'rightsConfirmed', 'arxivId'].includes(k))
-        || input.rightsConfirmed !== true || typeof input.filename !== 'string' || input.filename.length > 200
-        || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 300
-        || typeof input.pdfBase64 !== 'string' || input.pdfBase64.length > Math.ceil(PAPER_STUDY_MAX_BYTES / 3) * 4
-        || !/^[A-Za-z0-9+/]+={0,2}$/.test(input.pdfBase64)
-        || input.arxivId !== undefined && (typeof input.arxivId !== 'string' || input.arxivId !== '' && !/^\d{4}\.\d{4,5}(?:v\d+)?$/.test(input.arxivId))) fail('PAPER_STUDY_IMPORT_INVALID', 400);
-      const bytes = Buffer.from(input.pdfBase64, 'base64');
-      if (bytes.toString('base64') !== input.pdfBase64 || bytes.length > PAPER_STUDY_MAX_BYTES || bytes.subarray(0, 5).toString() !== '%PDF-') fail('PAPER_STUDY_IMPORT_INVALID', 400);
+      const bytes = decodePaperStudyInput(input);
       const hash = crypto.createHash('sha256').update(bytes).digest('hex');
       const existing = repository.list(actor.userId).find(x => x.sourceSha256 === hash);
       if (existing) { if (!existing.job && !existing.pack && input.arxivId) existing.arxivId = input.arxivId; return view(existing); }
