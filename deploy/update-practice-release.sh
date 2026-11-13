@@ -5,6 +5,7 @@ umask 077
 EXPECTED=${1:?Usage: bash update-practice-release.sh FULL_COMMIT_SHA}
 [[ "$EXPECTED" =~ ^[a-f0-9]{40}$ ]] || { echo 'Invalid release SHA'; exit 1; }
 cd /www/gamehub
+source deploy/pin-running-image.sh
 test -f deploy/.env.prod
 test "$(git rev-parse HEAD)" = "$EXPECTED"
 test -z "$(git status --porcelain)" || { echo 'Local edits found; stop without reset/clean.'; exit 1; }
@@ -14,12 +15,16 @@ dc config --quiet
 test -n "$(dc ps --status running --quiet postgres)"
 test -n "$(dc ps --status running --quiet api)"
 test -n "$(dc ps --status running --quiet web)"
+if [ "${MOOYU_RELEASE_RESUMING:-false}" = true ]; then
+  count=$(dc exec -T postgres psql -U gamehub -d gamehub -Atc 'SELECT count(*) FROM schema_migrations')
+  [ "$count" = 158 ] || { echo 'Resume expects the unchanged 158-migration production database. Stop for review.'; exit 1; }
+fi
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 RECORD=${MOOYU_RELEASE_RECORD:?Run prepare-practice-release.sh first}
 test -s "$RECORD/previous-commit.txt"
 test -s "$RECORD/compose.before.yml"
 printf '%s\n' "$EXPECTED" > "$RECORD/release-commit.txt"
-cp deploy/.env.prod "$RECORD/env.before"
+if [ ! -f "$RECORD/env.before" ]; then cp deploy/.env.prod "$RECORD/env.before"; fi
 mkdir -p "$RECORD/rollback-build/migrations"
 cp apps/api/migrations/*.sql "$RECORD/rollback-build/migrations/"
 # Update precisely the currently running application services. Never start an
@@ -28,13 +33,17 @@ mapfile -t SERVICES < <(dc ps --status running --services | grep -vE '^(postgres
 ((${#SERVICES[@]} > 0))
 printf 'services:\n' > "$RECORD/rollback-images.yml"
 WEB_RUNTIME_IMAGE=
+# Preserve every original service image before any image build begins.
 for service in "${SERVICES[@]}"; do
   id=$(dc ps --status running --quiet "$service")
   test -n "$id"
-  image=$(docker inspect --format '{{.Image}}' "$id")
+  original="mooyu-release-original:${STAMP,,}-$service"
+  pin_running_image "$id" "$original"
+done
+for service in "${SERVICES[@]}"; do
+  id=$(dc ps --status running --quiet "$service")
   tag="mooyu-release-rollback:${STAMP,,}-$service"
   original="mooyu-release-original:${STAMP,,}-$service"
-  docker image tag "$image" "$original"
   if [ "$service" = web ]; then WEB_RUNTIME_IMAGE="$original"; fi
   # The old readiness check rejects newer migration records. Old business
   # images therefore receive only the additive migration inventory, so rollback
@@ -43,7 +52,7 @@ for service in "${SERVICES[@]}"; do
     printf 'FROM %s\nCOPY --chown=node:node migrations/ /app/apps/api/migrations/\n' "$original" > "$RECORD/rollback-build/Dockerfile"
     docker build --tag "$tag" "$RECORD/rollback-build"
   else
-    docker image tag "$image" "$tag"
+    docker image tag "$original" "$tag"
   fi
   printf '  %s:\n    image: %s\n' "$service" "$tag" >> "$RECORD/rollback-images.yml"
 done
@@ -78,6 +87,7 @@ rollback_on_failure() {
   exit "$status"
 }
 trap rollback_on_failure ERR
+printf '%s\n' "$EXPECTED" > "$RECORD/activation-started"
 dc up -d --no-build --no-deps --wait --wait-timeout 240 "${SERVICES[@]}"
 dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';

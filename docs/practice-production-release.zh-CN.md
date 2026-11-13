@@ -22,6 +22,18 @@ bash /tmp/mooyu-prepare-practice-release.sh "$RELEASE_SHA"
 
 脚本会拒绝存在本地改动、未包含当前线上提交、或修改了旧迁移的版本。不使用 `reset`、`clean`、强制切分支或删除数据卷。
 
+### 回滚镜像准备阶段失败后的续发
+
+若旧镜像记录已不可用，脚本会从仍在运行的容器导出文件系统并导入为本机回滚镜像，保留启动命令、用户、工作目录和公开的基础环境设置，不将运行时密钥写入镜像配置。这个过程不暂停容器；[Docker export 不包含挂载卷内容](https://docs.docker.com/reference/cli/docker/container/export/)。不会用可能已更新的同名镜像标签冒充旧版本。所有服务的旧镜像均保留成功后才开始构建。
+
+第一次更新已经快进了源码、但在迁移前准备镜像时失败的情况，更新修复脚本后使用：
+
+```bash
+bash /tmp/mooyu-prepare-practice-release.sh "$RELEASE_SHA" --resume
+```
+
+续发会查找与当前失败提交匹配的原始发布记录，保留第一次更新前的提交、Compose 和环境备份。只有数据库仍为 158 条迁移、原记录尚未完成数据库备份或启动新版本时才允许继续；找不到可靠记录就停止，不覆盖旧备份。
+
 ## 执行顺序和恢复
 
 1. 保存原提交、原分支、原 Compose 和环境配置到 `/www/backup/gamehub/practice-时间戳`。
