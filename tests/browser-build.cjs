@@ -16,6 +16,17 @@ exports.build = async options => {
 };
 
 exports.servePage = (app, handler) => {
+  // Fixture auth is intentionally mocked, but still uses the current HTTP
+  // session-bootstrap protocol. Its profile comes from each fixture's /me.
+  app.addHook('onRequest', async (request, reply) => {
+    if (request.method !== 'POST' || request.url.split('?')[0] !== '/v1/auth/session'
+      || request.headers['x-mooyu-fixture-session'] !== '1') return;
+    const profile = await app.inject({ method: 'GET', url: '/v1/me', headers: {
+      ...(request.headers.authorization ? { authorization: request.headers.authorization } : {}),
+    } });
+    const data = profile.statusCode === 200 ? profile.json().data : null;
+    return reply.send({ data: { authenticated: Boolean(data?.id), profile: data?.id ? data : null } });
+  });
   app.get('/', handler);
   app.setNotFoundHandler((request, reply) => {
     const pathname = request.url.split('?')[0];

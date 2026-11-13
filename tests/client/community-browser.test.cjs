@@ -34,11 +34,12 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   app.post('/v1/analytics/events',async()=>({data:{accepted:1}}));
   const entry=[
     "import React from 'react';import{createRoot}from'react-dom/client';",
-    'import App from '+JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))+';',
-    'import{createApiClient}from'+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
+    'import CommunityPage from "./packages/platform-client/src/CommunityPage.jsx";import{I18nProvider}from"./packages/platform-client/src/I18n.jsx";import{useState,useEffect}from"react";import App from '+JSON.stringify(path.join(root,'tests/browser-platform-app.jsx').replaceAll('\\','/'))+';',
+    'import{createApiClient}from'+JSON.stringify(path.join(root,'tests/browser-api-client.mjs').replaceAll('\\','/'))+';',
     'const actors='+JSON.stringify(actors)+';let actor=actors.owner;',
     'const api=createApiClient({getAccessToken:()=>actor.id});const root=createRoot(document.getElementById("root"));',
-    'function render(){root.render(<React.StrictMode><App key={actor.id} apiClient={api} demo={false}/></React.StrictMode>);}window.communityFixture={setActor(name){actor=actors[name];render();}};render();',
+    'let isolated=false;function IsolatedCommunity(){const[route,setRoute]=useState(location.hash.slice(1)||"/community/feed");useEffect(()=>{const listen=()=>setRoute(location.hash.slice(1));addEventListener("hashchange",listen);return()=>removeEventListener("hashchange",listen)},[]);return <I18nProvider initialLocale="zh-CN"><div className="app" data-host="web"><CommunityPage api={api} route={route} go={path=>location.hash=path} accountProfile={actor}/></div></I18nProvider>}',
+    'function render(){if(isolated){root.render(<React.StrictMode><IsolatedCommunity key={actor.id}/></React.StrictMode>);return;}root.render(<React.StrictMode><App key={actor.id} apiClient={api} demo={false}/></React.StrictMode>);}window.communityFixture={openComponent(){isolated=true;render()},setActor(name){actor=actors[name];render();}};render();',
   ].join('\n');
   const bundled=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',target:'chrome110',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
@@ -52,7 +53,10 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const title='新发现：像素世界里的 AI '+Date.now();
   await page.goto(base+'/community');
-  await page.getByRole('button',{name:'＋ 分享发现',exact:true}).click();
+  await page.getByRole('navigation',{name:'主导航',exact:true}).waitFor();
+  assert.equal(await page.getByRole('navigation',{name:'主导航',exact:true}).getByRole('button',{name:'分享',exact:true}).count(),0,'paused community stays hidden in the real app');
+  await page.evaluate(()=>window.communityFixture.openComponent());
+  await page.getByRole('button',{name:'＋ 发起',exact:true}).click();await page.getByRole('menuitem',{name:/发布动态/}).click();
   await page.getByText('内容和修改审核通过后，将连同你的昵称公开。个人主页仍按原隐私设置展示。',{exact:false}).waitFor();
   await page.getByLabel('标题',{exact:true}).fill(title);
   await page.getByLabel('主题',{exact:true}).selectOption('ai');
@@ -95,12 +99,12 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   await page.setViewportSize({width:360,height:900});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'narrow layout must not overflow');
   await page.screenshot({path:path.join(root,'.runtime/community-acceptance/mobile.png'),fullPage:false});
-  await page.getByRole('button',{name:'私人收藏',exact:true}).click();
+  await page.evaluate(()=>location.hash='/community/bookmarks');
   await page.getByRole('heading',{name:title,exact:true}).waitFor();
   await page.evaluate(()=>{window.communityFixture.setActor('owner');location.hash='/community/bookmarks';});
   await page.getByRole('heading',{name:'还没有收藏',exact:true}).waitFor();
   await page.evaluate(()=>{location.hash='/social';});
-  await page.getByRole('heading',{name:'分享',exact:false}).waitFor();
+  await page.getByRole('navigation',{name:'社区导航',exact:true}).waitFor();
   await page.evaluate(()=>{window.communityFixture.setActor('admin');location.hash='/community/review';});
   await page.getByText('投稿限制管理',{exact:true}).click();
   await page.getByLabel('用户 ID',{exact:true}).fill(actors.owner.id);
@@ -108,7 +112,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   await page.getByRole('button',{name:'限制投稿',exact:true}).click();
   await page.getByText('已限制该账号投稿。',{exact:true}).waitFor();
   await page.evaluate(()=>{window.communityFixture.setActor('owner');location.hash='/community/mine';});
-  assert.equal(await page.getByRole('button',{name:'投稿已受限',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'＋ 发起',exact:true}).click();await page.getByRole('menuitem',{name:/发布动态/}).click();assert.equal(await page.getByLabel('标题',{exact:true}).count(),0,'restricted account cannot open a post editor');
   await page.getByText('当前账号已被限制投稿；已有分享仍可查看、撤回或删除。',{exact:true}).waitFor();
   await page.evaluate(()=>{window.communityFixture.setActor('admin');location.hash='/community/review';});
   await page.getByText('投稿限制管理',{exact:true}).click();
@@ -117,7 +121,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   await page.getByRole('button',{name:'解除投稿限制',exact:true}).click();
   await page.getByText('投稿限制已解除。',{exact:true}).waitFor();
   await page.evaluate(()=>{window.communityFixture.setActor('owner');location.hash='/community/mine';});
-  assert.equal(await page.getByRole('button',{name:'＋ 分享发现',exact:true}).isEnabled(),true);
+  await page.getByRole('button',{name:'＋ 发起',exact:true}).click();await page.getByRole('menuitem',{name:/发布动态/}).click();await page.getByLabel('标题',{exact:true}).waitFor();assert.equal(await page.getByLabel('标题',{exact:true}).isEnabled(),true);
   assert.deepEqual(errors,[]);
   // Keep fixture metadata consistent after the test's temporary image directory is removed.
   const posts=await service.list({userId:actors.owner.id},{kind:'mine'});

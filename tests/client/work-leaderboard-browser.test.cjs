@@ -34,8 +34,8 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   app.get('/v1/community/posts',async()=>({data:{items:[],nextCursor:null}}));
   const bundle=await build({stdin:{contents:[
     "import{I18nProvider}from'./packages/platform-client/src/I18n.jsx';import React from 'react';import {createRoot} from 'react-dom/client';",
-    'import App from '+JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))+';',
-    'import {createApiClient} from '+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
+    'import App from '+JSON.stringify(path.join(root,'tests/browser-platform-app.jsx').replaceAll('\\','/'))+';',
+    'import {createApiClient} from '+JSON.stringify(path.join(root,'tests/browser-api-client.mjs').replaceAll('\\','/'))+';',
     "let user='';const root=createRoot(document.getElementById('root'));const api=createApiClient({getAccessToken:()=>user||null});function render(){root.render(<React.StrictMode><I18nProvider initialLocale='zh-CN'><App key={user} apiClient={api} demo={false}/></I18nProvider></React.StrictMode>)}window.boardFixture={signIn(id){user=id;render()}};render();",
   ].join('\n'),loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
@@ -47,12 +47,12 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   await page.goto(base+'/w/gamehub-guess-baike');const board=page.locator('.work-leaderboard');
   await board.getByText('登录后记录你的成绩',{exact:true}).waitFor();assert.equal(await board.locator('li').count(),10);
   const layout=await page.evaluate(()=>({board:document.querySelector('.work-leaderboard').getBoundingClientRect().top,about:document.querySelector('.detail-columns').getBoundingClientRect().bottom}));assert.ok(layout.board>=layout.about);
-  await page.evaluate(()=>window.boardFixture.signIn('owner'));await board.getByText('第 61 名',{exact:true}).waitFor();
+  await page.evaluate(()=>window.boardFixture.signIn('owner'));await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();await board.getByText('第 61 名',{exact:true}).waitFor();
   await board.getByRole('button',{name:'展开完整榜单',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.work-leaderboard__list>li').length===50);
   failPage=true;await board.getByRole('button',{name:'加载更多名次',exact:true}).click();await board.getByText('后续名次暂时没能加载，请重试。',{exact:true}).waitFor();
   await board.getByRole('button',{name:'重试加载',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.work-leaderboard__list>li').length===65);
   assert.equal(await board.locator('li.is-me').count(),1);await board.getByRole('button',{name:'收起为前 10 名',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.work-leaderboard__list>li').length===10);
-  slow=true;await board.getByLabel('榜单日期',{exact:true}).fill(yesterday);await page.waitForRequest(r=>r.url().includes('date='+yesterday));
+  slow=true;await Promise.all([page.waitForRequest(r=>r.url().includes('date='+yesterday)),board.getByLabel('榜单日期',{exact:true}).fill(yesterday)]);
   await board.getByRole('button',{name:'回到今天',exact:true}).click();await board.getByText('像素玩家 1',{exact:true}).waitFor();await page.waitForTimeout(750);assert.equal(await board.getByText('历史玩家 1',{exact:true}).count(),0);slow=false;
   failBoard=true;await board.getByRole('button',{name:'刷新榜单',exact:true}).click();await board.getByRole('button',{name:'重试排行榜'}).waitFor();assert.equal(await page.getByRole('button',{name:'立即游玩',exact:false}).isEnabled(),true);
   await board.getByRole('button',{name:'重试排行榜'}).click();await board.getByText('第 61 名',{exact:true}).waitFor();
@@ -75,7 +75,7 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   const before=requests.filter(r=>r.url.includes('/leaderboards/')).length;
   await page.goto(base+'/w/00000000-0000-4000-8000-000000000002');await page.getByRole('heading',{name:'未接入榜单的游戏',exact:true}).waitFor();assert.equal(await board.count(),0);assert.equal(requests.filter(r=>r.url.includes('/leaderboards/')).length,before);
   await page.goto(base+'/games/guess-baike/community');await board.getByText('像素玩家 1',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'猜百科',exact:true}).count(),1);
-  await page.goto(base+'/community');await page.getByRole('navigation',{name:'分享导航'}).waitFor();assert.equal(await page.getByRole('button',{name:'猜百科排行 ↗',exact:true}).count(),0);
+  await page.goto(base+'/community');await page.getByRole('navigation',{name:'主导航',exact:true}).waitFor();assert.equal(await page.getByRole('navigation',{name:'社区导航'}).count(),0,'paused community route stays unavailable');assert.equal(await page.getByRole('button',{name:'猜百科排行 ↗',exact:true}).count(),0);
   await page.goto(base+'/play/gamehub-guess-baike');await page.getByText('排行榜测试',{exact:true}).waitFor();
   await page.getByPlaceholder('输入中文、英文或数字，也可直接猜标题').fill('测试');await page.getByRole('button',{name:'揭开',exact:false}).click();
   const result=page.getByRole('dialog',{name:'挑战完成'});await result.getByRole('button',{name:'重试保存成绩',exact:true}).waitFor();

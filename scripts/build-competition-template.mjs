@@ -7,5 +7,8 @@ const directory=path.join(root,'templates/competition-score'),artifact=path.join
 const bundled=await build({entryPoints:[path.join(root,'packages/web-game-sdk/src/index.mjs')],bundle:true,write:false,platform:'browser',format:'iife',globalName:'GameHubSDK',minify:true});
 const files=await Promise.all(['index.html','platform.json'].map(async name=>({name,data:await fs.readFile(path.join(directory,name))})));
 const guide=await fs.readFile(path.join(root,'docs/competition-creator-guide.zh-CN.md'));
-files.push({name:'gamehub-sdk.js',data:bundled.outputFiles[0].contents},{name:'game.js',data:(await fs.readFile(path.join(directory,'game.mjs'),'utf8')).replace(/^import .*\n/,'const {createGameHubClient}=GameHubSDK;\n')},{name:'README.txt',data:guide});await fs.mkdir(path.dirname(artifact),{recursive:true});await fs.writeFile(artifact,createZipBuffer(files));
+const gameSource=await fs.readFile(path.join(directory,'game.mjs'),'utf8');
+const game=gameSource.replace(/^\uFEFF?import[^\r\n]*\r?\n/u,'const {createGameHubClient}=GameHubSDK;\n');
+if(game===gameSource)throw new Error('Competition template must start with its SDK import.');
+files.push({name:'gamehub-sdk.js',data:bundled.outputFiles[0].contents},{name:'game.js',data:game},{name:'README.txt',data:guide});await fs.mkdir(path.dirname(artifact),{recursive:true});await fs.writeFile(artifact,createZipBuffer(files));
 const downloads=path.join(root,'apps/web/public/downloads');await fs.mkdir(downloads,{recursive:true});await fs.copyFile(artifact,path.join(downloads,path.basename(artifact)));await fs.writeFile(path.join(downloads,'competition-guide.md'),guide);console.log(artifact);

@@ -38,7 +38,7 @@ async function renameWithWindowsRetry(from, to) {
   for (let attempt = 0; ; attempt += 1) {
     try { await fs.promises.rename(from, to); return; }
     catch (error) {
-      if (!['EPERM', 'EACCES'].includes(error?.code) || attempt >= 7) throw error;
+      if (!['EPERM', 'EACCES'].includes(error?.code) || attempt >= 16) throw error;
       await new Promise(resolve => setTimeout(resolve, Math.min(25 * 2 ** attempt, 400)));
     }
   }
@@ -61,9 +61,27 @@ async function copyPackage(packageName, resolver, destinationRoot, visited = new
   const packageJson = resolver.resolve(`${packageName}/package.json`);
   const metadata = JSON.parse(await fs.promises.readFile(packageJson, 'utf8'));
   visited.add(packageName);
-  await copyDirectory(path.dirname(packageJson), path.join(destinationRoot, ...packageName.split('/')));
+  const packageRoot = path.dirname(packageJson), destination = path.join(destinationRoot, ...packageName.split('/'));
+  if (packageName === 'pdfjs-dist') {
+    // Ship the Node renderer and its binary resources, keeping viewer assets,
+    // declarations and source maps out of the bounded desktop manifest.
+    await fs.promises.mkdir(destination, { recursive: true });
+    for (const name of ['package.json', 'LICENSE']) await fs.promises.copyFile(path.join(packageRoot, name), path.join(destination, name));
+    for (const directory of ['build', 'legacy/build']) {
+      await fs.promises.mkdir(path.join(destination, directory), { recursive: true });
+      for (const name of await fs.promises.readdir(path.join(packageRoot, directory))) {
+        if (name.endsWith('.mjs')) await fs.promises.copyFile(path.join(packageRoot, directory, name), path.join(destination, directory, name));
+      }
+    }
+    for (const name of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) await copyDirectory(path.join(packageRoot, name), path.join(destination, name));
+  } else await copyDirectory(packageRoot, destination);
   const childResolver = createRequire(packageJson);
   for (const dependency of Object.keys(metadata.dependencies ?? {}).sort()) {
+    await copyPackage(dependency, childResolver, destinationRoot, visited);
+  }
+  for (const dependency of Object.keys(metadata.optionalDependencies ?? {}).sort()) {
+    try { childResolver.resolve(`${dependency}/package.json`); }
+    catch (error) { if (error.code === 'MODULE_NOT_FOUND') continue; throw error; }
     await copyPackage(dependency, childResolver, destinationRoot, visited);
   }
 }
@@ -129,7 +147,11 @@ try {
     path.join(staging, 'app', 'packages', 'agent-capabilities'));
   const packageResolver = createRequire(path.join(repositoryRoot, 'apps', 'capability-executor',
     'package.json'));
-  await copyPackage('yauzl', packageResolver, path.join(staging, 'app', 'node_modules'));
+  const executorPackage = JSON.parse(await fs.promises.readFile(path.join(repositoryRoot, 'apps', 'capability-executor', 'package.json'), 'utf8'));
+  const copiedPackages = new Set();
+  for (const dependency of Object.keys(executorPackage.dependencies ?? {}).sort()) {
+    await copyPackage(dependency, packageResolver, path.join(staging, 'app', 'node_modules'), copiedPackages);
+  }
 
   const entrypointPaths = Object.freeze({ nodeRuntime: 'bin/node.exe',
     shell: 'app/scripts/windows-desktop-product-host.mjs',

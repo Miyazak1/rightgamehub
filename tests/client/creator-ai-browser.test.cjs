@@ -28,8 +28,8 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   app.get('/v1/contribution-notifications', async () => ({ data: { items: [], unreadCount: 0 } }));
   const entry = [
     "import React from 'react';import{createRoot}from'react-dom/client';",
-    'import App from ' + JSON.stringify(path.join(root, 'packages/platform-client/src/App.jsx').replaceAll('\\', '/')) + ';',
-    'import{createApiClient}from' + JSON.stringify(path.join(root, 'packages/platform-api-client/src/index.mjs').replaceAll('\\', '/')) + ';',
+    'import App from ' + JSON.stringify(path.join(root, 'tests/browser-platform-app.jsx').replaceAll('\\', '/')) + ';',
+    'import{createApiClient}from' + JSON.stringify(path.join(root, 'tests/browser-api-client.mjs').replaceAll('\\', '/')) + ';',
     "const api=createApiClient({getAccessToken:()=> 'fixture-owner'});createRoot(document.getElementById('root')).render(<React.StrictMode><App apiClient={api} demo={false}/></React.StrictMode>);",
   ].join('\n');
   const bundle = await build({ stdin: { contents: entry, loader: 'jsx', resolveDir: root }, bundle: true, write: false, platform: 'browser', format: 'iife', nodePaths: [path.join(root, 'packages/platform-client/node_modules')], loader: { '.png': 'dataurl' }, define: { 'import.meta.env.DEV': 'false' }, logLevel: 'silent' });
@@ -40,7 +40,8 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   browser = await chromium.launch({ headless: true }); page = await browser.newPage({ viewport: { width: 1365, height: 1050 } }); page.setDefaultTimeout(10000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => { window.copied = []; window.clipboardFails = false; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { if (window.clipboardFails) throw Error('permission denied'); window.copied.push(text); } } }); });
-  await page.goto(base + '/creator/works/' + first + '/ai/leaderboards');
+  const gotoReady=async url=>{await page.goto(url);await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();};
+  await gotoReady(base + '/creator/works/' + first + '/ai/leaderboards');await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();
   await page.getByLabel('什么时候计分，怎么算？').fill('通关成功后记录耗时毫秒，暂停时间不计入。');
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), first);
   await page.getByText('web · 1.2.0', { exact: true }).waitFor();
@@ -83,7 +84,7 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   await page.getByLabel('选择作品', { exact: true }).selectOption(second);
   await page.getByRole('button', { name: '重试读取版本', exact: true }).click();
   await page.getByText('尚无公开发布版本', { exact: true }).waitFor();
-  await page.goto(base + '/creator/works/' + second + '/ai/multiplayer');
+  await gotoReady(base + '/creator/works/' + second + '/ai/multiplayer');
   await page.getByLabel('联机玩法', { exact: true }).fill('两个人轮流移动棋子，先到终点获胜。');
   await page.getByLabel('每局玩家人数').selectOption('2');
   await page.getByRole('button', { name: '生成 AI 任务', exact: true }).click();
@@ -91,13 +92,13 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   assert.doesNotMatch(await page.getByLabel('中文 AI 任务说明').inputValue(), /live-first/);
   await page.getByRole('button', { name: '高级：技术文档与官方模板 →', exact: true }).click();
   await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
-  await page.goto(base + '/creator');
-  await page.getByRole('button', { name: /让 AI 添加排行榜/ }).click();
+  await gotoReady(base + '/creator');
+  await page.getByRole('navigation',{name:'创作中心导航'}).getByRole('link',{name:/能力接入/}).click();await page.getByRole('navigation',{name:'当前创作栏目'}).getByRole('link',{name:'AI 接入排行榜',exact:true}).click();
   await page.getByRole('heading', { name: '让 AI 添加排行榜', exact: true }).waitFor();
   listState = 'empty'; await page.reload(); await page.getByRole('heading', { name: '先创建一个作品', exact: true }).waitFor();
   listState = 'error'; await page.reload(); await page.getByRole('button', { name: '重试读取作品', exact: true }).waitFor(); listState = 'ready'; await page.getByRole('button', { name: '重试读取作品', exact: true }).click(); await page.getByLabel('选择作品', { exact: true }).waitFor();
   listState = 'auth'; await page.reload(); await page.getByRole('heading', { name: '登录后选择你的作品', exact: true }).waitFor();
   assert.equal(await page.getByLabel('中文 AI 任务说明').count(), 0);
-  assert.deepEqual(requests.filter(req => req.method !== 'GET' && !req.url.startsWith('/v1/analytics/')), [], 'generating and copying tasks must not upload, publish or change platform data');
+  assert.deepEqual(requests.filter(req => req.method !== 'GET' && !req.url.startsWith('/v1/analytics/') && req.url !== '/v1/auth/session'), [], 'generating and copying tasks must not upload, publish or change platform data');
   assert.deepEqual(errors, []);
 });

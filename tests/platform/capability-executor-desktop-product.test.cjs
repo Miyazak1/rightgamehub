@@ -259,6 +259,30 @@ test('real desktop release builder produces a self-contained signed Windows arti
     `await import(${JSON.stringify(pathToFileURL(desktopArtifactHost).href)})`], {
     encoding: 'utf8', windowsHide: true, timeout: 15_000 });
   assert.equal(artifactImport.status, 0, artifactImport.stderr || artifactImport.stdout);
+  const pdfProbe = spawnSync(packagedNode, ['--input-type=module', '--eval', `
+    import assert from 'node:assert/strict';import path from 'node:path';
+    import {createRequire} from 'node:module';import {pathToFileURL} from 'node:url';
+    const app=process.argv[1],require=createRequire(path.join(app,'apps/capability-executor/package.json'));
+    for(const name of ['pdfjs-dist/package.json','@napi-rs/canvas/package.json','@napi-rs/canvas-win32-x64-msvc'])
+      assert.ok(require.resolve(name).startsWith(app+path.sep),'dependency escaped the installed release: '+name);
+    const pdfRoot=path.dirname(require.resolve('pdfjs-dist/package.json'));
+    const {getDocument}=await import(pathToFileURL(require.resolve('pdfjs-dist/legacy/build/pdf.mjs')).href);
+    const {createCanvas}=require('@napi-rs/canvas');
+    const content='BT /F1 12 Tf 10 20 Td (Offline release) Tj ET';
+    const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 50] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+      '<< /Length '+content.length+' >>\\nstream\\n'+content+'\\nendstream','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+    let pdf='%PDF-1.4\\n';const offsets=[0];for(const [i,body]of objects.entries()){offsets.push(Buffer.byteLength(pdf));pdf+=(i+1)+' 0 obj\\n'+body+'\\nendobj\\n';}
+    const start=Buffer.byteLength(pdf);pdf+='xref\\n0 6\\n0000000000 65535 f \\n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \\n').join('')+'trailer\\n<< /Size 6 /Root 1 0 R >>\\nstartxref\\n'+start+'\\n%%EOF\\n';
+    const loading=getDocument({data:new Uint8Array(Buffer.from(pdf)),standardFontDataUrl:pdfRoot+'/standard_fonts/'}),doc=await loading.promise;
+    const page=await doc.getPage(1),viewport=page.getViewport({scale:1}),canvas=createCanvas(viewport.width,viewport.height);
+    await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+    assert.equal(canvas.toBuffer('image/png').subarray(0,8).toString('hex'),'89504e470d0a1a0a');await loading.destroy();
+  `, path.join(installed.active.absoluteDirectory, 'app')], {
+    encoding: 'utf8', windowsHide: true, timeout: 30_000,
+    env: { ...process.env, NODE_PATH: '' },
+  });
+  assert.equal(pdfProbe.status, 0, pdfProbe.stderr || pdfProbe.stdout);
   const probe = spawnSync(packagedNode, [shell, 'invalid'], {
     encoding: 'utf8', windowsHide: true, timeout: 15_000 });
   assert.equal(probe.status, 10, probe.stderr || probe.stdout);

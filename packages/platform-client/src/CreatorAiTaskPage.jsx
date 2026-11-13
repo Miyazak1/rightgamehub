@@ -11,7 +11,11 @@ function TaskEditor({ kind, work, releases, demo, go }) {
   const [copyStatus, setCopyStatus] = useState('');
   const promptRef = useRef(null), jsonRef = useRef(null);
   const published = currentPublishedReleases(work, releases);
-  const update = event => { setForm(current => ({ ...current, [event.target.name]: event.target.value })); setOutput(null); setError(''); setCopyStatus(''); };
+  const update = event => {
+    const { name, value } = event.target;
+    setForm(current => ({ ...current, [name]: value }));
+    setOutput(null); setError(''); setCopyStatus('');
+  };
   const generate = event => {
     event.preventDefault(); setError(''); setCopyStatus('');
     try { const task = createCreatorAiTask({ kind, work, releases, form, demo }); setOutput({ task, prompt: formatCreatorAiTask(task), json: JSON.stringify(task, null, 2) }); }

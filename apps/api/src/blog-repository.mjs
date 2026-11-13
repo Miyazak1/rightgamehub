@@ -109,7 +109,7 @@ async function insertRevision(client, input) {
 }
 
 async function manageArticle(client, articleId, userId) {
-  const row = (await client.query(`${manageColumns}${manageJoins} WHERE a.id=$1 AND a.author_user_id=$2`, [articleId, userId])).rows[0];
+  const row = (await client.query(`SELECT ${manageColumns}${manageJoins} WHERE a.id=$1 AND a.author_user_id=$2`, [articleId, userId])).rows[0];
   if (!row) fail('BLOG_ARTICLE_NOT_FOUND', 404, '文章不存在。');
   return manageView(row);
 }

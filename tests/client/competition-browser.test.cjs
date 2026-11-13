@@ -12,7 +12,7 @@ for(const scenario of [
   const js=(await build({stdin:{contents:[
     "import{I18nProvider}from'./packages/platform-client/src/I18n.jsx';import React from 'react';import {createRoot} from 'react-dom/client';",
     'import WorkLeaderboard from '+JSON.stringify(path.join(root,'packages/platform-client/src/WorkLeaderboard.jsx').replaceAll('\\','/'))+';',
-    'import {createApiClient} from '+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
+    'import {createApiClient} from '+JSON.stringify(path.join(root,'tests/browser-api-client.mjs').replaceAll('\\','/'))+';',
     'import {createWebGameHost} from '+JSON.stringify(path.join(root,'packages/platform-client/src/web-game-host.mjs').replaceAll('\\','/'))+';',
     'const workId='+JSON.stringify(published.workId)+',releaseId='+JSON.stringify(published.releaseId)+',accountProfile='+JSON.stringify({id:fixture.actor.userId})+';',
     "const api=createApiClient({getAccessToken:()=> 'fixture'}),frame=document.getElementById('game');",
@@ -31,11 +31,11 @@ for(const scenario of [
   await page.goto(`http://127.0.0.1:${port}/`);const game=page.frameLocator('#game'),board=page.locator('.work-leaderboard');
   await board.getByRole('heading',{name:scenario.title,exact:false}).waitFor();assert.equal(await board.getByLabel('榜单日期',{exact:true}).count(),scenario.daily?1:0);
   if(scenario.daily){
-    await game.locator('#start').click();await game.getByText('开始点击！',{exact:true}).waitFor();
+    await game.locator('#start').click();try{await game.getByText('开始点击！',{exact:true}).waitFor();}catch(error){throw new Error('Template challenge failed: '+await game.locator('#status').innerText(),{cause:error});}
     for(let i=0;i<10;i++)await game.locator('#target').click();
     await game.locator('#submit').click();await game.getByText('已保存。退出游戏后可在详情页查看本游戏的榜单。',{exact:true}).waitFor();
     await board.getByRole('button',{name:'刷新榜单',exact:true}).click();await board.getByText('第 1 名',{exact:true}).waitFor();
-    assert.equal(await board.locator('.work-leaderboard__column-labels').innerText(),'用时（毫秒）\n点击（次）');
+    assert.equal(await board.locator('.work-leaderboard__column-labels').innerText(),'用时 (毫秒)\n点击 (次)');
     const saved=(await fixture.pool.query("SELECT metrics FROM competition_runs WHERE status='accepted'")).rows;
     assert.equal(saved.length,1);assert.equal(saved[0].metrics.clicks,10);assert.ok(saved[0].metrics.duration>0);
     assert.equal(Number(await board.locator('.work-leaderboard__scores b').first().innerText()),saved[0].metrics.duration);
@@ -50,7 +50,7 @@ for(const scenario of [
   assert.equal(await gameFrame.evaluate(()=>window.fakeStorage.getItem('gameState')),stored);
   await game.getByRole('button',{name:'提交本局',exact:true}).click();await game.getByRole('status').filter({hasText:'成绩已保存'}).waitFor();
   await board.getByRole('button',{name:'刷新榜单',exact:true}).click();await board.getByText('第 1 名',{exact:true}).waitFor();
-  assert.equal(await board.locator('.work-leaderboard__column-labels').innerText(),'得分（分）\n最大方块\n步数（步）');assert.equal(await board.locator('li').count(),1);
+  assert.equal(await board.locator('.work-leaderboard__column-labels').innerText(),'得分 (分)\n最大方块\n步数 (步)');assert.equal(await board.locator('li').count(),1);
   const saved=(await fixture.pool.query("SELECT metrics,status FROM competition_runs WHERE status='accepted'")).rows;assert.equal(saved.length,1);assert.ok(saved[0].metrics.moves>0);
   assert.equal(Number(await board.locator('.work-leaderboard__scores b').first().innerText()),saved[0].metrics.score);
   await game.getByRole('button',{name:'返回自由模式',exact:true}).click();assert.equal(await gameFrame.evaluate(()=>window.fakeStorage.getItem('gameState')),stored);

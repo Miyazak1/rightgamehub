@@ -30,9 +30,9 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   app.post('/v1/analytics/events', async () => ({ data: { accepted: 1 } }));
   const entry = [
     "import React from 'react';import{createRoot}from'react-dom/client';",
-    'import App from ' + JSON.stringify(path.join(root, 'packages/platform-client/src/App.jsx').replaceAll('\\','/')) + ';',
-    'import{createApiClient}from' + JSON.stringify(path.join(root, 'packages/platform-api-client/src/index.mjs').replaceAll('\\','/')) + ';',
-    "const root=createRoot(document.getElementById('root'));window.refreshIdentity=()=>root.render(<React.StrictMode><App apiClient={createApiClient({getAccessToken:()=> 'fixture'})} demo={false} routing={new URLSearchParams(location.search).get('routing')==='memory'?'memory':'hash'}/></React.StrictMode>);window.refreshIdentity();",
+    'import App from ' + JSON.stringify(path.join(root, 'tests/browser-platform-app.jsx').replaceAll('\\','/')) + ';',
+    'import{createApiClient}from' + JSON.stringify(path.join(root, 'tests/browser-api-client.mjs').replaceAll('\\','/')) + ';',
+    "const root=createRoot(document.getElementById('root'));window.refreshIdentity=()=>root.render(<React.StrictMode><App apiClient={createApiClient({getAccessToken:()=> 'fixture'})} demo={false} routing={new URLSearchParams(location.search).get('routing')==='memory'?'memory':'history'}/></React.StrictMode>);window.refreshIdentity();",
   ].join('\n');
   const bundle = await build({ stdin: { contents: entry, loader: 'jsx', resolveDir: root }, bundle: true, write: false, platform: 'browser', format: 'iife', nodePaths: [path.join(root, 'packages/platform-client/node_modules')], loader: { '.png': 'dataurl' }, define: { 'import.meta.env.DEV': 'false' }, logLevel: 'silent' });
   const css = await fs.readFile(path.join(root, 'packages/platform-client/src/styles.css'), 'utf8');
@@ -43,7 +43,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const menu = page.getByRole('menu', { name: '账号操作' }), avatar = page.getByRole('button', { name: '账号菜单', exact: true });
   const focused = () => page.evaluate(() => document.activeElement?.textContent?.trim());
-  const goAs = async (role, route = '/discover') => { identity = role; await page.goto(base + '/?visit=' + (++visit) + '#' + route); await page.getByRole('button', { name: role === 'guest' ? '登录' : '账号菜单', exact: true }).waitFor(); };
+  const goAs = async (role, route = '/discover') => { identity = role; await page.goto(base + route + '?visit=' + (++visit)); await page.getByRole('button', { name: role === 'guest' ? '登录' : '账号菜单', exact: true }).waitFor(); };
   const noOverflow = async () => {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     const rects = await page.locator('.header button:visible,.header .host-chip:visible').evaluateAll(elements => elements.map(el => { const r = el.getBoundingClientRect(); return { text: el.textContent, left: r.left, right: r.right }; }));
@@ -52,7 +52,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   };
   await goAs('guest');
   const nav = page.getByRole('navigation', { name: '主导航', exact: true });
-  assert.deepEqual(await nav.getByRole('button').allTextContents(), ['✦发现','✣分享','↗共建','▣游戏库']);
+  assert.deepEqual(await nav.getByRole('button').allTextContents(), ['✦发现','▤日志','◈学习','◇工具','▣游戏库']);
   assert.equal(await nav.getByRole('button', { name: /添加到 Agent|创作|治理/ }).count(), 0);
   assert.equal(await page.locator('.header__tools').getByRole('button', { name: /添加到 Agent/ }).count(), 1);
   await page.getByRole('button', { name: '登录', exact: true }).click(); await page.getByRole('heading', { name: '登录或创建账号' }).waitFor();
@@ -90,8 +90,8 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), workId);
   assert.equal(await workspace.getByRole('link', { name: /能力接入/ }).getAttribute('aria-current'), 'page');
   await page.goto(base + '/creator/multiplayer/docs'); await page.getByRole('heading', { name: '联网游戏开发者中心', exact: true }).waitFor();
-  await page.getByRole('button', { name: /返回 GameHub/ }).click(); await page.getByRole('heading', { name: '发现点有趣的' }).waitFor();
-  await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /#\/library$/);
+  await page.getByRole('button', { name: /返回墨鱼工坊/ }).click(); await page.getByRole('heading', { name: '发现点有趣的' }).waitFor();
+  await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /\/library$/);
   await goAs('admin'); await avatar.click(); await menu.getByRole('menuitem', { name: '治理', exact: true }).click();
   await page.getByRole('heading', { name: '平台运营', exact: true }).waitFor(); assert.equal((await page.request.get(base + '/v1/admin/reports')).status(), 200);
   await goAs('admin'); await avatar.click(); identity = 'player'; await page.evaluate(() => window.refreshIdentity());
@@ -101,7 +101,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
     await page.setViewportSize({ width, height: 900 }); await noOverflow();
     const activeNav = page.getByRole('navigation', { name: width <= 1000 ? '侧栏导航' : '主导航', exact: true });
     assert.equal(await activeNav.getByRole('button', { name: '游戏库', exact: true }).isVisible(), true);
-    await activeNav.getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /#\/library$/);
+    await activeNav.getByRole('button', { name: '游戏库', exact: true }).click(); assert.match(page.url(), /\/library$/);
     await avatar.click(); const box = await page.locator('.account-menu__panel').boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width + 1);
     if (width === 360 || width === 1365) await page.screenshot({ path: path.join(out, 'account-' + width + '.png') });
     await page.keyboard.press('Escape');
@@ -109,7 +109,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   await goAs('creator', '/creator'); await page.getByRole('heading', { name: '创作概览', exact: true }).waitFor();
   for (const width of [320,360,768,1365]) {
     await page.setViewportSize({ width, height: 900 }); await noOverflow();
-    for (const link of await workspace.getByRole('link').all()) { const box = await link.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width + 1); }
+    for (const link of await workspace.getByRole('link').all()) { await link.scrollIntoViewIfNeeded(); const box = await link.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width + 1); }
     await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
     if (width === 360 || width === 1365) await page.screenshot({ path: path.join(out, 'creator-' + width + '.png') });
   }
@@ -122,7 +122,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   await page.getByRole('navigation', { name: '当前创作栏目' }).getByRole('link', { name: 'AI 接入排行榜' }).click();
   await page.getByRole('heading', { name: '让 AI 添加排行榜', exact: true }).waitFor();
   assert.equal(new URL(page.url()).hash, '');
-  await page.getByRole('button', { name: /返回 GameHub/ }).click();
+  await page.getByRole('button', { name: /返回墨鱼工坊/ }).click();
   await page.getByRole('navigation', { name: '侧栏导航' }).getByRole('button', { name: '游戏库', exact: true }).click();
   await page.getByRole('heading', { name: '游戏库', exact: true }).waitFor(); await noOverflow();
   assert.deepEqual(errors, []);

@@ -26,9 +26,12 @@ exports.createContributionFixture=async function(url){
     const repository=new PostgresContributionTaskRepository(pool),service=createContributionTaskService({repository});
     const feedback=createCreatorFeedbackService({repository:new PostgresCreatorFeedbackRepository(pool)});
     const profiles=createPublicProfileService({repository:new PostgresPublicProfileRepository(pool)});
+    const {CommunityProjectService}=await import('../apps/api/src/community-project-service.mjs');
+    const {CommunityService}=await import('../apps/api/src/community-service.mjs');
+    const community=new CommunityService({pool,config:{enabled:true,postingEnabled:true,imagesEnabled:false},projects:new CommunityProjectService({pool})});
     const app=createApp({config:{requestBodyLimit:65536},database:{ping:async()=>true},migrations:{status:async()=>({ready:true})},
       authService:{authenticateBearer:async authorization=>{const id=authorization?.replace(/^Bearer /,'');const actor=Object.values(actors).find(a=>a.userId===id);if(!actor)throw new AuthError('AUTH_REQUIRED',401,'请先登录。');return actor;}},
-      contributionTaskService:service,creatorFeedbackService:feedback,publicProfileService:profiles});
+      contributionTaskService:service,creatorFeedbackService:feedback,publicProfileService:profiles,communityService:community});
     return {db,pool,actors,workId,releaseId,repository,service,feedback,profiles,app,
       async draft(){
         const f=await feedback.submit(actors.contributor,workId,{category:'bug',summary:'触屏按钮没有对齐',details:'使用手机竖屏时按钮发生重叠，需要修复并验证窄屏。'});

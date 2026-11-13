@@ -1503,6 +1503,9 @@ footer.community-actions>.community-report-button { margin-left:auto; padding-ri
 .account-menu { position: relative; flex: 0 0 auto; }
 .account-menu > .avatar { display: grid; place-items: center; }
 .account-menu__panel { position: absolute; z-index: 30; right: 0; top: calc(100% + 12px); width: min(248px,calc(100vw - 24px)); max-height: calc(100dvh - 84px); overflow-y: auto; padding: 8px; border: 1px solid var(--gh-border); background: var(--gh-panel); box-shadow: 4px 4px 0 color-mix(in srgb,var(--gh-border) 65%,transparent); }
+@media (max-width: 1000px) {
+  .account-menu__panel { position: fixed; right: 12px; top: 64px; }
+}
 .account-menu__identity { display: grid; gap: 6px; padding: 10px 12px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--gh-border); overflow-wrap: anywhere; }
 .account-menu__identity strong { font-size: 14px; }
 .account-menu__identity span { font-size: 11px; color: var(--gh-secondary); }

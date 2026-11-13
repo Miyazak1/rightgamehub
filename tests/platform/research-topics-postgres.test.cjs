@@ -134,6 +134,8 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await pool.query(`INSERT INTO tool_change_snapshots(id,watch_id,final_url,status_code,content_type,content_sha256,body_text,change_kind,rule_matched,rule_reason,importance) VALUES($1,$2,'https://example.com/releases',200,'text/html',$3,'Version 2 adds a verified export mode.','changed',true,'出现关键词 export','important')`,[snapshotId,watchId,'b'.repeat(64)]);
   const queued=await service.triggerRun({userId},topic.id);
   await assert.rejects(service.triggerRun({userId},topic.id),error=>error.code==='RESEARCH_RUN_ACTIVE');
+  // The archived evidence and completion below use a fixed October fixture window.
+  await pool.query("UPDATE tool_research_runs SET window_start_at='2026-10-20T00:00:00Z' WHERE id=$1",[queued.id]);
   const claimed=await repository.claimQueued('postgres-test-worker',120);
   assert.equal(claimed.id,queued.id);
   const summary=await repository.observeRun(claimed.id);
@@ -396,7 +398,7 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await assert.rejects(service.listReports({userId:otherUserId},topic.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
   await assert.rejects(pool.query("UPDATE tool_research_reports SET report_kind='run-summary' WHERE id=$1",[runReport.id]),/immutable snapshots/u);
   await assert.rejects(pool.query('DELETE FROM tool_research_reports WHERE id=$1',[runReport.id]),/immutable snapshots/u);
-  assert.equal((await service.listRunActions({userId},topic.id,claimed.id)).length,3);
+  assert.deepEqual((await service.listRunActions({userId},topic.id,claimed.id)).map(action=>action.id).sort(),[actionId,uncertainId,searchActionId,candidateAssessmentActionId].sort());
   await assert.rejects(service.listRunActions({userId:otherUserId},topic.id,claimed.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
   const httpRun=await service.triggerRun({userId},topic.id),httpClaim=await repository.claimQueued('postgres-http-worker',120);
   assert.equal(httpClaim.id,httpRun.id);
@@ -811,8 +813,9 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   await repository.completeRun(fairRunLeaseThree.id,'postgres-fair-run-worker-3',{status:'no_change',resultSummary:{schemaVersion:'radar-observation-v1'},finishedAt:'2030-01-03T00:00:00.000Z'});
   const fairUserGap=await collaboration.createGap({userId},topic.id,{question:'公平队列中的本账号待研究问题是什么？',reason:'验证同账号队首与跨账号最久未服务优先。',priority:'routine'}),fairUserGapTwo=await collaboration.createGap({userId},secondTopic.id,{question:'公平队列中的本账号第二个待研究问题是什么？',reason:'验证同账号并发领取不会突破上限。',priority:'routine'}),fairOtherGap=await collaboration.createGap({userId:otherUserId},fairOtherTopic.id,{question:'公平队列中的另一账号待研究问题是什么？',reason:'验证新账号不会被既有账号任务淹没。',priority:'routine'});
   const fairUserJob={id:key()},fairUserJobTwo={id:key()},fairOtherJob={id:key()},fairRequest={protocol:'research-job-v1',purpose:'scheduler-fairness-fixture'},fairRequestHash=crypto.createHash('sha256').update(JSON.stringify(fairRequest)).digest('hex');
+  const fairJobNode=await bindLocalResearcher(collaboration,userId,'postgres fairness node');
   await pool.query(`UPDATE tool_research_gaps SET status='queued',updated_at=now() WHERE id=ANY($1::uuid[])`,[[fairUserGap.id,fairUserGapTwo.id,fairOtherGap.id]]);
-  await pool.query(`INSERT INTO tool_researcher_jobs(id,topic_id,gap_id,contract_version,request_json,request_sha256,queued_at) VALUES($1,$2,$3,$4,$12,$13,$5::timestamptz),($6,$7,$8,$4,$12,$13,$9::timestamptz),($10,$11,$14,$4,$12,$13,$15::timestamptz)`,[fairUserJob.id,topic.id,fairUserGap.id,topic.currentContractVersion,'2026-10-21T00:00:00.000Z',fairUserJobTwo.id,secondTopic.id,fairUserGapTwo.id,'2026-10-21T00:00:30.000Z',fairOtherJob.id,fairOtherTopic.id,fairRequest,fairRequestHash,fairOtherGap.id,'2026-10-21T00:01:00.000Z']);
+  await pool.query(`INSERT INTO tool_researcher_jobs(id,topic_id,gap_id,contract_version,request_json,request_sha256,queued_at,executor_kind,provider,provider_model,provider_call_status,provider_reserved_at) VALUES($1,$2,$3,$4,$12,$13,$5::timestamptz,'local-node',$16,$17,'reserved',now()),($6,$7,$8,$4,$12,$13,$9::timestamptz,'local-node',$16,$17,'reserved',now()),($10,$11,$14,$4,$12,$13,$15::timestamptz,'local-node',$16,$17,'reserved',now())`,[fairUserJob.id,topic.id,fairUserGap.id,topic.currentContractVersion,'2026-10-21T00:00:00.000Z',fairUserJobTwo.id,secondTopic.id,fairUserGapTwo.id,'2026-10-21T00:00:30.000Z',fairOtherJob.id,fairOtherTopic.id,fairRequest,fairRequestHash,fairOtherGap.id,'2026-10-21T00:01:00.000Z',fairJobNode.provider,fairJobNode.model]);
   const globalJobClaims=await Promise.all([collaboration.claimNext('postgres-fair-researcher-1',{leaseSeconds:120}),collaboration.claimNext('postgres-fair-researcher-1b',{leaseSeconds:120})]),globalLeasedJobs=globalJobClaims.filter(Boolean);
   assert.equal(globalLeasedJobs.length,1,'the local-node account lock must enforce the configured per-account cap');
   const fairJobLeaseOne=globalLeasedJobs[0];
@@ -828,7 +831,7 @@ test('research PostgreSQL archive is isolated, idempotent, leased and evidence-b
   const otherAccountCollaboration=createResearcherCollaborationService({repository:collaborationRepository,maxActiveJobsPerAccount:1});
   await bindLocalResearcher(otherAccountCollaboration,otherUserId,'postgres other account node');
   const fairOtherLease=await otherAccountCollaboration.claimNext('ignored',{leaseSeconds:120});
-  assert.equal(fairOtherLease.id,fairOtherJob,'the other account job must remain invisible until that account node claims it');
+  assert.equal(fairOtherLease.id,fairOtherJob.id,'the other account job must remain invisible until that account node claims it');
   await otherAccountCollaboration.fail(fairOtherLease.id,{attemptId:fairOtherLease.attemptId,code:'FAIRNESS_TEST_DONE',message:'仅用于完成账号隔离验收。'});
   await assert.rejects(service.listEvidence({userId:otherUserId},topic.id),error=>error.code==='RESEARCH_TOPIC_NOT_FOUND');
   const replay=await repository.observeRun(claimed.id);

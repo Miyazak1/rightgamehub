@@ -21,9 +21,9 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
   app.get('/v1/creator/uploads/:id',async(req,reply)=>jobs.has(req.params.id)?{data:jobs.get(req.params.id)}:reply.code(404).send({error:{code:'NOT_FOUND'}}));
   const entry=[
     "import React from 'react';import{createRoot}from'react-dom/client';",
-    'import App from '+JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))+';',
+    'import App from '+JSON.stringify(path.join(root,'tests/browser-platform-app.jsx').replaceAll('\\','/'))+';',
     'import{demoUploads}from'+JSON.stringify(path.join(root,'packages/platform-client/src/demo.mjs').replaceAll('\\','/'))+';',
-    'import{createApiClient}from'+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
+    'import{createApiClient}from'+JSON.stringify(path.join(root,'tests/browser-api-client.mjs').replaceAll('\\','/'))+';',
     "const q=new URLSearchParams(location.search);const demo=q.has('demo');if(demo)Object.assign(demoUploads[0],{state:'succeeded',publicationOutcome:q.get('outcome')});const api=createApiClient({getAccessToken:()=> 'fixture'});createRoot(document.getElementById('root')).render(<React.StrictMode><App apiClient={api} demo={demo}/></React.StrictMode>);",
   ].join('\n');
   const bundle=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
@@ -51,12 +51,12 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
     const data={id:'restored-'+(++sequence),workId,state,publicationOutcome,targetKey:'web',actualBytes:'24',declaredBytes:'24',...extra};jobs.set(data.id,data);
     await page.evaluate(({workId,id})=>sessionStorage.setItem('gamehub-upload:'+workId,id),{workId,id:data.id});await page.reload();return data;
   };
-  await page.goto(base+route);
-  await page.getByRole('radio',{name:/Windows x64/}).check();
+  await page.goto(base+route);await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();
+  await page.locator('label').filter({has:page.getByRole('radio',{name:/Windows x64/})}).click();assert.equal(await page.getByRole('radio',{name:/Windows x64/}).isChecked(),true);
   await page.getByRole('heading',{name:'上传 Windows 版本',exact:true}).waitFor();
   await page.locator('.native-package-note').getByText('这是可下载的原生程序',{exact:true}).waitFor();
   assert.match(await page.locator('.upload-page').getAttribute('class'),/upload-page--native/);
-  await page.getByRole('radio',{name:/Web ·/}).check();
+  await page.locator('label').filter({has:page.getByRole('radio',{name:/Web ·/})}).click();assert.equal(await page.getByRole('radio',{name:/Web ·/}).isChecked(),true);
   assert.match(await page.locator('.upload-page').getAttribute('class'),/upload-page--web/);
   await page.locator('.upload-form input[type=file]').setInputFiles({name:'sample.zip',mimeType:'application/zip',buffer:Buffer.from('local fixture bytes')});
   await page.getByRole('button',{name:'开始上传',exact:true}).click();
@@ -85,7 +85,7 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
   // Switching works must not carry an earlier work's terminal result into the new upload form.
   await page.goto(base+'/creator/works/different-work/upload');await page.getByRole('button',{name:'开始上传',exact:true}).waitFor();
   assert.equal(await published.getAttribute('class'),'');assert.equal(await timeline.locator('li.is-done').count(),0);
-  await page.goto(base+'/?demo=1&outcome=published'+route.slice(1));await isPublished();
-  await page.goto(base+'/?demo=1&outcome=draft'+route.slice(1));await isDraft(/保留为草稿，尚未发布/);
+  await page.goto(base+route+'?demo=1&outcome=published');await isPublished();
+  await page.goto(base+route+'?demo=1&outcome=draft');await isDraft(/保留为草稿，尚未发布/);
   assert.deepEqual(errors,[]);
 });
