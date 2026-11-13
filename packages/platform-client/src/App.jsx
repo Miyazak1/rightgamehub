@@ -1,3 +1,4 @@
+import { PlatformAssistantProvider, AssistantToggle, AssistantWorkspace } from './PlatformAssistant.jsx';
 import { createPracticeApiClient } from '../../platform-api-client/src/practice.mjs';
 import AgentDisclosure from './AgentDisclosure.jsx';
 import DesktopDownloadPage,{DesktopDownloadFooter} from './DesktopDownloadPage.jsx';
@@ -177,6 +178,7 @@ function Header({ route, go, themeMode, setThemeMode, canChangeTheme, hostIdenti
     {creator ? <span className="header__workspace-label">{t('navigation.creatorSpace')}</span> : player && chrome ? <span className="desktop-drag-space"/> : <PlayerNavigation route={route} go={go}/>}
     {chrome && <span className="desktop-title-grip" aria-hidden="true"/>}
     <div className="header__tools">
+      <AssistantToggle/>
       {Actions ? <Actions go={go} route={route}/> : <>{hostIdentity.id==='browser'&&<button className="header-desktop-cta" aria-current={route==='/download'?'page':undefined} onClick={()=>go('/download')}>{t('navigation.downloadDesktop')}</button>}<button className="header-agent-cta" aria-current={route === '/install' ? 'page' : undefined} onClick={() => go('/install')}>{t('navigation.addAgent')}</button>
       <div className="host-chip" aria-label={t('navigation.hostCurrent',{host:hostIdentity.label})} title={t('navigation.hostTheme',{host:hostIdentity.label})}><span className="host-mark" aria-hidden="true">{hostIdentity.short}</span><span>{hostIdentity.label}</span></div></>}
       <LanguageSwitch />
@@ -1922,7 +1924,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     setTokens: tokens => host.account?.setTokens?.(tokens),
     withRefreshLock: (callback, signal) => host.account?.withRefreshLock ? host.account.withRefreshLock(callback, signal) : callback(),
   }), [apiClient, host]);
-  const practiceApi = useMemo(() => apiClient ?? createPracticeApiClient({
+  const practiceApi = useMemo(() => apiClient?.getPractice ? apiClient : createPracticeApiClient({
     baseUrl: host.apiBaseUrl ?? '',
     getAccessToken: () => host.account?.getAccessToken?.(),
     getRefreshToken: () => host.account?.getRefreshToken?.(),
@@ -1930,10 +1932,11 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     withRefreshLock: (callback, signal) => host.account?.withRefreshLock ? host.account.withRefreshLock(callback, signal) : callback(),
   }), [apiClient, host]);
   const [savedWork, setSavedWork] = useState(null);
+  const [hostCapabilities, setHostCapabilities] = useState(null);
   const [accountStatus, setAccountStatus] = useState(demo ? 'ready' : 'loading');
   const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [hostReady, setHostReady] = useState(false); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
-  useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) { setHostIdentity(resolveHostIdentity(capabilities)); setHostReady(true); } }).catch(() => { if (live) setHostReady(true); }); return () => { live = false; }; }, [host]);
-  useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host]);
+  useEffect(() => { let live = true; host.getCapabilities().then(capabilities => { if (live) { setHostIdentity(resolveHostIdentity(capabilities)); setHostCapabilities(capabilities); setHostReady(true); } }).catch(() => { if (live) setHostReady(true); }); return () => { live = false; }; }, [host]);
+  useEffect(() => { let live = true; const apply = theme => { if (!live || !themeRoot.current) return; setThemeModeState(theme.mode); applyThemeTokens(themeRoot.current, theme); }; host.theme.getTheme().then(apply); const off = host.theme.onThemeChanged(apply); return () => { live = false; off(); }; }, [host, hostCapabilities, accountProfile?.id]);
   useEffect(() => { setSavedWork(null); }, [accountProfile?.id]);
   useEffect(() => {
     if (demo) return undefined;
@@ -2012,7 +2015,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play' || parts[0] === 's';
   const creator = parts[0] === 'creator';
-  return <div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<DesktopDownloadFooter hostIdentity={hostIdentity} visible={!player&&!creator}/><div className="notice-region" aria-live="polite"/></div>;
+  return <PlatformAssistantProvider key={(accountProfile?.id || 'guest') + ':' + (hostCapabilities?.host || 'pending')} api={practiceApi} host={host} capabilities={hostCapabilities} owner={accountProfile?.id} route={route}><div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/><AssistantWorkspace>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<DesktopDownloadFooter hostIdentity={hostIdentity} visible={!player&&!creator}/><div className="notice-region" aria-live="polite"/></AssistantWorkspace></div></PlatformAssistantProvider>;
 }
 
 export default function App(props) {

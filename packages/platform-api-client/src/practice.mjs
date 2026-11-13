@@ -105,6 +105,8 @@ export function createPracticeApiClient({ baseUrl = '', fetchImpl = globalThis.f
     } finally { clearTimeout(timer); if (!hasCombinedSignal) signal?.removeEventListener('abort', cancel); }
   }
   return {
+    getAssistantCapabilities: options => request('/v1/me/assistant/capabilities', { ...options, auth: true }),
+    sendAssistantMessage: (body, options) => request('/v1/me/assistant/messages', { ...options, method: 'POST', body, auth: true }),
     getPracticeCatalog: (filter = {}, options) => request('/v1/learning/practice/catalog?' + new URLSearchParams(Object.entries(filter).filter(([,value]) => value)), options),
     listPracticeHistory: options => request('/v1/me/practice', { ...options, auth: true }),
     startPractice: (body, key, options) => request('/v1/me/practice', { ...options, method: 'POST', body, auth: true, headers: { 'Idempotency-Key': key } }),

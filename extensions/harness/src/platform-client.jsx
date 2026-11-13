@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createHarnessAssistantSender } from './assistant-bridge.mjs';
 import App from '@gamehub/platform-client';
 import { createHarnessHostAdapter } from '@gamehub/host-contract';
 import { createApiClient } from '@gamehub/platform-api-client';
@@ -65,12 +66,12 @@ function HarnessUpdateNotice({ signal }) {
   !busy && React.createElement('button', { type: 'button', onClick: dismiss, 'aria-label': english ? 'Dismiss update notice' : '暂时隐藏更新提示' }, english ? 'Later' : '稍后'));
 }
 
-function HarnessPlatform({ useTabInfo }) {
+function HarnessPlatform({ useTabInfo, sendHostPrompt }) {
   const { tab } = useTabInfo();
-  const host = useMemo(() => createHarnessHostAdapter({
+  const host = useMemo(() => ({...createHarnessHostAdapter({
     signal: tab.signal,
     apiBaseUrl: defaultApiBaseUrl(),
-  }), [tab.signal]);
+  }), assistant: { send: ({prompt}) => sendHostPrompt(prompt) }}), [tab.signal, sendHostPrompt]);
   const api = useMemo(() => createApiClient({
     baseUrl: host.apiBaseUrl,
     getAccessToken: () => host.account.getAccessToken(),
@@ -84,7 +85,7 @@ function HarnessPlatform({ useTabInfo }) {
   }, React.createElement('style', null, `${PLATFORM_CSS}\n${UPDATE_CSS}`), React.createElement(HarnessUpdateNotice, { signal: tab.signal }), React.createElement(App, { hostAdapter: host, apiClient: api, routing: 'memory' }));
 }
 
-export const inject = ['slots', 'sidebarRightTabs'];
+export const inject = ['slots', 'sidebarRightTabs', 'sessions', 'conversation'];
 export function apply(ctx) {
   const english = /^en(?:-|$)/iu.test(window.navigator.language || '');
   ctx.effect(() => ctx.sidebarRightTabs.register({
@@ -93,7 +94,9 @@ export function apply(ctx) {
     guide: [{ id: 'gamehub-platform', order: 60, title: () => 'MOOYU.FUN', description: () => english ? 'Discover, publish, and play Agent games' : '发现、发布与游玩 Agent 游戏' }],
   }), 'gamehub: register platform tab');
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
-    { name: 'sidebar.right.pane.tab', key: ID }, HarnessPlatform,
+    { name: 'sidebar.right.pane.tab', key: ID, inject: session => ({
+      sendHostPrompt: createHarnessAssistantSender(ctx, session),
+    }) }, HarnessPlatform,
   )), 'gamehub: register platform body');
   legacyClient.apply(ctx);
 }

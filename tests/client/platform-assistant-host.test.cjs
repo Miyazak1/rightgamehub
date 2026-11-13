@@ -1,0 +1,30 @@
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm');
+test('Harness sends to the pane session even after the foreground session changes',async()=>{
+ const {createHarnessAssistantSender}=await import('../../extensions/harness/src/assistant-bridge.mjs');
+ let current='A';const messages=[];
+ const ctx={sessions:{scope:id=>({conversation:{send:async prompt=>messages.push({id,prompt,current})}})}};
+ const send=createHarnessAssistantSender(ctx,{sessionId:'A'});current='B';
+ assert.deepEqual(await send('请解释当前题目'),{sent:true});assert.deepEqual(messages,[{id:'A',prompt:'请解释当前题目',current:'B'}]);
+ await assert.rejects(createHarnessAssistantSender(ctx,null)('question'),{message:'HOST_CHAT_SESSION_REQUIRED'});
+ await assert.rejects(createHarnessAssistantSender({},'A')('question'),{message:'HOST_CHAT_UNAVAILABLE'});
+});
+test('MCP widget syncs context without starting chat, validates child origin and returns host message receipts',async()=>{
+ const {createGameHubMcpWidget}=await import('../../apps/api/src/gamehub-mcp-widget.mjs');
+ const widget=createGameHubMcpWidget(),rpc=[],receipts=[];let receive;
+ const child={postMessage:(message,origin)=>receipts.push({message,origin})};
+ const frame={contentWindow:child,addEventListener(){},style:{}};
+ const document={documentElement:{},getElementById:id=>id==='gamehub-frame'?frame:{style:{}}};
+ let failMessage=false;
+ const parent={postMessage:message=>{rpc.push(message);if(message.id!==undefined)queueMicrotask(()=>receive({source:parent,data:{jsonrpc:'2.0',id:message.id,...(failMessage&&message.method==='ui/message'?{error:{message:'not supported'}}:{result:{}})}}));}};
+ const window={parent,addEventListener:(type,handler)=>{if(type==='message')receive=handler;},open(){}};
+ await vm.runInNewContext('(async()=>{'+widget.script.text+'})()',{window,document,navigator:{languages:['zh-CN']},URL,URLSearchParams,setTimeout,clearTimeout,console});
+ const context={kind:'practice-question',batchId:'batch',questionId:'question',number:1,total:3,prompt:'3x+5=20',options:[{id:'A',text:'3'},{id:'B',text:'5'}],checked:false};
+ receive({source:child,origin:'https://evil.example',data:{type:'gamehub/assistant.request',requestId:'bad',payload:{context,intent:'hint'}}});
+ await new Promise(r=>setImmediate(r));assert.equal(rpc.filter(r=>r.method==='ui/message').length,0);
+ receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/assistant.context',payload:context}});
+ await new Promise(r=>setImmediate(r));assert.equal(rpc.filter(r=>r.method==='ui/message').length,0);assert.equal(rpc.find(r=>r.method==='ui/update-model-context').params.structuredContent.mooyuPractice.questionId,'question');
+ receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/assistant.request',requestId:'real',payload:{context,intent:'hint',prompt:'MALICIOUS TOP LEVEL'}}});
+ await new Promise(r=>setImmediate(r));const sent=rpc.find(r=>r.method==='ui/message');assert.match(sent.params.content.text,/3x\+5=20/);assert.ok(!sent.params.content.text.includes('MALICIOUS TOP LEVEL'));
+ assert.equal(receipts.find(r=>r.message.requestId==='real').message.status,'sent');
+ failMessage=true;receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/assistant.request',requestId:'failed',payload:{context,intent:'hint'}}});await new Promise(r=>setImmediate(r));assert.equal(receipts.find(r=>r.message.requestId==='failed').message.status,'failed');
+});

@@ -1,0 +1,66 @@
+const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),{randomUUID}=require('node:crypto');
+const playwright=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH,root=path.resolve(__dirname,'../..');
+test('global assistant retains chat across routes, binds late replies, restores drafts and delegates host chat',{skip:!playwright,timeout:120000},async t=>{
+ const {chromium}=require(playwright),{build,servePage}=require('../browser-build.cjs');
+ const [{createPlatformAssistantService,registerPlatformAssistantRoutes},{createPracticeService},{registerPracticeRoutes},{mathTopics}]=await Promise.all([
+  import('../../apps/api/src/platform-assistant.mjs'),import('../../apps/api/src/practice/service.mjs'),import('../../apps/api/src/practice/routes.mjs'),import('../../packages/practice-core/src/catalog.mjs')]);
+ const app=require('../../apps/api/node_modules/fastify')(),batchId=randomUUID(),providerInputs=[];let browser,held,holdNext=true,failNext=false,calls=0;
+ t.after(async()=>{held?.();await browser?.close();await app.close();});
+ const batch={id:batchId,revision:1,userId:'demo-user',status:'ready',currentIndex:0,createdAt:new Date().toISOString(),config:{subjectId:'mathematics',curriculumId:'csca-math-1.43',topicId:'csca.math.sets',difficultyId:'basic',count:3,language:'zh'},items:[1,2,3].map(n=>({answer:null,checked:false,elapsedSeconds:0,question:{id:String(n).repeat(64),version:'test',prompt:'第'+n+'道示例方程：3x+5=20',options:[{id:'A',text:'3'},{id:'B',text:'5'}],correctAnswer:'B',explanation:'先减去5再除以3。'}}))};
+ const repository={get:async(user,id)=>user==='demo-user'&&id===batchId?structuredClone(batch):null,history:async()=>[],stats:async()=>({topics:[],wrong:[]}),mutate:async(user,id,fn)=>{fn(batch);batch.revision++;return structuredClone(batch);}};
+ const service=createPracticeService({repository,engine:{capabilities:()=>({ready:true,topics:mathTopics})}});
+ const assistant=createPlatformAssistantService({practiceService:service,provider:async({messages})=>{calls++;providerInputs.push(messages);if(holdNext){holdNext=false;await new Promise(r=>held=r);}if(failNext){failNext=false;throw Error('fixture failure');}return '两边同时减去 5。'+(messages[0].content.includes('第1道')?'这是第一题的提示。':'这是当前题的提示。');}});
+ const auth=async r=>{assert.equal(r.headers.authorization,'Bearer fixture');r.actor={userId:'demo-user'};};
+ app.setErrorHandler((e,r,reply)=>reply.code(e.statusCode||500).send({error:{code:e.code,message:e.message}}));
+ registerPracticeRoutes(app,{service,requireAuth:auth});registerPlatformAssistantRoutes(app,{service:assistant,requireAuth:auth});
+ const entry=`import React from 'react';import{createRoot}from'react-dom/client';import App from './packages/platform-client/src/App.jsx';import{createBrowserHostAdapter}from'./packages/host-contract/src/index.mjs';import{createPracticeApiClient}from'./packages/platform-api-client/src/practice.mjs';const hostKind=new URLSearchParams(location.search).get('host')||'browser';const host=createBrowserHostAdapter({host:hostKind});window.__hostMessages=[];window.__fixtureHost=host;host.assistant={send:async payload=>{window.__hostMessages.push(payload);}};const api=createPracticeApiClient({getAccessToken:()=> 'fixture'});createRoot(document.getElementById('root')).render(<React.StrictMode><App demo={true} apiClient={api} hostAdapter={host}/></React.StrictMode>);`;
+ const js=(await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],logLevel:'silent'})).outputFiles[0].text;
+ const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
+ t.diagnostic('Shared app built');
+ servePage(app,(_r,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+ app.get('/fixture.js',(_r,reply)=>reply.type('text/javascript').send(js));await app.listen({host:'127.0.0.1',port:0});
+ browser=await chromium.launch({headless:true});
+ t.diagnostic('Browser launched');
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
+ const url='http://127.0.0.1:'+app.server.address().port,practice='/learn/practice/'+batchId;
+ const navigate=route=>page.evaluate(route=>{history.pushState({},'',route);dispatchEvent(new PopStateEvent('popstate'));},route);
+ await page.goto(url+practice);await page.getByRole('button',{name:'问这道题',exact:true}).waitFor();
+ t.diagnostic('Practice page ready');
+ assert.equal(await page.locator('#platform-assistant').isVisible(),false);
+ await page.getByRole('button',{name:'问这道题',exact:true}).click();await page.getByText('正在思考…',{exact:true}).waitFor();assert.equal(calls,1);
+ await page.getByRole('button',{name:'下一题 →',exact:true}).click();await page.getByRole('heading',{name:'第2道示例方程：3x+5=20',exact:true}).waitFor();
+ held();await page.getByText(/这是第一题的提示/).waitFor();assert.match(await page.locator('.assistant-context strong').textContent(),/第 2 题/);
+ assert.match(await page.locator('.assistant-message.is-assistant small').textContent(),/第 1 题/);
+ await page.locator('#assistant-draft').fill('我还想问下一步');await navigate('/tools');await page.locator('.tools-page').waitFor().catch(()=>{});
+ assert.equal(await page.locator('#assistant-draft').inputValue(),'我还想问下一步');assert.match(await page.locator('.assistant-context strong').textContent(),/平台对话/);
+ await page.reload();await page.locator('#assistant-draft').waitFor();assert.equal(await page.locator('#assistant-draft').inputValue(),'我还想问下一步');assert.match(await page.locator('.assistant-message.is-assistant').textContent(),/第一题/);
+ await navigate(practice);await page.getByRole('button',{name:'问这道题',exact:true}).waitFor();
+ await page.getByRole('button',{name:'跟随页面 · 固定此题'}).click();await page.getByRole('button',{name:'下一题 →',exact:true}).click();assert.match(await page.locator('.assistant-context strong').textContent(),/第 2 题/);
+ await page.getByRole('button',{name:'取消固定 · 跟随页面'}).click();assert.match(await page.locator('.assistant-context strong').textContent(),/第 3 题/);
+ failNext=true;await page.getByRole('button',{name:'发送 ↑',exact:true}).click();await page.getByRole('button',{name:'重试',exact:true}).waitFor();await page.getByRole('button',{name:'重试',exact:true}).click();await page.getByText(/这是当前题的提示/).waitFor();assert.equal(await page.getByRole('button',{name:'重试',exact:true}).count(),0);
+ const separator=page.getByRole('separator',{name:'助手宽度'});await separator.focus();await page.keyboard.press('ArrowLeft');assert.equal(await separator.getAttribute('aria-valuenow'),'400');
+ await page.locator('#assistant-draft').fill('第一行');await page.locator('#assistant-draft').press('Shift+Enter');await page.locator('#assistant-draft').press('ArrowRight');assert.match(await page.locator('#assistant-draft').inputValue(),/\n/);
+ const beforeIme=calls;await page.locator('#assistant-draft').evaluate(el=>el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',isComposing:true,bubbles:true})));assert.equal(calls,beforeIme);
+ await page.locator('#assistant-draft').fill('键盘发送消息');await page.locator('#assistant-draft').press('Enter');await page.locator('.assistant-message.is-assistant.is-sent').nth(2).waitFor();assert.equal(calls,beforeIme+1);
+ const screenshots=path.join(root,'.runtime/global-platform-chat');await fs.mkdir(screenshots,{recursive:true});await page.locator('#assistant-draft').focus();
+ await page.evaluate(()=>window.__fixtureHost.theme.setPreference('dark'));await page.waitForFunction(()=>document.querySelector('.app').getAttribute('data-theme')==='dark'||getComputedStyle(document.querySelector('.app')).getPropertyValue('--gh-canvas').trim()==='#0c0b11');
+ await page.screenshot({path:path.join(screenshots,'desktop.png'),fullPage:true});
+ for(const width of [320,390,768,1024,1440]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'overflow at '+width);}
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('#platform-assistant').evaluate(el=>getComputedStyle(el).position),'fixed');await page.screenshot({path:path.join(screenshots,'mobile.png')});
+ await page.setViewportSize({width:390,height:500});assert.equal(await page.getByRole('button',{name:'发送 ↑',exact:true}).isVisible(),true);assert.equal(await page.locator('#platform-assistant').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true);const sendBox=await page.getByRole('button',{name:'发送 ↑',exact:true}).boundingBox();assert.ok(sendBox.y+sendBox.height<=500,'send remains above the keyboard');
+ await page.setViewportSize({width:1440,height:1000});await page.evaluate(()=>window.__fixtureHost.theme.setPreference('light'));await page.screenshot({path:path.join(screenshots,'desktop-light.png')});
+ await page.evaluate(()=>window.__fixtureHost.theme.setPreference('high-contrast'));await page.screenshot({path:path.join(screenshots,'desktop-contrast.png')});
+ await page.locator('#assistant-draft').focus();await page.keyboard.press('Escape');assert.equal(await page.locator('#platform-assistant').isVisible(),false);
+ await navigate('/tools');await page.getByRole('button',{name:'墨鱼助手',exact:true}).click();await page.locator('#assistant-draft').fill('练习入口在哪里？');failNext=true;await page.getByRole('button',{name:'发送 ↑',exact:true}).click();await page.getByRole('button',{name:'重试',exact:true}).waitFor();
+ await navigate(practice);await page.getByRole('button',{name:'问这道题',exact:true}).waitFor();await page.getByRole('button',{name:'重试',exact:true}).click();await page.locator('.assistant-message.is-assistant.is-sent').nth(3).waitFor();assert.match(await page.locator('.assistant-message.is-assistant').last().locator('small').textContent(),/平台对话/);assert.ok(providerInputs.at(-1)[0].content.endsWith('null'),'retry preserves an originally unbound conversation');
+ for(const host of ['harness','mcp-app','desktop-app']){
+  const hostPage=await browser.newPage({viewport:{width:1200,height:900}});const requests=[];hostPage.on('request',r=>{if(r.url().includes('/assistant/'))requests.push(r.url());});
+  await hostPage.goto(url+practice+'?host='+host);await hostPage.locator('.practice-question h2').waitFor();
+  if(host==='desktop-app'){assert.equal(await hostPage.getByRole('button',{name:'墨鱼助手',exact:false}).count()>0,true);}else{
+   assert.equal(await hostPage.locator('#platform-assistant').count(),0);assert.equal(requests.length,0);
+   await hostPage.getByRole('button',{name:'请宿主 Agent 帮我',exact:true}).click();await hostPage.getByText('已交给宿主聊天。',{exact:true}).waitFor();
+   const sent=await hostPage.evaluate(()=>window.__hostMessages);assert.equal(sent.length,1);assert.equal(sent[0].context.questionId,batch.items[2].question.id);assert.ok(!('correctAnswer'in sent[0].context));assert.equal(requests.length,0);
+  }await hostPage.close();
+ }
+ assert.deepEqual(errors,[]);
+});
