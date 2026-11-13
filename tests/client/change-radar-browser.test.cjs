@@ -8,7 +8,7 @@ const playwrightPath = process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
 
 test('change radar renders an empty account and opens long-term news tracking without a URL', { skip: !playwrightPath, timeout: 90000 }, async t => {
   const { chromium } = require(playwrightPath);
-  const { build } = require('../../extensions/harness/node_modules/esbuild');
+  const { build } = require('../browser-build.cjs');
   const app = require('../../apps/api/node_modules/fastify')();
   let browser;
   let page;
@@ -41,7 +41,7 @@ test('change radar renders an empty account and opens long-term news tracking wi
     logLevel: 'silent',
   });
   const css = await fs.readFile(path.join(root, 'packages/platform-client/src/styles.css'), 'utf8');
-  app.get('/', async (request, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app, async (request, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js', async (request, reply) => reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({ host: '127.0.0.1', port: 0 });
 

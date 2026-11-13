@@ -8,16 +8,16 @@ for(const scenario of [
   const published=await fixture.publish(await fs.readFile(path.join(root,'artifacts',scenario.archive)),scenario.name);
   const {createApp}=await import('../../apps/api/src/app.mjs');
   app=createApp({config:{requestBodyLimit:65536,corsOrigins:[]},competitionService:fixture.competition,gameSessionService:fixture.sessions,authService:{authenticateBearer:async()=>fixture.actor}});
-  const {build}=require('../../extensions/harness/node_modules/esbuild'),{chromium}=require(playwright);
+  const {build}=require('../browser-build.cjs'),{chromium}=require(playwright);
   const js=(await build({stdin:{contents:[
-    "import React from 'react';import {createRoot} from 'react-dom/client';",
+    "import{I18nProvider}from'./packages/platform-client/src/I18n.jsx';import React from 'react';import {createRoot} from 'react-dom/client';",
     'import WorkLeaderboard from '+JSON.stringify(path.join(root,'packages/platform-client/src/WorkLeaderboard.jsx').replaceAll('\\','/'))+';',
     'import {createApiClient} from '+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
     'import {createWebGameHost} from '+JSON.stringify(path.join(root,'packages/platform-client/src/web-game-host.mjs').replaceAll('\\','/'))+';',
     'const workId='+JSON.stringify(published.workId)+',releaseId='+JSON.stringify(published.releaseId)+',accountProfile='+JSON.stringify({id:fixture.actor.userId})+';',
     "const api=createApiClient({getAccessToken:()=> 'fixture'}),frame=document.getElementById('game');",
     "createWebGameHost({frame,launchId:'fixture',descriptor:{workId,releaseId,runtimeOrigin:new URL(frame.src).origin,capabilities:{competition:true}},apiClient:api});",
-    "createRoot(document.getElementById('root')).render(<React.StrictMode><WorkLeaderboard workId={workId} api={api} go={()=>{}} accountProfile={accountProfile} Avatar={()=> <span/>}/></React.StrictMode>);",
+    "createRoot(document.getElementById('root')).render(<React.StrictMode><I18nProvider initialLocale='zh-CN'><WorkLeaderboard workId={workId} api={api} go={()=>{}} accountProfile={accountProfile} Avatar={()=> <span/>}/></I18nProvider></React.StrictMode>);",
   ].join('\n'),loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')]})).outputFiles[0].text;
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
   const {createRuntimeEdgeApp}=await import('../../apps/api/src/runtime-edge-app.mjs');
@@ -25,7 +25,7 @@ for(const scenario of [
   const runtime=createRuntimeEdgeApp({repository:new PostgresRuntimeEdgeRepository(fixture.pool),objectStore:fixture.runtimeStore,runtimeDomain:'games.test'});t.after(()=>runtime.close());
   app.get('/game/*',async(req,reply)=>{const result=await runtime.inject({url:'/'+req.params['*'],headers:{host:'r-'+published.releaseId.replaceAll('-','')+'.games.test'}});return reply.code(result.statusCode).headers(result.headers).send(result.rawPayload);});
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(js));
-  let port;app.get('/',async(req,reply)=>reply.type('text/html').send(`<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}iframe{display:block;width:100%;height:1000px;border:0}#root{max-width:960px;margin:auto;container-type:inline-size}</style><iframe id="game" sandbox="allow-scripts" src="http://localhost:${port}/game/index.html"></iframe><div id="root"></div><script src="/fixture.js"></script></html>`));
+  let port;require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send(`<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}iframe{display:block;width:100%;height:1000px;border:0}#root{max-width:960px;margin:auto;container-type:inline-size}</style><iframe id="game" sandbox="allow-scripts" src="http://localhost:${port}/game/index.html"></iframe><div id="root"></div><script src="/fixture.js"></script></html>`));
   await app.listen({host:'0.0.0.0',port:0});port=app.server.address().port;
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1200,height:1000}}),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(12000);
   await page.goto(`http://127.0.0.1:${port}/`);const game=page.frameLocator('#game'),board=page.locator('.work-leaderboard');

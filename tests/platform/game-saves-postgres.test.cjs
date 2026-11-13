@@ -453,7 +453,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const {loadConfig}=await import('../../apps/api/src/config.mjs');
     const f=await fixture(),root=await fs.mkdtemp(path.join(os.tmpdir(),'gamehub-s2-pg-'));
     let offline=false,dropAck=false;
-    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+    const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
       authService:{authenticateBearer:async()=>f.actor},gameSessionService:f.sessions,gameSaveService:f.service});
     const stores=[],bridges=[],puts=[];
     st.after(async()=>{for(const b of bridges)b.close();for(const s of stores)await s.close();await app.close();await fs.rm(root,{recursive:true,force:true});});
@@ -491,7 +491,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const {loadConfig}=await import('../../apps/api/src/config.mjs');
     const f=await fixture(),other=await fixture();
     const actors={'Bearer account-a':f.actor,'Bearer account-b':other.actor};
-    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+    const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
       authService:{authenticateBearer:async header=>{assert.ok(actors[header]);return actors[header];}},
       gameSessionService:f.sessions,gameSaveService:f.service});
     st.after(()=>app.close());
@@ -572,7 +572,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const {createApp}=await import('../../apps/api/src/app.mjs');
     const {loadConfig}=await import('../../apps/api/src/config.mjs');
     const f=await fixture();let dropAck=false;
-    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+    const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
       authService:{authenticateBearer:async()=>f.actor},gameSessionService:f.sessions,gameSaveService:f.service});
     st.after(()=>app.close());
     const api=createApiClient({getAccessToken:()=> 'fixture',fetchImpl:async(address,init)=>{
@@ -607,7 +607,7 @@ test('PostgreSQL save transactions, durability receipts, retention and authoriza
     const f=await fixture();
     const {createApp}=await import('../../apps/api/src/app.mjs');
     const {loadConfig}=await import('../../apps/api/src/config.mjs');
-    const app=createApp({config:loadConfig({NODE_ENV:'test',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
+    const app=createApp({config:loadConfig({NODE_ENV:'test',CLOUD_SAVE_ENABLED:'true',DATABASE_URL:url,OTP_HMAC_KEY:'x'.repeat(32)}),
       authService:{authenticateBearer:async()=>f.actor},gameSaveService:f.service});
     st.after(()=>app.close());
     const body=Buffer.from(' { "chapter" : "二" }\n'),base='/v1/me/game-saves/'+f.workId+'/slots/autosave';

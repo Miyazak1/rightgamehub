@@ -9,7 +9,7 @@ test('project claim browser: creator sees progress and admin approval is auditab
   await fixture.createPendingClaim();
   const out=path.join(root,'.runtime/project-claim-acceptance');await fs.mkdir(out,{recursive:true});
   let browser,creatorPage,adminPage;t.after(async()=>{if(creatorPage)await creatorPage.screenshot({path:path.join(out,'creator-last.png'),fullPage:true});if(adminPage)await adminPage.screenshot({path:path.join(out,'admin-last.png'),fullPage:true});await browser?.close();await fixture.close();});
-  const {build}=require('../../extensions/harness/node_modules/esbuild');
+  const {build}=require('../browser-build.cjs');
   const entry=`import React,{useCallback,useEffect,useState}from'react';import{createRoot}from'react-dom/client';
 import{MyProjectClaims,AdminClaimManager}from${JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))};
 import{createApiClient}from${JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))};
@@ -17,7 +17,7 @@ const actors=${JSON.stringify(actors)},key=new URL(location.href).searchParams.g
 function Fixture(){const[state,setState]=useState({status:'loading',items:[]});const load=useCallback(async()=>{setState(current=>({...current,status:'loading'}));try{const response=key==='admin'?await api.listAdminProjectClaims('all',100):await api.listMyProjectClaims('all',100);setState({status:'ready',items:response.data});}catch(error){setState({status:'error',items:[],error:error.message});}},[]);useEffect(()=>{load();},[load]);return <main className="page">{key==='admin'?<AdminClaimManager api={api} claims={state.items} onChanged={load} demo={false}/>:<MyProjectClaims api={api} state={state} onReload={load} go={()=>{}} demo={false}/>}</main>}createRoot(document.getElementById('root')).render(<Fixture/>);`;
   const bundled=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',target:'chrome110',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(_request,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(_request,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(_request,reply)=>reply.type('application/javascript').send(bundled.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await require(playwrightPath).chromium.launch({headless:true,...(browserPath?{executablePath:browserPath}:{})});const errors=[];

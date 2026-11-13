@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const root=path.resolve(__dirname,'../..'),playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
 test('discovery browser: complete catalog, remote search, private recent plays and narrow navigation',{skip:!playwrightPath,timeout:90000},async t=>{
-  const {chromium}=require(playwrightPath),{build}=require('../../extensions/harness/node_modules/esbuild');
+  const {chromium}=require(playwrightPath),{build}=require('../browser-build.cjs');
   const app=require('../../apps/api/node_modules/fastify')();let browser;
   t.after(async()=>{await browser?.close();await app.close();});
   const make=(id,title,extra={})=>({id,title,description:'休息时打开，体验一段小小的游戏时光。',kind:'game',creatorDisplayName:'玩家',tags:['益智'],estimatedMinutes:3,targets:[{targetKey:'web',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}],ingestionMethod:'zip_upload',attributionKind:'publisher',openSource:false,remixable:false,claimEligible:false,claimStatus:'publisher',...extra});
@@ -34,7 +34,7 @@ test('discovery browser: complete catalog, remote search, private recent plays a
     "function render(){root.render(<React.StrictMode><App key={user} apiClient={api} demo={false}/></React.StrictMode>)};window.discoveryFixture={signIn(id){user=id;render()}};render();",
   ].join('\n'),loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundled.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);

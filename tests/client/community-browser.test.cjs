@@ -5,7 +5,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   assert.ok(['127.0.0.1','localhost'].includes(connection.hostname)&&connection.pathname==='/community_test','Browser fixture requires the dedicated local community_test database.');
   const {chromium}=require(playwrightPath);
   const Fastify=require('../../apps/api/node_modules/fastify'),sharp=require('../../apps/api/node_modules/sharp');
-  const {build}=require('../../extensions/harness/node_modules/esbuild');
+  const {build}=require('../browser-build.cjs');
   const {createCommunityTestDatabase}=require('../community-database.cjs');
   const {applyMigrations}=await import('../../apps/api/src/migrations.mjs');
   const {CommunityService}=await import('../../apps/api/src/community-service.mjs');
@@ -42,7 +42,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   ].join('\n');
   const bundled=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',target:'chrome110',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(request,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameHub 分享验收</title><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(request,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameHub 分享验收</title><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(request,reply)=>reply.type('application/javascript').send(bundled.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});
   const base='http://127.0.0.1:'+app.server.address().port;

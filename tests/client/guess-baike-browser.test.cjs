@@ -9,7 +9,7 @@ const browserPath = process.env.GAMEHUB_COMMUNITY_BROWSER_PATH;
 
 test('Guess Baike keeps the primary interaction visible and survives restricted storage', { skip: !playwrightPath, timeout: 60000 }, async t => {
   const { chromium } = require(playwrightPath);
-  const { build } = require('../../extensions/harness/node_modules/esbuild');
+  const { build } = require('../browser-build.cjs');
   const app = require('../../apps/api/node_modules/fastify')();
   let browser;
   t.after(async () => { await browser?.close(); await app.close(); });
@@ -44,7 +44,7 @@ test('Guess Baike keeps the primary interaction visible and survives restricted 
   });
   const css = await fs.readFile(path.join(root, 'packages/platform-client/src/styles.css'), 'utf8');
   const tokens = ':root{--gh-canvas:#0c0b11;--gh-panel:#15131d;--gh-raised:#1d1a28;--gh-primary:#f7f4ff;--gh-secondary:#aaa4b9;--gh-border:#343040;--gh-action:#9b6cff;--gh-onAction:#130d1e;--gh-success:#4fd49a;--gh-warning:#ffbd5b;--gh-danger:#ff6f87;--gh-glow:#8b5cf6}*{box-sizing:border-box}html,body,#root{margin:0;min-height:100%;background:#0c0b11}.fixture{container-type:inline-size}.host-bar{height:74px}';
-  app.get('/', async (req, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + tokens + css + '</style><div class="host-bar"></div><div class="fixture" id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app, async (req, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + tokens + css + '</style><div class="host-bar"></div><div class="fixture" id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js', async (req, reply) => reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({ host: '127.0.0.1', port: 0 });
 

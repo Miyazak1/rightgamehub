@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const root=path.resolve(__dirname,'../..'),playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
 test('work detail leaderboard: public, own rank, pagination, dates, narrow layout and saved result navigation',{skip:!playwrightPath,timeout:90000},async t=>{
-  const {chromium}=require(playwrightPath),{build}=require('../../extensions/harness/node_modules/esbuild');
+  const {chromium}=require(playwrightPath),{build}=require('../browser-build.cjs');
   const {guessBaikeWork}=await import('../../apps/api/src/built-in-works.mjs');
   const app=require('../../apps/api/node_modules/fastify')();let browser,releaseSave;
   t.after(async()=>{releaseSave?.();await browser?.close();await app.close();});
@@ -33,13 +33,13 @@ test('work detail leaderboard: public, own rank, pagination, dates, narrow layou
   app.get('/v1/community/capabilities',async()=>({data:{readEnabled:true,postingEnabled:true,canShare:false,isAdmin:false,channels:[{key:'game',name:'游戏'}],limits:{},reason:'AUTH_REQUIRED'}}));
   app.get('/v1/community/posts',async()=>({data:{items:[],nextCursor:null}}));
   const bundle=await build({stdin:{contents:[
-    "import React from 'react';import {createRoot} from 'react-dom/client';",
+    "import{I18nProvider}from'./packages/platform-client/src/I18n.jsx';import React from 'react';import {createRoot} from 'react-dom/client';",
     'import App from '+JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))+';',
     'import {createApiClient} from '+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',
-    "let user='';const root=createRoot(document.getElementById('root'));const api=createApiClient({getAccessToken:()=>user||null});function render(){root.render(<React.StrictMode><App key={user} apiClient={api} demo={false}/></React.StrictMode>)}window.boardFixture={signIn(id){user=id;render()}};render();",
+    "let user='';const root=createRoot(document.getElementById('root'));const api=createApiClient({getAccessToken:()=>user||null});function render(){root.render(<React.StrictMode><I18nProvider initialLocale='zh-CN'><App key={user} apiClient={api} demo={false}/></I18nProvider></React.StrictMode>)}window.boardFixture={signIn(id){user=id;render()}};render();",
   ].join('\n'),loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);

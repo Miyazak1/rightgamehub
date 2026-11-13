@@ -9,10 +9,10 @@ test('work editor browser: prefill, immutable kind, validation, real conflict, r
   app.addHook('onRequest',async req=>requests.push({method:req.method,url:req.url,headers:req.headers}));
   app.post('/v1/analytics/events',async()=>({data:{accepted:1}}));
   app.get('/v1/creator/feedback',async()=>({data:[]})); app.get('/v1/creator/contribution-tasks',async()=>({data:[]})); app.get('/v1/contribution-notifications',async()=>({data:{items:[],unreadCount:0}}));
-  const {build}=require('../../extensions/harness/node_modules/esbuild');
+  const {build}=require('../browser-build.cjs');
   const bundle=await build({stdin:{contents:["import React from 'react';import{createRoot}from'react-dom/client';",'import App from '+JSON.stringify(path.join(root,'packages/platform-client/src/App.jsx').replaceAll('\\','/'))+';','import{createApiClient}from'+JSON.stringify(path.join(root,'packages/platform-api-client/src/index.mjs').replaceAll('\\','/'))+';',`const api=createApiClient({getAccessToken:()=>${JSON.stringify(f.actors.owner.userId)}});createRoot(document.getElementById('root')).render(<React.StrictMode><App apiClient={api} demo={false}/></React.StrictMode>);`].join('\n'),loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
   browser=await require(playwrightPath).chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',error=>errors.push(error.message));

@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.resolve(__dirname,'../..'),playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
 
 test('live upload timeline: auto-publish, draft, restored results, processing, failures, demo parity and narrow layout',{skip:!playwrightPath,timeout:90000},async t=>{
-  const {chromium}=require(playwrightPath),{build}=require('../../extensions/harness/node_modules/esbuild');
+  const {chromium}=require(playwrightPath),{build}=require('../browser-build.cjs');
   const app=require('../../apps/api/node_modules/fastify')();let browser,page,sequence=0,latestJob;
   const jobs=new Map(),requests=[],workId='0d4748b7-2ac5-4a5c-847b-80505a21a7f1';
   const out=path.join(root,'.runtime/upload-status-acceptance');await fs.mkdir(out,{recursive:true});
@@ -28,7 +28,7 @@ test('live upload timeline: auto-publish, draft, restored results, processing, f
   ].join('\n');
   const bundle=await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.join(root,'packages/platform-client/node_modules')],loader:{'.png':'dataurl'},define:{'import.meta.env.DEV':'false'},logLevel:'silent'});
   const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
-  app.get('/',async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+  require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port,route='/creator/works/'+workId+'/upload';
   browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);
