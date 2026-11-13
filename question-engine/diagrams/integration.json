@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "math143-host-figures-v1",
+  "archive": "artifacts/math-lab/math-lab-1.43-diagrams-complete.zip",
+  "sha256": "48ea6def723eec29957de583b6371492477f88f27365906627b0ff7224b32574",
+  "questionScopes": 32,
+  "reviewOnlyScopes": 1,
+  "hostAdaptation": "frozen.cjs loader points to pinned math-v143 runtime; only nine rendering modules copied, trailing blank lines normalized; no reader/server or holdout data in runtime",
+  "archiveDistribution": "local-only upstream handoff containing internal holdout reports; runtime modules are versioned separately"
+}

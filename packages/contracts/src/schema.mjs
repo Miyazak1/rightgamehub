@@ -1,3 +1,4 @@
+import {practiceSchemas,practiceRoutes} from './practice-schema.mjs';
 import {competitionSchemas,competitionRoutes} from './competition-schema.mjs';
 import {saveOperationsSchemas,saveOperationsRoutes} from './save-operations-schema.mjs';
 import {communitySchemas,communityRoutes} from './community-schema.mjs';
@@ -847,6 +848,7 @@ export const schemas = Object.freeze({
     } },
     lastCleanup: object({ at: nullableDateTime, filesRemoved: { type: 'integer', minimum: 0 }, bytesReclaimed: { type: 'integer', minimum: 0 } }),
   }),
+  ...practiceSchemas,
 });
 
 const json = schema => ({ 'application/json': { schema } });
@@ -1045,6 +1047,7 @@ export const operations = Object.freeze([
   { method: 'post', path: '/v1/creator/uploads/{uploadId}/complete', operationId: 'completeUpload', auth: 'bearer', response: 'UploadJob', pathId: 'uploadId', idempotent: true },
   { method: 'get', path: '/v1/creator/uploads/{uploadId}', operationId: 'getUpload', auth: 'bearer', response: 'UploadJob', pathId: 'uploadId' },
   { method: 'get', path: '/v1/works/{workId}/cover', operationId: 'getWorkCover', auth: 'anonymous', pathId: 'workId', binaryResponse: true },
+  ...practiceRoutes,
 ]);
 
 export function createOpenApiDocument() {

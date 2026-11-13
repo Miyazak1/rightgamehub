@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 
 const assetMime = path => {
   if (/\.m?js$/u.test(path)) return 'text/javascript';
@@ -11,7 +12,16 @@ export const inlineComponentCss = {
   name: 'inline-component-css',
   setup(context) {
     context.onLoad({ filter: /\.css$/u }, async ({ path }) => {
-      const source = await readFile(path, 'utf8');
+      let source = await readFile(path, 'utf8');
+      // Webviews inject CSS as text, so relative font URLs have no asset base.
+      // Embed trusted local font dependencies (including KaTeX) for offline hosts.
+      const fonts = [...source.matchAll(/url\((['"]?)([^)'"\s]+\.(?:woff2?|ttf|eot))\1\)/gu)]
+        .filter(match => !/^(?:data:|https?:|\/)/u.test(match[2]));
+      for (const match of fonts) {
+        const extension = match[2].split('.').at(-1);
+        const mime = { woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', eot: 'application/vnd.ms-fontobject' }[extension];
+        source = source.replaceAll(match[0], `url(data:${mime};base64,${(await readFile(resolve(dirname(path), match[2]))).toString('base64')})`);
+      }
       return {
         contents: `if(typeof document!==\"undefined\"){const style=document.createElement(\"style\");style.textContent=${JSON.stringify(source)};document.head.append(style);}`,
         loader: 'js',

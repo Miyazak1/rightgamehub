@@ -1,3 +1,4 @@
+import {practiceSchemas} from '../packages/contracts/src/practice-schema.mjs';
 import {competitionSchemas} from '../packages/contracts/src/competition-schema.mjs';
 import {saveOperationsSchemas} from '../packages/contracts/src/save-operations-schema.mjs';
 import {communitySchemas} from '../packages/contracts/src/community-schema.mjs';
@@ -30,7 +31,7 @@ function operationSchemaType(s) {
   if(s.oneOf)return s.oneOf.map(operationSchemaType).join(' | ');
   if(s.const!==undefined)return JSON.stringify(s.const);
   if(s.enum)return s.enum.map(v=>JSON.stringify(v)).join(' | ');
-  if(s.type==='object')return s.additionalProperties===true?'Record<string, unknown>':'{ '+Object.entries(s.properties).map(([k,v])=>k+(s.required?.includes(k)?'':'?')+': '+operationSchemaType(v)).join('; ')+' }';
+  if(s.type==='object')return s.additionalProperties===true?'Record<string, unknown>':'{ '+Object.entries(s.properties).map(([k,v])=>(/^[A-Za-z_$][\w$]*$/.test(k)?k:JSON.stringify(k))+(s.required?.includes(k)?'':'?')+': '+operationSchemaType(v)).join('; ')+' }';
   if(s.type==='array')return 'Array<'+operationSchemaType(s.items)+'>';
   return s.type==='integer'?'number':s.type;
 }
@@ -43,6 +44,7 @@ function generateTypes() {
     lines.push(`export type ${name} = ${values.map(value => JSON.stringify(value)).join(' | ')};`);
   }
   lines.push('', 'export type UIntString = `${number}`;', 'export type UUID = string;', '');
+  for(const [name,schema] of Object.entries(practiceSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   for(const [name,schema] of Object.entries(saveOperationsSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   for(const [name,schema] of Object.entries(communitySchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');
   for(const [name,schema] of Object.entries(competitionSchemas)) lines.push('export type '+name+' = '+operationSchemaType(schema)+';');

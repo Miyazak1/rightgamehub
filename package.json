@@ -64,6 +64,10 @@
     "research:worker": "node apps/api/src/researcher-worker-cli.mjs",
     "research:local-node": "node apps/api/src/researcher-worker-cli.mjs",
     "build:change-radar-native": "node scripts/build-change-radar-native.mjs",
-    "research:qa:test:db": "node scripts/test-researcher-qa-db.mjs"
+    "research:qa:test:db": "node scripts/test-researcher-qa-db.mjs",
+    "practice:setup": "npm --prefix question-engine run setup",
+    "practice:test:engine": "npm --prefix question-engine test",
+    "test:practice": "node --test tests/practice/*.test.mjs",
+    "practice:dev": "node scripts/start-practice-review.mjs"
   }
 }
