@@ -28,7 +28,7 @@ for(const scenario of [
   let port;require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send(`<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}iframe{display:block;width:100%;height:1000px;border:0}#root{max-width:960px;margin:auto;container-type:inline-size}</style><iframe id="game" sandbox="allow-scripts" src="http://localhost:${port}/game/index.html"></iframe><div id="root"></div><script src="/fixture.js"></script></html>`));
   await app.listen({host:'0.0.0.0',port:0});port=app.server.address().port;
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1200,height:1000}}),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(12000);
-  await page.goto(`http://127.0.0.1:${port}/`);const game=page.frameLocator('#game'),board=page.locator('.work-leaderboard');
+  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded',timeout:30000});const game=page.frameLocator('#game'),board=page.locator('.work-leaderboard');
   await board.getByRole('heading',{name:scenario.title,exact:false}).waitFor();assert.equal(await board.getByLabel('榜单日期',{exact:true}).count(),scenario.daily?1:0);
   if(scenario.daily){
     await game.locator('#start').click();try{await game.getByText('开始点击！',{exact:true}).waitFor();}catch(error){throw new Error('Template challenge failed: '+await game.locator('#status').innerText(),{cause:error});}

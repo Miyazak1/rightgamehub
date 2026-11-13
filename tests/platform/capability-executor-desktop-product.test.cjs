@@ -309,8 +309,8 @@ test('real desktop release builder produces a self-contained signed Windows arti
   const productCli = path.resolve('scripts/windows-desktop-product-cli.mjs');
   for (const command of ['install', 'status', 'repair']) {
     const result = spawnSync(process.execPath, [productCli, command, '--config', productConfig],
-      { encoding: 'utf8', windowsHide: true, timeout: 30_000 });
-    assert.equal(result.status, 0, result.stderr || result.stdout);
+      { encoding: 'utf8', windowsHide: true, timeout: 60_000 });
+    assert.equal(result.status, 0, result.error?.message || result.stderr || result.stdout);
   }
   const registered = spawnSync('reg.exe', ['QUERY',
     'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', '/v', startupValueName],

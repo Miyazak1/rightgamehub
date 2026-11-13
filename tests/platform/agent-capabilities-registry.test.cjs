@@ -13,11 +13,14 @@ test('official Agent capabilities are strict, immutable and uniquely addressable
 
   assert.equal(snapshot.revision, 'official-tools-v1');
   assert.equal(snapshot.schemaVersion, 1);
-  assert.equal(snapshot.capabilities.length, 7);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.id)).size, 7);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.toolId)).size, 7);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.mcp.toolName)).size, 7);
-  assert.equal(new Set(snapshot.capabilities.map(item => item.launch.route)).size, 7);
+  assert.equal(snapshot.capabilities.length, 6);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.id)).size, 6);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.toolId)).size, 6);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.mcp.toolName)).size, 6);
+  assert.equal(new Set(snapshot.capabilities.map(item => item.launch.route)).size, 6);
+  assert.equal(registry.findOfficialToolCapability('paper-study'), null);
+  assert.equal(registry.findCapabilityByMcpToolName('open_paper_study'), null);
+  assert.equal(registry.findCapabilityByRoute('/tools/paper-study'), null);
 
   for (const capability of snapshot.capabilities) {
     assert.equal(capability.format, registry.AGENT_CAPABILITY_FORMAT);
@@ -78,6 +81,7 @@ test('frontend hosts browser tools while MCP retains every official capability',
     browserCapabilities.map(capability => capability.toolId),
   );
   assert.equal(frontend.findOfficialTool('change-radar'), null);
+  assert.equal(frontend.findOfficialTool('paper-study'), null);
   for (const capability of browserCapabilities) {
     const tool = frontend.findOfficialTool(capability.toolId);
     assert.ok(tool);

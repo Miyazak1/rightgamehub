@@ -287,7 +287,7 @@ test('publication receipt is immutable and repository rechecks Foundation owners
   const migration = fs.readFileSync(path.join(root,
     'apps/api/migrations/0138_agent_blog_foundation_publications.sql'), 'utf8');
   const repository = fs.readFileSync(path.join(root,
-    'apps/api/src/agent-blog-foundation-publication-repository.mjs'), 'utf8');
+    'apps/api/src/agent-blog-foundation-publication-repository.mjs'), 'utf8').replaceAll('\r\n', '\n');
   assert.match(migration, /action_id uuid NOT NULL UNIQUE/u);
   assert.match(migration, /article_id uuid NOT NULL UNIQUE/u);
   assert.match(migration, /publication receipts are immutable/u);

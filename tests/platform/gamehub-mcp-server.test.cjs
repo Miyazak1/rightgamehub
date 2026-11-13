@@ -27,7 +27,7 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   t.after(async () => { await client.close(); await server.close(); });
 
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_capability', 'get_game', 'launch_capability', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_paper_study', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_capabilities', 'search_games']);
+  assert.deepEqual(tools.tools.map(item => item.name).sort(), ['get_capability', 'get_game', 'launch_capability', 'open_change_radar', 'open_document_compare', 'open_gamehub', 'open_knowledge_map', 'open_pdf_reader', 'open_privacy_redactor', 'open_spreadsheet_audit', 'search_capabilities', 'search_games']);
   assert.equal(tools.tools.find(item => item.name === 'search_games').annotations.readOnlyHint, true);
   const openGameHubTool = tools.tools.find(item => item.name === 'open_gamehub');
   const mcpUiUri = openGameHubTool._meta.ui.resourceUri;
@@ -36,7 +36,7 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.deepEqual(openGameHubTool._meta.ui.visibility, ['model', 'app']);
   assert.equal(openGameHubTool._meta['openai/outputTemplate'], mcpUiUri);
   const uiTools = tools.tools.filter(item => item._meta?.ui?.resourceUri);
-  assert.equal(uiTools.length, 9);
+  assert.equal(uiTools.length, 8);
   for (const tool of uiTools) {
     assert.equal(tool._meta.ui.resourceUri, mcpUiUri);
     assert.equal(tool._meta['openai/outputTemplate'], mcpUiUri);
@@ -65,10 +65,9 @@ test('GameHub MCP exposes catalog and official app tools with a content-addresse
   assert.match(opened.structuredContent.view.url, /\/mcp-app\?gh_route=/u);
   assert.match(opened.structuredContent.view.url, /gh_host=mcp-app/u);
   const paperTool = tools.tools.find(item => item.name === 'open_paper_study');
-  assert.equal(paperTool.annotations.readOnlyHint, true);
-  assert.equal(paperTool.annotations.destructiveHint, false);
+  assert.equal(paperTool, undefined, 'unreleased paper study must not be advertised');
   const paperStudy = await client.callTool({ name: 'open_paper_study', arguments: {} });
-  assert.equal(paperStudy.structuredContent.view.path, '/tools/paper-study');
+  assert.equal(paperStudy.isError, true, 'direct calls must not open unreleased paper study');
   const unsafePaperInput = await client.callTool({ name: 'open_paper_study', arguments: { pdf: 'raw-document-content' } });
   assert.equal(unsafePaperInput.isError, true);
   const pdfTool = tools.tools.find(item => item.name === 'open_pdf_reader');
@@ -307,7 +306,7 @@ test('GameHub MCP route accepts a real stateless Streamable HTTP client', async 
   await client.connect(transport);
   t.after(async () => { await client.close(); await app.close(); });
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 13);
+  assert.equal(tools.tools.length, 12);
   assert.equal((await client.callTool({ name: 'search_games', arguments: {} })).structuredContent.games.length, 0);
   const openGameHub = tools.tools.find(item => item.name === 'open_gamehub');
   const resource = await client.readResource({ uri: openGameHub._meta.ui.resourceUri });

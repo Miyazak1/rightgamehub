@@ -6,6 +6,8 @@ import { tap } from 'node:test/reporters';
 import { buildTestInventory } from './support/frozen-test-inventory.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const concurrency = Number(process.env.MOOYU_TEST_CONCURRENCY || 4);
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw Error('MOOYU_TEST_CONCURRENCY must be an integer from 1 to 8');
 process.chdir(root);
 function discover(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -19,7 +21,7 @@ fs.mkdirSync(reportDir, { recursive: true });
 fs.writeFileSync(path.join(reportDir, 'inventory.json'), JSON.stringify(inventory, null, 2));
 console.log(`Running ${inventory.files.length} test files; ${inventory.rejectedBaselines.length} immutable rejection contracts run inside their mandatory successor verifiers.`);
 const stream = run({
-  files: inventory.files.map(file => path.resolve(file)), concurrency: 4, timeout: 180000,
+  files: inventory.files.map(file => path.resolve(file)), concurrency, timeout: 180000,
   execArgv: ['--import', new URL('./support/test-process-context.mjs', import.meta.url).href],
 });
 const failures = []; let passedEvents = 0, summary;

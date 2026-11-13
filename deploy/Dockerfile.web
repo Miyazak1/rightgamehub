@@ -1,3 +1,4 @@
+ARG MOOYU_WEB_RUNTIME_IMAGE=caddy-runtime
 FROM node:22-bookworm-slim AS web-build
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -62,10 +63,12 @@ RUN node scripts/build-extension.mjs && node scripts/package-vscode-extension.mj
 RUN pnpm --filter @gamehub/web build
 
 FROM caddy:2-builder-alpine AS caddy-build
-RUN xcaddy build --with github.com/caddy-dns/alidns@v1.0.29
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    GOMAXPROCS=2 GOFLAGS=-p=2 xcaddy build --with github.com/caddy-dns/alidns@v1.0.29
 
-FROM caddy:2-alpine
+FROM caddy:2-alpine AS caddy-runtime
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
+FROM ${MOOYU_WEB_RUNTIME_IMAGE} AS production
 COPY --from=web-build /app/apps/web/dist /srv/gamehub
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80 443

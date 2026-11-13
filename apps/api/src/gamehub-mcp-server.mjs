@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
-import { requireOfficialToolCapability, toOfficialToolMcpMetadata } from '@gamehub/agent-capabilities';
+import { findOfficialToolCapability, requireOfficialToolCapability, toOfficialToolMcpMetadata } from '@gamehub/agent-capabilities';
 import { z } from 'zod';
 import { AgentCapabilityError, createAgentCapabilityService } from './agent-capability-service.mjs';
 import { createGameHubMcpWidget, GAMEHUB_MCP_UI_COMPATIBILITY_URIS } from './gamehub-mcp-widget.mjs';
@@ -314,15 +314,17 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
     }
   });
 
-  const paperStudyTool = officialTool('paper-study');
-  registerAppTool(server, paperStudyTool.toolName, {
-    ...createOfficialAppToolOptions(paperStudyTool, uiResourceUri), inputSchema: z.object({}).strict(),
-    outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
-  }, async () => {
-    const path = paperStudyTool.route, url = new URL('/mcp-app', origin);
-    url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
-    return { content: [{ type: 'text', text: 'Opened paper study. Sign in and explicitly import a PDF in the workspace. Opening this tool uploads nothing, invokes no model and never publishes.' }], structuredContent: { view: { path, url: url.href } } };
-  });
+  if (findOfficialToolCapability('paper-study')) {
+    const paperStudyTool = officialTool('paper-study');
+    registerAppTool(server, paperStudyTool.toolName, {
+      ...createOfficialAppToolOptions(paperStudyTool, uiResourceUri), inputSchema: z.object({}).strict(),
+      outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
+    }, async () => {
+      const path = paperStudyTool.route, url = new URL('/mcp-app', origin);
+      url.searchParams.set('gh_route', path); url.searchParams.set('gh_host', 'mcp-app');
+      return { content: [{ type: 'text', text: 'Opened paper study. Sign in and explicitly import a PDF in the workspace. Opening this tool uploads nothing, invokes no model and never publishes.' }], structuredContent: { view: { path, url: url.href } } };
+    });
+  }
   const pdfReaderTool = officialTool('pdf-reader');
   registerAppTool(server, pdfReaderTool.toolName, {
     ...createOfficialAppToolOptions(pdfReaderTool, uiResourceUri),

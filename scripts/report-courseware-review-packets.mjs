@@ -119,7 +119,7 @@ for (const file of briefFiles) {
   const serialized = `${JSON.stringify(packet,null,2)}\n`;
   if (checkOnly) {
     const existing = await fs.readFile(target,'utf8').catch(() => '');
-    if (existing !== serialized) throw new Error(`复核包不是最新生成结果：${path.relative(root,target)}`);
+    if (existing.replaceAll('\r\n','\n') !== serialized) throw new Error(`复核包不是最新生成结果：${path.relative(root,target)}`);
   } else await fs.writeFile(target,serialized,'utf8');
   outputs.push({ file:path.relative(root,target).replaceAll('\\','/'),briefId:brief.id,nodes:packet.nodeReviews.length,relations:packet.relationReviews.length,status:packet.status });
 }

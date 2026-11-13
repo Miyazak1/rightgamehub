@@ -125,4 +125,6 @@ export const officialToolCapabilities = Object.freeze([
     },
     dataPolicy: { localFirst: true, retention: 'device-local', prohibitedToolInputs: ['workbook-contents', 'raw-xlsx', 'raw-xlsm', 'secrets'], agentContext: 'bounded-disclosed' },
   }),
-]);
+// Paper Study is still under development. Keep its definition for that work,
+// but exclude it from every public registry until its release is approved.
+].filter(capability => capability.toolId !== 'paper-study'));

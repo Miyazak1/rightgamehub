@@ -15,3 +15,4 @@ start.onclick=async()=>{
 };
 target.onclick=()=>{clicks++;target.textContent=`点击 ${clicks} / 10`;if(clicks===10){target.disabled=true;metrics={duration:Math.round(performance.now()-started),clicks};submit.disabled=false;}};
 submit.onclick=async()=>{submit.disabled=true;status.textContent='正在提交…';try{await sdk.competition.finish(run.id,{metrics});status.textContent='已保存。退出游戏后可在详情页查看本游戏的榜单。';start.disabled=false;}catch(error){status.textContent=error.message+'，可点击提交重试。';submit.disabled=false;}};
+start.disabled=false;

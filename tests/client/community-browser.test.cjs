@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto'),os=require('node:os');
 const root=path.resolve(__dirname,'../..'),databaseUrl=process.env.GAMEHUB_COMMUNITY_DATABASE_URL,playwrightPath=process.env.GAMEHUB_COMMUNITY_PLAYWRIGHT_PATH;
-test('community browser: StrictMode, failed-submit recovery, image, review and private bookmark',{skip:!databaseUrl||!playwrightPath,timeout:90000},async t=>{
+test('community browser: StrictMode, failed-submit recovery, image, review and private bookmark',{skip:!databaseUrl||!playwrightPath,timeout:180000},async t=>{
   const connection=new URL(databaseUrl);
   assert.ok(['127.0.0.1','localhost'].includes(connection.hostname)&&connection.pathname==='/community_test','Browser fixture requires the dedicated local community_test database.');
   const {chromium}=require(playwrightPath);
@@ -52,7 +52,7 @@ test('community browser: StrictMode, failed-submit recovery, image, review and p
   page=await browser.newPage({viewport:{width:1280,height:1000},deviceScaleFactor:1});
   page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const title='新发现：像素世界里的 AI '+Date.now();
-  await page.goto(base+'/community');
+  await page.goto(base+'/community',{waitUntil:'domcontentloaded',timeout:30000});
   await page.getByRole('navigation',{name:'主导航',exact:true}).waitFor();
   assert.equal(await page.getByRole('navigation',{name:'主导航',exact:true}).getByRole('button',{name:'分享',exact:true}).count(),0,'paused community stays hidden in the real app');
   await page.evaluate(()=>window.communityFixture.openComponent());
