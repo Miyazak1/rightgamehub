@@ -1,0 +1,9 @@
+Moodlelike Source-Available Notice
+
+No open-source license is granted for this repository at this time.
+All rights are reserved by the project owner. The source may not be copied,
+modified, redistributed, sublicensed, or offered as a service without written
+permission from the project owner.
+
+Before any external distribution, replace this notice with a license approved
+by the project owner and legal counsel.

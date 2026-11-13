@@ -1,3 +1,4 @@
+import './PracticePage.css';
 import React,{useEffect,useMemo,useState} from 'react';
 import {demoWorks} from './demo.mjs';
 import {useI18n} from './I18n.jsx';
@@ -59,6 +60,7 @@ export default function LearningPage({api,demo,go,Art,runtimeOrigin,courseId}){
   const [category,setCategory]=useState('simulations');
   const [subject,setSubject]=useState('all');
   const [query,setQuery]=useState('');
+  const showPractice=!query.trim()||['数学练习 mathematics practice csca 解题 练习'].some(value=>value.includes(query.trim().toLowerCase()));
   const [retry,setRetry]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();
@@ -86,7 +88,7 @@ export default function LearningPage({api,demo,go,Art,runtimeOrigin,courseId}){
       <div className="learning-section-heading"><div><span className="learning-kicker">LEARNING AREAS</span><h2 id="learning-categories-title">{t('learning.categories')}</h2></div><p>{t('learning.categoriesLead')}</p></div>
       <div className="learning-category-grid">
         {learningCategories.map(item=>{
-          const count=allItems.filter(entry=>entry.catalogCategory===item.id).length;
+          const count=allItems.filter(entry=>entry.catalogCategory===item.id).length+(item.id==='practice'?1:0);
           return <button key={item.id} type="button" className={category===item.id?'is-active':''} aria-pressed={category===item.id} onClick={()=>selectCategory(item.id)}>
             <span className="learning-category__icon" aria-hidden="true">{item.icon}</span><span className="learning-category__copy"><strong>{localized(item.title,locale)}</strong><small>{localized(item.description,locale)}</small></span><span className="learning-category__count">{count?t('learning.itemCount',{count}):t('learning.preparing')}</span>
           </button>;
@@ -97,7 +99,8 @@ export default function LearningPage({api,demo,go,Art,runtimeOrigin,courseId}){
       <div className="learning-catalog__head"><div><span className="learning-kicker">{category==='simulations'?'SIMULATION LIBRARY':'LEARNING LIBRARY'}</span><h2 id="learning-catalog-title">{localized(currentCategory.title,locale)}</h2><p>{localized(currentCategory.description,locale)}</p></div><label><span className="sr-only">{t('learning.searchLabel')}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('learning.searchPlaceholder')}/></label></div>
       {category==='simulations'&&<div className="learning-subjects" role="group" aria-label={t('learning.subjectsAria')}>{learningSubjects.map(item=><button key={item.id} type="button" aria-pressed={subject===item.id} onClick={()=>setSubject(item.id)}>{localized(item.label,locale)}</button>)}</div>}
       {state.status==='error'&&category==='simulations'&&<div className="learning-catalog__notice" role="status"><span>{apiLoadError(state.error,t('learning.communityFailed'),locale)}</span><button onClick={()=>setRetry(value=>value+1)}>{t('common.retry')}</button></div>}
-      {items.length?<div className="learning-grid">{items.map(item=><LearningCard key={item.id} item={item} go={go} Art={Art} locale={locale} onBuiltIn={runtimeOrigin?item=>go('/learn/'+item.id):null}/>)}</div>:<div className="learning-state"><span aria-hidden="true">{currentCategory.icon}</span><h3>{t(query?'learning.noMatch':'learning.categoryEmpty')}</h3><p>{t(query?'learning.noMatchLead':'learning.categoryEmptyLead')}</p>{query&&<button onClick={()=>setQuery('')}>{t('learning.clear')}</button>}</div>}
+      {category==='practice'&&showPractice&&<article className="learning-practice-entry"><span aria-hidden="true">∑</span><div><h3>{locale==='en'?'Mathematics practice':'数学练习'}</h3><p>{locale==='en'?'Choose a topic and difficulty. Practise in small batches, learn from explanations, and return to your saved progress.':'按知识点和难度练习，在小轮作答中找到思路，查看解析和错题，随时回来继续。'}</p><small>{locale==='en'?'CSCA mathematics · Single choice · Saved progress':'CSCA 数学专项 · 单项选择 · 进度保存'}</small></div><button onClick={()=>go('/learn/practice')}>{locale==='en'?'Open practice →':'进入练习 →'}</button></article>}
+      {items.length?<div className="learning-grid">{items.map(item=><LearningCard key={item.id} item={item} go={go} Art={Art} locale={locale} onBuiltIn={runtimeOrigin?item=>go('/learn/'+item.id):null}/>)}</div>:category==='practice'&&showPractice?null:<div className="learning-state"><span aria-hidden="true">{currentCategory.icon}</span><h3>{t(query?'learning.noMatch':'learning.categoryEmpty')}</h3><p>{t(query?'learning.noMatchLead':'learning.categoryEmptyLead')}</p>{query&&<button onClick={()=>setQuery('')}>{t('learning.clear')}</button>}</div>}
     </section>
   </main>;
 }

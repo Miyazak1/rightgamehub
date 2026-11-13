@@ -16,7 +16,7 @@ RUN pnpm install --frozen-lockfile --filter @gamehub/api...
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhei && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhei unzip && rm -rf /var/lib/apt/lists/*
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=dependencies /app/packages/creator-tools/node_modules ./packages/creator-tools/node_modules
@@ -25,6 +25,10 @@ COPY --chown=node:node packages/agent-capabilities ./packages/agent-capabilities
 COPY --chown=node:node packages/creator-tools ./packages/creator-tools
 COPY --chown=node:node packages/courseware-runtime ./packages/courseware-runtime
 COPY --chown=node:node packages/contracts ./packages/contracts
+COPY --chown=node:node packages/practice-core ./packages/practice-core
+COPY --chown=node:node question-engine ./question-engine
+COPY --chown=node:node artifacts/math-lab/csca-math-lab-1.43.0.zip ./artifacts/math-lab/csca-math-lab-1.43.0.zip
+RUN node question-engine/math-v143/install.cjs
 COPY --chown=node:node packages/web-game-sdk/src/sharing-protocol.mjs ./packages/web-game-sdk/src/sharing-protocol.mjs
 COPY --chown=node:node packages/competition-rules ./packages/competition-rules
 COPY --chown=node:node packages/multiplayer-protocol ./packages/multiplayer-protocol

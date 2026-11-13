@@ -1,0 +1,12 @@
+{
+  "name": "@mooyu/verified-math-runtime",
+  "private": true,
+  "version": "1.43.0",
+  "type": "commonjs",
+  "engines": { "node": ">=22.16 <23" },
+  "scripts": {
+    "setup": "node math-v143/install.cjs",
+    "status": "node math-v143/cli.cjs status",
+    "test": "node --test math-v143/test.cjs"
+  }
+}

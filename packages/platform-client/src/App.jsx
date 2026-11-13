@@ -59,6 +59,8 @@ import MultiplayerRuleReviewQueue from './MultiplayerRuleReviewQueue.jsx';
 import { ContributionCenterPage, CreateContributionTaskForm, CreatorContributionTasks } from './ContributionCenter.jsx';
 import { I18nProvider, LanguageSwitch, useI18n } from './I18n.jsx';
 
+const PracticePage = React.lazy(() => import('./PracticePage.jsx'));
+
 const icons = {
   discover: '✦', library: '▣', social: '✣', creator: '◇', account: '○', search: '⌕', play: '▶', back: '←', upload: '↑', check: '✓', dot: '•', spark: '✦', settings: '⚙', close: '×', file: '▤', globe: '◎', pause: 'Ⅱ', stop: '■', refresh: '↻',
 };
@@ -1983,6 +1985,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go} hostIdentity={hostIdentity} hostAdapter={host}/>;
   else if (route === '/download') content = <DesktopDownloadPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
+  else if (parts[0] === 'learn' && parts[1] === 'practice') content = <React.Suspense fallback={<main className="page" role="status">{t('common.loading')}</main>}><PracticePage key={accountProfile?.id || 'guest'} api={api} accountProfile={accountProfile} go={go} batchId={parts[2]}/></React.Suspense>;
   else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin) content = <LearningPage api={api} demo={demo} go={go} Art={Art} runtimeOrigin={host.learningRuntimeOrigin} courseId={parts[1]}/>;
   else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;
   else if (route === '/tools/change-radar') content = <LegacyChangeRadarRedirect go={go}/>;

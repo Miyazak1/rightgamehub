@@ -1,6 +1,12 @@
 .git
 .runtime
 artifacts
+!artifacts/
+artifacts/*
+!artifacts/math-lab/
+artifacts/math-lab/*
+!artifacts/math-lab/csca-math-lab-1.43.0.zip
+.local
 node_modules
 **/node_modules
 **/dist

@@ -1,3 +1,6 @@
+import { createVerifiedMathEngine } from './practice/engine.mjs';
+import { PostgresPracticeRepository } from './practice/repository.mjs';
+import { createPracticeService, createPracticeWorker } from './practice/service.mjs';
 import { createPaperStudyDurableRuntime } from './paper-study-durable-runtime.mjs';
 import {createCompetitionService} from './competition-service.mjs';
 import {createSaveOperationsService} from './save-operations-service.mjs';
@@ -308,7 +311,12 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const gameSaveService = config.cloudSaveEnabled ? createGameSaveService({ repository: gameSaveRepository, gameSessionService, metrics:saveMetrics }) : null;
   const saveLibraryService = config.cloudSaveEnabled ? createSaveLibraryService({ repository: gameSaveRepository }) : null;
   const paperStudyRuntime = config.paperStudy.enabled ? createPaperStudyDurableRuntime({pool:database.pool,redisUrl:config.redisUrl,executionAgentUserId:config.paperStudy.executionAgentUserId}) : null;
+  const practiceRepository = new PostgresPracticeRepository(database.pool);
+  const practiceEngine = createVerifiedMathEngine({enabled: env.PRACTICE_ENABLED !== 'false'});
+  const practiceService = createPracticeService({repository: practiceRepository, engine: practiceEngine});
+  const practiceWorker = createPracticeWorker({repository: practiceRepository, engine: practiceEngine});
   const app = createApp({
+    practiceService,
     paperStudyService: paperStudyRuntime?.service,
     gameSaveService,
     saveLibraryService,
@@ -369,8 +377,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     multiplayerRuleSubmissionService,
     logger: config.nodeEnv !== 'test',
   });
+  app.addHook('onReady', async () => { if (env.PRACTICE_ENABLED !== 'false') practiceWorker.start(); });
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
-  app.addHook('onClose', async () => { agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await paperStudyRuntime?.close(); await database.close(); });
+  app.addHook('onClose', async () => { await practiceWorker.stop(); agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await paperStudyRuntime?.close(); await database.close(); });
   return {
     config,
     database,

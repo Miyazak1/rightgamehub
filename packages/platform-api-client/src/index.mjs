@@ -119,6 +119,13 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     return { data: await response.blob(),digest: response.headers.get('digest') };
   }
   return {
+    getPracticeCatalog: (filter = {}, options) => request('/v1/learning/practice/catalog?' + new URLSearchParams(Object.entries(filter).filter(([,value]) => value)), options),
+    listPracticeHistory: options => request('/v1/me/practice', { ...options, auth: true }),
+    startPractice: (body, key, options) => request('/v1/me/practice', { ...options, method: 'POST', body, auth: true, headers: { 'Idempotency-Key': key } }),
+    getPractice: (id, options) => request('/v1/me/practice/' + encodeURIComponent(id), { ...options, auth: true }),
+    updatePractice: (id, body, options) => request('/v1/me/practice/' + encodeURIComponent(id), { ...options, method: 'PATCH', body, auth: true }),
+    continuePractice: (id, key, options) => request('/v1/me/practice/' + encodeURIComponent(id) + '/continue', { ...options, method: 'POST', auth: true, headers: { 'Idempotency-Key': key } }),
+    retryPractice: (id, options) => request('/v1/me/practice/' + encodeURIComponent(id) + '/retry', { ...options, method: 'POST', auth: true }),
     ...communityApi(request),
     listBlogArticles: ({ limit = 20, cursor = null, locale = null, q = null, author = null } = {}, options) => request(`/v1/blog/articles?${new URLSearchParams(Object.fromEntries(Object.entries({ limit, cursor, locale, q, author }).filter(([, value]) => value != null && value !== '')))}`, options),
     getBlogArticle: (slug, options) => request(`/v1/blog/articles/${encodeURIComponent(slug)}`, options),
