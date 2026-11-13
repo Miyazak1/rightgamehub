@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from './I18n.jsx';
 import { MathContent } from './PracticeMath.tsx';
 import { assistantHostMode, hostPracticePrompt } from './assistant-context.mjs';
@@ -32,8 +32,13 @@ export function PlatformAssistantProvider({ children, api, host, capabilities, o
   const pinnedCurrent=state.pinned&&ownRoute?.batchId===state.pinned.batchId&&ownRoute?.questionId===state.pinned.questionId;
   const context = pinnedCurrent ? ownRoute : state.pinned || ownRoute;
   const registerContext = useCallback(value => setPractice(value), []);
-  useEffect(() => {
-    if(mode==='host') syncHostAssistantContext(host,ownRoute);
+  const sharedPractice=useRef(false);
+  // Clear our context before a new page's passive effects publish its own tool context.
+  // Never overwrite another tool's context merely because this global provider mounted.
+  useLayoutEffect(() => {
+    if(mode==='host' && (ownRoute || sharedPractice.current)) {
+      syncHostAssistantContext(host,ownRoute);sharedPractice.current=Boolean(ownRoute);
+    }
   },[mode,host,ownRoute]);
   useEffect(() => { mounted.current=true; return () => {mounted.current=false;pending.current?.abort();}; }, []);
   // Owner and host changes remount this provider in the app; no transcript crosses an account boundary.

@@ -13,7 +13,7 @@ test('global assistant retains chat across routes, binds late replies, restores 
  const auth=async r=>{assert.equal(r.headers.authorization,'Bearer fixture');r.actor={userId:'demo-user'};};
  app.setErrorHandler((e,r,reply)=>reply.code(e.statusCode||500).send({error:{code:e.code,message:e.message}}));
  registerPracticeRoutes(app,{service,requireAuth:auth});registerPlatformAssistantRoutes(app,{service:assistant,requireAuth:auth});
- const entry=`import React from 'react';import{createRoot}from'react-dom/client';import App from './packages/platform-client/src/App.jsx';import{createBrowserHostAdapter}from'./packages/host-contract/src/index.mjs';import{createPracticeApiClient}from'./packages/platform-api-client/src/practice.mjs';const hostKind=new URLSearchParams(location.search).get('host')||'browser';const host=createBrowserHostAdapter({host:hostKind});window.__hostMessages=[];window.__fixtureHost=host;host.assistant={send:async payload=>{window.__hostMessages.push(payload);}};const api=createPracticeApiClient({getAccessToken:()=> 'fixture'});createRoot(document.getElementById('root')).render(<React.StrictMode><App demo={true} apiClient={api} hostAdapter={host}/></React.StrictMode>);`;
+ const entry=`import React from 'react';import{createRoot}from'react-dom/client';import App from './packages/platform-client/src/App.jsx';import{createBrowserHostAdapter}from'./packages/host-contract/src/index.mjs';import{createPracticeApiClient}from'./packages/platform-api-client/src/practice.mjs';const hostKind=new URLSearchParams(location.search).get('host')||'browser';const host=createBrowserHostAdapter({host:hostKind});window.__hostMessages=[];window.__hostContexts=[];window.__fixtureHost=host;host.assistant={syncContext:context=>window.__hostContexts.push(context),send:async payload=>{window.__hostMessages.push(payload);}};const api=createPracticeApiClient({getAccessToken:()=> 'fixture'});createRoot(document.getElementById('root')).render(<React.StrictMode><App demo={true} apiClient={api} hostAdapter={host}/></React.StrictMode>);`;
  const js=(await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],logLevel:'silent'})).outputFiles[0].text;
  const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
  t.diagnostic('Shared app built');
@@ -60,6 +60,8 @@ test('global assistant retains chat across routes, binds late replies, restores 
    assert.equal(await hostPage.locator('#platform-assistant').count(),0);assert.equal(requests.length,0);
    await hostPage.getByRole('button',{name:'请宿主 Agent 帮我',exact:true}).click();await hostPage.getByText('已交给宿主聊天。',{exact:true}).waitFor();
    const sent=await hostPage.evaluate(()=>window.__hostMessages);assert.equal(sent.length,1);assert.equal(sent[0].context.questionId,batch.items[2].question.id);assert.ok(!('correctAnswer'in sent[0].context));assert.equal(requests.length,0);
+   await hostPage.evaluate(()=>{history.pushState({},'','/tools');dispatchEvent(new PopStateEvent('popstate'));});await hostPage.locator('.tools-page').waitFor();await hostPage.waitForFunction(()=>window.__hostContexts.at(-1)===null);
+   await hostPage.goto(url+'/tools?host='+host);await hostPage.locator('.tools-page').waitFor();assert.equal(await hostPage.evaluate(()=>window.__hostContexts.length),0,'global provider must not clear another tool context on mount');
   }await hostPage.close();
  }
  assert.deepEqual(errors,[]);
