@@ -1,4 +1,4 @@
-> This file preserves the upstream Moodlelike integration notes. For the Mooyu host, use `npm run practice:setup`, `npm run practice:test:engine` and [the Right integration guide](../../docs/learning-practice-port.zh-CN.md). The original Agent, Prisma and source-site deployment commands below are not used by Right.
+> This file preserves the upstream Moodlelike integration notes. For the Mooyu host, use `npm --prefix question-engine run setup`, `npm --prefix question-engine test` and [the Right integration guide](../../docs/learning-practice-port.zh-CN.md). The original Agent, Prisma and source-site deployment commands below are not used by Right.
 
 # Verified mathematics in student practice
 

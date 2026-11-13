@@ -39,7 +39,7 @@ API 的请求、返回类型和 OpenAPI 位于 `packages/contracts/src/practice-
 pnpm install --frozen-lockfile
 npm --prefix question-engine run setup
 npm --prefix question-engine test
-npm run test:practice
+node --test tests/practice/*.test.mjs
 pnpm --filter @gamehub/web build
 ```
 
@@ -50,7 +50,7 @@ docker run -d --name mooyu-practice-acceptance `
   -e POSTGRES_PASSWORD=practice_local_test -e POSTGRES_DB=mooyu_practice_acceptance `
   -p 127.0.0.1:55438:5432 postgres:16-alpine
 $env:PRACTICE_TEST_DATABASE_URL='postgresql://postgres:practice_local_test@127.0.0.1:55438/mooyu_practice_acceptance'
-npm run test:practice
+node --test tests/practice/*.test.mjs
 node scripts/start-practice-review.mjs
 ```
 
