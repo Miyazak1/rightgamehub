@@ -14,7 +14,7 @@ test('R1.9 reuses persisted runtime facts and exposes a bounded operator recover
   assert.match(service,/agent_budget_reservations/);
   assert.match(service,/recoverExpiredStages\(\{stageId:/);
   assert.match(service,/PAPER_RESEARCH_OPERATIONS_LEASE_ACTIVE/);
-  assert.match(repository,/\$2::uuid IS NULL OR id=\$2/);
+  assert.match(repository,/\$2::uuid IS NULL OR stage\.id=\$2/);
   assert.match(routes,/paper-research-operations/);
   assert.match(routes,/recover-expired-stage/);
   assert.doesNotMatch(service,/blog_articles|blog\.article\.publish|publishArticle/);

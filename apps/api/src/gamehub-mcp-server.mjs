@@ -316,7 +316,7 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
 
   const paperStudyTool = officialTool('paper-study');
   registerAppTool(server, paperStudyTool.toolName, {
-    ...createOfficialAppToolOptions(paperStudyTool, uiResourceUri), inputSchema: {},
+    ...createOfficialAppToolOptions(paperStudyTool, uiResourceUri), inputSchema: z.object({}).strict(),
     outputSchema: { view: z.object({ path: z.string(), url: z.string().url() }) },
   }, async () => {
     const path = paperStudyTool.route, url = new URL('/mcp-app', origin);

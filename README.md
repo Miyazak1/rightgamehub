@@ -79,6 +79,8 @@ node .\poc\server.mjs
 
 构建开发扩展：`npm run build:extension`。运行入口选择测试：`npm test`。
 
+完整 CJS/MJS 回归使用 `node scripts/test-all.mjs`，结果保存在 `.runtime/test-all/latest/`；可用 `MOOYU_TEST_REPORT_DIR` 指定报告目录。该入口包含所有测试目录，并由 v19/v26 的后继验证测试实际执行 v18/v25 的原始失败样本，检查精确拒绝原因。历史失败样本和冻结哈希保持不变；清单缺失对应验证测试时会直接报错。数据库和 Python 回归仍需按各自的本机测试配置运行。
+
 已实现功能区优先、失败回退浏览器和手动浏览器选择。六项入口测试通过；Codex 内置浏览器的实际游玩和刷新恢复通过。VS Code 侧栏扩展已经生成，尚未安装到真实编辑器验收；没有验证 Codex 常驻原生侧栏注册能力。
 
 游戏创作者/AI 接入：[文件导出与游戏分享（fileExport/shareLinks）](docs/game-file-export-share-links.zh-CN.md)，包括 Bingo 题包最小示例、三端保存行为及失败处理。
