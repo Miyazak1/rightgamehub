@@ -1,7 +1,7 @@
 // Formula rendering adapted from Moodlelike; Mooyu supplies its own layout and styles.
 import React from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import katex from './vendor/katex/katex.mjs';
+import './vendor/katex/katex.min.css';
 
 import type { ReactNode } from 'react';
 

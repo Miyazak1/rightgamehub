@@ -1,3 +1,4 @@
+import { createPracticeApiClient } from '../../platform-api-client/src/practice.mjs';
 import AgentDisclosure from './AgentDisclosure.jsx';
 import DesktopDownloadPage,{DesktopDownloadFooter} from './DesktopDownloadPage.jsx';
 import {apiLoadError} from './api-load-error.mjs';
@@ -1921,6 +1922,13 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
     setTokens: tokens => host.account?.setTokens?.(tokens),
     withRefreshLock: (callback, signal) => host.account?.withRefreshLock ? host.account.withRefreshLock(callback, signal) : callback(),
   }), [apiClient, host]);
+  const practiceApi = useMemo(() => apiClient ?? createPracticeApiClient({
+    baseUrl: host.apiBaseUrl ?? '',
+    getAccessToken: () => host.account?.getAccessToken?.(),
+    getRefreshToken: () => host.account?.getRefreshToken?.(),
+    setTokens: tokens => host.account?.setTokens?.(tokens),
+    withRefreshLock: (callback, signal) => host.account?.withRefreshLock ? host.account.withRefreshLock(callback, signal) : callback(),
+  }), [apiClient, host]);
   const [savedWork, setSavedWork] = useState(null);
   const [accountStatus, setAccountStatus] = useState(demo ? 'ready' : 'loading');
   const [route, go] = useRoute(routing); const [themeMode, setThemeModeState] = useState('dark'); const [hostIdentity, setHostIdentity] = useState(hostIdentities.browser); const [hostReady, setHostReady] = useState(false); const [accountProfile, setAccountProfile] = useState(() => demo ? demoAccountProfile : null); const themeRoot = useRef(null);
@@ -1985,7 +1993,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (parts[0] === 'admin') content = <AdminPage api={api} demo={demo} go={go} hostIdentity={hostIdentity} hostAdapter={host}/>;
   else if (route === '/download') content = <DesktopDownloadPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
-  else if (parts[0] === 'learn' && parts[1] === 'practice') content = <React.Suspense fallback={<main className="page" role="status">{t('common.loading')}</main>}><PracticePage key={accountProfile?.id || 'guest'} api={api} accountProfile={accountProfile} go={go} batchId={parts[2]}/></React.Suspense>;
+  else if (parts[0] === 'learn' && parts[1] === 'practice') content = <React.Suspense fallback={<main className="page" role="status">{t('common.loading')}</main>}><PracticePage key={accountProfile?.id || 'guest'} api={practiceApi} accountProfile={accountProfile} go={go} batchId={parts[2]}/></React.Suspense>;
   else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin) content = <LearningPage api={api} demo={demo} go={go} Art={Art} runtimeOrigin={host.learningRuntimeOrigin} courseId={parts[1]}/>;
   else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;
   else if (route === '/tools/change-radar') content = <LegacyChangeRadarRedirect go={go}/>;

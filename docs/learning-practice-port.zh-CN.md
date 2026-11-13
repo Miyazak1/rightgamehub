@@ -37,8 +37,8 @@ API 的请求、返回类型和 OpenAPI 位于 `packages/contracts/src/practice-
 
 ```powershell
 pnpm install --frozen-lockfile
-npm run practice:setup
-npm run practice:test:engine
+npm --prefix question-engine run setup
+npm --prefix question-engine test
 npm run test:practice
 pnpm --filter @gamehub/web build
 ```
@@ -51,7 +51,7 @@ docker run -d --name mooyu-practice-acceptance `
   -p 127.0.0.1:55438:5432 postgres:16-alpine
 $env:PRACTICE_TEST_DATABASE_URL='postgresql://postgres:practice_local_test@127.0.0.1:55438/mooyu_practice_acceptance'
 npm run test:practice
-npm run practice:dev
+node scripts/start-practice-review.mjs
 ```
 
 浏览器验收地址为 `http://127.0.0.1:4188/#/learn/practice`。这个启动器只绑定本机，使用独立 `practice_review` schema 和固定验收账号；它不是生产认证入口，也不能用于公网部署。真实平台由 `createRuntime` 接入正式认证、迁移和练习 worker。

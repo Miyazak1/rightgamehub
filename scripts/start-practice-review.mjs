@@ -30,7 +30,7 @@ import {createRoot} from 'react-dom/client';
 import {I18nProvider,LanguageSwitch} from './packages/platform-client/src/I18n.jsx';
 import PracticePage from './packages/platform-client/src/PracticePage.jsx';
 import LearningPage from './packages/platform-client/src/LearningPage.jsx';
-import {createApiClient} from './packages/platform-api-client/src/index.mjs';
+import {createPracticeApiClient as createApiClient} from './packages/platform-api-client/src/practice.mjs';
 import './packages/platform-client/src/styles.css';
 const api=createApiClient({getAccessToken:()=> 'local-practice-review'});
 api.listWorks=async()=>({data:[]});
