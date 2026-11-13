@@ -58,6 +58,17 @@ test('PostgreSQL + actual frozen worker: lifecycle, recovery, confidentiality, c
   batch = await service.update(actor, batch.id, { action: 'check', expectedRevision: restored.revision, questionId: first.id });
   assert.equal(batch.items[0].correct, true); assert.equal(batch.items[0].explanation, first.localizations.en.explanation);
   assert.equal('correctAnswer' in batch.items[1], false);
+  const second = privateBatch.items[1].question;
+  const wrongAnswer = second.options.find(o => o.id !== second.correctAnswer).id;
+  batch = await service.update(actor, batch.id, { action: 'check', expectedRevision: batch.revision,
+    questionId: second.id, answer: wrongAnswer, elapsedSeconds: 7 });
+  assert.equal(batch.items[1].answer, wrongAnswer);
+  assert.equal(batch.items[1].checked, true);
+  assert.equal(batch.items[1].correct, false);
+  assert.equal(batch.items[1].correctAnswer, second.correctAnswer);
+  assert.equal(batch.items[1].explanation, second.localizations.en.explanation);
+  assert.equal((await restoredService.get(actor, batch.id)).items[1].checked, true);
+  assert.equal('correctAnswer' in batch.items[2], false);
   await assert.rejects(service.update(actor, batch.id, { action: 'save', expectedRevision: batch.revision, questionId: first.id, answer: first.options.find(o => o.id !== first.correctAnswer).id }), { code: 'PRACTICE_ANSWER_LOCKED' });
   await assert.rejects(service.continue(actor, batch.id, 'before-complete'), { code: 'PRACTICE_NOT_COMPLETED' });
   batch = await service.update(actor, batch.id, { action: 'submit', expectedRevision: batch.revision });
