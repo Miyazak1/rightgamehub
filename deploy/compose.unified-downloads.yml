@@ -1,0 +1,16 @@
+# Append to the actual running Compose file list; do not replace other overlays.
+services:
+  web:
+    volumes:
+      - type: bind
+        source: ${DESKTOP_DOWNLOADS_DIR:?Prepared desktop distribution required}
+        target: /srv/desktop-downloads
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${AGENT_DOWNLOADS_DIR:?Prepared Agent distribution required}
+        target: /srv/agent-downloads
+        read_only: true
+        bind:
+          create_host_path: false

@@ -26,7 +26,7 @@ if [ "$MODE" = --resume ]; then
   export MOOYU_RELEASE_RESUMING=true
   echo "Resuming with original production record: $RECORD"
 else
-  RECORD="/www/backup/gamehub/practice-$(date -u +%Y%m%dT%H%M%SZ)"
+  RECORD="${MOOYU_UNIFIED_RELEASE_RECORD:-/www/backup/gamehub/practice-$(date -u +%Y%m%dT%H%M%SZ)}"
   mkdir -p "$RECORD"
   printf '%s\n' "$CURRENT" > "$RECORD/previous-commit.txt"
   git branch --show-current > "$RECORD/previous-branch.txt"

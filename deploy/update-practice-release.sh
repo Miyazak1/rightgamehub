@@ -10,7 +10,12 @@ test -f deploy/.env.prod
 test "$(git rev-parse HEAD)" = "$EXPECTED"
 test -z "$(git status --porcelain)" || { echo 'Local edits found; stop without reset/clean.'; exit 1; }
 export COMPOSE_PROFILES= COMPOSE_PARALLEL_LIMIT=1
-dc() { docker compose --project-name gamehub-production --env-file deploy/.env.prod -f deploy/compose.prod.yml --profile '*' "$@"; }
+COMPOSE_ARGS=(-f deploy/compose.prod.yml)
+if [ -n "${MOOYU_RELEASE_COMPOSE_FILES:-}" ]; then
+  COMPOSE_ARGS=()
+  while IFS= read -r file; do test -f "$file"; COMPOSE_ARGS+=(-f "$file"); done < "$MOOYU_RELEASE_COMPOSE_FILES"
+fi
+dc() { docker compose --project-name gamehub-production --env-file deploy/.env.prod "${COMPOSE_ARGS[@]}" --profile '*' "$@"; }
 dc config --quiet
 test -n "$(dc ps --status running --quiet postgres)"
 test -n "$(dc ps --status running --quiet api)"
@@ -62,8 +67,14 @@ cat > "$RECORD/rollback.sh" <<'ROLLBACK'
 set -Eeuo pipefail
 cd "$(dirname "$0")"
 mapfile -t services < services.txt
+if [ -f downloads-environment.sh ]; then source downloads-environment.sh; fi
+compose=(-f compose.before.yml)
+if [ -f compose-files.rollback.txt ]; then
+  compose=(); while IFS= read -r file; do compose+=(-f "$file"); done < compose-files.rollback.txt
+fi
+if [ -x restore-downloads.sh ]; then bash restore-downloads.sh; fi
 docker compose --project-directory /www/gamehub/deploy --project-name gamehub-production \
-  --env-file env.before -f compose.before.yml -f rollback-images.yml --profile '*' \
+  --env-file env.before "${compose[@]}" -f rollback-images.yml --profile '*' \
   up -d --no-build --no-deps --wait --wait-timeout 240 "${services[@]}"
 echo 'Previous business code restored with the compatible migration inventory; user data retained.'
 ROLLBACK

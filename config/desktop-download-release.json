@@ -1,16 +1,16 @@
 {
-  "version": "0.2.0-preview.3",
-  "releaseDate": "2026-11-02",
+  "version": "0.2.0-preview.7",
+  "releaseDate": "2026-11-14",
   "notes": {
     "zh-CN": [
-      "提供 Windows 独立安装包，复用网页版账号与线上内容。",
-      "支持覆盖升级，默认卸载保留本机数据。",
-      "完善安装包完整性检查与本地安装验证。"
+      "新增全局墨鱼助手，支持题目提示与讲解。",
+      "优化右侧聊天、手机底部面板和练习交互。",
+      "不包含论文研读功能；支持后续受信更新。"
     ],
     "en": [
-      "A standalone Windows installer using your existing web account and online content.",
-      "Install over an older version; uninstalling keeps local app data by default.",
-      "Improved package integrity checks and local installation verification."
+      "Global Mooyu assistant with practice hints and explanations.",
+      "Improved chat layout and practice interactions.",
+      "Paper study is excluded; trusted updates supported."
     ]
   }
 }

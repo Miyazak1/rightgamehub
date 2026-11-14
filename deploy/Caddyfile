@@ -75,6 +75,24 @@
     file_server
   }
 
+  # Serve the locally verified plugin bytes; rebuilding the web image must not
+  # silently replace a versioned VSIX/tgz with differently encoded bytes.
+  @agent_downloads path /downloads/manifest.json /downloads/*.vsix /downloads/*.tgz /downloads/gamehub-agent-plugin-*.json /downloads/gamehub-creator-tools-v1.json
+  handle @agent_downloads {
+    uri strip_prefix /downloads
+    header Cache-Control "no-store"
+    header X-Content-Type-Options "nosniff"
+    route {
+      file_server {
+        root /srv/agent-downloads
+        pass_thru
+      }
+      file_server {
+        root /srv/gamehub/downloads
+      }
+    }
+  }
+
   # mooyu-desktop-downloads begin
   @desktop_downloads path /downloads/desktop /downloads/desktop/*
   handle @desktop_downloads {
