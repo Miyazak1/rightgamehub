@@ -7,6 +7,7 @@ test('Harness sends to the pane session even after the foreground session change
  assert.deepEqual(await send('请解释当前题目'),{sent:true});assert.deepEqual(messages,[{id:'A',prompt:'请解释当前题目',current:'B'}]);
  await assert.rejects(createHarnessAssistantSender(ctx,null)('question'),{message:'HOST_CHAT_SESSION_REQUIRED'});
  await assert.rejects(createHarnessAssistantSender({},'A')('question'),{message:'HOST_CHAT_UNAVAILABLE'});
+ await assert.rejects(createHarnessAssistantSender({get:()=>undefined},'A')('question'),{message:'HOST_CHAT_UNAVAILABLE'});
 });
 test('MCP widget syncs context without starting chat, validates child origin and returns host message receipts',async()=>{
  const {createGameHubMcpWidget}=await import('../../apps/api/src/gamehub-mcp-widget.mjs');

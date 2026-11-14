@@ -77,6 +77,19 @@
 
   # Serve the locally verified plugin bytes; rebuilding the web image must not
   # silently replace a versioned VSIX/tgz with differently encoded bytes.
+  @agent_updaters path /agent-update.ps1 /agent-update.mjs
+  handle @agent_updaters {
+    header Cache-Control "no-store"
+    route {
+      file_server {
+        root /srv/agent-downloads
+        pass_thru
+      }
+      file_server {
+        root /srv/gamehub
+      }
+    }
+  }
   @agent_downloads path /downloads/manifest.json /downloads/*.vsix /downloads/*.tgz /downloads/gamehub-agent-plugin-*.json /downloads/gamehub-creator-tools-v1.json
   handle @agent_downloads {
     uri strip_prefix /downloads

@@ -5,7 +5,7 @@ import {createReadStream} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 const digest=async file=>{const hash=crypto.createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);return hash.digest('hex');};
 const safe=relative=>typeof relative==='string'&&/^(?:agent|desktop)\/[A-Za-z0-9._/-]+$/.test(relative)&&!relative.split('/').some(s=>!s||s==='.'||s==='..');
-const pointer=relative=>['agent/manifest.json','agent/gamehub-creator-tools-v1.json','agent/gamehub-agent-latest.vsix','agent/gamehub-dsh-plugin-latest.tgz','desktop/manifest.json','desktop/updates/preview.json'].includes(relative);
+const pointer=relative=>['agent/manifest.json','agent/agent-update.ps1','agent/agent-update.mjs','agent/gamehub-creator-tools-v1.json','agent/gamehub-agent-latest.vsix','agent/gamehub-dsh-plugin-latest.tgz','desktop/manifest.json','desktop/updates/preview.json'].includes(relative);
 const regular=async file=>{const stat=await fs.lstat(file);if(!stat.isFile()||stat.isSymbolicLink())throw Error('ASSET_NOT_REGULAR: '+file);return stat;};
 async function ensureDirectory(directory){await fs.mkdir(directory,{recursive:true});if((await fs.lstat(directory)).isSymbolicLink())throw Error('ASSET_DIRECTORY_LINK_DENIED');}
 async function writeAtomic(file,bytes){await ensureDirectory(path.dirname(file));const temp=file+'.'+crypto.randomUUID()+'.tmp';try{await fs.writeFile(temp,bytes,{flag:'wx',mode:0o644});await fs.rename(temp,file);}finally{await fs.rm(temp,{force:true});}}
@@ -19,6 +19,7 @@ export async function verifyAssets(bundle,expected={}) {
   for(const name of ['agent/manifest.json','desktop/manifest.json','desktop/updates/preview.json'])if(!names.has(name))throw Error('ASSET_POINTER_MISSING');
   const agents=JSON.parse(await fs.readFile(path.join(bundle,'agent/manifest.json'),'utf8'));
   for(const [key,versionKey] of [['harnessPlugin','harnessVersion'],['editorExtension','editorVersion'],['agentPlugin','agentVersion']]){const item=agents[key];if(item?.version!==manifest[versionKey]||!names.has('agent/'+item.filename)||manifest.files.find(row=>row.path==='agent/'+item.filename).sha256!==item.sha256)throw Error('AGENT_MANIFEST_MISMATCH');}
+  for(const item of Object.values(agents.updater||{}).filter(v=>v&&typeof v==='object'&&v.filename)){if(!names.has('agent/'+item.filename)||manifest.files.find(row=>row.path==='agent/'+item.filename).sha256!==item.sha256)throw Error('AGENT_UPDATER_MISMATCH');}
   const desktop=JSON.parse(await fs.readFile(path.join(bundle,'desktop/manifest.json'),'utf8')).windowsX64;
   const signed=JSON.parse(await fs.readFile(path.join(bundle,'desktop/updates/preview.json'),'utf8'));
   const key=crypto.createPublicKey(manifest.desktopPublicKey),keyId=crypto.createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex').slice(0,32);

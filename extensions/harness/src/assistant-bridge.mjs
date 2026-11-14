@@ -3,7 +3,8 @@ export function createHarnessAssistantSender(ctx, session) {
   const sessionId = typeof session === 'string' ? session : session?.sessionId;
   return async prompt => {
     if (!sessionId || typeof prompt !== 'string' || !prompt.trim()) throw new Error('HOST_CHAT_SESSION_REQUIRED');
-    const scoped = ctx.sessions?.scope(sessionId);
+    const sessions=typeof ctx.get==='function'?ctx.get('sessions'):ctx.sessions;
+    const scoped = sessions?.scope?.(sessionId);
     if (typeof scoped?.conversation?.send !== 'function') throw new Error('HOST_CHAT_UNAVAILABLE');
     await scoped.conversation.send(prompt);
     return { sent: true };

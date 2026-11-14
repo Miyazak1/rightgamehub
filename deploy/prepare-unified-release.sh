@@ -7,6 +7,9 @@ ARCHIVE=${2:?Upload the verified release bundle outside the Git checkout first}
 [[ "$EXPECTED" =~ ^[a-f0-9]{40}$ ]] || exit 1
 [[ "$ARCHIVE" = /* && "$ARCHIVE" != *$'\n'* && -f "$ARCHIVE" && ! -L "$ARCHIVE" ]] || { echo 'Expected a regular absolute bundle path'; exit 1; }
 cd /www/gamehub
+mkdir -p /www/backup/gamehub
+exec 9>/www/backup/gamehub/.unified-release.lock
+flock -n 9 || { echo 'Another unified deployment is active; stop without changing services.'; exit 1; }
 test -f deploy/.env.prod
 test -z "$(git status --porcelain)" || { echo 'Production checkout has local edits. Stop; no reset/clean.'; exit 1; }
 git cat-file -e "$EXPECTED^{commit}"
@@ -28,6 +31,13 @@ tar -xzf "$ARCHIVE" -C "$RECORD/incoming" --no-same-owner --no-same-permissions
 WEB=$(docker ps -q --filter label=com.docker.compose.project=gamehub-production --filter label=com.docker.compose.service=web)
 API=$(docker ps -q --filter label=com.docker.compose.project=gamehub-production --filter label=com.docker.compose.service=api)
 test -n "$WEB" && test -n "$API"
+if [ "${PLATFORM_ASSISTANT_ENABLED:-false}" = true ]; then
+  # Resolve the existing server key without printing it or passing it in argv.
+  docker compose --project-name gamehub-production --env-file deploy/.env.prod -f deploy/compose.prod.yml config --format json |
+    docker exec -i "$API" node -e 'let text="";process.stdin.on("data",part=>text+=part);process.stdin.on("end",()=>{try{if(!JSON.parse(text).services.api.environment.DEEPSEEK_API_KEY?.trim())process.exit(1);}catch{process.exit(1);}});' || {
+      echo 'Configure DEEPSEEK_API_KEY privately in deploy/.env.prod first, or explicitly leave PLATFORM_ASSISTANT_ENABLED=false. No services changed.' >&2; exit 1;
+    }
+fi
 CONFIG_FILES=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$WEB")
 test -n "$CONFIG_FILES" && [ "$CONFIG_FILES" != '<no value>' ]
 IFS=',' read -r -a files <<< "$CONFIG_FILES"

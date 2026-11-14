@@ -9,7 +9,9 @@ const { pathToFileURL } = require('node:url');
 const apiUrl = pathToFileURL(path.resolve(__dirname,
   '../../apps/capability-executor/src/index.mjs')).href;
 const tempRoot = async prefix => {
-  const base = path.resolve('.runtime/capability-runtime-release-tests');
+  // Keep the installed helper path plus the CLR's .config suffix below MAX_PATH
+  // when this suite runs in a nested release worktree.
+  const base = path.resolve('.runtime/crr-tests');
   await fs.promises.mkdir(base, { recursive: true });
   return fs.promises.mkdtemp(path.join(base, prefix));
 };

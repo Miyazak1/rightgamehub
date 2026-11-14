@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
 import config from '../../scripts/desktop-windows-builder.cjs';
 import {installedDesktopConfig} from '../../apps/desktop/src/installed-configuration.mjs';
 import {auditDesktopArchive} from '../../scripts/lib/desktop-package-audit.mjs';
@@ -26,7 +27,10 @@ test('NSIS identity is stable across versions and acceptance never replaces the 
 });
 test('packaging exports the fixed base with an explicit small overlay and allows no user data files',async()=>{
   const spec=JSON.parse(await fs.readFile(new URL('scripts/desktop-windows-package.json',root)));
-  assert.equal(spec.sourceCommit,'76b97a0761c18a1389d6e1d1faa4d1a636dbbdc2');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
+  assert.equal(spec.sourceCommit,'983c428f51b7bc28486702b4f9c55afa92bb8d40');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
+  const sourceFile=file=>execFileSync('git',['show',spec.sourceCommit+':'+file],{cwd:new URL('../../',import.meta.url),encoding:'utf8',windowsHide:true});
+  assert.match(sourceFile('packages/platform-client/src/App.jsx'),/AssistantWorkspace/);
+  assert.doesNotMatch(sourceFile('packages/platform-client/src/official-tools.mjs'),/import\('\.\/PaperStudyTool\.jsx'\)/);
   for(const file of spec.overlay)assert.doesNotMatch(file,/(?:\.runtime|\.env|agent-paper|paper-review|MooyuWorkbench|desktop-d1)/);
   const c=config({});assert.deepEqual(c.files,['main.cjs','preload.cjs','web/**/*','build-info.json','package.json','update-runner.exe']);assert.equal(c.asar,true);
   const entry=await fs.readFile(new URL('apps/desktop/electron/installed.cjs',root),'utf8');assert.doesNotMatch(entry,/readFile|--acceptance-config|process\.env|launch\.json.*read/);

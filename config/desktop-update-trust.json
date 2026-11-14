@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "channel": "preview",
+  "feed": "https://mooyu.fun/downloads/desktop/updates/preview.json",
+  "keys": [
+    {
+      "id": "0a9065b3b7e6a09a84a05a019e78146a",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAxssup3ha46eKtnX5U7TV5pyiRY3QHjR5dy3jRqpbK/M=\n-----END PUBLIC KEY-----\n"
+    }
+  ]
+}

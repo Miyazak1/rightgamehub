@@ -22,6 +22,6 @@
 
 Codex / MCP Apps 不渲染墨鱼聊天组件，也不调用墨鱼模型接口。界面通过 MCP Apps `ui/update-model-context` 同步当前题目，通过 `ui/message` 将用户点击的提示或讲解请求交给宿主聊天；外层 widget 验证子页面来源，回执验证父窗口及请求编号。
 
-Harness 通过插件注册时绑定的 session scope 调用 `ctx.sessions.scope(sessionId).conversation.send(prompt)`，不查询或猜测全局当前会话。切题不会自动发送消息触发 Agent；点击提问时附上当时的题目快照。所需前端服务在插件清单中声明。其他宿主通过 `host.assistant.send` 适配；不支持消息接口时提供复制题目上下文的明确退路，不会偷偷启用另一套聊天。
+Harness 通过插件注册时绑定的 session scope 调用宿主的 `sessions.scope(sessionId).conversation.send(prompt)`，不查询或猜测全局当前会话。切题不会自动发送消息触发 Agent；点击提问时附上当时的题目快照。聊天服务在点击时检测，旧版宿主缺少接口时仍可打开平台并复制题目，不会因为新增聊天服务依赖而阻断整个插件。其他宿主通过 `host.assistant.send` 适配；不支持消息接口时提供复制题目上下文的明确退路，不会偷偷启用另一套聊天。
 
 宿主接口参考：[Harness conversation service](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-conversation/src/client/service.ts)。本地当前 Harness 安装的部分链接已失效，因此本轮以真实浏览器桥接回归及插件打包验证为准；安装后的实际宿主点击验收仍需在可用宿主环境补做。

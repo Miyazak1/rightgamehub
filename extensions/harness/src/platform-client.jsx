@@ -85,7 +85,9 @@ function HarnessPlatform({ useTabInfo, sendHostPrompt }) {
   }, React.createElement('style', null, `${PLATFORM_CSS}\n${UPDATE_CSS}`), React.createElement(HarnessUpdateNotice, { signal: tab.signal }), React.createElement(App, { hostAdapter: host, apiClient: api, routing: 'memory' }));
 }
 
-export const inject = ['slots', 'sidebarRightTabs', 'sessions', 'conversation'];
+// Chat is resolved when requested. Older hosts still open the platform and can
+// copy a question instead of failing to mount the whole plugin.
+export const inject = ['slots', 'sidebarRightTabs'];
 export function apply(ctx) {
   const english = /^en(?:-|$)/iu.test(window.navigator.language || '');
   ctx.effect(() => ctx.sidebarRightTabs.register({
