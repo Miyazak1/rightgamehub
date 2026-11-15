@@ -19,7 +19,8 @@ export function LearningDataCard({result,go}) {
 
 export default function PlatformAgentCards({results=[],go,openCapability,disabled}) {
   const {locale}=useI18n(),en=locale==='en';
-  return <div className="agent-result-cards">{results.map((item,i)=>item.error?<p className="agent-tool-error" role="status" key={i}>{en?'Query incomplete. Try again.':'本次查询未完成，可调整条件后重试。'}</p>:item.name==='get_my_learning_data'?<LearningDataCard key={i} result={item.result} go={go}/>:<React.Fragment key={i}>{(item.result?.capabilities||[item.result?.capability]).filter(Boolean).map(c=><article className="agent-capability-card" key={c.id}>
+  const seen=new Set();
+  return <div className="agent-result-cards">{results.map((item,i)=>item.error?<p className="agent-tool-error" role="status" key={i}>{en?'Query incomplete. Try again.':'本次查询未完成，可调整条件后重试。'}</p>:item.name==='get_my_learning_data'?<LearningDataCard key={i} result={item.result} go={go}/>:<React.Fragment key={i}>{(item.result?.capabilities||[item.result?.capability]).filter(c=>{if(!c||seen.has(c.id))return false;seen.add(c.id);return true;}).map(c=><article className="agent-capability-card" key={c.id}>
     <small>{c.kind==='game'?(en?'GAME':'游戏'):c.kind==='official-tool'?(en?'TOOL':'工具'):(en?'LEARN':'学习')}</small><strong>{c.title}</strong><p>{c.description}</p><button disabled={disabled} onClick={()=>openCapability(c.id)}>{en?'Open':'打开'} →</button>
   </article>)}{item.result?.capabilities?.length===0&&<p>{en?'No matching available content.':'没有找到匹配的可用内容。'}</p>}</React.Fragment>)}</div>;
 }

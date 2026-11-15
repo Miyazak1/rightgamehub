@@ -56,6 +56,8 @@
 .assistant-message { margin:0 0 24px;overflow-wrap:anywhere; }
 .assistant-message>small { display:flex;align-items:center;gap:6px;color:var(--gh-secondary);font-size:11px;margin-bottom:8px; }
 .assistant-message-mark { color:var(--gh-action);font-size:13px; }
+.assistant-user-avatar { display:block;flex:0 0 24px;width:24px;height:24px;overflow:hidden;border-radius:4px;border:1px solid var(--gh-border);background:var(--gh-panel); }
+.assistant-user-avatar .avatar-image,.assistant-user-avatar .avatar-sprite { width:100%;height:100%; }
 .assistant-message-scope { margin-left:auto;color:var(--gh-secondary);font-size:10px; }
 .assistant-message-body { white-space:pre-wrap;font-size:14px;line-height:1.85;max-width:100%;overflow-x:auto; }
 .assistant-message-body .math-content { font:inherit; }

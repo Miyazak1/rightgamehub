@@ -16,12 +16,15 @@ test('global assistant retains chat across routes, binds late replies, restores 
  const entry=`import React from 'react';import{createRoot}from'react-dom/client';import App from './packages/platform-client/src/App.jsx';import{createBrowserHostAdapter}from'./packages/host-contract/src/index.mjs';import{createPracticeApiClient}from'./packages/platform-api-client/src/practice.mjs';const hostKind=new URLSearchParams(location.search).get('host')||'browser';const host=createBrowserHostAdapter({host:hostKind});window.__hostMessages=[];window.__hostContexts=[];window.__fixtureHost=host;host.assistant={syncContext:context=>window.__hostContexts.push(context),send:async payload=>{window.__hostMessages.push(payload);}};const api=createPracticeApiClient({getAccessToken:()=> 'fixture'});createRoot(document.getElementById('root')).render(<React.StrictMode><App demo={true} apiClient={api} hostAdapter={host}/></React.StrictMode>);`;
  const js=(await build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],logLevel:'silent'})).outputFiles[0].text;
  const css=await fs.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');
+ const edge=await fs.readFile(path.join(root,'deploy/Caddyfile'),'utf8');
+ const csp=edge.match(/Content-Security-Policy "([^"]+)"/u)[1].replaceAll('{$RUNTIME_DOMAIN}','runtime.example.test');
  t.diagnostic('Shared app built');
- servePage(app,(_r,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
+ servePage(app,(_r,reply)=>reply.header('Content-Security-Policy',csp).type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
  app.get('/fixture.js',(_r,reply)=>reply.type('text/javascript').send(js));await app.listen({host:'127.0.0.1',port:0});
  browser=await chromium.launch({headless:true});
  t.diagnostic('Browser launched');
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
+ page.on('console',m=>{if(m.type()==='error'&&/Content Security Policy|font-src/i.test(m.text()))errors.push(m.text());});
  const url='http://127.0.0.1:'+app.server.address().port,practice='/learn/practice/'+batchId;
  const navigate=route=>page.evaluate(route=>{history.pushState({},'',route);dispatchEvent(new PopStateEvent('popstate'));},route);
  await page.goto(url+practice);await page.getByRole('button',{name:'问这道题',exact:true}).waitFor();

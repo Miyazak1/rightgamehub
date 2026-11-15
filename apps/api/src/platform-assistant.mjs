@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { rejectPractice } from './practice/error.mjs';
+import { PracticeError, rejectPractice } from './practice/error.mjs';
+import { parseAssistantOutput } from './assistant-output.mjs';
 import { createAgentDeepSeekProviderAdapter } from './agent-deepseek-provider-adapter.mjs';
 
 export function createPlatformAssistantProvider({ apiKey, modelId = 'deepseek-chat', invoke = createAgentDeepSeekProviderAdapter() }) {
   if (!apiKey) return null;
   return async ({ messages = [], requestId, allowTools = false, timeoutSeconds = 35 }) => {
     const deadline = Date.now() + timeoutSeconds * 1000;
+    let responseFailure = 'deadline';
     for (let attempt = 0; attempt < 2; attempt++) {
       const remaining = deadline - Date.now();
       if (remaining < 1000) break;
@@ -14,10 +16,11 @@ export function createPlatformAssistantProvider({ apiKey, modelId = 'deepseek-ch
           + (allowTools ? '调用工具只返回 {"toolCall":{"name":"能力名","arguments":{}}}，最终回答只返回 {"reply":"回答"}。'
             : '只返回 {"reply":"回答"}。') }] : messages }, tokenCeiling: attempt ? 2400 : 1200,
         timeoutSeconds: Math.min(timeoutSeconds, Math.ceil(remaining / 1000)), idempotencyKey: requestId + ':' + attempt });
-      let output;
-      try { output = JSON.parse(result.output); } catch { continue; }
       // Never execute a truncated response, even if its JSON happens to parse.
-      if (result.responseRef?.finishReason === 'length') continue;
+      if (result.responseRef?.finishReason === 'length') { responseFailure = 'truncated'; continue; }
+      let output;
+      try { output = parseAssistantOutput(result.output); } catch { responseFailure = 'invalid-json'; continue; }
+      responseFailure = 'invalid-shape';
       if (allowTools && output?.toolCall != null) {
         const call = output.toolCall;
         // Some models include a preliminary reply alongside the call. The tool
@@ -30,7 +33,9 @@ export function createPlatformAssistantProvider({ apiKey, modelId = 'deepseek-ch
       if (typeof output?.reply === 'string' && output.reply.trim() && output.reply.length <= 12000)
         return output.reply.trim();
     }
-    rejectPractice('ASSISTANT_RESPONSE_INVALID', 502, '助手回复未完成，请重试。');
+    const error = new PracticeError('ASSISTANT_RESPONSE_INVALID', 502, '助手回复未完成，请重试。');
+    error.assistantResponseFailure = responseFailure;
+    throw error;
   };
 }
 
@@ -82,7 +87,7 @@ export function createPlatformAssistantService({ practiceService, tools = null, 
           + '当前题目以以下服务端快照为准。没有题目上下文时也可处理平台查询。'
           + (tools?'每次只返回一个JSON对象：调用能力时只返回 {"toolCall":{"name":"能力名","arguments":{}}}；最终回答时只返回 {"reply":"纯文本回答"}。两种格式互斥。最多调用4个工具。工具定义：'+JSON.stringify(tools.descriptions)
             :'返回 JSON 对象，格式为 {"reply":"纯文本回答"}。')
-          + '回答段落用换行分隔，数学公式可用 LaTeX 定界符。\n'
+          + '回答段落用换行分隔，数学公式使用 $...$ 或 $$...$$。JSON字符串中的反斜线必须双写转义。\n'
           + JSON.stringify(context);
         const messages = [{role:'system', content:system}];
         const references=new Set((input.history||[]).filter(m=>m.role==='assistant'&&m.requestId).slice(-3).map(m=>m.requestId));
@@ -102,7 +107,18 @@ export function createPlatformAssistantService({ practiceService, tools = null, 
           const results=[],actions=[],deadline=Date.now()+65000;let reply;
           for(let round=0;round<=4;round++) {
             const remaining=deadline-Date.now();if(remaining<1000)fail('ASSISTANT_TOOL_LIMIT',422,'查询等待较久，请缩小范围后重试。');
-            const output=await provider({messages,requestId:key+':'+round,allowTools:Boolean(tools),timeoutSeconds:Math.min(35,Math.ceil(remaining/1000))});
+            let output;
+            try { output=await provider({messages,requestId:key+':'+round,allowTools:Boolean(tools),timeoutSeconds:Math.min(35,Math.ceil(remaining/1000))}); }
+            catch(error) {
+              // A graded question already has an authoritative explanation.
+              // Keep that useful result available without presenting it as AI.
+              if(error.code==='ASSISTANT_RESPONSE_INVALID'&&!results.length&&context?.question.checked
+                &&typeof context.question.explanation==='string'&&context.question.explanation.trim()
+                &&/(?:解释|讲解|解题|这道题|思路|\bexplain\b)/iu.test(input.message)) {
+                reply='助手暂未生成补充讲解，先显示题目自带解析：\n\n'+context.question.explanation.slice(0,10000);break;
+              }
+              throw error;
+            }
             if(typeof output==='string'){reply=output;break;}
             if(!tools||!output?.toolCall||round===4)fail('ASSISTANT_TOOL_LIMIT',422,'本次查询步骤较多，请缩小范围后重试。');
             const {name,arguments:args}=output.toolCall;
@@ -147,6 +163,11 @@ export function registerPlatformAssistantRoutes(app, { service, requireAuth }) {
       context:{anyOf:[context,{type:'null'}]}, history:{type:'array',maxItems:12,items:{type:'object',additionalProperties:false,
         required:['role','content'],properties:{role:{enum:['user','assistant']},content:{type:'string',minLength:1,maxLength:2000},
           questionId:{anyOf:[{type:'string',maxLength:128},{type:'null'}]},requestId:{type:'string',format:'uuid'}}}} } } } }, async (r,reply) => {
-    reply.header('Cache-Control','no-store'); return {data:await service.send(r.actor,r.body)};
+    reply.header('Cache-Control','no-store');
+    try { return {data:await service.send(r.actor,r.body)}; }
+    catch (error) {
+      if(error.assistantResponseFailure)r.log.warn({code:error.code,reason:error.assistantResponseFailure},'Assistant response rejected');
+      throw error;
+    }
   });
 }

@@ -6,6 +6,7 @@ import { requestHostAssistant, syncHostAssistantContext } from './assistant-host
 import './PlatformAssistant.css';
 import PlatformAgentCards from './PlatformAgentCards.jsx';
 import {validAgentNavigation} from './agent-navigation.mjs';
+import AvatarView from './AvatarView.jsx';
 
 const Assistant = createContext(null);
 export const usePlatformAssistant = () => useContext(Assistant);
@@ -24,7 +25,7 @@ function restore(owner, mode) {
 }
 const questionLabel = (context, en) => context ? (en ? `Question ${context.number}` : `第 ${context.number} 题`) : (en ? 'Platform' : '平台对话');
 
-export function PlatformAssistantProvider({ children, api, host, capabilities, owner, route, go }) {
+export function PlatformAssistantProvider({ children, api, avatarApi, profile, host, capabilities, owner, route, go }) {
   const mode = assistantHostMode(capabilities), {locale} = useI18n(), en = locale === 'en';
   const [state,setState] = useState(() => restore(owner,mode));
   const [practice,setPractice] = useState(null), [availability,setAvailability] = useState(null);
@@ -96,9 +97,10 @@ export function PlatformAssistantProvider({ children, api, host, capabilities, o
     catch { setHostNotice(en?'Host chat is unavailable. Copy the question context and paste it into your host chat.':'当前宿主未提供消息接口，请复制题目上下文后粘贴到宿主聊天。'); }
   },[mode,host,send,en]);
   const value = useMemo(()=>({state,setState,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,host,go,openCapability,navigation,
+    profile:profile?.id===owner?profile:null,avatarApi,
     retryConnection:()=>{setAvailability(null);api.getAssistantCapabilities().then(({data})=>setAvailability(data)).catch(()=>setAvailability({available:false}));},
     stop:()=>pending.current?.abort(),newChat:()=>{generation.current++;pending.current?.abort();pending.current=null;expectedNavigation.current=null;setNavigation(null);setState(s=>({...fresh(),open:true,width:s.width}));},
-    currentPractice:ownRoute}),[state,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,ownRoute,api,host,go,openCapability,navigation]);
+    currentPractice:ownRoute}),[state,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,ownRoute,api,avatarApi,profile,host,go,openCapability,navigation]);
   return <Assistant.Provider value={value}>{children}</Assistant.Provider>;
 }
 
@@ -165,7 +167,7 @@ export function AssistantWorkspace({children}) {
       <div className="assistant-messages" ref={log} onScroll={e=>{const el=e.currentTarget;followReplies.current=el.scrollHeight-el.scrollTop-el.clientHeight<60;}} role="log" aria-live="polite" aria-relevant="additions text">
         {!a.state.messages.length&&<div className="assistant-empty"><span className="assistant-empty-mark" aria-hidden="true">✦</span><strong>{en?'Where shall we start?':'从哪里开始？'}</strong><p>{en?'Ask for a small hint, or talk through a step. Your conversation stays here as you move between pages.':'想要一点提示，还是一起理清某一步？切换页面时，对话会留在这里。'}</p></div>}
         {a.state.messages.map(m=><article key={m.id} className={'assistant-message is-'+m.role+' is-'+m.status}>
-          <small><span className="assistant-message-mark" aria-hidden="true">{m.role==='user'?'↗':'✦'}</span>{m.role==='user'?(en?'You':'你'):(en?'Mooyu':'墨鱼')}<span className="assistant-message-scope">{questionLabel(m.context,en)}</span></small>
+          <small>{m.role==='user'?<span className="assistant-user-avatar"><AvatarView avatar={a.profile?.avatar} api={a.avatarApi} alt={en?'Your avatar':'你的头像'}/></span>:<span className="assistant-message-mark" aria-hidden="true">✦</span>}{m.role==='user'?(a.profile?.displayName||(en?'You':'你')):(en?'Mooyu':'墨鱼')}<span className="assistant-message-scope">{questionLabel(m.context,en)}</span></small>
           {m.status==='pending'?<p role="status" className="assistant-thinking">{en?'Thinking…':'正在思考…'}</p>:<div className="assistant-message-body"><MathContent text={m.content} formatPlainMath/></div>}
           {m.role==='assistant'&&m.status==='sent'&&<PlatformAgentCards results={m.results} go={a.go} openCapability={a.openCapability} disabled={pending||a.navigation?.status==='opening'}/>}
           {['failed','interrupted'].includes(m.status)&&<button disabled={pending} onClick={()=>a.send(m.request.content,m.request.intent||'chat',{...m.request,id:m.id})}>{en?'Retry':'重试'}</button>}
