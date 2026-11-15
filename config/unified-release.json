@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "release": "20261114-chat",
-  "archiveFilename": "mooyu-unified-20261114-chat.tar.gz",
-  "archiveSha256": "5e0831a8de6e7f7dd20b9efc22b9f3668658dbe9224995529ae08b3e5f8bb6f6",
-  "archiveBytes": 178692953,
-  "sourceCommit": "983c428f51b7bc28486702b4f9c55afa92bb8d40",
-  "desktopVersion": "0.2.0-preview.7",
-  "editorVersion": "0.4.1",
-  "harnessVersion": "0.1.29",
-  "agentVersion": "0.4.1",
+  "release": "20261115-agent",
+  "archiveFilename": "mooyu-unified-20261115-agent.tar.gz",
+  "archiveSha256": "32d7fb42e93c23e9a5b683574d3128c1ec8a8490f9120c3f6234c6675e6466ca",
+  "archiveBytes": 178666137,
+  "sourceCommit": "4efedf86925cb5268072563b409883748106cf80",
+  "desktopVersion": "0.2.0-preview.8",
+  "editorVersion": "0.4.2",
+  "harnessVersion": "0.1.30",
+  "agentVersion": "0.4.2",
   "desktopKeyId": "0a9065b3b7e6a09a84a05a019e78146a",
   "paperEnabled": false
 }

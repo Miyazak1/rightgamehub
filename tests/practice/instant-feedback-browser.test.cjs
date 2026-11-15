@@ -9,6 +9,7 @@ test('practice selection checks immediately and restores locked feedback after f
  await admin.query('CREATE SCHEMA '+schema);
  const pool=new Pool({connectionString:url,options:'-c search_path='+schema+',public'}),app=require('../../apps/api/node_modules/fastify')();
  let browser,releaseHeld,holdNext=true,failNext=false,loseNext=false;const checks=[];
+ let receivedHeld;const heldRequestReceived=new Promise(resolve=>{receivedHeld=resolve;});
  t.after(async()=>{releaseHeld?.();await browser?.close();await app.close();await pool.end();await admin.query('DROP SCHEMA '+schema+' CASCADE');await admin.end();});
  await pool.query('CREATE TABLE users(id uuid PRIMARY KEY)');await pool.query(await fs.readFile(path.join(root,'apps/api/migrations/0160_learning_practice.sql'),'utf8'));
  const userId=randomUUID(),batchId=randomUUID(),config={subjectId:'mathematics',curriculumId:'csca-math-1.43',topicId:'csca.math.sets',stageId:null,difficultyId:'basic',count:3,language:'zh'};
@@ -23,7 +24,7 @@ test('practice selection checks immediately and restores locked feedback after f
  app.addHook('preHandler',async(request,reply)=>{
   if(request.method!=='PATCH'||request.body?.action!=='check')return;
   checks.push(request.body);
-  if(holdNext){holdNext=false;await new Promise(resolve=>{releaseHeld=resolve;});}
+  if(holdNext){holdNext=false;await new Promise(resolve=>{releaseHeld=resolve;receivedHeld();});}
   if(failNext){failNext=false;return reply.code(503).send({error:{code:'API_UNAVAILABLE',message:'判题暂不可用，请重试。'}});}
  });
  app.addHook('onSend',async(request,reply,payload)=>{
@@ -43,6 +44,9 @@ test('practice selection checks immediately and restores locked feedback after f
  await page.goto('http://127.0.0.1:'+app.server.address().port,{waitUntil:'domcontentloaded',timeout:30000});await page.getByRole('heading',{name:prompts[0],exact:true}).waitFor();
  assert.equal(await page.getByRole('button',{name:'核对答案',exact:true}).count(),0);
  await option('A').click();await option('A').getByText('判题中…',{exact:true}).waitFor();assert.equal(await page.locator('.practice-options input[value="A"]').isChecked(),true);
+ // The optimistic spinner can render before fetch reaches Fastify. Wait for the
+ // held server request before asserting its count, without releasing its reply.
+ await heldRequestReceived;
  assert.equal(await page.locator('.practice-options input:enabled').count(),0);assert.equal(await feedback.count(),0);assert.equal(checks.length,1);assert.equal(checks[0].action,'check');assert.equal(checks[0].answer,'A');
  releaseHeld();await feedback.getByText('答对了，继续保持',{exact:true}).waitFor();await feedback.getByText('第一题的解析',{exact:true}).waitFor();
  assert.match(await option('A').getAttribute('class'),/is-correct/);assert.equal(await page.getByRole('heading',{name:prompts[0],exact:true}).count(),1,'checking must not auto-advance');

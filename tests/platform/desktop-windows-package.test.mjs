@@ -27,9 +27,11 @@ test('NSIS identity is stable across versions and acceptance never replaces the 
 });
 test('packaging exports the fixed base with an explicit small overlay and allows no user data files',async()=>{
   const spec=JSON.parse(await fs.readFile(new URL('scripts/desktop-windows-package.json',root)));
-  assert.equal(spec.sourceCommit,'983c428f51b7bc28486702b4f9c55afa92bb8d40');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
+  assert.equal(spec.sourceCommit,'4efedf86925cb5268072563b409883748106cf80');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
   const sourceFile=file=>execFileSync('git',['show',spec.sourceCommit+':'+file],{cwd:new URL('../../',import.meta.url),encoding:'utf8',windowsHide:true});
   assert.match(sourceFile('packages/platform-client/src/App.jsx'),/AssistantWorkspace/);
+  assert.match(sourceFile('apps/desktop/src/practice-contract.mjs'),/getLearningInsights/);
+  assert.match(sourceFile('apps/api/src/runtime.mjs'),/createPlatformAgentTools/);
   assert.doesNotMatch(sourceFile('packages/platform-client/src/official-tools.mjs'),/import\('\.\/PaperStudyTool\.jsx'\)/);
   for(const file of spec.overlay)assert.doesNotMatch(file,/(?:\.runtime|\.env|agent-paper|paper-review|MooyuWorkbench|desktop-d1)/);
   const c=config({});assert.deepEqual(c.files,['main.cjs','preload.cjs','web/**/*','build-info.json','package.json','update-runner.exe']);assert.equal(c.asar,true);

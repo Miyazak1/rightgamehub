@@ -112,7 +112,12 @@ const paper=await fetch('http://127.0.0.1:3090/v1/me/paper-studies');assert.equa
 const {officialToolCapabilities}=await import('./packages/agent-capabilities/src/index.mjs');assert.ok(!officialToolCapabilities.some(x=>x.toolId==='paper-study'));
 const mcp=await fetch('http://127.0.0.1:3090/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list',params:{}})});
 assert.equal(mcp.status,200);const tools=await mcp.json();assert.ok(Array.isArray(tools.result?.tools));assert.ok(!tools.result.tools.some(x=>x.name==='open_paper_study'));
-console.log(JSON.stringify({status:ready.status,migrations:ready.migrations,practiceTopics:catalog.topics.length,paperEnabled:false}));
+assert.ok(tools.result.tools.some(x=>x.name==='get_my_learning_data'),'new learning tool must be present');
+for(const path of ['/v1/me/assistant/capabilities','/v1/me/learning/insights'])assert.equal((await fetch('http://127.0.0.1:3090'+path)).status,401,'private Agent routes require auth');
+const agent=await fetch('http://127.0.0.1:3090/v1/me/agent/tools',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'get_my_learning_data',arguments:{}})});assert.equal(agent.status,401);
+const detail=await fetch('http://127.0.0.1:3090/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'get_capability',arguments:{capabilityId:'courseware:mathematics-practice'}}})});
+assert.equal(detail.status,200);assert.equal((await detail.json()).result.structuredContent.capability.launch.route,'/learn/practice');
+console.log(JSON.stringify({status:ready.status,migrations:ready.migrations,practiceTopics:catalog.topics.length,paperEnabled:false,platformAgent:true}));
 NODE
 trap - ERR
 dc ps

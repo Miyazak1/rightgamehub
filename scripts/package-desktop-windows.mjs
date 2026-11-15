@@ -44,7 +44,7 @@ try{
   await fs.mkdir(appDirectory);
   const projectRequire=createRequire(path.join(source,'package.json')),{build}=projectRequire('esbuild');
   const entry=acceptance?'tests/desktop/electron-installed-acceptance.cjs':'apps/desktop/electron/installed.cjs';
-  const bundled=await build({absWorkingDir:source,entryPoints:[entry],bundle:true,platform:'node',format:'cjs',target:'node22',outfile:path.join(appDirectory,'main.cjs'),external:['electron','bufferutil','utf-8-validate','kerberos'],nodePaths:[path.join(source,'apps/desktop/node_modules'),path.join(source,'apps/realtime/node_modules'),path.join(tools,'node_modules')],metafile:true,sourcemap:false,legalComments:'inline'});
+  const bundled=await build({absWorkingDir:source,entryPoints:[entry],bundle:true,platform:'node',format:'cjs',target:'node22',minify:true,outfile:path.join(appDirectory,'main.cjs'),external:['electron','bufferutil','utf-8-validate','kerberos'],nodePaths:[path.join(source,'apps/desktop/node_modules'),path.join(source,'apps/realtime/node_modules'),path.join(tools,'node_modules')],metafile:true,sourcemap:false,legalComments:'inline'});
   const inputs=Object.keys(bundled.metafile.inputs);if(inputs.some(f=>/agent-paper-|desktop-workbench|paper-review|MooyuWorkbench/.test(f)))throw Error('DEFERRED_CODE_IN_BUNDLE');
   report.bundleInputCount=inputs.length;
   await fs.copyFile(path.join(source,'apps/desktop/electron/preload.cjs'),path.join(appDirectory,'preload.cjs'));

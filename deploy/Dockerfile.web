@@ -21,6 +21,7 @@ COPY packages/courseware-runtime/package.json packages/courseware-runtime/packag
 RUN pnpm install --frozen-lockfile --filter @gamehub/web... --filter gamehub-dsh-plugin... --filter @gamehub/creator-tools...
 COPY apps/web apps/web
 COPY packages/agent-capabilities packages/agent-capabilities
+COPY packages/practice-core packages/practice-core
 COPY packages/platform-client packages/platform-client
 COPY packages/rules-sdk packages/rules-sdk
 COPY packages/web-game-sdk packages/web-game-sdk
