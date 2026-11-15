@@ -1,16 +1,16 @@
 {
-  "version": "0.2.0-preview.7",
-  "releaseDate": "2026-11-14",
+  "version": "0.2.0-preview.8",
+  "releaseDate": "2026-11-15",
   "notes": {
     "zh-CN": [
-      "新增全局墨鱼助手，支持题目提示与讲解。",
-      "优化右侧聊天、手机底部面板和练习交互。",
-      "不包含论文研读功能；支持后续受信更新。"
+      "平台助手接通游戏、工具与学习内容的查找和打开。",
+      "新增个人学习概览、练习历史和错题查询；插件使用宿主聊天。",
+      "保留账号、存档和设置；不包含论文研读功能。"
     ],
     "en": [
-      "Global Mooyu assistant with practice hints and explanations.",
-      "Improved chat layout and practice interactions.",
-      "Paper study is excluded; trusted updates supported."
+      "Find and open games, tools and learning content with Mooyu.",
+      "Read personal practice summaries, history and wrong answers; plugins use host chat.",
+      "Accounts, saves and settings are preserved. Paper study is excluded."
     ]
   }
 }

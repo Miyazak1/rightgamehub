@@ -29,6 +29,14 @@ async function run(){
   const save=await js(`(async()=>{const {createIndexedDbSaveStore}=await import('mooyu-app://client/install-save-probe.js');const store=createIndexedDbSaveStore();const scope=${JSON.stringify(scope)};if(${config.phase==='seed'}){if(!await store.compareAndSwap(scope,0,{format:1,progress:{chapter:3,score:42}}))throw Error('SAVE_SEED_FAILED');localStorage.setItem('mooyu.installer.preference','retained');}const row=await store.read(scope);await store.close();return {row,preference:localStorage.getItem('mooyu.installer.preference')};})()`);
   assert.deepEqual(save.row,{version:1,value:{format:1,progress:{chapter:3,score:42}}});assert.equal(save.preference,'retained');checks.push('real IndexedDB save and local preferences retained');
   const vault=await fs.readdir(path.join(config.profileRoot,'account-vault'));assert.ok(vault.some(f=>f.endsWith('.dpapi')));checks.push('OS-encrypted account vault present outside installation');
+  if(config.platformAgentAcceptance){
+    const invoke=async(method,args=[])=>{const response=await js(`window.mooyuDesktop.account.call('business',[${JSON.stringify({method,args})}])`);assert.equal(response.ok,true,method);return response.value.data;};
+    const capabilities=await invoke('getAssistantCapabilities');assert.equal(capabilities.available,false);assert.ok(capabilities.capabilities.includes('learning-insights'));
+    const learning=await invoke('getLearningInsights',[{days:30}]);assert.equal(learning.scope,'platform-practice');assert.equal(learning.summary.answered,0);assert.equal(learning.summary.accuracy,null);
+    const found=await invoke('executeAgentTool',['search_capabilities',{query:'知识图',kinds:['official-tool']}]);assert.equal(found.result.capabilities[0].id,'official-tool:knowledge-map');
+    const opened=await invoke('executeAgentTool',['open_capability',{capabilityId:'official-tool:knowledge-map'}]);assert.equal(opened.action.route,'/tools/knowledge-map');assert.equal(opened.result.status,'navigation_requested');
+    checks.push('installed authenticated Agent IPC queries owned learning data, discovers tools and resolves navigation without model calls');
+  }
   const result={passed:true,phase:config.phase,version:app.getVersion(),checks,productionConnected:false,profileRoot:config.profileRoot};
   if(config.updatePhase==='apply'){
     await fs.writeFile(config.report,JSON.stringify({...result,phase:'before-update'},null,2));

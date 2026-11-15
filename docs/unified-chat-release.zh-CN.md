@@ -1,22 +1,22 @@
-# 全局聊天统一发布（不含论文）
+# 平台 Agent 统一发布（不含论文）
 
-本次从 `codex/release-practice-no-paper` 的已发布提交建立独立发布工作区，仅合入已完成的全局助手与做题辅导，不带入开发工作区的未提交修改。发布仍使用 `codex/release-practice-no-paper` 渠道。
+本次从 `codex/release-practice-no-paper` 的已发布提交建立独立发布工作区，合入已完成的全局助手、做题辅导、游戏与工具查找和打开、个人学习数据查询，不带入开发工作区的未提交修改。发布仍使用 `codex/release-practice-no-paper` 渠道。
 
 | 产物 | 版本 |
 |---|---|
-| Windows x64 桌面端 | 0.2.0-preview.7 |
-| Harness | 0.1.29 |
-| Cursor / VS Code | 0.4.1 |
-| Codex / Claude portable marketplace | 0.4.1 |
+| Windows x64 桌面端 | 0.2.0-preview.8 |
+| Harness | 0.1.30 |
+| Cursor / VS Code | 0.4.2 |
+| Codex / Claude portable marketplace | 0.4.2 |
 
 论文网页入口、MCP 工具和能力发现保持关闭；Compose 四个论文开关固定为 false，不启动新的论文服务或 worker。只有原来运行的应用服务会更新；数据库、Redis 不重建，也不启动其他可选服务。
 
 ## 宝塔文件准备
 
-把已验证的 `mooyu-unified-20261114-chat.tar.gz` 通过宝塔文件管理器上传到：
+把已验证的 `mooyu-unified-20261115-agent.tar.gz` 通过宝塔文件管理器上传到：
 
 ```text
-/www/backup/gamehub/incoming/mooyu-unified-20261114-chat.tar.gz
+/www/backup/gamehub/incoming/mooyu-unified-20261115-agent.tar.gz
 ```
 
 安装包不放进 Git 或网页 Docker 镜像。仓库的 `config/unified-release.json` 固定此归档的 SHA-256、大小和版本；脚本在修改源码或服务之前验证归档，拒绝错误、损坏或带路径穿越的文件。分发包仅有客户端、插件、公共清单和公钥，不包含密钥、账号、profile 或工作区文件。
@@ -39,7 +39,7 @@ git fetch origin codex/release-practice-no-paper
 MOOYU_RELEASE_SHA=完整发布SHA
 export PLATFORM_ASSISTANT_ENABLED=true
 git show "$MOOYU_RELEASE_SHA":deploy/prepare-unified-release.sh > /tmp/mooyu-prepare-unified-release.sh
-bash /tmp/mooyu-prepare-unified-release.sh "$MOOYU_RELEASE_SHA" /www/backup/gamehub/incoming/mooyu-unified-20261114-chat.tar.gz
+bash /tmp/mooyu-prepare-unified-release.sh "$MOOYU_RELEASE_SHA" /www/backup/gamehub/incoming/mooyu-unified-20261115-agent.tar.gz
 BASH
 ```
 
@@ -53,15 +53,15 @@ BASH
 
 通过官方流程安装并启用更新的插件会检查新清单；新版就绪后需要重启或重新加载宿主。旧版 Harness 缺少会话接口时仍可打开平台并复制题目，不因聊天服务依赖阻断整个插件。
 
-当前旧桌面 preview.3 不含更新器，需要手动安装一次 preview.7。新包内置现有发布公钥，后续通过签名清单验证并在确认后重启更新。清单 Ed25519 签名与 Windows Authenticode 不同：安装器仍是未签名预览包，不宣称 Windows 已信任发布者。
+当前旧桌面 preview.3 不含更新器，需要手动安装一次 preview.8。新包内置现有发布公钥，后续通过签名清单验证并在确认后重启更新。清单 Ed25519 签名与 Windows Authenticode 不同：安装器仍是未签名预览包，不宣称 Windows 已信任发布者。
 
 签名更新清单有效期为 7 天；过期会停止更新，不影响已安装程序继续运行。需发布时续签清单，私钥只留在本地发布机器，不上传服务器。
 
 ## 发布后检查
 
 1. `/ready` 就绪，160 条迁移核验一致；论文 API 和工具入口仍关闭。
-2. `/download` 显示 preview.7，完整下载、HEAD 和 Range 正常。
-3. `/downloads/manifest.json` 显示 Harness 0.1.29、编辑器和 portable 插件 0.4.1，实际文件哈希与清单一致。
-4. 登录后测试练习即时判题、题目提示与讲解、跨页面保留，以及插件使用宿主聊天。
+2. `/download` 显示 preview.8，完整下载、HEAD 和 Range 正常。
+3. `/downloads/manifest.json` 显示 Harness 0.1.30、编辑器和 portable 插件 0.4.2，实际文件哈希与清单一致。
+4. 登录后测试练习即时判题、题目提示与讲解、游戏和工具查找/打开、学习概览/历史/错题、跨页面保留，以及插件使用宿主聊天。
 
 本次已完成本地包审计和隔离升级验收；不将这些结果冒充正式账号登录或生产部署结果。实际更新由你执行以上宝塔命令。

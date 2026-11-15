@@ -2,7 +2,7 @@
   "name": "gamehub-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "gamehub-local",
   "private": true,
   "engines": {

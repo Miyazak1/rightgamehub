@@ -28,9 +28,9 @@ const release={schemaVersion:1,paperEnabled:false,sourceCommit:raw.sourceCommit,
 async function walk(relative){for(const entry of await fs.readdir(path.join(output,relative),{withFileTypes:true})){const name=relative+'/'+entry.name;if(entry.isDirectory())await walk(name);else{const bytes=await fs.readFile(path.join(output,name));release.files.push({path:name,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')});}}}
 await walk('agent');await walk('desktop');release.files.sort((a,b)=>a.path.localeCompare(b.path));await fs.writeFile(path.join(output,'bundle.json'),JSON.stringify(release,null,2)+'\n');
 await verifyAssets(output,release);
-const filename='mooyu-unified-20261114-chat.tar.gz',archive=path.join(root,'artifacts',filename);
+const filename='mooyu-unified-20261115-agent.tar.gz',archive=path.join(root,'artifacts',filename);
 const tar=spawnSync('tar',['-czf',archive,'-C',output,'.'],{windowsHide:true,encoding:'utf8'});if(tar.status!==0)throw Error('ARCHIVE_FAILED: '+tar.stderr);
-const bytes=await fs.readFile(archive),config={schemaVersion:1,release:'20261114-chat',archiveFilename:filename,
+const bytes=await fs.readFile(archive),config={schemaVersion:1,release:'20261115-agent',archiveFilename:filename,
  archiveSha256:crypto.createHash('sha256').update(bytes).digest('hex'),archiveBytes:bytes.length,
  sourceCommit:release.sourceCommit,desktopVersion:release.desktopVersion,editorVersion:release.editorVersion,harnessVersion:release.harnessVersion,agentVersion:release.agentVersion,desktopKeyId:release.desktopKeyId,paperEnabled:false};
 await fs.writeFile(path.join(root,'config/unified-release.json'),JSON.stringify(config,null,2)+'\n');
