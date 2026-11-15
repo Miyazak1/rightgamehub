@@ -205,6 +205,13 @@ const asLegacyGame = (work, origin) => {
 };
 
 const normalize = value => cleanText(value, 500).toLocaleLowerCase('en-US');
+// Kind words commonly accompany Chinese search terms, but are already
+// represented by the kind filter. Preserve the full query for exact titles.
+const contentQuery = (query, kind) => {
+  const needle = normalize(query);
+  const suffix = kind === 'game' ? /游戏$/u : ['tool','official-tool'].includes(kind) ? /工具$/u : kind === 'courseware' ? /课件$/u : null;
+  return suffix ? needle.replace(suffix, '').trim() : needle;
+};
 const searchableText = capability => normalize([
   capability.title,
   capability.description,
@@ -224,7 +231,9 @@ const queryScore = (capability, query) => {
   if (title.includes(needle)) return 60;
   if (tags.some(tag => tag === needle)) return 50;
   if (tags.some(tag => tag.includes(needle))) return 40;
-  return text.includes(needle) ? 20 : 0;
+  if (text.includes(needle)) return 20;
+  const content = contentQuery(query, capability.kind);
+  return content !== needle && (!content || text.includes(content)) ? 10 : 0;
 };
 
 const matchesFilters = (capability, { query, tags, maxEstimatedMinutes }) => {
@@ -324,7 +333,9 @@ export function createAgentCapabilityService({ catalogService, discoveryCampaign
     }
 
     for (const kind of requestedKinds.filter(candidate => WORK_KINDS.has(candidate))) {
-      groupTasks.push(catalogService.list({ q: query, kind, runtime: 'web', limit: MAX_CATALOG_CANDIDATES }).then(works => {
+      const queries = [...new Set([query, contentQuery(query, kind)])];
+      groupTasks.push(Promise.all(queries.map(q => catalogService.list({ q, kind, runtime: 'web', limit: MAX_CATALOG_CANDIDATES }))).then(groups => {
+        const works = [...new Map(groups.flat().map(work => [work.id, work])).values()];
         const items = [...works.filter(work => work?.kind === kind).map(work => asWorkSummary(work, origin)),...(kind==='courseware'?builtIns(locale):[])].filter(item => matchesFilters(item, filters));
         return sortMatches(items, query);
       }));

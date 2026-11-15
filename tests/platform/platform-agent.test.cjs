@@ -18,7 +18,7 @@ test('assistant executes bounded tool turns, reports actual results and deduplic
  const {createPlatformAssistantService}=await import('../../apps/api/src/platform-assistant.mjs'),{createPlatformAgentTools}=await load();let calls=0;
  const tools=createPlatformAgentTools({capabilityService:catalog});
  const service=createPlatformAssistantService({tools,provider:async({messages,allowTools})=>{assert.equal(allowTools,true);calls++;if(calls===1)return {toolCall:{name:'search_capabilities',arguments:{query:'测试'}}};if(calls===2){assert.match(messages.at(-1).content,/game:test/);return {toolCall:{name:'open_capability',arguments:{capabilityId:'game:test'}}};}return '已找到，正在请求界面打开。';}});
- const input={requestId:randomUUID(),message:'查找并打开测试游戏'};const result=await service.send(actor,input);assert.equal(result.actions.length,1);assert.equal(result.results.length,2);assert.equal(result.actions[0].route,'/works/test');assert.equal(await service.send(actor,input),result);assert.equal(calls,3);
+ const input={requestId:randomUUID(),message:'查找并打开测试游戏'};const result=await service.send(actor,input);assert.equal(result.actions.length,1);assert.equal(result.results.length,2);assert.equal(result.actions[0].route,'/works/test');assert.equal(await service.send(actor,input),result);assert.equal(calls,2);
  const looping=createPlatformAssistantService({tools,provider:async()=>({toolCall:{name:'search_capabilities',arguments:{}}})});await assert.rejects(looping.send(actor,{requestId:randomUUID(),message:'find'}),{code:'ASSISTANT_TOOL_LIMIT'});
 });
 

@@ -102,6 +102,7 @@ test('resumable downloader keeps a partial and continues with an exact Range req
   const api = await import(apiUrl), root = await tempRoot('resume-');
   const payload = crypto.randomBytes(512 * 1024), expectedSha256 = digest(payload);
   const controller = new AbortController();
+  let abortWatch, abortDeadline;
   let requests = 0, observedRange = null;
   const { server, origin } = await listen((request, response) => {
     requests += 1;
@@ -110,7 +111,13 @@ test('resumable downloader keeps a partial and continues with an exact Range req
       response.writeHead(200, { 'content-length': payload.length, etag: '"release-1"' });
       response.flushHeaders();
       response.write(payload.subarray(0, 128 * 1024));
-      setTimeout(() => controller.abort(), 50);
+      // Interrupt only once bytes are on disk; a fixed 50ms can abort before
+      // the partial exists on a busy machine and never exercise resumption.
+      abortWatch = setInterval(async () => {
+        const partial = await fs.promises.stat(path.join(root, `${expectedSha256}.part`)).catch(() => null);
+        if (partial?.size > 0) { clearInterval(abortWatch); controller.abort(); }
+      }, 20);
+      abortDeadline = setTimeout(() => controller.abort(), 10000);
       return;
     }
     const offset = Number(String(request.headers.range).match(/^bytes=(\d+)-$/u)?.[1]);
@@ -122,12 +129,15 @@ test('resumable downloader keeps a partial and continues with an exact Range req
     await assert.rejects(api.downloadFileResumable({ url: `${origin}/runtime.zip`,
       destinationDirectory: root, expectedBytes: payload.length, expectedSha256,
       allowInsecureLocalhost: true, signal: controller.signal }));
+    clearInterval(abortWatch); clearTimeout(abortDeadline);
+    assert.ok((await fs.promises.stat(path.join(root, `${expectedSha256}.part`))).size > 0);
     const completed = await api.downloadFileResumable({ url: `${origin}/runtime.zip`,
       destinationDirectory: root, expectedBytes: payload.length, expectedSha256,
       allowInsecureLocalhost: true });
     assert.match(observedRange, /^bytes=\d+-$/u);
     assert.deepEqual(await fs.promises.readFile(completed), payload);
   } finally {
+    clearInterval(abortWatch); clearTimeout(abortDeadline);
     await new Promise(resolve => server.close(resolve));
     await fs.promises.rm(root, { recursive: true, force: true });
   }
