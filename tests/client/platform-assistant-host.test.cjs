@@ -28,4 +28,11 @@ test('MCP widget syncs context without starting chat, validates child origin and
  await new Promise(r=>setImmediate(r));const sent=rpc.find(r=>r.method==='ui/message');assert.match(sent.params.content.text,/3x\+5=20/);assert.ok(!sent.params.content.text.includes('MALICIOUS TOP LEVEL'));
  assert.equal(receipts.find(r=>r.message.requestId==='real').message.status,'sent');
  failMessage=true;receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/assistant.request',requestId:'failed',payload:{context,intent:'hint'}}});await new Promise(r=>setImmediate(r));assert.equal(receipts.find(r=>r.message.requestId==='failed').message.status,'failed');
+ failMessage=false;
+ const learning={kind:'learning-insights',version:1,requestId:'learning-request',result:{scope:'platform-practice',query:{view:'summary',days:30},summary:{answered:110,correct:55,incorrect:55,unanswered:55,accuracy:.5,topics:[]}},accessToken:'must-not-leak'};
+ const previous=rpc.filter(r=>r.method==='ui/message').length;
+ receive({source:child,origin:'https://evil.example',data:{type:'gamehub/learning.context',payload:learning}});await new Promise(r=>setImmediate(r));assert.ok(!rpc.some(r=>r.params?.structuredContent?.mooyuLearning));
+ receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/learning.context',payload:learning}});await new Promise(r=>setImmediate(r));const shared=rpc.find(r=>r.params?.structuredContent?.mooyuLearning);assert.equal(shared.params.structuredContent.mooyuLearning.result.summary.answered,110);assert.ok(!JSON.stringify(shared).includes('must-not-leak'));assert.equal(rpc.filter(r=>r.method==='ui/message').length,previous,'context sync must not start another conversation turn');
+ receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/assistant.request',requestId:'learning-send',payload:{intent:'learning-insights',context:learning,prompt:'UNTRUSTED PROMPT'}}});await new Promise(r=>setImmediate(r));assert.equal(receipts.find(r=>r.message.requestId==='learning-send').message.status,'sent');assert.ok(!rpc.at(-1).params.content.text.includes('UNTRUSTED PROMPT'));
+ receive({source:child,origin:'https://mooyu.fun',data:{type:'gamehub/learning.context',payload:null}});await new Promise(r=>setImmediate(r));assert.equal(rpc.at(-1).params.structuredContent.mooyuLearning,null);
 });

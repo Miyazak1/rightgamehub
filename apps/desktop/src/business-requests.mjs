@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 const error = (code, status) => Object.assign(new Error(code), { code, status });
-export function createBusinessRequests({ run, timeoutMs = 20000, concurrency = 4, maxPending = 32 }) {
+export function createBusinessRequests({ run, timeoutMs = 20000, concurrency = 4, maxPending = 32,timeoutForRequest=null }) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 20000 || !Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4) throw Error('DESKTOP_BUSINESS_QUEUE_CONFIG_INVALID');
   const pending = new Map(), queue = []; let active = 0;
   const pump = () => {
@@ -22,7 +22,9 @@ export function createBusinessRequests({ run, timeoutMs = 20000, concurrency = 4
         const controller = new AbortController();
         const item = { id, request, epoch, sessionSignal, controller, started: false, finished: false };
         const onAbort = () => item.finish(controller.signal.reason);
-        const timer = setTimeout(() => controller.abort(error('REQUEST_TIMEOUT', 408)), timeoutMs);
+        const duration=timeoutForRequest?timeoutForRequest(request):timeoutMs;
+        if(!Number.isInteger(duration)||duration<1||duration>80000){reject(error('DESKTOP_BUSINESS_QUEUE_CONFIG_INVALID',400));return;}
+        const timer = setTimeout(() => controller.abort(error('REQUEST_TIMEOUT', 408)), duration);
         item.finish = (failure, value) => {
           if (item.finished) return;
           item.finished = true; clearTimeout(timer); controller.signal.removeEventListener('abort', onAbort);

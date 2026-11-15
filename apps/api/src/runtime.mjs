@@ -1,4 +1,6 @@
 import { createPlatformAssistantProvider, createPlatformAssistantService } from './platform-assistant.mjs';
+import { createPlatformAgentTools } from './platform-agent-tools.mjs';
+import { createAgentCapabilityService } from './agent-capability-service.mjs';
 import { createVerifiedMathEngine } from './practice/engine.mjs';
 import { PostgresPracticeRepository } from './practice/repository.mjs';
 import { createPracticeService, createPracticeWorker } from './practice/service.mjs';
@@ -316,10 +318,12 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const practiceEngine = createVerifiedMathEngine({enabled: env.PRACTICE_ENABLED !== 'false'});
   const practiceService = createPracticeService({repository: practiceRepository, engine: practiceEngine});
   const practiceWorker = createPracticeWorker({repository: practiceRepository, engine: practiceEngine});
-  const platformAssistantService = createPlatformAssistantService({practiceService,
+  const platformAgentTools=createPlatformAgentTools({practiceService,capabilityService:createAgentCapabilityService({catalogService,discoveryCampaignService,siteOrigin:config.gameShareSiteOrigin})});
+  const platformAssistantService = createPlatformAssistantService({practiceService,tools:platformAgentTools,
     provider: env.PLATFORM_ASSISTANT_ENABLED === 'true' ? createPlatformAssistantProvider({
       apiKey: config.deepSeekApiKey, modelId: env.PLATFORM_ASSISTANT_MODEL?.trim() || 'deepseek-chat' }) : null});
   const app = createApp({
+    platformAgentTools,
     platformAssistantService,
     practiceService,
     paperStudyService: paperStudyRuntime?.service,

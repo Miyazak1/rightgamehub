@@ -1,4 +1,5 @@
 import { PlatformAssistantProvider, AssistantToggle, AssistantWorkspace } from './PlatformAssistant.jsx';
+import LearningInsightsPage from './LearningInsightsPage.jsx';
 import { createPracticeApiClient } from '../../platform-api-client/src/practice.mjs';
 import AgentDisclosure from './AgentDisclosure.jsx';
 import DesktopDownloadPage,{DesktopDownloadFooter} from './DesktopDownloadPage.jsx';
@@ -1997,7 +1998,8 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else if (route === '/download') content = <DesktopDownloadPage go={go} hostIdentity={hostIdentity}/>;
   else if (route === '/install') content = <InstallPage go={go} hostIdentity={hostIdentity}/>;
   else if (parts[0] === 'learn' && parts[1] === 'practice') content = <React.Suspense fallback={<main className="page" role="status">{t('common.loading')}</main>}><PracticePage key={accountProfile?.id || 'guest'} api={practiceApi} accountProfile={accountProfile} go={go} batchId={parts[2]}/></React.Suspense>;
-  else if (route === '/learn' || parts[0] === 'learn' && host.learningRuntimeOrigin) content = <LearningPage api={api} demo={demo} go={go} Art={Art} runtimeOrigin={host.learningRuntimeOrigin} courseId={parts[1]}/>;
+  else if (route === '/learn/insights') content = <LearningInsightsPage key={accountProfile?.id||'guest'} api={practiceApi} accountProfile={accountProfile} go={go}/>;
+  else if (route === '/learn' || parts[0] === 'learn') content = <LearningPage api={api} demo={demo} go={go} Art={Art} runtimeOrigin={host.learningRuntimeOrigin} courseId={parts[1]}/>;
   else if (route === '/apps/change-radar') content = <ChangeRadarAppPage api={api} accountProfile={accountProfile} go={go}/>;
   else if (route === '/tools/change-radar') content = <LegacyChangeRadarRedirect go={go}/>;
   else if (route === '/tools') content = <ToolsPage go={go}/>;
@@ -2015,7 +2017,7 @@ function PlatformApp({ hostAdapter, apiClient, demo = new URLSearchParams(locati
   else content = <DiscoverPage key={accountProfile?.id||'guest'} api={api} demo={demo} go={go} hostIdentity={hostIdentity} accountProfile={accountProfile} Art={Art}/>;
   const player = parts[0] === 'play' || parts[0] === 's';
   const creator = parts[0] === 'creator';
-  return <PlatformAssistantProvider key={(accountProfile?.id || 'guest') + ':' + (hostCapabilities?.host || 'pending')} api={practiceApi} host={host} capabilities={hostCapabilities} owner={accountProfile?.id} route={route}><div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/><AssistantWorkspace>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<DesktopDownloadFooter hostIdentity={hostIdentity} visible={!player&&!creator}/><div className="notice-region" aria-live="polite"/></AssistantWorkspace></div></PlatformAssistantProvider>;
+  return <PlatformAssistantProvider key={(accountProfile?.id || 'guest') + ':' + (hostCapabilities?.host || 'pending')} api={practiceApi} host={host} capabilities={hostCapabilities} owner={accountProfile?.id} route={route} go={go}><div ref={themeRoot} className={`app ${player ? 'app--player' : ''}${host.chrome ? ' app--desktop' : ''}`} data-host={hostIdentity.id}>{(!player || host.chrome) && <Header route={route} go={go} themeMode={themeMode} setThemeMode={setThemeMode} canChangeTheme={typeof host.theme.setPreference === 'function'} hostIdentity={hostIdentity} accountProfile={accountProfile} accountStatus={accountStatus} api={api} chrome={host.chrome}/>} {!player && !creator && <PlayerNavigation route={route} go={go} mobile/>}<div className="ambient" aria-hidden="true"/><AssistantWorkspace>{creator ? <CreatorWorkspace route={route} go={go} profile={accountProfile}>{content}</CreatorWorkspace> : content}<DesktopDownloadFooter hostIdentity={hostIdentity} visible={!player&&!creator}/><div className="notice-region" aria-live="polite"/></AssistantWorkspace></div></PlatformAssistantProvider>;
 }
 
 export default function App(props) {

@@ -80,10 +80,10 @@ export default function LearningPage({api,demo,go,Art,runtimeOrigin,courseId}){
       ].join(' ').toLowerCase().includes(needle));
   },[allItems,category,locale,query,subject]);
   const selectCategory=id=>{setCategory(id);setSubject('all');setQuery('');};
-  const active=runtimeOrigin&&builtInLearningItems.find(item=>item.id===courseId);
-  if(active)return <main className="page desktop-courseware"><button className="text-button" onClick={()=>go('/learn')}>← {t('learning.catalog')}</button><h1>{localized(active.title,locale)}</h1><iframe key={active.id} title={localized(active.title,locale)} src={runtimeOrigin+active.runtimeUrl} sandbox="allow-scripts" referrerPolicy="no-referrer"/></main>;
+  const active=builtInLearningItems.find(item=>item.id===courseId);
+  if(active)return <main className="page desktop-courseware"><button className="text-button" onClick={()=>go('/learn')}>← {t('learning.catalog')}</button><h1>{localized(active.title,locale)}</h1><iframe key={active.id} title={localized(active.title,locale)} src={(runtimeOrigin||'')+active.runtimeUrl} sandbox="allow-scripts" referrerPolicy="no-referrer"/></main>;
   return <main className="page learning-page">
-    <header className="learning-hero"><div><span className="learning-kicker">MOOYU.FUN LEARNING</span><h1>{t('learning.title')}</h1><p>{t('learning.lead')}</p></div><div className="learning-hero__mark" aria-hidden="true"><span>∿</span><i/><i/><i/></div></header>
+    <div className="agent-learning-entry"><button onClick={()=>go('/learn/insights')}>{locale==='en'?'My learning data':'我的学习数据'} →</button></div><header className="learning-hero"><div><span className="learning-kicker">MOOYU.FUN LEARNING</span><h1>{t('learning.title')}</h1><p>{t('learning.lead')}</p></div><div className="learning-hero__mark" aria-hidden="true"><span>∿</span><i/><i/><i/></div></header>
     <section className="learning-categories" aria-labelledby="learning-categories-title">
       <div className="learning-section-heading"><div><span className="learning-kicker">LEARNING AREAS</span><h2 id="learning-categories-title">{t('learning.categories')}</h2></div><p>{t('learning.categoriesLead')}</p></div>
       <div className="learning-category-grid">

@@ -4,6 +4,8 @@ import { MathContent } from './PracticeMath.tsx';
 import { assistantHostMode, hostPracticePrompt } from './assistant-context.mjs';
 import { requestHostAssistant, syncHostAssistantContext } from './assistant-host-bridge.mjs';
 import './PlatformAssistant.css';
+import PlatformAgentCards from './PlatformAgentCards.jsx';
+import {validAgentNavigation} from './agent-navigation.mjs';
 
 const Assistant = createContext(null);
 export const usePlatformAssistant = () => useContext(Assistant);
@@ -22,15 +24,27 @@ function restore(owner, mode) {
 }
 const questionLabel = (context, en) => context ? (en ? `Question ${context.number}` : `第 ${context.number} 题`) : (en ? 'Platform' : '平台对话');
 
-export function PlatformAssistantProvider({ children, api, host, capabilities, owner, route }) {
+export function PlatformAssistantProvider({ children, api, host, capabilities, owner, route, go }) {
   const mode = assistantHostMode(capabilities), {locale} = useI18n(), en = locale === 'en';
   const [state,setState] = useState(() => restore(owner,mode));
   const [practice,setPractice] = useState(null), [availability,setAvailability] = useState(null);
   const [hostNotice,setHostNotice] = useState('');
+  const [navigation,setNavigation]=useState(null);const expectedNavigation=useRef(null);
   const pending = useRef(null), mounted = useRef(true), generation = useRef(0);
   const ownRoute = practice && route === '/learn/practice/' + practice.batchId ? practice : null;
   const pinnedCurrent=state.pinned&&ownRoute?.batchId===state.pinned.batchId&&ownRoute?.questionId===state.pinned.questionId;
   const context = pinnedCurrent ? ownRoute : state.pinned || ownRoute;
+  useEffect(()=>{if(expectedNavigation.current?.route===route){setNavigation({...expectedNavigation.current,status:'opened'});expectedNavigation.current=null;}},[route]);
+  const openCapability=useCallback(async capabilityId=>{
+    const epoch=generation.current;setNavigation({status:'opening'});
+    try {
+      const {data}=await api.executeAgentTool('open_capability',{capabilityId,locale:en?'en':'zh-CN'});
+      if(!mounted.current||generation.current!==epoch)return;
+      if(!validAgentNavigation(data.action)||typeof go!=='function')throw Error('NAVIGATION_UNAVAILABLE');
+      if(route===data.action.route){setNavigation({...data.action,status:'opened'});return;}
+      expectedNavigation.current=data.action;setNavigation({...data.action,status:'opening'});go(data.action.route);
+    } catch {if(mounted.current&&generation.current===epoch){expectedNavigation.current=null;setNavigation({status:'failed'});}}
+  },[api,go,route,en]);
   const registerContext = useCallback(value => setPractice(value), []);
   const sharedPractice=useRef(false);
   // Clear our context before a new page's passive effects publish its own tool context.
@@ -56,7 +70,8 @@ export function PlatformAssistantProvider({ children, api, host, capabilities, o
     if (mode !== 'platform' || !owner || availability?.available === false || pending.current || !text.trim()) return;
     const snapshot = retry && Object.hasOwn(retry,'context') ? retry.context : context;
     const history = retry?.history || state.messages.filter(m => ['user','assistant'].includes(m.role) && m.status === 'sent')
-      .slice(-12).map(m => ({role:m.role,content:m.content.slice(0,2000),questionId:m.context?.questionId||null}));
+      .slice(-12).map(m => ({role:m.role,content:m.content.slice(0,2000),questionId:m.context?.questionId||null,
+        ...(m.role==='assistant'&&/^[a-f0-9-]{36}$/i.test(m.id?.replace(/:reply$/,''))?{requestId:m.id.replace(/:reply$/,'')}:{})}));
     const requestId = crypto.randomUUID(), controller = new AbortController(), epoch = generation.current;
     pending.current = controller;
     const content = text.trim().slice(0,2000);
@@ -67,10 +82,12 @@ export function PlatformAssistantProvider({ children, api, host, capabilities, o
     try {
       const {data} = await api.sendAssistantMessage({requestId,message: intent==='hint' ? '请给一小步提示，先不要直接给出答案。' : intent==='explain' ? '请解释这道题的解题过程。' : content,
         context:snapshot ? {batchId:snapshot.batchId,questionId:snapshot.questionId} : null,history},{signal:controller.signal});
-      settle({content:data.reply,status:'sent'});
+      if(controller.signal.aborted)throw new DOMException('Aborted','AbortError');
+      settle({content:data.reply,status:'sent',results:data.results||[]});
+      if(mounted.current&&generation.current===epoch&&data.actions?.[0]?.capabilityId)await openCapability(data.actions[0].capabilityId);
     } catch(error) { settle({content:error.name==='AbortError' ? (en?'Waiting stopped. The server may still finish this request.':'已停止等待，服务端可能仍在完成这次请求。') : (error.message || (en?'Unable to reply. Please retry.':'暂时无法回复，请重试。')),status:error.name==='AbortError'?'interrupted':'failed'}); }
     finally { if(pending.current===controller)pending.current=null; }
-  },[mode,owner,availability,context,state.messages,api,en]);
+  },[mode,owner,availability,context,state.messages,api,en,openCapability]);
   const askQuestion = useCallback(async (value,intent='hint') => {
     if(mode==='platform') { setState(s=>({...s,open:true,pinned:null})); await send(intent==='hint'?(en?'Give me a hint.':'给我一点提示。'):(en?'Explain this question.':'解释这道题。'),intent,{context:value}); return; }
     if(mode!=='host')return;
@@ -78,10 +95,10 @@ export function PlatformAssistantProvider({ children, api, host, capabilities, o
     try { await requestHostAssistant(host,{context:value,intent,prompt:hostPracticePrompt(value,intent)}); setHostNotice(en?'Sent to your host chat.':'已交给宿主聊天。'); }
     catch { setHostNotice(en?'Host chat is unavailable. Copy the question context and paste it into your host chat.':'当前宿主未提供消息接口，请复制题目上下文后粘贴到宿主聊天。'); }
   },[mode,host,send,en]);
-  const value = useMemo(()=>({state,setState,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,
+  const value = useMemo(()=>({state,setState,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,host,go,openCapability,navigation,
     retryConnection:()=>{setAvailability(null);api.getAssistantCapabilities().then(({data})=>setAvailability(data)).catch(()=>setAvailability({available:false}));},
-    stop:()=>pending.current?.abort(),newChat:()=>{generation.current++;pending.current?.abort();pending.current=null;setState(s=>({...fresh(),open:true,width:s.width}));},
-    currentPractice:ownRoute}),[state,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,ownRoute,api]);
+    stop:()=>pending.current?.abort(),newChat:()=>{generation.current++;pending.current?.abort();pending.current=null;expectedNavigation.current=null;setNavigation(null);setState(s=>({...fresh(),open:true,width:s.width}));},
+    currentPractice:ownRoute}),[state,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,ownRoute,api,host,go,openCapability,navigation]);
   return <Assistant.Provider value={value}>{children}</Assistant.Provider>;
 }
 
@@ -150,10 +167,13 @@ export function AssistantWorkspace({children}) {
         {a.state.messages.map(m=><article key={m.id} className={'assistant-message is-'+m.role+' is-'+m.status}>
           <small><span className="assistant-message-mark" aria-hidden="true">{m.role==='user'?'↗':'✦'}</span>{m.role==='user'?(en?'You':'你'):(en?'Mooyu':'墨鱼')}<span className="assistant-message-scope">{questionLabel(m.context,en)}</span></small>
           {m.status==='pending'?<p role="status" className="assistant-thinking">{en?'Thinking…':'正在思考…'}</p>:<div className="assistant-message-body"><MathContent text={m.content} formatPlainMath/></div>}
+          {m.role==='assistant'&&m.status==='sent'&&<PlatformAgentCards results={m.results} go={a.go} openCapability={a.openCapability} disabled={pending||a.navigation?.status==='opening'}/>}
           {['failed','interrupted'].includes(m.status)&&<button disabled={pending} onClick={()=>a.send(m.request.content,m.request.intent||'chat',{...m.request,id:m.id})}>{en?'Retry':'重试'}</button>}
         </article>)}
       </div>
       <div className="assistant-input-area">
+        {a.navigation&&<p className="agent-navigation-status" role="status">{a.navigation.status==='opened'?(en?'Opened: ':'已打开：')+a.navigation.title:a.navigation.status==='opening'?(en?'Opening…':'正在打开…'):(en?'Could not open this content. Try again.':'未能打开该内容，请重试。')}</p>}
+        {!a.context&&<div className="assistant-suggestions"><button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Find a short puzzle game.':'帮我找一个短时间能玩的益智游戏。')}>{en?'Find a game':'找个游戏'}</button><button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Show my learning summary for the last 30 days.':'看看我最近30天的学习情况。')}>{en?'My learning':'我的学习'}</button></div>}
         {!a.owner?<p>{en?'Sign in to chat with Mooyu.':'登录后与墨鱼助手交流。'}</p>:a.availability?.available===false?<p role="status">{en?'Assistant is currently unavailable. Your conversation is preserved.':'助手暂不可用，对话已保留。'} <button type="button" onClick={a.retryConnection}>{en?'Reconnect':'重新连接'}</button></p>:null}
         {a.context&&<div className="assistant-suggestions"><button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Give me a hint.':'给我一点提示。','hint')}>{en?'Small hint':'给一点提示'}</button>{a.context.checked&&<button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Explain this question.':'解释这道题。','explain')}>{en?'Explain':'讲解思路'}</button>}</div>}
         <form onSubmit={e=>{e.preventDefault();a.send(a.state.draft);}}><label className="assistant-input-label" htmlFor="assistant-draft">{en?'Message Mooyu':'向墨鱼提问'}</label><textarea id="assistant-draft" maxLength={2000} rows={3} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();if(!pending)a.send(a.state.draft);}}} value={a.state.draft} placeholder={a.context?(en?'Ask about this question…':'这道题，哪里还没想明白？'):(en?'Ask Mooyu…':'有什么想和墨鱼聊聊？')} onChange={e=>a.setState(s=>({...s,draft:e.target.value}))}/><div><small>{a.context?(en?'Question attached':'已附当前题目'):(en?'Platform conversation':'平台对话')}</small>{pending?<button type="button" className="assistant-send" onClick={a.stop}>{en?'Stop waiting':'停止等待'}</button>:<button type="submit" className="assistant-send" disabled={!a.owner||!a.state.draft.trim()||a.availability?.available===false}>{en?'Send ↑':'发送 ↑'}</button>}</div></form>

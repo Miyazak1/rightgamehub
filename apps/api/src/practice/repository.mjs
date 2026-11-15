@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { withTransaction } from '../database.mjs';
 import { rejectPractice } from './error.mjs';
+import { queryLearningInsights } from './insights.mjs';
 
 const map = row => row && ({ id: row.id, userId: row.user_id, config: row.config, status: row.status,
   items: row.items, currentIndex: row.current_index, revision: row.revision, previousId: row.previous_id,
@@ -10,6 +11,7 @@ const ownerLock = (client, userId) => client.query('SELECT pg_advisory_xact_lock
 
 export class PostgresPracticeRepository {
   constructor(pool) { this.pool = pool; }
+  insights(userId,query) { return queryLearningInsights(this.pool,userId,query); }
   async create(userId, config, key, previousId = null) {
     return withTransaction(this.pool, async client => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext('practice:queue-admission'))");

@@ -222,9 +222,16 @@ export default function KnowledgeMapTool() {
 
   useEffect(() => {
     if (!svgRef.current || !transformed.root) return undefined;
-    if (!mapRef.current) mapRef.current = Markmap.create(svgRef.current, { autoFit: true, duration: 240, maxWidth: 260, paddingX: 12, spacingVertical: 8 }, transformed.root);
-    else Promise.resolve(mapRef.current.setData(transformed.root)).then(() => mapRef.current?.fit()).catch(() => {});
-    return undefined;
+    const svg=svgRef.current;
+    if (!mapRef.current) {
+      // Markmap.create(root) starts an unobserved async fit. A route change can
+      // detach the percentage-sized SVG before that fit reaches D3's extent.
+      mapRef.current=Markmap.create(svg,{autoFit:false,duration:240,maxWidth:260,paddingX:12,spacingVertical:8});
+      mapRef.current.zoom.extent(()=>{const {width,height}=svg.getBoundingClientRect();return [[0,0],[Math.max(1,width),Math.max(1,height)]];});
+    }
+    const map=mapRef.current;let live=true;
+    Promise.resolve(map.setData(transformed.root)).then(()=>{if(live&&svg.isConnected&&mapRef.current===map)return map.fit();}).catch(()=>{});
+    return ()=>{live=false;map.svg.interrupt();map.svg.selectAll('*').interrupt();};
   }, [transformed.root]);
 
   useEffect(() => {
@@ -240,7 +247,7 @@ export default function KnowledgeMapTool() {
     return () => svg.removeEventListener('click', selectRenderedNode);
   }, [transformed.root]);
 
-  useEffect(() => () => { mapRef.current?.destroy?.(); mapRef.current = null; }, []);
+  useEffect(() => () => { const map=mapRef.current;map?.svg.interrupt();map?.svg.selectAll('*').interrupt();map?.destroy?.();mapRef.current = null; }, []);
   useEffect(() => { const timer = setTimeout(() => mapRef.current?.fit?.(), 80); return () => clearTimeout(timer); }, [editorOpen, canvasMode]);
 
   useEffect(() => {

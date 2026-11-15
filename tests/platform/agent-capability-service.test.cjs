@@ -51,7 +51,7 @@ test('Agent capability service discovers and resolves only bounded public capabi
   assert.deepEqual(crossLocale.capabilities.map(item => item.id), ['official-tool:knowledge-map']);
 
   const courseware = await service.searchCapabilities({ query: '函数', kinds: ['courseware'], locale: 'zh-CN', limit: 6 });
-  assert.deepEqual(courseware.capabilities.map(item => item.id), ['courseware:lesson-1']);
+  assert.deepEqual(courseware.capabilities.map(item => item.id), ['courseware:lesson-1','courseware:learning-quadratic-shape-explorer','courseware:learning-derivative-optimization-lab']);
   assert.equal(courseware.capabilities[0].url, 'https://mooyu.fun/w/lesson-1');
 
   const collection = await service.getCapability({ capabilityId: 'collection:weekly-math', locale: 'zh-CN' });

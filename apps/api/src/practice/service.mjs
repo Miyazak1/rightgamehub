@@ -39,6 +39,14 @@ export function createPracticeService({ repository, engine }) {
   };
   return {
     catalog,
+    async insights(actor,query) {
+      if(!repository?.insights)rejectPractice('LEARNING_DATA_UNAVAILABLE',503,'学习数据暂不可用。');
+      const result=await repository.insights(actor.userId,query);
+      const titles=new Map(catalog().topics.map(topic=>[topic.id,topic.title]));
+      if(result.summary)result.summary.topics=result.summary.topics.map(topic=>({...topic,title:titles.get(topic.topicId)||topic.topicId}));
+      if(result.items)result.items=result.items.map(item=>({...item,topicTitle:titles.get(item.config.topicId)||item.config.topicId}));
+      return result;
+    },
     async start(actor, input, key) {
       checkKey(key);
       const topic = catalog().topics.find(t => t.id === input.topicId);

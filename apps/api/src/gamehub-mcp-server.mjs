@@ -3,12 +3,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { findOfficialToolCapability, requireOfficialToolCapability, toOfficialToolMcpMetadata } from '@gamehub/agent-capabilities';
 import { z } from 'zod';
+import { normalizeLearningQuery } from './practice/insights.mjs';
 import { AgentCapabilityError, createAgentCapabilityService } from './agent-capability-service.mjs';
 import { createGameHubMcpWidget, GAMEHUB_MCP_UI_COMPATIBILITY_URIS } from './gamehub-mcp-widget.mjs';
 
 const toolError = message => ({ isError: true, content: [{ type: 'text', text: message }] });
 
-const capabilityKindSchema = z.enum(['game', 'official-tool', 'courseware', 'collection']);
+const capabilityKindSchema = z.enum(['game', 'official-tool', 'tool', 'courseware', 'collection']);
 const localeSchema = z.enum(['zh-CN', 'en']);
 const capabilitySummarySchema = z.object({
   id: z.string().min(3).max(180),
@@ -32,6 +33,7 @@ const capabilityDetailSchema = capabilitySummarySchema.extend({
     defaultMode: z.literal('auto'),
     modes: z.array(z.enum(['auto', 'sidebar', 'canvas', 'web'])),
     route: z.string().min(1).max(500),
+    playerRoute:z.string().min(1).max(500).optional(),
     url: z.string().url().max(2048),
     interaction: z.object({ required: z.boolean(), reason: z.string().min(1).max(80) }),
   }),
@@ -43,7 +45,7 @@ const capabilityDetailSchema = capabilitySummarySchema.extend({
     agentContext: z.string().min(1).max(80),
   }),
   metadata: z.object({
-    source: z.enum(['official-registry', 'public-catalog', 'published-collection']),
+    source: z.enum(['official-registry', 'public-catalog', 'published-collection','built-in-learning']),
     creator: z.string().max(120).nullable(),
     openSource: z.boolean().nullable(),
     itemCount: z.number().int().nullable(),
@@ -127,7 +129,7 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
     description: 'Search the bounded public MOOYU.FUN capability catalog for games, official tools, courseware, and published collections. Returns public metadata only; it does not open or run a capability.',
     inputSchema: {
       query: z.string().trim().max(100).optional(),
-      kinds: z.array(capabilityKindSchema).max(4).optional(),
+      kinds: z.array(capabilityKindSchema).max(5).optional(),
       tags: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
       maxEstimatedMinutes: z.number().int().min(1).max(1440).optional(),
       locale: localeSchema.default('zh-CN'),
@@ -248,6 +250,20 @@ export function createGameHubMcpServer({ catalogService, discoveryCampaignServic
       description: `${uiResourceDescription} Compatibility resource for an existing ChatGPT conversation.`,
     }, async () => readUiResource(compatibilityUri));
   }
+
+  registerAppTool(server, 'get_my_learning_data', {
+    title:'Read my MOOYU.FUN learning data',
+    description:'Request a read-only view of the signed-in user’s practice summary, history or wrong answers. The authenticated sidebar reads the data and shares a bounded disclosed result with this host conversation. This public MCP response contains no private records. If sign-in or UI is unavailable, ask the user to sign in or open the link; never claim data was read from this navigation response.',
+    inputSchema:{view:z.enum(['summary','history','wrong']).default('summary'),days:z.union([z.literal(0),z.literal(7),z.literal(30),z.literal(90),z.literal(365)]).default(30),
+      subjectId:z.string().regex(/^[a-zA-Z0-9._:-]{1,100}$/).optional(),stageId:z.string().regex(/^[a-zA-Z0-9._:-]{1,100}$/).optional(),
+      topicId:z.string().regex(/^[a-zA-Z0-9._:-]{1,100}$/).optional(),difficultyId:z.string().regex(/^[a-zA-Z0-9._:-]{1,100}$/).optional()},
+    annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},
+    _meta:{ui:{resourceUri:uiResourceUri,visibility:['model','app']},'openai/outputTemplate':uiResourceUri},
+  },async input=>{
+    const query=normalizeLearningQuery(input),path='/learn/insights?'+new URLSearchParams(query),url=new URL('/mcp-app',origin);
+    url.searchParams.set('gh_route',path);url.searchParams.set('gh_host','mcp-app');
+    return {content:[{type:'text',text:'Learning data requested in the authenticated sidebar. Wait for its disclosed learning-insights context; this result only opens the view. Sign in there if needed.'}],structuredContent:{status:'requires_user_interaction',view:{path,url:url.href}}};
+  });
 
   registerAppTool(server, 'launch_capability', {
     title: 'Launch a MOOYU.FUN capability',

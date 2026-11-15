@@ -4,9 +4,10 @@ import {
   officialToolCapabilities,
   toOfficialToolDiscoveryMetadata,
 } from '@gamehub/agent-capabilities';
+import { builtInLearningCapabilities } from '../../../packages/agent-capabilities/src/manifests/learning-content.mjs';
 
-const SUPPORTED_KINDS = Object.freeze(['game', 'official-tool', 'courseware', 'collection']);
-const WORK_KINDS = new Set(['game', 'courseware']);
+const SUPPORTED_KINDS = Object.freeze(['game', 'official-tool', 'courseware', 'collection','tool']);
+const WORK_KINDS = new Set(['game', 'courseware','tool']);
 const DEFAULT_LIMIT = 6;
 const MAX_CATALOG_CANDIDATES = 50;
 const BUILT_IN_GAME_ID = 'gamehub-guess-baike';
@@ -101,6 +102,7 @@ const detail = (summary, values) => ({
     defaultMode: 'auto',
     modes: values.modes,
     route: values.route,
+    ...(values.playerRoute?{playerRoute:values.playerRoute}:{}),
     url: summary.url,
     interaction: values.interaction,
   },
@@ -114,6 +116,7 @@ const asWorkDetail = (work, origin) => {
     version: cleanText(work.revision, 32) || '1',
     modes: ['auto', 'canvas', 'web'],
     route: workRoute(work.id),
+    playerRoute:work.id===BUILT_IN_GAME_ID||work.targets?.some(t=>t.targetKey==='web'&&t.currentReleaseId)?`/play/${encodeURIComponent(work.id)}`:null,
     interaction: { required: true, reason: work.kind === 'courseware' ? 'learn-in-ui' : 'play-in-ui' },
     dataHandling: {
       authentication: 'none',
@@ -262,6 +265,9 @@ const parseCapabilityId = capabilityId => {
 
 export function createAgentCapabilityService({ catalogService, discoveryCampaignService = null, siteOrigin = 'https://mooyu.fun' }) {
   const origin = new URL(siteOrigin).origin;
+  const builtIns=locale=>builtInLearningCapabilities.map(item=>({id:item.id,kind:item.kind,title:item.title[locale]||item.title['zh-CN'],
+    description:item.description[locale]||item.description['zh-CN'],tags:item.tags,estimatedMinutes:item.estimatedMinutes,
+    status:'available',trustTier:'official-content',requiresUi:true,requiresAuth:false,launchable:true,url:publicUrl(origin,item.route)}));
   const availableKinds = discoveryCampaignService?.listPublic && discoveryCampaignService?.getPublic
     ? SUPPORTED_KINDS
     : Object.freeze(SUPPORTED_KINDS.filter(kind => kind !== 'collection'));
@@ -280,6 +286,9 @@ export function createAgentCapabilityService({ catalogService, discoveryCampaign
 
   const getCapability = async ({ capabilityId, locale = 'zh-CN' }) => {
     const parsed = parseCapabilityId(capabilityId);
+    const builtIn=builtInLearningCapabilities.find(item=>item.id===parsed.value);
+    if(builtIn)return detail(builtIns(locale).find(item=>item.id===parsed.value),{version:'1',modes:['auto','canvas','web'],route:builtIn.route,
+      interaction:{required:true,reason:'learn-in-ui'},dataHandling:{authentication:'none',confirmation:'none',retention:'runtime-defined',localFirst:false,agentContext:'none'},metadata:{source:'built-in-learning',creator:'墨鱼工坊',openSource:null,itemCount:null}});
     if (parsed.kind === 'official-tool') {
       const capability = findAgentCapability(parsed.value);
       if (!capability) throw new AgentCapabilityError('CAPABILITY_NOT_FOUND', 404, 'Capability is unavailable or was not found.');
@@ -316,7 +325,7 @@ export function createAgentCapabilityService({ catalogService, discoveryCampaign
 
     for (const kind of requestedKinds.filter(candidate => WORK_KINDS.has(candidate))) {
       groupTasks.push(catalogService.list({ q: query, kind, runtime: 'web', limit: MAX_CATALOG_CANDIDATES }).then(works => {
-        const items = works.filter(work => work?.kind === kind).map(work => asWorkSummary(work, origin)).filter(item => matchesFilters(item, filters));
+        const items = [...works.filter(work => work?.kind === kind).map(work => asWorkSummary(work, origin)),...(kind==='courseware'?builtIns(locale):[])].filter(item => matchesFilters(item, filters));
         return sortMatches(items, query);
       }));
     }
@@ -339,17 +348,18 @@ export function createAgentCapabilityService({ catalogService, discoveryCampaign
 
   const launchCapability = async ({ capabilityId, launchMode = 'auto', locale = 'zh-CN' }) => {
     const capability = await getCapability({ capabilityId, locale });
+    const route=capability.launch.playerRoute||capability.launch.route;
     const mode = capability.launch.modes.includes(launchMode) ? launchMode : 'auto';
     const status = mode === 'web' ? 'web_fallback' : capability.launch.interaction.required ? 'requires_user_interaction' : 'opened';
     const url = new URL('/mcp-app', origin);
-    url.searchParams.set('gh_route', capability.launch.route);
+    url.searchParams.set('gh_route', route);
     url.searchParams.set('gh_host', 'mcp-app');
     url.searchParams.set('lang', locale);
     return {
       status,
       capabilityId: capability.id,
       mode,
-      route: capability.launch.route,
+      route,
       url: mode === 'web' ? capability.url : url.href,
       message: mode === 'web'
         ? 'A stable public web fallback is available. Opening the link does not mean the activity has been completed.'

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createApiClient, ApiError } from '../../../packages/platform-api-client/src/index.mjs';
+import { createPracticeApiClient } from '../../../packages/platform-api-client/src/practice.mjs';
 import { resolveAuthClientKind } from '../../../packages/platform-client/src/auth-client-kind.mjs';
 import { accountOrigin } from './account-configuration.mjs';
 import { businessArguments, businessMediaPath, rewriteBusinessMedia, businessRequestLimit } from './business-contract.mjs';
@@ -96,7 +97,7 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       // not cancel another page's refresh; logout still cancels the session.
       const refresh = new URL(address).pathname === '/v1/auth/refresh';
       const signals = refresh || shared ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
-      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : 20000), ...signals.filter(Boolean)]);
+      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : target.pathname==='/v1/me/assistant/messages'?80000:20000), ...signals.filter(Boolean)]);
       return abortable(() => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit', signal }), signal);
     };
     const verify = async () => {
@@ -139,8 +140,9 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     const result = refreshTail.then(() => { if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409); return callback(); });
     refreshTail = result.catch(() => {}); return result;
   };
-  const makeApi = () => createApiClient({ baseUrl: origin, fetchImpl: transport, withRefreshLock: withCredentialRefresh,
-    getAccessToken: () => current() ? tokens?.accessToken : null, getRefreshToken: () => current() ? tokens?.refreshToken : null, setTokens: persist });
+  const makeApi = () => {const options={ baseUrl: origin, fetchImpl: transport, withRefreshLock: withCredentialRefresh,
+    getAccessToken: () => current() ? tokens?.accessToken : null, getRefreshToken: () => current() ? tokens?.refreshToken : null, setTokens: persist };
+    return {...createApiClient(options),...createPracticeApiClient(options)};};
   let api = makeApi();
   const marker = () => ({ desktopSessionId: sessionId });
   const revokeGitHubTokens = async value => {
@@ -254,6 +256,7 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     return api[method]();
   }
   businessRequests = createBusinessRequests({ timeoutMs: businessTimeoutMs, concurrency: businessConcurrency,
+    timeoutForRequest:request=>request.method==='sendAssistantMessage'?80000:businessTimeoutMs,
     run: item => operation.run({ epoch: item.epoch, requestId: item.id, signal: item.controller.signal, sessionSignal: item.sessionSignal }, async () => {
       if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
       try { return await dispatch('business', [item.request]); }

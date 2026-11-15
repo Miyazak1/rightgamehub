@@ -10,7 +10,9 @@ const { pathToFileURL } = require('node:url');
 const apiUrl = pathToFileURL(path.resolve(__dirname,
   '../../apps/capability-executor/src/index.mjs')).href;
 const tempRoot = async prefix => {
-  const base = path.resolve('.runtime/capability-runtime-updater-tests');
+  // CLR startup also probes <helper>.config; nested worktrees can otherwise
+  // exceed its legacy MAX_PATH limit before the helper reaches Main().
+  const base = path.join(require('node:os').tmpdir(),'mooyu-runtime-update-tests');
   await fs.promises.mkdir(base, { recursive: true });
   return fs.promises.mkdtemp(path.join(base, prefix));
 };

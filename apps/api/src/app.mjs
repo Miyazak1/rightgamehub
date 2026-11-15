@@ -1,4 +1,5 @@
 import { registerPlatformAssistantRoutes } from './platform-assistant.mjs';
+import { registerPlatformAgentRoutes } from './platform-agent-tools.mjs';
 import { PracticeError } from './practice/error.mjs';
 import { registerPracticeRoutes } from './practice/routes.mjs';
 import { registerPaperStudyRoutes } from './paper-study-routes.mjs';
@@ -321,6 +322,7 @@ export function createApp(dependencies) {
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
   if (practiceService) registerPracticeRoutes(app, {service:practiceService, requireAuth});
   if (dependencies.platformAssistantService) registerPlatformAssistantRoutes(app, {service:dependencies.platformAssistantService, requireAuth});
+  if (dependencies.platformAgentTools) registerPlatformAgentRoutes(app, {tools:dependencies.platformAgentTools,requireAuth});
   if (dependencies.paperStudyService) registerPaperStudyRoutes(app,{service:dependencies.paperStudyService,requireAuth});
   if (researchQaHttpGateway) registerResearchQaHttpRoutes(app,{gateway:researchQaHttpGateway,requireAuth});
   const siteOrigin = new URL(config.gameShareSiteOrigin || 'https://mooyu.fun').origin;
