@@ -99,7 +99,7 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
   assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 4 });
-  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 2 });
+  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 3 });
   assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls[0].request.messages[1].content.includes('eligibleModes'));
   assert.equal(stored.get(selected.outputRef.artifactId).content.gateReport.acceptedCount, 1);
@@ -108,6 +108,102 @@ test('foundation generation separates provider selection and composition from de
   const verification = stored.get(verified.outputRef.artifactId).content;
   assert.equal(verification.approved, true);
   assert.equal(Object.hasOwn(verification, 'content'), false);
+});
+
+async function citationFixture({ outputs, count = 1, workflowKey = 'blog.project.single', providerError } = {}) {
+  const { createAgentBlogFoundationGenerationHandlers } = await load('agent-blog-foundation-generation.mjs');
+  const runId = uuid(), selectionId = uuid(), tools = Array.from({ length: count }, () => uuid());
+  const selection = { mode: count === 1 ? 'single' : 'comparison', selectedIndexes: count === 1 ? [2] : [2, 4],
+    selectedToolArtifactIds: tools, repositories: tools.map((_id, index) => `owner/tool${index}`),
+    repositoryUrls: tools.map((_id, index) => `https://github.com/owner/tool${index}`),
+    angle: '用可验证的实际体验理解开放工具', rationale: '仅根据已选项目的固定版本官方资料组织文章。' };
+  const calls = [], saves = [];
+  const handlers = createAgentBlogFoundationGenerationHandlers({ workflowKey,
+    artifactRepository: {
+      read: async () => ({ content: { schemaVersion: 'blog-subject-selection-v2', selection } }),
+      readToolArtifact: async ({ artifactId }) => evidence(artifactId, selection.repositories[tools.indexOf(artifactId)]),
+      save: async value => { saves.push(value); return { id: uuid(), artifactKey: value.artifactKey, contentSha256: 'c'.repeat(64) }; },
+    },
+    providerGateway: { invoke: async input => {
+      calls.push(structuredClone(input));
+      if (calls.length === 2 && providerError) throw providerError;
+      return { actionId: `fixture-action-${calls.length}`, output: structuredClone(outputs[Math.min(calls.length - 1, outputs.length - 1)]) };
+    } },
+  });
+  const input = context(runId, uuid(), 'compose', [{ stageKey: 'select-subject', status: 'succeeded',
+    outputRef: { artifactId: selectionId, artifactKey: 'blog.selection' } }]);
+  return { calls, saves, selection, run: () => handlers[`${workflowKey}:compose`](input, { workerId: 'worker', leaseToken: uuid() }) };
+}
+
+function citationArticle(indexes = [1]) {
+  const text = '项目官方资料介绍了清楚的输入输出、具体的使用步骤以及适用边界，读者应当先完成一次可验证的小规模体验，再根据实际结果决定是否继续使用。'.repeat(4);
+  return { title: '从实际体验理解开放工具', summary: '根据固定版本的官方资料，分析项目用途、使用步骤、结果验证和适用边界。',
+    blocks: Array.from({ length: 6 }, () => ({ type: 'paragraph', text, citationIndexes: [...indexes] })),
+    followUpQuestions: ['第一次体验从哪里开始？', '什么情况不适合使用？', '如何验证实际输出结果？'] };
+}
+
+test('public composition repairs the observed one-source citation overflow once, with explicit local numbering and audited provenance', async () => {
+  const invalid = citationArticle();
+  invalid.blocks[2].citationIndexes = [1, 2];
+  invalid.blocks[3].citationIndexes = [1, 3];
+  invalid.blocks[4].citationIndexes = [3];
+  const original = structuredClone(invalid);
+  const f = await citationFixture({ outputs: [invalid, citationArticle()] });
+  await f.run();
+  assert.equal(f.calls.length, 2);
+  const request = JSON.parse(f.calls[0].request.messages[1].content);
+  assert.deepEqual(request.citationContract.allowedIndexes, [1]);
+  assert.equal(request.verifiedSources[0].sourceIndex, 1);
+  assert.equal(Object.hasOwn(request.selectionDecision, 'selectedIndexes'), false);
+  assert.equal(Object.hasOwn(request.selectionDecision, 'selectedToolArtifactIds'), false);
+  assert.match(f.calls[0].request.messages[0].content, /不是候选选题编号/u);
+  const correction = JSON.parse(f.calls[1].request.messages[1].content);
+  assert.deepEqual(correction.correction.previousDraft, original);
+  assert.deepEqual(correction.verifiedSources, request.verifiedSources);
+  assert.equal(f.calls[1].action.actionKey, 'compose-citation-repair');
+  assert.notEqual(f.calls[1].idempotencyKey, f.calls[0].idempotencyKey);
+  assert.ok(f.calls[0].timeoutSeconds + f.calls[1].timeoutSeconds < 600);
+  assert.equal(f.saves.length, 1);
+  assert.equal(f.saves[0].actionId, 'fixture-action-2');
+  assert.deepEqual(f.saves[0].content.selection.selectedIndexes, [2]);
+  assert.equal(f.saves[0].content.content.citations.length, 1);
+  assert.deepEqual(invalid, original);
+});
+
+test('valid single and comparison citations never add a provider call or renumber original audit selections', async () => {
+  for (const count of [1, 2]) {
+    const allowed = count === 1 ? [1] : [1, 2];
+    const f = await citationFixture({ count, outputs: [citationArticle(allowed)] });
+    await f.run();
+    assert.equal(f.calls.length, 1);
+    assert.deepEqual(JSON.parse(f.calls[0].request.messages[1].content).citationContract.allowedIndexes, allowed);
+    assert.deepEqual(f.saves[0].content.selection, f.selection);
+    assert.equal(f.saves[0].content.content.citations.length, count);
+  }
+});
+
+test('unresolved or malformed citation indexes stay blocked after one repair and never save a composition', async () => {
+  for (const indexes of [[], [2], [1, 3], ['1'], [0]]) {
+    const f = await citationFixture({ outputs: [citationArticle(indexes)] });
+    await assert.rejects(f.run(), error => error.code === 'AGENT_BLOG_COMPOSITION_CITATION_INVALID');
+    assert.equal(f.calls.length, 2);
+    assert.equal(f.saves.length, 0);
+  }
+});
+
+test('citation repair preserves gateway budget denial, non-citation failures and shadow acceptance call counts', async () => {
+  const denial = Object.assign(Error('budget exhausted'), { code: 'AGENT_BUDGET_EXCEEDED' });
+  const denied = await citationFixture({ outputs: [citationArticle([3])], providerError: denial });
+  await assert.rejects(denied.run(), error => error === denial);
+  assert.equal(denied.calls.length, 2);
+  assert.equal(denied.saves.length, 0);
+  const malformed = citationArticle(); malformed.title = 'English title';
+  const other = await citationFixture({ outputs: [malformed] });
+  await assert.rejects(other.run(), error => error.code === 'AGENT_BLOG_COMPOSITION_INVALID');
+  assert.equal(other.calls.length, 1);
+  const shadow = await citationFixture({ workflowKey: 'blog.project.single.draft-shadow', outputs: [citationArticle([3])] });
+  await assert.rejects(shadow.run(), error => error.code === 'AGENT_BLOG_COMPOSITION_CITATION_INVALID');
+  assert.equal(shadow.calls.length, 1);
 });
 
 test('foundation selection rejects a repeated repository in single-project mode without human review', async () => {
