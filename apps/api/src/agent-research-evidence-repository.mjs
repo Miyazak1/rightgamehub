@@ -129,6 +129,11 @@ function withHashes(spans) {
     allowedUses: ['analysis', 'citation', 'comparison'] }));
 }
 
+// GitHub timestamps may omit milliseconds. Normalize only that equivalent
+// UTC spelling at the archive boundary; keep raw metadata and its hash intact.
+const githubArchiveTimestamp = value => typeof value === 'string'
+  ? value.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z$/u, '$1.000Z') : value;
+
 export function buildGitHubRepositorySourceArchive(value, options = {}) {
   const materialsMode = value?.schemaVersion === 'github-repository-materials-v1';
   const output = materialsMode
@@ -140,7 +145,7 @@ export function buildGitHubRepositorySourceArchive(value, options = {}) {
       publisher: output.repository.owner ?? output.repository.key?.split('/')[0] ?? null,
       authorityTier: 'official-implementation' },
     version: { fetchedAt: output.sourceVersion.fetchedAt,
-      publishedAt: output.metadata.pushedAt ?? null,
+      publishedAt: githubArchiveTimestamp(output.metadata.pushedAt ?? null),
       contentHash: output.sourceVersion.contentSha256,
       locator: { kind: 'github.repository', repository: output.repository.canonicalUrl,
         revision: output.sourceVersion.revision, canonicalUri: output.sourceVersion.canonicalUri },
