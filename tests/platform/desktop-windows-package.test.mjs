@@ -27,13 +27,17 @@ test('NSIS identity is stable across versions and acceptance never replaces the 
 });
 test('packaging exports the fixed base with an explicit small overlay and allows no user data files',async()=>{
   const spec=JSON.parse(await fs.readFile(new URL('scripts/desktop-windows-package.json',root)));
-  assert.equal(spec.sourceCommit,'80782029af89ad6ff7bea92332972b6f58640bdd');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
+  assert.equal(spec.sourceCommit,'e21dc44a9bd5c22ea7747576ea15b47f6955456a');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
   const sourceFile=file=>execFileSync('git',['show',spec.sourceCommit+':'+file],{cwd:new URL('../../',import.meta.url),encoding:'utf8',windowsHide:true});
   assert.match(sourceFile('packages/platform-client/src/App.jsx'),/AssistantWorkspace/);
   assert.match(sourceFile('packages/platform-client/src/PlatformAssistant.jsx'),/assistant-user-avatar/);
   assert.match(sourceFile('packages/platform-client/src/App.jsx'),/profile=\{accountProfile\} avatarApi=\{api\}/);
   assert.match(sourceFile('apps/desktop/src/practice-contract.mjs'),/getLearningInsights/);
   assert.match(sourceFile('apps/desktop/src/business-contract.mjs'),/MANAGEMENT_METHODS/);
+  assert.match(sourceFile('apps/desktop/src/business-contract.mjs'),/PARITY_METHODS/);
+  assert.match(sourceFile('apps/desktop/src/parity-inventory.mjs'),/communityOverview/);
+  assert.match(sourceFile('apps/desktop/src/account-session.mjs'),/boundedResponseStream/);
+  assert.match(sourceFile('apps/desktop/electron/main.cjs'),/mooyu:link-open/);
   assert.match(sourceFile('apps/desktop/src/management-methods.mjs'),/listCreatorWorks/);
   assert.match(sourceFile('apps/desktop/src/management-methods.mjs'),/listReports/);
   assert.match(sourceFile('apps/desktop/electron/main.cjs'),/mooyu:file-upload-register/);
