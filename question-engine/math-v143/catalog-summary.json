@@ -1,0 +1,1141 @@
+{
+  "schemaVersion": "math-lab-catalog-summary-v1",
+  "applicationVersion": "1.43.0",
+  "releaseManifestSha256": "9d8777ff224e836964b9275a16634b808c9fef471811d3df0583248724e0722c",
+  "cells": [
+    {
+      "id": "M-SET-001:basic",
+      "topicCode": "M-SET-001",
+      "title": "集合的定义、运算及表示方法",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-set-operation-v1:finite_union",
+          "key": "finite_union",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-set-operation-v1:finite_intersection",
+          "key": "finite_intersection",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-set-operation-v1:finite_difference",
+          "key": "finite_difference",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-set-operation-v1:finite_complement",
+          "key": "finite_complement",
+          "capacity": 238,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-SET-001:medium",
+      "topicCode": "M-SET-001",
+      "title": "集合的定义、运算及表示方法",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-set-composite-v1:union_then_intersection",
+          "key": "union_then_intersection",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-set-composite-v1:intersection_then_union",
+          "key": "intersection_then_union",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-set-composite-v1:difference_then_intersection",
+          "key": "difference_then_intersection",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-set-composite-v1:complement_then_union",
+          "key": "complement_then_union",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-SET-001:hard",
+      "topicCode": "M-SET-001",
+      "title": "集合的定义、运算及表示方法",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-interval-set-parameter-v1:translated_interval_subset_two_component_union",
+          "key": "translated_interval_subset_two_component_union",
+          "capacity": 4208,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-interval-set-parameter-v1:translated_interval_disjoint_two_component_union",
+          "key": "translated_interval_disjoint_two_component_union",
+          "capacity": 4208,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-interval-set-parameter-v1:translated_interval_meets_relative_complement",
+          "key": "translated_interval_meets_relative_complement",
+          "capacity": 4208,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-interval-set-parameter-v1:translated_interval_union_covers_target",
+          "key": "translated_interval_union_covers_target",
+          "capacity": 4208,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-INEQ-001:basic",
+      "topicCode": "M-INEQ-001",
+      "title": "不等式的基本性质与解法",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-linear-inequality-v1:linear_gt_positive",
+          "key": "linear_gt_positive",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-linear-inequality-v1:linear_lt_positive",
+          "key": "linear_lt_positive",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-linear-inequality-v1:linear_gt_negative",
+          "key": "linear_gt_negative",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-linear-inequality-v1:linear_le_negative",
+          "key": "linear_le_negative",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-INEQ-001:medium",
+      "topicCode": "M-INEQ-001",
+      "title": "不等式的基本性质与解法",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-inequality-sign-chart-v1:quadratic_strict_sign_interval",
+          "key": "quadratic_strict_sign_interval",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-inequality-sign-chart-v1:quadratic_inclusive_sign_interval",
+          "key": "quadratic_inclusive_sign_interval",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-inequality-sign-chart-v1:linear_fraction_strict_sign_interval",
+          "key": "linear_fraction_strict_sign_interval",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-inequality-sign-chart-v1:linear_fraction_inclusive_sign_interval",
+          "key": "linear_fraction_inclusive_sign_interval",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-INEQ-001:hard",
+      "topicCode": "M-INEQ-001",
+      "title": "不等式的基本性质与解法",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-compound-inequality-v1:quadratic_and_fraction_conjunction",
+          "key": "quadratic_and_fraction_conjunction",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-compound-inequality-v1:absolute_band_and_fraction_conjunction",
+          "key": "absolute_band_and_fraction_conjunction",
+          "capacity": 9464,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-compound-inequality-v1:quadratic_domain_implies_absolute_bound",
+          "key": "quadratic_domain_implies_absolute_bound",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-compound-inequality-v1:fraction_domain_implies_absolute_separation",
+          "key": "fraction_domain_implies_absolute_separation",
+          "capacity": 11200,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-001:basic",
+      "topicCode": "M-FUNC-001",
+      "title": "函数的概念与性质",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-function-property-v1:linear_monotonicity",
+          "key": "linear_monotonicity",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-function-property-v1:quadratic_axis",
+          "key": "quadratic_axis",
+          "capacity": 1170,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-function-property-v1:rational_domain_exclusion",
+          "key": "rational_domain_exclusion",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-function-property-v1:polynomial_parity",
+          "key": "polynomial_parity",
+          "capacity": 441,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-001:medium",
+      "topicCode": "M-FUNC-001",
+      "title": "函数的概念与性质",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-function-interval-v1:quadratic_closed_interval_range",
+          "key": "quadratic_closed_interval_range",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-function-interval-v1:quadratic_interval_monotonicity",
+          "key": "quadratic_interval_monotonicity",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-function-interval-v1:radical_fraction_domain_intersection",
+          "key": "radical_fraction_domain_intersection",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-function-interval-v1:linear_fraction_closed_interval_range",
+          "key": "linear_fraction_closed_interval_range",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-001:hard",
+      "topicCode": "M-FUNC-001",
+      "title": "函数的概念与性质",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-function-composition-v1:quadratic_composition_closed_interval_range",
+          "key": "quadratic_composition_closed_interval_range",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-function-composition-v1:piecewise_quadratic_interval_range",
+          "key": "piecewise_quadratic_interval_range",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-function-composition-v1:restricted_quadratic_inverse_fraction_domain",
+          "key": "restricted_quadratic_inverse_fraction_domain",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-function-composition-v1:piecewise_affine_monotonic_parameter",
+          "key": "piecewise_affine_monotonic_parameter",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-002:basic",
+      "topicCode": "M-FUNC-002",
+      "title": "基本初等函数",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-elementary-rotation-v1:logarithmic:domain",
+          "key": "logarithmic:domain",
+          "capacity": 132,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-elementary-rotation-v1:exponential:range",
+          "key": "exponential:range",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-elementary-rotation-v1:radical:monotonicity",
+          "key": "radical:monotonicity",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-elementary-rotation-v1:power:function_value",
+          "key": "power:function_value",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-002:medium",
+      "topicCode": "M-FUNC-002",
+      "title": "基本初等函数",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-elementary-exp-log-v1:exponential_common_base_linear_equation",
+          "key": "exponential_common_base_linear_equation",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-elementary-exp-log-v1:logarithmic_affine_argument_equation",
+          "key": "logarithmic_affine_argument_equation",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-elementary-exp-log-v1:exponential_affine_closed_interval_range",
+          "key": "exponential_affine_closed_interval_range",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-elementary-exp-log-v1:logarithmic_affine_inequality",
+          "key": "logarithmic_affine_inequality",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-FUNC-002:hard",
+      "topicCode": "M-FUNC-002",
+      "title": "基本初等函数",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-elementary-exp-log-constraint-v1:exponential_substitution_rational_inequality",
+          "key": "exponential_substitution_rational_inequality",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-elementary-exp-log-constraint-v1:logarithmic_difference_domain_inequality",
+          "key": "logarithmic_difference_domain_inequality",
+          "capacity": 5208,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-elementary-exp-log-constraint-v1:exponential_quadratic_closed_interval_range",
+          "key": "exponential_quadratic_closed_interval_range",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-elementary-exp-log-constraint-v1:nested_logarithm_rational_domain_intersection",
+          "key": "nested_logarithm_rational_domain_intersection",
+          "capacity": 10500,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-SEQ-001:basic",
+      "topicCode": "M-SEQ-001",
+      "title": "数列",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-sequence-v1:arithmetic_explicit_term",
+          "key": "arithmetic_explicit_term",
+          "capacity": 960,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-sequence-v1:geometric_explicit_term",
+          "key": "geometric_explicit_term",
+          "capacity": 192,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-sequence-v1:arithmetic_partial_sum",
+          "key": "arithmetic_partial_sum",
+          "capacity": 960,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-sequence-v1:geometric_partial_sum",
+          "key": "geometric_partial_sum",
+          "capacity": 192,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-SEQ-001:medium",
+      "topicCode": "M-SEQ-001",
+      "title": "数列",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-sequence-two-condition-v1:arithmetic_two_terms_target_term",
+          "key": "arithmetic_two_terms_target_term",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-sequence-two-condition-v1:arithmetic_term_and_sum_target_term",
+          "key": "arithmetic_term_and_sum_target_term",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-sequence-two-condition-v1:geometric_two_terms_target_term",
+          "key": "geometric_two_terms_target_term",
+          "capacity": 384,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-medium-sequence-two-condition-v1:geometric_term_and_sum_target_term",
+          "key": "geometric_term_and_sum_target_term",
+          "capacity": 128,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-SEQ-001:hard",
+      "topicCode": "M-SEQ-001",
+      "title": "数列",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-sequence-constraint-v1:arithmetic_term_sum_positive_window_sum",
+          "key": "arithmetic_term_sum_positive_window_sum",
+          "capacity": 12474,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-sequence-constraint-v1:arithmetic_two_terms_partial_sum_threshold_index",
+          "key": "arithmetic_two_terms_partial_sum_threshold_index",
+          "capacity": 4204,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-sequence-constraint-v1:geometric_two_terms_partial_sum_threshold_index",
+          "key": "geometric_two_terms_partial_sum_threshold_index",
+          "capacity": 4181,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-sequence-constraint-v1:affine_recurrence_two_terms_partial_sum",
+          "key": "affine_recurrence_two_terms_partial_sum",
+          "capacity": 23200,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-CALC-001:basic",
+      "topicCode": "M-CALC-001",
+      "title": "导数与微积分初步",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-derivative-v1:direct_polynomial_value",
+          "key": "direct_polynomial_value",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-CALC-001:medium",
+      "topicCode": "M-CALC-001",
+      "title": "导数与微积分初步",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-derivative-application-v1:quadratic_tangent_line_equation",
+          "key": "quadratic_tangent_line_equation",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-derivative-application-v1:cubic_monotonicity_interval",
+          "key": "cubic_monotonicity_interval",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-derivative-application-v1:cubic_local_extremum_value",
+          "key": "cubic_local_extremum_value",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-derivative-application-v1:cubic_closed_interval_extremum_value",
+          "key": "cubic_closed_interval_extremum_value",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-CALC-001:hard",
+      "topicCode": "M-CALC-001",
+      "title": "导数与微积分初步",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-derivative-constraint-v1:cubic_tangent_constraint_closed_interval_extremum",
+          "key": "cubic_tangent_constraint_closed_interval_extremum",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-derivative-constraint-v1:cubic_two_interval_monotonic_parameter_range",
+          "key": "cubic_two_interval_monotonic_parameter_range",
+          "capacity": 5024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-derivative-constraint-v1:cubic_level_equation_closed_interval_root_count",
+          "key": "cubic_level_equation_closed_interval_root_count",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-derivative-constraint-v1:cubic_extrema_gap_point_constraint_tangent_line",
+          "key": "cubic_extrema_gap_point_constraint_tangent_line",
+          "capacity": 11648,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-001:basic",
+      "topicCode": "M-GEO-001",
+      "title": "平面解析几何",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-line-relation-v1:slope_from_two_distinct_points",
+          "key": "slope_from_two_distinct_points",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-line-relation-v1:inclination_angle_from_line",
+          "key": "inclination_angle_from_line",
+          "capacity": 129,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-line-relation-v1:identify_parallel_or_perpendicular_line",
+          "key": "identify_parallel_or_perpendicular_line",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-line-relation-v1:line_equation_from_point_and_slope",
+          "key": "line_equation_from_point_and_slope",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-001:medium",
+      "topicCode": "M-GEO-001",
+      "title": "平面解析几何",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-plane-analytic-geometry-v1:line_intersection_then_point_distance",
+          "key": "line_intersection_then_point_distance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-plane-analytic-geometry-v1:parallel_lines_distance",
+          "key": "parallel_lines_distance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-plane-analytic-geometry-v1:circle_line_chord_length",
+          "key": "circle_line_chord_length",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-plane-analytic-geometry-v1:circle_tangent_at_point",
+          "key": "circle_tangent_at_point",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-001:hard",
+      "topicCode": "M-GEO-001",
+      "title": "平面解析几何",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-plane-analytic-geometry-constraint-v1:circle_center_line_two_points_tangent_length_squared",
+          "key": "circle_center_line_two_points_tangent_length_squared",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-plane-analytic-geometry-constraint-v1:diameter_circle_secant_intersection_triangle_area_squared",
+          "key": "diameter_circle_secant_intersection_triangle_area_squared",
+          "capacity": 8211,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-plane-analytic-geometry-constraint-v1:circle_line_pencil_chord_parameter_square_sum",
+          "key": "circle_line_pencil_chord_parameter_square_sum",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-plane-analytic-geometry-constraint-v1:external_point_tangency_points_distance_squared_sum",
+          "key": "external_point_tangency_points_distance_squared_sum",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-002:basic",
+      "topicCode": "M-GEO-002",
+      "title": "空间几何",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-solid-geometry-v1:cuboid_volume",
+          "key": "cuboid_volume",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-solid-geometry-v1:cuboid_surface_area",
+          "key": "cuboid_surface_area",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-solid-geometry-v1:cuboid_space_diagonal",
+          "key": "cuboid_space_diagonal",
+          "capacity": 86,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-solid-geometry-v1:cylinder_volume",
+          "key": "cylinder_volume",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-002:medium",
+      "topicCode": "M-GEO-002",
+      "title": "空间几何",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-solid-geometry-two-step-v1:cuboid_volume_to_surface_area",
+          "key": "cuboid_volume_to_surface_area",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-solid-geometry-two-step-v1:cuboid_surface_area_to_space_diagonal",
+          "key": "cuboid_surface_area_to_space_diagonal",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-solid-geometry-two-step-v1:cylinder_volume_to_total_surface_area",
+          "key": "cylinder_volume_to_total_surface_area",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-solid-geometry-two-step-v1:cone_radius_height_to_lateral_area",
+          "key": "cone_radius_height_to_lateral_area",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-GEO-002:hard",
+      "topicCode": "M-GEO-002",
+      "title": "空间几何",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-solid-geometry-constraint-v1:cuboid_face_diagonals_division_point_plane_distance_squared",
+          "key": "cuboid_face_diagonals_division_point_plane_distance_squared",
+          "capacity": 13240,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-solid-geometry-constraint-v1:cuboid_volume_face_areas_skew_lines_cosine_squared",
+          "key": "cuboid_volume_face_areas_skew_lines_cosine_squared",
+          "capacity": 2941,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-solid-geometry-constraint-v1:rectangular_pyramid_lateral_edge_section_plane_cosine_squared",
+          "key": "rectangular_pyramid_lateral_edge_section_plane_cosine_squared",
+          "capacity": 2048,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-solid-geometry-constraint-v1:cone_two_sections_frustum_total_surface_area",
+          "key": "cone_two_sections_frustum_total_surface_area",
+          "capacity": 5328,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-ALG-001:basic",
+      "topicCode": "M-ALG-001",
+      "title": "向量与复数",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-vector-complex-v1:vector_coordinate_addition",
+          "key": "vector_coordinate_addition",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-vector-complex-v1:vector_dot_product",
+          "key": "vector_dot_product",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-vector-complex-v1:complex_addition_subtraction",
+          "key": "complex_addition_subtraction",
+          "capacity": 1024,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-vector-complex-v1:complex_modulus",
+          "key": "complex_modulus",
+          "capacity": 152,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-ALG-001:medium",
+      "topicCode": "M-ALG-001",
+      "title": "向量与复数",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-vector-complex-two-step-v1:vector_linear_combination_norm_squared",
+          "key": "vector_linear_combination_norm_squared",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-vector-complex-two-step-v1:vector_perpendicular_parameter",
+          "key": "vector_perpendicular_parameter",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-vector-complex-two-step-v1:complex_multiply_then_add",
+          "key": "complex_multiply_then_add",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-vector-complex-two-step-v1:complex_affine_equation",
+          "key": "complex_affine_equation",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-ALG-001:hard",
+      "topicCode": "M-ALG-001",
+      "title": "向量与复数",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-vector-complex-constraint-v1:vector_gram_constraints_linear_combination_norm_squared",
+          "key": "vector_gram_constraints_linear_combination_norm_squared",
+          "capacity": 4678,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-vector-complex-constraint-v1:vector_angle_interval_parameter_combination_norm_squared",
+          "key": "vector_angle_interval_parameter_combination_norm_squared",
+          "capacity": 9174,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-vector-complex-constraint-v1:complex_two_moduli_real_constraint_quotient_norm_squared",
+          "key": "complex_two_moduli_real_constraint_quotient_norm_squared",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-vector-complex-constraint-v1:complex_unit_modulus_real_constraint_cubic_reciprocal_real_part",
+          "key": "complex_unit_modulus_real_constraint_cubic_reciprocal_real_part",
+          "capacity": 4173,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-PROB-001:basic",
+      "topicCode": "M-PROB-001",
+      "title": "古典概型与概率计算",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-probability-v1:colored_objects_single_draw",
+          "key": "colored_objects_single_draw",
+          "capacity": 361,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-probability-v1:uniform_integer_event",
+          "key": "uniform_integer_event",
+          "capacity": 408,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-probability-v1:single_die_event",
+          "key": "single_die_event",
+          "capacity": 17,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-probability-v1:two_coin_outcome_event",
+          "key": "two_coin_outcome_event",
+          "capacity": 14,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-PROB-001:medium",
+      "topicCode": "M-PROB-001",
+      "title": "古典概型与概率计算",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-probability-two-stage-v1:without_replacement_both_target",
+          "key": "without_replacement_both_target",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-probability-two-stage-v1:without_replacement_one_of_each",
+          "key": "without_replacement_one_of_each",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-probability-two-stage-v1:independent_two_boxes_both_target",
+          "key": "independent_two_boxes_both_target",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-probability-two-stage-v1:independent_two_boxes_at_least_one_target",
+          "key": "independent_two_boxes_at_least_one_target",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-PROB-001:hard",
+      "topicCode": "M-PROB-001",
+      "title": "古典概型与概率计算",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-probability-constraint-v1:without_replacement_nonadjacent_target_count",
+          "key": "without_replacement_nonadjacent_target_count",
+          "capacity": 82,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-probability-constraint-v1:without_replacement_all_colors_distinct_endpoints",
+          "key": "without_replacement_all_colors_distinct_endpoints",
+          "capacity": 286,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-hard-probability-constraint-v1:independent_boxes_three_red_each_box_nonempty",
+          "key": "independent_boxes_three_red_each_box_nonempty",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-probability-constraint-v1:numbered_cards_odd_sum_window_and_span",
+          "key": "numbered_cards_odd_sum_window_and_span",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-001:basic",
+      "topicCode": "M-STAT-001",
+      "title": "数据的数字特征",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-descriptive-statistics-v1:arithmetic_mean",
+          "key": "arithmetic_mean",
+          "capacity": 5148,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-descriptive-statistics-v1:median",
+          "key": "median",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-descriptive-statistics-v1:population_variance",
+          "key": "population_variance",
+          "capacity": 918,
+          "samplingMode": "finite-stock-index"
+        },
+        {
+          "id": "math-basic-descriptive-statistics-v1:population_standard_deviation",
+          "key": "population_standard_deviation",
+          "capacity": 1122,
+          "samplingMode": "finite-stock-index"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-001:medium",
+      "topicCode": "M-STAT-001",
+      "title": "数据的数字特征",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-descriptive-statistics-two-step-v1:missing_value_from_mean_to_population_variance",
+          "key": "missing_value_from_mean_to_population_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-descriptive-statistics-two-step-v1:missing_frequency_from_total_to_weighted_mean",
+          "key": "missing_frequency_from_total_to_weighted_mean",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-descriptive-statistics-two-step-v1:missing_frequency_from_mean_to_population_variance",
+          "key": "missing_frequency_from_mean_to_population_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-descriptive-statistics-two-step-v1:affine_mean_constraint_to_population_variance",
+          "key": "affine_mean_constraint_to_population_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-001:hard",
+      "topicCode": "M-STAT-001",
+      "title": "数据的数字特征",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-statistics-constraint-v1:two_missing_values_moments_order_replacement_variance",
+          "key": "two_missing_values_moments_order_replacement_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-statistics-constraint-v1:three_missing_frequencies_moments_trimmed_variance",
+          "key": "three_missing_frequencies_moments_trimmed_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-statistics-constraint-v1:two_group_moments_order_reweighted_mean",
+          "key": "two_group_moments_order_reweighted_mean",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-statistics-constraint-v1:affine_moments_sign_threshold_subset_variance",
+          "key": "affine_moments_sign_threshold_subset_variance",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-002:basic",
+      "topicCode": "M-STAT-002",
+      "title": "正态分布的基本概念",
+      "difficulty": "basic",
+      "scopes": [
+        {
+          "id": "math-basic-normal-distribution-v1:normal_parameter_identification",
+          "key": "normal_parameter_identification",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-normal-distribution-v1:normal_standardization_z_score",
+          "key": "normal_standardization_z_score",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-normal-distribution-v1:normal_symmetry_probability",
+          "key": "normal_symmetry_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-basic-normal-distribution-v1:normal_empirical_interval_probability",
+          "key": "normal_empirical_interval_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-002:medium",
+      "topicCode": "M-STAT-002",
+      "title": "正态分布的基本概念",
+      "difficulty": "medium",
+      "scopes": [
+        {
+          "id": "math-medium-normal-distribution-two-step-v1:standardized_interval_from_cdf_values",
+          "key": "standardized_interval_from_cdf_values",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-normal-distribution-two-step-v1:symmetric_interval_from_one_tail_probability",
+          "key": "symmetric_interval_from_one_tail_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-normal-distribution-two-step-v1:empirical_asymmetric_interval_probability",
+          "key": "empirical_asymmetric_interval_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-medium-normal-distribution-two-step-v1:empirical_tail_probability_to_threshold",
+          "key": "empirical_tail_probability_to_threshold",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    },
+    {
+      "id": "M-STAT-002:hard",
+      "topicCode": "M-STAT-002",
+      "title": "正态分布的基本概念",
+      "difficulty": "hard",
+      "scopes": [
+        {
+          "id": "math-hard-normal-distribution-constraint-v1:two_standardized_positions_interval_probability",
+          "key": "two_standardized_positions_interval_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-normal-distribution-constraint-v1:affine_absolute_value_interval_probability",
+          "key": "affine_absolute_value_interval_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-normal-distribution-constraint-v1:interval_union_difference_probability",
+          "key": "interval_union_difference_probability",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        },
+        {
+          "id": "math-hard-normal-distribution-constraint-v1:empirical_affine_two_tail_threshold_combination",
+          "key": "empirical_affine_two_tail_threshold_combination",
+          "capacity": 0,
+          "samplingMode": "parameter-seed"
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@
   "archive": "artifacts/math-lab/csca-math-lab-1.43.0.zip",
   "archiveSha256": "10b51845d51093711050d3fbd290ca73e78b6a094d0e8bd74fab1096df0fd3a2",
   "releaseManifestSha256": "9d8777ff224e836964b9275a16634b808c9fef471811d3df0583248724e0722c",
+  "catalogSummarySha256": "862f6c30867a672863c5d09f9a20a5b275823c1b6d9ba9f6fba623fa34da724d",
   "runtimeDirectory": ".local/math-lab/1.43.0",
   "cells": 36,
   "scopes": 141

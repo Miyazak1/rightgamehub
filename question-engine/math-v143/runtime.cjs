@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { fork } = require('node:child_process');
 const manifest = require('./integration.json');
 const { runtimeDirectory, verifyArchive, verifyRuntime } = require('./install.cjs');
@@ -19,14 +20,23 @@ function status() {
 }
 
 function catalog() {
-  verifyRuntime();
-  const { catalog: cells } = require(path.join(runtimeDirectory, 'src', 'lab-catalog-v2.cjs'));
-  const stock = require(path.join(runtimeDirectory, 'src', 'capacity-v9.cjs'));
-  return { ...status(), cells: cells.map(({ id, topicCode, title, difficulty, scopes }) => ({ id, topicCode, title, difficulty,
-    scopes: scopes.map(scope => {
-      const row = stock.row(id, scope.id);
-      return { ...scope, capacity: row?.entries.length ?? 0, samplingMode: row ? 'finite-stock-index' : 'parameter-seed' };
-    }) })) };
+  // Keep all archive/runtime integrity gates, but avoid loading historical
+  // question inventories into the API just to display availability metadata.
+  const verified = status();
+  if (!verified.installed) throw Error('math_lab_runtime_not_installed');
+  const bytes = fs.readFileSync(path.join(__dirname, 'catalog-summary.json'));
+  if (crypto.createHash('sha256').update(bytes).digest('hex') !== manifest.catalogSummarySha256) {
+    throw Error('math_lab_catalog_summary_digest_mismatch');
+  }
+  const summary = JSON.parse(bytes);
+  if (summary.schemaVersion !== 'math-lab-catalog-summary-v1'
+    || summary.applicationVersion !== manifest.applicationVersion
+    || summary.releaseManifestSha256 !== manifest.releaseManifestSha256
+    || summary.cells.length !== manifest.cells
+    || summary.cells.reduce((sum, cell) => sum + cell.scopes.length, 0) !== manifest.scopes) {
+    throw Error('math_lab_catalog_summary_invalid');
+  }
+  return { ...verified, cells: summary.cells };
 }
 
 function validateInput(input) {

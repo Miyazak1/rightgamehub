@@ -104,7 +104,19 @@ dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 import {createVerifiedMathEngine} from './apps/api/src/practice/engine.mjs';
 for(const key of ['PAPER_STUDY_ENABLED','PAPER_STUDY_WORKER_ENABLED','PAPER_STUDY_MODELS_ENABLED','PAPER_STUDY_PUBLISH_ENABLED']) assert.equal(process.env[key],'false',key);
-const get=async route=>{const r=await fetch('http://127.0.0.1:3090'+route,{signal:AbortSignal.timeout(15000)});assert.equal(r.status,200,route);return (await r.json()).data;};
+const get=async route=>{
+ const started=performance.now();
+ console.log(JSON.stringify({check:'http-start',route}));
+ try{
+  const r=await fetch('http://127.0.0.1:3090'+route,{signal:AbortSignal.timeout(15000)});
+  assert.equal(r.status,200,route);const body=await r.json();
+  console.log(JSON.stringify({check:'http-ok',route,status:r.status,elapsedMs:Math.round(performance.now()-started)}));
+  return body.data;
+ }catch(error){
+  console.error(JSON.stringify({check:'http-failed',route,elapsedMs:Math.round(performance.now()-started),name:error.name,message:error.message,cause:error.cause?.code}));
+  throw error;
+ }
+};
 const ready=await get('/ready');assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,160);assert.equal(ready.migrations.ready,true);
 const catalog=await get('/v1/learning/practice/catalog');assert.ok(catalog.topics.length>0);
 assert.equal(createVerifiedMathEngine().capabilities().ready,true,'verified engine must be installed');

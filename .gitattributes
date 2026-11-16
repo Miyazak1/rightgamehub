@@ -16,3 +16,6 @@ extensions/vscode/media/gamehub.js -whitespace
 # QA protocol snapshots and fixtures are hashed as byte-exact cross-platform artifacts.
 apps/api/src/researcher-qa-protocol/** text eol=lf
 tests/platform/fixtures/researcher-qa/** text eol=lf
+
+# Frozen math catalog metadata is verified by its exact SHA-256 bytes.
+question-engine/math-v143/catalog-summary.json text eol=lf
