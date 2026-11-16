@@ -1,5 +1,13 @@
 import { AGENT_GITHUB_RESEARCH_LIMITS,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
+import { BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,
+  BLOG_PROJECT_SINGLE_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
+
+// Bootstrap and execution use these same versioned manifests. Old active
+// versions must neither satisfy admission nor be required after an upgrade.
+const PUBLIC_WORKFLOWS = Object.freeze([
+  BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW, BLOG_PROJECT_SINGLE_WORKFLOW,
+]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const MODEL = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/u;
@@ -57,7 +65,7 @@ export function evaluateAgentBlogPublicRuntimeSnapshot(config, snapshot) {
   if (!snapshot.identityReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_IDENTITY_NOT_READY');
   if (snapshot.capabilityCount !== 5) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_CAPABILITIES_NOT_READY');
   if (snapshot.toolCount !== 3) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_TOOLS_NOT_READY');
-  if (snapshot.workflowCount !== 2) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_WORKFLOWS_NOT_READY');
+  if (snapshot.workflowCount !== PUBLIC_WORKFLOWS.length) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_WORKFLOWS_NOT_READY');
   if (!snapshot.secretReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_SECRET_NOT_READY');
   if (!snapshot.modelReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_MODEL_NOT_READY');
   if (!snapshot.circuitReady) blockers.push('AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER_CIRCUIT_OPEN');
@@ -119,7 +127,7 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
             ('research.github.repository.materials.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
-            ('blog.project.discovery-shadow',3),('blog.project.single',1))) AS workflow_count,
+            SELECT * FROM unnest($5::text[],$6::integer[]))) AS workflow_count,
         EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3) AS secret_ready,
         EXISTS(SELECT 1 FROM agent_provider_models WHERE provider=$3 AND model_id=$4 AND status='active'
           AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS model_ready,
@@ -146,7 +154,9 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
       FROM agent_blog_publication_owners owner
       LEFT JOIN agent_blog_automation_settings settings ON settings.agent_user_id=owner.agent_user_id
       WHERE owner.agent_user_id=$1`,
-    [config.agentUserId, requiredCapabilities, config.provider, config.modelId])).rows[0];
+    [config.agentUserId, requiredCapabilities, config.provider, config.modelId,
+      PUBLIC_WORKFLOWS.map(workflow => workflow.workflowKey),
+      PUBLIC_WORKFLOWS.map(workflow => workflow.workflowVersion)])).rows[0];
     if (!row) fail('AGENT_BLOG_PUBLIC_RUNTIME_OWNER_MISSING');
     const recent = (await this.pool.query(`SELECT status FROM agent_runs WHERE agent_user_id=$1
       AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')
