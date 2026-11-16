@@ -47,6 +47,7 @@ async function run(){
     const creatorLoaded=new Promise(resolve=>window.webContents.once('did-finish-load',resolve));await window.loadURL('mooyu-app://client/creator/works');await creatorLoaded;
     await wait(()=>js('!!document.querySelector(".creator-page") && document.body.innerText.includes("安装验收创作作品")'),'installed creator work library');
     checks.push('installed creator page uses server works and server denies unprivileged governance IPC');
+    await window.loadURL('mooyu-app://client/account');await wait(()=>js('!!document.querySelector(".account-summary")'),'restored account page');
   }
   const result={passed:true,phase:config.phase,version:app.getVersion(),checks,productionConnected:false,profileRoot:config.profileRoot};
   if(config.updatePhase==='apply'){
