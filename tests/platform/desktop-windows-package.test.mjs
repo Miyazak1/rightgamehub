@@ -27,12 +27,16 @@ test('NSIS identity is stable across versions and acceptance never replaces the 
 });
 test('packaging exports the fixed base with an explicit small overlay and allows no user data files',async()=>{
   const spec=JSON.parse(await fs.readFile(new URL('scripts/desktop-windows-package.json',root)));
-  assert.equal(spec.sourceCommit,'fdb3ea564718666247a919aeb7003fc1918826db');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
+  assert.equal(spec.sourceCommit,'80782029af89ad6ff7bea92332972b6f58640bdd');assert.equal(new Set(spec.overlay).size,spec.overlay.length);
   const sourceFile=file=>execFileSync('git',['show',spec.sourceCommit+':'+file],{cwd:new URL('../../',import.meta.url),encoding:'utf8',windowsHide:true});
   assert.match(sourceFile('packages/platform-client/src/App.jsx'),/AssistantWorkspace/);
   assert.match(sourceFile('packages/platform-client/src/PlatformAssistant.jsx'),/assistant-user-avatar/);
   assert.match(sourceFile('packages/platform-client/src/App.jsx'),/profile=\{accountProfile\} avatarApi=\{api\}/);
   assert.match(sourceFile('apps/desktop/src/practice-contract.mjs'),/getLearningInsights/);
+  assert.match(sourceFile('apps/desktop/src/business-contract.mjs'),/MANAGEMENT_METHODS/);
+  assert.match(sourceFile('apps/desktop/src/management-methods.mjs'),/listCreatorWorks/);
+  assert.match(sourceFile('apps/desktop/src/management-methods.mjs'),/listReports/);
+  assert.match(sourceFile('apps/desktop/electron/main.cjs'),/mooyu:file-upload-register/);
   assert.match(sourceFile('apps/api/src/runtime.mjs'),/createPlatformAgentTools/);
   assert.doesNotMatch(sourceFile('packages/platform-client/src/official-tools.mjs'),/import\('\.\/PaperStudyTool\.jsx'\)/);
   for(const file of spec.overlay)assert.doesNotMatch(file,/(?:\.runtime|\.env|agent-paper|paper-review|MooyuWorkbench|desktop-d1)/);
