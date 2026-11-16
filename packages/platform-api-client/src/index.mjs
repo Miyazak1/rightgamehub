@@ -5,8 +5,8 @@ export class ApiError extends Error {
   }
 }
 
-async function readBoundedResponse(response,limit,signal) {
-  if(!Number.isSafeInteger(limit)||limit<0||limit>1048576)throw new TypeError('Invalid save response limit.');
+async function readBoundedResponse(response,limit,signal,maximum=1048576) {
+  if(!Number.isSafeInteger(limit)||limit<0||limit>maximum)throw new TypeError('Invalid save response limit.');
   const declared=response.headers.get('content-length');
   if(declared!==null&&(!/^[0-9]+$/u.test(declared)||Number(declared)>limit)) {
     response.body?.cancel?.().catch(()=>{});
@@ -47,6 +47,7 @@ const saveConditions=input=>({
 });
 
 const randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const query=input=>{const params=new URLSearchParams(Object.entries(input).filter(([,value])=>value!==undefined&&value!==null));return params.size?'?'+params:'';};
 
 export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {}, withRefreshLock = callback => callback(), timeoutMs = 15000, xhrFactory = () => new XMLHttpRequest() } = {}) {
   let refreshPromise = null;
@@ -66,7 +67,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     }
     return refreshPromise;
   };
-  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false, beforeRequest, responseBytesLimit, requestTimeoutMs = timeoutMs } = {}) {
+  async function request(path, { method = 'GET', body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false, beforeRequest, responseBytesLimit,responseBlobLimit, requestTimeoutMs = timeoutMs } = {}) {
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(new Error('timeout')), requestTimeoutMs);
     const hasCombinedSignal = Boolean(globalThis.AbortSignal?.any);
@@ -91,13 +92,18 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
       if (response.status === 401 && auth && allowRefresh) {
         const currentToken = await getAccessToken();
         if (token && currentToken && token !== currentToken) {
-          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit, requestTimeoutMs });
+          return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit,responseBlobLimit, requestTimeoutMs });
         }
-        if (await refreshSession(signal, token)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit, requestTimeoutMs });
+        if (await refreshSession(signal, token)) return request(path, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit,responseBlobLimit, requestTimeoutMs });
       }
       if (response.ok && responseBytesLimit !== undefined) {
         const bytes = await readBoundedResponse(response, responseBytesLimit, combined);
         return { data: bytes, etag: response.headers.get('etag'), sha256: response.headers.get('x-content-sha256'), schemaVersion: Number(response.headers.get('x-gamehub-save-schema')), contentType: response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() };
+      }
+      if(response.ok&&responseBlobLimit!==undefined){
+        try {const bytes=await readBoundedResponse(response,responseBlobLimit,combined,64*1024**2);
+          return {data:new Blob([bytes],{type:response.headers.get('content-type')||'application/octet-stream'}),digest:response.headers.get('digest')};
+        }catch(error){if(error.code?.startsWith('SAVE_'))throw new ApiError({code:'DOWNLOAD_TOO_LARGE',message:'下载内容超过允许的大小或无法读取。',retryable:false});throw error;}
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new ApiError({ status: response.status, ...(payload.error ?? {}), message: payload.error?.message ?? `请求失败 (${response.status})` });
@@ -110,13 +116,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     } finally { clearTimeout(timer); if (!hasCombinedSignal) signal?.removeEventListener('abort', cancel); }
   }
   async function authenticatedDownload(path, options = {}) {
-    const token = await getAccessToken();
-    const response = await fetchImpl(`${baseUrl}${path}`, { signal: options.signal,headers: { Accept: options.accept ?? 'application/zip',...(token ? { Authorization: `Bearer ${token}` } : {}) } });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new ApiError({ status: response.status,...(payload.error ?? {}),message: payload.error?.message ?? `下载失败 (${response.status})` });
-    }
-    return { data: await response.blob(),digest: response.headers.get('digest') };
+    return request(path,{signal:options.signal,auth:true,responseBlobLimit:64*1024**2,requestTimeoutMs:options.requestTimeoutMs??120000,headers:{Accept:options.accept??'application/zip'}});
   }
   return {
     ...communityApi(request),
@@ -393,6 +393,10 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
         };
         const abort = () => xhr.abort(); signal?.addEventListener('abort',abort,{ once: true }); xhr.onloadend = () => signal?.removeEventListener('abort',abort); xhr.send(file);
       });
+    },
+    async uploadMultiplayerRulePackageBytes(submissionId,bytes,grantToken,options={}) {
+      const response=await fetchImpl(`${baseUrl}/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/package`,{method:'PUT',signal:options.signal,headers:{Authorization:`Upload ${grantToken}`,'Content-Type':'application/zip'},body:bytes});
+      const payload=await response.json().catch(()=>({}));if(!response.ok)throw new ApiError({status:response.status,...(payload.error??{}),message:payload.error?.message??`上传失败 (${response.status})`});return {data:payload.data};
     },
     submitMultiplayerRuleSubmission: (submissionId, options) => request(`/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/submit`, { ...options,method: 'POST',auth: true,idempotent: true }),
     listAdminMultiplayerRuleSubmissions: (state = 'queue',limit = 50,options) => request(`/v1/admin/multiplayer/rule-submissions?state=${encodeURIComponent(state)}&limit=${encodeURIComponent(limit)}`, { ...options,auth: true }),

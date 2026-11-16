@@ -4,6 +4,18 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WEB_LIMITS } from './web-policy.mjs';
 
+// Windows scanners may retain a directory handle briefly after the isolated
+// ZIP worker exits. Retry only transient sharing failures, never path errors.
+export async function renamePreparedDirectory(from,to,signal){
+  for(let attempt=0;;attempt++){
+    signal?.throwIfAborted();
+    try{return await rename(from,to);}catch(error){
+      if(process.platform!=='win32'||!['EPERM','EACCES','EBUSY'].includes(error.code)||attempt>=5)throw error;
+      await new Promise(resolve=>setTimeout(resolve,50*(attempt+1)));
+    }
+  }
+}
+
 export async function prepareWebGame({ root, id, archive, totalLimit, signal }) {
   if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid game ID');
   const parent = path.resolve(root, 'web');
@@ -41,10 +53,10 @@ export async function prepareWebGame({ root, id, archive, totalLimit, signal }) 
       });
     });
     signal?.throwIfAborted();
-    await rename(output, final);
+    await renamePreparedDirectory(output, final,signal);
     committed = true;
     return result;
   } finally {
-    if (!committed) await rm(output, { recursive: true, force: true });
+    if (!committed) await rm(output, { recursive: true, force: true,maxRetries:5,retryDelay:100 });
   }
 }

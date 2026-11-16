@@ -3,10 +3,12 @@
 import { GAME_METHODS, gameArgument } from './game-api-contract.mjs';
 import { PRACTICE_METHODS, practiceArgument } from './practice-contract.mjs';
 import {MANAGEMENT_METHODS,managementArgument} from './management-contract.mjs';
+import {PARITY_METHODS,parityArgument} from './parity-contract.mjs';
 import { PAPER_STUDY_METHODS, PAPER_STUDY_IMPORT_LIMIT, paperStudyImport } from '../../../packages/platform-client/src/paper-study-contract.mjs';
-export const businessRequestLimit = request => request?.method === 'importPaperStudy' ? PAPER_STUDY_IMPORT_LIMIT + 2048 : request?.method==='sendAssistantMessage'?114048:Object.hasOwn(MANAGEMENT_METHODS,request?.method)?524288:32768;
+export const businessRequestLimit = request => request?.method === 'importPaperStudy' ? PAPER_STUDY_IMPORT_LIMIT + 2048 : request?.method==='sendAssistantMessage'?114048:Object.hasOwn(PARITY_METHODS,request?.method)?2129920:Object.hasOwn(MANAGEMENT_METHODS,request?.method)?524288:32768;
 export const BUSINESS_METHODS = Object.freeze({
   ...MANAGEMENT_METHODS,
+  ...PARITY_METHODS,
   ...GAME_METHODS,
   ...PRACTICE_METHODS,
   ...PAPER_STUDY_METHODS,
@@ -29,6 +31,7 @@ export function businessArguments(method, args = []) {
   if (args.length > spec.length) denied();
   return spec.map((kind, index) => {
     const value = args[index];
+    if(Object.hasOwn(PARITY_METHODS,method))return parityArgument(kind,value);
     if(Object.hasOwn(MANAGEMENT_METHODS,method)&&!['listWorks','listDiscoveryCampaigns','getDiscoveryCampaign','listBlogArticles','getBlogArticle'].includes(method))return managementArgument(kind,value);
     if(Object.hasOwn(PRACTICE_METHODS,method))return practiceArgument(kind,value);
     if (kind === 'paper-import') return paperStudyImport(value);
@@ -54,12 +57,13 @@ export function businessArguments(method, args = []) {
   });
 }
 
-const mediaPath = /^\/v1\/(?:works\/[a-zA-Z0-9-]+\/cover|avatars\/[a-fA-F0-9-]{36}|discovery\/campaigns\/[a-zA-Z0-9-]+\/share-card\.png)$/u;
+const mediaPath = /^\/v1\/(?:works\/[a-zA-Z0-9-]+\/(?:cover|share-card\.png|promo\/xhs\/[a-zA-Z0-9-]+\.png)|avatars\/[a-fA-F0-9-]{36}|discovery\/campaigns\/[a-zA-Z0-9-]+\/share-card\.png)$/u;
 export function businessMediaPath(value, origin) {
   try {
     const url = new URL(value, origin);
     if (url.origin !== origin || url.username || url.password || url.hash || !mediaPath.test(url.pathname) ||
-      [...url.searchParams.keys()].some(k => !['v', 'variant', 'lang'].includes(k)) || url.search.length > 200) return null;
+      [...url.searchParams.keys()].some(k => !['v', 'variant', 'lang','download'].includes(k)) || url.search.length > 200) return null;
+    if(url.searchParams.has('download')&&!['0','1'].includes(url.searchParams.get('download')))return null;
     return url.pathname + url.search;
   } catch { return null; }
 }
@@ -69,6 +73,7 @@ export function desktopMediaUrl(value, origin) {
 }
 export function rewriteBusinessMedia(value, origin) {
   if (Array.isArray(value)) return value.map(item => rewriteBusinessMedia(item, origin));
+  if(value instanceof ArrayBuffer||ArrayBuffer.isView(value)||typeof Blob!=='undefined'&&value instanceof Blob)return value;
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
     key === 'coverUrl' ? desktopMediaUrl(item, origin) : rewriteBusinessMedia(item, origin)]));

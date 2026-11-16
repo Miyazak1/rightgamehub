@@ -797,7 +797,7 @@ test('API client exposes staged multiplayer rule submission and administrative r
   await client.listAdminMultiplayerRuleSubmissions('queue',20);
   await client.reviewAdminMultiplayerRuleSubmission(submissionId,{ action: 'start' });
   await client.downloadAdminMultiplayerRuleBuild(submissionId);
-  assert.deepEqual(requests.map(item => item.init.method),['POST','GET','POST','POST','GET','POST',undefined]);
+  assert.deepEqual(requests.map(item => item.init.method),['POST','GET','POST','POST','GET','POST','GET']);
   assert.ok(requests.every(item => item.init.headers.Authorization === 'Bearer rules-token'));
   assert.ok(requests[0].init.headers['Idempotency-Key']);
   assert.ok(requests[3].init.headers['Idempotency-Key']);

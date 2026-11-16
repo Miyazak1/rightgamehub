@@ -14,7 +14,8 @@ const gameCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-sr
 const courseCsp = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 function allowedRequest({ url, resourceType }, fixtureOrigin = null, runtimeOrigins = new Set()) {
   if (ui(url) || fixtureOrigin && matches(url, fixtureOrigin) || [...runtimeOrigins].some(origin => matches(url, origin))) return true;
-  return ['image', 'font', 'media'].includes(resourceType) && (/^data:/u.test(url) || url.startsWith('blob:' + UI + '/'));
+  return ['image', 'font', 'media'].includes(resourceType) && (/^data:/u.test(url) || url.startsWith('blob:' + UI + '/'))
+    || ['other','mainFrame'].includes(resourceType)&&url.startsWith('blob:'+UI+'/');
 }
 async function assetResponse(request, root, origin, spa, fixtureOrigin = null, runtimeSource = null, courseware = false) {
   const frames = [fixtureOrigin, runtimeSource].filter(Boolean).join(' ');

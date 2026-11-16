@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 if (process.isMainFrame) contextBridge.exposeInMainWorld('mooyuDesktop', Object.freeze({
+  links:Object.freeze({openExternal:value=>ipcRenderer.invoke('mooyu:link-open',value)}),
   environment: () => ipcRenderer.invoke('mooyu:preview-environment'),
   updates: Object.freeze({call: action => ipcRenderer.invoke('mooyu:update-call', action),
     onOpen(listener) {
@@ -43,3 +44,11 @@ if (process.isMainFrame) contextBridge.exposeInMainWorld('mooyuDesktop', Object.
     },
   }),
 }));
+if(process.isMainFrame)window.addEventListener('click',event=>{
+  if(!event.isTrusted||event.defaultPrevented||event.button!==0)return;
+  const anchor=event.composedPath().find(node=>node?.tagName==='A');
+  if(!anchor||anchor.hasAttribute('download'))return;
+  try{const url=new URL(anchor.href);if(!['http:','https:'].includes(url.protocol))return;
+    event.preventDefault();void ipcRenderer.invoke('mooyu:link-open',url.href).catch(()=>{});
+  }catch{}
+});

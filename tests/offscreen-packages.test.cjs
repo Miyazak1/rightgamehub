@@ -35,7 +35,9 @@ async function fixture(t) {
     const response = await call('upload', { name }, { method: 'POST', headers: {
       'X-GameHub-Client': '1', 'Content-Type': 'application/octet-stream', 'X-GameHub-Size': String(data.length),
     }, body: data });
-    assert.equal(response.status, 201); return (await response.json()).file;
+    assert.equal(response.status, 201); const file=(await response.json()).file;
+    if(data===bytes)assert.equal(file.web?.state,'ready',JSON.stringify(file.web));
+    return file;
   };
   const record = id => fs.readFile(path.join(root, id + '.json'), 'utf8').then(JSON.parse);
   return { root, bytes, approval, starts, stops, call, upload, record,
@@ -74,7 +76,8 @@ test('owned package upload, real download, verified cache and launch handoff pre
 
 test('service restart requires manual cache preparation and reuses a still-verified download', windows, async t => {
   const f = await fixture(t), file = await f.upload();
-  assert.equal((await f.call('offscreen-prepare', { id: file.id }, post)).status, 200);
+  const prepared=await f.call('offscreen-prepare', { id: file.id }, post);
+  assert.equal(prepared.status,200,JSON.stringify({response:await prepared.clone().text(),record:await f.record(file.id)}));
   await f.restart();
   assert.equal((await (await f.call('files')).json()).files[0].offscreenPackage.prepared, false);
   assert.equal((await f.call('offscreen-launch', { id: file.id }, post)).status, 409);
@@ -84,7 +87,8 @@ test('service restart requires manual cache preparation and reuses a still-verif
 
 test('altered cache resources are rejected before launch and explicit preparation repairs them', windows, async t => {
   const f = await fixture(t), file = await f.upload();
-  await f.call('offscreen-prepare', { id: file.id }, post);
+  const initial=await (await f.call('offscreen-prepare', { id: file.id }, post)).json();
+  assert.equal(initial.ok,true,JSON.stringify({initial,record:await f.record(file.id)}));
   const directory = path.join(f.root, 'offscreen-cache', file.sha256);
   const altered = path.join(directory, 'web', file.id, 'assets', 'game.js');
   const original = await fs.readFile(altered);
@@ -93,7 +97,7 @@ test('altered cache resources are rejected before launch and explicit preparatio
   assert.equal(refused.ok, false); assert.match(refused.error, /摘要不匹配/); assert.equal(f.starts.length, 0);
   assert.equal((await (await f.call('files')).json()).files[0].offscreenPackage.prepared, false);
   const repaired = await (await f.call('offscreen-prepare', { id: file.id }, post)).json();
-  assert.equal(repaired.ok, true); assert.equal(repaired.reused, false);
+  assert.equal(repaired.ok, true,JSON.stringify(repaired)); assert.equal(repaired.reused, false);
   assert.deepEqual(await fs.readFile(altered), original);
 });
 
@@ -154,7 +158,7 @@ test('aborting a partial package download cancels its stream and removes staging
 
 test('cache receipt cannot approve modified files, extra scripts, or a different archive', windows, async t => {
   const f = await fixture(t), file = await f.upload();
-  await f.call('offscreen-prepare', { id: file.id }, post);
+  const prepared=await (await f.call('offscreen-prepare', { id: file.id }, post)).json();assert.equal(prepared.ok,true,JSON.stringify({prepared,record:await f.record(file.id)}));
   const directory = path.join(f.root, 'offscreen-cache', file.sha256);
   const { verifyInstalledPackage } = await import('../extensions/harness/src/offscreen-install.mjs');
   const extra = path.join(directory, 'web', file.id, 'extra.js'); await fs.writeFile(extra, 'throw 1;');

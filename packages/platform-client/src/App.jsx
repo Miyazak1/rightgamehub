@@ -1,4 +1,5 @@
 import { PlatformAssistantProvider, AssistantToggle, AssistantWorkspace } from './PlatformAssistant.jsx';
+import {usePlatformLinks} from './PlatformLinks.jsx';
 import LearningInsightsPage from './LearningInsightsPage.jsx';
 import { createPracticeApiClient } from '../../platform-api-client/src/practice.mjs';
 import AgentDisclosure from './AgentDisclosure.jsx';
@@ -691,6 +692,7 @@ const feedbackCategoryLabels = { bug: 'creator.feedback.category.bug', idea: 'cr
 const feedbackStatusLabels = { new: 'creator.feedback.status.new', reviewed: 'creator.feedback.status.reviewed', archived: 'creator.feedback.status.archived', issue_drafted: 'creator.feedback.status.issueDrafted', issue_linked: 'creator.feedback.status.issueLinked', resolved: 'creator.feedback.status.resolved' };
 
 function CreatorFeedbackInbox({ state, api, demo, onReload, go }) {
+  const links=usePlatformLinks();
   const {t,date}=useI18n();
   const [busy, setBusy] = useState(''); const [message, setMessage] = useState(''); const [linking, setLinking] = useState(''); const [issueUrl, setIssueUrl] = useState('');
   const transition = async (item, action, extra = {}) => {
@@ -700,11 +702,11 @@ function CreatorFeedbackInbox({ state, api, demo, onReload, go }) {
     finally { setBusy(''); }
   };
   const draftIssue = async item => {
-    const popup = globalThis.open?.('', '_blank'); if (popup) popup.opener = null; setBusy(`${item.id}:draft`); setMessage('');
+    const popup = links ? null : globalThis.open?.('', '_blank'); if (popup) popup.opener = null; setBusy(`${item.id}:draft`); setMessage('');
     try {
       const draft = demo ? { createUrl: item.repositoryUrl ? `${item.repositoryUrl}/issues/new` : null, markdown: `# [玩家反馈] ${item.summary}\n\n${item.details}` } : (await api.createCreatorFeedbackIssueDraft(item.id)).data;
       if (draft.createUrl) {
-        if (popup) popup.location.href = draft.createUrl; else globalThis.open?.(draft.createUrl, '_blank', 'noopener,noreferrer');
+        if(links)await links.openExternal(draft.createUrl); else if (popup) popup.location.href = draft.createUrl; else globalThis.open?.(draft.createUrl, '_blank', 'noopener,noreferrer');
         setMessage(t('creator.feedback.githubOpened'));
       } else {
         popup?.close?.();

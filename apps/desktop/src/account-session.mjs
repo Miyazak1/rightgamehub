@@ -5,6 +5,10 @@ import { createPracticeApiClient } from '../../../packages/platform-api-client/s
 import { resolveAuthClientKind } from '../../../packages/platform-client/src/auth-client-kind.mjs';
 import { accountOrigin } from './account-configuration.mjs';
 import { businessArguments, businessMediaPath, rewriteBusinessMedia, businessRequestLimit } from './business-contract.mjs';
+import {FILE_OPERATIONS,GRANT_UPLOAD_METHODS,businessPayloadSize} from './parity-contract.mjs';
+import {encodeBusinessBinary} from './business-binary.mjs';
+import {businessResourcePath} from './resource-paths.mjs';
+import {boundedResponseStream} from './response-stream.mjs';
 import { localBusinessRuntime, validateDesktopLaunch } from './runtime-policy.mjs';
 import { createBusinessRequests } from './business-requests.mjs';
 import { createDesktopGameAuthority } from './game-api-contract.mjs';
@@ -35,7 +39,7 @@ export function validateGitHubAuthorizeUrl(value, challengeId, origin) {
   return url.href;
 }
 
-export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, resolveSelectedFile=null, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
+export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, resolveSelectedFile=null,paperEnabled=false, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
   const origin = accountOrigin(apiOrigin, environment);
   const runtimePolicy = localBusinessRuntime(businessRuntime, origin, environment);
   if (!origin) fail('DESKTOP_ACCOUNT_NOT_CONFIGURED', 503);
@@ -97,8 +101,10 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       // not cancel another page's refresh; logout still cancels the session.
       const refresh = new URL(address).pathname === '/v1/auth/refresh';
       const signals = refresh || shared ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
-      const uploading=/^\/v1\/creator\/uploads\/[^/]+\/content$/u.test(target.pathname);
-      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : uploading?1800000:target.pathname==='/v1/me/assistant/messages'?80000:20000), ...signals.filter(Boolean)]);
+      const uploading=/^\/v1\/creator\/(?:uploads\/[^/]+\/content|multiplayer-rule-submissions\/[^/]+\/package)$/u.test(target.pathname);
+      const artifact=/^\/v1\/admin\/multiplayer\/(?:rule-submissions|rule-builds)\/[^/]+\/package$/u.test(target.pathname);
+      const release=businessResourcePath(target.href,origin)!==null;
+      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : uploading||release?1800000:artifact?120000:target.pathname==='/v1/me/assistant/messages'?80000:20000), ...signals.filter(Boolean)]);
       return abortable(() => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit', signal }), signal);
     };
     const verify = async () => {
@@ -167,11 +173,13 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
           if(!tokens)fail('AUTH_REQUIRED',401);
           await openExternal(origin+'/creator/import');
           response={data:{externalOpened:true}};
-        }else if(['uploadContent','uploadWorkCover'].includes(request.method)){
+        }else if(Object.hasOwn(FILE_OPERATIONS,request.method)){
           if(!resolveSelectedFile||!tokens)fail('DESKTOP_UPLOAD_SELECTION_REQUIRED',400);
-          const file=await resolveSelectedFile(values[1],sessionId,request.method);
+          const index=FILE_OPERATIONS[request.method],file=await resolveSelectedFile(values[index],sessionId,request.method);
           signal?.throwIfAborted();
-          response=request.method==='uploadContent'?await api.uploadContentBytes(values[0],file,values[2]):await api.uploadWorkCover(values[0],file);
+          if(request.method==='uploadContent')response=await api.uploadContentBytes(values[0],file,values[2]);
+          else if(request.method==='uploadMultiplayerRulePackage')response=await api.uploadMultiplayerRulePackageBytes(values[0],file,values[2]);
+          else {values[index]=file;response=await api[request.method](...values);}
         }else response=await api[request.method](...values);
         signal?.throwIfAborted();
         if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
@@ -180,7 +188,9 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
           gameAuthority.launched(response.data);
         }
         gameAuthority.completed(request.method, values, response);
-        return rewriteBusinessMedia(response, origin);
+        const encoded=await encodeBusinessBinary(request.method,response);
+        signal?.throwIfAborted();if(!current())fail('DESKTOP_ACCOUNT_SESSION_CHANGED',409);
+        return rewriteBusinessMedia(encoded, origin);
       }
       catch (error) {
         if (error.code === 'DESKTOP_AUTH_TEST_ROUTE_DISABLED') fail('DESKTOP_BUSINESS_ACCOUNT_ONLY', 503);
@@ -267,11 +277,11 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     return api[method]();
   }
   businessRequests = createBusinessRequests({ timeoutMs: businessTimeoutMs, concurrency: businessConcurrency,
-    timeoutForRequest:request=>request.method==='uploadContent'?1800000:request.method==='sendAssistantMessage'?80000:businessTimeoutMs,
+    timeoutForRequest:request=>GRANT_UPLOAD_METHODS.includes(request.method)?1800000:request.method.startsWith('downloadAdminMultiplayerRule')?120000:request.method==='sendAssistantMessage'?80000:businessTimeoutMs,
     run: item => operation.run({ epoch: item.epoch, requestId: item.id, signal: item.controller.signal, sessionSignal: item.sessionSignal }, async () => {
       if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
       try { return await dispatch('business', [item.request]); }
-      catch (error) { if (error.status === 401 && item.request.method!=='uploadContent' && tokens && current() && !item.controller.signal.aborted) await clear(); throw error; }
+      catch (error) { if (error.status === 401 && !GRANT_UPLOAD_METHODS.includes(item.request.method) && tokens && current() && !item.controller.signal.aborted) await clear(); throw error; }
     }) });
   const exitSession = async method => {
     const retiring = tokens;
@@ -298,6 +308,27 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
   };
   return {
     state,
+    async resource(value,{signal,range,ifRange}={}){
+      const pathname=businessResourcePath(value,origin);if(!pathname)fail('DESKTOP_DOWNLOAD_DENIED',403);
+      const expectedEpoch=epoch,expectedSession=sessionId,sessionSignal=sessionAbort.signal;
+      const guard=()=>{if(epoch!==expectedEpoch||sessionId!==expectedSession)fail('DESKTOP_ACCOUNT_SESSION_CHANGED',409);};
+      return operation.run({epoch:expectedEpoch,sessionSignal,signal},async()=>{
+        const headers={};if(range!==undefined){if(!/^bytes=\d+-\d*$/u.test(range)||range.length>80)fail('DESKTOP_DOWNLOAD_DENIED',403);headers.Range=range;}
+        if(ifRange!==undefined){if(ifRange.length>300||/[\r\n\0]/u.test(ifRange))fail('DESKTOP_DOWNLOAD_DENIED',403);headers['If-Range']=ifRange;}
+        const fetchFile=()=>transport(origin+pathname,{method:'GET',signal:AbortSignal.any([sessionSignal,...(signal?[signal]:[])]),headers:{...headers,...(tokens?{Authorization:'Bearer '+tokens.accessToken}:{})}});
+        let response=await fetchFile();guard();
+        if(response.status===401&&tokens){await response.body?.cancel();await api.getProfile();guard();response=await fetchFile();guard();}
+        const type=response.headers.get('content-type')?.split(';')[0].trim().toLowerCase(),maximum=2*1024**3;
+        if(![200,206].includes(response.status)||!['application/zip','application/x-zip-compressed','application/octet-stream','application/x-msdownload','application/vnd.microsoft.portable-executable'].includes(type)){
+          await response.body?.cancel().catch(()=>{});fail('DESKTOP_DOWNLOAD_UNAVAILABLE',404);
+        }
+        const length=response.headers.get('content-length');if(length!==null&&(!/^\d+$/u.test(length)||Number(length)>maximum)){await response.body?.cancel();fail('DESKTOP_DOWNLOAD_TOO_LARGE',413);}
+        const disposition=response.headers.get('content-disposition');const output={'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',
+          'Content-Disposition':disposition&&disposition.includes(';')&&disposition.length<1024&&!/[\r\n]/u.test(disposition)?'attachment'+disposition.slice(disposition.indexOf(';')):'attachment; filename="release-download"'};
+        for(const key of ['content-length','content-range','accept-ranges','etag','last-modified'])if(response.headers.has(key))output[key]=response.headers.get(key);
+        return new Response(boundedResponseStream(response,{maxBytes:maximum,guard}),{status:response.status,headers:output});
+      });
+    },
     gameContext(workId, capability, descriptor) {
       if (descriptor) gameAuthority.assertLaunch(descriptor, capability);
       else if (!tokens || !gameAuthority.hasLaunch(workId, capability)) fail('DESKTOP_GAME_SESSION_DENIED', 403);
@@ -338,13 +369,15 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       });
       // The anonymous Chromium transport caches eligible public images. Keep
       // the UI-scheme response uncached so account/private media never persist.
-      return new Response(body, { headers: { 'Content-Type': type,
+      return new Response(body, { headers: { 'Content-Type': type,...(new URL(pathname,origin).searchParams.get('download')==='1'?{'Content-Disposition':'attachment; filename="mooyu-share-card.png"'}:{}),
         'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' } });
     },
     // Auth mutations stay ordered. Business work has a bounded, cancellable
     // queue; state/cancellation/local sign-out never wait behind business I/O.
     call(method, args = []) {
-      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || JSON.stringify(args).length>(method === 'business' ? businessRequestLimit(args[0]) : 4096)) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
+      let payloadSize;try{payloadSize=businessPayloadSize(args);}catch{return Promise.reject(Object.assign(Error('DESKTOP_ACCOUNT_INPUT_INVALID'),{code:'DESKTOP_ACCOUNT_INPUT_INVALID'}));}
+      if (typeof method !== 'string' || !Array.isArray(args) || args.length>1 || payloadSize>(method === 'business' ? businessRequestLimit(args[0]) : 4096)) return Promise.reject(Object.assign(new Error('DESKTOP_ACCOUNT_INPUT_INVALID'), { code: 'DESKTOP_ACCOUNT_INPUT_INVALID' }));
+      if(method==='business'&&/Paper/u.test(args[0]?.method||'')&&!(paperEnabled&&environment==='local-test'))return Promise.reject(Object.assign(Error('PAPER_STUDY_DISABLED'),{code:'PAPER_STUDY_DISABLED',status:404}));
       if (['startGitHubWeb','cancelGitHub','createChallenge','verifyChallenge','clear','logout','logoutAll'].includes(method)) cancelGitHub();
       if (method === 'state') return Promise.resolve(state());
       if (method === 'cancelGitHub') return Promise.all(cancelledGrants.splice(0).map(revokeGitHubTokens)).then(() => ({ cancelled: true }));

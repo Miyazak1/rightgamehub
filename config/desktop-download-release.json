@@ -1,15 +1,15 @@
 {
-  "version": "0.2.0-preview.10",
+  "version": "0.2.0-preview.11",
   "releaseDate": "2026-11-16",
   "notes": {
     "zh-CN": [
-      "接通桌面创作中心、作品管理、治理审批和平台运营数据。",
-      "支持原生选择文件上传，GitHub 授权在浏览器完成；保留聊天头像和学习助手。",
+      "补齐社区、变化雷达、猜百科成绩与社交、云存档及规则包管理的桌面接入。",
+      "支持分享图片预览、原生文件上传下载和浏览器外链；保留聊天头像与平台助手。",
       "保留账号、存档和设置；不包含论文研读功能。"
     ],
     "en": [
-      "Connect desktop creator tools, work management, governance and operations data.",
-      "Upload selected files natively and authorize GitHub in your browser; retain chat avatars and learning assistance.",
+      "Connect community, Change Radar, Guess Baike social results, cloud saves and rule package management on desktop.",
+      "Support share images, native uploads and downloads, and external browser links; retain chat avatars and the platform assistant.",
       "Accounts, saves and settings are preserved. Paper study is excluded."
     ]
   }

@@ -99,6 +99,12 @@ export function createDesktopGameAuthority(clock = Date.now) {
       while (launches.size > 32) launches.delete(launches.keys().next().value);
     },
     before(method, values) {
+      if(['getGameSavePolicy','listGameSaves','getGameSaveMetadata','readGameSave','getGameSaveWriteReceipt','writeGameSave','deleteGameSave','listGameSaveHistory','restoreGameSave'].includes(method)){
+        const scope=values[0],grant=sessions.get(scope.gameSessionId);
+        if(method==='getGameSavePolicy'&&!scope.gameSessionId){if(!this.hasLaunch(scope.workId,'cloudSave'))denied();return;}
+        if(!grant||grant.expiresAt<=clock()||!grant.cloudSave||grant.workId!==scope.workId||scope.releaseId&&scope.releaseId!==grant.releaseId||scope.channel&&scope.channel!==grant.channel)denied();return;
+      }
+      if(method==='joinMultiplayerRoom'){if(!rooms.has(values[0]))denied();return;}
       if (!Object.hasOwn(GAME_METHODS, method)) return;
       if (method === 'getGameShare') return;
       if (method === 'listMultiplayerModes') { if (!this.hasLaunch(values[0], 'multiplayer')) denied(); return; }
@@ -119,7 +125,7 @@ export function createDesktopGameAuthority(clock = Date.now) {
         const value = response.data, capabilities = launches.get(launchKey(values[0]));
         if (!capabilities || !value || !/^[A-Za-z0-9_-]{43}$/.test(value.gameSessionId) ||
             !Array.isArray(value.capabilities) || !Number.isFinite(Date.parse(value.expiresAt)) || Date.parse(value.expiresAt) <= clock()) denied();
-        sessions.set(value.gameSessionId, { expiresAt: Date.parse(value.expiresAt), competition: capabilities.competition === true && value.capabilities.includes('competition'), shareLinks: capabilities.shareLinks === true && value.capabilities.includes('shareLinks') });
+        sessions.set(value.gameSessionId, {workId:values[0].workId,releaseId:values[0].releaseId,channel:values[0].channel??'production',cloudSave:capabilities.cloudSave===true&&value.capabilities.includes('cloudSave'), expiresAt: Date.parse(value.expiresAt), competition: capabilities.competition === true && value.capabilities.includes('competition'), shareLinks: capabilities.shareLinks === true && value.capabilities.includes('shareLinks') });
         while (sessions.size > 64) sessions.delete(sessions.keys().next().value);
       }
       if (method === 'revokeGameSession') sessions.delete(values[0]);
@@ -127,7 +133,7 @@ export function createDesktopGameAuthority(clock = Date.now) {
       if (method === 'listMultiplayerModes') for (const mode of response.data ?? []) {
         if (!uuid(mode.id) || mode.workId !== values[0]) denied(); boundedSet(modes, mode.id, mode.workId);
       }
-      if (['listMultiplayerRooms','createMultiplayerRoom','getMultiplayerRoom','joinMultiplayerRoomScoped','leaveMultiplayerRoom','setMultiplayerReady'].includes(method)) for (const room of Array.isArray(response.data) ? response.data : [response.data]) {
+      if (['listMultiplayerRooms','createMultiplayerRoom','getMultiplayerRoom','joinMultiplayerRoom','joinMultiplayerRoomScoped','leaveMultiplayerRoom','setMultiplayerReady'].includes(method)) for (const room of Array.isArray(response.data) ? response.data : [response.data]) {
         if (!uuid(room?.id) || !modes.has(room.modeId)) denied(); boundedSet(rooms, room.id, room.modeId);
       }
       if (['startMultiplayerRoom','getMultiplayerMatch'].includes(method)) {

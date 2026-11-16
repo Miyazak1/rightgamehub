@@ -1,7 +1,7 @@
 {
   "name": "gamehub",
   "displayName": "MOOYU.FUN / 墨鱼工坊",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Discover, create locally, validate and publish MOOYU.FUN games and interactive courseware from Claude Code.",
   "author": {
     "name": "MOOYU.FUN",

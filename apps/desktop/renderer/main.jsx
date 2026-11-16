@@ -9,6 +9,7 @@ import { createDesktopAccountAdapter } from './account-adapter.mjs';
 import { createDesktopBusinessApi } from './business-api.mjs';
 import { createDesktopMultiplayerFactory } from './realtime-adapter.mjs';
 import { createDesktopFileExporter } from './file-adapter.mjs';
+import {PlatformLinksContext} from '../../../packages/platform-client/src/PlatformLinks.jsx';
 
 const browser = createBrowserHostAdapter({ host: 'desktop-app', surface: 'desktop-window' });
 let env;
@@ -30,5 +31,5 @@ const host = { ...browser, files: createDesktopFileExporter(globalThis.mooyuDesk
     canPersistCredential: !!session };
 } };
 createRoot(document.getElementById('root')).render(<React.StrictMode>
-  <App hostAdapter={host} apiClient={api} routing="history" demo={false}/>
+  <PlatformLinksContext.Provider value={globalThis.mooyuDesktop.links}><App hostAdapter={host} apiClient={api} routing="history" demo={false}/></PlatformLinksContext.Provider>
 </React.StrictMode>);

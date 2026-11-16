@@ -53,8 +53,8 @@ test('import requires PDF signature, canonical bounded base64 and explicit right
 test('HTTP and desktop transports require login and reject production/admin passthrough; isolated replay rejects unknown PDFs',async t=>{
   const backend=await createPaperStudyApiFixture();t.after(()=>backend.close());
   assert.equal((await fetch(backend.origin+'/v1/me/paper-studies')).status,401);
-  const session=await createDesktopAccountSession({apiOrigin:backend.origin,vault:createMemoryCredentialVault()});
-  const api=createDesktopBusinessApi({async call(method,args){try{return{ok:true,value:await session.call(method,args)};}catch(e){return{ok:false,error:{code:e.code,status:e.status,message:e.message}};}}},backend.origin);
+  const session=await createDesktopAccountSession({apiOrigin:backend.origin,vault:createMemoryCredentialVault(),paperEnabled:true});
+  const api=createDesktopBusinessApi({async call(method,args){try{return{ok:true,value:await session.call(method,args)};}catch(e){return{ok:false,error:{code:e.code,status:e.status,message:e.message}};}}},backend.origin,undefined,{paperEnabled:true});
   await assert.rejects(api.listPaperStudies(),e=>e.status===401);
   const challenge=await session.call('createChallenge',[{email:'paper@example.test'}]);await session.call('verifyChallenge',[{challengeId:challenge.data.challengeId,code:backend.code()}]);
   assert.deepEqual((await api.listPaperStudies()).data,[]);

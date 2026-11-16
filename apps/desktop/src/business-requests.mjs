@@ -23,7 +23,8 @@ export function createBusinessRequests({ run, timeoutMs = 20000, concurrency = 4
         const item = { id, request, epoch, sessionSignal, controller, started: false, finished: false };
         const onAbort = () => item.finish(controller.signal.reason);
         const duration=timeoutForRequest?timeoutForRequest(request):timeoutMs;
-        if(!Number.isInteger(duration)||duration<1||duration>(request.method==='uploadContent'?1800000:80000)){reject(error('DESKTOP_BUSINESS_QUEUE_CONFIG_INVALID',400));return;}
+        const maximum=['uploadContent','uploadMultiplayerRulePackage'].includes(request.method)?1800000:request.method.startsWith('downloadAdminMultiplayerRule')?120000:80000;
+        if(!Number.isInteger(duration)||duration<1||duration>maximum){reject(error('DESKTOP_BUSINESS_QUEUE_CONFIG_INVALID',400));return;}
         const timer = setTimeout(() => controller.abort(error('REQUEST_TIMEOUT', 408)), duration);
         item.finish = (failure, value) => {
           if (item.finished) return;

@@ -79,8 +79,8 @@ var ApiError = class extends Error {
     this.details = details && typeof details === "object" && !Array.isArray(details) ? details : {};
   }
 };
-async function readBoundedResponse(response, limit, signal) {
-  if (!Number.isSafeInteger(limit) || limit < 0 || limit > 1048576) throw new TypeError("Invalid save response limit.");
+async function readBoundedResponse(response, limit, signal, maximum = 1048576) {
+  if (!Number.isSafeInteger(limit) || limit < 0 || limit > maximum) throw new TypeError("Invalid save response limit.");
   const declared = response.headers.get("content-length");
   if (declared !== null && (!/^[0-9]+$/u.test(declared) || Number(declared) > limit)) {
     response.body?.cancel?.().catch(() => {
@@ -130,6 +130,10 @@ var saveConditions = (input) => ({
   ...input.createOnly ? { "If-None-Match": "*" } : { "If-Match": input.expectedEtag }
 });
 var randomKey = () => globalThis.crypto?.randomUUID?.() ?? `gh-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+var query2 = (input) => {
+  const params = new URLSearchParams(Object.entries(input).filter(([, value]) => value !== void 0 && value !== null));
+  return params.size ? "?" + params : "";
+};
 function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccessToken = () => null, getRefreshToken = () => null, setTokens = () => {
 }, withRefreshLock = (callback) => callback(), timeoutMs = 15e3, xhrFactory = () => new XMLHttpRequest() } = {}) {
   let refreshPromise = null;
@@ -150,9 +154,9 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
     }
     return refreshPromise;
   };
-  async function request(path7, { method = "GET", body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false, beforeRequest, responseBytesLimit } = {}) {
+  async function request(path7, { method = "GET", body, rawBody, headers = {}, signal, auth = false, idempotent = false, allowRefresh = true, keepalive = false, beforeRequest, responseBytesLimit, responseBlobLimit, requestTimeoutMs = timeoutMs } = {}) {
     const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(new Error("timeout")), timeoutMs);
+    const timer = setTimeout(() => timeout.abort(new Error("timeout")), requestTimeoutMs);
     const hasCombinedSignal = Boolean(globalThis.AbortSignal?.any);
     const combined = hasCombinedSignal ? AbortSignal.any([timeout.signal, ...signal ? [signal] : []]) : timeout.signal;
     const cancel = () => timeout.abort(signal?.reason);
@@ -177,13 +181,22 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
       if (response.status === 401 && auth && allowRefresh) {
         const currentToken = await getAccessToken();
         if (token && currentToken && token !== currentToken) {
-          return request(path7, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
+          return request(path7, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit, responseBlobLimit, requestTimeoutMs });
         }
-        if (await refreshSession(signal, token)) return request(path7, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit });
+        if (await refreshSession(signal, token)) return request(path7, { method, body, rawBody, headers, signal, auth, idempotent, allowRefresh: false, keepalive, beforeRequest, responseBytesLimit, responseBlobLimit, requestTimeoutMs });
       }
       if (response.ok && responseBytesLimit !== void 0) {
         const bytes = await readBoundedResponse(response, responseBytesLimit, combined);
         return { data: bytes, etag: response.headers.get("etag"), sha256: response.headers.get("x-content-sha256"), schemaVersion: Number(response.headers.get("x-gamehub-save-schema")), contentType: response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() };
+      }
+      if (response.ok && responseBlobLimit !== void 0) {
+        try {
+          const bytes = await readBoundedResponse(response, responseBlobLimit, combined, 64 * 1024 ** 2);
+          return { data: new Blob([bytes], { type: response.headers.get("content-type") || "application/octet-stream" }), digest: response.headers.get("digest") };
+        } catch (error) {
+          if (error.code?.startsWith("SAVE_")) throw new ApiError({ code: "DOWNLOAD_TOO_LARGE", message: "\u4E0B\u8F7D\u5185\u5BB9\u8D85\u8FC7\u5141\u8BB8\u7684\u5927\u5C0F\u6216\u65E0\u6CD5\u8BFB\u53D6\u3002", retryable: false });
+          throw error;
+        }
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new ApiError({ status: response.status, ...payload.error ?? {}, message: payload.error?.message ?? `\u8BF7\u6C42\u5931\u8D25 (${response.status})` });
@@ -199,18 +212,195 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
     }
   }
   async function authenticatedDownload(path7, options = {}) {
-    const token = await getAccessToken();
-    const response = await fetchImpl(`${baseUrl}${path7}`, { signal: options.signal, headers: { Accept: options.accept ?? "application/zip", ...token ? { Authorization: `Bearer ${token}` } : {} } });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new ApiError({ status: response.status, ...payload.error ?? {}, message: payload.error?.message ?? `\u4E0B\u8F7D\u5931\u8D25 (${response.status})` });
-    }
-    return { data: await response.blob(), digest: response.headers.get("digest") };
+    return request(path7, { signal: options.signal, auth: true, responseBlobLimit: 64 * 1024 ** 2, requestTimeoutMs: options.requestTimeoutMs ?? 12e4, headers: { Accept: options.accept ?? "application/zip" } });
   }
   return {
     ...communityApi(request),
+    listBlogArticles: ({ limit = 20, cursor = null, locale = null, q = null, author = null } = {}, options) => request(`/v1/blog/articles?${new URLSearchParams(Object.fromEntries(Object.entries({ limit, cursor, locale, q, author }).filter(([, value]) => value != null && value !== "")))}`, options),
+    getBlogArticle: (slug, options) => request(`/v1/blog/articles/${encodeURIComponent(slug)}`, options),
+    askBlogQuestion: (slug, body, options) => request(`/v1/blog/articles/${encodeURIComponent(slug)}/questions`, { ...options, requestTimeoutMs: options?.requestTimeoutMs ?? 13e4, method: "POST", body, auth: true, idempotent: true }),
+    listMyBlogArticles: ({ limit = 50, cursor = null } = {}, options) => request(`/v1/me/blog/articles?${new URLSearchParams(Object.fromEntries(Object.entries({ limit, cursor }).filter(([, value]) => value != null && value !== "")))}`, { ...options, auth: true }),
+    getMyBlogArticle: (articleId, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}`, { ...options, auth: true }),
+    createBlogDraft: (body, options) => request("/v1/me/blog/articles", { ...options, method: "POST", body, auth: true, idempotent: true }),
+    updateBlogDraft: (articleId, version, body, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/draft`, { ...options, method: "PUT", body, auth: true, idempotent: true, headers: { "If-Match": `"article-${articleId}-${version}"`, ...options?.headers ?? {} } }),
+    publishBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/publish`, { ...options, method: "POST", auth: true, idempotent: true, headers: { "If-Match": `"article-${articleId}-${version}"`, ...options?.headers ?? {} } }),
+    withdrawBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/withdraw`, { ...options, method: "POST", auth: true, idempotent: true, headers: { "If-Match": `"article-${articleId}-${version}"`, ...options?.headers ?? {} } }),
+    listAdminAgents: (options) => request("/v1/admin/agents", { ...options, auth: true }),
+    createAdminAgent: (body, options) => request("/v1/admin/agents", { ...options, method: "POST", body, auth: true }),
+    suspendAdminAgent: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/suspend`, { ...options, method: "POST", auth: true }),
+    setAdminAgentProviderKey: (agentUserId, apiKey, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-key`, { ...options, method: "PUT", body: { apiKey }, auth: true }),
+    listAdminAgentProviderModels: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-models`, { ...options, auth: true }),
+    getAdminAgentBehaviorProfile: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/behavior-profile`, { ...options, auth: true }),
+    updateAdminAgentBehaviorProfile: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/behavior-profile`, { ...options, method: "PUT", body, auth: true }),
+    deleteAdminAgentProviderKey: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-key`, { ...options, method: "DELETE", auth: true }),
+    updateAdminAgentBlogAutomation: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-automation`, { ...options, method: "PUT", body, auth: true }),
+    runAdminAgentBlogNow: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs`, { ...options, method: "POST", auth: true }),
+    listAdminAgentBlogRuns: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    withdrawAdminAgentBlogArticle: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-runs/${encodeURIComponent(runId)}/withdraw`, { ...options, method: "POST", auth: true }),
+    getAdminAgentRuntimeOverview: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-overview`, { ...options, auth: true }),
+    listAdminAgentRuntimeRuns: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    registerAdminCapabilityHostBinding: (body, options) => request("/v1/admin/capability-execution/host-bindings", { ...options, method: "POST", body, auth: true, idempotent: true }),
+    getCapabilityHostSnapshot: (agentUserId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    submitCapabilityHostRun: (agentUserId, profile, input, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/runs`, { ...options, method: "POST", body: { profile, input }, auth: true, idempotent: true }),
+    getCapabilityHostRun: (agentUserId, runId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/runs/${encodeURIComponent(runId)}`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    cancelCapabilityHostRun: (agentUserId, runId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/runs/${encodeURIComponent(runId)}/cancel`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    listCapabilityHostRunArtifacts: (agentUserId, runId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/runs/${encodeURIComponent(runId)}/artifacts`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    getCapabilityHostArtifactOpenDirective: (agentUserId, artifactId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/artifacts/${encodeURIComponent(artifactId)}/open`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    getCapabilityHostArtifactContent: (agentUserId, artifactId, profile, options) => request(`/v1/me/agents/${encodeURIComponent(agentUserId)}/capability-host/artifacts/${encodeURIComponent(artifactId)}/content`, { ...options, method: "POST", body: { profile }, auth: true, idempotent: true }),
+    getAdminAgentFoundationDraft: (agentUserId, articleId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/foundation-drafts/${encodeURIComponent(articleId)}`, { ...options, auth: true }),
+    getAdminAgentRuntimeTimeline: (agentUserId, runId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/runtime-runs/${encodeURIComponent(runId)}`, { ...options, auth: true }),
+    listPaperStudies: (options) => request("/v1/me/paper-studies", { ...options, auth: true }),
+    importPaperStudy: (body, options) => request("/v1/me/paper-studies", { ...options, method: "POST", body, auth: true, idempotent: true }),
+    getPaperStudy: (id, options) => request(`/v1/me/paper-studies/${encodeURIComponent(id)}`, { ...options, auth: true }),
+    getPaperStudySource: (id, options) => request(`/v1/me/paper-studies/${encodeURIComponent(id)}/source`, { ...options, auth: true }),
+    analyzePaperStudy: (id, options) => request(`/v1/me/paper-studies/${encodeURIComponent(id)}/analyze`, { ...options, method: "POST", body: {}, auth: true, idempotent: true }),
+    generatePaperStudyDraft: (id, options) => request(`/v1/me/paper-studies/${encodeURIComponent(id)}/draft`, { ...options, method: "POST", body: {}, auth: true, idempotent: true }),
+    getAdminAgentPaperAnalysis: (agentUserId, analysisId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-analyses/${encodeURIComponent(analysisId)}`, { ...options, auth: true }),
+    listAdminAgentPaperFollowUps: (agentUserId, analysisId, limit = 20, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-analyses/${encodeURIComponent(analysisId)}/follow-ups?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    askAdminAgentPaperFollowUp: (agentUserId, analysisId, question, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-analyses/${encodeURIComponent(analysisId)}/follow-ups`, { ...options, requestTimeoutMs: options?.requestTimeoutMs ?? 36e4, method: "POST", body: { question }, auth: true, idempotent: true }),
+    listAdminAgentPaperIntakes: (agentUserId, limit = 30, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-intakes?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    registerAdminAgentPaperDoi: (agentUserId, doi, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-intakes/doi`, { ...options, method: "POST", body: { doi }, auth: true, idempotent: true }),
+    uploadAdminAgentPaperPdf: (agentUserId, file, { rightsAttestation = "user-owned", doi = "", ...options } = {}) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-intakes/pdf`, { ...options, requestTimeoutMs: options.requestTimeoutMs ?? 18e4, method: "POST", rawBody: file, auth: true, idempotent: true, headers: { "Content-Type": "application/pdf", "X-Paper-Filename": encodeURIComponent(file.name || "paper.pdf"), "X-Paper-Rights": rightsAttestation, ...doi.trim() ? { "X-Paper-Doi": doi.trim() } : {}, ...options.headers ?? {} } }),
+    listAdminAgentPaperDiscoveries: (agentUserId, limit = 25, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-discoveries?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    discoverAdminAgentPaper: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-discoveries`, { ...options, method: "POST", body, auth: true, idempotent: true }),
+    listAdminAgentPaperResearchQueue: (agentUserId, limit = 50, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-queue?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    setAdminAgentPaperResearchQueueState: (agentUserId, queueItemId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-queue/${encodeURIComponent(queueItemId)}/state`, { ...options, method: "POST", body, auth: true, idempotent: true }),
+    listAdminAgentPaperResearchExecutions: (agentUserId, limit = 50, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-executions?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    startAdminAgentPaperResearchExecution: (agentUserId, queueItemId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-queue/${encodeURIComponent(queueItemId)}/executions`, { ...options, method: "POST", body: { externalProcessingConsent: false }, auth: true, idempotent: true }),
+    retryAdminAgentPaperResearchExecution: (agentUserId, executionId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-executions/${encodeURIComponent(executionId)}/retry`, { ...options, method: "POST", body: {}, auth: true, idempotent: true }),
+    cancelAdminAgentPaperResearchExecution: (agentUserId, executionId, reason, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-executions/${encodeURIComponent(executionId)}/cancel`, { ...options, method: "POST", body: { reason }, auth: true, idempotent: true }),
+    getAdminAgentPaperResearchOperations: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-operations`, { ...options, auth: true }),
+    setAdminAgentPaperResearchOperationsPolicy: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-operations/policy`, { ...options, method: "PUT", body, auth: true, idempotent: true }),
+    previewAdminAgentPaperResearchRetention: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-operations/retention-preview`, { ...options, auth: true }),
+    applyAdminAgentPaperResearchRetention: (agentUserId, reason, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-operations/retention-runs`, { ...options, method: "POST", body: { reason }, auth: true, idempotent: true }),
+    recoverAdminAgentPaperResearchExpiredStage: (agentUserId, executionId, reason, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/paper-research-executions/${encodeURIComponent(executionId)}/recover-expired-stage`, { ...options, method: "POST", body: { reason }, auth: true, idempotent: true }),
+    getAdminAgentPublicationCutoverPreflight: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-cutover-preflight`, { ...options, auth: true }),
+    cutoverAdminAgentPublication: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-cutover`, { ...options, method: "POST", body, auth: true, idempotent: true }),
+    rollbackAdminAgentPublication: (agentUserId, body, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/blog-publication-rollback`, { ...options, method: "POST", body, auth: true, idempotent: true }),
+    setAdminAgentPublicSchedule: (agentUserId, enabled, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/public-schedule`, { ...options, method: "PUT", body: { enabled }, auth: true, idempotent: true }),
+    runAdminAgentFoundationNow: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/public-runs`, { ...options, method: "POST", auth: true, idempotent: true }),
+    listChangeWatches: (options) => request("/v1/me/change-watches", { ...options, auth: true }),
+    createChangeWatch: (body, options) => request("/v1/me/change-watches", { ...options, method: "POST", body, auth: true }),
+    getChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, auth: true }),
+    updateChangeWatch: (id, body, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, method: "PATCH", body, auth: true }),
+    deleteChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}`, { ...options, method: "DELETE", auth: true }),
+    listChangeWatchSnapshots: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/snapshots`, { ...options, auth: true }),
+    checkChangeWatch: (id, options) => request(`/v1/me/change-watches/${encodeURIComponent(id)}/check`, { ...options, method: "POST", auth: true }),
+    getResearchNewsSourceCatalog: (options) => request("/v1/me/research-news-source-catalog", { ...options, auth: true }),
+    listResearchTopics: (options) => request("/v1/me/research-topics", { ...options, auth: true }),
+    createResearchTopic: (body, options) => request("/v1/me/research-topics", { ...options, method: "POST", body, auth: true }),
+    getResearchTopic: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}`, { ...options, auth: true }),
+    updateResearchTopic: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}`, { ...options, method: "PATCH", body, auth: true }),
+    createResearchContract: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/contracts`, { ...options, method: "POST", body, auth: true }),
+    listResearchTopicWatches: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/watches`, { ...options, auth: true }),
+    linkResearchTopicWatch: (id, watchId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/watches/${encodeURIComponent(watchId)}`, { ...options, method: "PUT", auth: true }),
+    unlinkResearchTopicWatch: (id, watchId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/watches/${encodeURIComponent(watchId)}`, { ...options, method: "DELETE", auth: true }),
+    listResearchTopicRuns: (id, limit = 30, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    getResearchTopicOperationsSummary: (id, days = 30, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/operations-summary?days=${encodeURIComponent(days)}`, { ...options, auth: true }),
+    getResearchTopicStorageAssessment: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/storage-assessment`, { ...options, auth: true }),
+    listResearchTopicBillingReconciliations: (id, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/billing-reconciliations?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    createResearchTopicBillingReconciliation: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/billing-reconciliations`, { ...options, method: "POST", body, auth: true }),
+    reviewResearchTopicBillingReconciliation: (id, reconciliationId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/billing-reconciliations/${encodeURIComponent(reconciliationId)}/reviews`, { ...options, method: "POST", body, auth: true }),
+    listResearchRunActions: (id, runId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/runs/${encodeURIComponent(runId)}/actions`, { ...options, auth: true }),
+    listResearchRunSources: (id, runId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/runs/${encodeURIComponent(runId)}/sources`, { ...options, auth: true }),
+    triggerResearchTopicRun: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/runs`, { ...options, method: "POST", auth: true }),
+    listResearchTopicSources: (id, limit = 100, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicSourceRelationships: (id, limit = 100, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/source-relationships?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    reviewResearchTopicSourceRelationship: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/source-relationships`, { ...options, method: "POST", body, auth: true }),
+    listResearchTopicDiscoveries: (id, query3 = 50, options) => {
+      const params = typeof query3 === "number" ? { limit: query3 } : Object.fromEntries(Object.entries({ limit: query3?.limit ?? 50, decision: query3?.decision, evaluatorKind: query3?.evaluatorKind, sourceStatus: query3?.sourceStatus, sort: query3?.sort, minTopicRelevance: query3?.minTopicRelevance }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/discoveries?${new URLSearchParams(params)}`, { ...options, auth: true });
+    },
+    getResearchTopicDiscoveryStats: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/discovery-stats`, { ...options, auth: true }),
+    getResearchTopicCandidateEvaluation: (id, evaluationKey = null, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation${evaluationKey ? `?evaluationKey=${encodeURIComponent(evaluationKey)}` : ""}`, { ...options, auth: true }),
+    listResearchTopicCandidateEvaluationDatasets: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets`, { ...options, auth: true }),
+    createResearchTopicCandidateEvaluationDataset: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets`, { ...options, method: "POST", auth: true, body }),
+    importResearchTopicCandidateEvaluationDataset: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets/import`, { ...options, method: "POST", auth: true, body }),
+    listResearchTopicCandidateEvaluationRuns: (id, datasetId, limit = 20, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets/${encodeURIComponent(datasetId)}/runs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicCandidateEvaluationPredictions: (id, datasetId, options = {}) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets/${encodeURIComponent(datasetId)}/predictions${query2({ evaluationKey: options.evaluationKey, limit: options.limit ?? 500 })}`, { ...options, auth: true }),
+    runResearchTopicCandidateEvaluationDataset: (id, datasetId, body = {}, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/candidate-evaluation-datasets/${encodeURIComponent(datasetId)}/runs`, { ...options, method: "POST", auth: true, body }),
+    reviewResearchTopicDiscovery: (id, discoveryId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/discoveries/${encodeURIComponent(discoveryId)}/reviews`, { ...options, method: "POST", auth: true, body }),
+    listResearchTopicEntities: (id, limit = 100, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/entities?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    createResearchTopicEntity: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/entities`, { ...options, method: "POST", body, auth: true }),
+    updateResearchTopicEntity: (id, entityId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/entities/${encodeURIComponent(entityId)}`, { ...options, method: "PATCH", body, auth: true }),
+    listResearchTopicEntityStatusReviews: (id, entityId, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/entities/${encodeURIComponent(entityId)}/status-reviews?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    addResearchTopicSource: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources`, { ...options, method: "POST", body, auth: true }),
+    updateResearchTopicSource: (id, sourceId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources/${encodeURIComponent(sourceId)}`, { ...options, method: "PATCH", body, auth: true }),
+    listResearchTopicSourceStatusReviews: (id, sourceId, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources/${encodeURIComponent(sourceId)}/status-reviews?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicSourceAuthorityReviews: (id, sourceId, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources/${encodeURIComponent(sourceId)}/authority-reviews?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    reviewResearchTopicSourceAuthority: (id, sourceId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources/${encodeURIComponent(sourceId)}/authority-reviews`, { ...options, method: "POST", body, auth: true }),
+    inspectResearchTopicSource: (id, sourceId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/sources/${encodeURIComponent(sourceId)}/inspect`, { ...options, method: "POST", auth: true }),
+    listResearchTopicEvidence: (id, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/evidence?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicEvents: (id, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/events?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicEventClusterDiagnostics: (id, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/event-cluster-diagnostics?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicReports: (id, limit = 30, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/reports?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    listResearchTopicNotifications: (id, { unreadOnly = false, limit = 50 } = {}, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/notifications?unreadOnly=${encodeURIComponent(unreadOnly)}&limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    markResearchEventRead: (eventId, options) => request(`/v1/me/research-events/${encodeURIComponent(eventId)}/read`, { ...options, method: "POST", auth: true }),
+    linkResearchTopicEventEntity: (id, eventId, entityId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/events/${encodeURIComponent(eventId)}/entities/${encodeURIComponent(entityId)}`, { ...options, method: "PUT", auth: true }),
+    getResearcherCapabilities: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/researcher`, { ...options, auth: true }),
+    listResearcherNodes: (options) => request("/v1/me/researcher-nodes", { ...options, auth: true }),
+    createResearcherNode: (body, options) => request("/v1/me/researcher-nodes", { ...options, method: "POST", body, auth: true }),
+    revokeResearcherNode: (nodeId, options) => request(`/v1/me/researcher-nodes/${encodeURIComponent(nodeId)}`, { ...options, method: "DELETE", auth: true }),
+    listResearchTopicGaps: (id, limit = 100, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/gaps?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    createResearchTopicGap: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/gaps`, { ...options, method: "POST", body, auth: true }),
+    queueResearcherJob: (id, gapId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/gaps/${encodeURIComponent(gapId)}/jobs`, { ...options, method: "POST", auth: true }),
+    listResearcherJobs: (id, limit = 50, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/researcher-jobs?limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
+    cancelResearcherJob: (id, jobId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/researcher-jobs/${encodeURIComponent(jobId)}`, { ...options, method: "DELETE", auth: true }),
+    listResearchTopicClaims: (id, query3 = 100, options) => {
+      const params = typeof query3 === "number" ? { limit: query3 } : { limit: query3?.limit ?? 100, ...query3?.status ? { status: query3.status } : {} };
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/claims?${new URLSearchParams(params)}`, { ...options, auth: true });
+    },
+    getResearchTopicFactTimeline: (id, query3 = {}, options) => {
+      const params = new URLSearchParams(Object.entries({ subject: query3.subject, dimensionKey: query3.dimensionKey, predicateKey: query3.predicateKey, scopeKey: query3.scopeKey, scopeValue: query3.scopeValue, from: query3.from, to: query3.to, limit: query3.limit ?? 200 }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/fact-timeline?${params}`, { ...options, auth: true });
+    },
+    listResearchTopicClaimReviewSignals: (id, query3 = {}, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/claim-review-signals?${new URLSearchParams({ limit: query3?.limit ?? 50, openOnly: query3?.openOnly !== false })}`, { ...options, auth: true }),
+    resolveResearchClaimReviewSignal: (signalId, body, options) => request(`/v1/me/research-claim-review-signals/${encodeURIComponent(signalId)}/resolutions`, { ...options, method: "POST", body, auth: true }),
+    getResearchTopicClaim: (id, claimId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/claims/${encodeURIComponent(claimId)}`, { ...options, auth: true }),
+    reviewResearchTopicClaim: (id, claimId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/claims/${encodeURIComponent(claimId)}/reviews`, { ...options, method: "POST", body, auth: true }),
+    listResearchTopicMethodTemplates: (id, status, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/method-templates${status ? `?status=${encodeURIComponent(status)}` : ""}`, { ...options, auth: true }),
+    createResearchTopicMethodTemplate: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/method-templates`, { ...options, method: "POST", body, auth: true }),
+    retireResearchTopicMethodTemplate: (id, methodId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/method-templates/${encodeURIComponent(methodId)}`, { ...options, method: "DELETE", auth: true }),
+    listResearchTopicMetrics: (id, filters = {}, options) => {
+      const params = new URLSearchParams(Object.entries({ status: filters.status ?? "active", metricKey: filters.metricKey, from: filters.from, to: filters.to, dimensionKey: filters.dimensionKey, dimensionValue: filters.dimensionValue, limit: filters.limit ?? 500 }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/metrics?${params}`, { ...options, auth: true });
+    },
+    compareResearchTopicMetric: (id, query3, options) => {
+      const params = new URLSearchParams(Object.entries({ metricKey: query3.metricKey, methodVersion: query3.methodVersion, dimensionKey: query3.dimensionKey, from: query3.from, to: query3.to }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-comparison?${params}`, { ...options, auth: true });
+    },
+    matrixResearchTopicMetrics: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-matrix`, { ...options, method: "POST", body, auth: true }),
+    trendResearchTopicMetric: (id, query3, options) => {
+      const params = new URLSearchParams(Object.entries({ metricKey: query3.metricKey, methodVersion: query3.methodVersion, interval: query3.interval ?? "month", dimensionKey: query3.dimensionKey, dimensionValue: query3.dimensionValue, from: query3.from, to: query3.to }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-trend?${params}`, { ...options, auth: true });
+    },
+    listResearchTopicMetricViews: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-views`, { ...options, auth: true }),
+    createResearchTopicMetricView: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-views`, { ...options, method: "POST", body, auth: true }),
+    deleteResearchTopicMetricView: (id, viewId, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/metric-views/${encodeURIComponent(viewId)}`, { ...options, method: "DELETE", auth: true }),
+    getResearchTopicQualitySummary: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/quality-summary`, { ...options, auth: true }),
+    listResearchTopicExternalBenchmarkCases: (id, query3 = {}, options) => {
+      const params = new URLSearchParams(Object.entries({ periodKey: query3.periodKey, status: query3.status, limit: query3.limit ?? 100 }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/external-benchmark-cases?${params}`, { ...options, auth: true });
+    },
+    createResearchTopicExternalBenchmarkCase: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/external-benchmark-cases`, { ...options, method: "POST", body, auth: true }),
+    reviewResearchTopicExternalBenchmarkCase: (id, caseId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/external-benchmark-cases/${encodeURIComponent(caseId)}/reviews`, { ...options, method: "POST", body, auth: true }),
+    listResearchTopicQualitySamples: (id, query3 = {}, options) => {
+      const params = new URLSearchParams(Object.entries({ status: query3.status, periodKey: query3.periodKey, sampleKind: query3.sampleKind, limit: query3.limit }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/quality-samples?${params}`, { ...options, auth: true });
+    },
+    generateResearchTopicQualitySamples: (id, body = {}, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/quality-samples/generate`, { ...options, method: "POST", body, auth: true }),
+    reviewResearchTopicQualitySample: (id, sampleId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/quality-samples/${encodeURIComponent(sampleId)}/reviews`, { ...options, method: "POST", body, auth: true }),
+    resolveResearchTopicQualityCorrection: (id, sampleId, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/quality-samples/${encodeURIComponent(sampleId)}/correction-resolution`, { ...options, method: "POST", body, auth: true }),
+    listResearchTopicDerivedMetrics: (id, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/derived-metrics`, { ...options, auth: true }),
+    createResearchTopicDerivedMetric: (id, body, options) => request(`/v1/me/research-topics/${encodeURIComponent(id)}/derived-metrics`, { ...options, method: "POST", body, auth: true }),
+    evaluateResearchTopicDerivedMetric: (id, derivedId, query3 = {}, options) => {
+      const params = new URLSearchParams(Object.entries({ from: query3.from, to: query3.to }).filter(([, value]) => value != null && value !== ""));
+      return request(`/v1/me/research-topics/${encodeURIComponent(id)}/derived-metrics/${encodeURIComponent(derivedId)}/evaluation?${params}`, { ...options, auth: true });
+    },
+    listChangeEvents: ({ unreadOnly = false, limit = 50 } = {}, options) => request(`/v1/me/change-events?${new URLSearchParams({ unreadOnly: String(Boolean(unreadOnly)), limit: String(limit) })}`, { ...options, auth: true }),
+    markChangeEventRead: (id, options) => request(`/v1/me/change-events/${encodeURIComponent(id)}/read`, { ...options, method: "POST", auth: true }),
     listWorkLeaderboards: (workId, options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards`, options),
-    readCompetitionLeaderboard: (workId, boardId, query2 = {}, options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards/${encodeURIComponent(boardId)}?${new URLSearchParams(Object.entries(query2).filter(([, value]) => value != null))}`, { ...options, auth: true }),
+    readCompetitionLeaderboard: (workId, boardId, query3 = {}, options) => request(`/v1/works/${encodeURIComponent(workId)}/leaderboards/${encodeURIComponent(boardId)}?${new URLSearchParams(Object.entries(query3).filter(([, value]) => value != null))}`, { ...options, auth: true }),
     listCompetitionModes: (session, options) => request("/v1/competition/modes", { ...options, auth: true, headers: { "X-GameHub-Session": session } }),
     startCompetitionRun: (session, body, options) => request("/v1/competition/runs", { ...options, auth: true, method: "POST", body, headers: { "X-GameHub-Session": session } }),
     getCompetitionRun: (session, id, options) => request("/v1/competition/runs/" + encodeURIComponent(id), { ...options, auth: true, headers: { "X-GameHub-Session": session } }),
@@ -220,20 +410,20 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
     listDiscoveryCampaigns: (limit = 3, options) => request(`/v1/discovery/campaigns?limit=${encodeURIComponent(limit)}`, options),
     getDiscoveryCampaign: (slug, options) => request(`/v1/discovery/campaigns/${encodeURIComponent(slug)}`, options),
     discoveryCampaignShareCardUrl: (slug, { download = false, version, locale } = {}) => {
-      const query2 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...locale ? { lang: locale } : {}, ...download ? { download: "1" } : {} });
-      return `/v1/discovery/campaigns/${encodeURIComponent(slug)}/share-card.png${query2.size ? `?${query2}` : ""}`;
+      const query3 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...locale ? { lang: locale } : {}, ...download ? { download: "1" } : {} });
+      return `/v1/discovery/campaigns/${encodeURIComponent(slug)}/share-card.png${query3.size ? `?${query3}` : ""}`;
     },
     listAdminDiscoveryCampaigns: (options) => request("/v1/admin/discovery-campaigns", { ...options, auth: true }),
     createDiscoveryCampaign: (body, options) => request("/v1/admin/discovery-campaigns", { ...options, method: "POST", body, auth: true }),
     updateDiscoveryCampaign: (campaignId, body, options) => request(`/v1/admin/discovery-campaigns/${encodeURIComponent(campaignId)}`, { ...options, method: "PATCH", body, auth: true }),
     getWork: (id, options) => request(`/v1/works/${encodeURIComponent(id)}`, options),
     workShareCardUrl: (id, { download = false, version, locale } = {}) => {
-      const query2 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...locale ? { lang: locale } : {}, ...download ? { download: "1" } : {} });
-      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/share-card.png${query2.size ? `?${query2}` : ""}`;
+      const query3 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...locale ? { lang: locale } : {}, ...download ? { download: "1" } : {} });
+      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/share-card.png${query3.size ? `?${query3}` : ""}`;
     },
     workXhsPromoUrl: (id, slide, { download = false, version } = {}) => {
-      const query2 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...download ? { download: "1" } : {} });
-      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/promo/xhs/${encodeURIComponent(slide)}.png${query2.size ? `?${query2}` : ""}`;
+      const query3 = new URLSearchParams({ ...version ? { v: String(version) } : {}, ...download ? { download: "1" } : {} });
+      return `${baseUrl}/v1/works/${encodeURIComponent(id)}/promo/xhs/${encodeURIComponent(slide)}.png${query3.size ? `?${query3}` : ""}`;
     },
     getWorkLeaderboard: (id, { date, puzzleId, limit = 10, offset = 0 } = {}, options) => request(`/v1/works/${encodeURIComponent(id)}/leaderboard?${new URLSearchParams({ limit, offset, ...date ? { date } : {}, ...puzzleId ? { puzzleId } : {} })}`, { ...options, auth: true }),
     getLaunch: (id, releaseId, options) => request(`/v1/works/${encodeURIComponent(id)}/launch${releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : ""}`, options),
@@ -304,7 +494,7 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
     createRealtimeTicket: (options) => request("/v1/realtime/tickets", { ...options, method: "POST", auth: true }),
     listMultiplayerModes: (workId, options) => request(`/v1/works/${encodeURIComponent(workId)}/multiplayer-modes`, options),
     createMultiplayerMode: (body, options) => request("/v1/admin/multiplayer/modes", { ...options, method: "POST", body, auth: true }),
-    listMultiplayerRooms: (modeId, limit = 30, query2 = "", options) => request(`/v1/multiplayer/rooms?modeId=${encodeURIComponent(modeId)}&limit=${encodeURIComponent(limit)}${query2 ? `&query=${encodeURIComponent(query2)}` : ""}`, options),
+    listMultiplayerRooms: (modeId, limit = 30, query3 = "", options) => request(`/v1/multiplayer/rooms?modeId=${encodeURIComponent(modeId)}&limit=${encodeURIComponent(limit)}${query3 ? `&query=${encodeURIComponent(query3)}` : ""}`, options),
     createMultiplayerRoom: (body, options) => request("/v1/multiplayer/rooms", { ...options, method: "POST", body, auth: true, idempotent: true }),
     getMultiplayerRoom: (roomId, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}`, { ...options, auth: true }),
     joinMultiplayerRoom: (roomId, joinCode, options) => request(`/v1/multiplayer/rooms/${encodeURIComponent(roomId)}/join`, { ...options, method: "POST", body: joinCode ? { joinCode } : {}, auth: true }),
@@ -352,6 +542,12 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
         xhr.send(file);
       });
     },
+    async uploadMultiplayerRulePackageBytes(submissionId, bytes, grantToken, options = {}) {
+      const response = await fetchImpl(`${baseUrl}/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/package`, { method: "PUT", signal: options.signal, headers: { Authorization: `Upload ${grantToken}`, "Content-Type": "application/zip" }, body: bytes });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new ApiError({ status: response.status, ...payload.error ?? {}, message: payload.error?.message ?? `\u4E0A\u4F20\u5931\u8D25 (${response.status})` });
+      return { data: payload.data };
+    },
     submitMultiplayerRuleSubmission: (submissionId, options) => request(`/v1/creator/multiplayer-rule-submissions/${encodeURIComponent(submissionId)}/submit`, { ...options, method: "POST", auth: true, idempotent: true }),
     listAdminMultiplayerRuleSubmissions: (state = "queue", limit = 50, options) => request(`/v1/admin/multiplayer/rule-submissions?state=${encodeURIComponent(state)}&limit=${encodeURIComponent(limit)}`, { ...options, auth: true }),
     getAdminMultiplayerRuleSubmission: (submissionId, options) => request(`/v1/admin/multiplayer/rule-submissions/${encodeURIComponent(submissionId)}`, { ...options, auth: true }),
@@ -365,6 +561,13 @@ function createApiClient({ baseUrl = "", fetchImpl = globalThis.fetch, getAccess
     startGitHubWeb: (body, options) => request("/v1/auth/github/web", { ...options, method: "POST", body }),
     pollGitHubWeb: (challengeId, options) => request(`/v1/auth/github/web/${encodeURIComponent(challengeId)}/poll`, { ...options, method: "POST" }),
     getProfile: (options) => request("/v1/me", { ...options, auth: true }),
+    bootstrapSession: (refreshToken, options) => request("/v1/auth/session", {
+      ...options,
+      method: "POST",
+      body: { ...refreshToken ? { refreshToken } : {} },
+      auth: true,
+      allowRefresh: false
+    }),
     getCreatorApplication: (options) => request("/v1/me/creator-application", { ...options, auth: true }),
     applyForCreator: (statement, options) => request("/v1/me/creator-application", { ...options, method: "POST", body: { statement }, auth: true }),
     listCreatorApplications: (status = "pending", options) => request(`/v1/admin/creator-applications?status=${encodeURIComponent(status)}`, { ...options, auth: true }),

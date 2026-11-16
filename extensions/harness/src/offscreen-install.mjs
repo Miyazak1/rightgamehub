@@ -2,7 +2,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, lstat, open, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { prepareWebGame } from './prepare-web-game.mjs';
+import { prepareWebGame,renamePreparedDirectory } from './prepare-web-game.mjs';
 import { containedPath } from './web-policy.mjs';
 import { approvedPackage, assertApprovedAssets, OFFSCREEN_MANIFEST, validateOffscreenManifest } from './offscreen-package.mjs';
 
@@ -74,7 +74,7 @@ export async function installOffscreenPackage({ root, record, download, signal }
       signal?.throwIfAborted();
       // An explicit prepare request repairs only this approved package cache.
       await ordinary(final, true);
-      await rm(final, { recursive: true, force: true });
+      await rm(final, { recursive: true, force: true,maxRetries:5,retryDelay:100 });
     }
   } catch (cause) { if (cause.code !== 'ENOENT') throw cause; }
   const staging = path.resolve(parent, `.partial-${randomUUID()}`);
@@ -109,11 +109,11 @@ export async function installOffscreenPackage({ root, record, download, signal }
     await writeFile(path.join(staging, 'install.json'), JSON.stringify({ schemaVersion: 1, sourceId: record.id, sha256: record.sha256 }), { flag: 'wx' });
     await verifyInstalledPackage(staging, record.sha256, signal);
     signal?.throwIfAborted();
-    await rename(staging, final); committed = true;
+    await renamePreparedDirectory(staging, final,signal); committed = true;
     return { ...await verifyInstalledPackage(final, record.sha256, signal), reused: false };
   } finally {
     await reader?.cancel().catch(() => {}); reader?.releaseLock();
     await handle?.close();
-    if (!committed) await rm(staging, { recursive: true, force: true });
+    if (!committed) await rm(staging, { recursive: true, force: true,maxRetries:5,retryDelay:100 });
   }
 }

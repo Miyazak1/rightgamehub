@@ -4,6 +4,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { app, BrowserWindow, session, protocol, ipcMain, screen, dialog, Tray, Menu, shell: systemShell } = require('electron');
 const policy = require('./policy.cjs');
+const {externalUrl,downloadable}=require('./platform-links.cjs');
 const { accountOrigin, prepareDesktopAccountProfileSync } = require('../src/account-configuration.mjs');
 const { localBusinessRuntime } = require('../src/runtime-policy.mjs');
 const { restoredWindowState, createWindowStateStore, titleBarPalette, validateAction, windowShortcut } = require('./window-state.cjs');
@@ -58,8 +59,20 @@ async function createShell(config) {
   });
   ses.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   ses.setPermissionCheckHandler(() => false);
-  ses.on('will-download', event => event.preventDefault());
+  ses.on('will-download', (event,item,contents) => {
+    if(!window||contents!==window.webContents||!policy.ui(contents.getURL())||!downloadable(item.getURL())){event.preventDefault();return;}
+    item.setSaveDialogOptions({title:'保存文件',defaultPath:path.basename(item.getFilename()).replace(/[<>:"/\\|?*\u0000-\u001f]/gu,'_')||'mooyu-download'});
+  });
   ses.protocol.handle('mooyu-app', async request => {
+    if(new URL(request.url).pathname==='/__desktop-file'){
+      if(!policy.ui(request.url)||!['GET','HEAD'].includes(request.method)||!accountApiOrigin)return new Response('Denied',{status:403});
+      try{
+        await accountStartup.run();
+        const response=await accountSession.resource(new URL(request.url).searchParams.get('path'),{signal:request.signal,range:request.headers.get('range')??undefined,ifRange:request.headers.get('if-range')??undefined});
+        if(request.method==='HEAD'){await response.body?.cancel();return new Response(null,{status:response.status,headers:response.headers});}
+        return response;
+      }catch{return new Response('Download unavailable',{status:404});}
+    }
     if (new URL(request.url).pathname === '/__desktop-media') {
       if (!policy.ui(request.url) || !['GET', 'HEAD'].includes(request.method) || !accountApiOrigin) return new Response('Denied', { status: 403 });
       try {
@@ -199,6 +212,7 @@ async function createShell(config) {
   const trusted = event => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !policy.ui(event.senderFrame.url)) throw Error('DESKTOP_SENDER_DENIED');
   };
+  ipcMain.handle('mooyu:link-open',async(event,value)=>{trusted(event);await systemShell.openExternal(externalUrl(value));return {opened:true};});
   ipcMain.handle('mooyu:preview-environment', async event => {
     trusted(event);
     await accountStartup.run();
