@@ -36,6 +36,12 @@ async function run(){
     const found=await invoke('executeAgentTool',['search_capabilities',{query:'知识图',kinds:['official-tool']}]);assert.equal(found.result.capabilities[0].id,'official-tool:knowledge-map');
     const opened=await invoke('executeAgentTool',['open_capability',{capabilityId:'official-tool:knowledge-map'}]);assert.equal(opened.action.route,'/tools/knowledge-map');assert.equal(opened.result.status,'navigation_requested');
     checks.push('installed authenticated Agent IPC queries owned learning data, discovers tools and resolves navigation without model calls');
+    await js(`sessionStorage.setItem('mooyu.assistant.v1:31e033b2-13d6-4b81-b214-21b3f25dca60',JSON.stringify({open:true,messages:[{id:'avatar-acceptance',role:'user',content:'桌面头像验收',status:'sent'}]}))`);
+    const reloaded=new Promise(resolve=>window.webContents.once('did-finish-load',resolve));window.webContents.reload();await reloaded;
+    await wait(()=>js('!!document.querySelector(".assistant-user-avatar .avatar-sprite--cat")'),'installed chat account avatar');
+    assert.match(await js('document.querySelector(".assistant-message.is-user small").textContent'),/桌面隔离测试用户/);
+    checks.push('installed chat renders the signed-in account avatar and display name');
+    await fs.writeFile(path.join(path.dirname(config.report),'assistant-avatar-'+config.phase+'.png'),(await window.webContents.capturePage()).toPNG());
   }
   const result={passed:true,phase:config.phase,version:app.getVersion(),checks,productionConnected:false,profileRoot:config.profileRoot};
   if(config.updatePhase==='apply'){

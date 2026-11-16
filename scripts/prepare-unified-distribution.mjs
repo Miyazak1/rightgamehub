@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';import path from 'node:path';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';
 import {prepareDesktopDownloads} from './lib/desktop-downloads.mjs';
 import {verifyAssets} from '../deploy/unified-assets.mjs';
-const root=path.resolve(import.meta.dirname,'..'),output=path.join(root,'.runtime/unified-distribution');
+const root=path.resolve(import.meta.dirname,'..');
+const options={};for(let i=2;i<process.argv.length;i+=2){const name=process.argv[i];if(!['--release','--output'].includes(name)||!process.argv[i+1]||options[name])throw Error('DISTRIBUTION_OPTIONS_INVALID');options[name]=process.argv[i+1];}
+const releaseId=options['--release']||'20261115-agent';if(!/^\d{8}-[a-z0-9-]+$/.test(releaseId))throw Error('RELEASE_ID_INVALID');
+const output=path.resolve(options['--output']||path.join(root,'.runtime/unified-distribution'));
 const raw=JSON.parse(await fs.readFile(path.join(root,'.runtime/desktop-windows-package/latest.json'),'utf8'));
 if(!raw.passed||raw.acceptance||!raw.preArchiveAudit?.payloadAuditPassed||!raw.finalPayloadAudit?.payloadAuditPassed)throw Error('VERIFIED_PRODUCTION_PACKAGE_REQUIRED');
 const report={...raw,codeSigned:false,bytes:raw.installerBytes,sha256:raw.installerSha256};
@@ -28,9 +31,10 @@ const release={schemaVersion:1,paperEnabled:false,sourceCommit:raw.sourceCommit,
 async function walk(relative){for(const entry of await fs.readdir(path.join(output,relative),{withFileTypes:true})){const name=relative+'/'+entry.name;if(entry.isDirectory())await walk(name);else{const bytes=await fs.readFile(path.join(output,name));release.files.push({path:name,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')});}}}
 await walk('agent');await walk('desktop');release.files.sort((a,b)=>a.path.localeCompare(b.path));await fs.writeFile(path.join(output,'bundle.json'),JSON.stringify(release,null,2)+'\n');
 await verifyAssets(output,release);
-const filename='mooyu-unified-20261115-agent.tar.gz',archive=path.join(root,'artifacts',filename);
+const filename=`mooyu-unified-${releaseId}.tar.gz`,archive=path.join(root,'artifacts',filename);
+if(await fs.lstat(archive).then(()=>true,error=>{if(error.code==='ENOENT')return false;throw error;}))throw Error('RELEASE_ARCHIVE_ALREADY_EXISTS');
 const tar=spawnSync('tar',['-czf',archive,'-C',output,'.'],{windowsHide:true,encoding:'utf8'});if(tar.status!==0)throw Error('ARCHIVE_FAILED: '+tar.stderr);
-const bytes=await fs.readFile(archive),config={schemaVersion:1,release:'20261115-agent',archiveFilename:filename,
+const bytes=await fs.readFile(archive),config={schemaVersion:1,release:releaseId,archiveFilename:filename,
  archiveSha256:crypto.createHash('sha256').update(bytes).digest('hex'),archiveBytes:bytes.length,
  sourceCommit:release.sourceCommit,desktopVersion:release.desktopVersion,editorVersion:release.editorVersion,harnessVersion:release.harnessVersion,agentVersion:release.agentVersion,desktopKeyId:release.desktopKeyId,paperEnabled:false};
 await fs.writeFile(path.join(root,'config/unified-release.json'),JSON.stringify(config,null,2)+'\n');

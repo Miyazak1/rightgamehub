@@ -1,15 +1,15 @@
 {
-  "version": "0.2.0-preview.8",
-  "releaseDate": "2026-11-15",
+  "version": "0.2.0-preview.9",
+  "releaseDate": "2026-11-16",
   "notes": {
     "zh-CN": [
-      "平台助手接通游戏、工具与学习内容的查找和打开。",
-      "新增个人学习概览、练习历史和错题查询；插件使用宿主聊天。",
+      "聊天显示当前账户头像和昵称，账户头像修改后同步更新。",
+      "修复做题数学公式回复解析、重复游戏卡片；保留平台助手和学习数据查询。",
       "保留账号、存档和设置；不包含论文研读功能。"
     ],
     "en": [
-      "Find and open games, tools and learning content with Mooyu.",
-      "Read personal practice summaries, history and wrong answers; plugins use host chat.",
+      "Chat shows your account avatar and name, including updated avatars.",
+      "Fix math reply decoding and duplicate game cards; retain platform Agent and learning queries.",
       "Accounts, saves and settings are preserved. Paper study is excluded."
     ]
   }
