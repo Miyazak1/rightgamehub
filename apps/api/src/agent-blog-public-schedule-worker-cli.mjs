@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { runAgentBlogPublicScheduleCycle } from './agent-blog-public-schedule-cycle.mjs';
 import { createAgentBlogPublicRuntime } from './agent-blog-public-runtime.mjs';
 import { PostgresAgentBlogPublicRuntimePreflightRepository } from './agent-blog-public-runtime-preflight.mjs';
 import { PostgresAgentBlogPublicScheduleRepository, createAgentBlogPublicScheduleController,
@@ -31,10 +32,13 @@ try {
   await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId, state: 'idle' });
   while (!stopping) {
     try {
-      await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId, state: 'busy' });
-      const result = await controller.runOnce();
-      await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId,
-        state: result.fire?.scheduleSuspended ? 'suspended' : 'idle' });
+      const result = await runAgentBlogPublicScheduleCycle({ controller,
+        agentUserId: runtime.config.agentUserId, instanceId,
+        heartbeatMilliseconds: Math.min(scheduleConfig.pollMilliseconds, 30000),
+        onHeartbeatError: error => process.stderr.write(`${JSON.stringify({
+          service: 'agent-blog-public-scheduler', event: 'heartbeat-error',
+          code: error?.code ?? 'AGENT_BLOG_PUBLIC_HEARTBEAT_FAILED' })}\n`),
+      });
       if (result.status !== 'idle') process.stdout.write(`${JSON.stringify({
         service: 'agent-blog-public-scheduler', event: 'fire-finished', ...result,
       })}\n`);

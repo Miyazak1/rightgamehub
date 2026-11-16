@@ -46,13 +46,13 @@ test('change radar renders an empty account and opens long-term news tracking wi
   await app.listen({ host: '127.0.0.1', port: 0 });
 
   const base = 'http://127.0.0.1:' + app.server.address().port;
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, args: process.platform === 'win32' ? ['--disable-logging'] : [] });
   page = await browser.newPage({ viewport: { width: 1365, height: 1000 } });
   page.setDefaultTimeout(10000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
 
-  await page.goto(base + '/');
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: '选择一个监控任务' }).waitFor();
   assert.equal(await page.getByText('还没有监控任务。', { exact: true }).count(), 1);
 

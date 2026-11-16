@@ -9,9 +9,12 @@ import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 export const BLOG_DISCOVERY_QUERY_PLAN_SCHEMA = Object.freeze({ key: 'blog.discovery.query-plan', version: 1 });
 export const BLOG_DISCOVERY_QUERY_PLAN_PROMPT = `你是小墨鱼的候选发现规划模块。只输出一个 JSON 对象，不要输出 Markdown。
 你的任务只是把中文选题范围规划成一至五条 GitHub 仓库搜索词，不得选择项目、写文章或声称任何项目事实。
+实际数量不得超过输入 maxQueries；此上限也包含后续空结果回退搜索。
 每条搜索词必须使用二至六个适合 GitHub 仓库元数据的英文技术关键词，至少包含一个英文字母；不得包含中文、URL、斜杠、冒号或 GitHub 搜索限定符。
 不要把 open source、GitHub、repository、project 当作主要关键词；优先使用项目作者会写在名称、简介或 topics 中的具体能力词，例如 agent、visualization、transcription、game engine。
 人格兴趣只用于决定搜索方向，不是事实证据。不得规划时政、敏感或高风险主题。
+每条搜索词至少包含两个非 open source、GitHub、repository、project 等泛词的具体能力词，例如 agent workflow、game engine。
+interestSignals 必须逐字复制 allowedInterestSignals 中的完整标签，不得追加解释、改写或重复。
 返回字段必须且只能是 queries、rationale、interestSignals。`;
 
 export class AgentBlogCandidateDiscoveryError extends Error {
@@ -154,10 +157,16 @@ function normalizeQueryPlan(output, input) {
     || new Set(queries.map(item => item.toLocaleLowerCase('en-US'))).size !== queries.length) {
     fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   }
-  const configured = new Set(input.behaviorProfile.modules.editorial.interestSignals);
-  const interestSignals = output.interestSignals.map(item => compact(item, 80));
+  const configured = input.behaviorProfile.modules.editorial.interestSignals;
+  const interestSignals = output.interestSignals.map(value => {
+    const item = compact(value, 500);
+    const matches = configured.filter(signal => item === signal
+      || item.startsWith(`${signal}：`) || item.startsWith(`${signal}:`));
+    return matches.length === 1 ? matches[0] : null;
+  });
   const rationale = compact(output.rationale, 500);
-  if (rationale.length < 30 || interestSignals.some(item => item.length < 2 || !configured.has(item))) {
+  if (rationale.length < 30 || interestSignals.some(item => item === null)
+    || new Set(interestSignals).size !== interestSignals.length) {
     fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   }
   return { queries, rationale, interestSignals };
@@ -207,7 +216,8 @@ async function executeSearches({ context, execution, toolGateway, artifactReposi
       used.add(normalized);
       fallbacks.push({ query, sourceQuery });
     }
-    for (const fallback of fallbacks.slice(0, Math.max(0, 5 - artifacts.length))) {
+    // Planned and fallback searches share the same declared request budget.
+    for (const fallback of fallbacks.slice(0, Math.max(0, searchPolicy.maxQueries - artifacts.length))) {
       await execute(fallback.query, 'fallback', fallback.sourceQuery);
       if (artifacts.at(-1).candidateCount > 0) break;
     }
@@ -234,7 +244,7 @@ async function finalizeCandidateSet({ context, execution, artifactRepository, in
     || !Array.isArray(searched.fallbackQueries) || !Array.isArray(searched.fallbackLineage)
     || !Array.isArray(searched.candidateCounts)
     || artifactIds.length !== executedQueries.length || artifactIds.length !== searched.candidateCounts.length
-    || artifactIds.length < queries.length || artifactIds.length > 5
+    || artifactIds.length < queries.length || artifactIds.length > (input.searchPolicy?.maxQueries ?? 5)
     || artifactIds.some(id => typeof id !== 'string')
     || executedQueries.some(query => typeof query !== 'string')
     || searched.candidateCounts.some(count => !Number.isSafeInteger(count) || count < 0 || count > 20)
@@ -357,7 +367,7 @@ export function createAgentBlogAutonomousCandidateDiscoveryHandlers({
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `blog-discovery-plan:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 2 },
+        modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 3 },
         responseSchema: BLOG_DISCOVERY_QUERY_PLAN_SCHEMA,
         request: { messages: [{ role: 'system', content: BLOG_DISCOVERY_QUERY_PLAN_PROMPT },
           { role: 'user', content: JSON.stringify(request) }], temperature: 0.2 },

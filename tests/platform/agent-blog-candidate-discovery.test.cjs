@@ -145,7 +145,7 @@ test('autonomous discovery lets the model plan only bounded queries before gover
   assert.equal(providerCalls.length, 1);
   assert.equal(providerCalls[0].action.actionKey, 'plan-queries');
   assert.equal(providerCalls[0].action.capabilityKey, 'provider.text.generate');
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 2 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 3 });
   assert.equal(searched.outputRef.artifactIds.length, 2);
   const candidateSet = stored.get(finalized.outputRef.artifactId);
   assert.deepEqual(candidateSet.content.queryPolicy.queries, ['visual ai tool', 'creative agent']);
@@ -251,4 +251,72 @@ test('autonomous discovery rejects Chinese promotional phrases before any GitHub
   { workerId: 'worker', leaseToken: uuid() }),
   error => error.code === 'AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   assert.equal(toolCalls, 0);
+});
+
+async function autonomousEmptyFixture({ queries, maxQueries, interestSignals = ['可以快速体验'] }) {
+  const { defaultAgentBehaviorProfile } = await load('agent-behavior-profile.mjs');
+  const { stableHash } = await load('researcher-qa-protocol/stable-json.mjs');
+  const { createAgentBlogAutonomousCandidateDiscoveryHandlers } = await load('agent-blog-candidate-discovery.mjs');
+  const stored = new Map(), tools = new Map(), requests = [], providerRequests = [];
+  const handlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
+    providerGateway: { invoke: async request => { providerRequests.push(request); return { actionId: uuid(), output: {
+      queries, interestSignals, rationale: '根据当前人格的明确兴趣寻找具有具体能力、适用边界和可验证输出的开放项目，搜索结果仍须由后续证据门禁核验。',
+    } }; } },
+    toolGateway: { invoke: async request => { requests.push(request); const id = uuid();
+      tools.set(id, { content: searchOutput(request.request.query, []) }); return { status: 'succeeded', artifactId: id }; } },
+    artifactRepository: { read: async ({ artifactId }) => stored.get(artifactId),
+      readToolArtifact: async ({ artifactId }) => tools.get(artifactId),
+      save: async value => { const item = { id: uuid(), ...value, contentSha256: stableHash(value.content) };
+        stored.set(item.id, item); return item; } },
+  });
+  const input = { schemaVersion: 'blog-project-discovery-input-v2', topicScope: '发现有证据可核验的开放工具',
+    searchPolicy: { sort: 'stars', minStars: 10, pushedAfter: '2026-01-01', maxCandidates: 5, maxQueries },
+    previousRepositoryUrls: [], behaviorProfile: defaultAgentBehaviorProfile() };
+  const run = { id: uuid(), agentUserId: uuid(), input, inputSha256: stableHash(input) };
+  const execution = { workerId: 'fixture', leaseToken: uuid() };
+  const call = (key, prerequisites = []) => handlers['blog.project.discovery-shadow:' + key]({
+    run, stage: { id: uuid() }, prerequisites }, execution);
+  const frozen = await call('freeze-brief');
+  return { requests, providerRequests, stored, call,
+    plan: () => call('plan-queries', [{ stageKey: 'freeze-brief', status: 'succeeded', outputRef: frozen.outputRef }]) };
+}
+
+test('empty planned and fallback searches share the declared GitHub request ceiling', async () => {
+  const queries = ['visual agent', 'workflow helper', 'audio transcription'];
+  for (const count of [1, 2, 3]) {
+    const f = await autonomousEmptyFixture({ queries: queries.slice(0, count), maxQueries: count });
+    const plan = await f.plan();
+    const searched = await f.call('search-candidates', [{ stageKey: 'plan-queries', status: 'succeeded', outputRef: plan.outputRef }]);
+    assert.equal(f.requests.length, count);
+    assert.equal(searched.outputRef.artifactIds.length, count);
+    assert.deepEqual(searched.outputRef.fallbackQueries, []);
+    await assert.rejects(f.call('finalize-candidates', [{ stageKey: 'search-candidates', status: 'succeeded',
+      outputRef: searched.outputRef }]), error => error.code === 'AGENT_BLOG_DISCOVERY_EMPTY');
+    assert.equal(f.requests.length, count);
+  }
+});
+
+test('discovery preserves configured interest labels and rejects invented or duplicate canonical signals', async () => {
+  const f = await autonomousEmptyFixture({ queries: ['visual agent'], maxQueries: 3,
+    interestSignals: ['可以快速体验：先完成一次可观察的体验。'] });
+  const plan = await f.plan();
+  assert.deepEqual(f.stored.get(plan.outputRef.artifactId).content.interestSignals, ['可以快速体验']);
+  assert.match(f.providerRequests[0].request.messages[0].content, /allowedInterestSignals/u);
+  assert.match(f.providerRequests[0].request.messages[0].content, /maxQueries/u);
+  for (const interestSignals of [['模型新编的标签'], ['可以快速体验', '可以快速体验：解释']]) {
+    const invalid = await autonomousEmptyFixture({ queries: ['visual agent'], maxQueries: 3, interestSignals });
+    await assert.rejects(invalid.plan(), error => error.code === 'AGENT_BLOG_DISCOVERY_PLAN_INVALID');
+    assert.equal(invalid.requests.length, 0);
+  }
+});
+
+test('finalization rejects a search set that exceeds the frozen search ceiling', async () => {
+  const f = await autonomousEmptyFixture({ queries: ['visual agent'], maxQueries: 1 });
+  const plan = await f.plan();
+  const searched = await f.call('search-candidates', [{ stageKey: 'plan-queries', status: 'succeeded', outputRef: plan.outputRef }]);
+  const reference = { ...searched.outputRef, artifactIds: [...searched.outputRef.artifactIds, uuid()],
+    queries: ['visual agent', 'visual'], candidateCounts: [0, 0], fallbackQueries: ['visual'],
+    fallbackLineage: [{ query: 'visual', sourceQuery: 'visual agent' }] };
+  await assert.rejects(f.call('finalize-candidates', [{ stageKey: 'search-candidates', status: 'succeeded',
+    outputRef: reference }]), error => error.code === 'AGENT_BLOG_DISCOVERY_SEARCH_SET_INVALID');
 });

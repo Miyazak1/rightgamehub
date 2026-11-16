@@ -126,6 +126,13 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
     }),
     createDiscoveryWorker: (runId, requestId) => worker(requestId, runId, discoveryHandlers, 'discovery'),
     createPublicationWorker: (runId, requestId) => worker(requestId, runId, publicationHandlers, 'publication'),
+    readRun: async runId => {
+      const row = (await pool.query(`SELECT id,status,output_type,output_id FROM agent_runs
+        WHERE id=$1 AND agent_user_id=$2
+          AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')`,
+      [runId, config.agentUserId])).rows[0];
+      return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id } : null;
+    },
   });
   const paperArticleRunner = createAgentPaperArticleManualRunner({ config,
     inputRepository: new PostgresAgentBlogPrivateCanaryInputRepository(pool), runtimeRepository,
