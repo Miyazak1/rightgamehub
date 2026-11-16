@@ -15,15 +15,17 @@ try {
   const validProxy=value=>{try{return ['http:','https:'].includes(new URL(value).protocol);}catch{return false;}};
   const httpsProxy=process.env.HTTPS_PROXY??process.env.https_proxy;
   if(validProxy(httpsProxy)&&process.env.HTTP_PROXY&&!validProxy(process.env.HTTP_PROXY)){process.env.HTTP_PROXY=httpsProxy;report.toolingProxyNormalized=true;}
-  const config=request.config;
-  config.afterPack=async context=>{report.phase='payload-audit';report.preArchiveAudit=await auditDesktopPayload(asar,context.appOutDir,request.audit);report.phase='build';};
   report.phase='build';
   for(let attempt=0;;attempt++) {
+    // electron-builder mutates file filters during a build. Retrying its
+    // mutated config after a transient Windows lock can fail with null.from.
+    const config=structuredClone(request.config);
+    config.afterPack=async context=>{report.phase='payload-audit';report.preArchiveAudit=await auditDesktopPayload(asar,context.appOutDir,request.audit);report.phase='build';};
     try{await build({projectDir:config.directories.app,targets:Platform.WINDOWS.createTarget(['nsis'],Arch.x64),config,publish:'never'});break;}
-    catch(error){if(attempt>=1||!['EPERM','EBUSY','UNKNOWN'].includes(error.code))throw error;await new Promise(resolve=>setTimeout(resolve,1000));}
+    catch(error){if(attempt>=1||!['EPERM','EBUSY','UNKNOWN'].includes(error.code))throw error;report.toolingRetry={code:error.code};await new Promise(resolve=>setTimeout(resolve,1000));}
   }
   if(!report.preArchiveAudit?.payloadAuditPassed)throw Error('DESKTOP_PRE_ARCHIVE_GATE_NOT_EXECUTED');
-  report.phase='final-payload-audit';report.finalAudit=await auditDesktopPayload(asar,path.join(config.directories.output,'win-unpacked'),request.audit);
+  report.phase='final-payload-audit';report.finalAudit=await auditDesktopPayload(asar,path.join(request.config.directories.output,'win-unpacked'),request.audit);
   report.passed=true;report.phase='complete';
 }catch(error){report.error=error.message;process.exitCode=1;}
 await fs.writeFile(resultFile,JSON.stringify(report,null,2)+'\n');
