@@ -17,9 +17,14 @@ export function createInstalledAgentAcceptanceHandler() {
   const tools=createPlatformAgentTools({capabilityService,practiceService}),assistant=createPlatformAssistantService({tools,practiceService});
   return async(req,res,url,authenticate)=>{
     const route=req.method+' '+url.pathname;
-    if(!['GET /v1/me/assistant/capabilities','GET /v1/me/learning/insights','POST /v1/me/agent/tools'].includes(route))return false;
+    if(!['GET /v1/me/assistant/capabilities','GET /v1/me/learning/insights','POST /v1/me/agent/tools','GET /v1/creator/works','GET /v1/creator/drafts','GET /v1/admin/reports'].includes(route))return false;
     const actor=await authenticate();let data;
-    if(route==='GET /v1/me/assistant/capabilities')data=assistant.capabilities();
+    if(route==='GET /v1/admin/reports'){
+      assert.equal(actor.profile.role,'user');res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:{code:'ADMIN_REQUIRED'}}));return true;
+    }
+    if(route==='GET /v1/creator/works')data=[{id:'installed-creator-work',title:'安装验收创作作品',kind:'game',state:'draft',visibility:'private',revision:'1',targets:[],tags:[]}];
+    else if(route==='GET /v1/creator/drafts')data=[];
+    else if(route==='GET /v1/me/assistant/capabilities')data=assistant.capabilities();
     else if(route==='GET /v1/me/learning/insights')data=await practiceService.insights(actor,Object.fromEntries(url.searchParams));
     else {let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>8192)throw Error('fixture input too large');}const input=JSON.parse(raw);data=await tools.execute(actor,input.name,input.arguments);}
     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({data}));return true;

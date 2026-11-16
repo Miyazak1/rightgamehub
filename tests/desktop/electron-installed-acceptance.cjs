@@ -42,6 +42,11 @@ async function run(){
     assert.match(await js('document.querySelector(".assistant-message.is-user small").textContent'),/桌面隔离测试用户/);
     checks.push('installed chat renders the signed-in account avatar and display name');
     await fs.writeFile(path.join(path.dirname(config.report),'assistant-avatar-'+config.phase+'.png'),(await window.webContents.capturePage()).toPNG());
+    const works=await invoke('listCreatorWorks');assert.equal(works[0].title,'安装验收创作作品');
+    const denied=await js("window.mooyuDesktop.account.call('business',[{method:'listReports',args:['open']}])");assert.equal(denied.ok,false);assert.equal(denied.error.status,403);
+    const creatorLoaded=new Promise(resolve=>window.webContents.once('did-finish-load',resolve));await window.loadURL('mooyu-app://client/creator/works');await creatorLoaded;
+    await wait(()=>js('!!document.querySelector(".creator-page") && document.body.innerText.includes("安装验收创作作品")'),'installed creator work library');
+    checks.push('installed creator page uses server works and server denies unprivileged governance IPC');
   }
   const result={passed:true,phase:config.phase,version:app.getVersion(),checks,productionConnected:false,profileRoot:config.profileRoot};
   if(config.updatePhase==='apply'){
