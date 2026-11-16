@@ -48,7 +48,24 @@ for file in "${files[@]}"; do
   [[ "$file" = /* && "$file" != *$'\n'* && -f "$file" ]] || { echo 'Running Compose configuration unavailable'; exit 1; }
   cp "$file" "$RECORD/compose-$count.before.yml"
   printf '%s\n' "compose-$count.before.yml" >> "$RECORD/compose-files.rollback.txt"
-  printf '%s\n' "$file" >> "$RECORD/compose-files.target.txt"
+  # A previous rollback leaves snapshot paths and rollback image overrides in
+  # the running containers' labels. Retain every file for rollback, but do not
+  # build the new release into the previous rollback's immutable image tags.
+  case "$file" in
+    /www/backup/gamehub/*/rollback-images.yml)
+      test -s "$(dirname "$file")/rollback.sh" && test -s "$(dirname "$file")/release-commit.txt" || {
+        echo 'Unrecognized rollback overlay; stop without changing services.' >&2; exit 1;
+      }
+      ;;
+    /www/backup/gamehub/*/compose-0.before.yml)
+      if [ "$count" = 0 ] && [ -s "$(dirname "$file")/compose-files.rollback.txt" ]; then
+        printf '%s\n' /www/gamehub/deploy/compose.prod.yml >> "$RECORD/compose-files.target.txt"
+      else
+        printf '%s\n' "$file" >> "$RECORD/compose-files.target.txt"
+      fi
+      ;;
+    *) printf '%s\n' "$file" >> "$RECORD/compose-files.target.txt" ;;
+  esac
   count=$((count+1))
 done
 grep -Fxq /www/gamehub/deploy/compose.unified-downloads.yml "$RECORD/compose-files.target.txt" || printf '%s\n' /www/gamehub/deploy/compose.unified-downloads.yml >> "$RECORD/compose-files.target.txt"

@@ -15,7 +15,7 @@ if [ -n "${MOOYU_RELEASE_COMPOSE_FILES:-}" ]; then
   COMPOSE_ARGS=()
   while IFS= read -r file; do test -f "$file"; COMPOSE_ARGS+=(-f "$file"); done < "$MOOYU_RELEASE_COMPOSE_FILES"
 fi
-dc() { docker compose --project-name gamehub-production --env-file deploy/.env.prod "${COMPOSE_ARGS[@]}" --profile '*' "$@"; }
+dc() { docker compose --project-directory /www/gamehub/deploy --project-name gamehub-production --env-file deploy/.env.prod "${COMPOSE_ARGS[@]}" --profile '*' "$@"; }
 dc config --quiet
 test -n "$(dc ps --status running --quiet postgres)"
 test -n "$(dc ps --status running --quiet api)"
