@@ -37,10 +37,13 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   require('../browser-build.cjs').servePage(app, async (req, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js', async (req, reply) => reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({ host: '127.0.0.1', port: 0 }); const base = 'http://127.0.0.1:' + app.server.address().port;
-  browser = await chromium.launch({ headless: true }); page = await browser.newPage({ viewport: { width: 1365, height: 1050 } }); page.setDefaultTimeout(10000);
+  browser = await chromium.launch({headless:true,args:process.platform==='win32'?['--disable-logging']:[]}); page = await browser.newPage({ viewport: { width: 1365, height: 1050 } }); page.setDefaultTimeout(10000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => { window.copied = []; window.clipboardFails = false; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { if (window.clipboardFails) throw Error('permission denied'); window.copied.push(text); } } }); });
-  const gotoReady=async url=>{await page.goto(url);await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();};
+  // The account menu can render before session bootstrap reloads route data.
+  // Keep the failing fixture response in place until those reads have settled,
+  // so switching it to ready cannot remove the retry button before the click.
+  const gotoReady=async url=>{await page.goto(url,{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();await page.waitForLoadState('networkidle');};
   await gotoReady(base + '/creator/works/' + first + '/ai/leaderboards');await page.getByRole('button',{name:'账号菜单',exact:true}).waitFor();
   await page.getByLabel('什么时候计分，怎么算？').fill('通关成功后记录耗时毫秒，暂停时间不计入。');
   assert.equal(await page.getByLabel('选择作品', { exact: true }).inputValue(), first);
@@ -96,7 +99,7 @@ test('Creator AI browser: contextual routes, copy and download, stale requests, 
   await page.getByRole('navigation',{name:'创作中心导航'}).getByRole('link',{name:/能力接入/}).click();await page.getByRole('navigation',{name:'当前创作栏目'}).getByRole('link',{name:'AI 接入排行榜',exact:true}).click();
   await page.getByRole('heading', { name: '让 AI 添加排行榜', exact: true }).waitFor();
   listState = 'empty'; await page.reload(); await page.getByRole('heading', { name: '先创建一个作品', exact: true }).waitFor();
-  listState = 'error'; await page.reload(); await page.getByRole('button', { name: '重试读取作品', exact: true }).waitFor(); listState = 'ready'; await page.getByRole('button', { name: '重试读取作品', exact: true }).click(); await page.getByLabel('选择作品', { exact: true }).waitFor();
+  listState = 'error'; await page.reload(); await page.getByRole('button', { name: '重试读取作品', exact: true }).waitFor(); await page.waitForLoadState('networkidle'); listState = 'ready'; await page.getByRole('button', { name: '重试读取作品', exact: true }).click(); await page.getByLabel('选择作品', { exact: true }).waitFor();
   listState = 'auth'; await page.reload(); await page.getByRole('heading', { name: '登录后选择你的作品', exact: true }).waitFor();
   assert.equal(await page.getByLabel('中文 AI 任务说明').count(), 0);
   assert.deepEqual(requests.filter(req => req.method !== 'GET' && !req.url.startsWith('/v1/analytics/') && req.url !== '/v1/auth/session'), [], 'generating and copying tasks must not upload, publish or change platform data');

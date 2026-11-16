@@ -39,7 +39,7 @@ test('navigation: roles, account menu keyboard/focus, creator routes, mobile and
   require('../browser-build.cjs').servePage(app, async (req, reply) => reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js', async (req, reply) => reply.type('text/javascript').send(bundle.outputFiles[0].text));
   await app.listen({ host: '127.0.0.1', port: 0 }); const base = 'http://127.0.0.1:' + app.server.address().port;
-  browser = await chromium.launch({ headless: true }); page = await browser.newPage({ viewport: { width: 1365, height: 1000 } }); page.setDefaultTimeout(8000);
+  browser = await chromium.launch({headless:true,args:process.platform==='win32'?['--disable-logging']:[]}); page = await browser.newPage({ viewport: { width: 1365, height: 1000 } }); page.setDefaultTimeout(8000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const menu = page.getByRole('menu', { name: '账号操作' }), avatar = page.getByRole('button', { name: '账号菜单', exact: true });
   const focused = () => page.evaluate(() => document.activeElement?.textContent?.trim());

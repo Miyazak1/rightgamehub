@@ -114,9 +114,7 @@ test('component manager verifies the signed catalog before a resumable local ins
     if (requests === 1) {
       response.writeHead(200, { 'content-length': bytes.length, etag: '"component-v1"' });
       response.flushHeaders();
-      response.write(bytes.subarray(0, 128 * 1024), () => {
-        setTimeout(() => controller.abort(), 75);
-      });
+      response.write(bytes.subarray(0, 128 * 1024));
       return;
     }
     const offset = Number(String(request.headers.range).match(/^bytes=(\d+)-$/u)?.[1]);
@@ -138,7 +136,17 @@ test('component manager verifies the signed catalog before a resumable local ins
       resolveDownloadUrl: () => localUrl });
     const request = { catalog, component: identity,
       engine: { name: 'PP-StructureV3', version: '3.0.0' }, languages: ['zh-Hans'] };
-    await assert.rejects(manager.ensure({ ...request, signal: controller.signal }));
+    const interrupted = assert.rejects(manager.ensure({ ...request, signal: controller.signal }));
+    const partial = path.join(root, 'downloads', identity.sha256 + '.part');
+    const deadline = Date.now() + 10000;
+    // Interrupt an actually persisted partial download, rather than racing a
+    // 75ms timer against fetch header delivery and filesystem scheduling.
+    while (!(await fs.promises.stat(partial).catch(() => null))?.size) {
+      assert.ok(Date.now() < deadline, 'the first download must persist bytes before interruption');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    controller.abort();
+    await interrupted;
     const installed = await manager.ensure(request);
     assert.equal(installed.downloaded, true);
     assert.match(observedRange, /^bytes=\d+-$/u);
@@ -152,6 +160,8 @@ test('component manager verifies the signed catalog before a resumable local ins
       error => error.code === 'CAPABILITY_COMPONENT_CATALOG_SIGNATURE_INVALID');
     assert.equal(requests, 2);
   } finally {
+    controller.abort();
+    server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
     await fs.promises.rm(root, { recursive: true, force: true });
   }

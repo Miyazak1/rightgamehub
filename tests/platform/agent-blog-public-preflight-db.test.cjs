@@ -66,6 +66,50 @@ test('public preflight checks the workflows actually installed by bootstrap acro
     await status(legacy, 'retired');
     assert.equal(workflowBlocked(await check()), false);
   });
+  await t.test('explicit recovery checks admission, preserves history and resumes the next daily fire only once', async () => {
+    const { resumeAgentBlogPublicSchedule } = await harness.load('agent-blog-public-resume.mjs');
+    const { PostgresAgentBlogPublicScheduleRepository } = await harness.load('agent-blog-public-schedule.mjs');
+    const now = new Date('2026-11-16T06:30:00.000Z'), clock = () => now;
+    const env = { AGENT_BLOG_PUBLIC_RUNTIME_ENABLED: 'true', AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED: 'true',
+      AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID: account.agentUserId,
+      AGENT_GITHUB_RESEARCH_TOKEN: 'synthetic-local-preflight-token' };
+    await admin.query(`UPDATE agent_blog_publication_owners SET active_publisher='foundation',
+      generation=generation+1,reason='Isolated recovery fixture cutover',
+      switched_at=GREATEST(clock_timestamp(),switched_at+interval '1 microsecond'),updated_at=clock_timestamp()
+      WHERE agent_user_id=$1`, [account.agentUserId]);
+    await admin.query(`INSERT INTO agent_provider_secrets(agent_user_id,provider,ciphertext,nonce,auth_tag,
+      key_fingerprint,key_last_four,updated_by_user_id) VALUES($1,'deepseek',$2,$3,$4,$5,'test',$6)`,
+    [account.agentUserId, Buffer.alloc(16), Buffer.alloc(12), Buffer.alloc(16), 'a'.repeat(64), operatorId]);
+    const schedules = new PostgresAgentBlogPublicScheduleRepository(admin, { clock });
+    await schedules.ensureDaily({ agentUserId: account.agentUserId, enabled: false });
+    const config = { mode: 'foundation-public', publishEnabled: true, consecutiveFailures: 2,
+      suspendedAt: '2026-10-31T02:00:21.000Z', suspensionReason: 'AGENT_BLOG_PUBLIC_RUNTIME_STAGE_INCOMPLETE',
+      customSetting: 'preserved', worker: { state: 'idle', heartbeatAt: now.toISOString() } };
+    await admin.query(`UPDATE agent_schedules SET config_json=$2,last_fire_at='2026-10-31T02:00:00Z'
+      WHERE agent_user_id=$1`, [account.agentUserId, config]);
+    const client = await admin.connect();
+    await client.query('BEGIN');
+    try {
+      await status(article, 'retired', client);
+      const blocked = await resumeAgentBlogPublicSchedule({ pool: client, env, clock });
+      assert.equal(blocked.blocked, true);
+      assert.ok(blocked.blockers.includes('AGENT_BLOG_PUBLIC_RUNTIME_WORKFLOWS_NOT_READY'));
+      assert.equal((await client.query('SELECT enabled FROM agent_schedules WHERE agent_user_id=$1', [account.agentUserId])).rows[0].enabled, false);
+    } finally { await client.query('ROLLBACK'); client.release(); }
+    const resumed = await resumeAgentBlogPublicSchedule({ pool: admin, env, clock });
+    assert.equal(resumed.blocked, false, JSON.stringify(resumed.blockers));
+    assert.equal(resumed.enabled, true);
+    assert.equal(resumed.schedule.nextFireAt, '2026-11-17T02:00:00.000Z');
+    assert.equal(resumed.schedule.lastFireAt, '2026-10-31T02:00:00.000Z');
+    const stored = (await admin.query('SELECT config_json FROM agent_schedules WHERE agent_user_id=$1', [account.agentUserId])).rows[0].config_json;
+    assert.equal(stored.customSetting, 'preserved');
+    assert.equal(stored.consecutiveFailures, 0);
+    assert.equal(stored.suspendedAt, undefined);
+    const repeated = await resumeAgentBlogPublicSchedule({ pool: admin, env, clock: () => new Date(now.getTime() + 1000) });
+    assert.equal(repeated.alreadyEnabled, true);
+    assert.equal(repeated.schedule.nextFireAt, resumed.schedule.nextFireAt);
+    await assert.rejects(resumeAgentBlogPublicSchedule({ pool: admin, env, clock: () => new Date(now.getTime() + 100000) }), /HEARTBEAT_STALE/u);
+  });
   await t.test('paper workflows cannot substitute for missing GitHub discovery workflow', async () => {
     assert.ok(receipt.workflows.some(w => w.workflowKey.startsWith('paper.')));
     await status(discovery, 'retired');

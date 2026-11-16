@@ -207,12 +207,16 @@ test('task consent cancellation, timeout and stale restart records fail closed',
   const restartRoot = await tempRoot('task-restart-');
   t.after(() => fs.promises.rm(restartRoot, { recursive: true, force: true }));
   const vault = api.createMemoryCredentialVault();
+  let enteredSleep;
+  const sleeping = new Promise(resolve => { enteredSleep = resolve; });
   const beforeRestart = api.createDesktopFileGrantBroker({ ...common, rootDirectory: restartRoot,
-    credentialVault: vault, sleep: async () => new Promise(() => {}) });
+    credentialVault: vault, sleep: async () => { enteredSleep(); return new Promise(() => {}); } });
   void beforeRestart.resolve({ fileScope: 'user-selected',
     contract: { key: 'research.paper.layout', version: 1 }, leaseId: crypto.randomUUID() });
   await waitFor(() => beforeRestart.listConsentRequests(), value => value.length === 1);
-  await new Promise(resolve => setTimeout(resolve, 25));
+  // Advance the simulated clock only after the old worker is actually parked;
+  // elapsed wall time does not prove filesystem work has reached this point.
+  await sleeping;
   clock += 30_001;
   const afterRestart = api.createDesktopFileGrantBroker({ ...common, rootDirectory: restartRoot,
     credentialVault: vault });

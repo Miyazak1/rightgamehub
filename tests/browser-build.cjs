@@ -9,6 +9,10 @@ exports.build = async options => {
     pathToFileURL(path.resolve(__dirname, '../scripts/esbuild-inline-css.mjs')).href
   );
   return esbuild.build({
+    // Reduce full-App parse work without changing NODE_ENV or disabling the
+    // development StrictMode checks explicitly exercised by browser fixtures.
+    minifySyntax: true,
+    minifyWhitespace: true,
     ...options,
     loader: { '.png': 'dataurl', '.webp': 'dataurl', '.jpg': 'dataurl', '.jpeg': 'dataurl', '.svg': 'dataurl', ...options.loader },
     plugins: [inlineImportedAssets, inlineComponentCss, ...(options.plugins || [])],

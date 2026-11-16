@@ -3,7 +3,7 @@ const root=path.resolve(__dirname,'../..'),playwrightPath=process.env.GAMEHUB_CO
 test('discovery browser: complete catalog, remote search, private recent plays and narrow navigation',{skip:!playwrightPath,timeout:90000},async t=>{
   const {chromium}=require(playwrightPath),{build}=require('../browser-build.cjs');
   const app=require('../../apps/api/node_modules/fastify')();let browser;
-  t.after(async()=>{await browser?.close();await app.close();});
+  t.after(async()=>{try{for(const context of browser?.contexts()??[])await context.close();}finally{try{await browser?.close();}finally{await app.close();}}});
   const make=(id,title,extra={})=>({id,title,description:'休息时打开，体验一段小小的游戏时光。',kind:'game',creatorDisplayName:'玩家',tags:['益智'],estimatedMinutes:3,targets:[{targetKey:'web',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}],ingestionMethod:'zip_upload',attributionKind:'publisher',openSource:false,remixable:false,claimEligible:false,claimStatus:'publisher',...extra});
   let small=[make('gamehub-guess-baike','猜百科',{tags:['推理'],estimatedMinutes:5,ingestionMethod:'platform'}),make('7359a350-cc0a-4a09-875d-cec9b5b8f93f','2048',{repositoryUrl:'https://github.com/gabrielecirulli/2048',licenseSpdx:'MIT',ingestionMethod:'github_import',openSource:true,remixable:true}),make('314fb01a-27da-4c28-947a-68b20176a6cf','OI 重开模拟器',{tags:['文字','模拟'],attributionKind:'community_catalog',claimEligible:true,claimStatus:'unclaimed'}),make('1a13df55-8906-4b03-a19a-5e5a3b776649','迷阵'),make('f8537969-5f6b-41a8-8c43-f46a0f4a1293','桌猫'),make('a7a26e9f-4db8-4e6f-9d4d-7ae51b94bec6','宇宙巡航机',{targets:[{targetKey:'windows-x64',currentReleaseId:'27c4a881-871a-4ae1-8201-ed0f4ecbe12a'}]})];
   if(process.env.GAMEHUB_DISCOVERY_VISUAL_CATALOG){
@@ -37,9 +37,11 @@ test('discovery browser: complete catalog, remote search, private recent plays a
   require('../browser-build.cjs').servePage(app,async(req,reply)=>reply.type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
   app.get('/fixture.js',async(req,reply)=>reply.type('text/javascript').send(bundled.outputFiles[0].text));
   await app.listen({host:'127.0.0.1',port:0});const base='http://127.0.0.1:'+app.server.address().port;
-  browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);
+  // Windows utility processes otherwise inherit native log handles and can
+  // hold the test process open after Chromium has exited. JS errors stay observed.
+  browser=await chromium.launch({headless:true,args:process.platform==='win32'?['--disable-logging']:[]});const page=await browser.newPage({viewport:{width:1365,height:1000}});page.setDefaultTimeout(10000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(base);await page.locator('.discovery-catalog__grid .discovery-game').nth(23).waitFor();
+  await page.goto(base,{waitUntil:'domcontentloaded'});await page.locator('.discovery-catalog__grid .discovery-game').nth(23).waitFor();
   assert.equal(await page.locator('.discovery-picks [data-work-id="1a13df55-8906-4b03-a19a-5e5a3b776649"]').count(),0);
   assert.equal(await page.locator('.discovery-catalog [data-work-id="gamehub-guess-baike"]').count(),1);
   assert.equal(await page.locator('.discovery-catalog [data-work-id="7359a350-cc0a-4a09-875d-cec9b5b8f93f"] .discovery-game__provenance').getByText('MIT · 可二创').count(),1);
