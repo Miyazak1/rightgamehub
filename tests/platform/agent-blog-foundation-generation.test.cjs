@@ -98,7 +98,7 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(verified.outputRef.approved, true);
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 4 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 5 });
   assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 3 });
   assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls[0].request.messages[1].content.includes('eligibleModes'));

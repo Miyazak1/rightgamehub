@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
-test('public pipeline completes discovery retry, handoff, citation repair, evidence verification and exactly one publication', { skip: !harness.enabled }, async t => {
+async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
+  expectedFailure = null, expectedCalls = 5 } = {}) {
   const { admin } = await harness.setup();
   t.after(() => admin.end());
   const { createAgentAccountService } = await harness.load('agent-account-service.mjs');
@@ -118,7 +119,7 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
   });
 
   const governance = new PostgresAgentProviderGatewayRepository(admin, {
-    agentMonthlyLimits: { providerCalls: 20, inputTokens: 200000, outputTokens: 50000, costMicrousd: 100000000 },
+    agentMonthlyLimits: { providerCalls: agentCallLimit, inputTokens: 200000, outputTokens: 50000, costMicrousd: 100000000 },
     platformMonthlyLimits: { providerCalls: 200, inputTokens: 2000000, outputTokens: 500000, costMicrousd: 1000000000 },
   });
   await governance.registerModel({ provider: 'deepseek', modelId: 'fixture-blog', catalogVersion: 1, status: 'active',
@@ -131,7 +132,7 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
   ) VALUES($1,'deepseek',$2,$3,$4,$5,$6,$7)`, [account.agentUserId, encrypted.ciphertext, encrypted.nonce,
     encrypted.authTag, encrypted.fingerprint, encrypted.lastFour, operatorId]);
   const longParagraph = '这个项目把原本分散的操作整理成可以观察和复现的步骤，读者能先完成最小体验，再根据自己的目标逐步增加能力。'.repeat(8);
-  let providerInvocations = 0, compositionCalls = 0;
+  let providerInvocations = 0, compositionCalls = 0, selectionCalls = 0;
   const providerGateway = createAgentProviderGateway({
     runtimeRepository: runtime, governanceRepository: governance, policyService, secretVault: vault,
     adapters: { deepseek: async request => {
@@ -140,7 +141,7 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
         ? { queries: ['agent tool'],
           rationale: '选题范围关注可以快速体验的开放工具，因此先用普通关键词寻找具有明确用途和可观察结果的项目。',
           interestSignals: ['可以快速体验'] }
-        : request.responseSchema.key === 'blog.subject.selection'
+        : ['blog.subject.selection','blog.subject.selection-attempt'].includes(request.responseSchema.key)
         ? { mode: 'single', selectedIndexes: [1], angle: '先验证最小路径，再理解它如何降低上手门槛',
           rationale: '仓库资料给出了明确安装步骤、可观察结果和本地运行方式，适合面向普通读者解释其实际价值。',
           interestSignals: ['可以快速体验'], comparisonAxes: [],
@@ -158,6 +159,9 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
             { type: 'paragraph', text: longParagraph, citationIndexes: [1] },
           ],
           followUpQuestions: ['第一次体验应该从哪一步开始？', '哪些使用场景最适合这个工具？', '继续扩展时应注意哪些边界？'] };
+      if(request.responseSchema.key === 'blog.subject.selection-attempt' && ++selectionCalls <= selectionFailures) {
+        delete output.scores; delete output.decisionReasonCodes;
+      }
       if(request.responseSchema.key === 'blog.article.composition' && ++compositionCalls === 1) {
         output.blocks.find(block => block.type === 'paragraph').citationIndexes = [1,3];
       }
@@ -178,6 +182,14 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
     toolGateway, providerGateway, artifactRepository, draftGateway, publicationGateway,
     researchEvidenceRepository: new PostgresAgentResearchEvidenceRepository(admin),
   });
+  const select = handlers['blog.project.single:select-subject'];
+  handlers['blog.project.single:select-subject'] = async (...args) => {
+    const result = await select(...args), count = providerInvocations;
+    const replay = await select(...args);
+    assert.deepEqual(replay, result);
+    assert.equal(providerInvocations, count, 'selection replay must reuse both durable attempt outputs');
+    return result;
+  };
 
   const { createAgentBlogCandidatePublicHandoff } = await harness.load('agent-blog-candidate-handoff.mjs');
   const { createAgentBlogPublicRuntimeManualRunner } = await harness.load('agent-blog-public-runtime-manual-run.mjs');
@@ -216,10 +228,32 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
     readRun: async runId => { const row = (await admin.query(`SELECT id,status,output_type,output_id FROM agent_runs
       WHERE id=$1 AND agent_user_id=$2`, [runId,account.agentUserId])).rows[0];
       return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id } : null; } });
-  const result = await runner.run({ requestId: crypto.randomUUID() });
+  let result;
+  try { result = await runner.run({ requestId: crypto.randomUUID() }); }
+  catch (error) {
+    if (!expectedFailure) throw error;
+    assert.match(error.details?.stageErrorCode ?? error.code, expectedFailure);
+    assert.equal(providerInvocations, expectedCalls);
+    assert.equal(compositionCalls, 0);
+    const state = (await admin.query(`SELECT
+      (SELECT count(*)::int FROM blog_articles WHERE author_user_id=$1) AS articles,
+      (SELECT count(*)::int FROM agent_blog_foundation_publications WHERE agent_user_id=$1) AS publications,
+      (SELECT count(*)::int FROM agent_runtime_stage_artifacts artifact JOIN agent_runs run ON run.id=artifact.run_id
+        WHERE run.agent_user_id=$1 AND artifact.artifact_key='blog.selection') AS approved_selections,
+      (SELECT sum(charged_provider_calls)::int FROM agent_budget_reservations WHERE agent_user_id=$1) AS charged`, [account.agentUserId])).rows[0];
+    assert.deepEqual(state, { articles: 0, publications: 0, approved_selections: 0, charged: expectedCalls });
+    const attempts = (await admin.query(`SELECT output.content_json FROM agent_provider_output_artifacts output
+      JOIN agent_run_actions action ON action.id=output.action_id JOIN agent_runs run ON run.id=action.run_id
+      WHERE run.agent_user_id=$1 AND output.schema_key='blog.subject.selection-attempt'`, [account.agentUserId])).rows;
+    assert.equal(attempts.length, expectedCalls - 1);
+    assert.ok(attempts.every(row => row.content_json.accepted === false));
+    return;
+  }
+  assert.equal(expectedFailure, null, 'the invalid selection or denied repair must not publish');
   assert.equal(result.publication.publicationState, 'published');
   assert.equal(result.publicationAttempted, true);
-  assert.equal(providerInvocations, 4);
+  assert.equal(providerInvocations, 5);
+  assert.equal(selectionCalls, 2);
   assert.equal(compositionCalls, 2);
   assert.equal(planAttempts, 2);
   assert.equal(lostCommitAcknowledgements, 1);
@@ -234,6 +268,28 @@ test('public pipeline completes discovery retry, handoff, citation repair, evide
   assert.deepEqual(runs.map(run => run.status), ['succeeded','succeeded']);
   assert.ok(runs.every(run => !run.workflow_key.startsWith('paper.')));
   const charged = (await admin.query('SELECT sum(charged_provider_calls)::int AS n FROM agent_budget_reservations WHERE agent_user_id=$1', [account.agentUserId])).rows[0].n;
-  assert.equal(charged, 4);
+  assert.equal(charged, 5);
+  const attempts = (await admin.query(`SELECT action.action_key,output.content_json FROM agent_run_actions action
+    JOIN agent_provider_output_artifacts output ON output.action_id=action.id
+    WHERE action.run_id=$1 AND output.schema_key='blog.subject.selection-attempt'
+    ORDER BY action.action_key`, [result.publication.runId])).rows;
+  assert.equal(attempts.length, 2);
+  const malformed = attempts.find(row => row.action_key==='select-subject');
+  const corrected = attempts.find(row => row.action_key==='select-subject-format-repair');
+  assert.equal(malformed.content_json.accepted, false);
+  assert.deepEqual(malformed.content_json.validation.missingFields, ['scores','decisionReasonCodes']);
+  assert.equal(corrected.content_json.accepted, true);
+  const publicUsage = (await admin.query(`SELECT sum(charged_provider_calls)::int AS calls,
+    sum(charged_output_tokens)::int AS output_tokens FROM agent_budget_reservations WHERE run_id=$1`, [result.publication.runId])).rows[0];
+  assert.deepEqual(publicUsage, { calls: 4, output_tokens: 17600 });
   assert.equal((await admin.query("SELECT count(*)::int AS n FROM agent_run_events WHERE run_id=$1 AND event_type='stage.retry-scheduled'", [result.discovery.runId])).rows[0].n, 1);
+}
+
+test('public selection schema handling preserves full pipeline governance', { skip: !harness.enabled }, async t => {
+  await t.test('format and citation correction, replay and lost publication acknowledgement finish exactly once',
+    sub => publicPipelineFixture(sub));
+  await t.test('two malformed selection replies stop before approval, writing or publication',
+    sub => publicPipelineFixture(sub, { selectionFailures: 2, expectedFailure: /AGENT_BLOG_SELECTION_SCHEMA_INVALID/u, expectedCalls: 3 }));
+  await t.test('agent budget denial blocks selection repair without another model call or publication',
+    sub => publicPipelineFixture(sub, { agentCallLimit: 2, expectedFailure: /BUDGET/u, expectedCalls: 2 }));
 });

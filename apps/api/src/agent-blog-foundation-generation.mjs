@@ -8,6 +8,7 @@ import { stableJson } from './researcher-qa-protocol/stable-json.mjs';
 
 export const BLOG_FOUNDATION_SELECTION_SCHEMA_V1 = Object.freeze({ key: 'blog.subject.selection', version: 1 });
 export const BLOG_FOUNDATION_SELECTION_SCHEMA = Object.freeze({ key: 'blog.subject.selection', version: 2 });
+export const BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA = Object.freeze({ key: 'blog.subject.selection-attempt', version: 1 });
 export const BLOG_FOUNDATION_COMPOSITION_SCHEMA = Object.freeze({ key: 'blog.article.composition', version: 1 });
 
 export class AgentBlogFoundationGenerationError extends Error {
@@ -48,6 +49,8 @@ const SELECTION_SCORE_KEYS = Object.freeze(['readerValue', 'handsOnPotential', '
   'explainability', 'evidenceStrength']);
 const SELECTION_REASON_CODES = new Set(['EVIDENCE_STRONG', 'USE_CASE_CONCRETE', 'HANDS_ON_TESTABLE',
   'READER_VALUE_HIGH', 'NOVELTY_SUFFICIENT', 'COMPARISON_JUSTIFIED']);
+const SELECTION_FIELDS = ['mode', 'selectedIndexes', 'angle', 'rationale', 'interestSignals',
+  'comparisonAxes', 'scores', 'decisionReasonCodes'];
 
 export function validateBlogFoundationSelectionResponse(value) {
   const output = providerObject(value);
@@ -75,7 +78,43 @@ export function validateBlogFoundationCompositionResponse(value) {
   return structuredClone(output);
 }
 
+// A completed model attempt is distinct from an approved selection. Keep a
+// bounded invalid reply in its own typed artifact so a governed repair can be
+// audited/replayed; the strict selection@2 validator remains unchanged.
+export function validateBlogFoundationSelectionAttempt(value) {
+  const bytes = Buffer.byteLength(typeof value === 'string' ? value : JSON.stringify(value) ?? '');
+  if (bytes < 1 || bytes > 262144) fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID');
+  try {
+    return { schemaVersion: 'blog-selection-attempt-v1', accepted: true,
+      selection: validateBlogFoundationSelectionResponse(value) };
+  } catch (error) {
+    let parsed = null;
+    try { parsed = providerObject(value); } catch {}
+    const invalidFields = [];
+    if (parsed) {
+      if (!['single', 'comparison'].includes(parsed.mode)) invalidFields.push('mode');
+      for (const key of ['selectedIndexes', 'interestSignals', 'comparisonAxes', 'decisionReasonCodes']) {
+        if (!Array.isArray(parsed[key])) invalidFields.push(key);
+      }
+      for (const key of ['angle', 'rationale']) if (typeof parsed[key] !== 'string') invalidFields.push(key);
+      if (!exact(parsed.scores, SELECTION_SCORE_KEYS)) invalidFields.push('scores');
+      else for (const key of SELECTION_SCORE_KEYS) {
+        if (!Number.isSafeInteger(parsed.scores[key]) || parsed.scores[key] < 0 || parsed.scores[key] > 100) invalidFields.push(`scores.${key}`);
+      }
+      if (Array.isArray(parsed.decisionReasonCodes) && (parsed.decisionReasonCodes.length < 1
+        || parsed.decisionReasonCodes.length > 6 || parsed.decisionReasonCodes.some(code => !SELECTION_REASON_CODES.has(code))
+        || new Set(parsed.decisionReasonCodes).size !== parsed.decisionReasonCodes.length)) invalidFields.push('decisionReasonCodes');
+    } else invalidFields.push('json-object');
+    return { schemaVersion: 'blog-selection-attempt-v1', accepted: false, rawOutput: structuredClone(value),
+      validation: { code: error.code ?? 'AGENT_BLOG_SELECTION_SCHEMA_INVALID',
+        missingFields: SELECTION_FIELDS.filter(key => !parsed || !Object.hasOwn(parsed, key)),
+        unexpectedFieldCount: parsed ? Object.keys(parsed).filter(key => !SELECTION_FIELDS.includes(key)).length : 0,
+        invalidFields } };
+  }
+}
+
 export const BLOG_FOUNDATION_RESPONSE_SCHEMAS = Object.freeze({
+  [`${BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA.key}@${BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA.version}`]: validateBlogFoundationSelectionAttempt,
   [`${BLOG_FOUNDATION_SELECTION_SCHEMA_V1.key}@${BLOG_FOUNDATION_SELECTION_SCHEMA_V1.version}`]:
     validateBlogFoundationSelectionResponseV1,
   [`${BLOG_FOUNDATION_SELECTION_SCHEMA.key}@${BLOG_FOUNDATION_SELECTION_SCHEMA.version}`]: validateBlogFoundationSelectionResponse,
@@ -92,7 +131,9 @@ single 不得选择 previouslyPublished=true 的仓库；comparison 可以复用
 interestSignals 的每一项必须逐字复制 allowedInterestSignals 中的一个完整标签，不得追加冒号、解释、证据或改写。
 scores 必须用 0 到 100 的整数分别评估 readerValue、handsOnPotential、novelty、explainability、evidenceStrength；分数只是可审计判断，不能绕过服务器门禁。
 decisionReasonCodes 只能使用 EVIDENCE_STRONG、USE_CASE_CONCRETE、HANDS_ON_TESTABLE、READER_VALUE_HIGH、NOVELTY_SUFFICIENT、COMPARISON_JUSTIFIED。
-返回字段必须且只能是 mode、selectedIndexes、angle、rationale、interestSignals、comparisonAxes、scores、decisionReasonCodes。`;
+返回字段必须且只能是 mode、selectedIndexes、angle、rationale、interestSignals、comparisonAxes、scores、decisionReasonCodes。
+必须符合输入 responseExample 的完整字段结构，scores 的五项必须全部为整数，不得遗漏；decisionReasonCodes 必须为允许代码的非空数组。
+responseExample 只展示格式，必须根据本次候选作出真实判断，不得照抄其中的选题理由。`;
 
 export const BLOG_FOUNDATION_COMPOSITION_PROMPT = `你是小墨鱼，面向中文大众读者写一篇有判断、有证据的开源项目文章。只输出一个 JSON 对象，不要输出 Markdown。
 必须服从 selectionDecision。single 只写一个主项目；comparison 才可比较多个项目。
@@ -430,17 +471,39 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         gateRules: { deterministic: true, noManualReview: true,
           singleProjectReuse: 'forbidden', comparisonReuse: 'allowed-with-new-question' },
         candidates: eligibleCandidates.map(({ artifactId, ...candidate }) => candidate),
+        responseExample: { mode: 'single', selectedIndexes: [1],
+          angle: '根据当前候选资料提出至少十字的具体研究角度',
+          rationale: '根据当前候选的固定版本资料解释选择理由，说明可验证用途、实际结果以及与当前兴趣的联系，至少三十字。',
+          interestSignals: [input.profile.modules.editorial.interestSignals[0]], comparisonAxes: [],
+          scores: Object.fromEntries(SELECTION_SCORE_KEYS.map(key => [key, 80])),
+          decisionReasonCodes: ['EVIDENCE_STRONG'] },
       };
-      const result = await providerGateway.invoke({
+      const publicSelection = workflow === 'blog.project.single';
+      const invokeSelection = (correction = null) => providerGateway.invoke({
         runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId, leaseToken: execution.leaseToken,
-        action: { actionKey: 'select-subject', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
-        idempotencyKey: `blog-select:${context.run.id}`, resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 4 },
-        responseSchema: BLOG_FOUNDATION_SELECTION_SCHEMA,
-        request: { messages: [{ role: 'system', content: BLOG_FOUNDATION_SELECTION_PROMPT }, { role: 'user', content: JSON.stringify(request) }], temperature: 0.25 },
-        tokenCeiling: 1800, timeoutSeconds: 240, estimatedInputTokens: estimatedTokens(request),
+        action: { actionKey: correction ? 'select-subject-format-repair' : 'select-subject', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
+        idempotencyKey: `${correction ? 'blog-select-format-repair' : 'blog-select'}:${context.run.id}`,
+        resource: { type: 'provider.model', owner: context.run.agentUserId },
+        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 5 },
+        responseSchema: publicSelection ? BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA : BLOG_FOUNDATION_SELECTION_SCHEMA,
+        request: { messages: [{ role: 'system', content: BLOG_FOUNDATION_SELECTION_PROMPT },
+          { role: 'user', content: stableJson(correction ? { ...request, correction } : request) }], temperature: 0.25 },
+        tokenCeiling: 1800, timeoutSeconds: correction ? 45 : 240,
+        estimatedInputTokens: estimatedTokens(correction ? { ...request, correction } : request),
       });
-      const selectionOutput = validateBlogFoundationSelectionResponse(result.output);
+      let result = await invokeSelection(), selectionOutput;
+      if (publicSelection) {
+        const attemptOf = output => output?.schemaVersion === 'blog-selection-attempt-v1'
+          && typeof output.accepted === 'boolean' ? output : validateBlogFoundationSelectionAttempt(output);
+        let attempt = attemptOf(result.output);
+        if (!attempt.accepted) {
+          result = await invokeSelection({ validation: attempt.validation, previousOutput: attempt.rawOutput,
+            instruction: '按照 responseExample 修正完整 JSON 字段结构。只能从本次候选中选择，仍须服从 eligibleModes、兴趣标签、冷却期和证据门禁；不得伪造评分字段以绕过限制。' });
+          attempt = attemptOf(result.output);
+        }
+        if (!attempt.accepted) fail('AGENT_BLOG_SELECTION_SCHEMA_INVALID');
+        selectionOutput = validateBlogFoundationSelectionResponse(attempt.selection);
+      } else selectionOutput = validateBlogFoundationSelectionResponse(result.output);
       const selection = semanticSelection(selectionOutput, eligibleCandidates, input.profile,
         input.previousRepositoryUrls, input.activeEditorialCooldowns);
       const artifact = await artifactRepository.save({
