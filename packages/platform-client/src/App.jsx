@@ -861,7 +861,8 @@ const githubStaticSignalLabels = {
 };
 
 function GitHubImportPage({ api, demo, go, accountProfile, embedded = false }) {
-  const {t}=useI18n();
+  const {t,locale}=useI18n();
+  const [authorizationNotice,setAuthorizationNotice]=useState(false);
   const [state, setState] = useState({ status: 'loading', connections: [], repositories: [], preview: null });
   const [selectedConnection, setSelectedConnection] = useState('');
   const [selectedRepository, setSelectedRepository] = useState('');
@@ -902,6 +903,7 @@ function GitHubImportPage({ api, demo, go, accountProfile, embedded = false }) {
     const installWindow = embedded ? globalThis.open?.('about:blank', 'gamehub-github-install', 'popup,width=900,height=820') : null;
     try {
       const result = (await api.startGitHubSourceInstall()).data;
+      if(result.externalOpened){installWindow?.close();setAuthorizationNotice(true);setBusy('');return;}
       const stateToken = new URL(result.installUrl).searchParams.get('state');
       if (stateToken) globalThis.sessionStorage?.setItem('gamehub.github-app-state', stateToken);
       if (installWindow) { installWindow.location.replace(result.installUrl); installWindow.opener = null; }
@@ -943,6 +945,7 @@ function GitHubImportPage({ api, demo, go, accountProfile, embedded = false }) {
   const repositoryUrl = state.preview ? `https://github.com/${encodeURIComponent(state.preview.repository.owner)}/${encodeURIComponent(state.preview.repository.name)}` : '';
   return <main className="page github-import-page">
     <button className="back-link" onClick={() => go('/creator')}>{icons.back} {t('creator.backWorks')}</button>
+    {authorizationNotice&&<div className="friendly-note" role="status"><p>{locale==='en'?'Complete GitHub authorization in your browser using the same Mooyu account, then refresh connections here.':'请在浏览器用同一墨鱼账号完成 GitHub 授权，然后在这里刷新连接。'}</p><Button kind="secondary" onClick={loadConnections}>{locale==='en'?'Refresh connections':'刷新连接'}</Button></div>}
     <div className="section-heading"><div><span className="kicker">READ-ONLY SOURCE IMPORT</span><h1>{t('creator.github.title')}</h1><p>{t('creator.github.lead')}</p></div><Button kind="github" icon={<GitHubLogo/>} onClick={install} disabled={!!busy}>{t(busy === 'install' ? 'creator.github.redirecting' : 'creator.github.connect')}</Button></div>
     <aside className="github-import-notice"><strong>{t('creator.github.noticeTitle')}</strong><p>{t('creator.github.noticeBody')}</p></aside>
     {error && <p className="form-error" role="alert">{error}</p>}
@@ -1898,7 +1901,7 @@ function AdminPage({ api, demo, go, hostIdentity, hostAdapter }) {
     <div className="admin-panel-heading"><div><span>{activePanel.eyebrow}</span><h2>{activePanel.label}</h2></div>{state.loadingPanel === panel && !firstLoad && <small role="status">正在刷新…</small>}</div>
     {error && <p className="form-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}{state.panelError && <div className="admin-panel-error" role="alert"><span>{state.panelError}</span><button type="button" onClick={() => loadPanel(panel, true)}>重新加载</button></div>}
     {firstLoad ? <LoadingCards/> : <>
-    {panel === 'overview' && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
+    {panel === 'overview' && state.loaded['overview:'+days] && <><section className="admin-overview-cards" aria-label="管理待办摘要"><button type="button" onClick={() => selectPanel('governance')}><span>内容待办</span><strong>{governanceCount}</strong><small>{state.applications.length} 份创作者申请 · {state.reports.length} 条举报</small></button><button type="button" onClick={() => selectPanel('works')}><span>认领待审</span><strong>{pendingClaims}</strong><small>核验作者与维护者关系</small></button><button type="button" onClick={() => selectPanel('works')} className={Number(state.sourceOverview?.failedWebhooks24h || 0) ? 'is-warning' : ''}><span>来源服务</span><strong>{state.sourceOverview?.failedWebhooks24h || 0}</strong><small>近 24 小时 Webhook 失败</small></button><button type="button" onClick={() => selectPanel('official')} className={state.automation?.lastRun?.status === 'failed' ? 'is-warning' : ''}><span>官方供给</span><strong>{state.automation?.readyCount ?? '—'}</strong><small>{state.automation?.lastRun?.status === 'failed' ? '最近同步失败' : '道题当前可用'}</small></button></section><AdminAnalytics analytics={state.analytics} days={days} onDays={setDays}/><AdminStorage storage={state.storage}/></>}
     {panel === 'agents' && <AgentAdmin api={api} go={go} hostIdentity={hostIdentity} hostAdapter={hostAdapter}/>}
     {panel === 'growth' && <><GrowthContentStudio api={api} demo={demo} demoWorks={demoWorks}/><DiscoveryCampaignAdmin api={api} demo={demo}/><AuthorOutreachQueue api={api} demo={demo}/></>}
     {panel === 'blog' && <BlogAdmin api={api} demo={demo} initialArticleId={readAdminArticle()}/>}

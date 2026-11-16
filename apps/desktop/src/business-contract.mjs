@@ -2,9 +2,11 @@
 // still own endpoint construction, authentication and refresh behavior.
 import { GAME_METHODS, gameArgument } from './game-api-contract.mjs';
 import { PRACTICE_METHODS, practiceArgument } from './practice-contract.mjs';
+import {MANAGEMENT_METHODS,managementArgument} from './management-contract.mjs';
 import { PAPER_STUDY_METHODS, PAPER_STUDY_IMPORT_LIMIT, paperStudyImport } from '../../../packages/platform-client/src/paper-study-contract.mjs';
-export const businessRequestLimit = request => request?.method === 'importPaperStudy' ? PAPER_STUDY_IMPORT_LIMIT + 2048 : request?.method==='sendAssistantMessage'?114048:32768;
+export const businessRequestLimit = request => request?.method === 'importPaperStudy' ? PAPER_STUDY_IMPORT_LIMIT + 2048 : request?.method==='sendAssistantMessage'?114048:Object.hasOwn(MANAGEMENT_METHODS,request?.method)?524288:32768;
 export const BUSINESS_METHODS = Object.freeze({
+  ...MANAGEMENT_METHODS,
   ...GAME_METHODS,
   ...PRACTICE_METHODS,
   ...PAPER_STUDY_METHODS,
@@ -27,6 +29,7 @@ export function businessArguments(method, args = []) {
   if (args.length > spec.length) denied();
   return spec.map((kind, index) => {
     const value = args[index];
+    if(Object.hasOwn(MANAGEMENT_METHODS,method)&&!['listWorks','listDiscoveryCampaigns','getDiscoveryCampaign','listBlogArticles','getBlogArticle'].includes(method))return managementArgument(kind,value);
     if(Object.hasOwn(PRACTICE_METHODS,method))return practiceArgument(kind,value);
     if (kind === 'paper-import') return paperStudyImport(value);
     if (Object.hasOwn(GAME_METHODS, method)) return gameArgument(kind, value);

@@ -79,13 +79,14 @@ test('account-only API stays explicit; no empty-success or local sample substitu
   }
 });
 
-test('renderer cannot turn business bridge into publishing, arbitrary headers or arbitrary HTTP', async t => {
+test('renderer cannot bypass fixed publishing parameters or supply arbitrary headers and HTTP', async t => {
   const { session, api, backend } = await setup(t);
   for (const method of ['publishBlogArticle', '__proto__', 'fetch', 'getProfile'])
     await assert.rejects(session.call('business', [{ method, args: [] }]));
   for (const query of [{ headers: { Authorization: 'injected' } }, { limit: -1 }, { q: 'x'.repeat(301) }])
     assert.throws(() => businessArguments('listWorks', [query]));
-  await assert.rejects(api.publishBlogArticle('article'), { code: 'DESKTOP_BUSINESS_OPERATION_UNAVAILABLE' });
+  await assert.rejects(api.publishBlogArticle('article'), { code: 'DESKTOP_BUSINESS_INPUT_INVALID' });
+  await assert.rejects(api.fetch('https://example.test'), { code: 'DESKTOP_BUSINESS_OPERATION_UNAVAILABLE' });
   assert.equal(backend.businessCalls.length, 0);
 });
 

@@ -35,7 +35,7 @@ export function validateGitHubAuthorizeUrl(value, challengeId, origin) {
   return url.href;
 }
 
-export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
+export async function createDesktopAccountSession({ apiOrigin, environment = 'local-test', vault, fetchImpl = globalThis.fetch, onChanged = () => {}, businessRuntime = null, onRuntimeOrigin = () => {}, businessTimeoutMs = 20000, businessConcurrency = 4, resolveSelectedFile=null, openExternal = async () => fail('DESKTOP_BROWSER_UNAVAILABLE', 503) }) {
   const origin = accountOrigin(apiOrigin, environment);
   const runtimePolicy = localBusinessRuntime(businessRuntime, origin, environment);
   if (!origin) fail('DESKTOP_ACCOUNT_NOT_CONFIGURED', 503);
@@ -97,7 +97,8 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
       // not cancel another page's refresh; logout still cancels the session.
       const refresh = new URL(address).pathname === '/v1/auth/refresh';
       const signals = refresh || shared ? [context?.sessionSignal] : [settings?.signal, context?.signal, context?.sessionSignal];
-      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : target.pathname==='/v1/me/assistant/messages'?80000:20000), ...signals.filter(Boolean)]);
+      const uploading=/^\/v1\/creator\/uploads\/[^/]+\/content$/u.test(target.pathname);
+      const signal = AbortSignal.any([AbortSignal.timeout(refresh ? 15000 : uploading?1800000:target.pathname==='/v1/me/assistant/messages'?80000:20000), ...signals.filter(Boolean)]);
       return abortable(() => fetchImpl(address, { ...settings, redirect: 'error', credentials: 'omit', signal }), signal);
     };
     const verify = async () => {
@@ -161,7 +162,17 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
         const signal = operation.getStore()?.signal;
         // Transport applies the page signal to ordinary I/O. Do not give it to
         // the client's shared refresh promise, which belongs to the session.
-        const response = await api[request.method](...values);
+        let response;
+        if(request.method==='startGitHubSourceInstall'){
+          if(!tokens)fail('AUTH_REQUIRED',401);
+          await openExternal(origin+'/creator/import');
+          response={data:{externalOpened:true}};
+        }else if(['uploadContent','uploadWorkCover'].includes(request.method)){
+          if(!resolveSelectedFile||!tokens)fail('DESKTOP_UPLOAD_SELECTION_REQUIRED',400);
+          const file=await resolveSelectedFile(values[1],sessionId,request.method);
+          signal?.throwIfAborted();
+          response=request.method==='uploadContent'?await api.uploadContentBytes(values[0],file,values[2]):await api.uploadWorkCover(values[0],file);
+        }else response=await api[request.method](...values);
         signal?.throwIfAborted();
         if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
         if (request.method === 'getLaunch') {
@@ -256,11 +267,11 @@ export async function createDesktopAccountSession({ apiOrigin, environment = 'lo
     return api[method]();
   }
   businessRequests = createBusinessRequests({ timeoutMs: businessTimeoutMs, concurrency: businessConcurrency,
-    timeoutForRequest:request=>request.method==='sendAssistantMessage'?80000:businessTimeoutMs,
+    timeoutForRequest:request=>request.method==='uploadContent'?1800000:request.method==='sendAssistantMessage'?80000:businessTimeoutMs,
     run: item => operation.run({ epoch: item.epoch, requestId: item.id, signal: item.controller.signal, sessionSignal: item.sessionSignal }, async () => {
       if (!current()) fail('DESKTOP_ACCOUNT_SESSION_CHANGED', 409);
       try { return await dispatch('business', [item.request]); }
-      catch (error) { if (error.status === 401 && tokens && current() && !item.controller.signal.aborted) await clear(); throw error; }
+      catch (error) { if (error.status === 401 && item.request.method!=='uploadContent' && tokens && current() && !item.controller.signal.aborted) await clear(); throw error; }
     }) });
   const exitSession = async method => {
     const retiring = tokens;

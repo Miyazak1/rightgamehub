@@ -32,7 +32,7 @@ const plan = () => ({ schemaVersion: 'paper-layout-engine-plan-v1',
 
 async function fixture(t, id, managerOptions = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'paper-engine-manager-'));
-  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  t.after(() => fs.rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   const root = path.join(directory, 'runs');
   const { createPaperLayoutEngineProcessManager } = await import(executorUrl);
   const { createPaperLayoutEngineProcessRequest } = await import(contractUrl);
@@ -83,6 +83,7 @@ if (process.env.MODE === 'success') {
 } else if (process.env.MODE === 'flood') {
   console.log('x'.repeat(4096)); await delay(200);
 } else if (process.env.MODE === 'cancel') {
+  fs.appendFileSync(request.output.progressPath, JSON.stringify(progress(1, 'rendering', 0, 1)) + '\\n');
   while (!fs.existsSync(request.output.cancellationPath)) await delay(10);
   atomic(result('cancelled'));
 } else if (process.env.MODE === 'timeout') {
@@ -127,9 +128,16 @@ test('process manager kills output flooding before it can consume unbounded memo
 test('process manager exposes cooperative cancellation through a local cancellation file', async t => {
   const { manager, request, adapter } = await fixture(t, ids.cancel);
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), 50);
-  const run = await manager.run({ request, command: command(adapter, 'cancel'),
+  const pending = manager.run({ request, command: command(adapter, 'cancel'),
     signal: controller.signal });
+  pending.catch(() => {});
+  // The cooperative protocol is meaningful only after the adapter starts.
+  // A fixed 50ms sometimes cancels the manager before it has spawned a child.
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline && !await fs.stat(request.output.progressPath).then(s=>s.size>0,()=>false))
+    await new Promise(resolve=>setTimeout(resolve,10));
+  controller.abort();
+  const run = await pending;
   assert.equal(run.result.status, 'cancelled');
   assert.equal(run.result.error.code, 'ENGINE_CANCELLED');
 });

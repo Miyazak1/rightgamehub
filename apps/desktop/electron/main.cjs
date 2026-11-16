@@ -83,7 +83,9 @@ async function createShell(config) {
   const publish = () => { setImmediate(() => { if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('mooyu:chrome-state', state()); }); };
   let accountSession = null;
   let realtimeBridge = null, fileExports = null;
-  const retireGameIO = () => { realtimeBridge?.closeAll(); fileExports?.cancelAll(); };
+  const {createSelectedUploads}=await import('../src/selected-uploads.mjs');
+  const selectedUploads=createSelectedUploads();
+  const retireGameIO = () => { realtimeBridge?.closeAll(); fileExports?.cancelAll(); selectedUploads.clear(); };
   app.once('will-quit', retireGameIO);
   const { createDesktopUpdater } = await import('../src/update-service.mjs');
   const updates = await createDesktopUpdater({configuration: ['production','local-test'].includes(accountEnvironment) ? config.updateTrust : null,
@@ -112,6 +114,7 @@ async function createShell(config) {
     accountSession = await createDesktopAccountSession({ apiOrigin: accountApiOrigin, environment: accountEnvironment,
       fetchImpl: createDesktopNetworkTransport(accountApiOrigin,network.fetch.bind(network)),
       businessRuntime, onRuntimeOrigin: origin => runtimeOrigins.add(origin),
+      resolveSelectedFile:(token,scope,purpose)=>selectedUploads.resolve(token,scope,purpose),
       openExternal: url => systemShell.openExternal(url, {activate:true}),
       vault: createWindowsDpapiCredentialVault({ directory: path.join(config.profileRoot, 'account-vault') }),
       onChanged: value => { retireGameIO(); if (window && !window.isDestroyed()) window.webContents.send('mooyu:account-state', value); } });
@@ -234,6 +237,11 @@ async function createShell(config) {
   ipcMain.handle('mooyu:realtime-call', (event, method, input) => { trusted(event); return gameResult(async () => { await accountStartup.run(); trusted(event); if (!realtimeBridge) throw Error('unconfigured'); return realtimeBridge.call(method, input); }); });
   ipcMain.handle('mooyu:file-save', (event, input) => { trusted(event); return gameResult(async () => { await accountStartup.run(); trusted(event); if (!fileExports) throw Error('unconfigured'); return fileExports.save(input); }); });
   ipcMain.handle('mooyu:file-cancel', async (event, id) => { trusted(event); await accountStartup.run(); trusted(event); if (typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id)) fileExports?.cancel(id); return { cancelled: true }; });
+  ipcMain.handle('mooyu:file-upload-register',(event,filename)=>{trusted(event);return gameResult(async()=>{
+    await accountStartup.run();trusted(event);const current=await accountSession?.call('state');
+    if(!current?.authenticated)throw Object.assign(Error('AUTH_REQUIRED'),{code:'AUTH_REQUIRED'});
+    return selectedUploads.register(filename,current.desktopSessionId);
+  });});
   ipcMain.handle('mooyu:chrome-action', (event, action) => { trusted(event); perform(action); return { accepted: true }; });
   ipcMain.handle('mooyu:chrome-theme', (event, mode) => { trusted(event); window.setTitleBarOverlay(titleBarPalette(mode)); currentTheme = mode; publish(); return { applied: mode }; });
   return { createWindow, session: ses, blockedRequests: blocked, windowStateStore: stateStore, updates, desktopTray };

@@ -18,7 +18,7 @@ catch (error) {
   if (message) { message.textContent = '客户端启动未完成，请关闭后重新打开。'; message.setAttribute('role', 'alert'); }
   throw error;
 }
-const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooyuDesktop.account, env.accountApiOrigin)
+const baseApi = env.accountConfigured ? createDesktopBusinessApi(globalThis.mooyuDesktop.account, env.accountApiOrigin, globalThis.mooyuDesktop.files)
   : createPreviewApi({ fixtureOrigin: env.fixtureOrigin });
 const session = env.accountConfigured ? createDesktopAccountAdapter(globalThis.mooyuDesktop.account) : null;
 const api = session ? new Proxy(baseApi, { get(target, key) { return Object.hasOwn(session.api, key) ? session.api[key] : target[key]; } }) : baseApi;

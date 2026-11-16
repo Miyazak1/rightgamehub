@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 if (process.isMainFrame) contextBridge.exposeInMainWorld('mooyuDesktop', Object.freeze({
   environment: () => ipcRenderer.invoke('mooyu:preview-environment'),
   updates: Object.freeze({call: action => ipcRenderer.invoke('mooyu:update-call', action),
@@ -12,7 +12,8 @@ if (process.isMainFrame) contextBridge.exposeInMainWorld('mooyuDesktop', Object.
       const handler = (_event, value) => listener(value); ipcRenderer.on('mooyu:update-state', handler);
       return () => ipcRenderer.removeListener('mooyu:update-state', handler);
     }}),
-  files: Object.freeze({ save: input => ipcRenderer.invoke('mooyu:file-save', input), cancel: id => ipcRenderer.invoke('mooyu:file-cancel', id) }),
+  files: Object.freeze({ save: input => ipcRenderer.invoke('mooyu:file-save', input), cancel: id => ipcRenderer.invoke('mooyu:file-cancel', id),
+    registerUpload: file => ipcRenderer.invoke('mooyu:file-upload-register',webUtils.getPathForFile(file)) }),
   realtime: Object.freeze({
     call: (method, input) => ipcRenderer.invoke('mooyu:realtime-call', method, input),
     onEvent(listener) {

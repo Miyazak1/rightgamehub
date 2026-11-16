@@ -4,10 +4,10 @@ import { createAuthService, AuthError } from '../../apps/api/src/auth-service.mj
 
 // In-memory repository + mail capture. Uses the product authentication service;
 // no database, SMTP, real account, production config or external credentials.
-export async function createIsolatedAccountApi({ onMail = () => {}, onGitHubChallenge = () => {}, onBrowserVisit = () => {}, automaticOAuth = false, handleBusinessRequest = async () => false } = {}) {
+export async function createIsolatedAccountApi({ onMail = () => {}, onGitHubChallenge = () => {}, onBrowserVisit = () => {}, automaticOAuth = false, handleBusinessRequest = async () => false,profileOverride={} } = {}) {
   const profile = { id: '31e033b2-13d6-4b81-b214-21b3f25dca60', displayName: '桌面隔离测试用户',
     role: 'user', canPublish: false, createdAt: '2026-11-01T00:00:00Z', profileHandle: null,
-    avatar: { kind: 'preset', presetKey: 'cat' }, linkedAccounts: [] };
+    avatar: { kind: 'preset', presetKey: 'cat' }, linkedAccounts: [],...profileOverride };
   const challenges = new Map(), grants = new Map(), calls = [];
   const webChallenges = new Map(), upstreamTokens = new Set();
   let origin;
