@@ -389,5 +389,18 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   assert.equal(providerTimeline.providerOutputArtifacts[0].id, providerResult.outputArtifactId);
   assert.equal(Object.hasOwn(providerTimeline.providerOutputArtifacts[0], 'content'), false);
   await assert.rejects(runtimeRead.listRuns({ userId: operatorId, role: 'user' }, account.agentUserId), error => error.code === 'AGENT_OPERATOR_REQUIRED');
+  const boundary=await runtime.createRun({agentUserId:account.agentUserId,workflowKey:workerManifest.workflowKey,
+    workflowVersion:1,triggerKind:'system',idempotencyKey:'request-boundary:'+crypto.randomUUID(),input:{fixture:true}});
+  const boundaryClaim=await runtime.claimNextStage('request-boundary',120,[workerManifest.workflowKey+':execute'],boundary.id);
+  await runtime.startStage({stageId:boundaryClaim.id,workerId:boundaryClaim.leasedBy,leaseToken:boundaryClaim.leaseToken});
+  const actionInput={runId:boundary.id,stageId:boundaryClaim.id,
+    action:{actionKey:'request-boundary',actionKind:'domain-write',capabilityKey:'blog.article.publish',contractVersion:1,riskLevel:'L3'},
+    policyDecision:{schemaVersion:'agent-policy-decision-v1',decision:'allow'}};
+  const edge=await runtime.createAction({...actionInput,idempotencyKey:'boundary-accepted:'+boundary.id,request:{text:'x'.repeat(65524)}});
+  assert.equal(Number((await admin.query('SELECT octet_length(request_json::text) AS bytes FROM agent_run_actions WHERE id=$1',[edge.id])).rows[0].bytes),65536);
+  await assert.rejects(runtime.createAction({...actionInput,idempotencyKey:'boundary-rejected:'+boundary.id,request:{text:'x'.repeat(65525)}}),error=>error.code==='AGENT_ACTION_REQUEST_TOO_LARGE');
+  await assert.rejects(runtime.createAction({...actionInput,idempotencyKey:'boundary-invalid:'+boundary.id,request:{text:'\ud83d'}}),error=>error.code==='AGENT_ACTION_REQUEST_INVALID');
+  assert.equal(Number((await admin.query('SELECT count(*) AS n FROM agent_run_actions WHERE run_id=$1',[boundary.id])).rows[0].n),1);
+  await runtime.failStage({stageId:boundaryClaim.id,workerId:boundaryClaim.leasedBy,leaseToken:boundaryClaim.leaseToken,errorCode:'FIXTURE_FINISHED',errorMessage:'Boundary fixture complete.',retryable:false});
   await admin.end();
 });

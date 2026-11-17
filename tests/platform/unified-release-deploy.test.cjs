@@ -8,6 +8,8 @@ test('unified deployment validates uploads before mutation, preserves Compose ov
   git('init','--initial-branch=production');git('config','user.name','Release fixture');git('config','user.email','fixture@example.test');git('config','core.autocrlf','false');
   fs.writeFileSync(path.join(repo,'.gitignore'),'deploy/.env.prod\n');fs.writeFileSync(path.join(repo,'deploy/compose.prod.yml'),'# previous base\n');fs.writeFileSync(path.join(repo,'deploy/extra.yml'),'# preserve extra gateway configuration\n');fs.writeFileSync(path.join(repo,'apps/api/migrations/0001_test.sql'),'-- unchanged\n');git('add','.');git('commit','-m','production');const previous=git('rev-parse','HEAD');
   for(const name of ['prepare-unified-release.sh','prepare-practice-release.sh','update-practice-release.sh','pin-running-image.sh','unified-assets.mjs','compose.unified-downloads.yml']){let content=fs.readFileSync(path.join(source,'deploy',name),'utf8').replaceAll('/www/backup/gamehub',clean(records)).replaceAll('/www/gamehub-downloads',clean(downloads)).replaceAll('/www/gamehub',clean(repo));if(name==='prepare-unified-release.sh')content=content.replace('set -Eeuo pipefail','set -Eeuo pipefail\ncurl() { bash "$FIXTURE_BIN/curl" "$@"; }; export -f curl\nflock() { [ "$FAIL_STAGE" != locked ]; }; export -f flock');fs.writeFileSync(path.join(repo,'deploy',name),content);}
+  fs.mkdirSync(path.join(repo,'apps/api/src'),{recursive:true});
+  for(const name of ['agent-provider-request.mjs','agent-provider-gateway.mjs','agent-runtime-repository.mjs','agent-blog-prompt.mjs','agent-blog-public-admission.mjs','agent-runtime-worker.mjs'])fs.writeFileSync(path.join(repo,'apps/api/src',name),'// source fixture '+name+'\n');
   for(const [dir,key]of [['agent','agent'],['desktop','desktop']]){fs.mkdirSync(path.join(downloads,dir));fs.writeFileSync(path.join(downloads,dir,'manifest.json'),JSON.stringify({[key]:'ready'})+'\n');}
   fs.writeFileSync(path.join(incoming,'bundle.json'),'{}');const archive=path.join(root,'release.tar.gz');execFileSync('tar',['-czf',archive,'-C',incoming,'.'],{windowsHide:true});const sum=crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
   fs.writeFileSync(path.join(repo,'config/unified-release.json'),JSON.stringify({archiveSha256:sum},null,2)+'\n');fs.writeFileSync(path.join(repo,'deploy/compose.prod.yml'),'# release base\n');git('add','.');git('commit','-m','release');const release=git('rev-parse','HEAD'),launcher=path.join(root,'prepare.sh');fs.copyFileSync(path.join(repo,'deploy/prepare-unified-release.sh'),launcher);git('checkout','--detach',previous);fs.writeFileSync(path.join(repo,'deploy/.env.prod'),'PRIVATE_FIXTURE_VALUE=never-print-me\n');
@@ -25,6 +27,8 @@ test('unified deployment validates uploads before mutation, preserves Compose ov
   const docker=`#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$TRACE"
 case "$*" in
+ *'Config.Image'*) target="\${*: -1}";service="\${target#cid-}";awk -v service="$service" '$0=="  "service":" {getline;print $2}' "$MOOYU_RELEASE_RECORD/release-images.yml";;
+ *'exec -T api sha256sum '*) target="\${*: -1}";sha256sum "$FIXTURE_REPO/\${target#/app/}";;
  'ps -q '*service=web*) echo cid-web;;
  'ps -q '*service=api*) echo cid-api;;
  *'project.config_files'*) if [ "$FAIL_STAGE" = overlay ]; then echo /missing/operator-overlay.yml; elif [[ "$FAIL_STAGE" = rolled-back* ]]; then printf '%s,%s,%s\\n' "$FIXTURE_PREVIOUS_RECORD/compose-0.before.yml" "$FIXTURE_PREVIOUS_RECORD/compose-1.before.yml" "$FIXTURE_PREVIOUS_RECORD/rollback-images.yml"; else printf '%s,%s\\n' "$FIXTURE_REPO/deploy/compose.prod.yml" "$FIXTURE_REPO/deploy/extra.yml"; fi;;
@@ -36,7 +40,7 @@ case "$*" in
  'exec cid-api test -d '*) exit 0;;
  'exec cid-web test -d '*) exit 1;;
  'exec cid-web printenv APP_DOMAIN') echo example.test;;
- *'config --format json'*) if [ "$FAIL_STAGE" = model ];then printf '{"services":{"api":{"environment":{"DEEPSEEK_API_KEY":""}}}}';else printf '{"services":{"api":{"environment":{"DEEPSEEK_API_KEY":"fixture-key"}}}}';fi;;
+ *'config --format json'*) if [ "$FAIL_STAGE" = model ];then printf '{"services":{"web":{"build":{}},"migrate":{"build":{}},"api":{"build":{},"environment":{"DEEPSEEK_API_KEY":""}}}}';else printf '{"services":{"web":{"build":{}},"migrate":{"build":{}},"api":{"build":{},"environment":{"DEEPSEEK_API_KEY":"fixture-key"}}}}';fi;;
  'exec -i cid-api node -e '*) shift 3; "$@";exit $?;;
  *'ps --status running --services'*) printf 'api\\nweb\\n';;
  *'ps --status running --quiet '*) printf 'cid-%s\\n' "\${*: -1}";;
@@ -98,4 +102,35 @@ test('real Compose keeps rollback snapshots relative to the production deploy di
  assert.equal(path.resolve(fixed.build.context),path.resolve(project));
  assert.equal(path.resolve(fixed.volumes[0].source),path.resolve(project,'rules'));
  assert.equal(fixed.build.dockerfile,'deploy/Dockerfile.api');
+});
+
+test('effective build roles get unique final images across three renamed rollback layers',t=>{
+ if(spawnSync('docker',['compose','version'],{windowsHide:true}).status!==0){t.skip('Docker Compose CLI is unavailable');return;}
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'mooyu-compose-identity-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const deploy=path.join(root,'project/deploy'),records=path.join(root,'records');fs.mkdirSync(deploy,{recursive:true});fs.mkdirSync(records);
+ const base=path.join(deploy,'compose.yml');
+ fs.writeFileSync(base,'services:\n  api:\n    build:\n      context: ..\n      dockerfile: deploy/Dockerfile.api\n    environment:\n      OPERATOR_TUNING: keep\n  migrate:\n    build:\n      context: ..\n      dockerfile: deploy/Dockerfile.api\n  external:\n    image: redis:7\n');
+ const source=fs.readFileSync(path.resolve(__dirname,'../../deploy/update-practice-release.sh'),'utf8');
+ const marker='dc config --format json | docker exec -i "$API_FOR_PLAN" node -e \'';
+ const code=source.split(marker)[1].split('\' "$RELEASE_IMAGE_PREFIX"')[0];
+ const read=files=>{
+  const result=spawnSync('docker',['compose','--project-directory',deploy,...files.flatMap(file=>['-f',file]),'config','--format','json'],{encoding:'utf8',windowsHide:true});
+  assert.equal(result.status,0,result.stderr);return JSON.parse(result.stdout);
+ };
+ const layers=[base],history=[];
+ for(let depth=1;depth<=3;depth++){
+  const old=path.join(records,`compose-${depth}.before.yml`),oldText=`services:\n  api:\n    image: mooyu-release-rollback:historical-${depth}\n`;
+  fs.writeFileSync(old,oldText);layers.push(old);history.push([old,oldText]);
+  const effective=read(layers);effective.services.api.environment.PRIVATE_FIXTURE_SECRET='never-print-this';
+  const prefix=`mooyu-release:${'a'.repeat(16)}-20261117t11000${depth}z`;
+  const plan=spawnSync(process.execPath,['-e',code,prefix,'migrate','api','external'],{input:JSON.stringify(effective),encoding:'utf8',windowsHide:true});
+  assert.equal(plan.status,0,plan.stderr);assert.doesNotMatch(plan.stdout,/PRIVATE_FIXTURE_SECRET|never-print-this|historical-/);
+  const latest=path.join(records,`release-${depth}.yml`);fs.writeFileSync(latest,plan.stdout);
+  const final=read([...layers,latest]);assert.equal(final.services.api.image,prefix+'-api');
+  assert.equal(final.services.migrate.image,prefix+'-migrate');assert.equal(final.services.external.image,'redis:7');
+  assert.equal(final.services.api.environment.OPERATOR_TUNING,'keep');
+  assert.equal(path.resolve(final.services.api.build.context),path.resolve(root,'project'));
+  layers.push(latest);
+ }
+ for(const [file,content] of history)assert.equal(fs.readFileSync(file,'utf8'),content);
 });

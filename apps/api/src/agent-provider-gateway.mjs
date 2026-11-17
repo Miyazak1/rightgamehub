@@ -1,4 +1,6 @@
 import { normalizeModelPolicy } from './agent-provider-gateway-repository.mjs';
+import { compileAgentProviderRequest } from './agent-provider-request.mjs';
+import {agentExecutionSignal} from './agent-execution-context.mjs';
 
 export class AgentProviderGatewayError extends Error {
   constructor(code, { cause = null, retryable = false, uncertain = false } = {}) {
@@ -36,14 +38,27 @@ export function createAgentProviderGateway({
   return {
     async invoke({
       runId, stageId, workerId, leaseToken, action, idempotencyKey, resource = {}, modelPolicy: inputPolicy,
-      promptTemplate, responseSchema, request, tokenCeiling, timeoutSeconds, estimatedInputTokens = 0,
+      promptTemplate, responseSchema, request, tokenCeiling, timeoutSeconds, estimatedInputTokens = 0,signal,
     }) {
       const modelPolicy = normalizeModelPolicy(inputPolicy);
+      signal=agentExecutionSignal(signal);
+      signal?.throwIfAborted();
+      let compiled;
+      try{
+        if(Buffer.byteLength(JSON.stringify({modelPolicy,promptTemplate,responseSchema}))>8192)fail('AGENT_PROVIDER_METADATA_TOO_LARGE');
+        compiled=compileAgentProviderRequest({request,modelPolicy,tokenCeiling,timeoutSeconds,estimatedInputTokens});
+      }catch(error){
+        let sizeBytes=null;try{sizeBytes=Buffer.byteLength(JSON.stringify(request??null));}catch{}
+        if(runtimeRepository.recordProviderRequestRejection)await runtimeRepository.recordProviderRequestRejection({runId,stageId,workerId,leaseToken,
+          errorCode:errorCode(error),sizeBytes,maxInputTokens:modelPolicy.maxInputTokens}).catch(()=>{});
+        throw error;
+      }
+      request=compiled.request;estimatedInputTokens=compiled.inputTokens;
       const validate = validators.get(schemaKey(responseSchema));
       if (!validate) fail('AGENT_PROVIDER_RESPONSE_SCHEMA_NOT_REGISTERED');
       const decision = await policyService.decide({ runId, stageId, action, resource });
       const prepared = await runtimeRepository.createAction({
-        runId, stageId, action, idempotencyKey,
+        runId, stageId, workerId,leaseToken,action, idempotencyKey,requestStorage:'artifact-v1',
         request: { modelPolicy, promptTemplate, responseSchema, tokenCeiling, timeoutSeconds, input: request },
         policyDecision: decision,
       });
@@ -114,13 +129,18 @@ export function createAgentProviderGateway({
         });
         throw error;
       }
+      if(signal?.aborted){
+        await governanceRepository.failBeforeAcknowledgement(reservation.callId,{notDispatched:true,
+          errorCode:'AGENT_PROVIDER_CANCELLED',errorMessage:'Stage cancelled before dispatch.'});
+        fail('AGENT_PROVIDER_CANCELLED');
+      }
       await governanceRepository.markSending(reservation.callId);
       let receipt;
       try {
         receipt = await adapter({
           apiKey, provider: model.provider, modelId: model.modelId, modelConfig: model.config,
           request: structuredClone(request), tokenCeiling, timeoutSeconds,
-          responseSchema: structuredClone(responseSchema), idempotencyKey,
+          responseSchema: structuredClone(responseSchema), idempotencyKey,signal,
         });
       } catch (error) {
         if (error?.acknowledged === true && error?.providerRequestId) {

@@ -80,6 +80,28 @@ echo 'Previous business code restored with the compatible migration inventory; u
 ROLLBACK
 chmod 700 "$RECORD/rollback.sh"
 echo "Release record and rollback: $RECORD"
+# Resolve build roles from the effective configuration, then append a final
+# image-only layer. This dominates renamed/nested rollback overlays without
+# discarding operator settings or rebuilding into a historical image tag.
+RELEASE_IMAGE_PREFIX="mooyu-release:${EXPECTED:0:16}-${STAMP,,}"
+API_FOR_PLAN=$(dc ps --status running --quiet api)
+dc config --format json | docker exec -i "$API_FOR_PLAN" node -e '
+let text="";process.stdin.on("data",part=>text+=part);process.stdin.on("end",()=>{
+ try{
+  const config=JSON.parse(text),[prefix,...names]=process.argv.slice(1);
+  if(!/^mooyu-release:[a-f0-9]{16}-[a-z0-9]+$/.test(prefix))throw Error();
+  const lines=["services:"];
+  for(const name of [...new Set(names)]){
+   if(!/^[a-z][a-z0-9-]*$/.test(name)||!config.services?.[name])throw Error();
+   if(config.services[name].build)lines.push("  "+name+":","    image: "+prefix+"-"+name);
+  }
+  if(lines.length===1)throw Error();
+  console.log(lines.join("\n"));
+ }catch{console.error("Release image role resolution failed; no services changed.");process.exitCode=1;}
+});' "$RELEASE_IMAGE_PREFIX" migrate "${SERVICES[@]}" > "$RECORD/release-images.yml"
+COMPOSE_ARGS+=(-f "$RECORD/release-images.yml")
+printf '%s\n' "$RECORD/release-images.yml" >> "$RECORD/compose-files.target.txt"
+dc config --quiet
 # Build before touching running services or the database. Avoid full compose up.
 # Keep the already working production Caddy binary and DNS provider. This is an
 # application update, so rebuilding unrelated Go dependencies is unnecessary.
@@ -88,7 +110,7 @@ dc build --build-arg "MOOYU_WEB_RUNTIME_IMAGE=$WEB_RUNTIME_IMAGE" migrate "${SER
 dc exec -T postgres pg_dump -U gamehub -d gamehub --format=custom > "$RECORD/database.dump.partial"
 dc exec -T postgres pg_restore --list < "$RECORD/database.dump.partial" > /dev/null
 mv "$RECORD/database.dump.partial" "$RECORD/database.dump"
-# Both 0159 and 0160 are additive. Retain them on an application rollback.
+# Pending migrations through 0161 are additive; retain them on application rollback.
 dc run --rm --no-deps migrate node apps/api/src/practice-release-migrate.mjs
 rollback_on_failure() {
   status=$?
@@ -100,6 +122,27 @@ rollback_on_failure() {
 trap rollback_on_failure ERR
 printf '%s\n' "$EXPECTED" > "$RECORD/activation-started"
 dc up -d --no-build --no-deps --wait --wait-timeout 240 "${SERVICES[@]}"
+
+: > "$RECORD/deployed-images.txt"
+for service in "${SERVICES[@]}"; do
+  id=$(dc ps --status running --quiet "$service")
+  test -n "$id"
+  if grep -Fxq "  $service:" "$RECORD/release-images.yml"; then
+    actual=$(docker inspect --format '{{.Config.Image}}' "$id")
+    if [ "$actual" != "$RELEASE_IMAGE_PREFIX-$service" ]; then echo "Unexpected release image for $service" >&2; fi
+    test "$actual" = "$RELEASE_IMAGE_PREFIX-$service"
+  fi
+  docker inspect --format '{{.Name}} {{.Image}} {{.Config.Image}}' "$id" >> "$RECORD/deployed-images.txt"
+done
+
+: > "$RECORD/verified-source-sha256.txt"
+for file in agent-provider-request.mjs agent-provider-gateway.mjs agent-runtime-repository.mjs agent-blog-prompt.mjs agent-blog-public-admission.mjs agent-runtime-worker.mjs; do
+  expected_hash=$(git show "$EXPECTED:apps/api/src/$file" | sha256sum | awk '{print $1}')
+  actual_hash=$(dc exec -T api sha256sum "/app/apps/api/src/$file" | awk '{print $1}')
+  if [ "$expected_hash" != "$actual_hash" ]; then echo "Running source mismatch: $file" >&2; fi
+  test "$expected_hash" = "$actual_hash"
+  printf '%s  %s\n' "$actual_hash" "$file" >> "$RECORD/verified-source-sha256.txt"
+done
 dc exec -T api node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 import {createVerifiedMathEngine} from './apps/api/src/practice/engine.mjs';
@@ -117,7 +160,7 @@ const get=async route=>{
   throw error;
  }
 };
-const ready=await get('/ready');assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,160);assert.equal(ready.migrations.ready,true);
+const ready=await get('/ready');assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,161);assert.equal(ready.migrations.ready,true);
 const catalog=await get('/v1/learning/practice/catalog');assert.ok(catalog.topics.length>0);
 assert.equal(createVerifiedMathEngine().capabilities().ready,true,'verified engine must be installed');
 const paper=await fetch('http://127.0.0.1:3090/v1/me/paper-studies');assert.equal(paper.status,404);

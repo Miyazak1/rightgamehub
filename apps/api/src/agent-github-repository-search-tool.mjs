@@ -1,3 +1,4 @@
+import {boundedAgentSignal} from './agent-execution-context.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
@@ -112,7 +113,7 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
     let response;
     try {
       response = await fetchImpl(canonicalUri, {
-        method: 'GET', redirect: 'error', signal: AbortSignal.timeout(timeoutSeconds * 1000),
+        method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
         headers: githubRequestHeaders({ accept: 'application/vnd.github+json', userAgent, token: researchToken }),
       });
     } catch (error) {

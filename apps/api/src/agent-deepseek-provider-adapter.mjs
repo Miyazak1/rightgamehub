@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
+import {agentExecutionSignal} from './agent-execution-context.mjs';
 
 const ENDPOINT = 'https://api.deepseek.com/chat/completions';
 
 export class AgentDeepSeekProviderError extends Error {
   constructor(code, { retryable = false, acknowledged = false, providerRequestId = null,
-    responseRef = null, usage = null, cause = null } = {}) {
+    responseRef = null, usage = null, cause = null,notDispatched=false } = {}) {
     super(code, cause ? { cause } : undefined);
     this.name = 'AgentDeepSeekProviderError';
     this.code = code;
@@ -13,6 +14,7 @@ export class AgentDeepSeekProviderError extends Error {
     this.providerRequestId = providerRequestId;
     this.responseRef = responseRef;
     this.usage = usage;
+    this.notDispatched=notDispatched;
   }
 }
 
@@ -35,7 +37,9 @@ const normalizedUsage = value => ({
 
 export function createAgentDeepSeekProviderAdapter({ fetchImpl = globalThis.fetch, endpoint = ENDPOINT } = {}) {
   if (typeof fetchImpl !== 'function') throw new Error('A fetch implementation is required');
-  return async function invoke({ apiKey, modelId, request, tokenCeiling, timeoutSeconds, idempotencyKey }) {
+  return async function invoke({ apiKey, modelId, request, tokenCeiling, timeoutSeconds, idempotencyKey,signal }) {
+    signal=agentExecutionSignal(signal);
+    if(signal?.aborted)fail('AGENT_PROVIDER_CANCELLED',{notDispatched:true});
     const messages = boundedMessages(request?.messages);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutSeconds * 1000);
@@ -43,7 +47,7 @@ export function createAgentDeepSeekProviderAdapter({ fetchImpl = globalThis.fetc
       let response;
       try {
         response = await fetchImpl(endpoint, {
-          method: 'POST', signal: controller.signal,
+          method: 'POST', signal: signal?AbortSignal.any([signal,controller.signal]):controller.signal,
           headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
             model: modelId, messages, thinking: request?.thinking ?? { type: 'disabled' },
@@ -52,6 +56,7 @@ export function createAgentDeepSeekProviderAdapter({ fetchImpl = globalThis.fetc
           }),
         });
       } catch (error) {
+        if(signal?.aborted)fail('AGENT_PROVIDER_CANCELLED',{acknowledged:false,cause:error});
         fail(error?.name === 'AbortError' ? 'AGENT_PROVIDER_TIMEOUT' : 'AGENT_PROVIDER_UNAVAILABLE',
           { retryable: true, acknowledged: false, cause: error });
       }

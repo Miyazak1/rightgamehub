@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
-  expectedFailure = null, expectedCalls = 5 } = {}) {
+  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false } = {}) {
   const { admin } = await harness.setup();
   t.after(() => admin.end());
   const { createAgentAccountService } = await harness.load('agent-account-service.mjs');
@@ -85,6 +85,19 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   materialsOutput.sourceVersion.contentSha256 = stableHash({
     metadata: materialsOutput.metadata, materials: materialsOutput.materials,
   });
+  const repositoryFixture=(template,repository)=>{
+    const key=repository.replace('https://github.com/',''),name=key.split('/')[1];
+    const output=JSON.parse(JSON.stringify(template).replaceAll('owner/project',key).replaceAll('"name":"project"','"name":'+JSON.stringify(name)));
+    if(longEvidence){
+      const text='这个开放项目提供固定版本安装步骤、明确的输入输出、可观察结果和适用边界，读者能够根据官方资料完成一次可复现的最小体验。'.repeat(100);
+      if(output.readme)output.readme.text=text;
+      if(output.materials)output.materials=Array.from({length:materialCount},(_,index)=>({...output.materials[0],
+        type:index?'documentation':'readme',path:index?`docs/guide${index}.md`:'README.md',
+        canonicalUri:`https://github.com/${key}/blob/${revision}/${index?`docs/guide${index}.md`:'README.md'}`,text,contentSha256:stableHash(text)}));
+    }
+    output.sourceVersion.contentSha256=stableHash(output.materials?{metadata:output.metadata,materials:output.materials}:{metadata:output.metadata,readme:output.readme});
+    return output;
+  };
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
     adapters: {
@@ -94,19 +107,19 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
           query: { text: 'agent tool', sort: 'stars', minStars: 10, pushedAfter: '2026-01-01' },
           source: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
             fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: 'c'.repeat(64) },
-          candidates: [{ key: 'owner/project', canonicalUrl: 'https://github.com/owner/project',
-            owner: 'owner', name: 'project', description: 'A useful tool', stars: 1200, forks: 100,
+          candidates: Array.from({length:candidateCount},(_,index)=>({ key: 'owner/project'+(index||''), canonicalUrl: 'https://github.com/owner/project'+(index||''),
+            owner: 'owner', name: 'project'+(index||''), description: 'A useful tool', stars: 1200, forks: 100,
             language: 'TypeScript', topics: ['agent'], licenseSpdx: 'MIT',
-            pushedAt: '2026-10-25T00:00:00.000Z' }],
+            pushedAt: '2026-10-25T00:00:00.000Z' })),
         }, responseRef: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
           contentSha256: 'c'.repeat(64) }, usage: { toolCalls: 1, networkRequests: 1, candidates: 1 },
       }),
-      'research.github.repository.read@1': async () => ({
-        receiptId: `github:owner/project@${revision}`, output: repositoryOutput,
+      'research.github.repository.read@1': async ({request}) => ({
+        receiptId: `github:${request.repository}@${revision}`, output: repositoryFixture(repositoryOutput,request.repository),
         responseRef: { canonicalUri: repositoryOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
       }),
-      'research.github.repository.materials.read@1': async () => ({
-        receiptId: `github-materials:owner/project@${revision}`, output: materialsOutput,
+      'research.github.repository.materials.read@1': async ({request}) => ({
+        receiptId: `github-materials:${request.repository}@${revision}`, output: repositoryFixture(materialsOutput,request.repository),
         responseRef: { canonicalUri: materialsOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
       }),
     },
@@ -282,6 +295,11 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   const publicUsage = (await admin.query(`SELECT sum(charged_provider_calls)::int AS calls,
     sum(charged_output_tokens)::int AS output_tokens FROM agent_budget_reservations WHERE run_id=$1`, [result.publication.runId])).rows[0];
   assert.deepEqual(publicUsage, { calls: 4, output_tokens: 17600 });
+  const inputUsage=(await admin.query('SELECT sum(charged_input_tokens)::int AS tokens FROM agent_budget_reservations WHERE run_id=$1',[result.publication.runId])).rows[0].tokens;
+  assert.ok(inputUsage<=90000);
+  const inputs=(await admin.query(`SELECT octet_length(action.request_json::text) AS ledger_bytes,input.content_sha256,action.request_sha256
+    FROM agent_run_actions action JOIN agent_provider_input_artifacts input ON input.action_id=action.id WHERE action.run_id=$1`,[result.publication.runId])).rows;
+  assert.equal(inputs.length,4);assert.ok(inputs.every(row=>row.ledger_bytes<=65536&&row.content_sha256===row.request_sha256));
   assert.equal((await admin.query("SELECT count(*)::int AS n FROM agent_run_events WHERE run_id=$1 AND event_type='stage.retry-scheduled'", [result.discovery.runId])).rows[0].n, 1);
 }
 
@@ -292,4 +310,6 @@ test('public selection schema handling preserves full pipeline governance', { sk
     sub => publicPipelineFixture(sub, { selectionFailures: 2, expectedFailure: /AGENT_BLOG_SELECTION_SCHEMA_INVALID/u, expectedCalls: 3 }));
   await t.test('agent budget denial blocks selection repair without another model call or publication',
     sub => publicPipelineFixture(sub, { agentCallLimit: 2, expectedFailure: /BUDGET/u, expectedCalls: 2 }));
+  await t.test('five repositories and six long Chinese materials pass both corrections and publish once',
+    sub=>publicPipelineFixture(sub,{candidateCount:5,materialCount:6,longEvidence:true}));
 });

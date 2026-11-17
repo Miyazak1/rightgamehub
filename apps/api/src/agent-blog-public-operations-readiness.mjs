@@ -1,3 +1,4 @@
+import {publicImmediateAdmission} from './agent-blog-public-admission.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export class AgentBlogPublicOperationsReadinessError extends Error {
@@ -24,33 +25,26 @@ export function evaluateAgentBlogPublicOperationsReadiness({
   if (runtimeConfig.agentUserId && runtimeConfig.agentUserId !== agentUserId) {
     runtimeBlockers.push('AGENT_BLOG_PUBLIC_RUNTIME_AGENT_MISMATCH');
   }
-  const manualRunReady = runtimeBlockers.length === 0;
-  const scheduleBlockers = [...runtimeBlockers];
-  if (!scheduleConfig.enabled) scheduleBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_DISABLED');
-  if (!schedule) scheduleBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_MISSING');
-  if (schedule && schedule.mode !== 'foundation-public') {
-    scheduleBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_MODE_INVALID');
-  }
-  if (schedule && !schedule.enabled) scheduleBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_NOT_ENABLED');
-  const heartbeatAt = schedule?.worker?.heartbeatAt ? new Date(schedule.worker.heartbeatAt) : null;
-  const maxHeartbeatAgeMs = Math.max(60_000, scheduleConfig.pollMilliseconds * 3);
-  const heartbeatValid = heartbeatAt && Number.isFinite(heartbeatAt.getTime());
-  const heartbeatAgeMs = heartbeatValid
-    ? Math.max(0, now.getTime() - heartbeatAt.getTime()) : null;
-  const workerLive = schedule?.worker?.state !== 'stopped'
-    && heartbeatAgeMs != null && heartbeatAgeMs <= maxHeartbeatAgeMs;
-  if (schedule?.enabled && schedule?.mode === 'foundation-public' && !workerLive) {
-    scheduleBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
-  }
+  const maxHeartbeatAgeMs=Math.max(60000,scheduleConfig.pollMilliseconds*3);
+  const admission=publicImmediateAdmission({schedule,configured:scheduleConfig.enabled,now,maxHeartbeatAgeMs});
+  const scheduleBlockers=[...runtimeBlockers,...admission.blockers];
+  const heartbeatAt=schedule?.worker?.heartbeatAt?new Date(schedule.worker.heartbeatAt):null;
+  const heartbeatValid=heartbeatAt&&Number.isFinite(heartbeatAt.getTime());
+  const heartbeatAgeMs=admission.heartbeatAgeMs,workerLive=admission.workerLive;
+  const activationBlockers=runtimeBlockers.filter(code=>code!=='AGENT_BLOG_PUBLIC_RUNTIME_DAILY_LIMIT_REACHED');
+  if(!scheduleConfig.enabled)activationBlockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_DISABLED');
   return Object.freeze({
     schemaVersion: 'agent-blog-public-operations-readiness-v1',
     agentUserId,
     manualRun: {
-      ready: manualRunReady,
-      blockers: runtimeBlockers,
+      // Legacy capability view, retained for installed clients that also use
+      // this field to enable a paused plan. New clients use requestNow.
+      ready: runtimeBlockers.length===0,
+      blockers: [...runtimeBlockers],
       activation: 'external-explicit',
       automaticActivation: false,
     },
+    requestNow: {ready:scheduleBlockers.length===0,blockers:[...scheduleBlockers],automaticActivation:false},
     scheduler: {
       ready: scheduleBlockers.length === 0,
       blockers: scheduleBlockers,
@@ -65,6 +59,7 @@ export function evaluateAgentBlogPublicOperationsReadiness({
       localTime: scheduleConfig.localTime,
       automaticActivation: false,
     },
+    activation: {ready:activationBlockers.length===0,blockers:activationBlockers},
     limits: structuredClone(runtimePreflight.limits),
     observed: structuredClone(runtimePreflight.observed),
   });

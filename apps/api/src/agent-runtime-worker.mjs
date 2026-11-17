@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {withAgentExecution} from './agent-execution-context.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const RUNTIME_VERSION = '1.0.0';
@@ -192,9 +193,9 @@ export function createAgentRuntimeWorker({
     scheduleHeartbeat();
     try {
       const result = normalizeResult(await Promise.race([
-        Promise.resolve().then(() => handler(structuredClone(context), {
+        Promise.resolve().then(() => withAgentExecution({signal:controller.signal},()=>handler(structuredClone(context), {
           signal: controller.signal, repository, workerId, instanceId, leaseToken: stage.leaseToken,
-        })),
+        }))),
         timeout,
         leaseFailure,
       ]));

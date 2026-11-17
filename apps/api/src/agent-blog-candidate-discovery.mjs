@@ -5,6 +5,7 @@ import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool
 import { validateGitHubRepositorySearchInput, validateGitHubRepositorySearchOutput } from './agent-github-repository-search-tool.mjs';
 import { parseWholeJson } from './researcher-qa-protocol/model-json.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
+import {buildBlogModelRequest} from './agent-blog-prompt.mjs';
 
 export const BLOG_DISCOVERY_QUERY_PLAN_SCHEMA = Object.freeze({ key: 'blog.discovery.query-plan', version: 1 });
 export const BLOG_DISCOVERY_QUERY_PLAN_PROMPT = `你是小墨鱼的候选发现规划模块。只输出一个 JSON 对象，不要输出 Markdown。
@@ -367,12 +368,11 @@ export function createAgentBlogAutonomousCandidateDiscoveryHandlers({
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `blog-discovery-plan:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 3 },
+          modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 4 },signal:execution.signal,
         responseSchema: BLOG_DISCOVERY_QUERY_PLAN_SCHEMA,
-        request: { messages: [{ role: 'system', content: BLOG_DISCOVERY_QUERY_PLAN_PROMPT },
-          { role: 'user', content: JSON.stringify(request) }], temperature: 0.2 },
+          request: buildBlogModelRequest({system:BLOG_DISCOVERY_QUERY_PLAN_PROMPT,payload:request,inputBudget:10000,kind:'discovery',temperature:0.2}),
         tokenCeiling: 1200, timeoutSeconds: 150,
-        estimatedInputTokens: Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(request)) / 3)),
+          estimatedInputTokens: 0,
       });
       const plan = normalizeQueryPlan(result.output, input);
       const artifact = await artifactRepository.save({

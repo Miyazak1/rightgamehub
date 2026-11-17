@@ -58,6 +58,8 @@ test('public operations readiness exposes disabled switches, agent mismatch and 
   assert.deepEqual(value.manualRun.blockers, [
     'AGENT_BLOG_PUBLIC_RUNTIME_DISABLED', 'AGENT_BLOG_PUBLIC_RUNTIME_AGENT_MISMATCH',
   ]);
+  assert.ok(value.requestNow.blockers.includes('AGENT_BLOG_PUBLIC_SCHEDULE_DISABLED'));
+  assert.ok(value.requestNow.blockers.includes('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE'));
   assert.equal(value.scheduler.ready, false);
   assert.ok(value.scheduler.blockers.includes('AGENT_BLOG_PUBLIC_SCHEDULE_DISABLED'));
   assert.ok(value.scheduler.blockers.includes('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE'));

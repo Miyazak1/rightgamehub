@@ -46,7 +46,7 @@ test('public citation repair uses durable governed calls and replays without ano
   const article = indexes => ({ title: '从可验证的体验理解开放项目', summary: '根据固定版本的官方资料介绍项目的使用路径、结果验证和适用边界。',
     blocks: Array.from({ length: 6 }, () => ({ type: 'paragraph', text, citationIndexes: indexes })),
     followUpQuestions: ['如何完成第一次体验？', '如何验证输出结果？', '哪些情况不适合使用？'] });
-  async function fixture({ invalidRepair = false, providerCalls = 4 } = {}) {
+  async function fixture({ invalidRepair = false, providerCalls = 4,cancelDuringDispatch=false } = {}) {
     const run = await runtime.createRun({ agentUserId: account.agentUserId, workflowKey: manifest.workflowKey,
       workflowVersion: manifest.workflowVersion, triggerKind: 'system', idempotencyKey: 'citation:' + crypto.randomUUID(),
       input: { topicScope: '根据固定版本官方资料研究开放工具', recentTitles: [], previousRepositoryUrls: [] },
@@ -55,9 +55,14 @@ test('public citation repair uses durable governed calls and replays without ano
     const claimed = await runtime.claimNextStage('citation-fixture', 600, ['blog.project.single:compose'], run.id);
     const stage = await runtime.startStage({ stageId: claimed.id, workerId: claimed.leasedBy, leaseToken: claimed.leaseToken });
     let invocations = 0;
+    let signalStarted;const dispatched=new Promise(resolve=>signalStarted=resolve);
+    const {createAgentDeepSeekProviderAdapter}=await harness.load('agent-deepseek-provider-adapter.mjs');
+    const cancellable=createAgentDeepSeekProviderAdapter({fetchImpl:async(_url,{signal})=>{
+      invocations++;signalStarted();return new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));
+    }});
     const gateway = createAgentProviderGateway({ runtimeRepository: runtime, governanceRepository: governance,
       policyService: createAgentRuntimePolicyService({ pool: admin }), secretVault: vault,
-      responseSchemas: BLOG_FOUNDATION_RESPONSE_SCHEMAS, adapters: { deepseek: async () => ({
+      responseSchemas: BLOG_FOUNDATION_RESPONSE_SCHEMAS, adapters: { deepseek: cancelDuringDispatch?cancellable:async () => ({
         providerRequestId: 'fixture:' + crypto.randomUUID(), output: article(++invocations === 1 || invalidRepair ? [1, 3] : [1]),
         responseRef: {}, usage: { providerCalls: 1, inputTokens: 500, outputTokens: 1200, costMicrousd: 10 },
       }) } });
@@ -80,7 +85,7 @@ test('public citation repair uses durable governed calls and replays without ano
       workerId: claimed.leasedBy, leaseToken: claimed.leaseToken });
     context.prerequisites = [{ stageKey: 'select-subject', status: 'succeeded',
       outputRef: { artifactId: selectionId, artifactKey: 'blog.selection' } }];
-    return { run, saves, invocations: () => invocations, execute: () => handlers['blog.project.single:compose'](context,
+    return { run, saves,gateway,stage,dispatched,execution:{workerId:claimed.leasedBy,leaseToken:claimed.leaseToken}, invocations: () => invocations, execute: () => handlers['blog.project.single:compose'](context,
       { workerId: claimed.leasedBy, leaseToken: claimed.leaseToken }) };
   }
   const usage = async runId => (await admin.query(`SELECT count(*)::int AS calls,
@@ -111,6 +116,68 @@ test('public citation repair uses durable governed calls and replays without ano
     await assert.rejects(f.execute(), error => /BUDGET/u.test(error.code));
     assert.equal(f.invocations(), 1); assert.equal(f.saves.length, 0);
     assert.deepEqual(await usage(f.run.id), { calls: 1, charged: 1 });
+  });
+  await t.test('large escaped requests use immutable input artifacts and replay without another call',async()=>{
+    const f=await fixture();
+    const input={runId:f.run.id,stageId:f.stage.id,...f.execution,
+      action:{actionKey:'large-request',actionKind:'provider',capabilityKey:'provider.text.generate',contractVersion:1,riskLevel:'L2'},
+      idempotencyKey:'large-request:'+f.run.id,resource:{type:'provider.model',owner:account.agentUserId},
+      modelPolicy:{taskClass:'structured-generation',requiresJsonSchema:true,maxInputTokens:60000,maxOutputTokens:7000,maxCostMicrousd:50000000,latencyClass:'batch',preferredProvider:'deepseek',preferredModel:'fixture-citation'},
+      promptTemplate:{key:'blog.large-request',version:1},responseSchema:{key:'blog.article.composition',version:1},
+      request:{messages:[{role:'user',content:'"\\'.repeat(18000)}]},tokenCeiling:7000,timeoutSeconds:120};
+    assert.ok(Buffer.byteLength(JSON.stringify(input.request))>65536);
+    const first=await f.gateway.invoke(input),again=await f.gateway.invoke(input);
+    assert.equal(again.actionId,first.actionId);assert.equal(f.invocations(),1);
+    // A fresh process has no in-memory gateway state or parent adapter cache.
+    const child=require('node:child_process').spawnSync(process.execPath,['--input-type=module','-e',`
+      import pg from './apps/api/node_modules/pg/lib/index.js';
+      import {PostgresAgentRuntimeRepository} from './apps/api/src/agent-runtime-repository.mjs';
+      import {PostgresAgentProviderGatewayRepository} from './apps/api/src/agent-provider-gateway-repository.mjs';
+      import {createAgentProviderGateway} from './apps/api/src/agent-provider-gateway.mjs';
+      import {createAgentRuntimePolicyService} from './apps/api/src/agent-runtime-policy-service.mjs';
+      let text='';for await(const chunk of process.stdin)text+=chunk;
+      const pool=new pg.Pool({connectionString:process.env.QA_LEDGER_TEST_URL,max:1});
+      try{
+        const gateway=createAgentProviderGateway({runtimeRepository:new PostgresAgentRuntimeRepository(pool),
+          governanceRepository:new PostgresAgentProviderGatewayRepository(pool),
+          policyService:createAgentRuntimePolicyService({pool}),secretVault:{},
+          adapters:{deepseek:async()=>{throw Error('Restart must not dispatch');}},
+          responseSchemas:{'blog.article.composition@1':value=>value}});
+        const result=await gateway.invoke(JSON.parse(text));
+        console.log(JSON.stringify({actionId:result.actionId,replayed:result.replayed}));
+      }finally{await pool.end();}
+    `],{cwd:require('node:path').resolve(__dirname,'../..'),input:JSON.stringify(input),encoding:'utf8',windowsHide:true,timeout:15000});
+    assert.equal(child.status,0,child.stderr);
+    assert.deepEqual(JSON.parse(child.stdout),{actionId:first.actionId,replayed:true});
+    const record=(await admin.query(`SELECT action.request_json,action.request_sha256,
+      octet_length(action.request_json::text) AS ledger_bytes,artifact.content_json,artifact.content_sha256,
+      octet_length(artifact.content_json::text) AS artifact_bytes FROM agent_run_actions action
+      JOIN agent_provider_input_artifacts artifact ON artifact.action_id=action.id WHERE action.id=$1`,[first.actionId])).rows[0];
+    assert.ok(record.ledger_bytes<65536);assert.ok(record.artifact_bytes>65536);
+    assert.equal(record.request_json.schemaVersion,'agent-provider-input-ref-v1');
+    assert.equal(record.request_sha256,record.content_sha256);assert.equal(stableHash(record.content_json),record.content_sha256);
+    await assert.rejects(admin.query('UPDATE agent_provider_input_artifacts SET content_json=content_json WHERE action_id=$1',[first.actionId]),/immutable/u);
+    await assert.rejects(f.gateway.invoke({...input,request:{messages:[{role:'user',content:'changed'}]}}),e=>e.code==='AGENT_ACTION_IDEMPOTENCY_CONFLICT');
+    assert.equal(f.invocations(),1);
+  });
+  await t.test('cancelling a dispatched provider call remains uncertain and cannot be dispatched twice',async()=>{
+    const f=await fixture({cancelDuringDispatch:true}),controller=new AbortController();
+    const input={runId:f.run.id,stageId:f.stage.id,...f.execution,signal:controller.signal,
+      action:{actionKey:'cancel-request',actionKind:'provider',capabilityKey:'provider.text.generate',contractVersion:1,riskLevel:'L2'},
+      idempotencyKey:'cancel-request:'+f.run.id,resource:{type:'provider.model',owner:account.agentUserId},
+      modelPolicy:{taskClass:'structured-generation',requiresJsonSchema:true,maxInputTokens:60000,maxOutputTokens:7000,maxCostMicrousd:50000000,latencyClass:'batch',preferredProvider:'deepseek',preferredModel:'fixture-citation'},
+      promptTemplate:{key:'blog.cancel-request',version:1},responseSchema:{key:'blog.article.composition',version:1},
+      request:{messages:[{role:'user',content:'cancellation fixture'}]},tokenCeiling:7000,timeoutSeconds:60};
+    const pending=f.gateway.invoke(input);await f.dispatched;controller.abort();
+    await assert.rejects(pending,error=>error.code==='AGENT_PROVIDER_CANCELLED'&&error.uncertain===true);
+    const record=(await admin.query(`SELECT call.status,reservation.status AS budget_status,reservation.charged_provider_calls
+      FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
+      JOIN agent_budget_reservations reservation ON reservation.action_id=action.id WHERE action.run_id=$1`,[f.run.id])).rows[0];
+    assert.equal(record.status,'uncertain');assert.equal(record.budget_status,'uncertain');assert.equal(record.charged_provider_calls,1);
+    await assert.rejects(f.gateway.invoke({...input,signal:undefined}),error=>error.code==='AGENT_PROVIDER_OUTCOME_UNCERTAIN');
+    assert.equal(f.invocations(),1);
+    await runtime.failStage({stageId:f.stage.id,...f.execution,errorCode:'AGENT_PROVIDER_CANCELLED',errorMessage:'Fixture cancelled after dispatch.',retryable:false,uncertain:true});
+    assert.equal((await admin.query('SELECT status FROM agent_runs WHERE id=$1',[f.run.id])).rows[0].status,'uncertain');
   });
   assert.equal((await admin.query('SELECT count(*)::int AS n FROM blog_articles WHERE author_user_id=$1', [account.agentUserId])).rows[0].n, 0);
 });

@@ -1,4 +1,6 @@
 import { normalizeActionDefinition } from './agent-runtime-contracts.mjs';
+import {agentExecutionSignal,withAgentExecution} from './agent-execution-context.mjs';
+import {isDatabaseJson} from './text-boundaries.mjs';
 
 export class AgentToolGatewayError extends Error {
   constructor(code, { retryable = false, uncertain = false, backoffSeconds = null, cause = null } = {}) {
@@ -36,9 +38,10 @@ export function createAgentToolGateway({
   return {
     async invoke({
       runId, stageId, workerId, leaseToken, action: inputAction, idempotencyKey,
-      resource = {}, tool, request, responseRef = {},
+      resource = {}, tool, request, responseRef = {},signal,
     }) {
       const action = normalizeActionDefinition(inputAction);
+      signal=agentExecutionSignal(signal);signal?.throwIfAborted();
       if (action.actionKind !== 'tool') fail('AGENT_TOOL_ACTION_INVALID');
       const contract = await toolRepository.resolveTool(tool ?? {});
       if (action.capabilityKey !== contract.capabilityKey || action.contractVersion !== contract.contractVersion
@@ -49,6 +52,7 @@ export function createAgentToolGateway({
       if (!adapter) fail('AGENT_TOOL_ADAPTER_UNAVAILABLE');
       if (!validateInput || !validateOutput) fail('AGENT_TOOL_SCHEMA_NOT_REGISTERED');
       const normalizedRequest = await validateInput(structuredClone(request));
+      if(!isDatabaseJson(normalizedRequest))fail('AGENT_TOOL_INPUT_TEXT_INVALID');
       const decision = await policyService.decide({ runId, stageId, action, resource });
       const prepared = await runtimeRepository.createAction({
         runId, stageId, action, idempotencyKey,
@@ -79,13 +83,18 @@ export function createAgentToolGateway({
           errorCode: errorCode(error), errorMessage: errorMessage(error) });
         throw error;
       }
+      if(signal?.aborted){
+        await toolRepository.failBeforeAcknowledgement(reserved.callId,{notDispatched:true,
+          errorCode:'AGENT_TOOL_CANCELLED',errorMessage:'Stage cancelled before dispatch.'});
+        fail('AGENT_TOOL_CANCELLED');
+      }
       await toolRepository.markSending(reserved.callId);
       let receipt;
       try {
-        receipt = await adapter({
+        receipt = await withAgentExecution({signal},()=>adapter({
           request: structuredClone(normalizedRequest), contract: structuredClone(contract),
-          timeoutSeconds: contract.timeoutSeconds,
-        });
+          timeoutSeconds: contract.timeoutSeconds,signal,
+        }));
       } catch (error) {
         const failure = await toolRepository.failBeforeAcknowledgement(reserved.callId, {
           notDispatched: error?.notDispatched === true,
@@ -117,6 +126,10 @@ export function createAgentToolGateway({
           errorCode: 'AGENT_TOOL_OUTPUT_INVALID', errorMessage: 'Tool output must be a structured value.',
         });
         fail('AGENT_TOOL_OUTPUT_INVALID');
+      }
+      if(!isDatabaseJson(output)){
+        await toolRepository.failAfterAcknowledgement(reserved.callId,{errorCode:'AGENT_TOOL_OUTPUT_TEXT_INVALID',errorMessage:'Tool output is not valid database JSON.'});
+        fail('AGENT_TOOL_OUTPUT_TEXT_INVALID');
       }
       if (Buffer.byteLength(JSON.stringify(output)) > contract.outputLimitBytes) {
         await toolRepository.failAfterAcknowledgement(reserved.callId, {

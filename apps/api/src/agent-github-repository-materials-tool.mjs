@@ -1,3 +1,5 @@
+import {unicodePrefix} from './text-boundaries.mjs';
+import {boundedAgentSignal} from './agent-execution-context.mjs';
 import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
@@ -137,9 +139,11 @@ async function readResponse(response, maxBytes = MAX_RESPONSE_BYTES) {
 
 async function readPrefix(response, maxBytes = TEXT_PREFIX_BYTES) {
   const { bytes: prefix, truncated } = await readBytes(response, maxBytes, { truncate: true });
+  const decoded=new TextDecoder('utf-8',{fatal:false}).decode(prefix).replace(/\u0000/gu,'');
+  const text=unicodePrefix(decoded,MATERIAL_TEXT_CHARS);
   return {
-    text: new TextDecoder('utf-8', { fatal: false }).decode(prefix).replace(/\u0000/gu, '').slice(0, MATERIAL_TEXT_CHARS),
-    truncated,
+    text,
+    truncated:truncated||text!==decoded,
   };
 }
 
@@ -160,12 +164,12 @@ function filename(response, fallback) {
   if (encoded) {
     try { value = decodeURIComponent(encoded); } catch { value = fallback; }
   }
-  value = String(value).trim().replace(/[\\/]/gu, '-').slice(0, 200);
+  value = unicodePrefix(String(value).trim().replace(/[\\/]/gu, '-'),200);
   return value || fallback;
 }
 
 function material({ type, path, canonicalUri, sourceRevision, publishedAt = null, text, truncated = false }) {
-  const normalized = String(text ?? '').trim().slice(0, MATERIAL_TEXT_CHARS);
+  const normalized = unicodePrefix(String(text ?? '').trim(),MATERIAL_TEXT_CHARS);
   if (!normalized) return null;
   return { type, path, canonicalUri, sourceRevision, publishedAt,
     text: normalized, truncated, contentSha256: stableHash(normalized) };
@@ -197,7 +201,7 @@ export function createGitHubRepositoryMaterialsAdapter({ fetchImpl = globalThis.
       try {
         networkRequests += 1;
         response = await fetchImpl(`https://api.github.com${path}`, {
-          method: 'GET', redirect: 'error', signal: AbortSignal.timeout(timeoutSeconds * 1000),
+          method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
           headers: githubRequestHeaders({ accept, range: `bytes=0-${TEXT_PREFIX_BYTES - 1}`,
             userAgent, token: researchToken }),
         });
@@ -268,7 +272,7 @@ export function createGitHubRepositoryMaterialsAdapter({ fetchImpl = globalThis.
       let release;
       try { release = JSON.parse(await readResponse(releaseResponse)); }
       catch (error) { fail('AGENT_GITHUB_RESPONSE_INVALID', { cause: error }); }
-      const tag = typeof release.tag_name === 'string' && release.tag_name ? release.tag_name.slice(0, 240) : 'latest';
+      const tag = typeof release.tag_name === 'string' && release.tag_name ? unicodePrefix(release.tag_name,240) : 'latest';
       const text = [release.name, release.tag_name, release.body].filter(item => typeof item === 'string' && item.trim()).join('\n\n');
       const item = material({ type: 'release', path: `releases/${tag}`, sourceRevision: tag,
         publishedAt: typeof release.published_at === 'string' ? release.published_at : null,
@@ -285,16 +289,16 @@ export function createGitHubRepositoryMaterialsAdapter({ fetchImpl = globalThis.
       sourceVersion: { revision, canonicalUri: `${locator.canonicalUrl}/tree/${revision}`,
         fetchedAt: new Date().toISOString(), contentSha256: '' },
       metadata: {
-        name: String(metadata.name ?? locator.repository).slice(0, 100),
-        fullName: String(metadata.full_name ?? `${locator.owner}/${locator.repository}`).slice(0, 240),
-        description: metadata.description == null ? null : String(metadata.description).slice(0, 1000),
-        homepage: metadata.homepage == null ? null : String(metadata.homepage).slice(0, 500),
-        defaultBranch: branch.slice(0, 240),
+        name: unicodePrefix(String(metadata.name ?? locator.repository),100),
+        fullName: unicodePrefix(String(metadata.full_name ?? `${locator.owner}/${locator.repository}`),240),
+        description: metadata.description == null ? null : unicodePrefix(String(metadata.description),1000),
+        homepage: metadata.homepage == null ? null : unicodePrefix(String(metadata.homepage),500),
+        defaultBranch: unicodePrefix(branch,240),
         stars: Math.max(0, Number.isSafeInteger(metadata.stargazers_count) ? metadata.stargazers_count : 0),
         forks: Math.max(0, Number.isSafeInteger(metadata.forks_count) ? metadata.forks_count : 0),
         openIssues: Math.max(0, Number.isSafeInteger(metadata.open_issues_count) ? metadata.open_issues_count : 0),
         topics: Array.isArray(metadata.topics) ? metadata.topics.filter(item => typeof item === 'string').slice(0, 30) : [],
-        licenseSpdx: typeof metadata.license?.spdx_id === 'string' ? metadata.license.spdx_id.slice(0, 80) : null,
+        licenseSpdx: typeof metadata.license?.spdx_id === 'string' ? unicodePrefix(metadata.license.spdx_id,80) : null,
         archived: metadata.archived === true,
         pushedAt: typeof metadata.pushed_at === 'string' ? metadata.pushed_at : null,
       },

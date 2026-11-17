@@ -1,3 +1,4 @@
+import {withTransaction} from './database.mjs';
 import { AgentAccountError } from './agent-account-repository.mjs';
 import { AGENT_BLOG_CANARY_ACCEPTANCE_POLICY } from './agent-blog-canary-acceptance.mjs';
 import { evaluateAgentBlogPublicRuntimeSnapshot,
@@ -192,7 +193,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
         WHERE r.agent_user_id=$1 ORDER BY r.created_at DESC,r.id DESC LIMIT $2`, [agentUserId, limit])).rows;
       return rows.map(row => ({
         id: row.id, workflowKey: row.workflow_key, workflowVersion: row.workflow_version,
-        triggerKind: row.trigger_kind, status: row.status, stageCount: row.stage_count,
+        triggerKind: row.trigger_kind, status: row.status, updatedAt: iso(row.updated_at), stageCount: row.stage_count,
         completedStageCount: row.completed_stage_count, actionCount: row.action_count,
         outputType: row.output_type, outputId: row.output_id, errorCode: row.error_code,
         errorMessage: row.error_message,
@@ -254,45 +255,46 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
     async timeline(actor, agentUserId, runId) {
       agentUserId = await scope(actor, agentUserId);
       runId = uuid(runId);
-      const run = (await pool.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
+      const snapshot=async reader=>{
+      const run = (await reader.query('SELECT * FROM agent_runs WHERE id=$1 AND agent_user_id=$2', [runId, agentUserId])).rows[0];
       if (!run) fail('AGENT_NOT_FOUND');
       const [stages, actions, events, reservations, providerCalls, providerOutputArtifacts, toolCalls, toolArtifacts,
         stageArtifacts, foundationDrafts, incomingHandoffs, outgoingHandoffs,
         paperQualityAssessments, paperSemanticAnalyses] = await Promise.all([
-        pool.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
-        pool.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
-        pool.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
-        pool.query('SELECT * FROM agent_budget_reservations WHERE run_id=$1 ORDER BY reserved_at,id', [runId]),
-        pool.query(`SELECT call.* FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
+        reader.query('SELECT * FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal,id', [runId]),
+        reader.query('SELECT * FROM agent_run_actions WHERE run_id=$1 ORDER BY created_at,id', [runId]),
+        reader.query('SELECT * FROM agent_run_events WHERE run_id=$1 ORDER BY id', [runId]),
+        reader.query('SELECT * FROM agent_budget_reservations WHERE run_id=$1 ORDER BY reserved_at,id', [runId]),
+        reader.query(`SELECT call.* FROM agent_provider_calls call JOIN agent_run_actions action ON action.id=call.action_id
           WHERE action.run_id=$1 ORDER BY call.created_at,call.id`, [runId]),
-        pool.query(`SELECT artifact.id,artifact.provider_call_id,artifact.action_id,artifact.schema_key,
+        reader.query(`SELECT artifact.id,artifact.provider_call_id,artifact.action_id,artifact.schema_key,
             artifact.schema_version,artifact.media_type,artifact.content_sha256,artifact.size_bytes,artifact.created_at
           FROM agent_provider_output_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
           WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
-        pool.query(`SELECT call.* FROM agent_tool_calls call JOIN agent_run_actions action ON action.id=call.action_id
+        reader.query(`SELECT call.* FROM agent_tool_calls call JOIN agent_run_actions action ON action.id=call.action_id
           WHERE action.run_id=$1 ORDER BY call.created_at,call.id`, [runId]),
-        pool.query(`SELECT artifact.id,artifact.tool_call_id,artifact.action_id,artifact.media_type,
+        reader.query(`SELECT artifact.id,artifact.tool_call_id,artifact.action_id,artifact.media_type,
             artifact.content_sha256,artifact.size_bytes,artifact.created_at
           FROM agent_tool_artifacts artifact JOIN agent_run_actions action ON action.id=artifact.action_id
           WHERE action.run_id=$1 ORDER BY artifact.created_at,artifact.id`, [runId]),
-        pool.query(`SELECT id,stage_id,action_id,artifact_key,artifact_kind,schema_key,schema_version,media_type,
+        reader.query(`SELECT id,stage_id,action_id,artifact_key,artifact_kind,schema_key,schema_version,media_type,
             content_sha256,size_bytes,source_tool_artifact_ids,source_stage_artifact_ids,created_at,
             CASE WHEN artifact_key='blog.selection' THEN content_json ELSE NULL END AS audit_content
           FROM agent_runtime_stage_artifacts WHERE run_id=$1 ORDER BY created_at,id`, [runId]),
-        pool.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
+        reader.query(`SELECT draft.run_id,draft.action_id,draft.article_id,draft.revision_id,
             draft.source_artifact_ids,draft.content_sha256,draft.verification_artifact_id,
             draft.composition_artifact_id,draft.created_at,article.slug,article.publication_state,
             revision.title
           FROM agent_blog_foundation_drafts draft JOIN blog_articles article ON article.id=draft.article_id
           JOIN blog_article_revisions revision ON revision.id=draft.revision_id
           WHERE draft.run_id=$1 ORDER BY draft.created_at,draft.article_id`, [runId]),
-        pool.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
+        reader.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
             source_artifact_key,source_content_sha256,target_run_id,target_input_sha256,created_at
           FROM agent_run_handoffs WHERE target_run_id=$1 ORDER BY created_at,id`, [runId]),
-        pool.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
+        reader.query(`SELECT id,handoff_kind,source_run_id,source_artifact_id,source_output_type,
             source_artifact_key,source_content_sha256,target_run_id,target_input_sha256,created_at
           FROM agent_run_handoffs WHERE source_run_id=$1 ORDER BY created_at,id`, [runId]),
-        pool.query(`SELECT assessment.paper_version_id,assessment.policy_version,
+        reader.query(`SELECT assessment.paper_version_id,assessment.policy_version,
             assessment.parser_version,assessment.reliability_grade,assessment.permitted_uses,
             assessment.reason_codes,assessment.metrics_json,assessment.assessment_sha256,
             assessment.created_at,identity.title,binding.id AS artifact_binding_id
@@ -303,7 +305,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           JOIN agent_paper_parse_assessments assessment ON assessment.paper_version_id=version.id
           WHERE binding.run_id=$1 AND binding.agent_user_id=$2 AND binding.artifact_kind='paper'
           ORDER BY assessment.created_at,assessment.paper_version_id`, [runId, agentUserId]),
-        pool.query(`SELECT analysis.id,analysis.paper_version_id,analysis.schema_version,
+        reader.query(`SELECT analysis.id,analysis.paper_version_id,analysis.schema_version,
             analysis.policy_version,analysis.prompt_version,analysis.provider,analysis.model_id,
             analysis.section_manifest,analysis.findings,analysis.limitations,analysis.follow_up_questions,
             analysis.evidence_manifest_sha256,analysis.analysis_sha256,analysis.created_at,identity.title,
@@ -350,7 +352,7 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
       return {
         run: {
           id: run.id, workflowKey: run.workflow_key, workflowVersion: run.workflow_version,
-          triggerKind: run.trigger_kind, status: run.status, behaviorProfileId: run.behavior_profile_id,
+          triggerKind: run.trigger_kind, status: run.status, updatedAt: iso(run.updated_at), behaviorProfileId: run.behavior_profile_id,
           policyProfileId: run.policy_profile_id, manifestSha256: run.manifest_sha256,
           outputType: run.output_type, outputId: run.output_id, errorCode: run.error_code,
           queuedAt: iso(run.queued_at), startedAt: iso(run.started_at), finishedAt: iso(run.finished_at),
@@ -442,6 +444,9 @@ export function createAgentRuntimeReadService({ pool, authorizeOperator,
           publicPublicationEnabled: false, createdAt: iso(row.created_at),
         })),
       };
+      };
+      if(typeof pool.connect!=='function')return snapshot(pool);
+      return withTransaction(pool,async client=>{await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');return snapshot(client);});
     },
   };
 }

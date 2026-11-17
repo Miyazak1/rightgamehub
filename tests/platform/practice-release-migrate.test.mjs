@@ -23,11 +23,34 @@ test('release migration commits both new schemas atomically and leaves the old i
   await assert.rejects(migratePracticeRelease(pool,broken),{code:'42883'});
   assert.equal((await pool.query("SELECT to_regclass('public.paper_study_documents') AS name")).rows[0].name,null);
   assert.equal((await migrationStatus(pool,old)).ready,true,'failed upgrade must leave the previous service ready');
-  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:158,total:160,applied:2});
+  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:158,total:161,applied:3});
   assert.equal((await migrationStatus(pool,actual)).ready,true);
   assert.equal((await migrationStatus(pool,old)).reason,'unexpected_version','rollback images need the newer migration inventory');
-  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:160,total:160,applied:0});
+  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:161,total:161,applied:0});
  }finally{
   if(pool)await pool.end();await control.query('DROP DATABASE IF EXISTS '+name);await control.end();await fs.rm(temp,{recursive:true,force:true});
  }
+});
+
+test('160 to 161 preserves existing data and failed input-artifact migration rolls back completely',{skip:!url,timeout:120000},async()=>{
+ const parsed=new URL(url);assert.ok(['127.0.0.1','localhost'].includes(parsed.hostname));assert.equal(parsed.pathname,'/postgres');
+ const {Pool}=createRequire(new URL('../../apps/api/package.json',import.meta.url))('pg');
+ const control=new Pool({connectionString:url}),name='release_input_'+crypto.randomUUID().replaceAll('-','');
+ const temporary=await fs.mkdtemp(path.join(os.tmpdir(),'mooyu-input-migrate-'));let pool;
+ try{
+  await control.query('CREATE DATABASE '+name);parsed.pathname='/'+name;pool=new Pool({connectionString:parsed.href});
+  const actual=path.resolve('apps/api/migrations'),baseline=path.join(temporary,'baseline'),broken=path.join(temporary,'broken');
+  await fs.mkdir(baseline);await fs.cp(actual,broken,{recursive:true});
+  for(const file of (await fs.readdir(actual)).filter(file=>file.endsWith('.sql')).sort().slice(0,160))await fs.copyFile(path.join(actual,file),path.join(baseline,file));
+  await applyMigrations(pool,baseline);
+  const existing=crypto.randomUUID();await pool.query("INSERT INTO users(id,display_name) VALUES($1,'Retained release fixture')",[existing]);
+  const last=path.join(broken,'0161_agent_provider_input_artifacts.sql');
+  await fs.writeFile(last,(await fs.readFile(last,'utf8')).replace(/COMMIT;\s*$/u,'SELECT missing_input_migration_function();\nCOMMIT;\n'));
+  await assert.rejects(migratePracticeRelease(pool,broken),{code:'42883'});
+  assert.equal((await migrationStatus(pool,baseline)).ready,true);
+  assert.equal((await pool.query("SELECT to_regclass('public.agent_provider_input_artifacts') AS name")).rows[0].name,null);
+  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:160,total:161,applied:1});
+  assert.equal((await pool.query('SELECT display_name FROM users WHERE id=$1',[existing])).rows[0].display_name,'Retained release fixture');
+  assert.deepEqual(await migratePracticeRelease(pool,actual),{previous:161,total:161,applied:0});
+ }finally{await pool?.end();await control.query('DROP DATABASE IF EXISTS '+name);await control.end();await fs.rm(temporary,{recursive:true,force:true});}
 });

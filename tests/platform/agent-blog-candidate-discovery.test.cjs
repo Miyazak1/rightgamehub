@@ -145,7 +145,7 @@ test('autonomous discovery lets the model plan only bounded queries before gover
   assert.equal(providerCalls.length, 1);
   assert.equal(providerCalls[0].action.actionKey, 'plan-queries');
   assert.equal(providerCalls[0].action.capabilityKey, 'provider.text.generate');
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 3 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 4 });
   assert.equal(searched.outputRef.artifactIds.length, 2);
   const candidateSet = stored.get(finalized.outputRef.artifactId);
   assert.deepEqual(candidateSet.content.queryPolicy.queries, ['visual ai tool', 'creative agent']);

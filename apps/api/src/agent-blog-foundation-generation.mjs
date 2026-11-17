@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import { normalizeAgentBehaviorProfile, defaultAgentBehaviorProfile } from './agent-behavior-profile.mjs';
-import { normalizeBlogContent } from './blog-contract.mjs';
+import { normalizeBlogContent,BLOG_LIMITS } from './blog-contract.mjs';
+import {unicodePrefix} from './text-boundaries.mjs';
 import { validateGitHubRepositoryReadOutput } from './agent-github-repository-tool.mjs';
 import { validateGitHubRepositoryMaterialsOutput } from './agent-github-repository-materials-tool.mjs';
 import { parseWholeJson } from './researcher-qa-protocol/model-json.mjs';
-import { stableJson } from './researcher-qa-protocol/stable-json.mjs';
+import {buildBlogModelRequest} from './agent-blog-prompt.mjs';
 
 export const BLOG_FOUNDATION_SELECTION_SCHEMA_V1 = Object.freeze({ key: 'blog.subject.selection', version: 1 });
 export const BLOG_FOUNDATION_SELECTION_SCHEMA = Object.freeze({ key: 'blog.subject.selection', version: 2 });
@@ -23,7 +24,7 @@ export class AgentBlogFoundationGenerationError extends Error {
 const fail = code => { throw new AgentBlogFoundationGenerationError(code); };
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).every(item => keys.includes(item)) && keys.every(item => Object.hasOwn(value, item));
-const compact = (value, max) => String(value ?? '').replace(/\s+/gu, ' ').trim().slice(0, max);
+const compact = (value, max) => unicodePrefix(String(value ?? '').replace(/\s+/gu, ' ').trim(),max);
 
 function providerObject(value) {
   if (typeof value === 'string') {
@@ -380,7 +381,7 @@ function normalizeComposition(output, selection, sources, runId) {
     return {
       id, label: `GitHub · ${source.repositoryKey}`, title: source.title, url: source.repositoryUrl,
       publisher: source.repositoryKey, publishedAt: null, accessedAt: source.accessedAt,
-      excerpt: source.excerpt, locator: `${source.materials.length || 1} 项官方资料 @ ${source.revision.slice(0, 12)}`,
+      excerpt: compact(source.excerpt,BLOG_LIMITS.citationExcerpt), locator: `${source.materials.length || 1} 项官方资料 @ ${source.revision.slice(0, 12)}`,
       repositoryUrl: source.repositoryUrl,
     };
   });
@@ -428,10 +429,6 @@ function modelPolicy(context, maxOutputTokens) {
     ...(typeof config.provider === 'string' ? { preferredProvider: config.provider } : {}),
     ...(typeof config.modelId === 'string' ? { preferredModel: config.modelId } : {}),
   };
-}
-
-function estimatedTokens(payload) {
-  return Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(payload)) / 3));
 }
 
 export function createAgentBlogFoundationGenerationHandlers({ providerGateway, artifactRepository,
@@ -484,12 +481,12 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         action: { actionKey: correction ? 'select-subject-format-repair' : 'select-subject', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `${correction ? 'blog-select-format-repair' : 'blog-select'}:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 5 },
+        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 6 },signal:execution.signal,
         responseSchema: publicSelection ? BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA : BLOG_FOUNDATION_SELECTION_SCHEMA,
-        request: { messages: [{ role: 'system', content: BLOG_FOUNDATION_SELECTION_PROMPT },
-          { role: 'user', content: stableJson(correction ? { ...request, correction } : request) }], temperature: 0.25 },
+        request: buildBlogModelRequest({system:BLOG_FOUNDATION_SELECTION_PROMPT,
+          payload:correction?{...request,correction}:request,kind:'selection',inputBudget:18000}),
         tokenCeiling: 1800, timeoutSeconds: correction ? 45 : 240,
-        estimatedInputTokens: estimatedTokens(correction ? { ...request, correction } : request),
+        estimatedInputTokens: 0,
       });
       let result = await invokeSelection(), selectionOutput;
       if (publicSelection) {
@@ -549,16 +546,14 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         action: { actionKey: repair ? 'compose-citation-repair' : 'compose', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `${repair ? 'blog-compose-citation-repair' : 'blog-compose'}:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 7000), promptTemplate: { key: 'blog.article.compose', version: 3 },
+        modelPolicy: modelPolicy(context, 7000), promptTemplate: { key: 'blog.article.compose', version: 4 },signal:execution.signal,
         responseSchema: BLOG_FOUNDATION_COMPOSITION_SCHEMA,
-        request: { messages: [{ role: 'system', content: BLOG_FOUNDATION_COMPOSITION_PROMPT },
-          // JSONB can reorder object keys between the original response and a
-          // durable replay. Canonical text keeps the repair request hash stable.
-          { role: 'user', content: stableJson(repair ? { ...request, correction: repair } : request) }], temperature: 0.35 },
+        request: buildBlogModelRequest({system:BLOG_FOUNDATION_COMPOSITION_PROMPT,
+          payload:repair?{...request,correction:repair}:request,kind:'composition',inputBudget:24000,temperature:0.35}),
         // Both calls fit the existing 600s compose stage and its original
         // token/call budgets; the gateway still admits and charges every call.
         tokenCeiling: 7000, timeoutSeconds: repair ? 90 : 480,
-        estimatedInputTokens: estimatedTokens(repair ? { ...request, correction: repair } : request),
+        estimatedInputTokens: 0,
       });
       let result = await invokeComposition(), normalized;
       try { normalized = normalizeComposition(result.output, selection, sources, context.run.id); }

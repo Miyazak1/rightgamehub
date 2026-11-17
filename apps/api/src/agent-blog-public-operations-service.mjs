@@ -20,7 +20,7 @@ const scheduleBlockers = Object.freeze({
 const scheduledOperation = async action => {
   try { return await action(); }
   catch (error) {
-    const blocker = error instanceof AgentBlogPublicScheduleError && scheduleBlockers[error.code];
+    const blocker = error instanceof AgentBlogPublicScheduleError && Object.hasOwn(scheduleBlockers,error.code) && scheduleBlockers[error.code];
     if (!blocker) throw error;
     const mapped = new AgentAccountError(blocker[0]);
     mapped.message = blocker[1];

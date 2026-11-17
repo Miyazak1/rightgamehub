@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { withTransaction } from './database.mjs';
 import { assertStateTransition, normalizeActionDefinition, normalizeWorkflowManifest, workflowManifestDigest } from './agent-runtime-contracts.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
+import {isDatabaseJson} from './text-boundaries.mjs';
 
 export class AgentRuntimeRepositoryError extends Error {
   constructor(code) {
@@ -657,8 +658,53 @@ export class PostgresAgentRuntimeRepository {
     });
   }
 
-  async createAction({ runId, stageId, action, idempotencyKey, request, policyDecision }) {
+  async recordProviderRequestRejection({runId,stageId,workerId,leaseToken,errorCode,sizeBytes,maxInputTokens}) {
+    await this.pool.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
+      SELECT $1,$2,'provider.request-rejected','worker',$3,$5 WHERE EXISTS(SELECT 1 FROM agent_run_stages
+        WHERE id=$2 AND run_id=$1 AND status='running' AND leased_by=$3 AND lease_token=$4 AND lease_until>now())`,
+    [runId,stageId,workerId,leaseToken,json({errorCode,sizeBytes,maxInputTokens})]);
+  }
+
+  async createProviderInputAction({runId,stageId,workerId,leaseToken,action,idempotencyKey,request,policyDecision}) {
+    action=normalizeActionDefinition(action);
+    if(action.actionKind!=='provider')fail('AGENT_PROVIDER_INPUT_ACTION_INVALID');
+    if(!isDatabaseJson(request))fail('AGENT_ACTION_REQUEST_INVALID');
+    const digest=stableHash(request),serialized=json(request);
+    if(Buffer.byteLength(serialized)>786432)fail('AGENT_PROVIDER_INPUT_TOO_LARGE');
+    return withTransaction(this.pool,async client=>{
+      const stage=(await client.query(`SELECT id FROM agent_run_stages WHERE id=$1 AND run_id=$2
+        AND status='running' AND leased_by=$3 AND lease_token=$4 AND lease_until>now() FOR UPDATE`,
+      [stageId,runId,workerId,leaseToken])).rows[0];
+      if(!stage)fail('AGENT_RUNTIME_LEASE_LOST');
+      const old=(await client.query('SELECT * FROM agent_run_actions WHERE stage_id=$1 AND action_key=$2 AND idempotency_key=$3',
+        [stageId,action.actionKey,idempotencyKey])).rows[0];
+      if(old){
+        if(old.request_sha256!==digest||old.action_kind!==action.actionKind||old.capability_key!==action.capabilityKey
+          ||old.contract_version!==action.contractVersion||old.risk_level!==action.riskLevel
+          ||policyDigest(old.policy_decision_json)!==policyDigest(policyDecision))fail('AGENT_ACTION_IDEMPOTENCY_CONFLICT');
+        return {id:old.id,status:old.status,existing:true};
+      }
+      const size=Number((await client.query('SELECT octet_length($1::jsonb::text) AS bytes',[serialized])).rows[0].bytes);
+      if(size>1048576)fail('AGENT_PROVIDER_INPUT_TOO_LARGE');
+      const id=crypto.randomUUID(),artifactId=crypto.randomUUID();
+      const reference={schemaVersion:'agent-provider-input-ref-v1',artifactId,contentSha256:digest,sizeBytes:size,
+        promptTemplate:request.promptTemplate,responseSchema:request.responseSchema};
+      await client.query(`INSERT INTO agent_run_actions(id,run_id,stage_id,action_key,action_kind,capability_key,
+        contract_version,risk_level,idempotency_key,request_json,request_sha256,policy_decision_json)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[id,runId,stageId,action.actionKey,action.actionKind,
+        action.capabilityKey,action.contractVersion,action.riskLevel,idempotencyKey,json(reference),digest,json(policyDecision)]);
+      await client.query(`INSERT INTO agent_provider_input_artifacts(id,action_id,content_json,content_sha256,size_bytes)
+        VALUES($1,$2,$3,$4,$5)`,[artifactId,id,serialized,digest,size]);
+      return {id,status:'prepared',existing:false,inputArtifactId:artifactId};
+    });
+  }
+
+  async createAction({ runId, stageId, workerId, leaseToken, action, idempotencyKey, request, policyDecision,requestStorage }) {
+    if(requestStorage==='artifact-v1')return this.createProviderInputAction({runId,stageId,workerId,leaseToken,action,idempotencyKey,request,policyDecision});
     action = normalizeActionDefinition(action);
+    if(!request||typeof request!=='object'||Array.isArray(request)||!isDatabaseJson(request))fail('AGENT_ACTION_REQUEST_INVALID');
+    const size=Number((await this.pool.query('SELECT octet_length($1::jsonb::text) AS bytes',[json(request)])).rows[0]?.bytes);
+    if(!Number.isFinite(size)||size>65536)fail('AGENT_ACTION_REQUEST_TOO_LARGE');
     const requestHash = stableHash(request);
     const row = (await this.pool.query(`INSERT INTO agent_run_actions(
       id,run_id,stage_id,action_key,action_kind,capability_key,contract_version,risk_level,idempotency_key,

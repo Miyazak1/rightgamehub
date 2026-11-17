@@ -4,17 +4,17 @@ import {fileURLToPath} from 'node:url';
 import pg from 'pg';
 import {loadMigrations} from './migrations.mjs';
 
-// This release adds 0159 and 0160 together. A failed second migration must not
-// leave the old API rejecting a partially upgraded migration inventory.
+// Apply all pending additive migrations atomically from a verified baseline.
+// Failure must not leave the old API with a partially upgraded inventory.
 export async function migratePracticeRelease(pool,directory) {
   const migrations=await loadMigrations(directory);
-  assert.equal(migrations.length,160,'This entry point is specific to the 160-migration release');
+  assert.equal(migrations.length,161,'This entry point is specific to the provider-input-artifact release');
   const client=await pool.connect();
   try {
     await client.query("SELECT pg_advisory_lock(hashtext('gamehub-schema-migrations'))");
     await client.query('BEGIN');
     const rows=(await client.query('SELECT version,checksum_sha256 FROM schema_migrations ORDER BY version')).rows;
-    assert.ok(rows.length===158||rows.length===160,'Expected the healthy 158 or 160 migration baseline');
+    assert.ok([158,160,161].includes(rows.length),'Expected a verified 158, 160 or 161 migration baseline');
     for(const [index,row] of rows.entries()){
       assert.equal(row.version,migrations[index].version);
       assert.equal(row.checksum_sha256,migrations[index].checksum,'Existing migration checksum changed');
@@ -24,7 +24,7 @@ export async function migratePracticeRelease(pool,directory) {
       await client.query('INSERT INTO schema_migrations(version,checksum_sha256) VALUES($1,$2)',[migration.version,migration.checksum]);
     }
     await client.query('COMMIT');
-    return {previous:rows.length,total:160,applied:160-rows.length};
+    return {previous:rows.length,total:161,applied:161-rows.length};
   } catch(error){await client.query('ROLLBACK').catch(()=>{});throw error;}
   finally {try{await client.query("SELECT pg_advisory_unlock(hashtext('gamehub-schema-migrations'))");}finally{client.release();}}
 }

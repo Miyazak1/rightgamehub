@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {publicImmediateAdmission} from './agent-blog-public-admission.mjs';
 import { withTransaction } from './database.mjs';
 import { nextAgentBlogPrivateDailyFire, scheduleFireRequestId } from './agent-blog-private-schedule.mjs';
 import { runAgentBlogPublicRuntimePreflight } from './agent-blog-public-runtime-preflight.mjs';
@@ -112,13 +113,9 @@ export class PostgresAgentBlogPublicScheduleRepository {
           AND owner.active_publisher='foundation' FOR UPDATE OF schedule`,
       [agentUserId, WORKFLOW_KEY])).rows[0];
       if (!row) fail('AGENT_BLOG_PUBLIC_SCHEDULE_NOT_ENABLED');
-      const worker = row.config_json?.worker;
-      const heartbeatAt = worker?.heartbeatAt ? new Date(worker.heartbeatAt) : null;
-      if (!heartbeatAt || !Number.isFinite(heartbeatAt.getTime())
-        || this.clock().getTime() - heartbeatAt.getTime() > maxHeartbeatAgeMs
-        || !['idle', 'busy'].includes(worker?.state)) {
-        fail('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
-      }
+      const admission=publicImmediateAdmission({schedule:{enabled:row.enabled,mode:row.config_json?.mode,
+        worker:row.config_json?.worker},now:this.clock(),maxHeartbeatAgeMs});
+      if(!admission.ready)fail(admission.blockers[0]);
       const running = (await client.query(`SELECT 1 FROM agent_schedule_fires
         WHERE schedule_id=$1 AND status='running' LIMIT 1`, [row.id])).rows[0];
       if (running) fail('AGENT_BLOG_PUBLIC_SCHEDULE_FIRE_ACTIVE');

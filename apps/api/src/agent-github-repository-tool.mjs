@@ -1,3 +1,5 @@
+import {unicodePrefix} from './text-boundaries.mjs';
+import {boundedAgentSignal} from './agent-execution-context.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
@@ -161,7 +163,7 @@ function readmeFilename(response) {
   if (encoded) {
     try { value = decodeURIComponent(encoded); } catch { value = 'README'; }
   }
-  value = String(value).trim().replace(/[\\/]/gu, '-').slice(0, 200);
+  value = unicodePrefix(String(value).trim().replace(/[\\/]/gu, '-'),200);
   return value || 'README';
 }
 
@@ -174,7 +176,7 @@ export function createGitHubRepositoryReadAdapter({ fetchImpl = globalThis.fetch
     let response;
     try {
       response = await fetchImpl(`https://api.github.com${path}`, {
-        method: 'GET', redirect: 'error', signal: AbortSignal.timeout(timeoutSeconds * 1000),
+        method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
         headers: githubRequestHeaders({ accept, range, userAgent, token: researchToken }),
       });
     } catch (error) {
@@ -210,12 +212,13 @@ export function createGitHubRepositoryReadAdapter({ fetchImpl = globalThis.fetch
     let readme = null;
     if (readmeResponse !== null) {
       const prefix = await readResponsePrefix(readmeResponse);
+      const decoded=new TextDecoder('utf-8',{fatal:false}).decode(prefix.bytes).replace(/\u0000/gu,'');
+      const bounded=unicodePrefix(decoded,README_TEXT_CHARS);
       readme = {
         canonicalUri: `https://api.github.com${readmePath}`,
         path: readmeFilename(readmeResponse),
-        text: new TextDecoder('utf-8', { fatal: false }).decode(prefix.bytes)
-          .replace(/\u0000/gu, '').slice(0, README_TEXT_CHARS),
-        truncated: prefix.truncated,
+        text: bounded,
+        truncated: prefix.truncated||bounded!==decoded,
       };
     }
     const output = {
@@ -228,16 +231,16 @@ export function createGitHubRepositoryReadAdapter({ fetchImpl = globalThis.fetch
         contentSha256: '',
       },
       metadata: {
-        name: String(metadata.name ?? locator.repository).slice(0, 100),
-        fullName: String(metadata.full_name ?? `${locator.owner}/${locator.repository}`).slice(0, 240),
-        description: metadata.description == null ? null : String(metadata.description).slice(0, 1000),
-        homepage: metadata.homepage == null ? null : String(metadata.homepage).slice(0, 500),
-        defaultBranch: branch.slice(0, 240),
+        name: unicodePrefix(String(metadata.name ?? locator.repository),100),
+        fullName: unicodePrefix(String(metadata.full_name ?? `${locator.owner}/${locator.repository}`),240),
+        description: metadata.description == null ? null : unicodePrefix(String(metadata.description),1000),
+        homepage: metadata.homepage == null ? null : unicodePrefix(String(metadata.homepage),500),
+        defaultBranch: unicodePrefix(branch,240),
         stars: Math.max(0, Number.isSafeInteger(metadata.stargazers_count) ? metadata.stargazers_count : 0),
         forks: Math.max(0, Number.isSafeInteger(metadata.forks_count) ? metadata.forks_count : 0),
         openIssues: Math.max(0, Number.isSafeInteger(metadata.open_issues_count) ? metadata.open_issues_count : 0),
         topics: Array.isArray(metadata.topics) ? metadata.topics.filter(item => typeof item === 'string').slice(0, 30) : [],
-        licenseSpdx: typeof metadata.license?.spdx_id === 'string' ? metadata.license.spdx_id.slice(0, 80) : null,
+        licenseSpdx: typeof metadata.license?.spdx_id === 'string' ? unicodePrefix(metadata.license.spdx_id,80) : null,
         archived: metadata.archived === true,
         pushedAt: typeof metadata.pushed_at === 'string' ? metadata.pushed_at : null,
       },
