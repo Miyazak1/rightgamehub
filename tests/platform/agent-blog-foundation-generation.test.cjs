@@ -10,6 +10,49 @@ const uuid = () => crypto.randomUUID();
 const scores = { readerValue: 82, handsOnPotential: 78, novelty: 70, explainability: 88,
   evidenceStrength: 90 };
 
+test('public selection repairs contextual index errors once without approving invalid references',async t=>{
+ const {createAgentBlogFoundationGenerationHandlers}=await load('agent-blog-foundation-generation.mjs');
+ for(const invalidIndexes of [[0],[2],['1'],[1,1],[]])await t.test(JSON.stringify(invalidIndexes),async()=>{
+  const id=uuid(),calls=[],saved=[];
+  const valid={mode:'single',selectedIndexes:[1],angle:'从第一次体验的具体路径判断项目价值',
+   rationale:'官方固定版本资料给出了清楚的安装步骤、可观察的输出结果和具体使用边界，适合独立研究。',
+   interestSignals:['可以快速体验'],comparisonAxes:[],scores,decisionReasonCodes:['EVIDENCE_STRONG']};
+  const handlers=createAgentBlogFoundationGenerationHandlers({workflowKey:'blog.project.single',
+   providerGateway:{invoke:async input=>{calls.push(input);return {actionId:uuid(),output:{...valid,selectedIndexes:calls.length===1?invalidIndexes:[1]}};}},
+   artifactRepository:{readToolArtifact:async()=>evidence(id),save:async input=>{saved.push(input);return {id:uuid(),artifactKey:input.artifactKey,contentSha256:'a'.repeat(64)};}}});
+  await handlers['blog.project.single:select-subject'](context(uuid(),uuid(),'select-subject',[
+   {stageKey:'collect-evidence',status:'succeeded',outputRef:{artifactIds:[id]}}]),{workerId:'worker',leaseToken:uuid()});
+  assert.equal(calls.length,2);assert.equal(saved.length,1);
+  const first=JSON.parse(calls[0].request.messages[1].content),repair=JSON.parse(calls[1].request.messages[1].content);
+  assert.deepEqual(first.selectionContract.allowedIndexes,[1]);assert.equal(first.candidates[0].discoverySourceIndex,undefined);
+  assert.deepEqual(repair.correction.validation.allowedIndexes,[1]);
+  assert.deepEqual(saved[0].content.selection.selectedIndexes,[1]);
+ });
+ await t.test('a schema repair that still has invalid indexes cannot request a third call',async()=>{
+  const id=uuid();let calls=0,saves=0;
+  const handlers=createAgentBlogFoundationGenerationHandlers({workflowKey:'blog.project.single',
+   providerGateway:{invoke:async()=>({actionId:uuid(),output:++calls===1?{}:{mode:'single',selectedIndexes:[2],angle:'足够具体的研究角度用于校验',rationale:'官方固定版本资料给出了清楚的安装步骤、可观察的输出结果和具体使用边界，适合独立研究。',interestSignals:['可以快速体验'],comparisonAxes:[],scores,decisionReasonCodes:['EVIDENCE_STRONG']}})},
+   artifactRepository:{readToolArtifact:async()=>evidence(id),save:async()=>{saves++;}}});
+  await assert.rejects(handlers['blog.project.single:select-subject'](context(uuid(),uuid(),'select-subject',[
+   {stageKey:'collect-evidence',status:'succeeded',outputRef:{artifactIds:[id]}}]),{workerId:'worker',leaseToken:uuid()}),error=>error.code==='AGENT_BLOG_SELECTION_INDEX_INVALID');
+  assert.equal(calls,2);assert.equal(saves,0);
+ });
+ await t.test('filtered original candidate two is exposed only as current source one and remains bound to its artifact',async()=>{
+  const ids=[uuid(),uuid(),uuid()],sources=ids.map((id,index)=>evidence(id,'owner/project'+index));
+  sources[0].content.metadata.licenseSpdx=null;sources[2].content.metadata.archived=true;
+  let saved;
+  const handlers=createAgentBlogFoundationGenerationHandlers({workflowKey:'blog.project.single',
+   providerGateway:{invoke:async input=>{const view=JSON.parse(input.request.messages[1].content);
+    assert.deepEqual(view.selectionContract.allowedIndexes,[1]);assert.equal(view.candidates.length,1);
+    assert.equal(view.candidates[0].sourceIndex,1);assert.equal(view.candidates[0].discoverySourceIndex,undefined);
+    return {actionId:uuid(),output:{mode:'single',selectedIndexes:[1],angle:'通过首次体验路径判断开放项目的价值',rationale:'官方资料有明确的安装步骤、可观察的结果和使用边界，适合以首次体验路径开展独立研究。',interestSignals:['可以快速体验'],comparisonAxes:[],scores,decisionReasonCodes:['EVIDENCE_STRONG']}};}},
+   artifactRepository:{readToolArtifact:async({artifactId})=>sources[ids.indexOf(artifactId)],save:async input=>{saved=input;return{id:uuid(),artifactKey:input.artifactKey,contentSha256:'a'.repeat(64)};}}});
+  await handlers['blog.project.single:select-subject'](context(uuid(),uuid(),'select-subject',[
+   {stageKey:'collect-evidence',status:'succeeded',outputRef:{artifactIds:ids}}]),{workerId:'worker',leaseToken:uuid()});
+  assert.deepEqual(saved.content.selection.selectedToolArtifactIds,[ids[1]]);
+ });
+});
+
 function evidence(artifactId, name = 'owner/project') {
   return {
     id: artifactId,
@@ -98,8 +141,8 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(verified.outputRef.approved, true);
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 6 });
-  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 4 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 7 });
+  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 5 });
   assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls[0].request.messages[1].content.includes('eligibleModes'));
   assert.equal(stored.get(selected.outputRef.artifactId).content.gateReport.acceptedCount, 1);
@@ -191,7 +234,7 @@ test('unresolved or malformed citation indexes stay blocked after one repair and
   }
 });
 
-test('citation repair preserves gateway budget denial, non-citation failures and shadow acceptance call counts', async () => {
+test('composition repair preserves gateway budget denial, bounded failures and shadow acceptance call counts', async () => {
   const denial = Object.assign(Error('budget exhausted'), { code: 'AGENT_BUDGET_EXCEEDED' });
   const denied = await citationFixture({ outputs: [citationArticle([3])], providerError: denial });
   await assert.rejects(denied.run(), error => error === denial);
@@ -200,10 +243,20 @@ test('citation repair preserves gateway budget denial, non-citation failures and
   const malformed = citationArticle(); malformed.title = 'English title';
   const other = await citationFixture({ outputs: [malformed] });
   await assert.rejects(other.run(), error => error.code === 'AGENT_BLOG_COMPOSITION_INVALID');
-  assert.equal(other.calls.length, 1);
+  assert.equal(other.calls.length, 2);
   const shadow = await citationFixture({ workflowKey: 'blog.project.single.draft-shadow', outputs: [citationArticle([3])] });
   await assert.rejects(shadow.run(), error => error.code === 'AGENT_BLOG_COMPOSITION_CITATION_INVALID');
   assert.equal(shadow.calls.length, 1);
+});
+
+test('actual live title shape receives one audited repair without rewriting model output',async()=>{
+ const invalid=citationArticle();invalid.title='用几条样式规则画生成艺术：css-doodle 上手笔记';
+ const original=structuredClone(invalid),f=await citationFixture({outputs:[invalid,citationArticle()]});
+ await f.run();assert.equal(f.calls.length,2);assert.equal(f.saves.length,1);
+ const repair=JSON.parse(f.calls[1].request.messages[1].content);
+ assert.equal(repair.correction.validation.titleHasLatinLetters,true);
+ assert.equal(repair.compositionContract.title.noLatinLetters,true);
+ assert.deepEqual(invalid,original);assert.equal(f.saves[0].actionId,'fixture-action-2');
 });
 
 test('foundation selection rejects a repeated repository in single-project mode without human review', async () => {

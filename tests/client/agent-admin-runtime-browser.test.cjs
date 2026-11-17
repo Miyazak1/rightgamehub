@@ -18,7 +18,7 @@ test('admin request admission and expanded stage details follow current server s
  };
  const api=new Proxy(methods,{get:(object,key)=>object[key]??(async()=>{throw Error('该夹具未启用此能力');})});
  createRoot(document.getElementById('root')).render(<AgentAdmin api={api} go={()=>{}}/>);`;
- const bundle=await build({stdin:{contents:entry,resolveDir:path.resolve(__dirname,'../..'),loader:'jsx'},bundle:true,write:false,platform:'browser',format:'iife',nodePaths:[path.resolve(__dirname,'../../packages/platform-client/node_modules')],logLevel:'silent'});
+ const bundle=await build({stdin:{contents:entry,resolveDir:path.resolve(__dirname,'../..'),loader:'jsx'},bundle:true,minify:true,write:false,platform:'browser',format:'iife',nodePaths:[path.resolve(__dirname,'../../packages/platform-client/node_modules')],logLevel:'silent'});
  app.get('/',async(_request,reply)=>reply.type('text/html').send('<!doctype html><html><meta charset="utf-8"><div id="root"></div><script src="/fixture.js"></script></html>'));
  app.get('/fixture.js',async(_request,reply)=>reply.type('text/javascript').send(bundle.outputFiles[0].text));
  await app.listen({host:'127.0.0.1',port:0});browser=await chromium.launch({headless:true,args:process.platform==='win32'?['--disable-logging']:[]});

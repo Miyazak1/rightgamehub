@@ -83,6 +83,19 @@ test('shared immediate admission rejects paused, stale, future and non-running w
  assert.equal(publicImmediateAdmission({schedule:base,now,activeFire:true}).ready,false);
 });
 
+test('long composition repair keeps an auditable bounded previous draft within the same input budget',async()=>{
+ const {buildBlogModelRequest}=await load('agent-blog-prompt.mjs');
+ const {stableHash}=await load('researcher-qa-protocol/stable-json.mjs');
+ const draft={title:'实际标题 CSS',blocks:Array.from({length:20},()=>({type:'paragraph',text:'公开项目资料'.repeat(500)}))};
+ const payload={verifiedSources:[{sourceIndex:1,repositoryUrl:'https://github.com/owner/tool',revision:'a'.repeat(40),excerpt:'证据'.repeat(5000)}],
+  correction:{previousDraft:draft,instruction:'返回完整修正文章。'}};
+ const before=stableHash(payload),request=buildBlogModelRequest({system:'Only verified evidence.',payload,kind:'composition',inputBudget:24000});
+ const view=JSON.parse(request.messages[1].content);
+ assert.equal(view.correction.previousDraftTruncated,true);
+ assert.equal(view.correction.previousDraftSha256,stableHash(draft));assert.equal(stableHash(payload),before);
+ assert.ok(request.messages.reduce((sum,item)=>sum+Buffer.byteLength(item.content)+64,0)<=24000);
+});
+
 test('execution cancellation reaches adapters while pre-dispatch cancellation performs no network call',async()=>{
  const {withAgentExecution}=await load('agent-execution-context.mjs');
  const {createAgentDeepSeekProviderAdapter}=await load('agent-deepseek-provider-adapter.mjs');

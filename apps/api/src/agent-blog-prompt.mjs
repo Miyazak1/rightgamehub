@@ -40,12 +40,12 @@ export function buildBlogModelRequest({system,payload,inputBudget=18000,temperat
     candidate.materialCount=candidate.materials?.length??0;
     delete candidate.materials;
   }
-  if(view.correction?.previousOutput!==undefined){
-    const raw=view.correction.previousOutput,text=typeof raw==='string'?raw:stableJson(raw);
+  for(const field of ['previousOutput','previousDraft'])if(view.correction?.[field]!==undefined){
+    const raw=view.correction[field],text=typeof raw==='string'?raw:stableJson(raw);
     if(Buffer.byteLength(text)>8000){
-      view.correction.previousOutput=prefix(text,8000);
-      view.correction.previousOutputSha256=stableHash(raw);
-      view.correction.previousOutputTruncated=true;
+      view.correction[field]=prefix(text,8000);
+      view.correction[`${field}Sha256`]=stableHash(raw);
+      view.correction[`${field}Truncated`]=true;
       view.correction.instruction+=' 原回复预览已截取；必须根据已给定来源重新生成完整 JSON，不续写被截断片段。';
       projection.truncatedFieldCount++;
     }

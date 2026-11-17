@@ -133,6 +133,7 @@ interestSignals 的每一项必须逐字复制 allowedInterestSignals 中的一�
 scores 必须用 0 到 100 的整数分别评估 readerValue、handsOnPotential、novelty、explainability、evidenceStrength；分数只是可审计判断，不能绕过服务器门禁。
 decisionReasonCodes 只能使用 EVIDENCE_STRONG、USE_CASE_CONCRETE、HANDS_ON_TESTABLE、READER_VALUE_HIGH、NOVELTY_SUFFICIENT、COMPARISON_JUSTIFIED。
 返回字段必须且只能是 mode、selectedIndexes、angle、rationale、interestSignals、comparisonAxes、scores、decisionReasonCodes。
+selectedIndexes 只能逐字使用 selectionContract.allowedIndexes 中的整数，对应 candidates.sourceIndex；从 1 开始，不是原调研编号、数组下标、评分排名或材料编号。不得选择未列出的编号。
 必须符合输入 responseExample 的完整字段结构，scores 的五项必须全部为整数，不得遗漏；decisionReasonCodes 必须为允许代码的非空数组。
 responseExample 只展示格式，必须根据本次候选作出真实判断，不得照抄其中的选题理由。`;
 
@@ -145,6 +146,7 @@ citationIndexes 只能逐字使用 citationContract.allowedIndexes 中的整数�
 它不是候选选题编号、段落编号或 materials 内的资料编号。同一仓库的多项资料共用该仓库的 sourceIndex。
 只有一个来源时，所有事实段落和列表的 citationIndexes 都必须为 [1]，不得出现 2、3 或空数组。
 返回字段必须且只能是 title、summary、blocks、followUpQuestions。followUpQuestions 必须恰好三个。
+必须满足 compositionContract：标题不得含任何英文字母（包括项目名）；标题中的英文项目名应改为中文描述，英文名可放正文。正文为 800 至 10000 字符，blocks 为 6 至 80 项。三个追问都须以问号结尾。
 blocks 中每个对象必须严格使用以下一种格式，不得混用字段：
 heading 只能是 {"type":"heading","level":2或3,"text":"标题"}；
 paragraph 只能是 {"type":"paragraph","text":"正文","citationIndexes":[1]}；
@@ -467,7 +469,8 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         activeEditorialCooldowns: input.activeEditorialCooldowns,
         gateRules: { deterministic: true, noManualReview: true,
           singleProjectReuse: 'forbidden', comparisonReuse: 'allowed-with-new-question' },
-        candidates: eligibleCandidates.map(({ artifactId, ...candidate }) => candidate),
+        selectionContract: {indexField:'candidates.sourceIndex',allowedIndexes:eligibleCandidates.map(item=>item.sourceIndex)},
+        candidates: eligibleCandidates.map(({ artifactId, discoverySourceIndex, ...candidate }) => candidate),
         responseExample: { mode: 'single', selectedIndexes: [1],
           angle: '根据当前候选资料提出至少十字的具体研究角度',
           rationale: '根据当前候选的固定版本资料解释选择理由，说明可验证用途、实际结果以及与当前兴趣的联系，至少三十字。',
@@ -481,27 +484,37 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         action: { actionKey: correction ? 'select-subject-format-repair' : 'select-subject', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `${correction ? 'blog-select-format-repair' : 'blog-select'}:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 6 },signal:execution.signal,
+        modelPolicy: modelPolicy(context, 1800), promptTemplate: { key: 'blog.subject.select', version: 7 },signal:execution.signal,
         responseSchema: publicSelection ? BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA : BLOG_FOUNDATION_SELECTION_SCHEMA,
         request: buildBlogModelRequest({system:BLOG_FOUNDATION_SELECTION_PROMPT,
           payload:correction?{...request,correction}:request,kind:'selection',inputBudget:18000}),
         tokenCeiling: 1800, timeoutSeconds: correction ? 45 : 240,
         estimatedInputTokens: 0,
       });
-      let result = await invokeSelection(), selectionOutput;
+      let result = await invokeSelection(), selection;
       if (publicSelection) {
         const attemptOf = output => output?.schemaVersion === 'blog-selection-attempt-v1'
           && typeof output.accepted === 'boolean' ? output : validateBlogFoundationSelectionAttempt(output);
-        let attempt = attemptOf(result.output);
-        if (!attempt.accepted) {
-          result = await invokeSelection({ validation: attempt.validation, previousOutput: attempt.rawOutput,
-            instruction: '按照 responseExample 修正完整 JSON 字段结构。只能从本次候选中选择，仍须服从 eligibleModes、兴趣标签、冷却期和证据门禁；不得伪造评分字段以绕过限制。' });
-          attempt = attemptOf(result.output);
+        for(let ordinal=0;ordinal<2;ordinal++){
+          const attempt=attemptOf(result.output);
+          let validation=attempt.validation,invalidError;
+          if(attempt.accepted){
+            try{
+              selection=semanticSelection(validateBlogFoundationSelectionResponse(attempt.selection),eligibleCandidates,
+                input.profile,input.previousRepositoryUrls,input.activeEditorialCooldowns);
+              break;
+            }catch(error){
+              if(!['AGENT_BLOG_SELECTION_INDEX_INVALID','AGENT_BLOG_SELECTION_INDEX_DUPLICATE',
+                'AGENT_BLOG_SELECTION_CARDINALITY_INVALID'].includes(error.code))throw error;
+              invalidError=error;validation={code:error.code,indexField:'candidates.sourceIndex',
+                allowedIndexes:request.selectionContract.allowedIndexes};
+            }
+          }
+          if(ordinal===1){if(invalidError)throw invalidError;fail('AGENT_BLOG_SELECTION_SCHEMA_INVALID');}
+          result=await invokeSelection({validation,previousOutput:attempt.accepted?attempt.selection:attempt.rawOutput,
+            instruction:'按照 responseExample 和 selectionContract 修正完整 JSON。selectedIndexes 只能使用 allowedIndexes 的整数；不得猜测原调研编号。仍须服从 eligibleModes、兴趣标签、冷却期和证据门禁。此次为唯一纠正机会。'});
         }
-        if (!attempt.accepted) fail('AGENT_BLOG_SELECTION_SCHEMA_INVALID');
-        selectionOutput = validateBlogFoundationSelectionResponse(attempt.selection);
-      } else selectionOutput = validateBlogFoundationSelectionResponse(result.output);
-      const selection = semanticSelection(selectionOutput, eligibleCandidates, input.profile,
+      } else selection=semanticSelection(validateBlogFoundationSelectionResponse(result.output),eligibleCandidates,input.profile,
         input.previousRepositoryUrls, input.activeEditorialCooldowns);
       const artifact = await artifactRepository.save({
         runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId, leaseToken: execution.leaseToken,
@@ -535,6 +548,9 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
       const request = {
         topicScope: input.topicScope, recentTitles: input.recentTitles, agentBehavior: input.profile,
         selectionDecision: compositionSelection,
+        compositionContract:{title:{noLatinLetters:true,maxCharacters:BLOG_LIMITS.title},
+          summary:{maxCharacters:BLOG_LIMITS.summary},bodyCharacters:{min:800,max:10000},
+          blocks:{min:6,max:80},followUpQuestions:{count:3,minCharacters:5,endWithQuestionMark:true}},
         citationContract: { allowedIndexes: sources.map((_source, index) => index + 1),
           indexField: 'verifiedSources.sourceIndex', materialsShareSourceIndex: true },
         verifiedSources: sources.map((source, index) => ({ sourceIndex: index + 1, repository: source.repositoryKey,
@@ -546,7 +562,7 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         action: { actionKey: repair ? 'compose-citation-repair' : 'compose', actionKind: 'provider', capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `${repair ? 'blog-compose-citation-repair' : 'blog-compose'}:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-        modelPolicy: modelPolicy(context, 7000), promptTemplate: { key: 'blog.article.compose', version: 4 },signal:execution.signal,
+        modelPolicy: modelPolicy(context, 7000), promptTemplate: { key: 'blog.article.compose', version: 5 },signal:execution.signal,
         responseSchema: BLOG_FOUNDATION_COMPOSITION_SCHEMA,
         request: buildBlogModelRequest({system:BLOG_FOUNDATION_COMPOSITION_PROMPT,
           payload:repair?{...request,correction:repair}:request,kind:'composition',inputBudget:24000,temperature:0.35}),
@@ -558,12 +574,17 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
       let result = await invokeComposition(), normalized;
       try { normalized = normalizeComposition(result.output, selection, sources, context.run.id); }
       catch (error) {
-        // One governed, replayable repair for public articles only. Shadow
+        // One shared, governed repair for public output-contract errors. Shadow
         // acceptance retains its exact provider-call contract. Never rewrite
         // unsupported indexes to an arbitrary source or publish invalid output.
-        if (workflow !== 'blog.project.single' || error.code !== 'AGENT_BLOG_COMPOSITION_CITATION_INVALID') throw error;
+        if (workflow !== 'blog.project.single' || !['AGENT_BLOG_COMPOSITION_CITATION_INVALID',
+          'AGENT_BLOG_COMPOSITION_INVALID','AGENT_BLOG_COMPOSITION_HEADING_INVALID',
+          'AGENT_BLOG_COMPOSITION_BLOCK_SHAPE_INVALID','AGENT_BLOG_COMPOSITION_LENGTH_INVALID',
+          'AGENT_BLOG_COMPOSITION_SOURCE_UNUSED'].includes(error.code)) throw error;
         result = await invokeComposition({ errorCode: error.code, previousDraft: result.output,
-          instruction: '仅依据 verifiedSources 纠正引用。所有事实段落和列表必须使用允许的来源编号；资料不足的内容必须删除或改写，不得伪造来源。返回完整、满足原格式的文章对象。' });
+          validation:{titleHasLatinLetters:/[A-Za-z]/u.test(result.output.title),
+            blockCount:result.output.blocks.length,followUpQuestionCount:result.output.followUpQuestions.length},
+          instruction: '仅依据 verifiedSources 和 compositionContract 纠正完整文章。标题必须删除英文项目名并改用中文描述；正文长度、段落格式、三个问号结尾的追问均须满足契约。所有事实段落和列表必须使用允许的来源编号，资料不足的内容必须删除或改写，不得伪造来源。此次为唯一写作纠正机会，返回完整 JSON。' });
         normalized = normalizeComposition(result.output, selection, sources, context.run.id);
       }
       const artifact = await artifactRepository.save({
