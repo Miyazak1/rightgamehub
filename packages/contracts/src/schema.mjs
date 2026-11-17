@@ -23,7 +23,7 @@ export const enums = Object.freeze({
   ProjectClaimStatus: ['publisher','unclaimed','pending','verified','rejected','cancelled','disputed','suspended','revoked'],
   AnalyticsEventType: ['page_view','session_ping','work_view','download_start','download_complete','game_start','game_end'],
   AnalyticsHostKind: ['browser','mcp-app','cursor','vscode','code','harness','codex','claude','opencode','unknown'],
-  AnalyticsRoute: ['discover','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown'],
+  AnalyticsRoute: ['discover','blog','learning','tools','library','social','creator','admin','work','play','auth','settings','profile','unknown'],
   AnalyticsAttributionSource: ['share_copy','share_system','readme','external','campaign'],
 });
 

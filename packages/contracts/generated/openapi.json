@@ -36157,6 +36157,7 @@
                   "type": "string",
                   "enum": [
                     "discover",
+                    "blog",
                     "learning",
                     "tools",
                     "library",
