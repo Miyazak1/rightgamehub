@@ -131,16 +131,30 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
         EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3) AS secret_ready,
         EXISTS(SELECT 1 FROM agent_provider_models WHERE provider=$3 AND model_id=$4 AND status='active'
           AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS model_ready,
-        NOT EXISTS(SELECT 1 FROM agent_provider_circuits WHERE provider=$3 AND model_id=$4 AND state<>'closed') AS circuit_ready,
+        NOT EXISTS(SELECT 1 FROM agent_provider_circuits WHERE provider=$3 AND model_id=$4 AND state<>'closed'
+          AND (retry_at>now() OR (state='half-open' AND probe_lease_until>now()))) AS circuit_ready,
         (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1
           AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')
-          AND status IN ('queued','running','waiting')) AS active_runs,
+          AND status IN ('queued','running','waiting')
+          AND NOT EXISTS(SELECT 1 FROM agent_blog_public_requests checkpoint
+            JOIN agent_blog_foundation_publications receipt ON receipt.agent_user_id=checkpoint.agent_user_id
+              AND receipt.run_id=agent_runs.id
+            WHERE checkpoint.agent_user_id=$1 AND checkpoint.status='completed'
+              AND agent_runs.idempotency_key='public-runtime:'||checkpoint.request_id||':article')) AS active_runs,
         (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1
           AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')
-          AND status='uncertain' AND created_at>=now()-interval '30 days') AS uncertain_runs,
+          AND status='uncertain' AND created_at>=now()-interval '30 days'
+          AND NOT EXISTS(SELECT 1 FROM agent_blog_public_requests checkpoint
+            WHERE checkpoint.agent_user_id=$1 AND (checkpoint.safe_for_next=true
+              OR (checkpoint.status='completed' AND EXISTS(SELECT 1 FROM agent_blog_foundation_publications receipt
+                WHERE receipt.run_id=agent_runs.id AND receipt.agent_user_id=$1)))
+              AND agent_runs.idempotency_key IN ('public-runtime:'||checkpoint.request_id||':article',
+                'public-runtime:'||checkpoint.request_id||':discovery'))) AS uncertain_runs,
         (SELECT count(*)::int FROM agent_runs source WHERE source.agent_user_id=$1
-          AND source.workflow_key='blog.project.discovery-shadow' AND source.status='succeeded'
-          AND NOT EXISTS(SELECT 1 FROM agent_run_handoffs handoff WHERE handoff.source_run_id=source.id)) AS awaiting_handoff,
+          AND source.workflow_key='blog.project.discovery-shadow' AND source.status='succeeded' AND source.output_type='blog.candidate-set'
+          AND NOT EXISTS(SELECT 1 FROM agent_run_handoffs handoff WHERE handoff.source_run_id=source.id)
+          AND NOT EXISTS(SELECT 1 FROM agent_blog_public_requests checkpoint WHERE checkpoint.agent_user_id=$1
+            AND checkpoint.safe_for_next=true AND source.idempotency_key='public-runtime:'||checkpoint.request_id||':discovery')) AS awaiting_handoff,
         (SELECT count(*)::int FROM agent_blog_foundation_publications publication
           WHERE publication.agent_user_id=$1
           AND publication.published_at>=date_trunc('day',now() AT TIME ZONE 'Asia/Shanghai')
@@ -161,12 +175,19 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
     const recent = (await this.pool.query(`SELECT status FROM agent_runs WHERE agent_user_id=$1
       AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')
       AND status IN ('succeeded','failed','rejected','uncertain','cancelled')
+      AND finished_at>=now()-interval '1 hour'
       ORDER BY finished_at DESC,id DESC LIMIT $2`, [config.agentUserId, config.consecutiveFailureLimit])).rows;
     let consecutiveFailures = 0;
     for (const item of recent) {
       if (item.status === 'succeeded') break;
       if (['failed', 'rejected', 'uncertain'].includes(item.status)) consecutiveFailures += 1;
     }
+    const recovery=(await this.pool.query(`SELECT
+      count(*) FILTER(WHERE status IN ('waiting','running'))::int AS pending,
+      count(*) FILTER(WHERE status='needs-review')::int AS needs_review,
+      min(created_at) FILTER(WHERE status IN ('waiting','running')) AS oldest_pending_at,
+      max(updated_at) FILTER(WHERE status='completed') AS last_completed_at
+      FROM agent_blog_public_requests WHERE agent_user_id=$1`,[config.agentUserId])).rows[0];
     return {
       activePublisher: row.active_publisher, legacyAutomationEnabled: row.legacy_automation_enabled,
       identityReady: row.identity_ready, capabilityCount: Number(row.capability_count),
@@ -176,6 +197,9 @@ export class PostgresAgentBlogPublicRuntimePreflightRepository {
       awaitingHandoff: Number(row.awaiting_handoff), publicationRunsToday: Number(row.publication_runs_today),
       providerCallsMonth: Number(row.provider_calls_month), costMicrousdMonth: Number(row.cost_microusd_month),
       consecutiveFailures,
+      recovery:{pending:Number(recovery.pending),needsReview:Number(recovery.needs_review),
+        oldestPendingAt:recovery.oldest_pending_at?.toISOString?.()??null,
+        lastCompletedAt:recovery.last_completed_at?.toISOString?.()??null},
     };
   }
 }

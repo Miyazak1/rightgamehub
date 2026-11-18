@@ -576,7 +576,7 @@ export class PostgresAgentRuntimeRepository {
       const stage = (await client.query(`SELECT * FROM agent_run_stages WHERE id=$1 AND status IN ('leased','running')
         AND leased_by=$2 AND lease_token=$3 AND lease_until>now() FOR UPDATE`, [stageId, workerId, leaseToken])).rows[0];
       if (!stage) fail('AGENT_RUNTIME_LEASE_LOST');
-      const activeActions = (await client.query(`SELECT id,status FROM agent_run_actions WHERE stage_id=$1
+      const activeActions = (await client.query(`SELECT id,status,action_kind,capability_key FROM agent_run_actions WHERE stage_id=$1
         AND status IN ('prepared','authorized','reserved','sending','sent','acknowledged','uncertain')
         FOR UPDATE`, [stageId])).rows;
       const exposed = activeActions.filter(action => ['sending', 'sent', 'acknowledged', 'uncertain'].includes(action.status));
@@ -614,7 +614,13 @@ export class PostgresAgentRuntimeRepository {
       await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
         finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
       [stageId, errorCode, errorMessage]);
-      const retry = retryable && !unsafeOutcome && stage.attempt < stage.max_attempts;
+      const run=(await client.query('SELECT workflow_key,workflow_version FROM agent_runs WHERE id=$1',[stage.run_id])).rows[0];
+      const safeReadRetry=run.workflow_version===4
+        && ['blog.project.single','blog.project.discovery-shadow'].includes(run.workflow_key)
+        && ['provider','tool'].includes(stage.kind)
+        && activeActions.every(action=>['provider','tool'].includes(action.action_kind)
+          && ['provider.text.generate','research.github.read','research.github.discover'].includes(action.capability_key));
+      const retry = retryable && (!unsafeOutcome||safeReadRetry) && stage.attempt < stage.max_attempts;
       const nextStatus = retry ? 'queued' : unsafeOutcome ? 'uncertain' : 'failed';
       const row = (await client.query(`UPDATE agent_run_stages SET status=$2,available_at=CASE WHEN $2='queued'
           THEN now()+($5*interval '1 second') ELSE available_at END,lease_token=NULL,leased_by=NULL,lease_until=NULL,
@@ -685,6 +691,43 @@ export class PostgresAgentRuntimeRepository {
       SELECT $1,$2,'provider.request-rejected','worker',$3,$5 WHERE EXISTS(SELECT 1 FROM agent_run_stages
         WHERE id=$2 AND run_id=$1 AND status='running' AND leased_by=$3 AND lease_token=$4 AND lease_until>now())`,
     [runId,stageId,workerId,leaseToken,json({errorCode,sizeBytes,maxInputTokens})]);
+  }
+
+  async chargeGitHubRequest({runId,stageId,workerId,leaseToken,actionId}) {
+    return withTransaction(this.pool,async client=>{
+      const run=(await client.query(`SELECT workflow_key,workflow_version,idempotency_key,agent_user_id FROM agent_runs WHERE id=$1`,[runId])).rows[0];
+      if(!run||run.workflow_version!==4||!['blog.project.single','blog.project.discovery-shadow'].includes(run.workflow_key))return;
+      const requestId=/^public-runtime:([a-f0-9-]{36}):(discovery|article)$/u.exec(run.idempotency_key)?.[1];
+      if(!requestId)return; // Other explicit canaries retain their own contract.
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['public-network:'+run.agent_user_id+':'+requestId]);
+      const owner=(await client.query(`SELECT 1 FROM agent_blog_public_requests request
+        JOIN agent_run_stages stage ON stage.id=$3 AND stage.run_id=$4
+        WHERE request.agent_user_id=$1 AND request.request_id=$2 AND request.status='running' AND request.lease_until>now()
+          AND stage.leased_by=$5 AND stage.lease_token=$6 AND stage.lease_until>now() AND stage.status='running'`,
+      [run.agent_user_id,requestId,stageId,runId,workerId,leaseToken])).rows[0];
+      if(!owner)fail('AGENT_RUNTIME_LEASE_LOST');
+      const count=Number((await client.query(`SELECT count(*)::int AS n FROM agent_blog_public_network_requests
+        WHERE agent_user_id=$1 AND request_id=$2`,[run.agent_user_id,requestId])).rows[0].n);
+      if(count>=43)fail('AGENT_GITHUB_REQUEST_BUDGET_EXHAUSTED');
+      await client.query(`INSERT INTO agent_blog_public_network_requests(agent_user_id,request_id,ordinal,action_id)
+        VALUES($1,$2,$3,$4)`,[run.agent_user_id,requestId,count+1,actionId]);
+    });
+  }
+
+  async recoveryActionKey({stageId,workerId,leaseToken,actionKey,idempotencyKey}) {
+    const stage=(await this.pool.query(`SELECT stage.attempt,stage.kind,run.workflow_key,run.workflow_version,
+      (stage.leased_by=$2 AND stage.lease_token=$3 AND stage.status IN ('leased','running') AND stage.lease_until>now()) AS valid
+      FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id WHERE stage.id=$1`,[stageId,workerId,leaseToken])).rows[0];
+    if(!stage)fail('AGENT_RUNTIME_LEASE_LOST');
+    if(stage.workflow_version!==4||!['blog.project.single','blog.project.discovery-shadow'].includes(stage.workflow_key))return idempotencyKey;
+    if(!stage.valid)fail('AGENT_RUNTIME_LEASE_LOST');
+    if(stage.attempt<2)return idempotencyKey;
+    const keys=Array.from({length:stage.attempt},(_,i)=>i?`${idempotencyKey}:recovery:${i+1}`:idempotencyKey);
+    const prior=(await this.pool.query(`SELECT status,idempotency_key FROM agent_run_actions
+      WHERE stage_id=$1 AND action_key=$2 AND idempotency_key=ANY($3) ORDER BY created_at DESC`,[stageId,actionKey,keys])).rows;
+    const completed=prior.find(row=>row.status==='succeeded');
+    if(!completed&&stage.kind==='domain-write'&&prior.some(row=>!['failed','cancelled','rejected'].includes(row.status)))fail('AGENT_DOMAIN_WRITE_OUTCOME_UNCERTAIN');
+    return completed?.idempotency_key??keys.at(-1);
   }
 
   async createProviderInputAction({runId,stageId,workerId,leaseToken,action,idempotencyKey,request,policyDecision}) {
@@ -880,7 +923,7 @@ export class PostgresAgentRuntimeRepository {
   }
 
   async recoverExpiredStages({ workerId = 'agent-runtime-recovery', limit = 25,
-    baseBackoffSeconds = 1, stageId = null, supportedRoutes = null } = {}) {
+    baseBackoffSeconds = 1, stageId = null, supportedRoutes = null, agentUserId = null, runId = null } = {}) {
     workerIdentifier(workerId);
     boundedInteger(limit, 1, 200, 'AGENT_RUNTIME_RECOVERY_LIMIT_INVALID');
     boundedInteger(baseBackoffSeconds, 0, 300, 'AGENT_RUNTIME_BACKOFF_INVALID');
@@ -888,15 +931,19 @@ export class PostgresAgentRuntimeRepository {
       fail('AGENT_RUNTIME_STAGE_ID_INVALID');
     }
     return withTransaction(this.pool, async client => {
-      const rows = (await client.query(`SELECT stage.* FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id
+      if(agentUserId!==null&&!UUID.test(agentUserId))fail('AGENT_RUNTIME_AGENT_INVALID');
+      if(runId!==null&&!UUID.test(runId))fail('AGENT_RUNTIME_RUN_INVALID');
+      const rows = (await client.query(`SELECT stage.*,run.workflow_key,run.workflow_version FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id
         WHERE ($2::uuid IS NULL OR stage.id=$2) AND stage.status IN ('leased','running') AND (stage.lease_until<=now()
           OR stage.attempt_started_at+(stage.timeout_seconds*interval '1 second')<=now())
           AND ($3::text[] IS NULL OR (run.workflow_key||':'||stage.stage_key)=ANY($3))
+          AND ($4::uuid IS NULL OR run.agent_user_id=$4)
+          AND ($5::uuid IS NULL OR run.id=$5)
         ORDER BY least(stage.lease_until,stage.attempt_started_at+(stage.timeout_seconds*interval '1 second')),stage.id
-        FOR UPDATE OF stage SKIP LOCKED LIMIT $1`, [limit, stageId, routeKeys(supportedRoutes)])).rows;
+        FOR UPDATE OF stage SKIP LOCKED LIMIT $1`, [limit, stageId, routeKeys(supportedRoutes),agentUserId,runId])).rows;
       const result = { examined: rows.length, requeued: 0, failed: 0, uncertain: 0 };
       for (const stage of rows) {
-        const exposed = (await client.query(`SELECT id FROM agent_run_actions WHERE stage_id=$1
+        const exposed = (await client.query(`SELECT id,action_kind,capability_key FROM agent_run_actions WHERE stage_id=$1
           AND status IN ('sending','sent','acknowledged','uncertain') FOR UPDATE`, [stage.id])).rows;
         const errorCode = exposed.length ? 'AGENT_STAGE_RECOVERY_UNCERTAIN' : 'AGENT_STAGE_LEASE_EXPIRED';
         const errorMessage = exposed.length
@@ -926,8 +973,13 @@ export class PostgresAgentRuntimeRepository {
         await client.query(`UPDATE agent_run_actions SET status='cancelled',error_code=$2,error_message=$3,
           finished_at=now(),updated_at=now() WHERE stage_id=$1 AND status IN ('prepared','authorized','reserved')`,
         [stage.id, errorCode, errorMessage]);
-        const retry = exposed.length === 0 && stage.attempt < stage.max_attempts;
-        const nextStatus = exposed.length ? 'uncertain' : retry ? 'queued' : 'failed';
+        const safeReadRetry=stage.workflow_version===4
+          && ['blog.project.single','blog.project.discovery-shadow'].includes(stage.workflow_key)
+          && ['provider','tool'].includes(stage.kind)
+          && exposed.every(action=>['provider','tool'].includes(action.action_kind)
+            && ['provider.text.generate','research.github.read','research.github.discover'].includes(action.capability_key));
+        const retry = (exposed.length === 0||safeReadRetry) && stage.attempt < stage.max_attempts;
+        const nextStatus = retry ? 'queued' : exposed.length ? 'uncertain' : 'failed';
         const backoff = Math.min(300, baseBackoffSeconds * (2 ** Math.max(0, stage.attempt - 1)));
         const updated = (await client.query(`UPDATE agent_run_stages SET status=$2,
           available_at=CASE WHEN $2='queued' THEN now()+($5*interval '1 second') ELSE available_at END,

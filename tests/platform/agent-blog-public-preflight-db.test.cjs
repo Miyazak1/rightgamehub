@@ -108,6 +108,17 @@ test('public preflight checks the workflows actually installed by bootstrap acro
     const repeated = await resumeAgentBlogPublicSchedule({ pool: admin, env, clock: () => new Date(now.getTime() + 1000) });
     assert.equal(repeated.alreadyEnabled, true);
     assert.equal(repeated.schedule.nextFireAt, resumed.schedule.nextFireAt);
+    const waitingClient=await admin.connect();await waitingClient.query('BEGIN');
+    try{
+      const waitingRuntime=loadAgentBlogPublicRuntimeConfig(env);
+      await waitingClient.query(`INSERT INTO agent_provider_circuits(provider,model_id,state,retry_at)
+        VALUES($1,$2,'open',now()+interval '1 hour') ON CONFLICT(provider,model_id) DO UPDATE
+        SET state='open',retry_at=now()+interval '1 hour',probe_lease_token=NULL,probe_lease_until=NULL`,[waitingRuntime.provider,waitingRuntime.modelId]);
+      const waiting=await resumeAgentBlogPublicSchedule({pool:waitingClient,env,clock});
+      assert.equal(waiting.alreadyEnabled,true);assert.equal(waiting.enabled,true);assert.equal(waiting.blocked,true);
+      assert.ok(waiting.blockers.includes('AGENT_BLOG_PUBLIC_RUNTIME_PROVIDER_CIRCUIT_OPEN'));
+      assert.equal((await waitingClient.query('SELECT next_fire_at FROM agent_schedules WHERE agent_user_id=$1',[account.agentUserId])).rows[0].next_fire_at.toISOString(),resumed.schedule.nextFireAt);
+    }finally{await waitingClient.query('ROLLBACK');waitingClient.release();}
     await assert.rejects(resumeAgentBlogPublicSchedule({ pool: admin, env, clock: () => new Date(now.getTime() + 100000) }), /HEARTBEAT_STALE/u);
   });
   await t.test('paper workflows cannot substitute for missing GitHub discovery workflow', async () => {

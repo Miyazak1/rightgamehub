@@ -31,7 +31,7 @@ async function main(){
  await save();
  try{
   const {publicPipelineFixture}=require('../tests/platform/agent-blog-public-pipeline-db.test.cjs');
-  await publicPipelineFixture({after:fn=>cleanups.push(fn)},{live:{modelId:settings.DEEPSEEK_MODEL,apiKey:settings.DEEPSEEK_API_KEY,githubAuthenticated:!!token,
+  await publicPipelineFixture({after:fn=>cleanups.push(fn)},{agentCallLimit:process.argv.includes('--resilience')?40:20,live:{modelId:settings.DEEPSEEK_MODEL,apiKey:settings.DEEPSEEK_API_KEY,githubAuthenticated:!!token,
    onDatabase:pool=>database=pool,
    toolAdapters:{'research.github.repository.search@1':createGitHubRepositorySearchAdapter({token}),
     'research.github.repository.read@1':createGitHubRepositoryReadAdapter({token}),
@@ -43,7 +43,11 @@ async function main(){
     catch(error){call.errorCode=error.code??'PROVIDER_FAILED';throw error;}
     finally{await save();}
    },onComplete:async result=>{report.acceptance=result;await save();}
-  },afterPublication:process.argv.includes('--continuity')?async state=>{
+  },afterPublication:process.argv.includes('--resilience')?async state=>{
+    report.resilience=await require('./support/verify-blog-resilience.cjs')(state,{token,directory,progress:async event=>{
+      console.log(JSON.stringify(event));report.resilienceProgress=event;await save();
+    }});await save();
+  }:process.argv.includes('--continuity')?async state=>{
     report.continuity=await require('./support/verify-blog-editorial-continuity.cjs')(state,async event=>{
       console.log(JSON.stringify(event));report.continuityProgress=event;await save();
     });await save();
@@ -53,6 +57,8 @@ async function main(){
   if(database){
    report.stages=(await database.query('SELECT stage_key,status,error_code FROM agent_run_stages ORDER BY created_at,ordinal')).rows;
    report.runs=(await database.query('SELECT id,workflow_key,status,error_code FROM agent_runs ORDER BY created_at')).rows;
+   report.stageArtifacts=(await database.query('SELECT run_id,artifact_key,content_json FROM agent_runtime_stage_artifacts ORDER BY created_at')).rows;
+   report.modelOutputs=(await database.query('SELECT schema_key,content_json FROM agent_provider_output_artifacts ORDER BY created_at')).rows;
   }
   await save();throw error;
  }finally{

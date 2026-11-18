@@ -57,6 +57,8 @@ export function createAgentProviderGateway({
       const validate = validators.get(schemaKey(responseSchema));
       if (!validate) fail('AGENT_PROVIDER_RESPONSE_SCHEMA_NOT_REGISTERED');
       const decision = await policyService.decide({ runId, stageId, action, resource });
+      if(runtimeRepository.recoveryActionKey)idempotencyKey=await runtimeRepository.recoveryActionKey({
+        stageId,workerId,leaseToken,actionKey:action.actionKey,idempotencyKey});
       const prepared = await runtimeRepository.createAction({
         runId, stageId, workerId,leaseToken,action, idempotencyKey,requestStorage:'artifact-v1',
         request: { modelPolicy, promptTemplate, responseSchema, tokenCeiling, timeoutSeconds, input: request },

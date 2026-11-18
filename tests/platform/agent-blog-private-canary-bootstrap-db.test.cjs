@@ -52,7 +52,7 @@ test('private canary bootstrap is idempotent and writes control-plane records on
   const counts = (await admin.query(`SELECT
     (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
       AND (workflow_key,workflow_version) IN (
-        ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',2))) AS workflows,
+        ('blog.project.discovery-shadow',4),('blog.project.single.draft-shadow',2))) AS workflows,
     (SELECT count(*)::int FROM agent_tool_contracts WHERE status='active'
       AND (tool_key,contract_version) IN (
         ('research.github.repository.search',1),('research.github.repository.read',1),

@@ -17,7 +17,7 @@ test('one durable agent publishes continuously, reselects, skips and replays wit
       await state.runtime.registerWorkflow({actorUserId:operator,manifest:BLOG_PROJECT_SINGLE_WORKFLOW,status:'draft'});
       assert.equal((await admin.query(`SELECT manifest_sha256 FROM agent_workflow_definitions
         WHERE workflow_key=$1 AND workflow_version=2`,[legacy.workflowKey])).rows[0].manifest_sha256,registered.manifestSha256);
-      assert.equal(BLOG_PROJECT_SINGLE_WORKFLOW.workflowVersion,3);
+      assert.equal(BLOG_PROJECT_SINGLE_WORKFLOW.workflowVersion,4);
       config.dailyPublicationRunLimit = 4;
       const historyBefore = (await admin.query(`SELECT id,payload_json FROM agent_editorial_memory_events
         WHERE agent_user_id=$1 ORDER BY id`, [account.agentUserId])).rows;
@@ -74,7 +74,7 @@ test('one durable agent publishes continuously, reselects, skips and replays wit
       await admin.query(`UPDATE agent_schedules SET next_fire_at=now()-interval '1 second',
         config_json=config_json||'{"consecutiveFailures":1}'::jsonb WHERE agent_user_id=$1`, [account.agentUserId]);
       const controller = createAgentBlogPublicScheduleController({ repository, runtimeConfig: config,
-        preflightRepository: { snapshot: async () => assert.fail('runOnce delegates preflight to runner') },
+        preflightRepository: new (await harness.load('agent-blog-public-runtime-preflight.mjs')).PostgresAgentBlogPublicRuntimePreflightRepository(admin),
         runner: { run: async () => outcomes[3] } });
       assert.equal((await controller.runOnce()).status, 'succeeded');
       const schedule = (await admin.query('SELECT enabled,config_json,next_fire_at FROM agent_schedules WHERE agent_user_id=$1',

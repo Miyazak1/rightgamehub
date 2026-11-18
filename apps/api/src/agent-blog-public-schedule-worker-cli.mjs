@@ -15,24 +15,23 @@ const controller = createAgentBlogPublicScheduleController({
 });
 let stopping = false;
 const instanceId = crypto.randomUUID();
-const stop = () => { stopping = true; };
+const shutdown=new AbortController();
+const stop = () => { stopping = true; shutdown.abort(Object.assign(new Error('AGENT_RUNTIME_INTERRUPTED'),{code:'AGENT_RUNTIME_INTERRUPTED'})); };
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 process.once('SIGINT', stop);
 process.once('SIGTERM', stop);
 
 try {
-  const activation = await controller.ensure({ agentUserId: runtime.config.agentUserId, enabled: true,
-    preserveExisting: true });
-  process.stdout.write(`${JSON.stringify({ service: 'agent-blog-public-scheduler', event: 'activation',
-    enabled: activation.enabled, blocked: activation.blocked, blockers: activation.blockers,
-    schedule: activation.schedule ?? null })}\n`);
-  if (activation.blocked) throw Object.assign(new Error('AGENT_BLOG_PUBLIC_SCHEDULE_ACTIVATION_BLOCKED'), {
-    code: 'AGENT_BLOG_PUBLIC_SCHEDULE_ACTIVATION_BLOCKED', blockers: activation.blockers,
-  });
-  await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId, state: 'idle' });
+  let activated=false;
   while (!stopping) {
     try {
+      if(!activated){
+        const activation=await controller.ensure({agentUserId:runtime.config.agentUserId,enabled:true,preserveExisting:true});
+        activated=!activation.blocked;
+        process.stdout.write(`${JSON.stringify({service:'agent-blog-public-scheduler',event:'activation',...activation})}\n`);
+      }
       const result = await runAgentBlogPublicScheduleCycle({ controller,
+        signal:shutdown.signal,
         agentUserId: runtime.config.agentUserId, instanceId,
         heartbeatMilliseconds: Math.min(scheduleConfig.pollMilliseconds, 30000),
         onHeartbeatError: error => process.stderr.write(`${JSON.stringify({
@@ -44,7 +43,7 @@ try {
       })}\n`);
     } catch (error) {
       await controller.heartbeat({ agentUserId: runtime.config.agentUserId, instanceId,
-        state: 'idle' }).catch(() => {});
+        state: 'degraded' }).catch(() => {});
       process.stderr.write(`${JSON.stringify({ service: 'agent-blog-public-scheduler', event: 'loop-error',
         code: error?.code ?? 'AGENT_BLOG_PUBLIC_SCHEDULE_WORKER_FAILED', message: error?.message })}\n`);
     }

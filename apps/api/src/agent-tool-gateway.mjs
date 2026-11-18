@@ -54,6 +54,8 @@ export function createAgentToolGateway({
       const normalizedRequest = await validateInput(structuredClone(request));
       if(!isDatabaseJson(normalizedRequest))fail('AGENT_TOOL_INPUT_TEXT_INVALID');
       const decision = await policyService.decide({ runId, stageId, action, resource });
+      if(runtimeRepository.recoveryActionKey)idempotencyKey=await runtimeRepository.recoveryActionKey({
+        stageId,workerId,leaseToken,actionKey:action.actionKey,idempotencyKey});
       const prepared = await runtimeRepository.createAction({
         runId, stageId, action, idempotencyKey,
         request: { tool: { key: contract.toolKey, version: contract.contractVersion }, input: normalizedRequest },
@@ -91,7 +93,8 @@ export function createAgentToolGateway({
       await toolRepository.markSending(reserved.callId);
       let receipt;
       try {
-        receipt = await withAgentExecution({signal},()=>adapter({
+        receipt = await withAgentExecution({signal,beforeNetworkRequest:()=>runtimeRepository.chargeGitHubRequest?.({
+          runId,stageId,workerId,leaseToken,actionId:prepared.id})},()=>adapter({
           request: structuredClone(normalizedRequest), contract: structuredClone(contract),
           timeoutSeconds: contract.timeoutSeconds,signal,
         }));

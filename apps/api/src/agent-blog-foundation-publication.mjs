@@ -40,6 +40,8 @@ export function createAgentBlogFoundationPublicationGateway({
       const resource = { type: 'blog.article', owner: agentUserId, id: articleId };
       const decision = await policyService.decide({ runId, stageId, action: ACTION, resource });
       if (decision.agentUserId !== agentUserId) fail('AGENT_BLOG_PUBLICATION_AGENT_MISMATCH');
+      if(runtimeRepository.recoveryActionKey)idempotencyKey=await runtimeRepository.recoveryActionKey({
+        stageId,workerId,leaseToken,actionKey:ACTION.actionKey,idempotencyKey});
       const prepared = await runtimeRepository.createAction({
         runId, stageId, action: ACTION, idempotencyKey,
         request: { schemaVersion: 'blog-foundation-publication-request-v1', articleId,

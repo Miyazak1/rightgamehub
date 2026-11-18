@@ -1,5 +1,7 @@
 import { AGENT_GITHUB_RESEARCH_LIMITS,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
+import {BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW as DISCOVERY,
+  BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW as DRAFT} from './agent-blog-foundation-workflows.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const MODEL = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/u;
@@ -131,11 +133,12 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
             ('research.github.repository.materials.read',1))) AS tool_count,
         (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active'
           AND (workflow_key,workflow_version) IN (
-            ('blog.project.discovery-shadow',3),('blog.project.single.draft-shadow',2))) AS workflow_count,
+            SELECT * FROM unnest($5::text[],$6::integer[]))) AS workflow_count,
         EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider=$3) AS secret_ready,
         EXISTS(SELECT 1 FROM agent_provider_models WHERE provider=$3 AND model_id=$4 AND status='active'
           AND supports_json_schema=true AND 'structured-generation'=ANY(task_classes)) AS model_ready,
-        NOT EXISTS(SELECT 1 FROM agent_provider_circuits WHERE provider=$3 AND model_id=$4 AND state<>'closed') AS circuit_ready,
+        NOT EXISTS(SELECT 1 FROM agent_provider_circuits WHERE provider=$3 AND model_id=$4 AND state<>'closed'
+          AND (retry_at>now() OR (state='half-open' AND probe_lease_until>now()))) AS circuit_ready,
         (SELECT count(*)::int FROM agent_runs WHERE agent_user_id=$1
           AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single.draft-shadow')
           AND status IN ('queued','running','waiting')) AS active_runs,
@@ -154,7 +157,8 @@ export class PostgresAgentBlogPrivateCanaryPreflightRepository {
         (SELECT COALESCE(sum(charged_cost_microusd),0)::bigint FROM agent_budget_reservations
           WHERE agent_user_id=$1 AND period_month=date_trunc('month',now() AT TIME ZONE 'UTC')::date
             AND status IN ('settled','uncertain')) AS cost_microusd_month`,
-    [config.agentUserId, requiredCapabilities, config.provider, config.modelId])).rows[0];
+    [config.agentUserId, requiredCapabilities, config.provider, config.modelId,
+      [DISCOVERY.workflowKey,DRAFT.workflowKey],[DISCOVERY.workflowVersion,DRAFT.workflowVersion]])).rows[0];
     const recent = (await this.pool.query(`SELECT status FROM agent_runs WHERE agent_user_id=$1
       AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single.draft-shadow')
       AND status IN ('succeeded','failed','rejected','uncertain','cancelled')

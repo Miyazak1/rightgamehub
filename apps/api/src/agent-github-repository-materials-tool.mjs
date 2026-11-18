@@ -1,5 +1,5 @@
 import {unicodePrefix} from './text-boundaries.mjs';
-import {boundedAgentSignal} from './agent-execution-context.mjs';
+import {boundedAgentSignal,chargeAgentNetworkRequest} from './agent-execution-context.mjs';
 import { normalizeGitHubRepositoryLocator } from './agent-github-repository-tool.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
@@ -200,6 +200,7 @@ export function createGitHubRepositoryMaterialsAdapter({ fetchImpl = globalThis.
       let response;
       try {
         networkRequests += 1;
+        await chargeAgentNetworkRequest();
         response = await fetchImpl(`https://api.github.com${path}`, {
           method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
           headers: githubRequestHeaders({ accept, range: `bytes=0-${TEXT_PREFIX_BYTES - 1}`,

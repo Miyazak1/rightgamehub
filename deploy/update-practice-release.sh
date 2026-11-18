@@ -121,7 +121,7 @@ dc build --build-arg "MOOYU_WEB_RUNTIME_IMAGE=$WEB_RUNTIME_IMAGE" migrate "${SER
 docker exec "$POSTGRES_ID" pg_dump -U gamehub -d gamehub --format=custom > "$RECORD/database.dump.partial"
 docker exec -i "$POSTGRES_ID" pg_restore --list < "$RECORD/database.dump.partial" > /dev/null
 mv "$RECORD/database.dump.partial" "$RECORD/database.dump"
-# Pending migrations through 0161 are additive; retain them on application rollback.
+# Pending migrations through 0162 are additive; retain them on application rollback.
 dc run --rm --no-deps migrate node apps/api/src/practice-release-migrate.mjs
 rollback_on_failure() {
   status=$?
@@ -183,7 +183,7 @@ const get=async route=>{
   throw error;
  }
 };
-const ready=await get('/ready');assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,161);assert.equal(ready.migrations.ready,true);
+const ready=await get('/ready');assert.equal(ready.status,'ready');assert.equal(ready.migrations.expected,162);assert.equal(ready.migrations.ready,true);
 const catalog=await get('/v1/learning/practice/catalog');assert.ok(catalog.topics.length>0);
 assert.equal(createVerifiedMathEngine().capabilities().ready,true,'verified engine must be installed');
 const paper=await fetch('http://127.0.0.1:3090/v1/me/paper-studies');assert.equal(paper.status,404);

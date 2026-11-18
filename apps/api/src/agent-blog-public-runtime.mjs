@@ -55,10 +55,15 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
   const ownsPool = !suppliedPool;
   const pool = suppliedPool ?? new pg.Pool({
     connectionString: env.DATABASE_URL, max: 3, connectionTimeoutMillis: 5000,
-    idleTimeoutMillis: 30000, application_name: applicationName ?? 'gamehub-agent-blog-public-runtime',
+    idleTimeoutMillis: 30000, statement_timeout: 30000, query_timeout: 35000, lock_timeout: 5000,
+    application_name: applicationName ?? 'gamehub-agent-blog-public-runtime',
     ssl: env.DATABASE_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
   });
   const runtimeRepository = new PostgresAgentRuntimeRepository(pool);
+  // Idle sockets also fail during a database restart. pg emits these outside
+  // an awaited query; retain a live scheduler and let its next cycle reconnect.
+  if(ownsPool)pool.on('error',error=>process.stderr.write(`${JSON.stringify({
+    service:'agent-blog-public-runtime',event:'database-unavailable',code:error.code??'DATABASE_UNAVAILABLE'})}\n`));
   const policyService = createAgentRuntimePolicyService({ pool });
   const paperSemanticRepository = new PostgresAgentPaperSemanticRepository(pool);
   const toolGateway = createAgentToolGateway({
@@ -111,9 +116,9 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
     toolGateway, providerGateway, artifactRepository, draftGateway,
     researchEvidenceRepository: new PostgresAgentResearchEvidenceRepository(pool),
   });
-  const worker = (requestId, runId, handlers, kind) => createAgentRuntimeWorker({
-    repository: runtimeRepository, handlers, targetRunId: runId,
-    workerId: `agent-blog-public-${kind}-${requestId}`.slice(0, 120),
+  const worker = (requestId, runId, handlers, kind, signal) => createAgentRuntimeWorker({
+    repository: runtimeRepository, handlers, targetRunId: runId, recoverTargetRun: true, signal,
+    workerId: `agent-blog-public-${kind}-${requestId}-${crypto.randomUUID()}`.slice(0, 120),
     instanceId: crypto.randomUUID(), leaseSeconds: 180, heartbeatSeconds: 30,
     pollMilliseconds: 1000, recoveryBatch: 1, outboxBatch: 25,
   });
@@ -126,14 +131,16 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
     publicHandoff: createAgentBlogCandidatePublicHandoff({
       runtimeRepository, artifactRepository, enabled: true,
     }),
-    createDiscoveryWorker: (runId, requestId) => worker(requestId, runId, discoveryHandlers, 'discovery'),
-    createPublicationWorker: (runId, requestId) => worker(requestId, runId, publicationHandlers, 'publication'),
+    createDiscoveryWorker: (runId, requestId, signal) => worker(requestId, runId, discoveryHandlers, 'discovery',signal),
+    createPublicationWorker: (runId, requestId, signal) => worker(requestId, runId, publicationHandlers, 'publication',signal),
     readRun: async runId => {
-      const row = (await pool.query(`SELECT id,status,output_type,output_id FROM agent_runs
+      const row = (await pool.query(`SELECT id,status,output_type,output_id,error_code,
+        (SELECT count(*)::int FROM agent_run_stages WHERE run_id=agent_runs.id AND status='succeeded') AS completed_stage_count FROM agent_runs
         WHERE id=$1 AND agent_user_id=$2
           AND workflow_key IN ('blog.project.discovery-shadow','blog.project.single')`,
       [runId, config.agentUserId])).rows[0];
-      return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id } : null;
+      return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id,
+        errorCode:row.error_code,completedStageCount:row.completed_stage_count } : null;
     },
   });
   const paperArticleRunner = createAgentPaperArticleManualRunner({ config,

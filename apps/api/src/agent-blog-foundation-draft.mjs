@@ -37,6 +37,8 @@ export function createAgentBlogFoundationDraftGateway({ runtimeRepository, draft
       const resource = { type: 'blog.private-draft', owner: agentUserId };
       const decision = await policyService.decide({ runId, stageId, action: ACTION, resource });
       if (decision.agentUserId !== agentUserId) fail('AGENT_BLOG_DRAFT_AGENT_MISMATCH');
+      if(runtimeRepository.recoveryActionKey)idempotencyKey=await runtimeRepository.recoveryActionKey({
+        stageId,workerId,leaseToken,actionKey:ACTION.actionKey,idempotencyKey});
       const prepared = await runtimeRepository.createAction({
         runId, stageId, action: ACTION, idempotencyKey,
         request: { schemaVersion: 'blog-private-draft-request-v1', slug: content.slug,
@@ -60,9 +62,12 @@ export function createAgentBlogFoundationDraftGateway({ runtimeRepository, draft
       } else if (prepared.status !== 'authorized') fail('AGENT_BLOG_DRAFT_ACTION_IN_PROGRESS');
       try {
         const draft = await draftRepository.persist({ actionId: prepared.id, content, contentSha256,
-          sourceArtifactIds, verificationArtifactId });
+          sourceArtifactIds, verificationArtifactId,workerId,leaseToken });
         return { status: 'succeeded', replayed: draft.existing, ...draft };
       } catch (error) {
+        if(error?.code==='AGENT_RUNTIME_LEASE_LOST')throw error;
+        const recovered=await draftRepository.getByAction(prepared.id);
+        if(recovered)return {status:'succeeded',replayed:true,...recovered};
         try {
           await runtimeRepository.transitionAction({ actionId: prepared.id, from: 'authorized', to: 'failed',
             errorCode: String(error?.code ?? 'AGENT_BLOG_DRAFT_PERSIST_FAILED').slice(0, 120),

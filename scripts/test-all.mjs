@@ -8,6 +8,8 @@ import { buildTestInventory } from './support/frozen-test-inventory.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const concurrency = Number(process.env.MOOYU_TEST_CONCURRENCY || 4);
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw Error('MOOYU_TEST_CONCURRENCY must be an integer from 1 to 8');
+const fileTimeout=Number(process.env.MOOYU_TEST_FILE_TIMEOUT_MS||180000);
+if(!Number.isInteger(fileTimeout)||fileTimeout<1000||fileTimeout>600000)throw Error('MOOYU_TEST_FILE_TIMEOUT_MS must be an integer from 1000 to 600000');
 process.chdir(root);
 function discover(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -21,7 +23,7 @@ fs.mkdirSync(reportDir, { recursive: true });
 fs.writeFileSync(path.join(reportDir, 'inventory.json'), JSON.stringify(inventory, null, 2));
 console.log(`Running ${inventory.files.length} test files; ${inventory.rejectedBaselines.length} immutable rejection contracts run inside their mandatory successor verifiers.`);
 const stream = run({
-  files: inventory.files.map(file => path.resolve(file)), concurrency, timeout: 180000,
+  files: inventory.files.map(file => path.resolve(file)), concurrency, timeout: fileTimeout,
   execArgv: ['--import', new URL('./support/test-process-context.mjs', import.meta.url).href],
 });
 const failures = []; let passedEvents = 0, summary;

@@ -1,5 +1,5 @@
 import {unicodePrefix} from './text-boundaries.mjs';
-import {boundedAgentSignal} from './agent-execution-context.mjs';
+import {boundedAgentSignal,chargeAgentNetworkRequest} from './agent-execution-context.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
@@ -175,6 +175,7 @@ export function createGitHubRepositoryReadAdapter({ fetchImpl = globalThis.fetch
     accept = 'application/vnd.github+json', range = null } = {}) => {
     let response;
     try {
+      await chargeAgentNetworkRequest();
       response = await fetchImpl(`https://api.github.com${path}`, {
         method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
         headers: githubRequestHeaders({ accept, range, userAgent, token: researchToken }),

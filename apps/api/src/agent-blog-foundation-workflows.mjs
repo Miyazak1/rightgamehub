@@ -37,21 +37,21 @@ export const BLOG_PROJECT_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
 export const BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'blog.project.discovery-shadow',
-  workflowVersion: 3,
+  workflowVersion: 4,
   inputSchema: 'blog-project-discovery-input-v2',
   outputSchema: 'blog-candidate-set-output-v1',
   requiredCapabilities: [
     { key: 'provider.text.generate', version: 1 },
     { key: 'research.github.discover', version: 1 },
   ],
-  defaultBudget: { providerCalls: 1, toolCalls: 5, inputTokens: 12000, outputTokens: 1200, wallClockSeconds: 900 },
+  defaultBudget: { providerCalls: 2, toolCalls: 5, inputTokens: 24000, outputTokens: 2400, wallClockSeconds: 900 },
   stages: [
-    { key: 'freeze-brief', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
+    { key: 'freeze-brief', kind: 'deterministic', dependsOn: [], maxAttempts: 2, timeoutSeconds: 30 },
     { key: 'plan-queries', kind: 'provider', dependsOn: ['freeze-brief'], maxAttempts: 2, timeoutSeconds: 180,
       capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
     { key: 'search-candidates', kind: 'tool', dependsOn: ['plan-queries'], maxAttempts: 3, timeoutSeconds: 300,
       capability: { key: 'research.github.discover', version: 1 }, idempotencyMode: 'key' },
-    { key: 'finalize-candidates', kind: 'deterministic', dependsOn: ['search-candidates'], maxAttempts: 1, timeoutSeconds: 60 },
+    { key: 'finalize-candidates', kind: 'deterministic', dependsOn: ['search-candidates'], maxAttempts: 2, timeoutSeconds: 60 },
   ],
 });
 
@@ -61,7 +61,7 @@ export const BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW = Object.freeze({
 export const BLOG_PROJECT_SINGLE_WORKFLOW = Object.freeze({
   schemaVersion: 'agent-workflow-v1',
   workflowKey: 'blog.project.single',
-  workflowVersion: 3,
+  workflowVersion: 4,
   inputSchema: 'blog-project-single-input-v2',
   outputSchema: 'blog-publication-result-v2',
   requiredCapabilities: [
@@ -70,19 +70,19 @@ export const BLOG_PROJECT_SINGLE_WORKFLOW = Object.freeze({
     { key: 'blog.article.draft', version: 1 },
     { key: 'blog.article.publish', version: 1 },
   ],
-  defaultBudget: { providerCalls: 4, toolCalls: 12, inputTokens: 90000, outputTokens: 18000, wallClockSeconds: 1800 },
+  defaultBudget: { providerCalls: 8, toolCalls: 16, inputTokens: 180000, outputTokens: 36000, wallClockSeconds: 1800 },
   stages: [
-    { key: 'freeze-input', kind: 'deterministic', dependsOn: [], maxAttempts: 1, timeoutSeconds: 30 },
+    { key: 'freeze-input', kind: 'deterministic', dependsOn: [], maxAttempts: 2, timeoutSeconds: 30 },
     { key: 'collect-evidence', kind: 'tool', dependsOn: ['freeze-input'], maxAttempts: 3, timeoutSeconds: 600,
       capability: { key: 'research.github.read', version: 1 }, idempotencyMode: 'key' },
     { key: 'select-subject', kind: 'provider', dependsOn: ['collect-evidence'], maxAttempts: 2, timeoutSeconds: 300,
       capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
     { key: 'compose', kind: 'provider', dependsOn: ['select-subject'], maxAttempts: 2, timeoutSeconds: 600,
       capability: { key: 'provider.text.generate', version: 1 }, idempotencyMode: 'key' },
-    { key: 'verify', kind: 'deterministic', dependsOn: ['compose'], maxAttempts: 1, timeoutSeconds: 120 },
-    { key: 'persist-draft', kind: 'domain-write', dependsOn: ['verify'], maxAttempts: 1, timeoutSeconds: 60,
+    { key: 'verify', kind: 'deterministic', dependsOn: ['compose'], maxAttempts: 2, timeoutSeconds: 120 },
+    { key: 'persist-draft', kind: 'domain-write', dependsOn: ['verify'], maxAttempts: 2, timeoutSeconds: 60,
       capability: { key: 'blog.article.draft', version: 1 }, idempotencyMode: 'queryable' },
-    { key: 'publish', kind: 'domain-write', dependsOn: ['persist-draft'], maxAttempts: 1, timeoutSeconds: 60,
+    { key: 'publish', kind: 'domain-write', dependsOn: ['persist-draft'], maxAttempts: 2, timeoutSeconds: 60,
       capability: { key: 'blog.article.publish', version: 1 }, idempotencyMode: 'queryable' },
   ],
 });

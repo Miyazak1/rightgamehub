@@ -45,6 +45,28 @@ function repositoryFixture({ handlerFailure = false } = {}) {
   };
 }
 
+test('interrupting an active handler aborts its signal and persists a bounded retry',async()=>{
+  const {createAgentRuntimeWorker}=await import(moduleUrl.href),fixture=repositoryFixture({handlerFailure:true});
+  const controller=new AbortController();let started;
+  const ready=new Promise(resolve=>started=resolve);let observed;
+  const worker=createAgentRuntimeWorker({repository:fixture.repository,signal:controller.signal,
+    workerId:'worker-test',leaseSeconds:30,heartbeatSeconds:5,
+    handlers:{'foundation.worker:prepare':async(_context,{signal})=>{observed=signal;started();return new Promise(()=>{});}}});
+  const pending=worker.runOnce();await ready;controller.abort();
+  const result=await pending;assert.equal(result.status,'retry-scheduled');assert.equal(observed.aborted,true);
+  assert.equal(fixture.calls.find(call=>call[0]==='fail-stage')[1].errorCode,'AGENT_RUNTIME_INTERRUPTED');
+  assert.equal(fixture.calls.some(call=>call[0]==='complete-stage'),false);await worker.stop();
+});
+
+test('a severed database connection leaves the stage for receipt and lease recovery',async()=>{
+  const {createAgentRuntimeWorker}=await import(moduleUrl.href),fixture=repositoryFixture();
+  fixture.repository.completeStage=async()=>{throw Object.assign(new Error('DB connection terminated'),{code:'57P01'});};
+  const worker=createAgentRuntimeWorker({repository:fixture.repository,workerId:'worker-test',leaseSeconds:30,heartbeatSeconds:5,
+    handlers:{'foundation.worker:prepare':async()=>({outputRef:{prepared:true}})}});
+  assert.equal((await worker.runOnce()).status,'lease-lost');
+  assert.equal(fixture.calls.some(call=>call[0]==='fail-stage'),false);await worker.stop();
+});
+
 test('runtime worker dispatches outbox and atomically completes a registered stage route', async () => {
   const { createAgentRuntimeWorker } = await import(moduleUrl.href);
   const fixture = repositoryFixture();

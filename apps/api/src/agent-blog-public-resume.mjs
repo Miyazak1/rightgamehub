@@ -17,7 +17,7 @@ export async function resumeAgentBlogPublicSchedule({ pool, env = process.env, c
   if (!row) throw Error('AGENT_BLOG_PUBLIC_SCHEDULE_MISSING');
   const worker = row.config_json?.worker, age = clock().getTime() - Date.parse(worker?.heartbeatAt);
   if (!Number.isFinite(age) || age < -30000 || age > Math.max(90000, scheduleConfig.pollMilliseconds * 3)
-    || !['idle', 'busy', 'suspended'].includes(worker?.state)) throw Error('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
+    || !['starting','idle','busy','waiting','degraded','suspended'].includes(worker?.state)) throw Error('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
   const controller = createAgentBlogPublicScheduleController({
     repository: new PostgresAgentBlogPublicScheduleRepository(pool, { clock }),
     preflightRepository: new PostgresAgentBlogPublicRuntimePreflightRepository(pool), runtimeConfig,
@@ -25,5 +25,7 @@ export async function resumeAgentBlogPublicSchedule({ pool, env = process.env, c
   const alreadyEnabled = row.enabled && !row.config_json?.suspendedAt;
   const result = await controller.ensure({ agentUserId: runtimeConfig.agentUserId, enabled: true,
     resume: !alreadyEnabled, preserveExisting: Boolean(alreadyEnabled) });
-  return { ...result, alreadyEnabled: Boolean(alreadyEnabled) };
+  // An enabled plan may be recovering a task or waiting for budget. Reporting
+  // that preflight as disabled would misstate the durable schedule state.
+  return { ...result, enabled:alreadyEnabled?true:result.enabled, alreadyEnabled: Boolean(alreadyEnabled) };
 }

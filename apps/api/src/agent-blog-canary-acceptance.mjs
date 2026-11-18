@@ -47,7 +47,7 @@ export function evaluateAgentBlogCanaryAcceptance(snapshot,
   }
   const reasons = [];
   if (snapshot.discovery.workflowKey !== 'blog.project.discovery-shadow'
-    || snapshot.discovery.workflowVersion !== 3
+    || ![3,4].includes(snapshot.discovery.workflowVersion)
     || snapshot.draft.workflowKey !== 'blog.project.single.draft-shadow'
     || snapshot.draft.workflowVersion !== 2
     || snapshot.handoff.sourceRunId !== snapshot.discovery.id

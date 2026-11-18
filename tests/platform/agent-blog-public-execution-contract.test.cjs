@@ -4,14 +4,31 @@ const crypto = require('node:crypto');
 const load = name => import('../../apps/api/src/' + name);
 const manifest = { stages: [{ maxAttempts: 3 }, { maxAttempts: 1 }], defaultBudget: { wallClockSeconds: 10 } };
 
+test('a committed run resumes without executing any stage again',async()=>{
+  const {executeAgentBlogPublicRun}=await load('agent-blog-public-runtime-manual-run.mjs');
+  const runId=crypto.randomUUID(),durable={id:runId,status:'succeeded',outputType:'blog.article',outputId:crypto.randomUUID()};
+  let stopped=0;
+  assert.equal(await executeAgentBlogPublicRun({runId,workflow:manifest,outputType:'blog.article',readRun:async()=>durable,
+    worker:{runOnce:async()=>assert.fail('completed stages must not dispatch'),stop:async()=>{stopped++;}}}),durable);
+  assert.equal(stopped,1);
+});
+
+test('recovery runs even before the schedule heartbeat row exists',async()=>{
+  const {runAgentBlogPublicScheduleCycle}=await load('agent-blog-public-schedule-cycle.mjs');
+  let ran=false;const errors=[];
+  const result=await runAgentBlogPublicScheduleCycle({controller:{heartbeat:async()=>{throw Error('schedule missing');},
+    runOnce:async()=>{ran=true;return {status:'recovered'};}},onHeartbeatError:error=>errors.push(error.message)});
+  assert.equal(result.status,'recovered');assert.equal(ran,true);assert.equal(errors.length,2);
+});
+
 test('lost final acknowledgements reconcile only an exact durable success without running another stage', async () => {
   const { executeAgentBlogPublicRun } = await load('agent-blog-public-runtime-manual-run.mjs');
   const runId = crypto.randomUUID(), outputId = crypto.randomUUID();
   const durable = { id: runId, status: 'succeeded', outputType: 'blog.article', outputId };
   for (const thrown of [false, true]) {
-    let calls = 0, stopped = 0;
+    let calls = 0, stopped = 0, reads=0;
     const result = await executeAgentBlogPublicRun({ runId, workflow: manifest, outputType: 'blog.article',
-      readRun: async id => { assert.equal(id, runId); return durable; }, worker: {
+      readRun: async id => { assert.equal(id, runId); return reads++?durable:null; }, worker: {
         runOnce: async () => { calls++; if(thrown)throw Error('commit acknowledgement lost'); return { status: 'lease-lost' }; },
         stop: async () => { stopped++; },
       } });
@@ -19,9 +36,10 @@ test('lost final acknowledgements reconcile only an exact durable success withou
   }
   for (const observed of [null, { ...durable, id: crypto.randomUUID() }, { ...durable, status: 'uncertain' },
     { ...durable, outputType: 'blog.private-draft' }, { ...durable, outputId: 'invalid' }]) {
+    let reads=0;
     await assert.rejects(executeAgentBlogPublicRun({ runId, workflow: manifest, outputType: 'blog.article',
-      readRun: async () => observed, worker: { runOnce: async () => ({ status: 'lease-lost' }), stop: async () => {} } }),
-    error => error.code === 'AGENT_BLOG_PUBLIC_RUNTIME_STAGE_INCOMPLETE');
+      readRun: async () => reads++?observed:null, worker: { runOnce: async () => ({ status: 'lease-lost' }), stop: async () => {} } }),
+    error => error.code === (observed?.status==='uncertain'?'AGENT_BLOG_PUBLIC_RUNTIME_TERMINAL_FAILURE':'AGENT_BLOG_PUBLIC_RUNTIME_STAGE_INCOMPLETE'));
   }
 });
 
