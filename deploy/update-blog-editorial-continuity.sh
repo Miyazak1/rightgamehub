@@ -4,6 +4,8 @@ set -Eeuo pipefail
 umask 077
 EXPECTED=${1:?Usage: bash update-blog-editorial-continuity.sh FULL_COMMIT_SHA [BUNDLE]}
 ARCHIVE=${2:-/www/backup/gamehub/incoming/mooyu-unified-20261116-desktop-parity.tar.gz}
+FINISH_ONLY=${MOOYU_RELEASE_FINISH_ONLY:-false}
+[[ "$FINISH_ONLY" = true || "$FINISH_ONLY" = false ]]
 [[ "$EXPECTED" =~ ^[a-f0-9]{40}$ ]]
 RUN_DIR=$(cd "$(dirname "$0")" && pwd)
 [[ "$RUN_DIR" == /www/backup/gamehub/update-editorial-* ]] || {
@@ -35,7 +37,7 @@ test -z "$(git status --porcelain)" || { echo '线上工作区有修改，停止
 git cat-file -e "$EXPECTED^{commit}"
 git merge-base --is-ancestor "$EXPECTED" origin/codex/release-practice-no-paper
 git merge-base --is-ancestor HEAD "$EXPECTED"
-test -f "$ARCHIVE" && test ! -L "$ARCHIVE"
+if [ "$FINISH_ONLY" = false ]; then test -f "$ARCHIVE" && test ! -L "$ARCHIVE"; fi
 sha256sum deploy/.env.prod > "$RUN_DIR/config-before.sha256"
 cp -p deploy/.env.prod "$RUN_DIR/env.before"
 chmod 600 "$RUN_DIR/env.before"
@@ -50,18 +52,45 @@ PLATFORM_ASSISTANT_ENABLED=$(docker exec "${api_ids[0]}" node -e 'console.log(pr
 export PLATFORM_ASSISTANT_ENABLED
 git show "$EXPECTED:deploy/prepare-unified-release.sh" > "$RUN_DIR/prepare.sh"
 PHASE=update
-bash "$RUN_DIR/prepare.sh" "$EXPECTED" "$ARCHIVE"
+if [ "$FINISH_ONLY" = true ]; then
+  # Finishing an already-activated release may only fast-forward host-side
+  # scripts/tests/docs. Any business/config/schema change requires full deploy.
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    case "$file" in deploy/*.sh|tests/*|docs/*) :;;
+      *) echo "Finish-only cannot install business/config changes: $file"; exit 1;; esac
+  done < <(git diff --name-only HEAD "$EXPECTED")
+  echo 'Finishing the activated release; no image build, database migration or application restart.'
+else
+  bash "$RUN_DIR/prepare.sh" "$EXPECTED" "$ARCHIVE"
+fi
 printf '0\n' > "$RUN_DIR/update-exit-code"
 
 PHASE=verify
 exec 8>/www/backup/gamehub/.unified-release.lock
 flock -n 8 || { echo '存在其他部署；本次不恢复调度。'; exit 1; }
+if [ "$FINISH_ONLY" = true ]; then git merge --ff-only "$EXPECTED"; fi
 sha256sum --check --status "$RUN_DIR/config-before.sha256"
 : > "$RUN_DIR/verified-source-sha256.txt"
 for service in api agent-blog-public-scheduler; do
   mapfile -t ids < <(docker ps -q --filter label=com.docker.compose.project=gamehub-production \
     --filter "label=com.docker.compose.service=$service")
   [ "${#ids[@]}" -eq 1 ] || { echo "Expected one running $service; no scheduler resume."; exit 1; }
+  if [ "$service" = agent-blog-public-scheduler ]; then
+    # Bootstrap has already completed through the healthy API. Only restart a
+    # process that is already in a crash loop, never interrupt a running fire.
+    if [ "$(docker inspect --format '{{.State.Restarting}}' "${ids[0]}")" = true ]; then
+      docker restart "${ids[0]}"
+    fi
+    ready=false
+    for attempt in {1..30}; do
+      if docker exec "${ids[0]}" node -e 'process.exit(0)' > "$RUN_DIR/scheduler-probe.log" 2>&1; then
+        ready=true; break
+      fi
+      sleep 3
+    done
+    [ "$ready" = true ] || { echo 'Scheduler did not start after bootstrap; see service logs.'; exit 1; }
+  fi
   for file in agent-blog-foundation-generation.mjs agent-blog-candidate-discovery.mjs \
     agent-editorial-memory-repository.mjs agent-blog-private-canary-manual-run.mjs \
     agent-blog-public-runtime-manual-run.mjs agent-blog-public-schedule.mjs agent-runtime-repository.mjs \
@@ -76,11 +105,15 @@ for service in api agent-blog-public-scheduler; do
       if((process.env[key]??"false")!=="false")throw Error(key+" must remain false");
     }
     console.log(JSON.stringify({service:process.argv[1],paperEnabled:false}));' "$service"
+  if [ "$service" = api ]; then
+    PHASE=bootstrap
+    # API has the same reviewed code/config but does not require the scheduler
+    # activation gate. Register first, before entering the restarting worker.
+    docker exec "${ids[0]}" node /app/apps/api/src/agent-blog-public-runtime-bootstrap-cli.mjs
+    printf '0\n' > "$RUN_DIR/bootstrap-exit-code"
+    PHASE=verify
+  fi
 done
-PHASE=bootstrap
-# Registers the new result-contract version; creates no Run, paper job or publication.
-docker exec "${ids[0]}" node /app/apps/api/src/agent-blog-public-runtime-bootstrap-cli.mjs
-printf '0\n' > "$RUN_DIR/bootstrap-exit-code"
 printf '0\n' > "$RUN_DIR/verify-exit-code"
 if [ "${RESUME_BLOG_SCHEDULE:-false}" = true ]; then
   PHASE=resume
