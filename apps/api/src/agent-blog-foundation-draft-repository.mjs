@@ -56,14 +56,15 @@ export class PostgresAgentBlogFoundationDraftRepository {
     return view(row);
   }
 
-  async persist({ actionId, content, contentSha256, sourceArtifactIds, verificationArtifactId }) {
+  async persist({ actionId, content, contentSha256, sourceArtifactIds, verificationArtifactId,workerId,leaseToken }) {
     const artifacts = ids(sourceArtifactIds);
     if (typeof verificationArtifactId !== 'string' || !uuidPattern.test(verificationArtifactId)) {
       fail('AGENT_BLOG_DRAFT_VERIFICATION_INVALID');
     }
     return withTransaction(this.pool, async client => {
       const action = (await client.query(`SELECT action.*,run.agent_user_id,run.status AS run_status,
-          stage.status AS stage_status,account.status AS agent_status,author.status AS user_status
+          stage.status AS stage_status,stage.leased_by,stage.lease_token,stage.lease_until>now() AS lease_valid,
+          run.workflow_key,run.workflow_version,account.status AS agent_status,author.status AS user_status
         FROM agent_run_actions action
         JOIN agent_runs run ON run.id=action.run_id
         JOIN agent_run_stages stage ON stage.id=action.stage_id AND stage.run_id=action.run_id
@@ -84,6 +85,8 @@ export class PostgresAgentBlogFoundationDraftRepository {
         }
         return { ...view(existing), existing: true };
       }
+      if(action.workflow_key==='blog.project.single'&&action.workflow_version===4
+        &&(action.leased_by!==workerId||action.lease_token!==leaseToken||!action.lease_valid))fail('AGENT_RUNTIME_LEASE_LOST');
       if (action.status !== 'authorized' || action.run_status !== 'running' || action.stage_status !== 'running'
         || action.agent_status !== 'active' || action.user_status !== 'active') fail('AGENT_BLOG_DRAFT_ACTION_NOT_AUTHORIZED');
       const verified = Number((await client.query(`SELECT count(*)::int AS n

@@ -5,7 +5,7 @@ const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
   expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,
-  selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,
+  selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,allowEmptyDiscovery=false,recoverAfterFailure=false,
   compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
   t.after(() => admin.end());
@@ -105,10 +105,10 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
     adapters: live?.toolAdapters??{
-      'research.github.repository.search@1': async () => ({
-        receiptId: 'github-search:shadow-fixture', output: {
+      'research.github.repository.search@1': async ({request}) => ({
+        receiptId: 'github-search:'+request.query, output: {
           schemaVersion: 'github-repository-search-v1',
-          query: { text: 'agent tool', sort: 'stars', minStars: 10, pushedAfter: '2026-01-01' },
+          query: { text: request.query, sort: 'stars', minStars: 10, pushedAfter: '2026-01-01' },
           source: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
             fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: 'c'.repeat(64) },
           candidates: Array.from({length:candidateCount},(_,index)=>({ key: 'owner/project'+(continuity?.round?`round${continuity.round}`:(index||'')), canonicalUrl: 'https://github.com/owner/project'+(continuity?.round?`round${continuity.round}`:(index||'')),
@@ -142,7 +142,8 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   await governance.registerModel({ provider: 'deepseek', modelId, catalogVersion: 1, status: 'active',
     taskClasses: ['structured-generation'], supportsJsonSchema: true, maxInputTokens: 60000, maxOutputTokens: 7000,
     inputPriceMicrousdPerMillion: 2000000, outputPriceMicrousdPerMillion: 4000000, config: { fixture: true } });
-  const vault = createAgentSecretVault({ masterKey: live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32) });
+  const masterKey=live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32);
+  const vault = createAgentSecretVault({ masterKey });
   const encrypted = vault.encrypt(account.agentUserId, 'deepseek', live?.apiKey??'fixture-shadow-secret-key');
   await admin.query(`INSERT INTO agent_provider_secrets(
     agent_user_id,provider,ciphertext,nonce,auth_tag,key_fingerprint,key_last_four,updated_by_user_id
@@ -249,7 +250,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
     agentUserId: account.agentUserId, provider: 'deepseek', modelId, githubResearchAuthenticated: live?live.githubAuthenticated:true,
     dailyPublicationRunLimit: 1, monthlyProviderCallLimit: 120, monthlyCostMicrousdLimit: 10000000, consecutiveFailureLimit: 2 };
   const worker = (runId, routes) => createAgentRuntimeWorker({ repository: runtime, handlers: routes,
-    targetRunId: runId, workerId: 'public-pipeline-' + runId, leaseSeconds: 30, heartbeatSeconds: 5 });
+    targetRunId: runId, recoverTargetRun:true, workerId: 'public-pipeline-' + runId, leaseSeconds: 30, heartbeatSeconds: 5 });
   const completeStage = runtime.completeStage.bind(runtime);
   let lostCommitAcknowledgements = 0;
   runtime.completeStage = async input => {
@@ -265,13 +266,18 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
     preflightRepository: new PostgresAgentBlogPublicRuntimePreflightRepository(admin),
     inputRepository: new PostgresAgentBlogPrivateCanaryInputRepository(admin), discoveryCanary, publicHandoff,
     createDiscoveryWorker: runId => worker(runId, discoveryHandlers), createPublicationWorker: runId => worker(runId, handlers),
-    readRun: async runId => { const row = (await admin.query(`SELECT id,status,output_type,output_id FROM agent_runs
+    readRun: async runId => { const row = (await admin.query(`SELECT id,status,output_type,output_id,error_code,
+      (SELECT count(*)::int FROM agent_run_stages WHERE run_id=agent_runs.id AND status='succeeded') AS completed_stage_count FROM agent_runs
       WHERE id=$1 AND agent_user_id=$2`, [runId,account.agentUserId])).rows[0];
-      return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id } : null; } });
+      return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id,
+        errorCode:row.error_code,completedStageCount:row.completed_stage_count } : null; } });
   let result;
   try { result = await runner.run({ requestId: crypto.randomUUID() }); }
   catch (error) {
-    if (!expectedFailure) throw error;
+    if (!expectedFailure) {
+      console.error(JSON.stringify({event:'pipeline-failure',code:error.code,details:error.details}));
+      throw error;
+    }
     assert.match(error.details?.stageErrorCode ?? error.code, expectedFailure);
     assert.equal(providerInvocations, expectedCalls);
     assert.equal(compositionCalls, 0);
@@ -287,9 +293,24 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       WHERE run.agent_user_id=$1 AND output.schema_key='blog.subject.selection-attempt'`, [account.agentUserId])).rows;
     assert.equal(attempts.length, expectedCalls - 1);
     assert.ok(attempts.every(row => row.content_json.accepted === (selectionIndexFailures>0)));
+    if(recoverAfterFailure){
+      const old=(await admin.query('SELECT id,status,error_code FROM agent_runs WHERE agent_user_id=$1 ORDER BY id',[account.agentUserId])).rows;
+      assert.equal((await admin.query("SELECT status,safe_for_next FROM agent_blog_public_requests WHERE agent_user_id=$1",[account.agentUserId])).rows[0].status,'needs-review');
+      const next=await runner.run({requestId:crypto.randomUUID()});assert.equal(next.publication.publicationState,'published');
+      assert.deepEqual((await admin.query('SELECT id,status,error_code FROM agent_runs WHERE id=ANY($1::uuid[]) ORDER BY id',[old.map(row=>row.id)])).rows,old);
+    }
     return;
   }
   assert.equal(expectedFailure, null, 'the invalid selection or denied repair must not publish');
+  if(allowEmptyDiscovery){
+    assert.equal(result.publication.publicationState,'skipped');assert.equal(result.publicationAttempted,false);
+    assert.equal(result.publication.runId,null);assert.equal(providerInvocations,1);
+    const before=providerInvocations;assert.deepEqual(await runner.run({requestId:result.requestId}),result);
+    assert.equal(providerInvocations,before);
+    assert.equal((await admin.query('SELECT count(*)::int AS n FROM blog_articles WHERE author_user_id=$1',[account.agentUserId])).rows[0].n,0);
+    assert.equal((await admin.query('SELECT status FROM agent_blog_public_requests WHERE agent_user_id=$1 AND request_id=$2',[account.agentUserId,result.requestId])).rows[0].status,'completed');
+    return;
+  }
   assert.equal(result.publication.publicationState, 'published');
   assert.equal(result.publicationAttempted, true);
   if(!live){
@@ -345,7 +366,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       replayNoNewProviderCalls:true,duplicateRunBlocked:true,lostCommitAcknowledgements});
   }
   await afterPublication?.({ admin, runner, config, account, runtime, handlers, artifactRepository,
-    providerGateway, result, providerCalls:()=>providerInvocations });
+    providerGateway, result, masterKey, providerCalls:()=>providerInvocations });
 }
 
 module.exports={publicPipelineFixture};

@@ -292,7 +292,15 @@ async function finalizeCandidateSet({ context, execution, artifactRepository, in
       || left.bestSearchRank - right.bestSearchRank || right.stars - left.stars || left.key.localeCompare(right.key))
     .slice(0, maxCandidates)
     .map((candidate, index) => ({ discoveryRank: index + 1, ...candidate }));
-  if (!candidates.length) fail('AGENT_BLOG_DISCOVERY_EMPTY');
+  if (!candidates.length) {
+    if(!(context.run.workflowVersion>=4))fail('AGENT_BLOG_DISCOVERY_EMPTY');
+    const artifact=await artifactRepository.save({runId:context.run.id,stageId:context.stage.id,
+      workerId:execution.workerId,leaseToken:execution.leaseToken,artifactKey:'blog.discovery-skip',artifactKind:'validated-output',
+      schema:{key:'blog.discovery.skip',version:1},content:{schemaVersion:'blog-discovery-skip-v1',reason:'NO_CANDIDATES'},
+      sourceToolArtifactIds:artifactIds,sourceStageArtifactIds:planArtifactId?[planArtifactId]:[]});
+    return {outputRef:{artifactId:artifact.id,artifactKey:artifact.artifactKey,candidateCount:0},
+      runOutput:{type:'blog.discovery-skipped',id:artifact.id}};
+  }
   const searchPolicy = input.searchPolicy ?? input;
   const content = { schemaVersion: 'blog-candidate-set-v1', topicScope: input.topicScope,
     queryPolicy: { queries: executedQueries, plannedQueries: queries,

@@ -6,7 +6,7 @@ import { runAgentBlogPublicRuntimePreflight } from './agent-blog-public-runtime-
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const WORKFLOW_KEY = 'blog.project.discovery-shadow';
-const WORKFLOW_VERSION = 3;
+const WORKFLOW_VERSION = 4;
 const SPEC = Object.freeze({ kind: 'daily-local-time', localTime: '10:00' });
 
 export class AgentBlogPublicScheduleError extends Error {
@@ -64,7 +64,7 @@ export class PostgresAgentBlogPublicScheduleRepository {
         JOIN agent_schedules schedule ON schedule.id=fire.schedule_id
         WHERE schedule.agent_user_id=$1 AND schedule.workflow_key=$2 AND fire.status='running'
         LIMIT 1`, [agentUserId, WORKFLOW_KEY])).rows[0];
-      if (running) fail('AGENT_BLOG_PUBLIC_SCHEDULE_FIRE_ACTIVE');
+      if (running && !preserveExisting) fail('AGENT_BLOG_PUBLIC_SCHEDULE_FIRE_ACTIVE');
       const nextFireAt = enabled ? nextAgentBlogPrivateDailyFire(this.clock()) : null;
       const config = { mode: 'foundation-public', publishEnabled: true };
       const row = (await client.query(`INSERT INTO agent_schedules(id,agent_user_id,workflow_key,workflow_version,
@@ -129,22 +129,37 @@ export class PostgresAgentBlogPublicScheduleRepository {
     });
   }
 
-  async claimDue({ leaseSeconds = 7200 } = {}) {
+  async claimDue({ leaseSeconds = 180, agentUserId = null, recoverOnly = false } = {}) {
     if (!Number.isSafeInteger(leaseSeconds) || leaseSeconds < 60 || leaseSeconds > 14400) {
       fail('AGENT_BLOG_PUBLIC_SCHEDULE_LEASE_INVALID');
     }
     return withTransaction(this.pool, async client => {
-      await client.query(`UPDATE agent_schedule_fires SET status='uncertain',attempt_id=NULL,lease_until=NULL,
-        error_code='AGENT_BLOG_PUBLIC_SCHEDULE_LEASE_EXPIRED',
-        error_message='公开计划执行进程在完成前失去租约；为避免重复发布，未自动重发。',
-        finished_at=now(),updated_at=now() WHERE status='running' AND lease_until<now()`);
+      const expired=(await client.query(`SELECT fire.* FROM agent_schedule_fires fire
+        JOIN agent_schedules schedule ON schedule.id=fire.schedule_id
+        JOIN agent_blog_publication_owners owner ON owner.agent_user_id=fire.agent_user_id
+        WHERE fire.status='running' AND fire.lease_until<=now()
+          AND schedule.workflow_key=$1 AND schedule.config_json->>'mode'='foundation-public'
+          AND owner.active_publisher='foundation' AND ($2::uuid IS NULL OR fire.agent_user_id=$2)
+        ORDER BY fire.logical_fire_at,fire.id FOR UPDATE OF fire SKIP LOCKED LIMIT 1`,
+        [WORKFLOW_KEY,agentUserId])).rows[0];
+      if(expired){
+        const row=(await client.query(`UPDATE agent_schedule_fires SET attempt_id=$2,
+          lease_until=now()+($3*interval '1 second'),updated_at=now() WHERE id=$1 RETURNING *`,
+        [expired.id,crypto.randomUUID(),leaseSeconds])).rows[0];
+        await client.query(`INSERT INTO agent_blog_public_recovery_events(id,agent_user_id,request_id,event_type,detail_json)
+          VALUES($1,$2,$3,'fire-lease-reclaimed',$4)`,[crypto.randomUUID(),row.agent_user_id,row.request_id,JSON.stringify({fireId:row.id})]);
+        return fireView(row);
+      }
+      if(recoverOnly)return null;
       const schedule = (await client.query(`SELECT schedule.* FROM agent_schedules schedule
         JOIN agent_blog_publication_owners owner ON owner.agent_user_id=schedule.agent_user_id
         WHERE schedule.enabled=true AND schedule.workflow_key=$1
           AND schedule.config_json->>'mode'='foundation-public'
           AND owner.active_publisher='foundation' AND schedule.next_fire_at<=now()
+          AND ($2::uuid IS NULL OR schedule.agent_user_id=$2)
+          AND NOT EXISTS(SELECT 1 FROM agent_schedule_fires fire WHERE fire.schedule_id=schedule.id AND fire.status='running')
         ORDER BY schedule.next_fire_at,schedule.id
-        FOR UPDATE OF schedule SKIP LOCKED LIMIT 1`, [WORKFLOW_KEY])).rows[0];
+        FOR UPDATE OF schedule SKIP LOCKED LIMIT 1`, [WORKFLOW_KEY,agentUserId])).rows[0];
       if (!schedule) return null;
       const logicalFireAt = new Date(schedule.next_fire_at), now = this.clock();
       const nextFireAt = nextAgentBlogPrivateDailyFire(now, schedule.timezone,
@@ -162,9 +177,23 @@ export class PostgresAgentBlogPublicScheduleRepository {
     });
   }
 
+  async renew(fireId,attemptId,{leaseSeconds=180}={}) {
+    const row=await this.pool.query(`UPDATE agent_schedule_fires SET lease_until=now()+($3*interval '1 second'),updated_at=now()
+      WHERE id=$1 AND attempt_id=$2 AND status='running' AND lease_until>now()`,[fireId,attemptId,leaseSeconds]);
+    if(row.rowCount!==1)fail('AGENT_BLOG_PUBLIC_SCHEDULE_LEASE_LOST');
+  }
+
+  async defer(fireId,attemptId,errorCode) {
+    const row=(await this.pool.query(`UPDATE agent_schedule_fires SET lease_until=now()+interval '30 seconds',
+      error_code=$3,updated_at=now() WHERE id=$1 AND attempt_id=$2 AND status='running' AND lease_until>now() RETURNING *`,
+    [fireId,attemptId,String(errorCode).slice(0,120)])).rows[0];
+    if(!row)fail('AGENT_BLOG_PUBLIC_SCHEDULE_LEASE_LOST');
+    return fireView(row);
+  }
+
   async heartbeat({ agentUserId, instanceId, state = 'idle' }) {
     if (!UUID.test(agentUserId ?? '') || !UUID.test(instanceId ?? '')
-      || !['starting', 'idle', 'busy', 'suspended', 'stopped'].includes(state)) {
+      || !['starting', 'idle', 'busy', 'suspended', 'waiting', 'degraded', 'stopped'].includes(state)) {
       fail('AGENT_BLOG_PUBLIC_SCHEDULE_HEARTBEAT_INVALID');
     }
     const row = (await this.pool.query(`UPDATE agent_schedules SET
@@ -180,7 +209,7 @@ export class PostgresAgentBlogPublicScheduleRepository {
   }
 
   async finish(fireId, attemptId, { status, result = {}, errorCode = null, errorMessage = null,
-    suspendAfterFailures = 2 }) {
+    suspendAfterFailures = 2, retryNextDaily = false }) {
     if (!UUID.test(fireId ?? '') || !UUID.test(attemptId ?? '')
       || !['succeeded', 'failed'].includes(status) || !result || typeof result !== 'object'
       || Array.isArray(result) || !Number.isSafeInteger(suspendAfterFailures)
@@ -200,7 +229,7 @@ export class PostgresAgentBlogPublicScheduleRepository {
         const schedule = (await client.query('SELECT config_json FROM agent_schedules WHERE id=$1 FOR UPDATE',
           [row.schedule_id])).rows[0];
         const failures = Math.max(0, Number(schedule?.config_json?.consecutiveFailures) || 0) + 1;
-        if (failures >= suspendAfterFailures) {
+        if (failures >= suspendAfterFailures && !retryNextDaily) {
           scheduleSuspended = true;
           await client.query(`UPDATE agent_schedules SET enabled=false,next_fire_at=NULL,
             config_json=config_json||jsonb_build_object('consecutiveFailures',$2::int,
@@ -264,13 +293,33 @@ export function createAgentBlogPublicScheduleController({
       }
       return repository.heartbeat(input);
     },
-    async runOnce() {
+    async runOnce({signal}={}) {
       if (!runner) fail('AGENT_BLOG_PUBLIC_SCHEDULE_RUNNER_REQUIRED');
-      const fire = await repository.claimDue();
+      let fire=await repository.claimDue({agentUserId:runtimeConfig.agentUserId,recoverOnly:true});
+      if(!fire){
+        const pending=await runner.pending?.();
+        if(pending){
+          try{return {status:'recovered',run:await runner.run({requestId:pending.request_id,
+            triggerKind:pending.trigger_kind,triggerRef:pending.trigger_ref,signal})};}
+          catch(error){return {status:'waiting',code:error.code??'AGENT_PUBLIC_REQUEST_INTERRUPTED'};}
+        }
+        const preflight=await runAgentBlogPublicRuntimePreflight({repository:preflightRepository,config:runtimeConfig});
+        if(!preflight.ready)return {status:'waiting',blockers:preflight.blockers};
+        fire=await repository.claimDue({agentUserId:runtimeConfig.agentUserId});
+      }
       if (!fire) return { status: 'idle' };
+      const controller=new AbortController();
+      const relay=()=>controller.abort(signal.reason);
+      if(signal?.aborted)relay();else signal?.addEventListener('abort',relay,{once:true});
+      let renewing=false;
+      const timer=repository.renew?setInterval(async()=>{
+        if(renewing)return;renewing=true;
+        try{await repository.renew(fire.id,fire.attemptId);}catch(error){controller.abort(error);}finally{renewing=false;}
+      },30000):null;
+      timer?.unref?.();
       try {
         const run = await runner.run({ requestId: fire.requestId, triggerKind: 'schedule',
-          triggerRef: `schedule:${fire.scheduleId}:${fire.logicalFireAt}` });
+          triggerRef: `schedule:${fire.scheduleId}:${fire.logicalFireAt}`,signal:controller.signal });
         const published = run?.publication?.publicationState === 'published'
           && run?.publicationAttempted === true;
         const skipped = run?.publication?.publicationState === 'skipped'
@@ -279,18 +328,22 @@ export function createAgentBlogPublicScheduleController({
           articleId: run?.publication?.articleId ?? null,
           publicationState: run?.publication?.publicationState ?? null };
         const finished = await repository.finish(fire.id, fire.attemptId, published || skipped
-          ? { status: 'succeeded', result, suspendAfterFailures: runtimeConfig.consecutiveFailureLimit }
+          ? { status: 'succeeded', result, suspendAfterFailures: runtimeConfig.consecutiveFailureLimit,retryNextDaily:true }
           : { status: 'failed', result, errorCode: 'AGENT_BLOG_PUBLIC_SCHEDULE_PUBLICATION_INCOMPLETE',
             errorMessage: '公开计划没有得到已发布文章。',
             suspendAfterFailures: runtimeConfig.consecutiveFailureLimit });
         return { status: finished.status, fire: finished };
       } catch (error) {
+        if(repository.defer&&!error.requestNeedsReview){
+          const deferred=await repository.defer(fire.id,fire.attemptId,error.code??'AGENT_PUBLIC_REQUEST_INTERRUPTED');
+          return {status:'waiting',fire:deferred};
+        }
         const finished = await repository.finish(fire.id, fire.attemptId, { status: 'failed',
           errorCode: String(error?.code || 'AGENT_BLOG_PUBLIC_SCHEDULE_RUN_FAILED').slice(0, 120),
           errorMessage: String(error?.message || '公开计划运行失败。').slice(0, 500),
-          suspendAfterFailures: runtimeConfig.consecutiveFailureLimit });
+          suspendAfterFailures: runtimeConfig.consecutiveFailureLimit,retryNextDaily:true });
         return { status: 'failed', fire: finished };
-      }
+      } finally {clearInterval(timer);signal?.removeEventListener('abort',relay);}
     },
   };
 }

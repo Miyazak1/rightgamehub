@@ -1,4 +1,4 @@
-import {boundedAgentSignal} from './agent-execution-context.mjs';
+import {boundedAgentSignal,chargeAgentNetworkRequest} from './agent-execution-context.mjs';
 import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
@@ -112,6 +112,7 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
     const canonicalUri = `https://api.github.com/search/repositories?${params.toString()}`;
     let response;
     try {
+      await chargeAgentNetworkRequest();
       response = await fetchImpl(canonicalUri, {
         method: 'GET', redirect: 'error', signal: boundedAgentSignal(timeoutSeconds),
         headers: githubRequestHeaders({ accept: 'application/vnd.github+json', userAgent, token: researchToken }),

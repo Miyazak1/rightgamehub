@@ -837,8 +837,8 @@ services:
     mem_limit: 256m
 
   # Durable public scheduler, excluded from the default deployment. Startup is
-  # an explicit activation attempt; any unsafe preflight condition aborts it,
-  # and consecutive failed fires suspend the schedule at the configured threshold.
+  # an explicit activation attempt. Temporary admission blockers wait in-process;
+  # accepted requests recover before new admission, with fenced publication.
   agent-blog-public-scheduler:
     <<: *service-defaults
     profiles: ["agent-blog-public-scheduler"]
@@ -846,6 +846,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
+    stop_grace_period: 45s
     command: ["node", "apps/api/src/agent-blog-public-schedule-worker-cli.mjs"]
     depends_on:
       migrate: { condition: service_completed_successfully }

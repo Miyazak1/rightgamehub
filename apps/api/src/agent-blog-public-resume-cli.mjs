@@ -10,7 +10,9 @@ try {
   console.log(JSON.stringify({ service: 'agent-blog-public-scheduler', event: 'explicit-resume',
     enabled: result.enabled, blocked: result.blocked, blockers: result.blockers,
     alreadyEnabled: result.alreadyEnabled, schedule: result.schedule ?? null }));
-  if (result.blocked) process.exitCode = 1;
+  // This is an idempotent control operation: waiting on an already enabled
+  // plan is diagnostic, not a failed deployment or a request to restart it.
+  if (result.blocked && !result.alreadyEnabled) process.exitCode = 1;
 } catch (error) {
   console.error(JSON.stringify({ event: 'resume-failed', code: error.code ?? error.message }));
   process.exitCode = 1;

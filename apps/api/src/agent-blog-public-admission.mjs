@@ -8,7 +8,8 @@ export function publicImmediateAdmission({schedule,configured=true,now=new Date(
     if(!schedule.enabled)blockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_NOT_ENABLED');
   }
   const worker=schedule?.worker,at=Date.parse(worker?.heartbeatAt),age=now.getTime()-at;
-  const workerLive=Number.isFinite(age)&&age>=-30000&&age<=maxHeartbeatAgeMs&&['idle','busy'].includes(worker?.state);
+  const workerLive=Number.isFinite(age)&&age>=-30000&&age<=maxHeartbeatAgeMs
+    &&['starting','idle','busy','waiting','degraded'].includes(worker?.state);
   if(schedule&&!workerLive)blockers.push('AGENT_BLOG_PUBLIC_SCHEDULER_HEARTBEAT_STALE');
   if(activeFire)blockers.push('AGENT_BLOG_PUBLIC_SCHEDULE_FIRE_ACTIVE');
   return {ready:blockers.length===0,blockers,workerLive,heartbeatAgeMs:Number.isFinite(age)?age:null};

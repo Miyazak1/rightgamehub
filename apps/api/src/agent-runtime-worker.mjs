@@ -95,6 +95,8 @@ export function createAgentRuntimeWorker({
   recoveryBatch = 25,
   outboxBatch = 25,
   targetRunId = null,
+  recoverTargetRun = false,
+  signal = null,
   scopeRecoveryToHandlers = false,
   metadata = {},
   logger = false,
@@ -169,6 +171,11 @@ export function createAgentRuntimeWorker({
     let timeoutTimer = null;
     let leaseReject;
     const leaseFailure = new Promise((_, reject) => { leaseReject = reject; });
+    const interrupt=()=>{
+      const error=new AgentRuntimeWorkerError('AGENT_RUNTIME_INTERRUPTED',{retryable:true});
+      controller.abort(error);leaseReject(error);
+    };
+    if(signal?.aborted)interrupt();else signal?.addEventListener('abort',interrupt,{once:true});
     const scheduleHeartbeat = () => {
       heartbeatTimer = setTimeout(async () => {
         try {
@@ -205,6 +212,12 @@ export function createAgentRuntimeWorker({
       });
       return { status: 'completed', stage: completed.stage, run: completed.run, unlocked: completed.unlocked };
     } catch (error) {
+      // A broken DB connection cannot prove whether the transaction committed.
+      // Leave the lease intact; recovery queries receipts after it expires.
+      if(['57P01','57P02','57P03','08000','08003','08006','08001','ECONNRESET','ECONNREFUSED','ETIMEDOUT'].includes(error?.code)
+        || /Connection terminated|connection timeout/iu.test(error?.message??'')) {
+        return {status:'lease-lost',stageId:stage.id,error};
+      }
       if (error?.code === 'AGENT_RUNTIME_LEASE_LOST') return { status: 'lease-lost', stageId: stage.id, error };
       const details = errorDetails(error, stage);
       try {
@@ -215,6 +228,7 @@ export function createAgentRuntimeWorker({
         throw failureError;
       }
     } finally {
+      signal?.removeEventListener('abort',interrupt);
       clearTimeout(heartbeatTimer);
       clearTimeout(timeoutTimer);
       controller.abort();
@@ -223,18 +237,19 @@ export function createAgentRuntimeWorker({
   };
 
   const runOnce = async () => {
+    signal?.throwIfAborted();
     if (running) fail('AGENT_RUNTIME_WORKER_REENTRANT');
     if (stopping) return { status: 'stopping' };
     running = true;
     try {
       await register();
       const isolated = targetRunId !== null;
-      const [stageRecovery, outboxRecovery] = isolated
+      const [stageRecovery, outboxRecovery] = isolated && !recoverTargetRun
         ? [{ examined: 0, requeued: 0, failed: 0, uncertain: 0 },
           { examined: 0, requeued: 0, failed: 0 }]
         : await Promise.all([
-          repository.recoverExpiredStages({ workerId, limit: recoveryBatch, ...(scopeRecoveryToHandlers ? { supportedRoutes: [...routes.keys()] } : {}) }),
-          scopeRecoveryToHandlers ? Promise.resolve({ examined: 0, requeued: 0, failed: 0 }) : repository.recoverExpiredOutbox({ limit: recoveryBatch }),
+          repository.recoverExpiredStages({ workerId, limit: recoveryBatch, ...(isolated?{runId:targetRunId}:{}), ...(scopeRecoveryToHandlers ? { supportedRoutes: [...routes.keys()] } : {}) }),
+          isolated||scopeRecoveryToHandlers ? Promise.resolve({ examined: 0, requeued: 0, failed: 0 }) : repository.recoverExpiredOutbox({ limit: recoveryBatch }),
         ]);
       const outbox = isolated || scopeRecoveryToHandlers ? { delivered: 0, failed: 0 } : await dispatchOutbox();
       const claimed = await repository.claimNextStage(workerId, leaseSeconds, [...routes.keys()], targetRunId);
