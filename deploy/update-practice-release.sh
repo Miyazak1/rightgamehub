@@ -6,6 +6,7 @@ EXPECTED=${1:?Usage: bash update-practice-release.sh FULL_COMMIT_SHA}
 [[ "$EXPECTED" =~ ^[a-f0-9]{40}$ ]] || { echo 'Invalid release SHA'; exit 1; }
 cd /www/gamehub
 source deploy/pin-running-image.sh
+source deploy/running-service.sh
 test -f deploy/.env.prod
 test "$(git rev-parse HEAD)" = "$EXPECTED"
 test -z "$(git status --porcelain)" || { echo 'Local edits found; stop without reset/clean.'; exit 1; }
@@ -17,11 +18,11 @@ if [ -n "${MOOYU_RELEASE_COMPOSE_FILES:-}" ]; then
 fi
 dc() { docker compose --project-directory /www/gamehub/deploy --project-name gamehub-production --env-file deploy/.env.prod "${COMPOSE_ARGS[@]}" --profile '*' "$@"; }
 dc config --quiet
-test -n "$(dc ps --status running --quiet postgres)"
-test -n "$(dc ps --status running --quiet api)"
-test -n "$(dc ps --status running --quiet web)"
+POSTGRES_ID=$(running_service_id postgres)
+running_service_id api > /dev/null
+running_service_id web > /dev/null
 if [ "${MOOYU_RELEASE_RESUMING:-false}" = true ]; then
-  count=$(dc exec -T postgres psql -U gamehub -d gamehub -Atc 'SELECT count(*) FROM schema_migrations')
+  count=$(docker exec "$POSTGRES_ID" psql -U gamehub -d gamehub -Atc 'SELECT count(*) FROM schema_migrations')
   [ "$count" = 158 ] || { echo 'Resume expects the unchanged 158-migration production database. Stop for review.'; exit 1; }
 fi
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
@@ -34,19 +35,29 @@ mkdir -p "$RECORD/rollback-build/migrations"
 cp apps/api/migrations/*.sql "$RECORD/rollback-build/migrations/"
 # Update precisely the currently running application services. Never start an
 # optional scheduler, bootstrap, paper job or desktop preview for this release.
-mapfile -t SERVICES < <(dc ps --status running --services | grep -vE '^(postgres|redis)$')
-((${#SERVICES[@]} > 0))
+RUNNING_SERVICES=$(running_project_services)
+CONFIGURED_SERVICES=$(dc config --services)
+SERVICES=()
+while IFS= read -r service; do
+  [ -n "$service" ] || continue
+  case "$service" in postgres|redis) continue;; esac
+  grep -Fxq "$service" <<< "$CONFIGURED_SERVICES" || {
+    echo "Running service absent from target configuration: $service; no services changed." >&2; exit 1;
+  }
+  SERVICES+=("$service")
+done <<< "$RUNNING_SERVICES"
+((${#SERVICES[@]} > 0)) || { echo 'No running application services found; no services changed.' >&2; exit 1; }
 printf 'services:\n' > "$RECORD/rollback-images.yml"
 WEB_RUNTIME_IMAGE=
 # Preserve every original service image before any image build begins.
 for service in "${SERVICES[@]}"; do
-  id=$(dc ps --status running --quiet "$service")
+  id=$(running_service_id "$service")
   test -n "$id"
   original="mooyu-release-original:${STAMP,,}-$service"
   pin_running_image "$id" "$original"
 done
 for service in "${SERVICES[@]}"; do
-  id=$(dc ps --status running --quiet "$service")
+  id=$(running_service_id "$service")
   tag="mooyu-release-rollback:${STAMP,,}-$service"
   original="mooyu-release-original:${STAMP,,}-$service"
   if [ "$service" = web ]; then WEB_RUNTIME_IMAGE="$original"; fi
@@ -84,7 +95,7 @@ echo "Release record and rollback: $RECORD"
 # image-only layer. This dominates renamed/nested rollback overlays without
 # discarding operator settings or rebuilding into a historical image tag.
 RELEASE_IMAGE_PREFIX="mooyu-release:${EXPECTED:0:16}-${STAMP,,}"
-API_FOR_PLAN=$(dc ps --status running --quiet api)
+API_FOR_PLAN=$(running_service_id api)
 dc config --format json | docker exec -i "$API_FOR_PLAN" node -e '
 let text="";process.stdin.on("data",part=>text+=part);process.stdin.on("end",()=>{
  try{
@@ -107,25 +118,33 @@ dc config --quiet
 # application update, so rebuilding unrelated Go dependencies is unnecessary.
 test -n "$WEB_RUNTIME_IMAGE"
 dc build --build-arg "MOOYU_WEB_RUNTIME_IMAGE=$WEB_RUNTIME_IMAGE" migrate "${SERVICES[@]}"
-dc exec -T postgres pg_dump -U gamehub -d gamehub --format=custom > "$RECORD/database.dump.partial"
-dc exec -T postgres pg_restore --list < "$RECORD/database.dump.partial" > /dev/null
+docker exec "$POSTGRES_ID" pg_dump -U gamehub -d gamehub --format=custom > "$RECORD/database.dump.partial"
+docker exec -i "$POSTGRES_ID" pg_restore --list < "$RECORD/database.dump.partial" > /dev/null
 mv "$RECORD/database.dump.partial" "$RECORD/database.dump"
 # Pending migrations through 0161 are additive; retain them on application rollback.
 dc run --rm --no-deps migrate node apps/api/src/practice-release-migrate.mjs
 rollback_on_failure() {
   status=$?
   trap - ERR
+  printf 'Release check failed: phase=%s service=%s line=%s exit-code=%s\n' \
+    "${RELEASE_PHASE:-unknown}" "${CURRENT_SERVICE:-none}" "${1:-unknown}" "$status" >&2
+  docker ps -a --filter label=com.docker.compose.project=gamehub-production \
+    --format '{{.ID}} {{.Names}} {{.Status}} {{.Image}}' > "$RECORD/failed-containers.txt" 2>&1 || true
   echo "Release failed ($status); restoring previous images from $RECORD" >&2
   bash "$RECORD/rollback.sh" || echo "Automatic rollback failed. Run: bash $RECORD/rollback.sh" >&2
   exit "$status"
 }
-trap rollback_on_failure ERR
+trap 'rollback_on_failure "$LINENO"' ERR
+RELEASE_PHASE=activate
 printf '%s\n' "$EXPECTED" > "$RECORD/activation-started"
 dc up -d --no-build --no-deps --wait --wait-timeout 240 "${SERVICES[@]}"
 
+RELEASE_PHASE=verify-containers
 : > "$RECORD/deployed-images.txt"
 for service in "${SERVICES[@]}"; do
-  id=$(dc ps --status running --quiet "$service")
+  CURRENT_SERVICE=$service
+  echo "Verifying running container: $service"
+  id=$(running_service_id "$service")
   test -n "$id"
   if grep -Fxq "  $service:" "$RECORD/release-images.yml"; then
     actual=$(docker inspect --format '{{.Config.Image}}' "$id")
@@ -135,15 +154,19 @@ for service in "${SERVICES[@]}"; do
   docker inspect --format '{{.Name}} {{.Image}} {{.Config.Image}}' "$id" >> "$RECORD/deployed-images.txt"
 done
 
+RELEASE_PHASE=verify-sources
+CURRENT_SERVICE=api
+VERIFIED_API_ID=$(running_service_id api)
 : > "$RECORD/verified-source-sha256.txt"
 for file in agent-provider-request.mjs agent-provider-gateway.mjs agent-runtime-repository.mjs agent-blog-prompt.mjs agent-blog-public-admission.mjs agent-runtime-worker.mjs; do
   expected_hash=$(git show "$EXPECTED:apps/api/src/$file" | sha256sum | awk '{print $1}')
-  actual_hash=$(dc exec -T api sha256sum "/app/apps/api/src/$file" | awk '{print $1}')
+  actual_hash=$(docker exec "$VERIFIED_API_ID" sha256sum "/app/apps/api/src/$file" | awk '{print $1}')
   if [ "$expected_hash" != "$actual_hash" ]; then echo "Running source mismatch: $file" >&2; fi
   test "$expected_hash" = "$actual_hash"
   printf '%s  %s\n' "$actual_hash" "$file" >> "$RECORD/verified-source-sha256.txt"
 done
-dc exec -T api node --input-type=module <<'NODE'
+RELEASE_PHASE=verify-http
+docker exec -i "$VERIFIED_API_ID" node --input-type=module <<'NODE'
 import assert from 'node:assert/strict';
 import {createVerifiedMathEngine} from './apps/api/src/practice/engine.mjs';
 for(const key of ['PAPER_STUDY_ENABLED','PAPER_STUDY_WORKER_ENABLED','PAPER_STUDY_MODELS_ENABLED','PAPER_STUDY_PUBLISH_ENABLED']) assert.equal(process.env[key],'false',key);
@@ -175,5 +198,6 @@ assert.equal(detail.status,200);assert.equal((await detail.json()).result.struct
 console.log(JSON.stringify({status:ready.status,migrations:ready.migrations,practiceTopics:catalog.topics.length,paperEnabled:false,platformAgent:true}));
 NODE
 trap - ERR
-dc ps
+docker ps --filter label=com.docker.compose.project=gamehub-production \
+  --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 echo "Release verified. Rollback command: bash $RECORD/rollback.sh"

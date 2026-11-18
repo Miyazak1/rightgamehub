@@ -7,7 +7,7 @@ test('unified deployment validates uploads before mutation, preserves Compose ov
   const clean=p=>{const value=p.replaceAll('\\','/');return process.platform==='win32'?'/'+value[0].toLowerCase()+value.slice(2):value;},git=(...args)=>execFileSync('git',args,{cwd:repo,encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','pipe']}).trim();
   git('init','--initial-branch=production');git('config','user.name','Release fixture');git('config','user.email','fixture@example.test');git('config','core.autocrlf','false');
   fs.writeFileSync(path.join(repo,'.gitignore'),'deploy/.env.prod\n');fs.writeFileSync(path.join(repo,'deploy/compose.prod.yml'),'# previous base\n');fs.writeFileSync(path.join(repo,'deploy/extra.yml'),'# preserve extra gateway configuration\n');fs.writeFileSync(path.join(repo,'apps/api/migrations/0001_test.sql'),'-- unchanged\n');git('add','.');git('commit','-m','production');const previous=git('rev-parse','HEAD');
-  for(const name of ['prepare-unified-release.sh','prepare-practice-release.sh','update-practice-release.sh','pin-running-image.sh','unified-assets.mjs','compose.unified-downloads.yml']){let content=fs.readFileSync(path.join(source,'deploy',name),'utf8').replaceAll('/www/backup/gamehub',clean(records)).replaceAll('/www/gamehub-downloads',clean(downloads)).replaceAll('/www/gamehub',clean(repo));if(name==='prepare-unified-release.sh')content=content.replace('set -Eeuo pipefail','set -Eeuo pipefail\ncurl() { bash "$FIXTURE_BIN/curl" "$@"; }; export -f curl\nflock() { [ "$FAIL_STAGE" != locked ]; }; export -f flock');fs.writeFileSync(path.join(repo,'deploy',name),content);}
+  for(const name of ['prepare-unified-release.sh','prepare-practice-release.sh','update-practice-release.sh','pin-running-image.sh','running-service.sh','unified-assets.mjs','compose.unified-downloads.yml']){let content=fs.readFileSync(path.join(source,'deploy',name),'utf8').replaceAll('/www/backup/gamehub',clean(records)).replaceAll('/www/gamehub-downloads',clean(downloads)).replaceAll('/www/gamehub',clean(repo));if(name==='prepare-unified-release.sh')content=content.replace('set -Eeuo pipefail','set -Eeuo pipefail\ncurl() { bash "$FIXTURE_BIN/curl" "$@"; }; export -f curl\nflock() { [ "$FAIL_STAGE" != locked ]; }; export -f flock');fs.writeFileSync(path.join(repo,'deploy',name),content);}
   fs.mkdirSync(path.join(repo,'apps/api/src'),{recursive:true});
   for(const name of ['agent-provider-request.mjs','agent-provider-gateway.mjs','agent-runtime-repository.mjs','agent-blog-prompt.mjs','agent-blog-public-admission.mjs','agent-runtime-worker.mjs'])fs.writeFileSync(path.join(repo,'apps/api/src',name),'// source fixture '+name+'\n');
   for(const [dir,key]of [['agent','agent'],['desktop','desktop']]){fs.mkdirSync(path.join(downloads,dir));fs.writeFileSync(path.join(downloads,dir,'manifest.json'),JSON.stringify({[key]:'ready'})+'\n');}
@@ -27,8 +27,10 @@ test('unified deployment validates uploads before mutation, preserves Compose ov
   const docker=`#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$TRACE"
 case "$*" in
+ *'.State.Running'*) service="\${*: -1}";service="\${service#cid-}";printf 'true gamehub-production %s False\\n' "$service";;
+ 'ps --no-trunc --quiet '*) if [[ "$*" != *label=com.docker.compose.service=* ]];then printf 'cid-api\\ncid-web\\ncid-postgres\\ncid-redis\\n';else service="\${*: -1}";service="\${service##*=}";printf 'cid-%s\\n' "$service";fi;;
  *'Config.Image'*) target="\${*: -1}";service="\${target#cid-}";awk -v service="$service" '$0=="  "service":" {getline;print $2}' "$MOOYU_RELEASE_RECORD/release-images.yml";;
- *'exec -T api sha256sum '*) target="\${*: -1}";sha256sum "$FIXTURE_REPO/\${target#/app/}";;
+ *'exec cid-api sha256sum '*) target="\${*: -1}";sha256sum "$FIXTURE_REPO/\${target#/app/}";;
  'ps -q '*service=web*) echo cid-web;;
  'ps -q '*service=api*) echo cid-api;;
  *'project.config_files'*) if [ "$FAIL_STAGE" = overlay ]; then echo /missing/operator-overlay.yml; elif [[ "$FAIL_STAGE" = rolled-back* ]]; then printf '%s,%s,%s\\n' "$FIXTURE_PREVIOUS_RECORD/compose-0.before.yml" "$FIXTURE_PREVIOUS_RECORD/compose-1.before.yml" "$FIXTURE_PREVIOUS_RECORD/rollback-images.yml"; else printf '%s,%s\\n' "$FIXTURE_REPO/deploy/compose.prod.yml" "$FIXTURE_REPO/deploy/extra.yml"; fi;;
@@ -41,6 +43,7 @@ case "$*" in
  'exec cid-web test -d '*) exit 1;;
  'exec cid-web printenv APP_DOMAIN') echo example.test;;
  *'config --format json'*) if [ "$FAIL_STAGE" = model ];then printf '{"services":{"web":{"build":{}},"migrate":{"build":{}},"api":{"build":{},"environment":{"DEEPSEEK_API_KEY":""}}}}';else printf '{"services":{"web":{"build":{}},"migrate":{"build":{}},"api":{"build":{},"environment":{"DEEPSEEK_API_KEY":"fixture-key"}}}}';fi;;
+ *'config --services'*) printf 'api\\nweb\\npostgres\\nredis\\n';;
  'exec -i cid-api node -e '*) shift 3; "$@";exit $?;;
  *'ps --status running --services'*) printf 'api\\nweb\\n';;
  *'ps --status running --quiet '*) printf 'cid-%s\\n' "\${*: -1}";;
@@ -53,7 +56,7 @@ case "$*" in
  *' pg_dump '*) echo fixture-dump;;
  *' pg_restore '*) cat >/dev/null;;
  *'up -d --no-build --no-deps --wait '*) if [[ "$FAIL_STAGE" = restart || "$FAIL_STAGE" = rolled-back-restart ]] && [ ! -f "$ONCE" ]; then touch "$ONCE";exit 7;fi;;
- *'exec -T api node '*) cat >/dev/null;;
+ *'exec -i cid-api node --input-type=module'*) cat >/dev/null;;
 esac
 exit 0
 `;fs.writeFileSync(path.join(bin,'docker'),docker,{mode:0o755});fs.writeFileSync(path.join(bin,'curl'),`#!/usr/bin/env bash
