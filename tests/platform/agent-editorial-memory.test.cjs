@@ -24,10 +24,13 @@ test('single-project publication permanently excludes the main repository and re
   assert.equal(project.permanentMainExclusion, true);
   assert.equal(project.cooldownUntil, null);
   assert.equal(project.payload.repositoryUrl, 'https://github.com/Blue-Idea/Linkit');
-  assert.deepEqual(value.events.filter(item => item.eventType === 'scenario-used')
-    .map(item => item.payload.signal), ['可以快速体验', '结果直观可视化']);
+  assert.deepEqual(project.payload.interestSignals, ['可以快速体验', '结果直观可视化']);
+  assert.equal(project.payload.rationale, '这个项目提供可验证的本地知识整理路径。');
+  assert.equal(value.events.some(item => item.eventType === 'scenario-used'), false);
   assert.equal(value.events.some(item => item.eventType === 'topic-used'), true);
-  assert.equal(value.events.some(item => item.eventType === 'claim-stated'), true);
+  const claim = value.events.find(item => item.eventType === 'claim-stated');
+  assert.equal(claim.payload.claim, '一篇基于官方仓库证据的项目研究。');
+  assert.equal(claim.payload.rationale, undefined);
 });
 
 test('comparison publication keeps projects reusable but cools down the pair deterministically', async () => {
@@ -64,6 +67,22 @@ test('selection memory freezes only active editorial cooldowns at snapshot time'
   assert.equal(memory.schemaVersion, 'blog-editorial-memory-input-v1');
   assert.deepEqual(memory.activeCooldowns.map(item => [item.subjectKind, item.label]),
     [['topic', '本地知识整理的使用路径']]);
+});
+
+test('legacy preference and rationale cooldowns remain immutable history without blocking selection', async () => {
+  const { buildEditorialSelectionMemory } = await import(moduleUrl.href);
+  const items = [
+    { subjectKind: 'scenario', subjectKey: 'scenario:legacy', occurrenceCount: 3,
+      cooldownUntil: '2027-01-01T00:00:00Z', payload: { signal: '可以快速体验' } },
+    { subjectKind: 'claim', subjectKey: 'claim:legacy', occurrenceCount: 2,
+      cooldownUntil: '2027-01-01T00:00:00Z', payload: { rationale: '基于固定仓库资料选择有趣工具' } },
+    { subjectKind: 'topic', subjectKey: 'topic:real', occurrenceCount: 1,
+      cooldownUntil: '2027-01-01T00:00:00Z', payload: { angle: '文件恢复的真实使用边界' } },
+  ];
+  const before = structuredClone(items);
+  const result = buildEditorialSelectionMemory(items, { capturedAt: '2026-11-18T00:00:00Z' });
+  assert.deepEqual(result.activeCooldowns.map(item => item.subjectKind), ['topic']);
+  assert.deepEqual(items, before);
 });
 
 test('project research records initial, same-version and new-version lineage explicitly', async () => {

@@ -7,7 +7,7 @@ const runtime = createAgentBlogPublicRuntime({ applicationName: 'gamehub-agent-b
 try {
   const result = await runtime.runner.run({ requestId });
   process.stdout.write(`${JSON.stringify(result)}\n`);
-  if (result.publication?.publicationState !== 'published') process.exitCode = 1;
+  if (!['published', 'skipped'].includes(result.publication?.publicationState)) process.exitCode = 1;
 } finally {
   await runtime.close();
 }

@@ -117,3 +117,14 @@ test('incomplete or failed public fire is persisted and only suspends at the con
   assert.equal((await createAgentBlogPublicScheduleController(failed).runOnce()).status, 'failed');
   assert.equal(failed.events.find(([event]) => event === 'finish')[3].errorCode, 'PROVIDER_FAILED');
 });
+
+test('a normal editorial skip completes its fire without escalating consecutive failures', async () => {
+  const { createAgentBlogPublicScheduleController } = await load('agent-blog-public-schedule.mjs');
+  const value = fixture();
+  value.runner.run = async () => ({ publicationAttempted: false,
+    publication: { runId: crypto.randomUUID(), articleId: null, publicationState: 'skipped' } });
+  const result = await createAgentBlogPublicScheduleController(value).runOnce();
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.fire.result.publicationState, 'skipped');
+  assert.equal(result.fire.errorCode, null);
+});

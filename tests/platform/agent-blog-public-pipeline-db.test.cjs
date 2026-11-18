@@ -5,7 +5,8 @@ const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
   expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,
-  selectionIndexFailures=0,compositionTitleFailures=0 } = {}) {
+  selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,
+  compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
   t.after(() => admin.end());
   live?.onDatabase?.(admin);
@@ -110,8 +111,8 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
           query: { text: 'agent tool', sort: 'stars', minStars: 10, pushedAfter: '2026-01-01' },
           source: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
             fetchedAt: '2026-10-26T02:00:00.000Z', contentSha256: 'c'.repeat(64) },
-          candidates: Array.from({length:candidateCount},(_,index)=>({ key: 'owner/project'+(index||''), canonicalUrl: 'https://github.com/owner/project'+(index||''),
-            owner: 'owner', name: 'project'+(index||''), description: 'A useful tool', stars: 1200, forks: 100,
+          candidates: Array.from({length:candidateCount},(_,index)=>({ key: 'owner/project'+(continuity?.round?`round${continuity.round}`:(index||'')), canonicalUrl: 'https://github.com/owner/project'+(continuity?.round?`round${continuity.round}`:(index||'')),
+            owner: 'owner', name: 'project'+(continuity?.round?`round${continuity.round}`:(index||'')), description: 'A useful tool', stars: 1200, forks: 100,
             language: 'TypeScript', topics: ['agent'], licenseSpdx: 'MIT',
             pushedAt: '2026-10-25T00:00:00.000Z' })),
         }, responseRef: { canonicalUri: 'https://api.github.com/search/repositories?q=agent+tool',
@@ -182,6 +183,13 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
           followUpQuestions: ['第一次体验应该从哪一步开始？', '哪些使用场景最适合这个工具？', '继续扩展时应注意哪些边界？'] };
       if(request.responseSchema.key === 'blog.subject.selection-attempt') {
         selectionCalls++;
+        if (continuity?.round) {
+          const view=JSON.parse(request.request.messages[1].content);
+          output.angle=continuity.round===1?'通过依赖图查找前端工程中未使用的模块和循环引用'
+            :continuity.round===2&&view.correction?'在家庭网络中绘制设备拓扑并定位连接异常'
+            :continuity.round===2?'通过依赖图查找前端工程中未使用的模块和循环引用'
+            :'在家庭网络中绘制设备拓扑并定位连接异常';
+        }
         if(selectionCalls<=selectionFailures){delete output.scores; delete output.decisionReasonCodes;}
         if(selectionCalls<=selectionIndexFailures)output.selectedIndexes=[candidateCount+1];
       }
@@ -189,7 +197,12 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         output.blocks.find(block => block.type === 'paragraph').citationIndexes = [1,3];
       }
       if(request.responseSchema.key === 'blog.article.composition'&&compositionCalls<=compositionTitleFailures){
-        output.title='用几条样式规则画生成艺术：css-doodle 上手笔记';
+        output.title=compositionInvalidTitle;
+      }
+      const correction=request.responseSchema.key==='blog.article.composition'
+        ?JSON.parse(request.request.messages[1].content).correction:null;
+      if(correction&&compositionTitleFailures>0){
+        assert.deepEqual(correction.validation.invalidTitleTokens,[...new Set(compositionInvalidTitle.match(/[A-Za-z]+/gu))]);
       }
       return { providerRequestId: `fixture:${crypto.randomUUID()}`, output, responseRef: {},
         usage: { providerCalls: 1, inputTokens: 500, outputTokens: 1200, costMicrousd: 10 } };
@@ -248,6 +261,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
     return result;
   };
   const runner = createAgentBlogPublicRuntimeManualRunner({ config,
+    requestRepository: new (await harness.load('agent-blog-public-request-repository.mjs')).PostgresAgentBlogPublicRequestRepository(admin),
     preflightRepository: new PostgresAgentBlogPublicRuntimePreflightRepository(admin),
     inputRepository: new PostgresAgentBlogPrivateCanaryInputRepository(admin), discoveryCanary, publicHandoff,
     createDiscoveryWorker: runId => worker(runId, discoveryHandlers), createPublicationWorker: runId => worker(runId, handlers),
@@ -330,6 +344,8 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       receipts:stored.receipts,publicationEvents:stored.events,linkedCitations:stored.linked_citations,
       replayNoNewProviderCalls:true,duplicateRunBlocked:true,lostCommitAcknowledgements});
   }
+  await afterPublication?.({ admin, runner, config, account, runtime, handlers, artifactRepository,
+    providerGateway, result, providerCalls:()=>providerInvocations });
 }
 
 module.exports={publicPipelineFixture};
@@ -348,4 +364,6 @@ if(require.main===module)test('public selection schema handling preserves full p
     sub=>publicPipelineFixture(sub,{selectionFailures:0,selectionIndexFailures:2,expectedFailure:/AGENT_BLOG_SELECTION_INDEX_INVALID/u,expectedCalls:3}));
   await t.test('actual live title failure and citation correction share the original writing repair budget',
     sub=>publicPipelineFixture(sub,{compositionTitleFailures:1}));
+  await t.test('unit abbreviations from real output receive exact title-field repair feedback',
+    sub=>publicPipelineFixture(sub,{compositionTitleFailures:1,compositionInvalidTitle:'四KB小引擎，从零做一个能玩的小游戏'}));
 });

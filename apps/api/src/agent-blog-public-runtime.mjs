@@ -3,6 +3,7 @@ import pg from 'pg';
 import { loadAgentBlogPublicRuntimeConfig,
   PostgresAgentBlogPublicRuntimePreflightRepository } from './agent-blog-public-runtime-preflight.mjs';
 import { createAgentBlogPublicRuntimeManualRunner } from './agent-blog-public-runtime-manual-run.mjs';
+import { PostgresAgentBlogPublicRequestRepository } from './agent-blog-public-request-repository.mjs';
 import { PostgresAgentBlogPrivateCanaryInputRepository } from './agent-blog-private-canary-manual-run.mjs';
 import { PostgresAgentRuntimeRepository } from './agent-runtime-repository.mjs';
 import { createAgentRuntimeWorker } from './agent-runtime-worker.mjs';
@@ -118,6 +119,7 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
   });
   const runner = createAgentBlogPublicRuntimeManualRunner({
     config,
+    requestRepository: new PostgresAgentBlogPublicRequestRepository(pool),
     preflightRepository: new PostgresAgentBlogPublicRuntimePreflightRepository(pool),
     inputRepository: new PostgresAgentBlogPrivateCanaryInputRepository(pool),
     discoveryCanary: createAgentBlogAutonomousDiscoveryCanary({ runtimeRepository, enabled: true }),

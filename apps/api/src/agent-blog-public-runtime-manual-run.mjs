@@ -35,7 +35,8 @@ export async function executeAgentBlogPublicRun({ worker, workflow, outputType, 
         // The final stage can commit before the worker loses its acknowledgement.
         const persisted = await readRun(runId);
         if (persisted?.id === runId && persisted.status === 'succeeded'
-          && persisted.outputType === outputType && UUID.test(persisted.outputId ?? '')) {
+          && (persisted.outputType === outputType || (outputType === 'blog.article'
+            && persisted.outputType === 'blog.publication-skipped')) && UUID.test(persisted.outputId ?? '')) {
           terminal = persisted;
           break;
         }
@@ -61,13 +62,17 @@ export async function executeAgentBlogPublicRun({ worker, workflow, outputType, 
       attempts += 1;
       completed += 1;
       waitingRetry = false;
-      if (result.run) terminal = result.run;
+      if (result.run) {
+        terminal = result.run;
+        if (outputType === 'blog.article' && terminal.outputType === 'blog.publication-skipped') break;
+      }
     }
   } finally {
     await worker.stop();
   }
   if (!terminal || terminal.id !== runId || terminal.status !== 'succeeded'
-    || terminal.outputType !== outputType || !UUID.test(terminal.outputId ?? '')) {
+    || (terminal.outputType !== outputType && !(outputType === 'blog.article'
+      && terminal.outputType === 'blog.publication-skipped')) || !UUID.test(terminal.outputId ?? '')) {
     fail('AGENT_BLOG_PUBLIC_RUNTIME_OUTPUT_INVALID', { runId, expectedOutputType: outputType });
   }
   return terminal;
@@ -75,11 +80,12 @@ export async function executeAgentBlogPublicRun({ worker, workflow, outputType, 
 
 export function createAgentBlogPublicRuntimeManualRunner({
   config, preflightRepository, inputRepository, discoveryCanary, publicHandoff,
-  createDiscoveryWorker, createPublicationWorker, readRun = null,
+  createDiscoveryWorker, createPublicationWorker, readRun = null, requestRepository = null,
 } = {}) {
   if (!config || !preflightRepository || !inputRepository || !discoveryCanary || !publicHandoff
     || typeof createDiscoveryWorker !== 'function' || typeof createPublicationWorker !== 'function'
-    || (readRun !== null && typeof readRun !== 'function')) {
+    || (readRun !== null && typeof readRun !== 'function')
+    || (requestRepository !== null && typeof requestRepository.findCompleted !== 'function')) {
     fail('AGENT_BLOG_PUBLIC_RUNTIME_DEPENDENCY_REQUIRED');
   }
   return {
@@ -89,6 +95,8 @@ export function createAgentBlogPublicRuntimeManualRunner({
         || triggerRef.length < 1 || triggerRef.length > 240) {
         fail('AGENT_BLOG_PUBLIC_RUNTIME_TRIGGER_INVALID');
       }
+      const completed = await requestRepository?.findCompleted({ agentUserId:config.agentUserId, requestId });
+      if (completed) return completed;
       const preflight = await runAgentBlogPublicRuntimePreflight({ repository: preflightRepository, config });
       if (!preflight.ready) fail('AGENT_BLOG_PUBLIC_RUNTIME_PREFLIGHT_BLOCKED', { blockers: preflight.blockers });
       const frozen = await inputRepository.snapshot(config.agentUserId);
@@ -135,9 +143,10 @@ export function createAgentBlogPublicRuntimeManualRunner({
         agentUserId: config.agentUserId, preflight: 'passed',
         behaviorProfileVersion: frozen.behaviorProfileVersion,
         discovery: { runId: discovery.id, artifactId: discoveryOutput.outputId },
-        publication: { runId: publication.id, articleId: publicationOutput.outputId,
-          publicationState: 'published' },
-        publicationAttempted: true,
+        publication: { runId: publication.id,
+          articleId: publicationOutput.outputType === 'blog.article' ? publicationOutput.outputId : null,
+          publicationState: publicationOutput.outputType === 'blog.article' ? 'published' : 'skipped' },
+        publicationAttempted: publicationOutput.outputType === 'blog.article',
       });
     },
   };

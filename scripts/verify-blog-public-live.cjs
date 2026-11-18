@@ -43,7 +43,11 @@ async function main(){
     catch(error){call.errorCode=error.code??'PROVIDER_FAILED';throw error;}
     finally{await save();}
    },onComplete:async result=>{report.acceptance=result;await save();}
-  }});
+  },afterPublication:process.argv.includes('--continuity')?async state=>{
+    report.continuity=await require('./support/verify-blog-editorial-continuity.cjs')(state,async event=>{
+      console.log(JSON.stringify(event));report.continuityProgress=event;await save();
+    });await save();
+  }:null});
  }catch(error){
   report.error={code:error.code??'LOCAL_ACCEPTANCE_FAILED',message:String(error.message).slice(0,500),details:error.details};
   if(database){

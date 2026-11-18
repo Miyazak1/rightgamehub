@@ -9,7 +9,7 @@ import {buildBlogModelRequest} from './agent-blog-prompt.mjs';
 
 export const BLOG_DISCOVERY_QUERY_PLAN_SCHEMA = Object.freeze({ key: 'blog.discovery.query-plan', version: 1 });
 export const BLOG_DISCOVERY_QUERY_PLAN_PROMPT = `你是小墨鱼的候选发现规划模块。只输出一个 JSON 对象，不要输出 Markdown。
-你的任务只是把中文选题范围规划成一至五条 GitHub 仓库搜索词，不得选择项目、写文章或声称任何项目事实。
+你的任务只是把中文选题范围规划成一至 maxQueries 条 GitHub 仓库搜索词，不得选择项目、写文章或声称任何项目事实。
 实际数量不得超过输入 maxQueries；此上限也包含后续空结果回退搜索。
 每条搜索词必须使用二至六个适合 GitHub 仓库元数据的英文技术关键词，至少包含一个英文字母；不得包含中文、URL、斜杠、冒号或 GitHub 搜索限定符。
 不要把 open source、GitHub、repository、project 当作主要关键词；优先使用项目作者会写在名称、简介或 topics 中的具体能力词，例如 agent、visualization、transcription、game engine。
@@ -138,7 +138,7 @@ function modelPolicy(context) {
 
 function normalizeQueryPlan(output, input) {
   const maxQueries = input.searchPolicy.maxQueries;
-  if (output.queries.length < 1 || output.queries.length > maxQueries
+  if (output.queries.length < 1 || output.queries.length > 5
     || output.interestSignals.length < 1 || output.interestSignals.length > 6) {
     fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   }
@@ -170,7 +170,11 @@ function normalizeQueryPlan(output, input) {
     || new Set(interestSignals).size !== interestSignals.length) {
     fail('AGENT_BLOG_DISCOVERY_PLAN_INVALID');
   }
-  return { queries, rationale, interestSignals };
+  // The model proposes searches; only the server allocates requests. Preserve
+  // the raw provider reply and explicitly audit any bounded excess proposals.
+  return { queries: queries.slice(0, maxQueries), rationale, interestSignals,
+    queryLimitApplied: output.queryLimitApplied ?? { proposedCount: queries.length,
+      admittedCount: Math.min(queries.length, maxQueries), omittedCount: Math.max(0, queries.length - maxQueries) } };
 }
 
 function broadenGitHubQuery(query) {
@@ -368,7 +372,7 @@ export function createAgentBlogAutonomousCandidateDiscoveryHandlers({
           capabilityKey: 'provider.text.generate', contractVersion: 1, riskLevel: 'L2' },
         idempotencyKey: `blog-discovery-plan:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
-          modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 4 },signal:execution.signal,
+          modelPolicy: modelPolicy(context), promptTemplate: { key: 'blog.discovery.plan', version: 5 },signal:execution.signal,
         responseSchema: BLOG_DISCOVERY_QUERY_PLAN_SCHEMA,
           request: buildBlogModelRequest({system:BLOG_DISCOVERY_QUERY_PLAN_PROMPT,payload:request,inputBudget:10000,kind:'discovery',temperature:0.2}),
         tokenCeiling: 1200, timeoutSeconds: 150,

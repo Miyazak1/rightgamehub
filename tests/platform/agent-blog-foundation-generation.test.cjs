@@ -79,6 +79,45 @@ function context(runId, stageId, stageKey, prerequisites) {
   };
 }
 
+test('public editorial cooldown repairs once, skips exhausted novelty, and ignores legacy intent vetoes', async t => {
+  const { createAgentBlogFoundationGenerationHandlers } = await load('agent-blog-foundation-generation.mjs');
+  for (const outcome of ['reselect', 'skip', 'legacy']) await t.test(outcome, async () => {
+    const id = uuid(), calls = [], saved = [];
+    const angle = '怎样可靠地恢复误删文件并验证恢复结果';
+    const valid = { mode: 'single', selectedIndexes: [1], angle,
+      rationale: '官方固定版本资料给出了清楚的安装步骤、可观察的输出结果和具体使用边界，适合独立研究。',
+      interestSignals: ['可以快速体验'], comparisonAxes: [], scores, decisionReasonCodes: ['EVIDENCE_STRONG'] };
+    const ctx = context(uuid(), uuid(), 'select-subject', [
+      { stageKey: 'collect-evidence', status: 'succeeded', outputRef: { artifactIds: [id] } }]);
+    ctx.run.input.editorialMemory = { schemaVersion: 'blog-editorial-memory-input-v1',
+      capturedAt: '2026-11-18T00:00:00Z', activeCooldowns: outcome === 'legacy' ? [
+        { subjectKind: 'scenario', subjectKey: 'scenario:old', label: '可以快速体验', occurrenceCount: 1, cooldownUntil: '2027-01-01T00:00:00Z' },
+        { subjectKind: 'claim', subjectKey: 'claim:old', label: valid.rationale, occurrenceCount: 1, cooldownUntil: '2027-01-01T00:00:00Z' },
+      ] : [{ subjectKind: 'topic', subjectKey: 'topic:old', label: angle, occurrenceCount: 1, cooldownUntil: '2027-01-01T00:00:00Z' }] };
+    const handlers = createAgentBlogFoundationGenerationHandlers({ workflowKey: 'blog.project.single',
+      providerGateway: { invoke: async input => {
+        calls.push(input);
+        return { actionId: uuid(), output: { ...valid,
+          angle: outcome === 'reselect' && calls.length === 2 ? '通过实时绘制网络拓扑定位家庭设备的连接问题' : angle } };
+      } }, artifactRepository: { readToolArtifact: async () => evidence(id), save: async input => {
+        saved.push(input); return { id: uuid(), artifactKey: input.artifactKey, contentSha256: 'a'.repeat(64) };
+      } } });
+    const result = await handlers['blog.project.single:select-subject'](ctx, { workerId: 'worker', leaseToken: uuid() });
+    assert.equal(calls.length, outcome === 'legacy' ? 1 : 2);
+    assert.equal(saved.length, 1);
+    if (outcome === 'skip') {
+      assert.equal(result.runOutput.type, 'blog.publication-skipped');
+      assert.equal(saved[0].content.reason, 'EDITORIAL_COOLDOWN_EXHAUSTED');
+    } else assert.equal(saved[0].artifactKey, 'blog.selection');
+    if (outcome !== 'legacy') {
+      const correction = JSON.parse(calls[1].request.messages[1].content).correction;
+      assert.equal(correction.validation.code, 'AGENT_BLOG_EDITORIAL_COOLDOWN_CONFLICT');
+      assert.equal(calls[1].action.actionKey, 'select-subject-format-repair');
+      assert.equal(calls[1].tokenCeiling, calls[0].tokenCeiling);
+    }
+  });
+});
+
 test('foundation generation separates provider selection and composition from deterministic verification', async () => {
   const { createAgentBlogFoundationGenerationHandlers } = await load('agent-blog-foundation-generation.mjs');
   const runId = uuid();
@@ -141,8 +180,8 @@ test('foundation generation separates provider selection and composition from de
   assert.equal(verified.outputRef.approved, true);
   assert.equal(providerCalls.length, 2);
   assert.deepEqual(providerCalls.map(item => item.action.actionKey), ['select-subject', 'compose']);
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 7 });
-  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 5 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.subject.select', version: 8 });
+  assert.deepEqual(providerCalls[1].promptTemplate, { key: 'blog.article.compose', version: 6 });
   assert(providerCalls[0].request.messages[1].content.includes('allowedInterestSignals'));
   assert(providerCalls[0].request.messages[1].content.includes('eligibleModes'));
   assert.equal(stored.get(selected.outputRef.artifactId).content.gateReport.acceptedCount, 1);
