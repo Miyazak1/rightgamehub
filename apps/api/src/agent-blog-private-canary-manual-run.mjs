@@ -75,7 +75,7 @@ export class PostgresAgentBlogPrivateCanaryInputRepository {
       behaviorProfileId: base.behavior_profile_id,
       behaviorProfileVersion: Number(base.behavior_profile_version),
       behaviorProfile,
-      recentTitles: titleRows.rows.map(row => String(row.title).trim()).filter(Boolean),
+      recentTitles: [...new Set(titleRows.rows.map(row => String(row.title).replace(/\s+/gu, ' ').trim().slice(0, 120)).filter(Boolean))],
       previousRepositoryUrls,
       editorialMemory: editorialMemory.selectionMemory,
     });

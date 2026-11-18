@@ -469,6 +469,28 @@ export class PostgresAgentRuntimeRepository {
       if (!row) fail('AGENT_RUNTIME_LEASE_LOST');
       await client.query(`INSERT INTO agent_run_events(run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
         VALUES($1,$2,'stage.succeeded','worker',$3,$4)`, [row.run_id, row.id, workerId, json({ outputRef })]);
+      // A validated editorial no-op is a successful terminal decision. It must
+      // never unlock writing, drafting or publication, or bypass other workflows.
+      if (runOutput?.type === 'blog.publication-skipped') {
+        const decision = (await client.query(`SELECT artifact.id FROM agent_runtime_stage_artifacts artifact
+          JOIN agent_runs run ON run.id=artifact.run_id
+          JOIN agent_workflow_definitions definition ON definition.workflow_key=run.workflow_key
+            AND definition.workflow_version=run.workflow_version AND definition.manifest_sha256=run.manifest_sha256
+          WHERE artifact.id=$1 AND artifact.run_id=$2 AND artifact.stage_id=$3
+            AND artifact.artifact_key='blog.selection-skip'
+            AND artifact.content_json->>'schemaVersion'='blog-selection-skip-v1'
+            AND artifact.content_json->>'reason' IN ('NO_ELIGIBLE_SUBJECT','EDITORIAL_COOLDOWN_EXHAUSTED')
+            AND run.workflow_key='blog.project.single'
+            AND definition.manifest_json->>'outputSchema'='blog-publication-result-v2'`, [runOutput.id, row.run_id, row.id])).rows[0];
+        if (!decision || row.stage_key !== 'select-subject') fail('AGENT_RUN_SKIP_INVALID');
+        const skipped = (await client.query(`UPDATE agent_run_stages SET status='skipped',
+            output_ref_json=$2,finished_at=now(),updated_at=now()
+          WHERE run_id=$1 AND status='blocked' AND ordinal>$3 RETURNING id`,
+        [row.run_id, json(outputRef), row.ordinal])).rows;
+        for (const stage of skipped) await client.query(`INSERT INTO agent_run_events(
+            run_id,stage_id,event_type,actor_kind,actor_ref,payload_json)
+          VALUES($1,$2,'stage.skipped','worker',$3,$4)`, [row.run_id, stage.id, workerId, json(outputRef)]);
+      }
       const unlocked = (await client.query(`UPDATE agent_run_stages candidate SET status='queued',available_at=now(),updated_at=now()
         WHERE candidate.run_id=$1 AND candidate.status='blocked'
           AND NOT EXISTS (

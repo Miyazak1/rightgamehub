@@ -145,7 +145,7 @@ test('autonomous discovery lets the model plan only bounded queries before gover
   assert.equal(providerCalls.length, 1);
   assert.equal(providerCalls[0].action.actionKey, 'plan-queries');
   assert.equal(providerCalls[0].action.capabilityKey, 'provider.text.generate');
-  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 4 });
+  assert.deepEqual(providerCalls[0].promptTemplate, { key: 'blog.discovery.plan', version: 5 });
   assert.equal(searched.outputRef.artifactIds.length, 2);
   const candidateSet = stored.get(finalized.outputRef.artifactId);
   assert.deepEqual(candidateSet.content.queryPolicy.queries, ['visual ai tool', 'creative agent']);
@@ -280,6 +280,23 @@ async function autonomousEmptyFixture({ queries, maxQueries, interestSignals = [
   return { requests, providerRequests, stored, call,
     plan: () => call('plan-queries', [{ stageKey: 'freeze-brief', status: 'succeeded', outputRef: frozen.outputRef }]) };
 }
+
+test('extra valid model search proposals are audited without spending beyond the frozen request ceiling', async () => {
+  const queries = ['visualization tool', 'interactive demo', 'creative coding', 'game engine', 'learning playground'];
+  for (const maxQueries of [1, 2, 3]) {
+    const f = await autonomousEmptyFixture({ queries, maxQueries });
+    const plan = await f.plan();
+    const content = f.stored.get(plan.outputRef.artifactId).content;
+    assert.deepEqual(content.queries, queries.slice(0, maxQueries));
+    assert.deepEqual(content.queryLimitApplied, { proposedCount: 5, admittedCount: maxQueries, omittedCount: 5 - maxQueries });
+    await f.call('search-candidates', [{ stageKey:'plan-queries', status:'succeeded', outputRef:plan.outputRef }]);
+    assert.equal(f.requests.length, maxQueries);
+    assert.ok(f.requests.every(item => content.queries.includes(item.request.query)));
+  }
+  const invalid = await autonomousEmptyFixture({ queries: [...queries, 'audio transcription'], maxQueries: 3 });
+  await assert.rejects(invalid.plan(), error => error.code === 'AGENT_BLOG_DISCOVERY_PLAN_INVALID');
+  assert.equal(invalid.requests.length, 0);
+});
 
 test('empty planned and fallback searches share the declared GitHub request ceiling', async () => {
   const queries = ['visual agent', 'workflow helper', 'audio transcription'];

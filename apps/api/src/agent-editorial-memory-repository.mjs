@@ -33,8 +33,10 @@ function plusDays(value, days) {
 
 function memoryLabel(item) {
   if (item.subjectKind === 'topic') return compact(item.payload?.angle, 240);
-  if (item.subjectKind === 'claim') return compact(item.payload?.rationale, 1000);
-  if (item.subjectKind === 'scenario') return compact(item.payload?.signal, 500);
+  // Legacy rationale/signal records describe editorial intent, not a repeated
+  // factual claim or a concrete use case. Keep their history, not their veto.
+  if (item.subjectKind === 'claim') return compact(item.payload?.claim, 1000);
+  if (item.subjectKind === 'scenario') return compact(item.payload?.scenario, 500);
   if (item.subjectKind === 'comparison') {
     const repositories = Array.isArray(item.payload?.repositories)
       ? item.payload.repositories.map(value => compact(value, 240)).filter(Boolean).sort() : [];
@@ -91,7 +93,8 @@ export function buildEditorialMemoryEvents({ selection, citations, summary, publ
     cooldownUntil: selection.mode === 'comparison' ? plusDays(occurredAt, 30) : null,
     citationId: project.citationId,
     payload: { repositoryKey: project.repository.key, repositoryUrl: project.repository.canonicalUrl,
-      revision: project.revision, selectionMode: selection.mode, angle },
+      revision: project.revision, selectionMode: selection.mode, angle,
+      rationale, interestSignals: selection.interestSignals ?? [] },
   }));
   if (selection.mode === 'comparison') {
     const keys = projects.map(item => item.repository.key).sort();
@@ -105,14 +108,13 @@ export function buildEditorialMemoryEvents({ selection, citations, summary, publ
   events.push({ eventType: 'topic-used', subjectKind: 'topic', subjectKey: textKey('topic', angle),
     currentRole: 'topic', permanentMainExclusion: false, cooldownUntil: plusDays(occurredAt, 90),
     citationId: null, payload: { angle } });
-  events.push({ eventType: 'claim-stated', subjectKind: 'claim', subjectKey: textKey('claim', rationale),
-    currentRole: 'claim', permanentMainExclusion: false, cooldownUntil: plusDays(occurredAt, 90),
-    citationId: null, payload: { rationale, articleSummary: compact(summary, 1000) } });
-  const interestSignals = Array.isArray(selection.interestSignals)
-    ? [...new Set(selection.interestSignals.map(item => compact(item, 500)).filter(Boolean))] : [];
-  for (const signal of interestSignals) events.push({ eventType: 'scenario-used', subjectKind: 'scenario',
-    subjectKey: textKey('scenario', signal), currentRole: 'scenario', permanentMainExclusion: false,
-    cooldownUntil: plusDays(occurredAt, 90), citationId: null, payload: { signal } });
+  // Selection justifications and stable interests remain in project intent.
+  // Only evidence-backed claims/scenarios may be stored under those concepts.
+  const claim = compact(summary, 1000);
+  if (claim.length >= 2) events.push({ eventType: 'claim-stated', subjectKind: 'claim',
+    subjectKey: textKey('claim', claim), currentRole: 'claim', permanentMainExclusion: false,
+    cooldownUntil: plusDays(occurredAt, 90), citationId: null,
+    payload: { claim, articleSummary: claim, source: 'published-article-summary' } });
   return { occurredAt, events };
 }
 

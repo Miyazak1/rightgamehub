@@ -273,10 +273,12 @@ export function createAgentBlogPublicScheduleController({
           triggerRef: `schedule:${fire.scheduleId}:${fire.logicalFireAt}` });
         const published = run?.publication?.publicationState === 'published'
           && run?.publicationAttempted === true;
+        const skipped = run?.publication?.publicationState === 'skipped'
+          && run?.publicationAttempted === false && !run?.publication?.articleId;
         const result = { publicationRunId: run?.publication?.runId ?? null,
           articleId: run?.publication?.articleId ?? null,
           publicationState: run?.publication?.publicationState ?? null };
-        const finished = await repository.finish(fire.id, fire.attemptId, published
+        const finished = await repository.finish(fire.id, fire.attemptId, published || skipped
           ? { status: 'succeeded', result, suspendAfterFailures: runtimeConfig.consecutiveFailureLimit }
           : { status: 'failed', result, errorCode: 'AGENT_BLOG_PUBLIC_SCHEDULE_PUBLICATION_INCOMPLETE',
             errorMessage: '公开计划没有得到已发布文章。',
