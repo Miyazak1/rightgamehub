@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "botId": "100000001",
+  "groupId": "100000002",
+  "allowedUsers": ["100000003"],
+  "port": 6700,
+  "dailyCalls": 20,
+  "dailyTokens": 100000,
+  "userDailyCalls": 10,
+  "userMinuteMessages": 3,
+  "groupMinuteMessages": 10,
+  "maxInputBytes": 2000,
+  "maxReplyTokens": 512,
+  "maxAttempts": 2,
+  "model": "deepseek-chat"
+}

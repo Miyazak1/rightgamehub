@@ -93,6 +93,15 @@ importers:
         specifier: 8.22.0
         version: 8.22.0
 
+  apps/qq-channel:
+    dependencies:
+      pg:
+        specifier: 8.23.0
+        version: 8.23.0
+      ws:
+        specifier: 8.22.0
+        version: 8.22.0
+
   apps/realtime:
     dependencies:
       '@gamehub/multiplayer-protocol':
