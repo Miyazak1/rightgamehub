@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Initial, independent QQ deployment only. Never runs the website release flow.
 set -Eeuo pipefail
+# Docker Compose attaches stdin by default. Never let a child consume commands
+# from an operator's enclosing bash heredoc. Explicit SQL heredocs still work.
+exec </dev/null
 umask 077
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 [[ "$ROOT" == /www/mooyu-qq ]] || { echo '请解压到 /www/mooyu-qq 后执行。'; exit 1; }

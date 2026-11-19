@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+exec </dev/null
 umask 077
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 [[ "$ROOT" == /www/mooyu-qq && $EUID -eq 0 ]] || exit 1
