@@ -66,6 +66,34 @@ observed={}
 module.subprocess.run=lambda args,**options:(observed.update(options) or SimpleNamespace(returncode=0,stdout=b'',stderr=b''))
 module.run(['docker','compose','config'])
 assert observed['env']['DESKTOP_DOWNLOADS_DIR']=='/www/retained/desktop'
+module.LOGDIR=None
+checks=[]
+web_info={'Config':{'Env':['APP_DOMAIN=example.test']},'State':{'Running':True}}
+module.discover=lambda *args:web_info
+def http(args):
+ checks.append(args)
+ return b'<html><body>test only</body></html>' if args[-1].endswith('/') else b'{"ready":true}'
+module.run=http
+assert module.wait_ready('test-only','web',seconds=1)==web_info
+assert len(checks)==2
+assert checks[0][-1]=='https://example.test/ready'
+assert checks[1][-1]=='https://example.test/'
+assert all('--insecure' not in args and '-k' not in args and '--resolve' in args and 'example.test:443:127.0.0.1' in args for args in checks)
+checks.clear();web_info['State']['Health']={'Status':'unhealthy'}
+try:module.wait_ready('test-only','web',seconds=0.01)
+except RuntimeError:pass
+else:raise AssertionError('unhealthy website accepted')
+assert checks==[]
+web_info['State'].pop('Health')
+module.run=lambda args:b'not HTML'
+try:module.probe_web(web_info)
+except RuntimeError:pass
+else:raise AssertionError('non-HTML website accepted')
+def broken(args):raise RuntimeError('HTTP failure')
+module.run=broken
+try:module.probe_web(web_info)
+except RuntimeError:pass
+else:raise AssertionError('HTTP failure accepted')
 print('QQ_DEPLOYMENT_GUARDS_AND_NONDESTRUCTIVE_ROLLBACK_OK')
 `;
  const result=spawnSync(python,['-c',script,path.resolve('deploy/qq/update-admin.py')],{encoding:'utf8',windowsHide:true});assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/QQ_DEPLOYMENT_GUARDS_AND_NONDESTRUCTIVE_ROLLBACK_OK/);

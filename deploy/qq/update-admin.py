@@ -79,12 +79,28 @@ def compose(project,files,cwd,env_file,args):
     for file in files: command+=['-f',str(file)]
     return run(command+args)
 
+def probe_web(info):
+    domain=environment(info).get('APP_DOMAIN','')
+    if not re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?',domain):
+        fail('网站域名不符合本机探测要求。')
+    # Probe the existing public listener directly, without DNS/proxies and
+    # without weakening TLS verification. A missing Docker HEALTHCHECK is not
+    # itself a failure, but Running alone is not a readiness signal either.
+    command=['curl','--silent','--show-error','--fail','--noproxy','*','--connect-timeout','3','--max-time','8','--resolve',domain+':443:127.0.0.1']
+    run(command+['https://'+domain+'/ready'])
+    html=run(command+['https://'+domain+'/'])
+    if b'<html' not in html.lower(): fail('网站首页未返回 HTML。')
+
 def wait_ready(project,service,seconds=120):
     until=time.monotonic()+seconds
     while time.monotonic()<until:
         try:
             info=discover(project,service)
-            if info['State'].get('Health',{}).get('Status')=='healthy': return info
+            health=info['State'].get('Health')
+            if service=='web' and (health is None or health.get('Status')=='healthy'):
+                probe_web(info)
+                return info
+            if service!='web' and health and health.get('Status')=='healthy': return info
         except RuntimeError: pass
         time.sleep(2)
     fail('服务未在时限内健康：'+service)
