@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {once} from 'node:events';
 import {parseConfig,parseInbound} from '../../apps/qq-channel/src/config.mjs';
-import {createQQProvider} from '../../apps/qq-channel/src/service.mjs';
+import {createQQProvider,QQService} from '../../apps/qq-channel/src/service.mjs';
 import {OneBotGateway} from '../../apps/qq-channel/src/onebot.mjs';
 const {WebSocket}=createRequire(new URL('../../apps/qq-channel/package.json',import.meta.url))('ws');
 const env={QQ_ACCESS_TOKEN:'test-only-token-'.repeat(3),QQ_DATABASE_URL:'postgresql://127.0.0.1/mooyu_qq_local_unit'};
@@ -34,6 +34,16 @@ test('QQ provider allows only a bounded final text response and invokes no tools
  for(const output of ['{"toolCall":{"name":"publish","arguments":{}}}','{"reply":"hello","toolCall":{}}','{"reply":"'+ 'x'.repeat(8001)+'"}'])
   await assert.rejects(createQQProvider({apiKey:'fixture',invoke:async()=>({output,responseRef:{finishReason:'stop'}})})({messages:[],maxTokens:512,requestId:'test'}));
  await assert.rejects(createQQProvider({apiKey:'fixture',invoke:async()=>({output:'{"reply":"partial"}',responseRef:{finishReason:'length'}})})({messages:[],maxTokens:512,requestId:'test'}));
+});
+test('QQ follow-up preserves the JSON output contract for assistant history only',()=>{
+ const service=new QQService({config:parseConfig(input,env)});
+ const history=[{role:'user',content:'用一句话介绍自己。'},{role:'assistant',content:'我是小墨鱼。\n引用："你好"，路径 \\test'},{role:'user',content:'继续'},{role:'assistant',content:'{"reply":"用户可见的字面 JSON"}'}];
+ const before=structuredClone(history),messages=service.messages(history,{input_text:'我刚才让你做了什么？'});
+ assert.deepEqual(history,before);
+ assert.deepEqual(messages.filter(m=>m.role==='assistant').map(m=>JSON.parse(m.content)),history.filter(m=>m.role==='assistant').map(m=>({reply:m.content})));
+ assert.deepEqual(messages.filter(m=>m.role==='user').map(m=>m.content),['用一句话介绍自己。','继续','我刚才让你做了什么？']);
+ assert.equal(messages.length,6);
+ assert.equal(service.messages([],{input_text:'首轮'})[1].content,'首轮');
 });
 test('real OneBot socket authenticates, binds one account, correlates echoes and sends only fixed text replies',async t=>{
  const c=parseConfig(input,env),received=[];const server=new OneBotGateway(c,{receive:async e=>received.push(e),actionTimeoutMs:150});
