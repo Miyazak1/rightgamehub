@@ -160,7 +160,28 @@ def rollback(state,record):
         qq_sql(pg,"UPDATE mooyu_qq.settings s SET policy_hash=c.bootstrap_hash FROM mooyu_qq.control_settings c WHERE c.channel_id=s.channel_id AND c.revision=1 AND s.policy_hash='managed:'||c.bootstrap_hash;")
     compose('mooyu-qq',state['qq_files']+[str(record/'rollback-qq.json')],state['qq_cwd'],'/www/mooyu-qq/.env',['up','-d','--no-deps','--no-build','--pull','never','worker'])
 
-def update(payload,record):
+def verify_resume(resume_record,manifest,infos,pg):
+    root=Path('/www/backup/gamehub')
+    if resume_record.is_symlink() or resume_record.parent!=root or not resume_record.name.startswith('update-qq-admin-'):
+        fail('接续记录路径不安全。')
+    previous=json.loads((resume_record/'previous-images.json').read_text())
+    expected={item['service']:item['image'] for item in previous}
+    if set(expected)!={'api','web','worker'} or any(info['Image']!=expected[name] for name,info in infos.items()):
+        fail('当前镜像与原回滚材料不一致，停止。')
+    prior=json.loads((resume_record/'payload/release.json').read_text())
+    if prior['baseCommit']!=manifest['baseCommit'] or prior['images']!=manifest['images']:
+        fail('接续包与原业务镜像基线不符。')
+    # Only resume the exact untouched policy reported after automatic rollback.
+    # Never discard later operator edits or a successful installation marker.
+    result=qq_sql(pg,"SELECT count(*) FROM mooyu_qq.control_settings c JOIN mooyu_qq.settings s USING(channel_id) WHERE c.revision=1 AND c.login_revision=1 AND s.policy_hash=c.bootstrap_hash;")
+    total=qq_sql(pg,'SELECT count(*) FROM mooyu_qq.control_settings;')
+    if result!='1' or total!='1': fail('QQ 设置已改变，不能自动接续首次升级。')
+
+def retain_json(path,value):
+    if path.is_symlink() or not path.is_file() or json.loads(path.read_text())!=value:
+        fail('已有管理覆盖文件与当前配置不符，停止，保留原文件。')
+
+def update(payload,record,resume_record=None):
     global LOGDIR
     LOGDIR=record
     manifest=json.loads((payload/'release.json').read_text())
@@ -170,10 +191,20 @@ def update(payload,record):
     run(['git','-C','/www/gamehub','fetch',str(payload/'source.bundle'),manifest['sourceRef']])
     if run(['git','-C','/www/gamehub','rev-parse','FETCH_HEAD']).decode().strip()!=manifest['targetCommit']: fail('离线源码目标不符。')
     run(['git','-C','/www/gamehub','merge-base','--is-ancestor',manifest['baseCommit'],manifest['targetCommit']])
-    if (Path('/www/mooyu-qq/admin')).exists(): fail('已有 QQ 管理配置，停止，避免覆盖。')
+    admin=Path('/www/mooyu-qq/admin')
+    if resume_record is None and admin.exists(): fail('已有 QQ 管理配置，停止，避免覆盖。')
+    if resume_record is not None and (not admin.is_dir() or admin.is_symlink() or (admin/'installed.json').exists()):
+        fail('当前管理安装状态不允许接续。')
     site_env=Path('/www/gamehub/deploy/.env.prod');qq_env=Path('/www/mooyu-qq/.env')
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [site_env,qq_env,Path('/www/mooyu-qq/worker.env'),Path('/www/mooyu-qq/config.json')]}
     api,web,worker,pg,napcat=[discover(p,s) for p,s in [('gamehub-production','api'),('gamehub-production','web'),('mooyu-qq','worker'),('mooyu-qq','postgres'),('mooyu-qq','napcat')]]
+    if resume_record is not None:
+        verify_resume(resume_record,manifest,{'api':api,'web':web,'worker':worker},pg)
+        probe_web(web)
+        for name in ['shared.secret','qq.override.json','site.override.json']:
+            file=admin/name
+            if file.is_symlink() or not file.is_file(): fail('管理材料不完整：'+name)
+            hashes[str(file)]=hashlib.sha256(file.read_bytes()).hexdigest()
     COMPOSE_ENV.update(recover_download_environment(web))
     site_files,site_cwd=compose_files(api);web_files,_=compose_files(web)
     if site_files!=web_files: fail('网站 API 与网页的 Compose 配置不一致，停止。')
@@ -195,20 +226,32 @@ def update(payload,record):
         tag='mooyu-qq-admin-rollback:'+record.name+'-'+label
         run(['docker','tag',info['Image'],tag]);previous.append({'service':label,'image':info['Image'],'tag':tag})
     private_write(record/'previous-images.json',json.dumps(previous))
-    run(['docker','load','--input',str(payload/'images.tar')],capture=False)
+    if resume_record is None: run(['docker','load','--input',str(payload/'images.tar')],capture=False)
     for item in manifest['images']:
         if json.loads(run(['docker','image','inspect',item['tag']]))[0]['Id']!=item['id']: fail('导入镜像身份不符，停止。')
     network='mooyu-qq-admin-control'
-    if run(['docker','network','ls','-q','--filter','name=^'+network+'$']).strip(): fail('控制网络已存在，停止，避免误用。')
-    run(['docker','network','create','--internal','--label','mooyu.qq.admin=1',network])
-    admin=Path('/www/mooyu-qq/admin');admin.mkdir(mode=0o700)
-    secret=admin/'shared.secret';private_write(secret,secrets.token_hex(32)+'\n');os.chown(secret,0,1000);os.chmod(secret,0o640)
+    if resume_record is None:
+        if run(['docker','network','ls','-q','--filter','name=^'+network+'$']).strip(): fail('控制网络已存在，停止，避免误用。')
+        run(['docker','network','create','--internal','--label','mooyu.qq.admin=1',network])
+        admin.mkdir(mode=0o700)
+        secret=admin/'shared.secret';private_write(secret,secrets.token_hex(32)+'\n');os.chown(secret,0,1000);os.chmod(secret,0o640)
+    else:
+        net=json.loads(run(['docker','network','inspect',network]))[0]
+        if net.get('Internal') is not True or (net.get('Labels') or {}).get('mooyu.qq.admin')!='1' or net.get('Containers'):
+            fail('既有控制网络状态不符合回滚后的空闲状态。')
+        secret=admin/'shared.secret'
+        if not re.fullmatch(r'[a-f0-9]{64}\n?',secret.read_text()): fail('既有控制密钥格式不符。')
     qq_extra={'QQ_ADMIN_ENABLED':'true','QQ_ADMIN_AGENT_USER_ID':agent,'QQ_ADMIN_SECRET_FILE':'/run/secrets/qq-admin-shared','QQ_NAPCAT_TOKEN':environment(napcat)['QQ_WEBUI_TOKEN']}
     api_extra={'QQ_ADMIN_ENABLED':'true','QQ_ADMIN_AGENT_USER_ID':agent,'QQ_ADMIN_SECRET_FILE':'/run/secrets/qq-admin-shared','QQ_ADMIN_ORIGIN':'http://qq-control:6780'}
     control_network={'qq-admin-control':{'external':True,'name':network}}
     qq_override=admin/'qq.override.json';site_override=admin/'site.override.json'
-    private_write(qq_override,json.dumps({'services':{'worker':overlay(worker,manifest['worker'],qq_extra,qq_render['services']['worker'].get('networks',{'default':{}}),secret)},'networks':control_network},ensure_ascii=False))
-    private_write(site_override,json.dumps({'services':{'api':overlay(api,manifest['api'],api_extra,site_render['services']['api'].get('networks',{'backend':{}}),secret),'web':overlay(web,manifest['web'])},'networks':control_network},ensure_ascii=False))
+    qq_value={'services':{'worker':overlay(worker,manifest['worker'],qq_extra,qq_render['services']['worker'].get('networks',{'default':{}}),secret)},'networks':control_network}
+    site_value={'services':{'api':overlay(api,manifest['api'],api_extra,site_render['services']['api'].get('networks',{'backend':{}}),secret),'web':overlay(web,manifest['web'])},'networks':control_network}
+    if resume_record is None:
+        private_write(qq_override,json.dumps(qq_value,ensure_ascii=False))
+        private_write(site_override,json.dumps(site_value,ensure_ascii=False))
+    else:
+        retain_json(qq_override,qq_value);retain_json(site_override,site_value)
     state={'site_files':site_files,'site_cwd':site_cwd,'qq_files':qq_files,'qq_cwd':qq_cwd,'qq_override':str(qq_override),'compose_env':dict(COMPOSE_ENV)}
     private_write(record/'rollback-state.json',json.dumps(state))
     private_write(record/'rollback.sh',"#!/usr/bin/env bash\nset -Eeuo pipefail\nexec </dev/null\numask 077\nexec 9>>/www/backup/gamehub/.unified-release.lock\nflock -n 9 || exit 1\npython3 "+str(payload/'update-admin.py')+" --rollback "+str(record)+"\n")
@@ -245,6 +288,8 @@ if __name__=='__main__':
             record=Path(sys.argv[2]);LOGDIR=record
             STEP=max([int(p.stem.split('-')[1]) for p in record.glob('command-*.log')]+[0])
             rollback(json.loads((record/'rollback-state.json').read_text()),record)
+        elif len(sys.argv)==4 and sys.argv[1]=='--resume':
+            record=Path(sys.argv[3]);update(record/'payload',record,resume_record=Path(sys.argv[2]))
         elif len(sys.argv)==3: update(Path(sys.argv[1]),Path(sys.argv[2]))
         else: fail('参数无效。')
     except Exception as error:
