@@ -1,0 +1,87 @@
+name: mooyu-qq
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+services:
+  postgres:
+    image: ${QQ_POSTGRES_IMAGE:?required}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mooyu_qq
+      POSTGRES_DB: mooyu_qq_local_server
+      POSTGRES_PASSWORD: ${QQ_POSTGRES_PASSWORD:?required}
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases: [qq-postgres]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U mooyu_qq -d mooyu_qq_local_server"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *logging
+  worker:
+    image: ${QQ_WORKER_IMAGE:?required}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: ./worker.env
+        format: raw
+    volumes:
+      - ./config.json:/config/config.json:ro
+    command: [node, apps/qq-channel/src/cli.mjs, /config/config.json, --run]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
+    mem_limit: 384m
+    cpus: 0.75
+    healthcheck:
+      test: [CMD, node, /app/deploy/qq/health.mjs]
+      interval: 30s
+      timeout: 8s
+      start_period: 20s
+      retries: 3
+    logging: *logging
+  napcat:
+    image: ${QQ_GATEWAY_IMAGE:?required}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HOME: /data/home
+      NAPCAT_WORKDIR: /data/napcat
+      NAPCAT_QQ_DATA_DIR: /data/qq
+      NAPCAT_DISABLE_MULTI_PROCESS: "1"
+      QQ_WEBUI_TOKEN: ${QQ_WEBUI_TOKEN:?required}
+      QQ_ACCESS_TOKEN: ${QQ_ACCESS_TOKEN:?required}
+    ports:
+      - "127.0.0.1:16099:6099"
+    volumes:
+      - napcat:/data
+      - ./config.json:/config/config.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ulimits:
+      core: 0
+    mem_limit: 1g
+    cpus: 1
+    logging: *logging
+volumes:
+  database:
+  napcat:

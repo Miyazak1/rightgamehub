@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily backup of the independent Mooyu QQ database
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

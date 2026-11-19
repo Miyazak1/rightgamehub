@@ -27,6 +27,18 @@ test('only an actual at segment in the expected group from an allowed human admi
  assert.equal(parseInbound({...c,enabled:false},message),null);
  assert.equal(parseInbound(c,{...message,sender:{role:'owner'},user_id:100000004}),null);
 });
+test('server deployment explicitly permits only the dedicated Compose database and preserves local policy compatibility',()=>{
+ const local=parseConfig(input,env);
+ assert.equal(local.listenHost,'127.0.0.1');
+ assert.equal(parseConfig({...input,deployment:'local'},env).policyHash,local.policyHash);
+ const serverEnv={...env,QQ_DATABASE_URL:'postgresql://qq-postgres/mooyu_qq_local_server'};
+ const server=parseConfig({...input,deployment:'server'},serverEnv);
+ assert.equal(server.listenHost,'0.0.0.0');assert.notEqual(server.policyHash,local.policyHash);
+ assert.throws(()=>parseConfig(input,serverEnv),{code:'QQ_LOCAL_DATABASE_REQUIRED'});
+ for(const database of ['postgresql://production/mooyu_qq_local_server','postgresql://qq-postgres/gamehub','postgresql://127.0.0.1/mooyu_qq_local_server','postgresql://qq-postgres.attacker/mooyu_qq_local_server'])
+  assert.throws(()=>parseConfig({...input,deployment:'server'},{...env,QQ_DATABASE_URL:database}),{code:'QQ_LOCAL_DATABASE_REQUIRED'});
+ assert.throws(()=>parseConfig({...input,deployment:'public'},env),{code:'QQ_DEPLOYMENT_INVALID'});
+});
 test('QQ provider allows only a bounded final text response and invokes no tools or automatic retries',async()=>{
  let calls=0;const invoke=async request=>{calls++;assert.equal(request.tokenCeiling,512);assert.equal(request.timeoutSeconds,30);return {output:'{"reply":"你好"}',responseRef:{finishReason:'stop'},usage:{inputTokens:10,outputTokens:3}};};
  const provider=createQQProvider({apiKey:'local-fixture',model:'deepseek-chat',invoke});

@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up the independent Mooyu QQ database
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/bin/bash /www/mooyu-qq/backup.sh

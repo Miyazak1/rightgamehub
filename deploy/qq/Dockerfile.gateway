@@ -1,0 +1,13 @@
+# Context is assembled from the verified upstream build and official Tencent QQ.
+FROM mooyu-qq-linux-base:verification
+WORKDIR /opt
+COPY qq /opt/qq
+COPY napcat /opt/napcat
+COPY gateway-entry.cjs /opt/gateway-entry.cjs
+COPY manage.mjs /opt/manage.mjs
+COPY node_addon.node /opt/node_addon.node
+ENV LD_LIBRARY_PATH=/opt/qq:/opt/qq/sharp-lib
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libgnutls.so.30:/lib/x86_64-linux-gnu/libcrypto.so.3
+RUN mkdir -p /data && chown node:node /data
+USER node
+CMD ["node", "/opt/gateway-entry.cjs"]

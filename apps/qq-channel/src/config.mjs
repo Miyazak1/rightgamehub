@@ -5,7 +5,7 @@ const id=value=>{if(typeof value!=='string'||!/^[1-9][0-9]{4,15}$/u.test(value))
 const integer=(value,fallback,min,max)=>{const n=value??fallback;if(!Number.isSafeInteger(n)||n<min||n>max)reject('QQ_LIMIT_INVALID');return n;};
 export function parseConfig(input,env={}){
   if(!input||Object.getPrototypeOf(input)!==Object.prototype)reject('QQ_CONFIG_INVALID');
-  const keys=['enabled','botId','groupId','allowedUsers','port','dailyCalls','dailyTokens','userDailyCalls','userMinuteMessages','groupMinuteMessages','maxInputBytes','maxReplyTokens','maxAttempts','model','persona'];
+  const keys=['enabled','botId','groupId','allowedUsers','port','dailyCalls','dailyTokens','userDailyCalls','userMinuteMessages','groupMinuteMessages','maxInputBytes','maxReplyTokens','maxAttempts','model','persona','deployment'];
   if(Object.keys(input).some(key=>!keys.includes(key)))reject('QQ_CONFIG_UNKNOWN_FIELD');
   if(typeof input.enabled!=='boolean')reject('QQ_ENABLE_FLAG_REQUIRED');
   const botId=id(input.botId),groupId=id(input.groupId);
@@ -17,19 +17,22 @@ export function parseConfig(input,env={}){
   const persona=input.persona??defaultAgentBehaviorProfile().core;
   if(!persona||Object.keys(persona).sort().join(',')!=='audience,mission,personality,voice'
     ||Object.values(persona).some(text=>typeof text!=='string'||!text.trim()||Buffer.byteLength(text)>2000))reject('QQ_PERSONA_INVALID');
-  const config={enabled:input.enabled,botId,groupId,allowedUsers,port:integer(input.port,6700,1024,65535),model,persona,
+  if(input.deployment!==undefined&&!['local','server'].includes(input.deployment))reject('QQ_DEPLOYMENT_INVALID');
+  const server=input.deployment==='server';
+  const config={...(server?{deployment:'server'}:{}),enabled:input.enabled,botId,groupId,allowedUsers,port:integer(input.port,6700,1024,65535),model,persona,
     dailyCalls:integer(input.dailyCalls,20,1,200),dailyTokens:integer(input.dailyTokens,100000,1024,2000000),
     userDailyCalls:integer(input.userDailyCalls,10,1,100),userMinuteMessages:integer(input.userMinuteMessages,3,1,10),
     groupMinuteMessages:integer(input.groupMinuteMessages,10,1,30),maxInputBytes:integer(input.maxInputBytes,2000,1,4000),
     maxReplyTokens:integer(input.maxReplyTokens,512,64,1200),maxAttempts:integer(input.maxAttempts,2,1,3)};
   const token=env.QQ_ACCESS_TOKEN;
   if(typeof token!=='string'||token.length<32||token.length>256||!/^[-_a-zA-Z0-9]+$/u.test(token))reject('QQ_ACCESS_TOKEN_REQUIRED');
-  // First release is deliberately local-only and cannot point at production.
+  // Server mode accepts only the dedicated Compose DB alias, never a website DB.
   let database;try{database=new URL(env.QQ_DATABASE_URL);}catch{reject('QQ_LOCAL_DATABASE_REQUIRED');}
-  if(!['postgres:','postgresql:'].includes(database.protocol)||!['127.0.0.1','localhost','[::1]'].includes(database.hostname)
+  const allowedHosts=server?['qq-postgres']:['127.0.0.1','localhost','[::1]'];
+  if(!['postgres:','postgresql:'].includes(database.protocol)||!allowedHosts.includes(database.hostname)
     ||!/^\/mooyu_qq_local_[a-z0-9_]{1,60}$/u.test(database.pathname))reject('QQ_LOCAL_DATABASE_REQUIRED');
   for(const [key,value]of Object.entries(env))if(/^PAPER_STUDY_(ENABLED|WORKER_ENABLED|MODELS_ENABLED|PUBLISH_ENABLED)$/u.test(key)&&value!=='false')reject('QQ_PAPER_MUST_REMAIN_DISABLED');
-  return {...config,channelId:botId+':'+groupId,accessToken:token,databaseUrl:database.href,
+  return {...config,listenHost:server?'0.0.0.0':'127.0.0.1',channelId:botId+':'+groupId,accessToken:token,databaseUrl:database.href,
     policyHash:createHash('sha256').update(JSON.stringify(config)).digest('hex')};
 }
 

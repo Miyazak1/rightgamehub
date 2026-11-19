@@ -49,7 +49,7 @@ export class OneBotGateway {
       });
       this.log({event:'gateway-connected'});
     });
-    await new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(port,'127.0.0.1',resolve);});
+    await new Promise((resolve,reject)=>{this.server.once('error',reject);this.server.listen(port,this.config.listenHost??'127.0.0.1',resolve);});
     return this.server.address();
   }
   async send(row){

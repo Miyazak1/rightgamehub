@@ -1,0 +1,2 @@
+FROM node:22.23.2-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+RUN apt-get update && apt-get install -y --no-install-recommends libx11-6 libx11-xcb1 libxext6 libgssapi-krb5-2 libglib2.0-0 libexpat1 libjpeg62-turbo libpng16-16 libtiff6 libwebp7 libwebpmux3 libwebpdemux2 libexif12 liblcms2-2 liborc-0.4-0 libnss3 ca-certificates && rm -rf /var/lib/apt/lists/*
