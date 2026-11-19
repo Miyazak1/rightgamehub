@@ -42,7 +42,44 @@ calls.clear();sql.clear();revision='1';module.rollback(state,Path('/private/reco
 assert len(calls)==3 and calls[1][-1]==['stop','worker'] and calls[2][0]=='mooyu-qq'
 assert any('c.revision=1' in text for text in sql)
 assert not any('DROP ' in text or 'DELETE ' in text or 'TRUNCATE ' in text for text in sql)
+from types import SimpleNamespace
+real_path=module.Path
+module.Path=lambda value: SimpleNamespace(is_absolute=lambda:value.startswith('/'),is_dir=lambda:True,is_symlink=lambda:False,resolve=lambda:value)
+web={'Mounts':[{'Destination':'/srv/desktop-downloads','Source':'/www/retained/desktop','Type':'bind','RW':False},{'Destination':'/srv/agent-downloads','Source':'/www/retained/agent','Type':'bind','RW':False}]}
+recovered=module.recover_download_environment(web)
+assert recovered=={'DESKTOP_DOWNLOADS_DIR':'/www/retained/desktop','AGENT_DOWNLOADS_DIR':'/www/retained/agent'}
+for kind in ['missing','duplicate','writable','volume','outside']:
+ value=copy.deepcopy(web)
+ if kind=='missing': value['Mounts'].pop()
+ if kind=='duplicate': value['Mounts'].append(value['Mounts'][0])
+ if kind=='writable': value['Mounts'][0]['RW']=True
+ if kind=='volume': value['Mounts'][0]['Type']='volume'
+ if kind=='outside': value['Mounts'][0]['Source']='/other/path'
+ try:module.recover_download_environment(value)
+ except RuntimeError:pass
+ else:raise AssertionError('unsafe mount accepted: '+kind)
+module.Path=real_path
+state['compose_env']=recovered
+module.COMPOSE_ENV.clear();module.rollback(state,Path('/private/record'))
+assert module.COMPOSE_ENV==recovered
+observed={}
+module.subprocess.run=lambda args,**options:(observed.update(options) or SimpleNamespace(returncode=0,stdout=b'',stderr=b''))
+module.run(['docker','compose','config'])
+assert observed['env']['DESKTOP_DOWNLOADS_DIR']=='/www/retained/desktop'
 print('QQ_DEPLOYMENT_GUARDS_AND_NONDESTRUCTIVE_ROLLBACK_OK')
 `;
  const result=spawnSync(python,['-c',script,path.resolve('deploy/qq/update-admin.py')],{encoding:'utf8',windowsHide:true});assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/QQ_DEPLOYMENT_GUARDS_AND_NONDESTRUCTIVE_ROLLBACK_OK/);
+});
+
+test('actual unified-downloads Compose overlay requires and preserves recovered bind directories',{skip:process.env.QQ_ADMIN_TEST_DOCKER!=='1'},()=>{
+ const fs=require('node:fs'),os=require('node:os');const root=fs.mkdtempSync(path.join(os.tmpdir(),'qq-admin-compose-'));
+ try{
+  const base=path.join(root,'base.json'),envFile=path.join(root,'empty.env');fs.writeFileSync(base,JSON.stringify({services:{web:{image:'test-only:fixture'}}}));fs.writeFileSync(envFile,'');
+  const args=['compose','--project-name','qq-admin-render-test','--project-directory',root,'--env-file',envFile,'-f',base,'-f',path.resolve('deploy/compose.unified-downloads.yml'),'config','--format','json'];
+  const env={...process.env};delete env.DESKTOP_DOWNLOADS_DIR;delete env.AGENT_DOWNLOADS_DIR;
+  const missing=spawnSync('docker',args,{env,encoding:'utf8',windowsHide:true});assert.notEqual(missing.status,0);assert.match(missing.stderr,/DOWNLOADS_DIR/);
+  env.DESKTOP_DOWNLOADS_DIR=path.join(root,'desktop');env.AGENT_DOWNLOADS_DIR=path.join(root,'agent');fs.mkdirSync(env.DESKTOP_DOWNLOADS_DIR);fs.mkdirSync(env.AGENT_DOWNLOADS_DIR);
+  const valid=spawnSync('docker',args,{env,encoding:'utf8',windowsHide:true});assert.equal(valid.status,0,valid.stderr);const mounts=JSON.parse(valid.stdout).services.web.volumes;
+  assert.equal(mounts.length,2);for(const m of mounts){assert.equal(m.type,'bind');assert.equal(m.read_only,true);assert.notEqual(m.bind?.create_host_path,true);assert(m.target==='/srv/desktop-downloads'||m.target==='/srv/agent-downloads');}
+ }finally{assert(path.resolve(root).startsWith(path.resolve(os.tmpdir())+path.sep));fs.rmSync(root,{recursive:true,force:true});}
 });

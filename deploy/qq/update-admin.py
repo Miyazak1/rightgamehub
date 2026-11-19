@@ -7,13 +7,14 @@ import hashlib,json,os,re,secrets,subprocess,sys,time
 from pathlib import Path
 LOGDIR=None
 STEP=0
+COMPOSE_ENV={}
 
 def fail(message):
     raise RuntimeError(message)
 
 def run(args, *, data=None, capture=True):
     global STEP
-    result=subprocess.run(args,input=data,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180,check=False)
+    result=subprocess.run(args,input=data,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180,check=False,env={**os.environ,**COMPOSE_ENV})
     diagnostic=''
     if LOGDIR is not None:
         STEP+=1
@@ -37,6 +38,20 @@ def private_write(path,value):
 
 def environment(info):
     return dict(item.split('=',1) for item in info['Config'].get('Env',[]) if '=' in item)
+
+def recover_download_environment(web):
+    result={}
+    for variable,target in [('DESKTOP_DOWNLOADS_DIR','/srv/desktop-downloads'),('AGENT_DOWNLOADS_DIR','/srv/agent-downloads')]:
+        mounts=[m for m in web.get('Mounts',[]) if m.get('Destination')==target]
+        if len(mounts)!=1 or mounts[0].get('Type')!='bind' or mounts[0].get('RW',True):
+            fail('无法确认当前只读下载目录：'+variable)
+        source=mounts[0].get('Source','');directory=Path(source)
+        if not directory.is_absolute() or not directory.is_dir() or directory.is_symlink() or not str(directory.resolve()).startswith('/www/'):
+            fail('当前下载目录路径不安全：'+variable)
+        # Live bind mounts are authoritative. Ignore conflicting shell values;
+        # never guess paths, create directories or rewrite the production env.
+        result[variable]=source
+    return result
 
 def discover(project,service):
     ids=run(['docker','ps','-q','--filter','label=com.docker.compose.project='+project,'--filter','label=com.docker.compose.service='+service]).decode().split()
@@ -113,6 +128,7 @@ def validate_snapshot(rendered,old_infos):
         if not old_tmp.issubset(new_tmp): fail('原临时文件挂载未保留：'+service)
 
 def rollback(state,record):
+    COMPOSE_ENV.update(state.get('compose_env',{}))
     print('更新未通过，恢复原网站镜像；不回退或删除数据库。',flush=True)
     compose('gamehub-production',state['site_files']+[str(record/'rollback-site.json')],state['site_cwd'],'/www/gamehub/deploy/.env.prod',['up','-d','--no-deps','--no-build','--pull','never','api','web'])
     # Preserve administrator changes even if a website verification subsequently
@@ -142,6 +158,7 @@ def update(payload,record):
     site_env=Path('/www/gamehub/deploy/.env.prod');qq_env=Path('/www/mooyu-qq/.env')
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [site_env,qq_env,Path('/www/mooyu-qq/worker.env'),Path('/www/mooyu-qq/config.json')]}
     api,web,worker,pg,napcat=[discover(p,s) for p,s in [('gamehub-production','api'),('gamehub-production','web'),('mooyu-qq','worker'),('mooyu-qq','postgres'),('mooyu-qq','napcat')]]
+    COMPOSE_ENV.update(recover_download_environment(web))
     site_files,site_cwd=compose_files(api);web_files,_=compose_files(web)
     if site_files!=web_files: fail('网站 API 与网页的 Compose 配置不一致，停止。')
     qq_files,qq_cwd=compose_files(worker)
@@ -176,7 +193,7 @@ def update(payload,record):
     qq_override=admin/'qq.override.json';site_override=admin/'site.override.json'
     private_write(qq_override,json.dumps({'services':{'worker':overlay(worker,manifest['worker'],qq_extra,qq_render['services']['worker'].get('networks',{'default':{}}),secret)},'networks':control_network},ensure_ascii=False))
     private_write(site_override,json.dumps({'services':{'api':overlay(api,manifest['api'],api_extra,site_render['services']['api'].get('networks',{'backend':{}}),secret),'web':overlay(web,manifest['web'])},'networks':control_network},ensure_ascii=False))
-    state={'site_files':site_files,'site_cwd':site_cwd,'qq_files':qq_files,'qq_cwd':qq_cwd,'qq_override':str(qq_override)}
+    state={'site_files':site_files,'site_cwd':site_cwd,'qq_files':qq_files,'qq_cwd':qq_cwd,'qq_override':str(qq_override),'compose_env':dict(COMPOSE_ENV)}
     private_write(record/'rollback-state.json',json.dumps(state))
     private_write(record/'rollback.sh',"#!/usr/bin/env bash\nset -Eeuo pipefail\nexec </dev/null\numask 077\nexec 9>>/www/backup/gamehub/.unified-release.lock\nflock -n 9 || exit 1\npython3 "+str(payload/'update-admin.py')+" --rollback "+str(record)+"\n")
     # Compose array/map merges must retain the original service data mounts,
