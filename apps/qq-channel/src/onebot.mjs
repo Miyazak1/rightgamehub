@@ -59,7 +59,7 @@ export class OneBotGateway {
     return new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));},this.timeout);timer.unref();
       this.pending.set(echo,{socket,timer,resolve,reject});
-      try{socket.send(JSON.stringify({action:'send_group_msg',params:{group_id:Number(this.config.groupId),message},echo}),err=>{
+      try{socket.send(JSON.stringify({action:'send_group_msg',params:{group_id:Number(row.origin_group_id??this.config.groupId),message},echo}),err=>{
         if(err){clearTimeout(timer);this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));}
       });}catch{clearTimeout(timer);this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));}
     });

@@ -16,6 +16,7 @@ export class QQService {
     Object.assign(this,{config,repository,provider,gateway,log,fault});this.controller=new AbortController();
   }
   async receive(event){
+    if(this.repository.control){const result=await this.repository.admit(event);if(result.accepted&&!result.duplicate)this.log({event:'admission',messageId:String(event.message_id),accepted:true});return result;}
     const input=parseInbound(this.config,event);if(!input)return {accepted:false,code:'QQ_IGNORED'};
     const result=await this.repository.accept(input);
     // Duplicate and rejected flood traffic must not become unbounded logs.
@@ -32,12 +33,16 @@ export class QQService {
     ...history.map(message=>message.role==='assistant'?{...message,content:JSON.stringify({reply:message.content})}:message),
     {role:'user',content:row.input_text}];}
   async tick(){
-    if(!this.config.enabled||this.controller.signal.aborted)return {idle:true};
+    if(this.controller.signal.aborted)return {idle:true};
+    if(!this.repository.control&&!this.config.enabled)return {idle:true};
     return this.repository.locked(async c=>{
+      if(this.repository.control)this.config=await this.repository.check(c);
       await this.repository.recover(c);
+      if(!this.config.enabled)return {paused:true};
+      if(this.readiness&&!this.readiness(this.config))return {accountNotReady:true};
       if(!this.gateway.connected())return {offline:true};
       const row=await this.repository.next(c);if(!row)return {idle:true};
-      if(!this.config.allowedUsers.includes(row.user_id)){await this.repository.deny(c,row);return {policyRejected:true};}
+      if(!this.config.allowedUsers.includes(row.user_id)||(row.origin_group_id&&row.origin_group_id!==this.config.groupId)){await this.repository.deny(c,row);return {policyRejected:true};}
       if(row.status==='queued'){
         const messages=this.messages(await this.repository.history(c,row),row);
         // UTF-8 bytes plus envelope overhead conservatively reserve input tokens.

@@ -1,4 +1,5 @@
 .git
+private-deployments
 .runtime
 artifacts
 !artifacts/

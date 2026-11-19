@@ -2911,3 +2911,17 @@ footer.community-actions > .community-report-button {
 @media(max-width:860px){.capability-task-panel__summary{justify-items:start}.capability-task-panel__actions{align-items:stretch;flex-direction:column;grid-column:2}.capability-task-panel>ol>li{grid-template-columns:12px minmax(0,1fr)}}
 
 .agent-avatar-editor{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}.agent-avatar-editor__preview{width:88px;height:88px;flex:0 0 88px;overflow:hidden;border-radius:18px}.agent-avatar-editor__preview img{width:100%;height:100%;object-fit:contain}.agent-avatar-editor__actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.agent-admin__list img.agent-admin__avatar{width:40px;height:40px;object-fit:contain;border-radius:10px}
+/* Administrator-only QQ channel controls. */
+.qq-admin-status{display:flex;flex-wrap:wrap;gap:12px;padding:14px 0;font-size:13px}
+.qq-admin-login{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.qq-admin-qr{flex-basis:100%;padding:20px;background:#fff;color:#171425;border:1px solid #ded9eb;max-width:300px;text-align:center}
+.qq-admin-qr svg{max-width:100%;height:auto}
+.qq-admin-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;border:1px solid var(--gh-border,#ded9eb);padding:18px;margin:0 0 18px}
+.qq-admin-fields label{display:grid;gap:7px;min-width:0}
+.qq-admin-fields input:not([type=checkbox]),.qq-admin-fields textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--gh-border,#ded9eb);border-radius:5px;background:var(--gh-panel,#fff);color:inherit;font:inherit}
+.qq-admin-fields small,.qq-admin-note{font-size:12px;line-height:1.6;opacity:.8}
+.qq-admin-fields .qq-admin-enabled{grid-column:1/-1;display:flex;align-items:center;gap:10px}
+.agent-qq-admin footer{display:flex;gap:12px;flex-wrap:wrap}
+.agent-qq-admin details{margin-top:18px;font-size:12px}
+.agent-qq-admin details li{margin:8px 0;overflow-wrap:anywhere}
+@media(max-width:680px){.qq-admin-fields{grid-template-columns:1fr}.qq-admin-status{flex-direction:column;gap:6px}}

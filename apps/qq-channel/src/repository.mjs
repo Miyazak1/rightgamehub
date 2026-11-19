@@ -1,9 +1,10 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {reject} from './config.mjs';
+import {reject,parseInbound,applyQQControlPolicy} from './config.mjs';
+import {qqPolicyView,qqAdminError} from '../../api/src/qq-admin-protocol.mjs';
 const day="date_trunc('day',now() AT TIME ZONE 'Asia/Shanghai') AT TIME ZONE 'Asia/Shanghai'";
 export class QQRepository {
-  constructor(pool,config){this.pool=pool;this.config=config;this.id=config.channelId;}
+  constructor(pool,config){this.pool=pool;this.config=config;this.bootstrap=structuredClone(config);this.id=config.channelId;this.control=false;}
   async transaction(client,fn){
     try{await client.query('BEGIN');await client.query("SET LOCAL lock_timeout='3s'");await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,1))',[this.id]);
       const value=await fn(client);await client.query('COMMIT');return value;
@@ -23,28 +24,54 @@ export class QQRepository {
   }
   async initialize(){return this.locked(client=>this.transaction(client,async c=>{
     await c.query(await readFile(new URL('./schema.sql',import.meta.url),'utf8'));
+    const existing=(await c.query('SELECT policy_hash FROM mooyu_qq.settings WHERE channel_id=$1',[this.id])).rows[0];
+    if(existing?.policy_hash.startsWith('managed:'))reject('QQ_MANAGED_INITIALIZATION_REQUIRED');
     await c.query(`INSERT INTO mooyu_qq.settings(channel_id,policy_hash) VALUES($1,$2)
       ON CONFLICT(channel_id) DO UPDATE SET policy_hash=EXCLUDED.policy_hash`,[this.id,this.config.policyHash]);
     await this.event(c,null,'configured',{policyHash:this.config.policyHash});return {initialized:true};
   }));}
   async check(client=this.pool){
+    if(this.control){
+      const row=(await client.query('SELECT s.policy_hash,c.bootstrap_hash,c.policy FROM mooyu_qq.settings s JOIN mooyu_qq.control_settings c USING(channel_id) WHERE s.channel_id=$1',[this.id])).rows[0];
+      if(row?.bootstrap_hash!==this.bootstrap.policyHash||row?.policy_hash!=='managed:'+this.bootstrap.policyHash)reject('QQ_POLICY_REINITIALIZATION_REQUIRED');
+      this.config=applyQQControlPolicy(this.bootstrap,row.policy);return this.config;
+    }
     const row=(await client.query('SELECT policy_hash FROM mooyu_qq.settings WHERE channel_id=$1',[this.id])).rows[0];
     if(row?.policy_hash!==this.config.policyHash)reject('QQ_POLICY_REINITIALIZATION_REQUIRED');
+    return this.config;
   }
-  async status(){
-    await this.check();
-    const states=(await this.pool.query('SELECT status,count(*)::int AS count FROM mooyu_qq.messages WHERE channel_id=$1 GROUP BY status',[this.id])).rows;
-    const review=(await this.pool.query("SELECT message_id,error_code FROM mooyu_qq.messages WHERE channel_id=$1 AND status='needs-review' ORDER BY created_at",[this.id])).rows;
-    const budget=(await this.pool.query(`SELECT count(*)::int AS calls,COALESCE(sum(reserved_tokens),0)::int AS tokens
+  async enableControl(){
+    const outcome=await this.locked(c=>this.transaction(c,async client=>{
+      const row=(await client.query('SELECT policy_hash FROM mooyu_qq.settings WHERE channel_id=$1 FOR UPDATE',[this.id])).rows[0];
+      if(![this.bootstrap.policyHash,'managed:'+this.bootstrap.policyHash].includes(row?.policy_hash))reject('QQ_POLICY_REINITIALIZATION_REQUIRED');
+      await client.query(await readFile(new URL('./control-schema.sql',import.meta.url),'utf8'));
+      const inserted=await client.query('INSERT INTO mooyu_qq.control_settings(channel_id,bootstrap_hash,policy) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING channel_id',[this.id,this.bootstrap.policyHash,JSON.stringify(qqPolicyView(this.bootstrap))]);
+      const control=(await client.query('SELECT bootstrap_hash FROM mooyu_qq.control_settings WHERE channel_id=$1',[this.id])).rows[0];
+      if(control.bootstrap_hash!==this.bootstrap.policyHash)reject('QQ_POLICY_REINITIALIZATION_REQUIRED');
+      await client.query('UPDATE mooyu_qq.messages SET origin_group_id=$2 WHERE channel_id=$1 AND origin_group_id IS NULL',[this.id,this.bootstrap.groupId]);
+      await client.query('UPDATE mooyu_qq.settings SET policy_hash=$2 WHERE channel_id=$1',[this.id,'managed:'+this.bootstrap.policyHash]);
+      if(inserted.rowCount)await this.event(client,null,'control-initialized',{revision:1});
+      return {initialized:true};
+    }));
+    if(outcome.busy)throw qqAdminError('QQ_WORKER_BUSY',409);this.control=true;await this.check();return outcome;
+  }
+  async status(client=this.pool){
+    await this.check(client);
+    const states=(await client.query('SELECT status,count(*)::int AS count FROM mooyu_qq.messages WHERE channel_id=$1 GROUP BY status',[this.id])).rows;
+    const review=(await client.query("SELECT message_id,error_code FROM mooyu_qq.messages WHERE channel_id=$1 AND status='needs-review' ORDER BY created_at",[this.id])).rows;
+    const budget=(await client.query(`SELECT count(*)::int AS calls,COALESCE(sum(reserved_tokens),0)::int AS tokens
       FROM mooyu_qq.attempts WHERE channel_id=$1 AND created_at>=(${day})`,[this.id])).rows[0];
     return {states,review,budget:{...budget,maxCalls:this.config.dailyCalls,maxTokens:this.config.dailyTokens,timezone:'Asia/Shanghai'}};
   }
   async event(c,messageId,type,details={}){await c.query('INSERT INTO mooyu_qq.events(channel_id,message_id,event_type,details) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',[this.id,messageId,type,JSON.stringify(details)]);}
-  async accept(input){
+  async admit(event){return this.accept(event,true);}
+  async accept(input,inbound=false){
     const client=await this.pool.connect();let destroy=false;
     const disconnected=()=>{destroy=true;};client.on('error',disconnected);
     try{return await this.transaction(client,async c=>{
       await this.check(c);
+      if(inbound){input=parseInbound(this.config,input);if(!input)return {accepted:false,code:'QQ_IGNORED'};}
+      else if(this.control&&!this.config.enabled)return {accepted:false,code:'QQ_DISABLED'};
       const fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex');
       const prior=(await c.query('SELECT fingerprint,status FROM mooyu_qq.messages WHERE channel_id=$1 AND message_id=$2',[this.id,input.messageId])).rows[0];
       if(prior){if(prior.fingerprint!==fingerprint){await this.event(c,input.messageId,'id-conflict');return {accepted:false,code:'QQ_MESSAGE_CONFLICT'};}
@@ -58,7 +85,8 @@ export class QQRepository {
       if(counts.daily>=this.config.dailyCalls*2||counts.user_daily>=this.config.userDailyCalls*2)return {accepted:false,code:'QQ_DAILY_MESSAGE_LIMIT'};
       if(counts.recent>=this.config.groupMinuteMessages||counts.user_recent>=this.config.userMinuteMessages||counts.pending>=50)
         return {accepted:false,code:'QQ_RATE_LIMITED'};
-      await c.query('INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint) VALUES($1,$2,$3,$4,$5)',[this.id,input.messageId,input.userId,input.text,fingerprint]);
+      if(this.control)await c.query('INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint,origin_group_id) VALUES($1,$2,$3,$4,$5,$6)',[this.id,input.messageId,input.userId,input.text,fingerprint,this.config.groupId]);
+      else await c.query('INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint) VALUES($1,$2,$3,$4,$5)',[this.id,input.messageId,input.userId,input.text,fingerprint]);
       await this.event(c,input.messageId,'accepted');return {accepted:true,duplicate:false};
     });}finally{client.removeListener('error',disconnected);client.release(destroy||Boolean(client.qqBroken));}
   }
@@ -75,7 +103,7 @@ export class QQRepository {
     ORDER BY CASE WHEN status='ready' THEN 0 ELSE 1 END,created_at,message_id LIMIT 1`,[this.id])).rows[0]??null;}
   async history(c,row){
     const messages=(await c.query(`SELECT input_text,reply FROM mooyu_qq.messages WHERE channel_id=$1 AND user_id=$2 AND status='delivered' AND error_code IS NULL
-      AND created_at<$3 ORDER BY created_at DESC LIMIT 3`,[this.id,row.user_id,row.created_at])).rows.reverse();
+      AND created_at<$3 ${this.control?'AND origin_group_id=$4':''} ORDER BY created_at DESC LIMIT 3`,this.control?[this.id,row.user_id,row.created_at,row.origin_group_id]:[this.id,row.user_id,row.created_at])).rows.reverse();
     return messages.flatMap(item=>[{role:'user',content:item.input_text},{role:'assistant',content:item.reply}]);
   }
   async deny(c,row){return this.transaction(c,async client=>{

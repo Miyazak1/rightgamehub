@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {defaultAgentBehaviorProfile} from '../../api/src/agent-behavior-profile.mjs';
 export const reject=code=>{throw Object.assign(new Error(code),{code});};
-const id=value=>{if(typeof value!=='string'||!/^[1-9][0-9]{4,15}$/u.test(value))reject('QQ_ID_INVALID');return value;};
+const id=value=>{if(typeof value!=='string'||!/^[1-9][0-9]{4,15}$/u.test(value)||!Number.isSafeInteger(Number(value)))reject('QQ_ID_INVALID');return value;};
 const integer=(value,fallback,min,max)=>{const n=value??fallback;if(!Number.isSafeInteger(n)||n<min||n>max)reject('QQ_LIMIT_INVALID');return n;};
 export function parseConfig(input,env={}){
   if(!input||Object.getPrototypeOf(input)!==Object.prototype)reject('QQ_CONFIG_INVALID');
@@ -46,4 +46,14 @@ export function parseInbound(config,event){
   const text=event.message.filter(part=>part.type==='text').map(part=>typeof part.data?.text==='string'?part.data.text:'').join('').trim();
   if(!text||Buffer.byteLength(text)>config.maxInputBytes||/[\x00-\x08\x0b\x0c\x0e-\x1f]/u.test(text))return null;
   return {messageId:String(event.message_id),userId:String(event.user_id),text};
+}
+export function applyQQControlPolicy(base,policy){
+ const keys=['enabled','botId','groupId','allowedUsers','port','dailyCalls','dailyTokens','userDailyCalls','userMinuteMessages','groupMinuteMessages','maxInputBytes','maxReplyTokens','maxAttempts','model','persona','deployment'];
+ const input=Object.fromEntries(keys.filter(key=>Object.hasOwn(base,key)).map(key=>[key,base[key]]));
+ const mutable=['enabled','groupId','allowedUsers','dailyCalls','dailyTokens','userDailyCalls','userMinuteMessages','groupMinuteMessages'];
+ if(!policy||Object.keys(policy).sort().join(',')!==[...mutable].sort().join(','))reject('QQ_CONTROL_INPUT');
+ const next=parseConfig({...input,...policy},{QQ_ACCESS_TOKEN:base.accessToken,QQ_DATABASE_URL:base.databaseUrl});
+ // Administrative channel identity stays stable: changing groups cannot reset
+ // the daily ledger or overwrite old history. Origin group is stored per task.
+ return {...next,channelId:base.channelId};
 }

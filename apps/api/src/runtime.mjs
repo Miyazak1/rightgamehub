@@ -1,4 +1,5 @@
 import { createPlatformAssistantProvider, createPlatformAssistantService } from './platform-assistant.mjs';
+import {createAgentQQAdminService} from './agent-qq-admin-service.mjs';
 import { createPlatformAgentTools } from './platform-agent-tools.mjs';
 import { createAgentCapabilityService } from './agent-capability-service.mjs';
 import { createVerifiedMathEngine } from './practice/engine.mjs';
@@ -243,6 +244,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentAvatarService=createAgentAvatarService({repository:new PostgresAgentAvatarRepository(database.pool,avatarStore),
     authorizeOperator:async actor=>actor?.profile?.role==='admin',processImage:authService.processAvatarUpload});
   const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin',avatarService:agentAvatarService});
+  const agentQQAdminService=createAgentQQAdminService({pool:database.pool,env});
   const agentSecretVault=createAgentSecretVault({masterKey:config.agentSecretEncryptionKey});
   const agentBlogWriter=createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs});
   const agentBlogRuntimeShadowProjector=createAgentBlogRuntimeShadowProjector({repository:new PostgresAgentBlogRuntimeShadowRepository(database.pool),runtimeRepository:new PostgresAgentRuntimeRepository(database.pool),mode:config.agentBlogFoundationMode});
@@ -367,6 +369,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     discoveryCampaignService,
     blogService,
     agentAccountService,
+    agentQQAdminService,
     agentBlogAutomation,
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
