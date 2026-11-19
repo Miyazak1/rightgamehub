@@ -27,6 +27,18 @@ const paperOperationsRetentionSchema={type:'object',additionalProperties:false,r
 
 export function registerAgentAccountRoutes(app,{accountService,automation,runtimeRead,paperFollowUp,paperIntake,paperDiscovery,paperResearch,paperResearchOperations,publicationCutover,publicOperations,requireAuth}){
   const envelope=data=>({data});
+  app.put('/v1/admin/agents/:agentUserId/avatar',{preHandler:[requireAuth,
+    async request=>accountService.authorizeAvatar(request.actor,request.params.agentUserId)],
+    bodyLimit:2*1024*1024,schema:{params:agentParams}},async(request,reply)=>{
+    if(!['image/png','image/jpeg','image/gif','image/webp'].includes(request.headers['content-type']?.split(';')[0]))
+      throw Object.assign(new Error('请选择有效的头像图片。'),{code:'AVATAR_INVALID',statusCode:415});
+    const chunks=[];let size=0;
+    for await(const chunk of request.body){size+=chunk.length;if(size>2*1024*1024)throw Object.assign(new Error('头像不能超过 2 MB。'),{code:'AVATAR_TOO_LARGE',statusCode:413});chunks.push(chunk);}
+    reply.header('Cache-Control','no-store');return envelope(await accountService.uploadAvatar(request.actor,request.params.agentUserId,Buffer.concat(chunks)));
+  });
+  app.delete('/v1/admin/agents/:agentUserId/avatar',{preHandler:requireAuth,schema:{params:agentParams}},async(request,reply)=>{
+    reply.header('Cache-Control','no-store');return envelope(await accountService.resetAvatar(request.actor,request.params.agentUserId));
+  });
   app.get('/v1/admin/agents',{preHandler:requireAuth},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await automation.listAgents(request.actor,accountService));});
   app.post('/v1/admin/agents',{preHandler:requireAuth,schema:{body:provisionSchema}},async(request,reply)=>{const agent=await accountService.provision(request.actor,request.body);reply.status(201).header('Cache-Control','no-store');return envelope(agent);});
   app.post('/v1/admin/agents/:agentUserId/suspend',{preHandler:requireAuth,schema:{params:agentParams}},async(request,reply)=>{reply.header('Cache-Control','no-store');return envelope(await accountService.suspend(request.actor,request.params.agentUserId));});

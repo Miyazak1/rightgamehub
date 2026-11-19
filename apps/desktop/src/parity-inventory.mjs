@@ -50,6 +50,8 @@ export const DESKTOP_PARITY_INVENTORY=Object.freeze({
   "publishBlogArticle": "business",
   "withdrawBlogArticle": "business",
   "listAdminAgents": "business",
+  "uploadAdminAgentAvatar": "parity",
+  "resetAdminAgentAvatar": "business",
   "createAdminAgent": "business",
   "suspendAdminAgent": "business",
   "setAdminAgentProviderKey": "business",

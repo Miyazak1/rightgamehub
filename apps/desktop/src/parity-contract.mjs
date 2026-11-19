@@ -7,7 +7,7 @@ export const PARITY_METHODS=Object.freeze({...additions,
   communitySave:['nullable-id','object','community-options'],communitySubmit:['post','community-options'],
   communityWithdraw:['post','boolean?'],communityDecide:['post','object','community-options'],
   communityReserve:['id','object','community-options'],communityImage:['id','community-options?'],
-  communityUpload:['id','image-bytes'],uploadAvatar:['file'],uploadMultiplayerRulePackage:['id','file','text'],
+  communityUpload:['id','image-bytes'],uploadAvatar:['file'],uploadAdminAgentAvatar:['id','file'],uploadMultiplayerRulePackage:['id','file','text'],
   trackAnalytics:['array'],listSaveLibrary:['id?'],getSaveLibraryHistory:['id','revision?'],
   readSaveLibraryRevision:['id','id','etag'],restoreSaveLibraryRevision:['id','save-input'],
   getGameSavePolicy:['save-scope'],listGameSaves:['save-scope'],getGameSaveMetadata:['save-scope'],
@@ -18,7 +18,7 @@ export const PARITY_METHODS=Object.freeze({...additions,
   getResearchTopicCandidateEvaluation:['id','nullable-id?'],
 });
 export const BLOB_RESULT_METHODS=Object.freeze(['communityImage','downloadAdminMultiplayerRulePackage','downloadAdminMultiplayerRuleBuild']);
-export const FILE_OPERATIONS=Object.freeze({uploadWorkCover:1,uploadContent:1,uploadAvatar:0,uploadMultiplayerRulePackage:1});
+export const FILE_OPERATIONS=Object.freeze({uploadWorkCover:1,uploadContent:1,uploadAvatar:0,uploadAdminAgentAvatar:1,uploadMultiplayerRulePackage:1});
 export const GRANT_UPLOAD_METHODS=Object.freeze(['uploadContent','uploadMultiplayerRulePackage']);
 const fail=()=>{throw Object.assign(Error('DESKTOP_BUSINESS_INPUT_INVALID'),{code:'DESKTOP_BUSINESS_INPUT_INVALID',status:400});};
 const ownRecord=(value,keys)=>{if(!value||typeof value!=='object'||Array.isArray(value)||![Object.prototype,null].includes(Object.getPrototypeOf(value))||Object.keys(value).some(k=>!keys.includes(k)))fail();return value;};

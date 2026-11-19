@@ -186,7 +186,13 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
     if (prefix.subarray(0, 4).toString('ascii') === 'RIFF' && prefix.subarray(8, 12).toString('ascii') === 'WEBP') { webpGeometry(body); return { mediaType: 'image/webp', ...webpAnimation(body) }; }
     throw new AuthError('AVATAR_INVALID', 400, '请选择有效的 PNG、JPEG、GIF 或 WebP 图片。');
   };
+  const processAvatarUpload=async body=>{
+    const inspected=inspectAvatar(body);
+    try{return await avatarProcessor(body,inspected);}
+    catch(error){if(error instanceof AvatarProcessingError)throw new AuthError('AVATAR_DECODE_FAILED',400,error.message);throw error;}
+  };
   return {
+    processAvatarUpload,
     async requestChallenge({ email, clientKind, locale }) {
       const emailNormalized = String(email ?? '').trim().toLowerCase();
       if (!EMAIL.test(emailNormalized) || emailNormalized.length > 320 || !CLIENTS.has(clientKind)) throw new AuthError('SCHEMA_INVALID', 400, 'Email or client kind is invalid.');
@@ -346,10 +352,7 @@ export function createAuthService({ repository, mailer, otpHmacKey, githubClient
       return profile;
     },
     async uploadAvatar(actor, body) {
-      const inspected = inspectAvatar(body);
-      let processed;
-      try { processed = await avatarProcessor(body, inspected); }
-      catch (error) { if (error instanceof AvatarProcessingError) throw new AuthError('AVATAR_DECODE_FAILED', 400, error.message); throw error; }
+      const processed=await processAvatarUpload(body);
       const profile = await repository.setUploadedAvatar({
         userId: actor.userId, ...processed,
         sha256: crypto.createHash('sha256').update(processed.body).digest(),

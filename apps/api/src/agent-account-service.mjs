@@ -6,10 +6,13 @@ const uuid=v=>{if(typeof v!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{
 const text=(v,min,max)=>{if(typeof v!=='string'||v.trim()!==v||v.length<min||v.length>max||/[\x00-\x1f\x7f]/.test(v))fail('AGENT_INPUT');return v;};
 const allowedCapabilities=new Set(['research:qa','blog:auto-publish']);
 const caps=v=>{if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(x=>!allowedCapabilities.has(x)))fail('AGENT_CAPABILITY_DENIED');return [...v].sort();};
-export function createAgentAccountService({repository,authorizeOperator}){
+export function createAgentAccountService({repository,authorizeOperator,avatarService=null}){
  if(typeof authorizeOperator!=='function')fail('AGENT_OPERATOR_PORT_REQUIRED');
  async function operator(actor){const copy=structuredClone(actor);uuid(copy?.userId);if(await authorizeOperator(structuredClone(copy))!==true)fail('AGENT_OPERATOR_REQUIRED');return copy.userId;}
  return {
+  async authorizeAvatar(actor,id){if(!avatarService)fail('AGENT_OPERATOR_PORT_REQUIRED');return avatarService.authorize(actor,id);},
+  async uploadAvatar(actor,id,body){if(!avatarService)fail('AGENT_OPERATOR_PORT_REQUIRED');return avatarService.upload(actor,id,body);},
+  async resetAvatar(actor,id){if(!avatarService)fail('AGENT_OPERATOR_PORT_REQUIRED');return avatarService.reset(actor,id);},
   async list(actor){return repository.list(await operator(actor));},
   async provision(actor,input){input=structuredClone(input);const id=await operator(actor),v={provisionKey:text(input.provisionKey,8,100),displayName:text(input.displayName,1,120),handle:text(input.handle,3,32).toLowerCase(),badgeLabel:input.badgeLabel,operatorLabel:text(input.operatorLabel,1,120),capabilities:caps(input.capabilities??[]),metadata:input.metadata??{}};if(!/^[a-z][a-z0-9-]{2,31}$/.test(v.handle)||['admin','api','me','login','profile','settings','support'].includes(v.handle)||!['AI 助手','官方机器人'].includes(v.badgeLabel)||!v.metadata||Array.isArray(v.metadata)||typeof v.metadata!=='object'||Buffer.byteLength(JSON.stringify(v.metadata))>4096)fail('AGENT_INPUT');return repository.provision(id,{...v,digest:stableHash({operator:id,...v})});},
   async suspend(actor,agentUserId){return repository.suspend(await operator(actor),uuid(agentUserId));},

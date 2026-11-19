@@ -64,7 +64,7 @@ test('all added JSON operations reach their fixed web endpoint through the manag
   const f=await fixture(t),skipped=new Set(['uploadAvatar','uploadMultiplayerRulePackage','communityImage','downloadAdminMultiplayerRulePackage','downloadAdminMultiplayerRuleBuild','readSaveLibraryRevision','joinMultiplayerRoom']);
   let count=0;
   for(const [name,spec]of Object.entries(PARITY_METHODS)){
-    if(skipped.has(name)||spec.includes('save-scope'))continue;
+    if(skipped.has(name)||spec.includes('save-scope')||spec.includes('file'))continue;
     const args=spec.map(kind=>{
       if(kind.endsWith('?'))return undefined;
       return ({id:'operation-one',text:'sample',number:10,revision:1,boolean:true,object:{},value:{},array:[],post:{id:'post-one',version:1},'community-options':{key:'operation-key'},'nullable-id':null,'image-bytes':new Uint8Array([0,1]),etag:'"saved"','save-input':{revisionId:'revision-one',expectedEtag:'"saved"',idempotencyKey:'restore-one'}})[kind];

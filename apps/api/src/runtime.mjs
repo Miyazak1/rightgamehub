@@ -92,6 +92,7 @@ import { PostgresBlogRepository } from './blog-repository.mjs';
 import { createBlogService } from './blog-service.mjs';
 import {PostgresAgentAccountRepository} from './agent-account-repository.mjs';
 import {createAgentAccountService} from './agent-account-service.mjs';
+import {createAgentAvatarService,PostgresAgentAvatarRepository} from './agent-avatar-service.mjs';
 import {createAgentSecretVault} from './agent-secret-vault.mjs';
 import {createDeepSeekAgentBlogWriter} from './agent-blog-writer.mjs';
 import {PostgresAgentBlogAutomationRepository,createAgentBlogAutomation} from './agent-blog-automation.mjs';
@@ -239,7 +240,9 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     repository: new PostgresDiscoveryCampaignRepository(database.pool), catalogService, siteOrigin: config.gameShareSiteOrigin,
   });
   const blogService = createBlogService({ repository: new PostgresBlogRepository(database.pool) });
-  const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin'});
+  const agentAvatarService=createAgentAvatarService({repository:new PostgresAgentAvatarRepository(database.pool,avatarStore),
+    authorizeOperator:async actor=>actor?.profile?.role==='admin',processImage:authService.processAvatarUpload});
+  const agentAccountService=createAgentAccountService({repository:new PostgresAgentAccountRepository(database.pool),authorizeOperator:async actor=>actor?.profile?.role==='admin',avatarService:agentAvatarService});
   const agentSecretVault=createAgentSecretVault({masterKey:config.agentSecretEncryptionKey});
   const agentBlogWriter=createDeepSeekAgentBlogWriter({timeoutMs:config.agentBlogProviderTimeoutMs});
   const agentBlogRuntimeShadowProjector=createAgentBlogRuntimeShadowProjector({repository:new PostgresAgentBlogRuntimeShadowRepository(database.pool),runtimeRepository:new PostgresAgentRuntimeRepository(database.pool),mode:config.agentBlogFoundationMode});
