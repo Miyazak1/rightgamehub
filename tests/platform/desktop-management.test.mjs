@@ -31,6 +31,21 @@ export async function managementFixture(t){
  return {api,session,backend,bridge,selected,calls,bodyRequests,opened,allowAdmin:()=>{admin=true;}};
 }
 
+test('desktop agent avatars upload selected bytes to a fixed authenticated endpoint and reset through the same bridge',async t=>{
+ const f=await managementFixture(t),root=await fs.mkdtemp(path.join(os.tmpdir(),'mooyu-agent-avatar-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const filename=path.join(root,'avatar.png'),bytes=Buffer.from([137,80,78,71]);await fs.writeFile(filename,bytes);
+ const scope=(await f.session.call('state')).desktopSessionId;
+ const api=createDesktopBusinessApi(f.bridge,f.backend.origin,{registerUpload:async()=>({ok:true,value:await f.selected.register(filename,scope)})});
+ await assert.rejects(api.uploadAdminAgentAvatar('agent-one',{}),{status:403});f.allowAdmin();
+ await api.uploadAdminAgentAvatar('agent-one',{});
+ assert.equal(f.calls.at(-1).method,'PUT');assert.equal(f.bodyRequests.at(-1).path,'/v1/admin/agents/agent-one/avatar');
+ assert.equal(f.bodyRequests.at(-1).headers['content-type'],'image/png');assert.deepEqual(f.bodyRequests.at(-1).bytes,bytes);
+ await api.resetAdminAgentAvatar('agent-one');assert.equal(f.calls.at(-1).method,'DELETE');assert.equal(f.calls.at(-1).path,'/v1/admin/agents/agent-one/avatar');
+ await fs.writeFile(filename,Buffer.alloc(2*1024**2+1));
+ await assert.rejects(api.uploadAdminAgentAvatar('agent-one',{}),{code:'DESKTOP_UPLOAD_TYPE_DENIED'});
+ assert.throws(()=>businessArguments('uploadAdminAgentAvatar',['agent-one',{path:filename}]),{code:'DESKTOP_BUSINESS_INPUT_INVALID'});
+});
+
 test('desktop creator and governance methods use managed authentication and enforce server authorization',async t=>{
  const f=await managementFixture(t);
  assert.equal((await f.api.listCreatorWorks()).data[0].title,'桌面实际作品');

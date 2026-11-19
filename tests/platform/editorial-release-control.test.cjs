@@ -16,7 +16,8 @@ test('editorial release bootstraps through healthy API before worker inspection 
   fs.writeFileSync(path.join(repo,'.gitignore'),'deploy/.env.prod\n');
   const files=['agent-blog-foundation-generation.mjs','agent-blog-candidate-discovery.mjs','agent-editorial-memory-repository.mjs',
    'agent-blog-private-canary-manual-run.mjs','agent-blog-public-runtime-manual-run.mjs','agent-blog-public-schedule.mjs',
-   'agent-runtime-repository.mjs','agent-blog-public-request-repository.mjs','agent-blog-public-runtime.mjs','agent-blog-foundation-workflows.mjs'];
+   'agent-runtime-repository.mjs','agent-blog-public-request-repository.mjs','agent-blog-public-runtime.mjs','agent-blog-foundation-workflows.mjs',
+   'agent-avatar-service.mjs','agent-account-routes.mjs','agent-account-repository.mjs','agent-account-service.mjs','auth-service.mjs','runtime.mjs'];
   for(const file of files)fs.writeFileSync(path.join(repo,'apps/api/src',file),'// reviewed '+file+'\n');
   fs.writeFileSync(path.join(repo,'deploy/resume-blog-public.sh'),'#!/bin/bash\ntest -f "$BOOTSTRAPPED"\necho resumed\n');
   fs.writeFileSync(path.join(repo,'deploy/prepare-unified-release.sh'),'#!/bin/bash\nset -e\nprintf prepared >> "$PREPARED"\ngit merge --ff-only "$1"\n');

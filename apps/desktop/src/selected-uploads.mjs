@@ -30,6 +30,7 @@ export function createSelectedUploads({now=Date.now}={}){
       if(epoch!==generation)fail('DESKTOP_ACCOUNT_SESSION_CHANGED');
       if(!stat.isFile()||stat.isSymbolicLink()||stat.size!==e.size||stat.mtimeMs!==e.mtime||stat.ino!==e.ino)fail('DESKTOP_UPLOAD_FILE_CHANGED');
       if(['uploadWorkCover','uploadAvatar'].includes(purpose)&&(!e.type.startsWith('image/')||e.size>8*1024**2))fail('DESKTOP_UPLOAD_TYPE_DENIED');
+      if(purpose==='uploadAdminAgentAvatar'&&(!e.type.startsWith('image/')||e.size>2*1024**2))fail('DESKTOP_UPLOAD_TYPE_DENIED');
       if(purpose==='uploadContent'&&e.type.startsWith('image/'))fail('DESKTOP_UPLOAD_TYPE_DENIED');
       if(purpose==='uploadMultiplayerRulePackage'&&e.type!=='application/zip')fail('DESKTOP_UPLOAD_TYPE_DENIED');
       const blob=await openAsBlob(e.filename,{type:e.type}),after=await lstat(e.filename);

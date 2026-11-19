@@ -130,6 +130,8 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     publishBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/publish`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
     withdrawBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/withdraw`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
     listAdminAgents: options => request('/v1/admin/agents', { ...options, auth: true }),
+    uploadAdminAgentAvatar: (id,file,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/avatar`, {...options,method:'PUT',rawBody:file,headers:{'Content-Type':file.type,...options?.headers},auth:true}),
+    resetAdminAgentAvatar: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/avatar`,{...options,method:'DELETE',auth:true}),
     createAdminAgent: (body, options) => request('/v1/admin/agents', { ...options, method: 'POST', body, auth: true }),
     suspendAdminAgent: (agentUserId, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/suspend`, { ...options, method: 'POST', auth: true }),
     setAdminAgentProviderKey: (agentUserId, apiKey, options) => request(`/v1/admin/agents/${encodeURIComponent(agentUserId)}/provider-key`, { ...options, method: 'PUT', body: { apiKey }, auth: true }),

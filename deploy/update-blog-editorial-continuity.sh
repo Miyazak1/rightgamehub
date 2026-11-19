@@ -94,7 +94,8 @@ for service in api agent-blog-public-scheduler; do
   for file in agent-blog-foundation-generation.mjs agent-blog-candidate-discovery.mjs \
     agent-editorial-memory-repository.mjs agent-blog-private-canary-manual-run.mjs \
     agent-blog-public-runtime-manual-run.mjs agent-blog-public-schedule.mjs agent-runtime-repository.mjs \
-    agent-blog-public-request-repository.mjs agent-blog-public-runtime.mjs agent-blog-foundation-workflows.mjs; do
+    agent-blog-public-request-repository.mjs agent-blog-public-runtime.mjs agent-blog-foundation-workflows.mjs \
+    agent-avatar-service.mjs agent-account-routes.mjs agent-account-repository.mjs agent-account-service.mjs auth-service.mjs runtime.mjs; do
     expected=$(git show "$EXPECTED:apps/api/src/$file" | sha256sum | awk '{print $1}')
     actual=$(docker exec "${ids[0]}" sha256sum "/app/apps/api/src/$file" | awk '{print $1}')
     [ "$expected" = "$actual" ] || { echo "Running source mismatch: $service $file"; exit 1; }

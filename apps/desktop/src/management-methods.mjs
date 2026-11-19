@@ -10,6 +10,7 @@ export const MANAGEMENT_METHODS=Object.freeze({
   publishBlogArticle:["id","text"],
   withdrawBlogArticle:["id","text"],
   listAdminAgents:[],
+  resetAdminAgentAvatar:["id"],
   createAdminAgent:["object"],
   suspendAdminAgent:["id"],
   setAdminAgentProviderKey:["id","text"],
