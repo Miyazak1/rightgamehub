@@ -64,10 +64,12 @@ export class NapCatControl{
   finally{passwordMd5='';}
  }
  async maintain(config,connected){
+  const isConnected=()=>typeof connected==='function'?connected():connected;
   if(Date.now()<this.nextCheck)return;this.nextCheck=Date.now()+5000;
-  const state=await this.inspect(config);if(!state.accountMatches||!state.groupReady||connected)return;
+  const state=await this.inspect(config);if(!state.accountMatches||!state.groupReady||isConnected())return;
   try{
    const current=await this.post('/OB11Config/GetConfig'),clients=current.network?.websocketClients??[];
+   if(isConnected())return;
    if(clients.some(item=>item.enable&&!['mooyu-server','mooyu-admin-managed'].includes(item.name)))return;
    const entry={name:'mooyu-admin-managed',enable:true,url:this.workerUrl,messagePostFormat:'array',reportSelfMessage:false,reconnectInterval:5000,heartInterval:30000,token:this.accessToken,debug:false};
    await this.post('/OB11Config/SetConfig',{config:JSON.stringify({...current,network:{...current.network,websocketClients:[...clients.filter(item=>!['mooyu-server','mooyu-admin-managed'].includes(item.name)),entry]}})});

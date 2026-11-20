@@ -54,7 +54,7 @@ try{
       const stop=()=>service.stop();process.once('SIGINT',stop);process.once('SIGTERM',stop);
       let failures=0,lastError=null,lastLogged=0;
       try{while(!service.controller.signal.aborted){
-        try{if(napcat)await napcat.maintain(await repository.check(),gateway.connected());await service.tick();failures=0;lastError=null;}catch(error){
+        try{if(napcat)await napcat.maintain(await repository.check(),()=>gateway.connected());await service.tick();failures=0;lastError=null;}catch(error){
           failures++;const code=/^[A-Z0-9_]{1,80}$/u.test(error.code??'')?error.code:'QQ_DATABASE_OR_WORKER_UNAVAILABLE';
           if(code!==lastError||Date.now()-lastLogged>60000){log({event:'worker-waiting',code});lastLogged=Date.now();lastError=code;}
         }

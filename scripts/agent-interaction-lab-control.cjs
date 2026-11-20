@@ -3,6 +3,20 @@ const root=path.resolve(__dirname,'..'),file=path.resolve(process.argv[2]??''),o
 if(s.schemaVersion!=='agent-interaction-lab-v1')throw Error('ISOLATION_REQUIRED');
 function docker(args){const r=cp.spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1000000});if(r.status!==0)throw Error('LAB_DOCKER_FAILED');return r.stdout.trim();}
 async function main(){
+ if(operation==='--route-status'){
+  const {NapCatControl}=await import(pathToFileURL(path.join(root,'apps/qq-channel/src/napcat-control.mjs')).href),n=new NapCatControl({token:s.gatewayToken,accessToken:s.accessToken,origin:s.gatewayOrigin}),v=await n.post('/OB11Config/GetConfig');
+  console.log(JSON.stringify({networkKeys:Object.keys(v.network??{}),clients:(v.network?.websocketClients??[]).map(c=>({name:c.name,url:c.url,enable:c.enable,messagePostFormat:c.messagePostFormat,reportSelfMessage:c.reportSelfMessage,otherFields:Object.keys(c).filter(k=>!['token','secret','access_token'].includes(k))})),globalKeys:Object.keys(v)}));return;
+ }
+ if(operation==='--recent-message-shapes'){
+  const {NapCatControl}=await import(pathToFileURL(path.join(root,'apps/qq-channel/src/napcat-control.mjs')).href),n=new NapCatControl({token:s.gatewayToken,accessToken:s.accessToken,origin:s.gatewayOrigin});
+  const data=n.unwrap(await n.post('/Debug/call',{action:'get_group_msg_history',params:{group_id:Number(s.oldStack.groupId),count:12}}));
+  const messages=(data?.messages??[]).filter(m=>String(m.user_id)===s.oldStack.caller).slice(-3).map(m=>({messageId:m.message_id,time:m.time,messageType:m.message_type,segments:Array.isArray(m.message)?m.message.map(p=>p.type):typeof m.message,mentionsExpectedBot:Array.isArray(m.message)&&m.message.some(p=>p.type==='at'&&String(p.data?.qq)===s.oldStack.botId),textBytes:Array.isArray(m.message)?Buffer.byteLength(m.message.filter(p=>p.type==='text').map(p=>p.data.text).join('')):null}));console.log(JSON.stringify({expectedCallerMessages:messages}));return;
+ }
+ if(operation==='--qq-status'){
+  const health=await (await fetch('http://127.0.0.1:'+s.qqHealthPort+'/health',{signal:AbortSignal.timeout(5000)})).json(),{qqSignature}=await import(pathToFileURL(path.join(root,'apps/api/src/qq-admin-protocol.mjs')).href),body=JSON.stringify({operation:'status',actorId:s.operatorId,agentUserId:s.agentId,args:{}}),at=String(Date.now()),id=crypto.randomUUID();
+  const response=await fetch('http://127.0.0.1:'+s.qqControlPort+'/control',{method:'POST',headers:{'content-type':'application/json','x-qq-time':at,'x-qq-request':id,'x-qq-signature':qqSignature(s.sharedSecret,at,id,body)},body,signal:AbortSignal.timeout(12000)}),value=await response.json();
+  console.log(JSON.stringify({connected:health.connected,httpStatus:response.status,runtime:value.data?.runtime,binding:value.data?.binding,states:value.data?.status?.states,review:value.data?.status?.review,ingress:value.data?.ingress,code:value.error?.code,paperEnabled:value.data?.paperEnabled}));return;
+ }
  if(operation==='--recover-test-gateway'){
   const state=await (await fetch('http://127.0.0.1:'+s.apiPort+'/lab/qq/login-status',{headers:{authorization:'Bearer '+s.browserToken}})).json();if(state.data?.loggedIn!==false||state.data?.ready!==false)throw Error('OFFLINE_GATEWAY_REQUIRED');
   const inspect=name=>JSON.parse(docker(['inspect',name]))[0],before=inspect(s.oldStack.gateway),worker=inspect(s.oldStack.worker),db=inspect(s.oldStack.db);
@@ -16,11 +30,13 @@ async function main(){
   const report={at:new Date().toISOString(),gateway:s.oldStack.gateway,reason:'QR_REFRESH_REQUIRES_LOGIN_SERVICE_RESTART',sameMounts,sameImage,workerRetained,dbRetained,historyRetained,localPort:Number(binding.HostPort),paperEnabled:false};fs.writeFileSync(path.join(s.evidence,'gateway-recovery-'+stamp+'.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
   if(![sameMounts,sameImage,workerRetained,dbRetained,historyRetained].every(Boolean))throw Error('PRESERVATION_CHECK_FAILED');return;
  }
- if(operation==='--restart-qq-waiting'){
-  if(!s.qqWorker||fs.existsSync(path.join(s.privateRoot,'activation/ready')))throw Error('LAB_WAITING_WORKER_REQUIRED');
+ if(['--restart-qq-waiting','--restart-qq-transport'].includes(operation)){
+  if(!s.qqWorker||(operation==='--restart-qq-waiting'&&fs.existsSync(path.join(s.privateRoot,'activation/ready'))))throw Error('LAB_WAITING_WORKER_REQUIRED');
   const info=JSON.parse(docker(['inspect',s.qqWorker]))[0];if(info.Config.Labels['mooyu.agent-lab']!==s.id)throw Error('LAB_WORKER_IDENTITY_MISMATCH');
   const pending=docker(['exec',s.name+'-db','psql','-U','qa_ledger_test','-d',s.qqDatabase,'-At','-c',"SELECT count(*) FROM mooyu_qq.messages WHERE status IN ('queued','generating','ready','sending')"]);if(pending!=='0')throw Error('LAB_WORKER_BUSY');
-  docker(['restart','--timeout','5',s.qqWorker]);console.log(JSON.stringify({restarted:s.qqWorker,pending:0,gatewayRestarted:false}));return;
+  docker(['restart','--timeout','5',s.qqWorker]);
+  s.qqControlPort=Number(docker(['port',s.qqWorker,'6780/tcp']).match(/127\.0\.0\.1:(\d+)/)[1]);s.qqHealthPort=Number(docker(['port',s.qqWorker,'6700/tcp']).match(/127\.0\.0\.1:(\d+)/)[1]);fs.writeFileSync(file,JSON.stringify(s,null,2));
+  console.log(JSON.stringify({restarted:s.qqWorker,pending:0,gatewayRestarted:false}));return;
  }
  if(operation==='--permission'){
   if(!['allow','deny'].includes(process.argv[4]))throw Error('PERMISSION_ACTION_REQUIRED');
@@ -59,7 +75,9 @@ async function main(){
   const health=await napcat.inspect({botId:s.oldStack.botId,groupId:s.oldStack.groupId});if(operation==='--wire-qq'&&(!health.accountMatches||!health.groupReady))throw Error('TEST_QQ_NOT_READY');
   const activation=path.join(s.privateRoot,'activation');fs.mkdirSync(activation,{recursive:true});
   const snapshot=path.join(s.privateRoot,'gateway-before.private.json');if(!fs.existsSync(snapshot)&&health.accountMatches&&health.groupReady)fs.writeFileSync(snapshot,JSON.stringify(await napcat.post('/OB11Config/GetConfig'),null,2),{flag:'wx',mode:0o600});
-  if(s.qqWorker){if(operation==='--wire-qq'){if(!fs.existsSync(snapshot))throw Error('GATEWAY_SNAPSHOT_REQUIRED');fs.writeFileSync(path.join(activation,'ready'),'ready');}console.log(JSON.stringify({prepared:true,active:fs.existsSync(path.join(activation,'ready')),qqWorker:s.qqWorker}));return;}
+  if(s.qqWorker){
+   s.qqControlPort=Number(docker(['port',s.qqWorker,'6780/tcp']).match(/127\.0\.0\.1:(\d+)/)[1]);s.qqHealthPort=Number(docker(['port',s.qqWorker,'6700/tcp']).match(/127\.0\.0\.1:(\d+)/)[1]);fs.writeFileSync(file,JSON.stringify(s,null,2));
+   if(operation==='--wire-qq'){if(!fs.existsSync(snapshot))throw Error('GATEWAY_SNAPSHOT_REQUIRED');fs.writeFileSync(path.join(activation,'ready'),'ready');}console.log(JSON.stringify({prepared:true,active:fs.existsSync(path.join(activation,'ready')),qqWorker:s.qqWorker,qqHealthPort:s.qqHealthPort}));return;}
   const dbUrl=new URL(s.databaseUrl);dbUrl.hostname='qq-postgres';dbUrl.port='5432';dbUrl.pathname='/'+s.qqDatabase;
   const workerSettings={lab:true,agentId:s.agentId,secret:s.sharedSecret,gatewayToken:s.gatewayToken,config:{deployment:'server',enabled:true,botId:s.oldStack.botId,groupId:s.oldStack.groupId,allowedUsers:[s.oldStack.caller],dailyCalls:20,dailyTokens:500000,userDailyCalls:20,userMinuteMessages:3,groupMinuteMessages:5,maxReplyTokens:1200,maxAttempts:1},env:{QQ_DATABASE_URL:dbUrl.href,QQ_ACCESS_TOKEN:s.accessToken,PAPER_STUDY_ENABLED:'false',PAPER_STUDY_WORKER_ENABLED:'false',PAPER_STUDY_MODELS_ENABLED:'false',PAPER_STUDY_PUBLISH_ENABLED:'false'}};
   fs.writeFileSync(path.join(s.privateRoot,'worker.private.json'),JSON.stringify(workerSettings,null,2),{mode:0o600});

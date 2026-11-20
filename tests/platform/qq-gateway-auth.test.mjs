@@ -12,6 +12,14 @@ test('parallel status polls reuse one gateway credential and rate limits cool do
  for(let i=0;i<10;i++)await assert.rejects(control.post('/QQLogin/CheckLoginStatus'),{code:'QQ_GATEWAY_RATE_LIMITED'});assert.equal(authCalls,2);
  now+=60001;limited=false;await control.post('/QQLogin/CheckLoginStatus');assert.equal(authCalls,3);assert.equal(statusCalls,11);
 });
+test('reconnection during an awaited inspection never rewrites a now-live OneBot connection',async()=>{
+ let connected=false,postCalls=0;
+ const n=new NapCatControl({token:'a'.repeat(64),accessToken:'test'});
+ n.inspect=async()=>{connected=true;return {accountMatches:true,groupReady:true};};n.post=async()=>{postCalls++;return {network:{websocketClients:[]}};};
+ await n.maintain({},()=>connected);assert.equal(postCalls,0);
+ connected=false;n.nextCheck=0;n.inspect=async()=>({accountMatches:true,groupReady:true});n.post=async path=>{postCalls++;assert.equal(path,'/OB11Config/GetConfig');connected=true;return {network:{websocketClients:[]}};};
+ await n.maintain({},()=>connected);assert.equal(postCalls,1);
+});
 test('gateway restart-required and QR-not-ready outcomes remain explicit without discarding a valid credential',async()=>{
  let authCalls=0;
  const control=new NapCatControl({token:'a'.repeat(64),accessToken:'test',fetchImpl:async url=>{

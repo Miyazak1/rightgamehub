@@ -17,10 +17,17 @@ const exists=await pool.query("SELECT to_regclass('mooyu_qq.settings') AS name")
 if(!exists.rows[0].name)await repository.initialize();
 await repository.enableControl();await repository.enableAgentBridge();
 const bridge=new QQAgentBridge({repository,client:createQQAgentClient({url:'http://api:3090',secret:settings.secret,agentId:settings.agentId})});
-const service=new QQService({config,repository,bridge,log}),gateway=new OneBotGateway(config,{receive:event=>service.receive(event),log});service.gateway=gateway;
+const ingress={received:0,accepted:0,rejected:0,upgrades:{},lastExpected:null};
+const service=new QQService({config,repository,bridge,log}),gateway=new OneBotGateway(config,{receive:async event=>{
+ ingress.received++;
+ if(String(event.group_id)===config.groupId&&String(event.user_id)===settings.config.allowedUsers[0])ingress.lastExpected={postType:event.post_type,messageType:event.message_type,messageId:event.message_id,selfMatches:String(event.self_id)===config.botId,segments:Array.isArray(event.message)?event.message.map(p=>p.type).slice(0,32):typeof event.message};
+ const result=await service.receive(event);if(result.accepted)ingress.accepted++;else ingress.rejected++;return result;
+},log});service.gateway=gateway;
 const napcat=new NapCatControl({token:settings.gatewayToken,accessToken:config.accessToken,workerUrl:'ws://interaction-worker:6700/onebot/v11'});
 service.readiness=current=>napcat.readyGroup===current.groupId;
-const control=await startQQControlServer({secret:settings.secret,agentUserId:settings.agentId,store:new QQControlStore(repository),napcat,gateway});
-await gateway.start();let stopping=false;process.once('SIGTERM',()=>{stopping=true;service.stop();});process.once('SIGINT',()=>{stopping=true;service.stop();});
-try{while(!stopping){try{const current=await repository.check(),active=await access('/config/activation/ready').then(()=>true,()=>false);if(active)await napcat.maintain(current,gateway.connected());else await napcat.inspect(current);await service.tick();}catch(error){log({event:'lab-worker-waiting',code:/^[A-Z0-9_]+$/.test(error.code??'')?error.code:'LAB_WORKER_UNAVAILABLE'});}await new Promise(r=>setTimeout(r,1000));}}
+const store=new QQControlStore(repository),view=store.view.bind(store);store.view=async()=>({...await view(),ingress});
+const control=await startQQControlServer({secret:settings.secret,agentUserId:settings.agentId,store,napcat,gateway});
+await gateway.start();gateway.server.prependListener('upgrade',req=>{const reason=req.url!=='/onebot/v11'?'path':req.headers.authorization!=='Bearer '+config.accessToken?'authorization':String(req.headers['x-self-id']??'')!==config.botId?'account':gateway.connected()?'occupied':'accepted';ingress.upgrades[reason]=(ingress.upgrades[reason]??0)+1;});
+let stopping=false;process.once('SIGTERM',()=>{stopping=true;service.stop();});process.once('SIGINT',()=>{stopping=true;service.stop();});
+try{while(!stopping){try{const current=await repository.check(),active=await access('/config/activation/ready').then(()=>true,()=>false);if(active)await napcat.maintain(current,()=>gateway.connected());else await napcat.inspect(current);await service.tick();}catch(error){log({event:'lab-worker-waiting',code:/^[A-Z0-9_]+$/.test(error.code??'')?error.code:'LAB_WORKER_UNAVAILABLE'});}await new Promise(r=>setTimeout(r,1000));}}
 finally{service.stop();await control.close();await gateway.stop();await pool.end();}
