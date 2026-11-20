@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {loginState,nativeEvents} from '../../scripts/qq-login-lab.mjs';
+
+test('lab status drops account identity, QR, credentials and arbitrary gateway errors',()=>{
+ const result=loginState({loginPhase:'ready',isLogin:true,coreReady:true,uin:'123456789',password:'private',loginError:'private',qrcode:'private',Credential:'private'});
+ assert.deepEqual(result,{phase:'ready',loggedIn:true,coreReady:true,offline:false});
+ assert(!JSON.stringify(result).includes('private'));
+ assert.equal(loginState({loginPhase:'private-password'}).phase,'unknown');
+});
+
+test('native event report excludes chat content and does not retain URLs or long numeric identities',()=>{
+ const events=nativeEvents('群聊 SIGSEGV private chat\n普通登录 private content\nSignal name: SIGSEGV\n$$00 pc 0000000006def064 /opt/qq/wrapper.node\nhandleSignal user 123456789 https://example.com/private');
+ assert.equal(events.length,3);assert(!JSON.stringify(events).includes('private'));assert(!JSON.stringify(events).includes('123456789'));assert(events.some(line=>line.includes('SIGSEGV')));
+});
