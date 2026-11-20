@@ -7,6 +7,7 @@ import {QQService,createQQProvider} from './service.mjs';
 import {QQControlStore} from './control-store.mjs';
 import {NapCatControl} from './napcat-control.mjs';
 import {startQQControlServer} from './control-server.mjs';
+import {QQAgentBridge,createQQAgentClient} from './agent-bridge.mjs';
 const log=value=>console.log(JSON.stringify({at:new Date().toISOString(),...value}));
 let pool,gateway,service,controlServer;
 try{
@@ -14,6 +15,9 @@ try{
   if(!file||!['--init','--run','--status','--resolve'].includes(command))throw Object.assign(Error(),{code:'QQ_USAGE_CONFIG_INIT_RUN_STATUS_RESOLVE'});
   const config=parseConfig(JSON.parse(await readFile(file,'utf8')),process.env);
   const managed=process.env.QQ_ADMIN_ENABLED==='true';
+  if(process.env.QQ_AGENT_INTERACTIONS_ENABLED!=null&&!['true','false'].includes(process.env.QQ_AGENT_INTERACTIONS_ENABLED))throw Object.assign(Error(),{code:'QQ_AGENT_ENABLE_FLAG_INVALID'});
+  const useAgent=process.env.QQ_AGENT_INTERACTIONS_ENABLED==='true';
+  if(useAgent&&!managed)throw Object.assign(Error(),{code:'QQ_AGENT_MANAGED_CHANNEL_REQUIRED'});
   if(managed&&config.deployment!=='server')throw Object.assign(Error(),{code:'QQ_CONTROL_SERVER_ONLY'});
   if(command==='--run'&&!config.enabled&&!managed){log({event:'disabled',paperEnabled:false});process.exitCode=0;}
   else{
@@ -34,7 +38,9 @@ try{
       log({event:'status',...await repository.status(),paperEnabled:false});
     }else{
       await repository.check();
-      service=new QQService({config,repository,provider:createQQProvider({apiKey:process.env.DEEPSEEK_API_KEY,model:config.model}),log});
+      let bridge=null;
+      if(useAgent){await repository.enableAgentBridge();bridge=new QQAgentBridge({repository,client:createQQAgentClient({url:process.env.QQ_AGENT_API_URL??'http://api:3090',secret:(await readFile(process.env.QQ_ADMIN_SECRET_FILE,'utf8')).trim(),agentId:process.env.QQ_ADMIN_AGENT_USER_ID})});}
+      service=new QQService({config,repository,bridge,provider:useAgent?null:createQQProvider({apiKey:process.env.DEEPSEEK_API_KEY,model:config.model}),log});
       gateway=new OneBotGateway(config,{receive:event=>service.receive(event),log});service.gateway=gateway;
       const address=await gateway.start();log({event:'listening',host:address.address,port:address.port,paperEnabled:false});
       let napcat;

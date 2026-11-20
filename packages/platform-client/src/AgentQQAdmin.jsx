@@ -46,7 +46,7 @@ export default function AgentQQAdmin({api,agentId}){
   <header className="agent-control-card__title"><div><span className="kicker">QQ CHANNEL</span><h3>QQ 接入</h3><p>管理专用 QQ 的登录、群内 @文字问答和调用预算。</p></div><span className={connection.online?'agent-state is-ready':'agent-state'}>{connection.label}</span></header>
   {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="admin-notice" role="status">{notice}</p>}
   {snapshot&&form?<>
-   <div className="qq-admin-status"><span>回复：{snapshot.settings.enabled?'启用':'暂停'}</span><span>今日调用：{snapshot.status.budget.calls}/{snapshot.settings.dailyCalls}</span><span>预留 Token：{snapshot.status.budget.tokens}/{snapshot.settings.dailyTokens}</span><span>待核对发送：{snapshot.status.review.length}</span></div>
+   <div className="qq-admin-status"><span>回复：{snapshot.settings.enabled?'启用':'暂停'}</span>{snapshot.binding?.executionMode==='agent'?<span>调用与费用：由小墨鱼统一预算管理</span>:<><span>今日调用：{snapshot.status.budget.calls}/{snapshot.settings.dailyCalls}</span><span>预留 Token：{snapshot.status.budget.tokens}/{snapshot.settings.dailyTokens}</span></>}<span>待核对发送：{snapshot.status.review.length}</span></div>
    {connection.message&&<p className="admin-notice" role="status" aria-live="polite">{connection.message}</p>}
    {runtime.loggedIn&&!runtime.accountMatches&&<p role="alert" className="form-error">登录的 QQ 与专用账号不一致，回复已阻止。请联系运营者核对账号。</p>}
    {runtime.accountMatches&&!runtime.groupReady&&<p role="status">请确认专用 QQ 已加入设置的群。</p>}

@@ -21,7 +21,7 @@ test('global assistant retains chat across routes, binds late replies, restores 
  t.diagnostic('Shared app built');
  servePage(app,(_r,reply)=>reply.header('Content-Security-Policy',csp).type('text/html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><div id="root"></div><script src="/fixture.js"></script></html>'));
  app.get('/fixture.js',(_r,reply)=>reply.type('text/javascript').send(js));await app.listen({host:'127.0.0.1',port:0});
- browser=await chromium.launch({headless:true});
+ browser=await chromium.launch({headless:true,...(process.env.GAMEHUB_BROWSER_CHANNEL?{channel:process.env.GAMEHUB_BROWSER_CHANNEL}:{})});
  t.diagnostic('Browser launched');
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
  page.on('console',m=>{if(m.type()==='error'&&/Content Security Policy|font-src/i.test(m.text()))errors.push(m.text());});
@@ -45,7 +45,7 @@ test('global assistant retains chat across routes, binds late replies, restores 
  await page.locator('#assistant-draft').fill('第一行');await page.locator('#assistant-draft').press('Shift+Enter');await page.locator('#assistant-draft').press('ArrowRight');assert.match(await page.locator('#assistant-draft').inputValue(),/\n/);
  const beforeIme=calls;await page.locator('#assistant-draft').evaluate(el=>el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',isComposing:true,bubbles:true})));assert.equal(calls,beforeIme);
  await page.locator('#assistant-draft').fill('键盘发送消息');await page.locator('#assistant-draft').press('Enter');await page.locator('.assistant-message.is-assistant.is-sent').nth(2).waitFor();assert.equal(calls,beforeIme+1);
- const screenshots=path.join(root,'.runtime/global-platform-chat');await fs.mkdir(screenshots,{recursive:true});await page.locator('#assistant-draft').focus();
+ const screenshots=process.env.CODEX_BUILD_ROOT||path.join(root,'.runtime/global-platform-chat');await fs.mkdir(screenshots,{recursive:true});await page.locator('#assistant-draft').focus();
  await page.evaluate(()=>window.__fixtureHost.theme.setPreference('dark'));await page.waitForFunction(()=>document.querySelector('.app').getAttribute('data-theme')==='dark'||getComputedStyle(document.querySelector('.app')).getPropertyValue('--gh-canvas').trim()==='#0c0b11');
  await page.screenshot({path:path.join(screenshots,'desktop.png'),fullPage:true});
  for(const width of [320,390,768,1024,1440]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'overflow at '+width);}

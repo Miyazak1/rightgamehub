@@ -23,7 +23,8 @@ export async function startQQControlServer({secret,agentUserId,store,napcat,gate
    let data;
    if(command.operation==='status'){
     const view=await store.view(),runtime=await napcat.inspect(await store.repository.check());
-    data={...view,runtime:{...runtime,connected:gateway.connected()}};
+    const binding=await store.repository.check();
+    data={...view,runtime:{...runtime,connected:gateway.connected()},binding:{botId:binding.botId,interactionProtocolVersion:1,executionMode:store.repository.agentBridge?'agent':'channel'}};
    }else if(command.operation==='qr'){
     const view=await store.view();data={...await napcat.qr(),loginRevision:view.loginRevision};
     const repo=store.repository,client=await repo.pool.connect();

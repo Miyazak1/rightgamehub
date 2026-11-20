@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
-  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,
+  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,compositionCitationRepair=true,
   selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,allowEmptyDiscovery=false,recoverAfterFailure=false,
   compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
@@ -194,7 +194,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         if(selectionCalls<=selectionFailures){delete output.scores; delete output.decisionReasonCodes;}
         if(selectionCalls<=selectionIndexFailures)output.selectedIndexes=[candidateCount+1];
       }
-      if(request.responseSchema.key === 'blog.article.composition' && ++compositionCalls === 1) {
+      if(request.responseSchema.key === 'blog.article.composition' && ++compositionCalls === 1&&compositionCitationRepair) {
         output.blocks.find(block => block.type === 'paragraph').citationIndexes = [1,3];
       }
       if(request.responseSchema.key === 'blog.article.composition'&&compositionCalls<=compositionTitleFailures){
@@ -271,6 +271,9 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       WHERE id=$1 AND agent_user_id=$2`, [runId,account.agentUserId])).rows[0];
       return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id,
         errorCode:row.error_code,completedStageCount:row.completed_stage_count } : null; } });
+  if(interactionExercise)return interactionExercise({pool:admin,agentId:account.agentUserId,operatorId,config,runtimeRepository:runtime,toolGateway,providerGateway,artifactRepository,draftGateway,publicationGateway,
+    discoveryHandlers,publicationHandlers:handlers,researchEvidenceRepository:new PostgresAgentResearchEvidenceRepository(admin),
+    inputRepository:new PostgresAgentBlogPrivateCanaryInputRepository(admin),preflightRepository:new PostgresAgentBlogPublicRuntimePreflightRepository(admin),providerCalls:()=>providerInvocations});
   let result;
   try { result = await runner.run({ requestId: crypto.randomUUID() }); }
   catch (error) {

@@ -1,4 +1,5 @@
 import { registerPlatformAssistantRoutes } from './platform-assistant.mjs';
+import {registerAgentInteractionRoutes} from './agent-interaction-routes.mjs';
 import { registerPlatformAgentRoutes } from './platform-agent-tools.mjs';
 import { PracticeError } from './practice/error.mjs';
 import { registerPracticeRoutes } from './practice/routes.mjs';
@@ -325,6 +326,7 @@ export function createApp(dependencies) {
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
   if (practiceService) registerPracticeRoutes(app, {service:practiceService, requireAuth});
   if (dependencies.platformAssistantService) registerPlatformAssistantRoutes(app, {service:dependencies.platformAssistantService, requireAuth});
+  if(dependencies.agentInteractionService)registerAgentInteractionRoutes(app,{service:dependencies.agentInteractionService,requireAuth,channelSecret:dependencies.agentChannelSecret});
   if (dependencies.platformAgentTools) registerPlatformAgentRoutes(app, {tools:dependencies.platformAgentTools,requireAuth});
   if (dependencies.paperStudyService) registerPaperStudyRoutes(app,{service:dependencies.paperStudyService,requireAuth});
   if (researchQaHttpGateway) registerResearchQaHttpRoutes(app,{gateway:researchQaHttpGateway,requireAuth});

@@ -55,7 +55,7 @@ export class OneBotGateway {
   async send(row){
     if(!this.connected())throw error('QQ_GATEWAY_OFFLINE',true);
     const socket=this.socket,echo=randomUUID();
-    const message=[{type:'reply',data:{id:row.message_id}},{type:'at',data:{qq:row.user_id}},{type:'text',data:{text:' '+row.reply}}];
+    const message=[{type:'reply',data:{id:row.reply_to_message_id??row.message_id}},{type:'at',data:{qq:row.user_id}},{type:'text',data:{text:' '+row.reply}}];
     return new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));},this.timeout);timer.unref();
       this.pending.set(echo,{socket,timer,resolve,reject});

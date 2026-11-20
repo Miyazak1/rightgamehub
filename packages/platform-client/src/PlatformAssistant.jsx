@@ -10,17 +10,17 @@ import AvatarView from './AvatarView.jsx';
 
 const Assistant = createContext(null);
 export const usePlatformAssistant = () => useContext(Assistant);
-const fresh = () => ({ messages: [], draft: '', open: false, width: 380, pinned: null });
+const fresh = () => ({ conversationId:crypto.randomUUID(),messages: [], draft: '', open: false, width: 380, pinned: null });
 const storageKey = owner => 'mooyu.assistant.v1:' + owner;
 function restore(owner, mode) {
   if (!owner || mode !== 'platform') return fresh();
   try {
     const value = JSON.parse(sessionStorage.getItem(storageKey(owner)) || 'null');
     if (!value || !Array.isArray(value.messages)) return fresh();
-    return { ...fresh(), draft: String(value.draft || '').slice(0,2000), open: value.open === true,
+    return { ...fresh(),...( /^[a-f0-9-]{36}$/i.test(value.conversationId??'')?{conversationId:value.conversationId}:{}), draft: String(value.draft || '').slice(0,2000), open: value.open === true,
       width: Math.min(520,Math.max(300,Number(value.width)||380)), messages: value.messages.slice(-80)
         .filter(m => m && ['user','assistant'].includes(m.role) && typeof m.content === 'string')
-        .map(m => ({...m, status: m.status === 'pending' ? 'interrupted' : m.status})), pinned: null };
+        .map(m => ({...m, status: m.status === 'pending'&&!m.interaction ? 'interrupted' : m.status})), pinned: null };
   } catch { return fresh(); }
 }
 const questionLabel = (context, en) => context ? (en ? `Question ${context.number}` : `第 ${context.number} 题`) : (en ? 'Platform' : '平台对话');
@@ -32,6 +32,7 @@ export function PlatformAssistantProvider({ children, api, avatarApi, profile, h
   const [hostNotice,setHostNotice] = useState('');
   const [navigation,setNavigation]=useState(null);const expectedNavigation=useRef(null);
   const pending = useRef(null), mounted = useRef(true), generation = useRef(0);
+  const handledActions=useRef(new Set());
   const ownRoute = practice && route === '/learn/practice/' + practice.batchId ? practice : null;
   const pinnedCurrent=state.pinned&&ownRoute?.batchId===state.pinned.batchId&&ownRoute?.questionId===state.pinned.questionId;
   const context = pinnedCurrent ? ownRoute : state.pinned || ownRoute;
@@ -67,28 +68,48 @@ export function PlatformAssistantProvider({ children, api, avatarApi, profile, h
     api.getAssistantCapabilities({signal:abort.signal}).then(({data})=>setAvailability(data)).catch(()=>setAvailability({available:false}));
     return () => abort.abort();
   },[api,mode,owner]);
+  const tracking=state.messages.filter(m=>m.interaction&&!['completed','failed','needs-review'].includes(m.interaction.state)||m.task&&!['completed','failed','needs-review'].includes(m.task.state)).map(m=>({messageId:m.id,root:m.interaction,task:m.task}));
+  const trackingKey=JSON.stringify(tracking);
+  useEffect(()=>{
+    if(mode!=='platform'||!owner||!api.getAgentInteraction||!tracking.length)return;
+    const controller=new AbortController(),epoch=generation.current;let timer;
+    async function poll(){
+      for(const item of JSON.parse(trackingKey)){
+        const rootDone=['completed','failed','needs-review'].includes(item.root?.state),isTask=Boolean(item.task&&rootDone);
+        const target=isTask?item.task.id:item.root?.id;if(!target)continue;
+        try{const {data}=await api.getAgentInteraction(target,{signal:controller.signal});
+          if(controller.signal.aborted||generation.current!==epoch||!mounted.current)return;
+          const terminal=['completed','failed','needs-review'].includes(data.state);
+          setState(s=>({...s,messages:s.messages.map(m=>m.id!==item.messageId?m:isTask?{...m,task:{...m.task,state:data.state,progress:data.progress},...(terminal?{taskResult:data.reply}:{})}:{...m,content:data.reply,status:terminal?'sent':'pending',interaction:{id:data.id,state:data.state},results:data.results??[],...(data.task?{task:data.task}:{})})}));
+          if(!isTask&&terminal&&data.actions?.[0]?.capabilityId&&!handledActions.current.has(data.id)){handledActions.current.add(data.id);await openCapability(data.actions[0].capabilityId);}
+        }catch(error){if(controller.signal.aborted)return;if([401,403,404].includes(error.status)){setState(s=>({...s,messages:s.messages.map(m=>m.id!==item.messageId?m:{...m,status:'sent',content:en?'Task access is unavailable.':'当前无法查看任务，请检查登录或授权。',interaction:{...m.interaction,state:'failed'},...(m.task?{task:{...m.task,state:'failed'}}:{})})}));}}
+      }
+      if(!controller.signal.aborted)timer=setTimeout(poll,2000);
+    }
+    poll();return()=>{controller.abort();clearTimeout(timer);};
+  },[api,mode,owner,trackingKey,en,openCapability]);
   const send = useCallback(async (text, intent = 'chat', retry = null) => {
     if (mode !== 'platform' || !owner || availability?.available === false || pending.current || !text.trim()) return;
     const snapshot = retry && Object.hasOwn(retry,'context') ? retry.context : context;
     const history = retry?.history || state.messages.filter(m => ['user','assistant'].includes(m.role) && m.status === 'sent')
       .slice(-12).map(m => ({role:m.role,content:m.content.slice(0,2000),questionId:m.context?.questionId||null,
         ...(m.role==='assistant'&&/^[a-f0-9-]{36}$/i.test(m.id?.replace(/:reply$/,''))?{requestId:m.id.replace(/:reply$/,'')}:{})}));
-    const requestId = crypto.randomUUID(), controller = new AbortController(), epoch = generation.current;
+    const requestId = availability?.mode==='agent'&&retry?.requestId?retry.requestId:crypto.randomUUID(), controller = new AbortController(), epoch = generation.current;
     pending.current = controller;
     const content = text.trim().slice(0,2000);
-    const userMessage = {id:requestId,role:'user',content,context:snapshot,history,intent,status:'sent'};
+    const userMessage = {id:requestId,requestId,role:'user',content,context:snapshot,history,intent,status:'sent'};
     setState(s => ({...s,open:true,draft:retry ? s.draft : '',messages:[...s.messages.filter(m=>m.id!==retry?.id && (!retry?.id || m.id!==retry.id.replace(/:reply$/,''))),userMessage,
       {id:requestId+':reply',role:'assistant',content:'',context:snapshot,status:'pending',request:userMessage}].slice(-80)}));
     const settle = update => { if(mounted.current && generation.current===epoch)setState(s=>({...s,messages:s.messages.map(m=>m.id===requestId+':reply'?{...m,...update}:m)})); };
     try {
-      const {data} = await api.sendAssistantMessage({requestId,message: intent==='hint' ? '请给一小步提示，先不要直接给出答案。' : intent==='explain' ? '请解释这道题的解题过程。' : content,
+      const {data} = await api.sendAssistantMessage({requestId,...(availability?.mode==='agent'?{conversationId:state.conversationId}:{}),message: intent==='hint' ? '请给一小步提示，先不要直接给出答案。' : intent==='explain' ? '请解释这道题的解题过程。' : content,
         context:snapshot ? {batchId:snapshot.batchId,questionId:snapshot.questionId} : null,history},{signal:controller.signal});
       if(controller.signal.aborted)throw new DOMException('Aborted','AbortError');
-      settle({content:data.reply,status:'sent',results:data.results||[]});
+      settle({content:data.reply,status:data.interaction&&!['completed','failed','needs-review'].includes(data.interaction.state)?'pending':'sent',results:data.results||[],...(data.interaction?{interaction:data.interaction}:{}),...(data.task?{task:data.task}:{})});
       if(mounted.current&&generation.current===epoch&&data.actions?.[0]?.capabilityId)await openCapability(data.actions[0].capabilityId);
     } catch(error) { settle({content:error.name==='AbortError' ? (en?'Waiting stopped. The server may still finish this request.':'已停止等待，服务端可能仍在完成这次请求。') : (error.message || (en?'Unable to reply. Please retry.':'暂时无法回复，请重试。')),status:error.name==='AbortError'?'interrupted':'failed'}); }
     finally { if(pending.current===controller)pending.current=null; }
-  },[mode,owner,availability,context,state.messages,api,en,openCapability]);
+  },[mode,owner,availability,context,state.messages,state.conversationId,api,en,openCapability]);
   const askQuestion = useCallback(async (value,intent='hint') => {
     if(mode==='platform') { setState(s=>({...s,open:true,pinned:null})); await send(intent==='hint'?(en?'Give me a hint.':'给我一点提示。'):(en?'Explain this question.':'解释这道题。'),intent,{context:value}); return; }
     if(mode!=='host')return;
@@ -99,7 +120,7 @@ export function PlatformAssistantProvider({ children, api, avatarApi, profile, h
   const value = useMemo(()=>({state,setState,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,host,go,openCapability,navigation,
     profile:profile?.id===owner?profile:null,avatarApi,
     retryConnection:()=>{setAvailability(null);api.getAssistantCapabilities().then(({data})=>setAvailability(data)).catch(()=>setAvailability({available:false}));},
-    stop:()=>pending.current?.abort(),newChat:()=>{generation.current++;pending.current?.abort();pending.current=null;expectedNavigation.current=null;setNavigation(null);setState(s=>({...fresh(),open:true,width:s.width}));},
+    stop:()=>{pending.current?.abort();setState(s=>({...s,messages:s.messages.map(m=>m.status==='pending'&&m.interaction?{...m,status:'interrupted'}:m)}));},newChat:()=>{generation.current++;pending.current?.abort();pending.current=null;expectedNavigation.current=null;setNavigation(null);setState(s=>({...fresh(),open:true,width:s.width}));},
     currentPractice:ownRoute}),[state,mode,context,registerContext,askQuestion,hostNotice,send,owner,availability,ownRoute,api,avatarApi,profile,host,go,openCapability,navigation]);
   return <Assistant.Provider value={value}>{children}</Assistant.Provider>;
 }
@@ -170,6 +191,7 @@ export function AssistantWorkspace({children}) {
           <small>{m.role==='user'?<span className="assistant-user-avatar"><AvatarView avatar={a.profile?.avatar} api={a.avatarApi} alt={en?'Your avatar':'你的头像'}/></span>:<span className="assistant-message-mark" aria-hidden="true">✦</span>}{m.role==='user'?(a.profile?.displayName||(en?'You':'你')):(en?'Mooyu':'墨鱼')}<span className="assistant-message-scope">{questionLabel(m.context,en)}</span></small>
           {m.status==='pending'?<p role="status" className="assistant-thinking">{en?'Thinking…':'正在思考…'}</p>:<div className="assistant-message-body"><MathContent text={m.content} formatPlainMath/></div>}
           {m.role==='assistant'&&m.status==='sent'&&<PlatformAgentCards results={m.results} go={a.go} openCapability={a.openCapability} disabled={pending||a.navigation?.status==='opening'}/>}
+          {m.task&&<div className="assistant-task" role="status"><small>{en?'Agent task':'小墨鱼任务'} · {({queued:'排队中',running:'执行中',waiting:'等待恢复',completed:'已完成',failed:'未完成','needs-review':'待核对'})[m.task.state]??m.task.state}{m.task.progress?.total?' · '+m.task.progress.completed+'/'+m.task.progress.total:''}</small><p>{m.taskResult||m.task.id}</p></div>}
           {['failed','interrupted'].includes(m.status)&&<button disabled={pending} onClick={()=>a.send(m.request.content,m.request.intent||'chat',{...m.request,id:m.id})}>{en?'Retry':'重试'}</button>}
         </article>)}
       </div>
@@ -179,7 +201,7 @@ export function AssistantWorkspace({children}) {
         {!a.owner?<p>{en?'Sign in to chat with Mooyu.':'登录后与墨鱼助手交流。'}</p>:a.availability?.available===false?<p role="status">{en?'Assistant is currently unavailable. Your conversation is preserved.':'助手暂不可用，对话已保留。'} <button type="button" onClick={a.retryConnection}>{en?'Reconnect':'重新连接'}</button></p>:null}
         {a.context&&<div className="assistant-suggestions"><button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Give me a hint.':'给我一点提示。','hint')}>{en?'Small hint':'给一点提示'}</button>{a.context.checked&&<button disabled={pending||!a.owner||a.availability?.available===false} onClick={()=>a.send(en?'Explain this question.':'解释这道题。','explain')}>{en?'Explain':'讲解思路'}</button>}</div>}
         <form onSubmit={e=>{e.preventDefault();a.send(a.state.draft);}}><label className="assistant-input-label" htmlFor="assistant-draft">{en?'Message Mooyu':'向墨鱼提问'}</label><textarea id="assistant-draft" maxLength={2000} rows={3} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();if(!pending)a.send(a.state.draft);}}} value={a.state.draft} placeholder={a.context?(en?'Ask about this question…':'这道题，哪里还没想明白？'):(en?'Ask Mooyu…':'有什么想和墨鱼聊聊？')} onChange={e=>a.setState(s=>({...s,draft:e.target.value}))}/><div><small>{a.context?(en?'Question attached':'已附当前题目'):(en?'Platform conversation':'平台对话')}</small>{pending?<button type="button" className="assistant-send" onClick={a.stop}>{en?'Stop waiting':'停止等待'}</button>:<button type="submit" className="assistant-send" disabled={!a.owner||!a.state.draft.trim()||a.availability?.available===false}>{en?'Send ↑':'发送 ↑'}</button>}</div></form>
-        <small className="assistant-retention">{en?'Stored in this tab · Model replies may be imperfect':'当前标签页保存 · 模型回答仅供参考'}</small>
+        <small className="assistant-retention">{a.availability?.mode==='agent'?(en?'Tasks are saved on the server. Closing chat does not cancel them.':'任务已在服务端保存，收起对话不会取消任务。'):(en?'Stored in this tab · Model replies may be imperfect':'当前标签页保存 · 模型回答仅供参考')}</small>
       </div>
     </aside></>}
   </div>;

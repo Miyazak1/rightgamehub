@@ -12,8 +12,8 @@ export function createQQProvider({apiKey,model,invoke=createAgentDeepSeekProvide
   };
 }
 export class QQService {
-  constructor({config,repository,provider,gateway,log=()=>{},fault=async()=>{}}){
-    Object.assign(this,{config,repository,provider,gateway,log,fault});this.controller=new AbortController();
+  constructor({config,repository,provider,gateway,bridge=null,log=()=>{},fault=async()=>{}}){
+    Object.assign(this,{config,repository,provider,gateway,bridge,log,fault});this.controller=new AbortController();
   }
   async receive(event){
     if(this.repository.control){const result=await this.repository.admit(event);if(result.accepted&&!result.duplicate)this.log({event:'admission',messageId:String(event.message_id),accepted:true});return result;}
@@ -41,9 +41,11 @@ export class QQService {
       if(!this.config.enabled)return {paused:true};
       if(this.readiness&&!this.readiness(this.config))return {accountNotReady:true};
       if(!this.gateway.connected())return {offline:true};
+      if(this.bridge)await this.bridge.poll(c,this.config,this.controller.signal);
       const row=await this.repository.next(c);if(!row)return {idle:true};
       if(!this.config.allowedUsers.includes(row.user_id)||(row.origin_group_id&&row.origin_group_id!==this.config.groupId)){await this.repository.deny(c,row);return {policyRejected:true};}
       if(row.status==='queued'){
+        if(this.bridge)return this.bridge.queued(c,row,this.config,this.controller.signal);
         const messages=this.messages(await this.repository.history(c,row),row);
         // UTF-8 bytes plus envelope overhead conservatively reserve input tokens.
         const tokens=Buffer.byteLength(JSON.stringify(messages))+1024+this.config.maxReplyTokens;

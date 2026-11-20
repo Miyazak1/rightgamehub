@@ -15,6 +15,8 @@
     "rule-worker:start": "node src/multiplayer-rule-build-worker-cli.mjs",
     "researcher-worker:start": "node src/researcher-worker-cli.mjs",
     "agent-runtime-worker:start": "node src/agent-runtime-worker-cli.mjs",
+    "agent-interaction-worker:start": "node src/agent-interaction-worker-cli.mjs",
+    "agent-interaction:bootstrap": "node src/agent-interaction-bootstrap-cli.mjs",
     "agent-blog-private-scheduler:start": "node src/agent-blog-private-schedule-worker-cli.mjs",
     "agent-paper-semantic:run": "node src/agent-paper-semantic-run-cli.mjs",
     "agent-paper-article:run": "node src/agent-paper-article-manual-run-cli.mjs",

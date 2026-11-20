@@ -46,7 +46,7 @@ import { createAgentPaperArticleAcceptanceService,
   PostgresAgentPaperArticleAcceptanceRepository } from './agent-paper-article-acceptance.mjs';
 
 export function createAgentBlogPublicRuntime({ env = process.env, applicationName,
-  pool: suppliedPool } = {}) {
+  pool: suppliedPool, additionalResponseSchemas = {}, providerAdapter = null } = {}) {
   if (!env.DATABASE_URL && !suppliedPool) throw new Error('DATABASE_URL is required');
   if (!env.AGENT_SECRET_ENCRYPTION_KEY) throw new Error('AGENT_SECRET_ENCRYPTION_KEY is required');
   const config = loadAgentBlogPublicRuntimeConfig(env);
@@ -95,9 +95,9 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
   const providerGateway = createAgentProviderGateway({
     runtimeRepository, governanceRepository: new PostgresAgentProviderGatewayRepository(pool), policyService,
     secretVault: createAgentSecretVault({ masterKey: env.AGENT_SECRET_ENCRYPTION_KEY }),
-    adapters: { deepseek: createAgentDeepSeekProviderAdapter() },
+    adapters: { deepseek: providerAdapter ?? createAgentDeepSeekProviderAdapter() },
     responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS,
-      ...PAPER_ARTICLE_RESPONSE_SCHEMAS },
+      ...PAPER_ARTICLE_RESPONSE_SCHEMAS, ...additionalResponseSchemas },
   });
   const artifactRepository = new PostgresAgentRuntimeStageArtifactRepository(pool);
   const discoveryHandlers = createAgentBlogAutonomousCandidateDiscoveryHandlers({
@@ -108,9 +108,10 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
       { requireResearchEvidence: true }), policyService });
   const publicationGateway = createAgentBlogFoundationPublicationGateway({ runtimeRepository,
     publicationRepository: new PostgresAgentBlogFoundationPublicationRepository(pool), policyService });
+  const researchEvidenceRepository=new PostgresAgentResearchEvidenceRepository(pool);
   const publicationHandlers = createAgentBlogFoundationPublicHandlers({
     toolGateway, providerGateway, artifactRepository, draftGateway, publicationGateway,
-    researchEvidenceRepository: new PostgresAgentResearchEvidenceRepository(pool),
+    researchEvidenceRepository,
   });
   const paperArticleHandlers = createAgentPaperArticleDraftHandlers({
     toolGateway, providerGateway, artifactRepository, draftGateway,
@@ -156,6 +157,10 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
   });
   const paperArticleAcceptance = createAgentPaperArticleAcceptanceService({ paperArticleRunner,
     repository: new PostgresAgentPaperArticleAcceptanceRepository(pool) });
-  return Object.freeze({ config, pool, runner, paperArticleRunner, paperArticleAcceptance,
+  const interactionPorts=Object.freeze({runtimeRepository,providerGateway,toolGateway,artifactRepository,draftGateway,
+    publicationGateway,discoveryHandlers,publicationHandlers,
+    inputRepository:new PostgresAgentBlogPrivateCanaryInputRepository(pool),
+    preflightRepository:new PostgresAgentBlogPublicRuntimePreflightRepository(pool),researchEvidenceRepository});
+  return Object.freeze({ config, pool, runner, paperArticleRunner, paperArticleAcceptance,interactionPorts,
     close: async () => { if (ownsPool) await pool.end(); } });
 }

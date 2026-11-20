@@ -12,6 +12,45 @@ export class PostgresAgentBlogPublicRequestRepository {
     return (await this.pool.query('SELECT * FROM agent_blog_public_requests WHERE agent_user_id=$1 AND request_id=$2',
       [agentUserId,requestId])).rows[0]??null;
   }
+  async completeInteractionReceipt(agentUserId,requestId,result){
+    await this.requireInteractionReceipt(agentUserId,requestId,result);
+    const changed=await this.pool.query(`UPDATE agent_blog_public_requests SET status='completed',result_json=$3,
+      lease_token=NULL,lease_until=NULL,error_code=NULL,safe_for_next=true,updated_at=now()
+      WHERE agent_user_id=$1 AND request_id=$2 AND snapshot_json->>'executionSource'='agent-interaction-v1'
+        AND (status='waiting' OR (status='running' AND lease_until<=now()))`,[agentUserId,requestId,JSON.stringify(result)]);
+    return changed.rowCount===1;
+  }
+  async requireInteractionReceipt(agentUserId,requestId,result){
+    const id=result.runId??result.discoveryRunId;
+    const proof=(await this.pool.query(`SELECT run.id FROM agent_runs run JOIN agent_blog_public_requests request
+      ON request.agent_user_id=run.agent_user_id AND request.request_id=$2
+      WHERE run.agent_user_id=$1 AND run.id=$3 AND run.status='succeeded'
+       AND request.snapshot_json->>'executionSource'='agent-interaction-v1'
+       AND ((run.idempotency_key=$4 AND run.workflow_key IN ('blog.project.discovery-shadow','agent.github.inspect')
+          AND run.output_type IN ('blog.candidate-set','blog.discovery-skipped','agent.github.repository'))
+        OR (run.idempotency_key=$5 AND run.workflow_key IN ('blog.project.single','blog.project.single.draft-shadow')
+          AND run.output_type IN ('blog.article','blog.private-draft','blog.publication-skipped')))
+       AND ($6::uuid IS NULL OR run.output_id=$6::uuid)`,[agentUserId,requestId,id,`public-runtime:${requestId}:discovery`,`public-runtime:${requestId}:article`,result.articleId??null])).rows[0];
+    if(!proof)throw failure('AGENT_PUBLIC_REQUEST_RECEIPT_REQUIRED');
+  }
+  async deferInteraction(agentUserId,requestId,{errorCode,needsReview=false}){
+    await this.pool.query(`UPDATE agent_blog_public_requests SET status=$3,error_code=$4,safe_for_next=$5,
+      next_attempt_at=now()+interval '60 seconds',updated_at=now()
+      WHERE agent_user_id=$1 AND request_id=$2 AND status='waiting' AND snapshot_json->>'executionSource'='agent-interaction-v1'`,[agentUserId,requestId,needsReview?'needs-review':'waiting',errorCode,needsReview]);
+  }
+  async settleInteraction(agentUserId,requestId,token,{result,...options}){
+    if(!result)return this.settle(agentUserId,requestId,token,options);
+    await this.requireInteractionReceipt(agentUserId,requestId,result);
+    const changed=await this.pool.query(`UPDATE agent_blog_public_requests SET status='completed',result_json=$4,
+      lease_token=NULL,lease_until=NULL,error_code=NULL,safe_for_next=true,updated_at=now()
+      WHERE agent_user_id=$1 AND request_id=$2 AND lease_token=$3 AND status='running'
+       AND snapshot_json->>'executionSource'='agent-interaction-v1'`,[agentUserId,requestId,token,JSON.stringify(result)]);
+    if(changed.rowCount!==1){
+      const saved=await this.checkpoint(agentUserId,requestId);
+      if(saved?.status!=='completed')throw failure('AGENT_PUBLIC_REQUEST_LEASE_LOST');
+    }
+    await this.event(agentUserId,requestId,'completed');
+  }
 
   async reconcileCompleted(agentUserId,requestId,result) {
     if(!await this.findCompleted({agentUserId,requestId}))throw failure('AGENT_PUBLIC_REQUEST_RECEIPT_REQUIRED');
@@ -84,6 +123,7 @@ export class PostgresAgentBlogPublicRequestRepository {
 
   async pending(agentUserId) {
     const checkpoint=(await this.pool.query(`SELECT * FROM agent_blog_public_requests WHERE agent_user_id=$1
+      AND coalesce(snapshot_json->>'executionSource','public-runtime')<>'agent-interaction-v1'
       AND (status='waiting' OR (status='running' AND lease_until<=now())) AND next_attempt_at<=now()
       ORDER BY created_at,request_id LIMIT 1`,[agentUserId])).rows[0]??null;
     if(checkpoint)return checkpoint;
@@ -104,9 +144,9 @@ export class PostgresAgentBlogPublicRequestRepository {
     const rows=(await this.pool.query(`SELECT id,workflow_key,status,output_type,output_id,input_json,config_snapshot,
       behavior_profile_id,trigger_kind,trigger_ref FROM agent_runs
       WHERE agent_user_id=$1 AND ((workflow_key='blog.project.discovery-shadow' AND idempotency_key=$2)
-        OR (workflow_key='blog.project.single' AND idempotency_key=$3))`,
+        OR (workflow_key IN ('blog.project.single','blog.project.single.draft-shadow') AND idempotency_key=$3))`,
     [agentUserId,`public-runtime:${requestId}:discovery`,`public-runtime:${requestId}:article`])).rows;
-    return Object.fromEntries(rows.map(row=>[row.workflow_key==='blog.project.single'?'publication':'discovery',
+    return Object.fromEntries(rows.map(row=>[row.workflow_key==='blog.project.discovery-shadow'?'discovery':'publication',
       {...row,outputType:row.output_type,outputId:row.output_id}]));
   }
 
