@@ -3,6 +3,25 @@ const root=path.resolve(__dirname,'..'),file=path.resolve(process.argv[2]??''),o
 if(s.schemaVersion!=='agent-interaction-lab-v1')throw Error('ISOLATION_REQUIRED');
 function docker(args){const r=cp.spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1000000});if(r.status!==0)throw Error('LAB_DOCKER_FAILED');return r.stdout.trim();}
 async function main(){
+ if(operation==='--recover-test-gateway'){
+  const state=await (await fetch('http://127.0.0.1:'+s.apiPort+'/lab/qq/login-status',{headers:{authorization:'Bearer '+s.browserToken}})).json();if(state.data?.loggedIn!==false||state.data?.ready!==false)throw Error('OFFLINE_GATEWAY_REQUIRED');
+  const inspect=name=>JSON.parse(docker(['inspect',name]))[0],before=inspect(s.oldStack.gateway),worker=inspect(s.oldStack.worker),db=inspect(s.oldStack.db);
+  if(before.Config.Labels['mooyu.qq-login-lab']!==s.oldStack.id||worker.Config.Labels['mooyu.qq-compat']!==s.oldStack.id||db.Config.Labels['mooyu.qq-compat']!==s.oldStack.id)throw Error('INDEPENDENT_GATEWAY_IDENTITY_REQUIRED');
+  const history=()=>docker(['exec',s.oldStack.db,'psql','-U','mooyu_qq','-d','mooyu_qq_local_compat','-At','-c',"SELECT json_build_object('pending',count(*) FILTER(WHERE status IN ('queued','generating','ready','sending')),'delivered',count(*) FILTER(WHERE status='delivered')) FROM mooyu_qq.messages"]),oldHistory=history();if(JSON.parse(oldHistory).pending!==0)throw Error('ORIGINAL_WORKER_BUSY');
+  const stamp=new Date().toISOString().replace(/[^0-9]/g,''),snapshot=path.join(s.privateRoot,'gateway-recovery-'+stamp+'.private.json');fs.writeFileSync(snapshot,JSON.stringify(before,null,2),{flag:'wx',mode:0o600});
+  docker(['restart','--timeout','30',s.oldStack.gateway]);
+  const after=inspect(s.oldStack.gateway),binding=after.NetworkSettings.Ports['6099/tcp']?.[0];if(binding?.HostIp!=='127.0.0.1')throw Error('GATEWAY_PORT_MUST_REMAIN_LOCAL');
+  const sameMounts=JSON.stringify(before.Mounts)===JSON.stringify(after.Mounts),sameImage=before.Image===after.Image,workerRetained=inspect(s.oldStack.worker).State.StartedAt===worker.State.StartedAt,dbRetained=inspect(s.oldStack.db).State.StartedAt===db.State.StartedAt,historyRetained=history()===oldHistory;
+  s.gatewayOrigin='http://127.0.0.1:'+binding.HostPort;fs.writeFileSync(file,JSON.stringify(s,null,2));
+  const report={at:new Date().toISOString(),gateway:s.oldStack.gateway,reason:'QR_REFRESH_REQUIRES_LOGIN_SERVICE_RESTART',sameMounts,sameImage,workerRetained,dbRetained,historyRetained,localPort:Number(binding.HostPort),paperEnabled:false};fs.writeFileSync(path.join(s.evidence,'gateway-recovery-'+stamp+'.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+  if(![sameMounts,sameImage,workerRetained,dbRetained,historyRetained].every(Boolean))throw Error('PRESERVATION_CHECK_FAILED');return;
+ }
+ if(operation==='--restart-qq-waiting'){
+  if(!s.qqWorker||fs.existsSync(path.join(s.privateRoot,'activation/ready')))throw Error('LAB_WAITING_WORKER_REQUIRED');
+  const info=JSON.parse(docker(['inspect',s.qqWorker]))[0];if(info.Config.Labels['mooyu.agent-lab']!==s.id)throw Error('LAB_WORKER_IDENTITY_MISMATCH');
+  const pending=docker(['exec',s.name+'-db','psql','-U','qa_ledger_test','-d',s.qqDatabase,'-At','-c',"SELECT count(*) FROM mooyu_qq.messages WHERE status IN ('queued','generating','ready','sending')"]);if(pending!=='0')throw Error('LAB_WORKER_BUSY');
+  docker(['restart','--timeout','5',s.qqWorker]);console.log(JSON.stringify({restarted:s.qqWorker,pending:0,gatewayRestarted:false}));return;
+ }
  if(operation==='--permission'){
   if(!['allow','deny'].includes(process.argv[4]))throw Error('PERMISSION_ACTION_REQUIRED');
   const url='http://127.0.0.1:'+s.apiPort+'/v1/admin/agents/'+s.agentId+'/channel-participants',headers={authorization:'Bearer '+s.browserToken,'content-type':'application/json'},prior=await (await fetch(url,{headers})).json(),entry=prior.data?.find(v=>v.channel==='qq'&&v.actor_ref===s.oldStack.caller);
