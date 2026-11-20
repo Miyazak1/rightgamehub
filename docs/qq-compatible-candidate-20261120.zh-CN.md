@@ -78,7 +78,7 @@ Node 测试共 5 项通过、无跳过：实际候选容器拒绝混用运行路
 
 ## 线上切换工具准备
 
-用户已在服务器确认：API、web、QQ worker 的原镜像与本地构建基线一致；四个新镜像已导入并核对摘要。线上源码仍为 `9f98c06`，原分支及未跟踪的 Python 缓存保留；QQ 数据库六条消息均已送达。数据库压缩备份及 SHA256 校验通过。实际登录卷为 `mooyu-qq-napcat-fresh`，网关使用 `compose.yml`、`compose.freshvol.yml`、`compose.quick.yml`；worker 和网站各有既存历史覆盖层，因此不能只用原始 compose.yml 重建。
+用户已在服务器确认：API、web、QQ worker 的原镜像与本地构建基线一致；四个新镜像已导入并核对摘要。线上源码仍为 `9f98c06`，原分支及未跟踪的 Python 缓存保留；QQ 数据库六条消息均已送达。数据库压缩备份及 SHA256 校验通过。网关使用 `compose.yml`、`compose.freshvol.yml`、`compose.quick.yml` 和 fresh 登录卷；具体卷名以已核对的网关容器实际挂载为准，不能从截图转写后固定。worker 和网站各有既存历史覆盖层，因此不能只用原始 compose.yml 重建。
 
 新增 `deploy/qq/switch-compatible.py`，分为 `plan`、`apply`、`rollback`。本轮仅准备工具，尚未线上执行切换。
 
@@ -89,3 +89,5 @@ Node 测试共 5 项通过、无跳过：实际候选容器拒绝混用运行路
 三项本地检查通过，无跳过：配置/挂载/环境漂移拒绝及中断自动回退；实际 Compose 合并和无网络容器验证令牌中的字面美元符号保持原值、旧镜像默认环境被清除；实际候选镜像中的资料兼容复制及同路径不同内容拒绝。备份用候选镜像具备 GNU tar 1.34。Compose 的 JSON 输出会将字面 `$` 序列化为 `$$`，比较时解码一次，实际容器值已单独验证。
 
 私有切换记录位于 `/www/backup/gamehub/qq-compatible-55b2f7e8/cutover-*`，目录 0700、文件 0600。其中 `plan.private.json`、原配置副本和 `command-*.log` 可能含凭据，不能分享。只反馈终端步骤、退出码及脱敏结果。
+
+首轮线上预检在 `QQ_ORIGINAL_LOGIN_VOLUME_MISMATCH` 安全停止：初版错误地固定了截图转写的卷名，未停止服务、未创建副本或切换。第二版改为从身份已核对的容器读取唯一 `/data` 可写 volume 挂载，再核对 Docker 卷身份及唯一运行使用者；PLAN_READY 明确输出实际卷名。新增含下划线命名卷、非卷挂载、只读挂载及无效名称保护检查通过。旧预检记录保留，第二版使用新的记录目录。

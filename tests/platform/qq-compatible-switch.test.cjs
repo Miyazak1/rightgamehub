@@ -9,6 +9,13 @@ def load(name,file):
  spec=importlib.util.spec_from_file_location(name,file);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 m=load('compatible',sys.argv[1]);u=load('prior',sys.argv[2])
 old={'Config':{'Env':['QQ_WEBUI_TOKEN='+('a'*64),'QQ_ACCESS_TOKEN=synthetic-$token','NODE_VERSION=22','OLD_DEFAULT=old','OPERATOR_SETTING=retained'],'Labels':{'com.docker.compose.service':'napcat'}},'Mounts':[{'Type':'volume','Destination':'/data','Name':'old_login','RW':True},{'Type':'bind','Destination':'/config/config.json','Source':'/www/mooyu-qq/config.json','RW':False}],'NetworkSettings':{'Networks':{'existing':{}}},'HostConfig':{'Tmpfs':{'/tmp':'size=128m'},'ReadonlyRootfs':True}}
+for name in ['mooyu-qq_qq-napcat-fresh','mooyu-qq-napcat-fresh','old_login']:
+ actual=copy.deepcopy(old);actual['Mounts'][0]['Name']=name;assert m.login_volume(actual)==name
+for mount in [[],[{'Type':'bind','Destination':'/data','Source':'/somewhere','RW':True}],[{'Type':'volume','Destination':'/data','Name':'old_login','RW':False}],[{'Type':'volume','Destination':'/data','Name':'../wrong','RW':True}]]:
+ actual=copy.deepcopy(old);actual['Mounts']=mount
+ try:m.login_volume(actual)
+ except RuntimeError:pass
+ else:raise AssertionError('invalid source mount accepted')
 old_image={'Config':{'Env':['NODE_VERSION=22','OLD_DEFAULT=old']}}
 new_image={'Id':'new-image','Config':{'Env':['NODE_VERSION=20']}}
 value=m.gateway_overlay(u,old,old_image,new_image,'new_login')

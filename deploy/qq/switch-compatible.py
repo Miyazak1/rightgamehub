@@ -54,6 +54,18 @@ def fail(code):
     raise RuntimeError(code)
 
 
+def login_volume(gateway):
+    # The verified live container is authoritative; Compose may add underscores
+    # or use an explicitly named external volume. Never guess its name.
+    mounts = [m for m in gateway['Mounts'] if m['Destination'] == '/data']
+    if len(mounts) != 1 or mounts[0]['Type'] != 'volume' or mounts[0].get('RW') is not True:
+        fail('QQ_ORIGINAL_LOGIN_VOLUME_MISMATCH')
+    name = mounts[0].get('Name', '')
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', name):
+        fail('QQ_ORIGINAL_LOGIN_VOLUME_MISMATCH')
+    return name
+
+
 def load_helper(record=None):
     # Read the already verified Git object, not an untracked Python file/cache.
     if record:
@@ -192,10 +204,10 @@ def prepare(package):
     if u.qq_sql(infos['postgres'], "SELECT count(*) FROM mooyu_qq.messages WHERE status IN ('generating','sending','needs-review');") != '0':
         fail('QQ_BUSY_OR_UNCERTAIN_SEND')
     gateway = infos['gateway']
-    mounts = [m for m in gateway['Mounts'] if m['Destination'] == '/data']
-    if len(mounts) != 1 or mounts[0]['Type'] != 'volume' or mounts[0]['Name'] != 'mooyu-qq-napcat-fresh':
+    old_volume = login_volume(gateway)
+    volume_info = json.loads(u.run(['docker', 'volume', 'inspect', old_volume]))[0]
+    if volume_info.get('Name') != old_volume:
         fail('QQ_ORIGINAL_LOGIN_VOLUME_MISMATCH')
-    old_volume = mounts[0]['Name']
     users = u.run(['docker', 'ps', '-q', '--no-trunc', '--filter', 'volume=' + old_volume]).decode().split()
     if set(users) != {gateway['Id']}:
         fail('QQ_LOGIN_VOLUME_HAS_OTHER_RUNNING_USERS')
@@ -260,6 +272,7 @@ def prepare(package):
     state['history'] = history(u, infos['postgres'])
     write(u, record / 'plan.private.json', state)
     print(json.dumps({'result': 'PLAN_READY', 'record': str(record), 'profile': profile,
+                      'originalLoginVolume': old_volume,
                       'existingDeliveredMessages': len(state['history']), 'servicesChanged': False,
                       'paperEnabled': False}, ensure_ascii=False), flush=True)
 
