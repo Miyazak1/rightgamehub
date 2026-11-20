@@ -142,7 +142,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   await governance.registerModel({ provider: 'deepseek', modelId, catalogVersion: 1, status: 'active',
     taskClasses: ['structured-generation'], supportsJsonSchema: true, maxInputTokens: 60000, maxOutputTokens: 7000,
     inputPriceMicrousdPerMillion: 2000000, outputPriceMicrousdPerMillion: 4000000, config: { fixture: true } });
-  const masterKey=live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32);
+  const masterKey=live?.masterKey??(live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32));
   const vault = createAgentSecretVault({ masterKey });
   const encrypted = vault.encrypt(account.agentUserId, 'deepseek', live?.apiKey??'fixture-shadow-secret-key');
   await admin.query(`INSERT INTO agent_provider_secrets(

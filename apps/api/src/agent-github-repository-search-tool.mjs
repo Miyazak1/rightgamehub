@@ -3,7 +3,9 @@ import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
 
-const MAX_RESPONSE_BYTES = 262144;
+// GitHub search can include large owner/description metadata even for a short
+// result page. Bound raw transport separately from the normalized tool output.
+const MAX_RESPONSE_BYTES = 1048576;
 const QUERY = /^[\p{L}\p{N} ._+#-]{2,120}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
 
@@ -94,10 +96,16 @@ export function validateGitHubRepositorySearchOutput(value) {
 
 async function readResponse(response) {
   const declared = Number(response.headers.get('content-length') ?? 0);
-  if (declared > MAX_RESPONSE_BYTES) fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > MAX_RESPONSE_BYTES) fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
-  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  if (declared > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel();fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
+  }
+  const reader=response.body?.getReader();if(!reader)fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID');
+  const chunks=[];let size=0;
+  try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;
+    if(size>MAX_RESPONSE_BYTES){await reader.cancel();fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');}
+    chunks.push(Buffer.from(value));
+  }}finally{reader.releaseLock();}
+  return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks,size));
 }
 
 export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fetch,
@@ -128,7 +136,10 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
     }
     let payload;
     try { payload = JSON.parse(await readResponse(response)); }
-    catch (error) { fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID', { cause: error }); }
+    catch (error) {
+      if(error?.code==='AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE')throw error;
+      fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID', { cause: error });
+    }
     if (!Array.isArray(payload?.items)) fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID');
     const candidates = payload.items.slice(0, input.limit).map(item => {
       const owner = String(item?.owner?.login ?? '').slice(0, 100);
