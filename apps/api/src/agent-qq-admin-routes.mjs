@@ -12,5 +12,10 @@ export function registerAgentQQAdminRoutes(app,{service,requireAuth}){
  app.get(root,{preHandler:guard,schema:{params}},run('status'));
  app.get(root+'/qrcode',{preHandler:guard,schema:{params}},run('qr'));
  app.post(root+'/qrcode/refresh',{preHandler:guard,preValidation:strict('refresh'),bodyLimit:16384,schema:{params,body:{type:'object',additionalProperties:false,required:['requestId','expectedLoginRevision'],properties:{requestId:{type:'string',format:'uuid'},expectedLoginRevision:revision}}}},run('refresh'));
+ const clearPassword=async request=>{if(request.body&&typeof request.body==='object')delete request.body.password;};
+ app.post(root+'/login/password',{logLevel:'silent',onRequest:async(_request,reply)=>{reply.header('Cache-Control','no-store, private').header('Pragma','no-cache');},preHandler:guard,preValidation:strict('password'),onError:clearPassword,onResponse:clearPassword,bodyLimit:4096,schema:{params},errorHandler:(error,_request,reply)=>{
+  const known=/^QQ_[A-Z0-9_]{1,70}$/u.test(error.code??'');
+  reply.code(known?(error.statusCode??400):(error.statusCode<500?400:503)).send({error:{code:known?error.code:error.statusCode<500?'QQ_CONTROL_INPUT':'QQ_CONTROL_UNAVAILABLE'}});
+ }},async(request,reply)=>{try{return await run('password')(request,reply);}finally{await clearPassword(request);}});
  app.put(root+'/settings',{preHandler:guard,preValidation:strict('configure'),bodyLimit:16384,schema:{params,body:{type:'object',additionalProperties:false,required:['requestId','expectedRevision','settings'],properties:{requestId:{type:'string',format:'uuid'},expectedRevision:revision,settings:policy}}}},run('configure'));
 }

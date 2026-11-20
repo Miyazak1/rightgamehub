@@ -66,6 +66,46 @@ test('QQ administrator controls use real isolated PostgreSQL, authenticated HTTP
   await assert.rejects(f.store.mutate(crypto.randomUUID(),op,failure),{code:'QQ_LOGIN_CONFLICT'});
   assert(!JSON.stringify((await f.store.view()).audit).includes('synthetic lost response'));
  });
+ await t.test('password operations persist only metadata, preserve history/budget and serialize against QR refresh',async()=>{
+  const f=await fixture();await f.service.receive(f.event(1));await f.service.tick();await f.service.tick();await f.enable();
+  const history=await f.row(1),budget=(await f.repo.status()).budget,secret='synthetic-password-never-store';
+  await pool.query("ALTER TABLE mooyu_qq.control_requests DROP CONSTRAINT control_requests_operation_check; ALTER TABLE mooyu_qq.control_requests ADD CONSTRAINT control_requests_operation_check CHECK(operation IN ('configure','refresh'))");
+  await f.repo.enableControl();
+
+  const op={operation:'password',actorId,agentUserId:agentId,args:{expectedLoginRevision:1,uin:f.config.botId,password:secret}},id=crypto.randomUUID();let calls=0;
+  const action=async()=>{calls++;return {outcome:'verification_required',verification:'new_device',jumpUrl:secret,passwordMd5:secret};};
+  const result=await f.store.mutate(id,op,action);assert.deepEqual(result,{loginRevision:2,outcome:'verification_required',verification:'new_device'});
+  assert.deepEqual(await f.store.mutate(id,{...op,args:{...op.args,password:'different-transient-password'}},action),result);assert.equal(calls,1);
+  await assert.rejects(f.store.mutate(crypto.randomUUID(),{operation:'refresh',actorId,agentUserId:agentId,args:{expectedLoginRevision:1}},()=>{throw Error('must not run');}),{code:'QQ_LOGIN_CONFLICT'});
+  const rows=(await pool.query('SELECT digest,operation,result FROM mooyu_qq.control_requests WHERE channel_id=$1',[f.repo.id])).rows;
+  const events=(await pool.query('SELECT details FROM mooyu_qq.events WHERE channel_id=$1',[f.repo.id])).rows;
+  assert(!JSON.stringify({rows,events}).includes(secret));assert(!JSON.stringify({rows,events}).includes(crypto.createHash('md5').update(secret).digest('hex')));
+  const safe={...op,args:{expectedLoginRevision:1,uin:f.config.botId}};assert.equal(rows[0].digest,crypto.createHash('sha256').update(JSON.stringify(safe)).digest('hex'));
+  assert.deepEqual(await f.row(1),history);assert.deepEqual((await f.repo.status()).budget,budget);assert.equal((await f.store.view()).paperEnabled,false);
+  await f.repo.enableControl();assert.deepEqual(await f.row(1),history);assert.equal((await f.store.view()).loginRevision,2);
+  const lost={...op,args:{...op.args,expectedLoginRevision:2}},lostId=crypto.randomUUID();
+  await assert.rejects(f.store.mutate(lostId,lost,async()=>{calls++;throw Error(secret);}),{code:'QQ_ACTION_UNCERTAIN'});
+  await assert.rejects(f.store.mutate(lostId,lost,action),{code:'QQ_ACTION_UNCERTAIN'});assert.equal(calls,2);
+ });
+ await t.test('signed password bridge restricts the bound QQ, redacts persistence and rate-limits login attempts',async()=>{
+  const f=await fixture();await f.enable();const {startQQControlServer}=await import('../../apps/qq-channel/src/control-server.mjs');
+  const secret=crypto.randomBytes(32).toString('hex'),password='synthetic-signed-login-password';let calls=0;
+  const server=await startQQControlServer({secret,agentUserId:agentId,store:f.store,gateway:{connected:()=>false},napcat:{inspect:async()=>({loggedIn:false}),passwordLogin:async(uin,value)=>{assert.equal(uin,f.config.botId);assert.equal(value,password);calls++;return {outcome:'submitted'};}},host:'127.0.0.1',port:0});
+  try{
+   const send=async(command,id=crypto.randomUUID(),signature=true)=>{const body=JSON.stringify(command),timestamp=String(Date.now());return fetch('http://127.0.0.1:'+server.address.port+'/control',{method:'POST',headers:{'Content-Type':'application/json',...(signature?{'X-QQ-Time':timestamp,'X-QQ-Request':id,'X-QQ-Signature':qqSignature(secret,timestamp,id,body)}:{})},body});};
+   const command={operation:'password',actorId,agentUserId:agentId,args:{expectedLoginRevision:1,uin:f.config.botId,password}},id=crypto.randomUUID();
+   assert.equal((await send(command,id,false)).status,401);assert.equal(calls,0);
+   assert.equal((await send({...command,args:{...command.args,uin:'999999999'}})).status,409);assert.equal(calls,0);
+   let response=await send(command,id);assert.equal(response.status,200);assert.equal((await response.json()).data.outcome,'submitted');assert.equal(calls,1);
+   response=await send(command,id);assert.equal(response.status,200);assert.equal(calls,1);
+   response=await send({...command,args:{...command.args,expectedLoginRevision:1}});assert.equal(response.status,409);assert.equal(calls,1);
+   response=await send(command,id);assert.equal(response.status,200);
+   response=await send(command,id);assert.equal(response.status,429);assert.equal(calls,1);
+   const rows=(await pool.query('SELECT row_to_json(r) AS value FROM mooyu_qq.control_requests r WHERE channel_id=$1',[f.repo.id])).rows;
+   const events=(await pool.query('SELECT details FROM mooyu_qq.events WHERE channel_id=$1',[f.repo.id])).rows;
+   assert(!JSON.stringify({rows,events}).includes(password));assert(!JSON.stringify({rows,events}).includes(crypto.createHash('md5').update(password).digest('hex')));
+  }finally{await server.close();}
+ });
  await t.test('real HTTP bridge rejects forged/expired signatures and website permission or ownership failures before exposing QR',async()=>{
   const f=await fixture();await f.enable();const secret=crypto.randomBytes(32).toString('hex');let qrReads=0;
   const {startQQControlServer}=await import('../../apps/qq-channel/src/control-server.mjs');

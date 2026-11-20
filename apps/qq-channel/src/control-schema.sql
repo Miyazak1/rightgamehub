@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS mooyu_qq.control_settings (
 );
 CREATE TABLE IF NOT EXISTS mooyu_qq.control_requests (
  channel_id text NOT NULL REFERENCES mooyu_qq.settings(channel_id), request_id uuid NOT NULL,
- digest text NOT NULL, operation text NOT NULL CHECK(operation IN ('configure','refresh')),
+ digest text NOT NULL, operation text NOT NULL CHECK(operation IN ('configure','refresh','password')),
  result jsonb, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(channel_id,request_id)
 );
+-- Extend the existing operation guard without replacing rows, settings or history.
+ALTER TABLE mooyu_qq.control_requests DROP CONSTRAINT IF EXISTS control_requests_operation_check;
+ALTER TABLE mooyu_qq.control_requests ADD CONSTRAINT control_requests_operation_check CHECK(operation IN ('configure','refresh','password'));

@@ -13,7 +13,7 @@ export class QQControlStore{
   });}finally{client.release();}
  }
  async mutate(requestId,command,refresh){
-  const repo=this.repository,digest=createHash('sha256').update(JSON.stringify(command)).digest('hex');
+  const repo=this.repository,durableCommand=command.operation==='password'?{...command,args:{expectedLoginRevision:command.args.expectedLoginRevision,uin:command.args.uin}}:command,digest=createHash('sha256').update(JSON.stringify(durableCommand)).digest('hex');
   const candidate=command.operation==='configure'?applyQQControlPolicy(repo.bootstrap,command.args.settings):null;
   const result=await repo.locked(async client=>{
    const intent=await repo.transaction(client,async c=>{
@@ -32,16 +32,18 @@ export class QQControlStore{
     const loginRevision=current.login_revision+1;
     await c.query('UPDATE mooyu_qq.control_settings SET login_revision=$2,updated_at=now() WHERE channel_id=$1',[repo.id,loginRevision]);
     await c.query('INSERT INTO mooyu_qq.control_requests(channel_id,request_id,digest,operation) VALUES($1,$2,$3,$4)',[repo.id,requestId,digest,command.operation]);
-    await repo.event(c,null,'admin-qr-refresh-requested',{actorId:command.actorId,requestId,revision:loginRevision});return {loginRevision};
+    await repo.event(c,null,command.operation==='password'?'admin-password-login-requested':'admin-qr-refresh-requested',{actorId:command.actorId,requestId,revision:loginRevision});return {loginRevision};
    });
    if(intent.result)return intent.result;
-   // Persist refresh intent before the external action. Unknown outcomes are
-   // reviewed through current status/QR, never blindly executed a second time.
-   try{await refresh();}catch{throw qqAdminError('QQ_ACTION_UNCERTAIN',409);}
-   const saved={loginRevision:intent.loginRevision,refreshed:true};
+   // Persist only operation metadata before an external login/refresh action.
+   // Passwords and credential-derived hashes are excluded from durable identity.
+   // Unknown outcomes are checked through status, never automatically replayed.
+   let outcome;
+   try{outcome=await refresh();}catch{throw qqAdminError('QQ_ACTION_UNCERTAIN',409);}
+   const saved=command.operation==='password'?{loginRevision:intent.loginRevision,outcome:outcome?.outcome==='verification_required'?'verification_required':outcome?.outcome==='rejected'?'rejected':'submitted',...(outcome?.outcome==='verification_required'?{verification:outcome.verification==='new_device'?'new_device':'captcha'}:{})}:{loginRevision:intent.loginRevision,refreshed:true};
    await repo.transaction(client,async c=>{
     await c.query('UPDATE mooyu_qq.control_requests SET result=$3 WHERE channel_id=$1 AND request_id=$2',[repo.id,requestId,JSON.stringify(saved)]);
-    await repo.event(c,null,'admin-qr-refreshed',{actorId:command.actorId,requestId,revision:intent.loginRevision});
+    await repo.event(c,null,command.operation==='password'?'admin-password-login-completed':'admin-qr-refreshed',{actorId:command.actorId,requestId,revision:intent.loginRevision});
    });return saved;
   });
   if(result.busy)throw qqAdminError('QQ_WORKER_BUSY',409);return result;

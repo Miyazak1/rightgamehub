@@ -4,16 +4,18 @@ import {buildQQSettings,qqForm,qqAdminErrorLabel} from './qq-admin-settings.mjs'
 const numericFields=[['dailyCalls','群每日模型调用',1,200],['userDailyCalls','每人每日模型调用',1,100],['dailyTokens','每日预留 Token',1024,2000000],['userMinuteMessages','每人每分钟消息',1,10],['groupMinuteMessages','群每分钟消息',1,30]];
 const phaseLabels={waiting_qrcode:'等待扫码',generating_qrcode:'正在生成二维码',qrcode_scanned:'已扫码，请在手机确认',initializing:'正在登录',ready:'已登录',offline:'未连接',failed:'登录未完成'};
 export default function AgentQQAdmin({api,agentId}){
- const [snapshot,setSnapshot]=useState(null),[form,setForm]=useState(null),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[qr,setQR]=useState(null);
+ const [snapshot,setSnapshot]=useState(null),[form,setForm]=useState(null),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[qr,setQR]=useState(null),[loginUin,setLoginUin]=useState('');
+ const passwordInput=useRef(null);
+ const clearPassword=()=>{if(passwordInput.current)passwordInput.current.value='';};
  const alive=useRef(true),loading=useRef(false),dirtyRef=useRef(false),revision=useRef(null),latest=useRef(null),pending=useRef(null),controller=useRef(new AbortController()),epoch=useRef(0);
  const load=async(reset=false)=>{
   if(loading.current)return;loading.current=true;const generation=epoch.current;
   try{const result=(await api.getAdminAgentQQ(agentId,{signal:controller.current.signal})).data;if(!alive.current||generation!==epoch.current)return;latest.current=result;setSnapshot(result);
    if(reset||!dirtyRef.current){setForm(qqForm(result.settings));revision.current=result.revision;dirtyRef.current=false;setDirty(false);}
-   if(result.runtime.loggedIn)setQR(null);if(!dirtyRef.current)setError('');
-  }catch(e){if(alive.current&&generation===epoch.current&&e.name!=='AbortError'){setError(qqAdminErrorLabel(e));if([401,403,404].includes(e.status)){setQR(null);setSnapshot(null);setForm(null);latest.current=null;}}}finally{if(generation===epoch.current)loading.current=false;}
+   if(result.runtime.loggedIn){setQR(null);clearPassword();}if(!dirtyRef.current)setError('');
+  }catch(e){if(alive.current&&generation===epoch.current&&e.name!=='AbortError'){setError(qqAdminErrorLabel(e));if([401,403,404].includes(e.status)){clearPassword();setLoginUin('');setQR(null);setSnapshot(null);setForm(null);latest.current=null;}}}finally{if(generation===epoch.current)loading.current=false;}
  };
- useEffect(()=>{alive.current=true;epoch.current++;loading.current=false;controller.current=new AbortController();load();const timer=setInterval(()=>load(),5000);return()=>{alive.current=false;clearInterval(timer);controller.current.abort();};},[agentId,api]);
+ useEffect(()=>{clearPassword();setLoginUin('');alive.current=true;epoch.current++;loading.current=false;controller.current=new AbortController();load();const timer=setInterval(()=>load(),5000);return()=>{clearPassword();alive.current=false;clearInterval(timer);controller.current.abort();};},[agentId,api]);
  useEffect(()=>{if(!qr)return;const timer=setTimeout(()=>setQR(null),Math.max(0,new Date(qr.expiresAt).getTime()-Date.now()));return()=>clearTimeout(timer);},[qr]);
  const change=(key,value)=>{setForm(current=>({...current,[key]:value}));dirtyRef.current=true;setDirty(true);pending.current=null;setNotice('');};
  const operation=async(kind,fn)=>{if(busy)return;setBusy(kind);setError('');setNotice('');try{await fn();}catch(e){if(alive.current)setError(e.code?qqAdminErrorLabel(e):e.message);}finally{if(alive.current)setBusy('');}};
@@ -30,6 +32,16 @@ export default function AgentQQAdmin({api,agentId}){
   if(alive.current&&!latest.current?.runtime.loggedIn)setQR(value);
   await load();
  });
+ const passwordLogin=()=>operation('password',async()=>{
+  const generation=epoch.current;let password=passwordInput.current?.value??'';clearPassword();
+  try{
+   if(!/^[1-9][0-9]{4,15}$/u.test(loginUin)||!password)throw Error('请填写专用 QQ 号和密码。');
+   const result=(await api.loginAdminAgentQQPassword(agentId,{requestId:crypto.randomUUID(),expectedLoginRevision:latest.current.loginRevision,uin:loginUin,password},{signal:controller.current.signal})).data;
+   if(!alive.current||generation!==epoch.current)return;setQR(null);await load();
+   if(!alive.current||generation!==epoch.current)return;
+   setNotice(result.outcome==='verification_required'?(result.verification==='new_device'?'腾讯要求新设备验证，请使用下方扫码入口完成登录。':'腾讯要求验证码，请使用下方扫码入口完成登录。'):result.outcome==='rejected'?'密码登录未成功，请核对账号和密码，或使用扫码登录。':'登录请求已提交，请等待状态更新。');
+  }finally{password='';clearPassword();}
+ });
  const runtime=snapshot?.runtime,online=runtime?.loggedIn&&runtime?.coreReady&&runtime?.accountMatches&&runtime?.groupReady&&runtime?.connected;
  return <section className="agent-control-card agent-qq-admin" aria-label="QQ 接入管理">
   <header className="agent-control-card__title"><div><span className="kicker">QQ CHANNEL</span><h3>QQ 接入</h3><p>管理专用 QQ 的登录、群内 @文字问答和调用预算。</p></div><span className={online?'agent-state is-ready':'agent-state'}>{online?'已连接':phaseLabels[runtime?.phase]??'读取中…'}</span></header>
@@ -39,7 +51,13 @@ export default function AgentQQAdmin({api,agentId}){
    {runtime.loggedIn&&!runtime.accountMatches&&<p role="alert" className="form-error">登录的 QQ 与专用账号不一致，回复已阻止。请联系运营者核对账号。</p>}
    {runtime.accountMatches&&!runtime.groupReady&&<p role="status">请确认专用 QQ 已加入设置的群。</p>}
    <div className="qq-admin-login">
-    {!runtime.loggedIn&&<><button type="button" className="button button--secondary" disabled={!!busy||!runtime.available} onClick={()=>showQR(false)}>显示登录二维码</button><button type="button" className="button button--secondary" disabled={!!busy||!runtime.available} onClick={()=>showQR(true)}>刷新二维码</button></>}
+    {!runtime.loggedIn&&<><form className="qq-admin-password" autoComplete="off" onSubmit={event=>{event.preventDefault();passwordLogin();}}>
+     <fieldset className="qq-admin-fields" disabled={!!busy||!runtime.available}><legend>密码登录</legend>
+      <label>专用 QQ 号<input inputMode="numeric" autoComplete="off" value={loginUin} onChange={event=>setLoginUin(event.target.value.trim())}/></label>
+      <label>QQ 密码<input ref={passwordInput} type="password" autoComplete="off" maxLength={256}/></label>
+      <button type="submit" className="button button--secondary">{busy==='password'?'正在提交…':'使用密码登录'}</button>
+      <p className="qq-admin-note">密码仅用于本次登录，不保存。腾讯可能要求额外验证，可使用扫码入口完成登录。</p>
+     </fieldset></form><button type="button" className="button button--secondary" disabled={!!busy||!runtime.available} onClick={()=>showQR(false)}>显示登录二维码</button><button type="button" className="button button--secondary" disabled={!!busy||!runtime.available} onClick={()=>showQR(true)}>刷新二维码</button></>}
     {runtime.loggedIn&&<p>登录状态已保存在服务器，关闭此页面不会退出 QQ。</p>}
     {qr&&<div className="qq-admin-qr"><QRCodeSVG value={qr.qrText} size={200} level="M" marginSize={4}/><p>用专用账号的手机 QQ 扫码，并在手机确认。二维码过期后可刷新。</p><button type="button" onClick={()=>setQR(null)}>隐藏二维码</button></div>}
    </div>
@@ -51,7 +69,7 @@ export default function AgentQQAdmin({api,agentId}){
    </fieldset>
    <footer><button type="button" className="button button--primary" disabled={!!busy||!dirty} onClick={save}>{busy==='save'?'正在保存…':'保存 QQ 设置'}</button><button type="button" className="button button--secondary" disabled={!!busy} onClick={()=>{pending.current=null;load(true);}}>{dirty?'放弃修改并重新载入':'刷新状态'}</button></footer>
    <p className="qq-admin-note">暂停会保留登录、历史和排队任务；恢复后重新检查权限与预算。图片、语音和私聊不参与问答。论文保持关闭。</p>
-   {snapshot.audit.length>0&&<details><summary>最近管理操作</summary><ul>{snapshot.audit.map((item,index)=><li key={item.requestId+':'+item.type+':'+index}>{new Date(item.at).toLocaleString()} · {item.type==='admin-configured'?'更新 QQ 设置':item.type==='admin-qr-viewed'?'查看登录二维码':item.type==='admin-qr-refreshed'?'已刷新二维码':'请求刷新二维码'} · 操作人 {item.actorId?.slice(0,8)} · 版本 {item.revision??'—'}</li>)}</ul></details>}
+   {snapshot.audit.length>0&&<details><summary>最近管理操作</summary><ul>{snapshot.audit.map((item,index)=><li key={item.requestId+':'+item.type+':'+index}>{new Date(item.at).toLocaleString()} · {item.type==='admin-password-login-requested'?'请求密码登录':item.type==='admin-password-login-completed'?'密码登录请求已处理':item.type==='admin-configured'?'更新 QQ 设置':item.type==='admin-qr-viewed'?'查看登录二维码':item.type==='admin-qr-refreshed'?'已刷新二维码':'请求刷新二维码'} · 操作人 {item.actorId?.slice(0,8)} · 版本 {item.revision??'—'}</li>)}</ul></details>}
   </>:!error&&<p role="status">正在读取 QQ 状态…</p>}
  </section>;
 }

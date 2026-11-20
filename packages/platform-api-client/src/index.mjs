@@ -132,6 +132,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     listAdminAgents: options => request('/v1/admin/agents', { ...options, auth: true }),
     getAdminAgentQQ: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq`,{...options,auth:true}),
     getAdminAgentQQCode: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq/qrcode`,{...options,auth:true}),
+    loginAdminAgentQQPassword: (id,body,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq/login/password`,{...options,method:'POST',body,auth:true,allowRefresh:false}),
     refreshAdminAgentQQCode: (id,body,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq/qrcode/refresh`,{...options,method:'POST',body,auth:true}),
     updateAdminAgentQQ: (id,body,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq/settings`,{...options,method:'PUT',body,auth:true}),
     uploadAdminAgentAvatar: (id,file,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/avatar`, {...options,method:'PUT',rawBody:file,headers:{'Content-Type':file.type,...options?.headers},auth:true}),

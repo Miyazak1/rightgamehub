@@ -13,11 +13,12 @@ export function verifyQQSignature(secret,headers,body,now=Date.now()){
  return requestId;
 }
 export function validateQQCommand(body,requestId,agentUserId){
- if(!body||Object.getPrototypeOf(body)!==Object.prototype||Object.keys(body).some(key=>!['operation','actorId','agentUserId','args'].includes(key))||!qqUuid(body.actorId)||body.agentUserId!==agentUserId||!qqUuid(requestId)||!['status','qr','refresh','configure'].includes(body.operation))throw qqAdminError('QQ_CONTROL_INPUT',400);
+ if(!body||Object.getPrototypeOf(body)!==Object.prototype||Object.keys(body).some(key=>!['operation','actorId','agentUserId','args'].includes(key))||!qqUuid(body.actorId)||body.agentUserId!==agentUserId||!qqUuid(requestId)||!['status','qr','refresh','configure','password'].includes(body.operation))throw qqAdminError('QQ_CONTROL_INPUT',400);
  if(!body.args||Object.getPrototypeOf(body.args)!==Object.prototype)throw qqAdminError('QQ_CONTROL_INPUT',400);
- const keys=body.operation==='configure'?['expectedRevision','settings']:body.operation==='refresh'?['expectedLoginRevision']:[];
+ const keys=body.operation==='configure'?['expectedRevision','settings']:body.operation==='refresh'?['expectedLoginRevision']:body.operation==='password'?['expectedLoginRevision','uin','password']:[];
  if(Object.keys(body.args).some(key=>!keys.includes(key))||keys.some(key=>!Object.hasOwn(body.args,key)))throw qqAdminError('QQ_CONTROL_INPUT',400);
  if(body.operation==='configure'&&(!Number.isSafeInteger(body.args.expectedRevision)||body.args.expectedRevision<1||!body.args.settings||Object.keys(body.args.settings).sort().join(',')!==[...qqMutableKeys].sort().join(',')))throw qqAdminError('QQ_CONTROL_INPUT',400);
- if(body.operation==='refresh'&&(!Number.isSafeInteger(body.args.expectedLoginRevision)||body.args.expectedLoginRevision<1))throw qqAdminError('QQ_CONTROL_INPUT',400);
+ if(['refresh','password'].includes(body.operation)&&(!Number.isSafeInteger(body.args.expectedLoginRevision)||body.args.expectedLoginRevision<1))throw qqAdminError('QQ_CONTROL_INPUT',400);
+ if(body.operation==='password'&&(typeof body.args.uin!=='string'||!/^[1-9][0-9]{4,15}$/u.test(body.args.uin)||!Number.isSafeInteger(Number(body.args.uin))||typeof body.args.password!=='string'||!body.args.password.length||Buffer.byteLength(body.args.password,'utf8')>256))throw qqAdminError('QQ_CONTROL_INPUT',400);
  return body;
 }

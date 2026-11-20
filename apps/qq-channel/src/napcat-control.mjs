@@ -14,8 +14,9 @@ export class NapCatControl{
   let response;
   try{response=await this.fetchImpl(this.origin+'/api'+path,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+this.credential}:{})},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
    const chunks=[];let length=0;for await(const chunk of response.body){length+=chunk.length;if(length>524288)throw Error();chunks.push(chunk);}const value=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+   if(response.ok&&path==='/QQLogin/PasswordLogin'&&typeof value.code==='number'&&value.code!==0)throw qqAdminError('QQ_PASSWORD_LOGIN_FAILED',409);
    if(!response.ok||value.code!==0)throw Error();return value.data;
-  }catch{this.credential=null;throw qqAdminError('QQ_GATEWAY_UNAVAILABLE',503);}
+  }catch(error){if(error.code==='QQ_PASSWORD_LOGIN_FAILED')throw error;this.credential=null;throw qqAdminError('QQ_GATEWAY_UNAVAILABLE',503);}
  }
  unwrap(value){if(value&&Object.hasOwn(value,'retcode')){if(value.status!=='ok'||value.retcode!==0)throw qqAdminError('QQ_GROUP_NOT_READY',409);return value.data;}return value;}
  async inspect(config){
@@ -39,6 +40,19 @@ export class NapCatControl{
   return {qrText:url.href,expiresAt:new Date(Date.now()+60000).toISOString()};
  }
  async refresh(){const status=await this.post('/QQLogin/CheckLoginStatus');if(status.isLogin)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);await this.post('/QQLogin/RefreshQRcode');}
+ async passwordLogin(uin,password){
+  const status=await this.post('/QQLogin/CheckLoginStatus');if(status.isLogin)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
+  // NapCat's existing endpoint accepts an MD5 digest. Neither value is retained.
+  let passwordMd5=createHash('md5').update(password,'utf8').digest('hex');password='';
+  try{
+   const value=await this.post('/QQLogin/PasswordLogin',{uin,passwordMd5});
+   if(value===null)return {outcome:'submitted'};
+   if(value?.needCaptcha===true)return {outcome:'verification_required',verification:'captcha'};
+   if(value?.needNewDevice===true)return {outcome:'verification_required',verification:'new_device'};
+   throw qqAdminError('QQ_PASSWORD_LOGIN_FAILED',409);
+  }catch(error){if(error.code==='QQ_GATEWAY_UNAVAILABLE')throw qqAdminError('QQ_ACTION_UNCERTAIN',409);throw error;}
+  finally{passwordMd5='';}
+ }
  async maintain(config,connected){
   if(Date.now()<this.nextCheck)return;this.nextCheck=Date.now()+5000;
   const state=await this.inspect(config);if(!state.accountMatches||!state.groupReady||connected)return;

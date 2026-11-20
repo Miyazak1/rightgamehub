@@ -15,6 +15,11 @@ export async function startQQControlServer({secret,agentUserId,store,napcat,gate
    validateQQCommand(command,requestId,agentUserId);
    const now=Date.now();for(const [key,value]of rates)if(now-value.at>60000)rates.delete(key);
    const rate=rates.get(command.actorId)??{at:now,count:0};if(++rate.count>60||rates.size>128)throw qqAdminError('QQ_CONTROL_RATE_LIMIT',429);rates.set(command.actorId,rate);
+   if(command.operation==='password'){
+    const key='password:'+command.actorId,entry=rates.get(key)??{at:now,count:0};
+    if(++entry.count>5)throw qqAdminError('QQ_CONTROL_RATE_LIMIT',429);rates.set(key,entry);
+    if(command.args.uin!==(await store.repository.check()).botId)throw qqAdminError('QQ_LOGIN_ACCOUNT_MISMATCH',409);
+   }
    let data;
    if(command.operation==='status'){
     const view=await store.view(),runtime=await napcat.inspect(await store.repository.check());
@@ -24,8 +29,13 @@ export async function startQQControlServer({secret,agentUserId,store,napcat,gate
     const repo=store.repository,client=await repo.pool.connect();
     try{await repo.transaction(client,c=>repo.event(c,null,'admin-qr-viewed',{actorId:command.actorId,requestId}));}finally{client.release();}
    }else{
-    if(command.operation==='refresh'&&(await napcat.inspect(await store.repository.check())).loggedIn)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
-    data=await store.mutate(requestId,command,()=>napcat.refresh());
+    if(['refresh','password'].includes(command.operation)&&(await napcat.inspect(await store.repository.check())).loggedIn)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
+    if(command.operation==='password'){
+     let password=command.args.password;delete command.args.password;
+     try{data=await store.mutate(requestId,command,async()=>{
+      try{return await napcat.passwordLogin(command.args.uin,password);}catch(error){if(error.code==='QQ_PASSWORD_LOGIN_FAILED')return {outcome:'rejected'};throw error;}
+     });}finally{password='';}
+    }else data=await store.mutate(requestId,command,()=>napcat.refresh());
    }
    send(200,{data});
   }catch(error){

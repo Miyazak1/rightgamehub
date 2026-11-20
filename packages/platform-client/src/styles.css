@@ -2914,6 +2914,10 @@ footer.community-actions > .community-report-button {
 /* Administrator-only QQ channel controls. */
 .qq-admin-status{display:flex;flex-wrap:wrap;gap:12px;padding:14px 0;font-size:13px}
 .qq-admin-login{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.qq-admin-password{flex-basis:100%;min-width:0}
+.qq-admin-password .qq-admin-fields{margin-bottom:0}
+.qq-admin-password button,.qq-admin-password .qq-admin-note{grid-column:1/-1;margin:0}
+.qq-admin-password button{justify-self:start}
 .qq-admin-qr{flex-basis:100%;padding:20px;background:#fff;color:#171425;border:1px solid #ded9eb;max-width:300px;text-align:center}
 .qq-admin-qr svg{max-width:100%;height:auto}
 .qq-admin-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;border:1px solid var(--gh-border,#ded9eb);padding:18px;margin:0 0 18px}
