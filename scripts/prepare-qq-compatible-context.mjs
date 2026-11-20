@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+const args=process.argv.slice(2),out=args[args.indexOf('--out-dir')+1],main=args[args.indexOf('--main')+1];
+if(!args.includes('--out-dir')||!args.includes('--main')||!out||!main)throw Error('Usage: --out-dir NEW_E_BUILD_DIRECTORY --main VERIFIED_NAPCAT_MAIN');
+const destination=path.resolve(out),buildRoot=path.resolve('E:/CodexData/build/Right');
+if(!destination.startsWith(buildRoot+path.sep)||fs.existsSync(destination))throw Error('QQ_CONTEXT_REQUIRES_NEW_E_BUILD_DIRECTORY');
+const code=fs.readFileSync(main),sha=createHash('sha256').update(code).digest('hex');
+if(sha!=='7967149b1c4f3d30e0506c842f84b7b925c2d361e3c9c75ebf0d4ff24dbdedaa')throw Error('QQ_MAIN_HASH_MISMATCH');
+fs.mkdirSync(destination,{recursive:true});
+fs.writeFileSync(path.join(destination,'napcat.mjs'),code,{flag:'wx'});
+const source=path.resolve(import.meta.dirname,'../deploy/qq');
+for(const [name,target]of [['Dockerfile.gateway-compatible','Dockerfile'],['gateway-entry-compatible.cjs','gateway-entry-compatible.cjs'],['manage.mjs','manage.mjs']])fs.copyFileSync(path.join(source,name),path.join(destination,target),fs.constants.COPYFILE_EXCL);
+fs.writeFileSync(path.join(destination,'context-verification.json'),JSON.stringify({mainSha256:sha,baseImage:'ghcr.io/napneko/nodenapcat@sha256:9f35df29e9f0a92f737143e123b9159b998c314a573139b5ac0e6bd4ab5af574',containsLoginData:false,containsModelKey:false,productionChanged:false},null,2));
+console.log(JSON.stringify({context:destination,mainSha256:sha,containsLoginData:false}));

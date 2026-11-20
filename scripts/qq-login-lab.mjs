@@ -16,7 +16,7 @@ async function main(){
  const privateDir=path.join(privateRoot,id),evidence=path.join('E:/CodexData/build/Right/qq-login-repro',id);
  const options=process.argv.slice(2),image=options.includes('--image')?options[options.indexOf('--image')+1]:'mooyu-qq-gateway:20261119-verified';
  const upstream='ghcr.io/napneko/nodenapcat@sha256:9f35df29e9f0a92f737143e123b9159b998c314a573139b5ac0e6bd4ab5af574',isUpstream=image===upstream;
- if(!['mooyu-qq-gateway:20261119-verified','mooyu-qq-lab-node20:20261120','mooyu-qq-lab-qq52194:20261120','mooyu-qq-lab-system-zlib:20261120',upstream].includes(image))throw Error('LAB_IMAGE_NOT_ALLOWED');
+ if(!['mooyu-qq-gateway:20261119-verified','mooyu-qq-lab-node20:20261120','mooyu-qq-lab-qq52194:20261120','mooyu-qq-lab-system-zlib:20261120','mooyu-qq-gateway:20261120-compatible-candidate',upstream].includes(image))throw Error('LAB_IMAGE_NOT_ALLOWED');
  const name='mooyu-qq-login-lab-'+id,actionKey=randomBytes(24).toString('hex');let token=randomBytes(32).toString('hex'),seedUsed=false;
  fs.mkdirSync(path.join(privateDir,'data'),{recursive:true});fs.mkdirSync(evidence,{recursive:true});
  function docker(args,optional=false){const result=spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:15000,maxBuffer:2*1024**2});if(result.status!==0&&!optional)throw Error('LAB_DOCKER_'+args[0].toUpperCase()+'_FAILED');return result;}
