@@ -22,6 +22,7 @@ async function main(){
   for(const close of cleanups.reverse())await close();
  }
  pool=new Pool({connectionString:s.databaseUrl,max:10});
+ await (await load('migrations.mjs')).applyMigrations(pool,path.join(root,'apps/api/migrations'));
  const repository=new (await load('agent-interaction-repository.mjs')).PostgresAgentInteractionRepository(pool);
  await (await load('agent-interaction-bootstrap.mjs')).bootstrapAgentInteractions({repository,runtimeRepository:new (await load('agent-runtime-repository.mjs')).PostgresAgentRuntimeRepository(pool),agentId:s.agentId});
  const {qqSignature}=await load('qq-admin-protocol.mjs');

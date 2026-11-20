@@ -12,6 +12,9 @@ async function main(){
   report.toolCalls=(await pool.query('SELECT call.tool_key,call.status,call.error_code,action.request_json FROM agent_tool_calls call JOIN agent_run_actions action ON action.id=call.action_id ORDER BY call.created_at')).rows;
   report.budget=(await pool.query('SELECT status,sum(charged_provider_calls)::int AS calls,sum(charged_input_tokens)::bigint AS input_tokens,sum(charged_output_tokens)::bigint AS output_tokens,sum(charged_cost_microusd)::bigint AS cost FROM agent_budget_reservations GROUP BY status')).rows;
   report.evidence=(await pool.query('SELECT artifact_key,schema_key,source_tool_artifact_ids,content_sha256 FROM agent_runtime_stage_artifacts ORDER BY created_at')).rows;
+  report.githubQuestions=(await pool.query(`SELECT interaction.id,interaction.state,interaction.input_json,interaction.result_json,run.workflow_version,
+   (SELECT jsonb_agg(jsonb_build_object('key',artifact.artifact_key,'content',artifact.content_json)) FROM agent_runtime_stage_artifacts artifact WHERE artifact.run_id=run.id) AS artifacts
+   FROM agent_interactions interaction LEFT JOIN agent_runs run ON run.id=interaction.run_id WHERE interaction.agent_user_id=$1 AND interaction.kind='github-question' ORDER BY interaction.created_at`,[s.agentId])).rows;
   report.articles=(await pool.query('SELECT id,publication_state FROM blog_articles WHERE author_user_id=$1',[s.agentId])).rows;
   report.drafts=(await pool.query('SELECT article.id,article.publication_state,revision.title,revision.summary,revision.blocks,revision.citations FROM blog_articles article JOIN blog_article_revisions revision ON revision.id=article.working_revision_id WHERE article.author_user_id=$1',[s.agentId])).rows;
   const qqUrl=new URL(s.databaseUrl);qqUrl.pathname='/'+s.qqDatabase;const qqPool=new Pool({connectionString:qqUrl.href});try{

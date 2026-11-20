@@ -6,10 +6,10 @@ export class PostgresAgentInteractionRepository{
  constructor(pool){this.pool=pool;}
  async readiness(agentId){
   const row=(await this.pool.query(`SELECT
-   (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active' AND (workflow_key,workflow_version) IN (('agent.conversation.turn',1),('agent.github.inspect',1),('blog.project.single.draft-shadow',3))) AS workflows,
+   (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active' AND (workflow_key,workflow_version) IN (('agent.conversation.turn',1),('agent.github.inspect',1),('blog.project.single.draft-shadow',3),('agent.github.question',2))) AS workflows,
    EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider='deepseek') AS secret,
    EXISTS(SELECT 1 FROM agent_capability_grants WHERE agent_user_id=$1 AND capability_key='provider.text.generate' AND status='active' AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now())) AS provider_grant`,[agentId])).rows[0];
-  return {ready:row.workflows===3&&row.secret&&row.provider_grant,code:row.workflows!==3?'AGENT_INTERACTION_BOOTSTRAP_REQUIRED':!row.secret?'AGENT_INTERACTION_PROVIDER_KEY_REQUIRED':!row.provider_grant?'AGENT_INTERACTION_PROVIDER_GRANT_REQUIRED':null};
+  return {ready:row.workflows===4&&row.secret&&row.provider_grant,code:row.workflows!==4?'AGENT_INTERACTION_BOOTSTRAP_REQUIRED':!row.secret?'AGENT_INTERACTION_PROVIDER_KEY_REQUIRED':!row.provider_grant?'AGENT_INTERACTION_PROVIDER_GRANT_REQUIRED':null};
  }
  async agent(agentId){
   const row=(await this.pool.query(`SELECT a.user_id AS id,a.operator_user_id,u.display_name,u.profile_handle,
@@ -78,7 +78,7 @@ export class PostgresAgentInteractionRepository{
   return rows.flatMap(item=>[{role:'user',content:item.input_json.message},{role:'assistant',content:item.result_json.reply,requestId:item.id},...(item.task_result?[{role:'assistant',content:item.task_result.reply,requestId:item.task_id}]:[])]);
  }
  async claim(agentId,kind){return withTransaction(this.pool,async c=>{
-  const kinds=kind==='message'?['message']:['github-search','github-article'];
+  const kinds=kind==='message'?['message']:['github-search','github-article','github-question'];
   const row=(await c.query(`SELECT * FROM agent_interactions WHERE agent_user_id=$1 AND kind=ANY($2::text[])
    AND ((state IN ('queued','waiting') AND next_attempt_at<=now()) OR (state='running' AND lease_until<=now()))
    ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`,[agentId,kinds])).rows[0];if(!row)return null;
@@ -109,4 +109,13 @@ export class PostgresAgentInteractionRepository{
   WHERE article.id=$1 AND article.author_user_id=$2`,[articleId,agentId])).rows[0]??null;}
  async progress(row){if(!row.run_id)return null;const stages=(await this.pool.query('SELECT stage_key,status FROM agent_run_stages WHERE run_id=$1 ORDER BY ordinal',[row.run_id])).rows;return {completed:stages.filter(s=>['succeeded','skipped'].includes(s.status)).length,total:stages.length,phase:stages.find(s=>!['succeeded','skipped'].includes(s.status))?.stage_key??row.state};}
  async children(id){return (await this.pool.query('SELECT * FROM agent_interactions WHERE parent_id=$1 ORDER BY created_at,id',[id])).rows;}
+ async researchContext(row){
+  // Only the latest project task in this requester's exact conversation. A new
+  // ambiguous candidate search supersedes older projects instead of guessing.
+  const task=(await this.pool.query(`SELECT input_json,result_json FROM agent_interactions WHERE agent_user_id=$1 AND channel=$2 AND actor_ref=$3 AND conversation_ref=$4 AND kind<>'message' AND created_at<$5 ORDER BY created_at DESC,id DESC LIMIT 1`,[row.agent_user_id,row.channel,row.actor_ref,row.conversation_ref,row.created_at])).rows[0];
+  if(!task)return null;
+  const repositoryUrl=task.input_json.repositoryUrl??task.result_json?.repository?.url??(task.result_json?.repositories?.length===1?task.result_json.repositories[0].url:null);
+  if(!repositoryUrl)return null;
+  return {repositoryUrl,revision:task.result_json?.repository?.revision??task.input_json.revision??null,previous:task.result_json?.answer?{question:task.input_json.topic,reply:task.result_json.reply}:null};
+ }
 }

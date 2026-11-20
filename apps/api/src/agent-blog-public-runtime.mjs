@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {GITHUB_CODE_TOOL,createGitHubCodeAdapter,validateGitHubCodeInput,validateGitHubCodeOutput} from './agent-github-code-tool.mjs';
 import pg from 'pg';
 import { loadAgentBlogPublicRuntimeConfig,
   PostgresAgentBlogPublicRuntimePreflightRepository } from './agent-blog-public-runtime-preflight.mjs';
@@ -69,6 +70,7 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
   const toolGateway = createAgentToolGateway({
     runtimeRepository, toolRepository: new PostgresAgentToolGatewayRepository(pool), policyService,
     adapters: {
+      [`${GITHUB_CODE_TOOL.toolKey}@1`]:createGitHubCodeAdapter({token:githubResearchToken}),
       [`${GITHUB_REPOSITORY_SEARCH_TOOL.toolKey}@${GITHUB_REPOSITORY_SEARCH_TOOL.contractVersion}`]:
         createGitHubRepositorySearchAdapter({ token: githubResearchToken }),
       [`${GITHUB_REPOSITORY_READ_TOOL.toolKey}@${GITHUB_REPOSITORY_READ_TOOL.contractVersion}`]:
@@ -80,12 +82,14 @@ export function createAgentBlogPublicRuntime({ env = process.env, applicationNam
           agentUserId: config.agentUserId }),
     },
     inputSchemas: {
+      'github.code.input@1':validateGitHubCodeInput,
       'github.repository.search.input@1': validateGitHubRepositorySearchInput,
       'github.repository.read.input@1': validateGitHubRepositoryReadInput,
       'github.repository.materials.read.input@1': validateGitHubRepositoryMaterialsInput,
       'paper.analysis.read.input@1': validatePaperAnalysisReadInput,
     },
     outputSchemas: {
+      'github.code.output@1':validateGitHubCodeOutput,
       'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
       'github.repository.read.output@1': validateGitHubRepositoryReadOutput,
       'github.repository.materials.read.output@1': validateGitHubRepositoryMaterialsOutput,

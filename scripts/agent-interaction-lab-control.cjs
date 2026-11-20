@@ -3,16 +3,16 @@ const root=path.resolve(__dirname,'..'),file=path.resolve(process.argv[2]??''),o
 if(s.schemaVersion!=='agent-interaction-lab-v1')throw Error('ISOLATION_REQUIRED');
 function docker(args){const r=cp.spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1000000});if(r.status!==0)throw Error('LAB_DOCKER_FAILED');return r.stdout.trim();}
 async function main(){
- if(operation==='--reserve-recheck-budget'){
+ if(['--reserve-recheck-budget','--reserve-research-budget'].includes(operation)){
   const location=new URL(s.databaseUrl);if(location.hostname!=='127.0.0.1'||!/^\/qa_ledger_test_[a-f0-9]{32}$/.test(location.pathname)||location.username!=='qa_ledger_test')throw Error('ISOLATED_DATABASE_REQUIRED');
   const {Pool}=require('node:module').createRequire(path.join(root,'apps/api/package.json'))('pg'),pool=new Pool({connectionString:s.databaseUrl}),client=await pool.connect();
   try{await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[s.id+':lab-budget']);
    const current=(await client.query(`SELECT profile.version,profile.policy_json FROM agent_accounts account JOIN agent_policy_profile_assignments assignment ON assignment.agent_user_id=account.user_id JOIN agent_policy_profiles profile ON profile.id=assignment.active_policy_profile_id WHERE account.user_id=$1 AND account.operator_user_id=$2 FOR UPDATE OF assignment`,[s.agentId,s.operatorId])).rows[0];if(!current||s.providerCallLimit!==20)throw Error('LAB_BUDGET_IDENTITY_REQUIRED');
-   const before=current.policy_json.budgets.agentMonthly,after={...before,costMicrousd:2000000};if(before.providerCalls!==20||before.costMicrousd>after.costMicrousd)throw Error('LAB_BUDGET_LIMIT_MISMATCH');
+   const before=current.policy_json.budgets.agentMonthly,after={...before,costMicrousd:operation==='--reserve-research-budget'?3000000:2000000};if(before.providerCalls!==20||before.costMicrousd>after.costMicrousd)throw Error('LAB_BUDGET_LIMIT_MISMATCH');
    if(before.costMicrousd!==after.costMicrousd){const policy={...current.policy_json,budgets:{...current.policy_json.budgets,agentMonthly:after}},id=crypto.randomUUID(),{stableHash}=await import(pathToFileURL(path.join(root,'apps/api/src/researcher-qa-protocol/stable-json.mjs')).href);
     await client.query(`INSERT INTO agent_policy_profiles(id,agent_user_id,version,schema_version,policy_json,policy_sha256,created_by_user_id) VALUES($1,$2,$3,'agent-policy-v1',$4,$5,$6)`,[id,s.agentId,current.version+1,JSON.stringify(policy),stableHash(policy),s.operatorId]);await client.query('UPDATE agent_policy_profile_assignments SET active_policy_profile_id=$2,updated_by_user_id=$3 WHERE agent_user_id=$1',[s.agentId,id,s.operatorId]);}
    const used=(await client.query('SELECT sum(charged_provider_calls)::int AS calls,sum(charged_cost_microusd)::bigint AS reserved_cost FROM agent_budget_reservations WHERE agent_user_id=$1',[s.agentId])).rows[0];await client.query('COMMIT');s.costMicrousdLimit=after.costMicrousd;fs.writeFileSync(file,JSON.stringify(s,null,2));
-   const report={at:new Date().toISOString(),reason:'one-bounded-live-composition-recheck',before,after,used,countersReset:false,productionConnected:false};fs.writeFileSync(path.join(s.evidence,'budget-recheck.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+   const research=operation==='--reserve-research-budget',report={at:new Date().toISOString(),reason:research?'bounded-source-refinement-recheck-within-original-20-calls':'one-bounded-live-composition-recheck',before,after,used,countersReset:false,productionConnected:false};fs.writeFileSync(path.join(s.evidence,research?'budget-research.json':'budget-recheck.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
   }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e;}finally{client.release();await pool.end();}return;
  }
  if(operation==='--result-delivery'){

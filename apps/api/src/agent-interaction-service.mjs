@@ -41,7 +41,20 @@ export function createAgentInteractionService({repository,agentId,readQQPolicy})
    await authorize(row.origin_json);
    const descriptions=[...INTERACTION_GITHUB_TOOLS,...(row.channel==='web'&&platformTools?platformTools.descriptions:[])];
    return {descriptions,async execute(_ignored,name,args={}){
+    if(name==='github_answer_question'){
+     if(Object.keys(args).some(k=>!['question','repositoryUrl'].includes(k))||typeof args.question!=='string'||args.question.trim().length<2||args.question.length>1000)interactionFail('AGENT_INTERACTION_GITHUB_INPUT');
+     const prior=await repository.researchContext(row);
+     const explicit=args.repositoryUrl==null?null:normalizeGitHubInteraction({kind:'github-search',topic:args.question,repositoryUrl:args.repositoryUrl}).repositoryUrl;
+     const repositoryUrl=explicit??prior?.repositoryUrl;
+     if(!repositoryUrl) return {name,error:{code:'AGENT_INTERACTION_PROJECT_REQUIRED',message:'请提供要讨论的 GitHub 项目链接；当前会话没有唯一明确的项目。'}};
+     const same=prior?.repositoryUrl===repositoryUrl;
+     const task={kind:'github-question',topic:args.question.trim(),repositoryUrl,revision:same?prior.revision??null:null,previous:same?prior.previous??null:null};
+     await authorize(row.origin_json);
+     const accepted=await repository.attachTask(row,task);
+     return {name,result:{status:'queued',taskId:accepted.id,kind:accepted.kind},task:{id:accepted.id,kind:accepted.kind,state:accepted.state},reply:'已交给小墨鱼针对这个问题查阅项目资料和源码，任务已保存；完成后会直接回复，不创建文章。'};
+    }
     if(['github_search_projects','github_write_article'].includes(name)){
+     if(name==='github_write_article'&&/(?:不(?:要)?写.{0,3}文章|只(?:需|要)?(?:回答|总结|分析)|仅(?:回答|总结|分析))/u.test(row.input_json.message))return {name,error:{code:'AGENT_INTERACTION_QUESTION_ONLY',message:'用户只要求回答、总结或分析，不应创建文章；请使用 github_answer_question。'}};
      if(Object.keys(args).some(k=>!['topic','repositoryUrl','publication'].includes(k)))interactionFail('AGENT_INTERACTION_GITHUB_INPUT');
      const task=forceExplicitDraft(row.input_json.message,normalizeGitHubInteraction({kind:name==='github_write_article'?'github-article':'github-search',...args}));
      await authorize(row.origin_json,{invoke:task.kind==='github-article'});
