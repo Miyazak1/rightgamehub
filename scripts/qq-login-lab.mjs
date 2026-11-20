@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 
 export function loginState(value){return {phase:['waiting_qrcode','generating_qrcode','qrcode_scanned','initializing','ready','offline','failed','reconnecting'].includes(value?.loginPhase)?value.loginPhase:'unknown',loggedIn:value?.isLogin===true,coreReady:value?.coreReady===true,offline:value?.isOffline===true};}
+export function localGatewayOrigin(info){const binding=info?.NetworkSettings?.Ports?.['6099/tcp']?.[0];if(binding?.HostIp!=='127.0.0.1'||!/^[0-9]{1,5}$/u.test(binding.HostPort)||Number(binding.HostPort)<1||Number(binding.HostPort)>65535)throw Error('LAB_PORT_NOT_LOCAL');return 'http://127.0.0.1:'+binding.HostPort;}
 export function nativeEvents(text){return text.split(/\r?\n/u).filter(line=>/SIGSEGV|SEGV_ACCERR|Signal code:|error addr:|Native stack:|\$\$\d+\s+pc\s|handleSignal/u.test(line)&&!(/群聊|私聊|收\s*<-|发\s*->/u.test(line))).slice(-30).map(line=>line.replace(/https?:\/\/[^\s]+/gu,'[URL]').replace(/(?<![a-zA-Z0-9])\d{8,}(?![a-zA-Z0-9])/gu,'[ID]').slice(0,500));}
 export const componentProbe=`const fs=require('node:fs'),os=require('node:os'),crypto=require('node:crypto'),base=fs.existsSync('/opt/qq/package.json')?'/opt/qq':'/app',napcat=base==='/app'?'/app/napcat':'/opt/napcat';const out={node:process.version,arch:process.arch,kernel:os.release(),libc:process.report.getReport().header.glibcVersionRuntime,components:{}};for(const [name,file]of [['qq',base+'/package.json'],['napcat',napcat+'/package.json']]){try{out[name]=JSON.parse(fs.readFileSync(file)).version;}catch{out[name]=null;}}for(const file of [base==='/app'?'/app/node_addon.node':'/opt/node_addon.node',base+'/wrapper.node',base+'/sharp-lib/libvips-cpp.so.42',napcat+'/native/napi2native/napi2native.linux.x64.node',napcat+'/native/packet/MoeHoo.linux.x64.node',napcat+'/napcat.mjs']){try{out.components[file]=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');}catch{out.components[file]=null;}}console.log(JSON.stringify(out));`;
 
@@ -69,7 +70,7 @@ async function main(){
  const timeline=path.join(evidence,'timeline.jsonl');
  async function post(endpoint,body={},auth=true){
   if(auth&&!credential){const reply=await post('/auth/login',{hash:createHash('sha256').update(token+'.napcat').digest('hex')},false);if(typeof reply?.Credential!=='string')throw Error('LAB_AUTH_UNAVAILABLE');credential=reply.Credential;}
-  const response=await fetch(origin+'/api'+endpoint,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+credential}:{})},body:JSON.stringify(body),signal:AbortSignal.timeout(4000)});
+  const response=await fetch(localGatewayOrigin(info())+'/api'+endpoint,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+credential}:{})},body:JSON.stringify(body),signal:AbortSignal.timeout(4000)});
   if(Number(response.headers.get('content-length'))>100000)throw Error('LAB_RESPONSE_TOO_LARGE');const data=await response.json();if(!response.ok||data.code!==0){credential=null;throw Error('LAB_GATEWAY_UNAVAILABLE');}return data.data;
  }
  async function observe(){
