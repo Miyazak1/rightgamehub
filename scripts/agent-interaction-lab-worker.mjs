@@ -17,6 +17,9 @@ const exists=await pool.query("SELECT to_regclass('mooyu_qq.settings') AS name")
 if(!exists.rows[0].name)await repository.initialize();
 await repository.enableControl();await repository.enableAgentBridge();
 const bridge=new QQAgentBridge({repository,client:createQQAgentClient({url:'http://api:3090',secret:settings.secret,agentId:settings.agentId})});
+// Explicit lab fault gate: retain a finished task's outbound receipt across a
+// transport restart, without pausing Agent execution or altering its result.
+const poll=bridge.poll.bind(bridge);bridge.poll=async(...args)=>{if(await access('/config/activation/hold-task-delivery').then(()=>true,()=>false))return;return poll(...args);};
 const ingress={received:0,accepted:0,rejected:0,upgrades:{},lastExpected:null};
 const service=new QQService({config,repository,bridge,log}),gateway=new OneBotGateway(config,{receive:async event=>{
  ingress.received++;

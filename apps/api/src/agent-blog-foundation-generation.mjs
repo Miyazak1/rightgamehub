@@ -11,6 +11,7 @@ export const BLOG_FOUNDATION_SELECTION_SCHEMA_V1 = Object.freeze({ key: 'blog.su
 export const BLOG_FOUNDATION_SELECTION_SCHEMA = Object.freeze({ key: 'blog.subject.selection', version: 2 });
 export const BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA = Object.freeze({ key: 'blog.subject.selection-attempt', version: 1 });
 export const BLOG_FOUNDATION_COMPOSITION_SCHEMA = Object.freeze({ key: 'blog.article.composition', version: 1 });
+export const BLOG_FOUNDATION_COMPOSITION_ATTEMPT_SCHEMA=Object.freeze({key:'blog.article.composition-attempt',version:1});
 
 export class AgentBlogFoundationGenerationError extends Error {
   constructor(code) {
@@ -114,7 +115,18 @@ export function validateBlogFoundationSelectionAttempt(value) {
   }
 }
 
+export function validateBlogFoundationCompositionAttempt(value){
+ const bytes=Buffer.byteLength(typeof value==='string'?value:JSON.stringify(value)??'');
+ if(bytes<1||bytes>262144)fail('AGENT_BLOG_PROVIDER_OUTPUT_INVALID');
+ try{return {schemaVersion:'blog-composition-attempt-v1',accepted:true,composition:validateBlogFoundationCompositionResponse(value)};}
+ catch(error){let parsed=null;try{parsed=providerObject(value);}catch{}
+  const fields=['title','summary','blocks','followUpQuestions'];
+  return {schemaVersion:'blog-composition-attempt-v1',accepted:false,rawOutput:structuredClone(value),validation:{code:error.code??'AGENT_BLOG_COMPOSITION_SCHEMA_INVALID',missingFields:fields.filter(k=>!parsed||!Object.hasOwn(parsed,k)),unexpectedFieldCount:parsed?Object.keys(parsed).filter(k=>!fields.includes(k)).length:0,invalidFields:fields.filter(k=>!parsed||(['title','summary'].includes(k)?typeof parsed[k]!=='string':!Array.isArray(parsed[k])))}};
+ }
+}
+
 export const BLOG_FOUNDATION_RESPONSE_SCHEMAS = Object.freeze({
+  'blog.article.composition-attempt@1':validateBlogFoundationCompositionAttempt,
   [`${BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA.key}@${BLOG_FOUNDATION_SELECTION_ATTEMPT_SCHEMA.version}`]: validateBlogFoundationSelectionAttempt,
   [`${BLOG_FOUNDATION_SELECTION_SCHEMA_V1.key}@${BLOG_FOUNDATION_SELECTION_SCHEMA_V1.version}`]:
     validateBlogFoundationSelectionResponseV1,
@@ -549,6 +561,7 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
     },
 
     [`${workflow}:compose`]: async (context, execution) => {
+      const interactiveDraft=workflow==='blog.project.single.draft-shadow'&&context.run.workflowVersion>=3;
       const input = editorialInput(context);
       const selectionArtifactId = stageArtifactId(context, 'select-subject', 'blog.selection');
       const selectionArtifact = await artifactRepository.read({ runId: context.run.id,
@@ -583,7 +596,7 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         idempotencyKey: `${repair ? 'blog-compose-citation-repair' : 'blog-compose'}:${context.run.id}`,
         resource: { type: 'provider.model', owner: context.run.agentUserId },
         modelPolicy: modelPolicy(context, 7000), promptTemplate: { key: 'blog.article.compose', version: 6 },signal:execution.signal,
-        responseSchema: BLOG_FOUNDATION_COMPOSITION_SCHEMA,
+        responseSchema: interactiveDraft?BLOG_FOUNDATION_COMPOSITION_ATTEMPT_SCHEMA:BLOG_FOUNDATION_COMPOSITION_SCHEMA,
         request: buildBlogModelRequest({system:BLOG_FOUNDATION_COMPOSITION_PROMPT,
           payload:repair?{...request,correction:repair}:request,kind:'composition',inputBudget:24000,temperature:0.35}),
         // Both calls fit the existing 600s compose stage and its original
@@ -592,22 +605,29 @@ export function createAgentBlogFoundationGenerationHandlers({ providerGateway, a
         estimatedInputTokens: 0,
       });
       let result = await invokeComposition(), normalized;
-      try { normalized = normalizeComposition(result.output, selection, sources, context.run.id); }
+      const composition=value=>{
+        if(!interactiveDraft)return value;
+        if(!value?.accepted)fail(value?.validation?.code??'AGENT_BLOG_COMPOSITION_SCHEMA_INVALID');
+        return value.composition;
+      };
+      try { normalized = normalizeComposition(composition(result.output), selection, sources, context.run.id); }
       catch (error) {
         // One shared, governed repair for public output-contract errors. Shadow
         // acceptance retains its exact provider-call contract. Never rewrite
         // unsupported indexes to an arbitrary source or publish invalid output.
-        if (workflow !== 'blog.project.single' || !['AGENT_BLOG_COMPOSITION_CITATION_INVALID',
+        if ((!interactiveDraft&&workflow !== 'blog.project.single') || !['AGENT_BLOG_COMPOSITION_CITATION_INVALID',
           'AGENT_BLOG_COMPOSITION_INVALID','AGENT_BLOG_COMPOSITION_HEADING_INVALID',
           'AGENT_BLOG_COMPOSITION_BLOCK_SHAPE_INVALID','AGENT_BLOG_COMPOSITION_LENGTH_INVALID',
-          'AGENT_BLOG_COMPOSITION_SOURCE_UNUSED'].includes(error.code)) throw error;
-        result = await invokeComposition({ errorCode: error.code, previousDraft: result.output,
-          validation:{titleHasLatinLetters:/[A-Za-z]/u.test(result.output.title),
-            invalidTitleTokens:[...new Set(result.output.title.match(/[A-Za-z]+/gu)??[])],
+          'AGENT_BLOG_COMPOSITION_SOURCE_UNUSED',...(interactiveDraft?['AGENT_BLOG_COMPOSITION_SCHEMA_INVALID','AGENT_BLOG_PROVIDER_OUTPUT_INVALID']:[])].includes(error.code)) throw error;
+        const previous=interactiveDraft?(result.output.composition??result.output.rawOutput):result.output;
+        result = await invokeComposition({ errorCode: error.code, previousDraft: previous,
+          validation:{...(interactiveDraft?result.output.validation??{}:{}),titleHasLatinLetters:/[A-Za-z]/u.test(previous?.title??''),
+            invalidTitleTokens:[...new Set(String(previous?.title??'').match(/[A-Za-z]+/gu)??[])],
             titleRule:'标题不得有任何 A-Z 或 a-z 字符，包括单位和通用缩写；英文可以出现在正文。',
-            blockCount:result.output.blocks.length,followUpQuestionCount:result.output.followUpQuestions.length},
+            blockCount:Array.isArray(previous?.blocks)?previous.blocks.length:null,followUpQuestionCount:Array.isArray(previous?.followUpQuestions)?previous.followUpQuestions.length:null,
+            requiredFields:['title','summary','blocks','followUpQuestions'],onlyTheseFields:true},
           instruction: '先逐项修复 validation 指出的错误，不能原样返回上一稿。invalidTitleTokens 列出的每一个英文片段都必须从标题移除或译成中文（例如 KB 改为千字节、AI 改为人工智能），单位和通用缩写也不能保留；英文名可移到正文。仅依据 verifiedSources 和 compositionContract 纠正完整文章；正文长度、段落格式、三个问号结尾的追问均须满足契约。所有事实段落和列表必须使用允许的来源编号，资料不足的内容必须删除或改写，不得伪造来源。此次为唯一写作纠正机会，返回完整 JSON。' });
-        normalized = normalizeComposition(result.output, selection, sources, context.run.id);
+        normalized = normalizeComposition(composition(result.output), selection, sources, context.run.id);
       }
       const artifact = await artifactRepository.save({
         runId: context.run.id, stageId: context.stage.id, workerId: execution.workerId, leaseToken: execution.leaseToken,

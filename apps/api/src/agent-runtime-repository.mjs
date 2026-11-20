@@ -697,7 +697,7 @@ export class PostgresAgentRuntimeRepository {
     return withTransaction(this.pool,async client=>{
       const run=(await client.query(`SELECT workflow_key,workflow_version,idempotency_key,agent_user_id FROM agent_runs WHERE id=$1`,[runId])).rows[0];
       if(!run||!((run.workflow_version===4&&['blog.project.single','blog.project.discovery-shadow'].includes(run.workflow_key))
-        ||(run.workflow_version===2&&run.workflow_key==='blog.project.single.draft-shadow')
+        ||([2,3].includes(run.workflow_version)&&run.workflow_key==='blog.project.single.draft-shadow')
         ||(run.workflow_version===1&&run.workflow_key==='agent.github.inspect')))return;
       const requestId=/^public-runtime:([a-f0-9-]{36}):(discovery|article)$/u.exec(run.idempotency_key)?.[1];
       if(!requestId)return; // Other explicit canaries retain their own contract.
@@ -722,7 +722,7 @@ export class PostgresAgentRuntimeRepository {
       FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id WHERE stage.id=$1`,[stageId,workerId,leaseToken])).rows[0];
     if(!stage)fail('AGENT_RUNTIME_LEASE_LOST');
     if(!((stage.workflow_version===4&&['blog.project.single','blog.project.discovery-shadow'].includes(stage.workflow_key))
-      ||(stage.workflow_version===2&&stage.workflow_key==='blog.project.single.draft-shadow'&&stage.run_key?.startsWith('public-runtime:'))))return idempotencyKey;
+      ||([2,3].includes(stage.workflow_version)&&stage.workflow_key==='blog.project.single.draft-shadow'&&stage.run_key?.startsWith('public-runtime:'))))return idempotencyKey;
     if(!stage.valid)fail('AGENT_RUNTIME_LEASE_LOST');
     if(stage.attempt<2)return idempotencyKey;
     const keys=Array.from({length:stage.attempt},(_,i)=>i?`${idempotencyKey}:recovery:${i+1}`:idempotencyKey);

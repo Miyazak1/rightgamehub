@@ -1,10 +1,10 @@
 import {randomUUID} from 'node:crypto';
 import {PostgresAgentBlogPublicRequestRepository} from './agent-blog-public-request-repository.mjs';
 import {runAgentBlogPublicRuntimePreflight} from './agent-blog-public-runtime-preflight.mjs';
-import {BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,BLOG_PROJECT_SINGLE_WORKFLOW,BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW} from './agent-blog-foundation-workflows.mjs';
+import {BLOG_PROJECT_AUTONOMOUS_DISCOVERY_SHADOW_WORKFLOW,BLOG_PROJECT_SINGLE_WORKFLOW,BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW} from './agent-blog-foundation-workflows.mjs';
 import {normalizeBlogFoundationPublicInput,normalizeBlogFoundationShadowInput,createAgentBlogFoundationShadowHandlers} from './agent-blog-foundation-shadow.mjs';
 import {createAgentBlogAutonomousDiscoveryCanary} from './agent-blog-candidate-discovery.mjs';
-import {createAgentBlogCandidatePublicHandoff,createAgentBlogCandidateDraftHandoffCanary} from './agent-blog-candidate-handoff.mjs';
+import {createAgentBlogCandidatePublicHandoff,createAgentBlogCandidateInteractionDraftHandoff} from './agent-blog-candidate-handoff.mjs';
 import {createAgentRuntimeWorker} from './agent-runtime-worker.mjs';
 import {executeAgentBlogPublicRun} from './agent-blog-public-runtime-manual-run.mjs';
 import {AGENT_GITHUB_RESEARCH_LIMITS} from './agent-github-research-runtime.mjs';
@@ -15,7 +15,7 @@ export function createAgentGitHubInteractionExecutor({repository,service,runtime
  const {runtimeRepository,artifactRepository}=ports;
  const discovery=createAgentBlogAutonomousDiscoveryCanary({runtimeRepository,enabled:true});
  const publishedHandoff=createAgentBlogCandidatePublicHandoff({runtimeRepository,artifactRepository,enabled:true});
- const draftHandoff=createAgentBlogCandidateDraftHandoffCanary({runtimeRepository,artifactRepository,enabled:true});
+ const draftHandoff=createAgentBlogCandidateInteractionDraftHandoff({runtimeRepository,artifactRepository,enabled:true});
  const draftHandlers=createAgentBlogFoundationShadowHandlers({...ports,publicationGateway:null,researchEvidenceRepository:ports.researchEvidenceRepository});
  async function requireSchedulerProtocol(){
   const row=(await pool.query(`SELECT config_json->'worker' AS worker FROM agent_schedules WHERE agent_user_id=$1 AND workflow_key='blog.project.discovery-shadow'`,[service.agentId])).rows[0];
@@ -121,13 +121,13 @@ export function createAgentGitHubInteractionExecutor({repository,service,runtime
     if(!articleRun)articleRun=await (publication==='published'?publishedHandoff:draftHandoff).createDraftRun({agentUserId:agent.id,discoveryRunId:discoveryRun.id,discoveryArtifactId:found.outputId,
      idempotencyKey:'public-runtime:'+row.id+':article',triggerKind:'manual',triggerRef:'interaction:'+row.id,config,recentTitles:frozen.recentTitles,previousRepositoryUrls:frozen.previousRepositoryUrls,behaviorProfile:frozen.behaviorProfile,editorialMemory:frozen.editorialMemory});
    }else if(!articleRun){
-    const workflow=publication==='published'?BLOG_PROJECT_SINGLE_WORKFLOW:BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW;
+    const workflow=publication==='published'?BLOG_PROJECT_SINGLE_WORKFLOW:BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW;
     const normalize=publication==='published'?normalizeBlogFoundationPublicInput:normalizeBlogFoundationShadowInput;
     articleRun=await runtimeRepository.createRun({agentUserId:agent.id,workflowKey:workflow.workflowKey,workflowVersion:workflow.workflowVersion,triggerKind:'manual',triggerRef:'interaction:'+row.id,idempotencyKey:'public-runtime:'+row.id+':article',config,
      input:normalize({schemaVersion:publication==='published'?'blog-project-single-input-v2':'blog-project-single-shadow-input-v2',topicScope:frozen.topicScope,candidateRepositories:[row.input_json.repositoryUrl],recentTitles:frozen.recentTitles,previousRepositoryUrls:frozen.previousRepositoryUrls,behaviorProfile:frozen.behaviorProfile,editorialMemory:frozen.editorialMemory}),budget:workflow.defaultBudget});
    }
    await repository.setRun(row,articleRun.id);
-   await executeAgentBlogPublicRun({worker:createWorker(articleRun.id,publication==='published'?ports.publicationHandlers:draftHandlers),workflow:publication==='published'?BLOG_PROJECT_SINGLE_WORKFLOW:BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,outputType:publication==='published'?'blog.article':'blog.private-draft',runId:articleRun.id,readRun,signal:owner.signal});
+   await executeAgentBlogPublicRun({worker:createWorker(articleRun.id,publication==='published'?ports.publicationHandlers:draftHandlers),workflow:publication==='published'?BLOG_PROJECT_SINGLE_WORKFLOW:BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW,outputType:publication==='published'?'blog.article':'blog.private-draft',runId:articleRun.id,readRun,signal:owner.signal});
    const result=await receipt(row,{discovery:discoveryRun,publication:articleRun});if(!result)interactionFail('AGENT_INTERACTION_RESULT_MISSING',503);
    await requests.settleInteraction(agent.id,row.id,checkpoint.lease_token,{result,safeForNext:true});return result;
   }catch(error){

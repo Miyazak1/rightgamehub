@@ -23,6 +23,7 @@ async function main(){
  }
  pool=new Pool({connectionString:s.databaseUrl,max:10});
  const repository=new (await load('agent-interaction-repository.mjs')).PostgresAgentInteractionRepository(pool);
+ await (await load('agent-interaction-bootstrap.mjs')).bootstrapAgentInteractions({repository,runtimeRepository:new (await load('agent-runtime-repository.mjs')).PostgresAgentRuntimeRepository(pool),agentId:s.agentId});
  const {qqSignature}=await load('qq-admin-protocol.mjs');
  const readQQPolicy=async()=>{
   const current=JSON.parse(fs.readFileSync(file,'utf8'));if(!current.qqControlPort)throw Object.assign(Error(),{code:'AGENT_INTERACTION_QQ_UNAVAILABLE'});

@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
-  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,compositionCitationRepair=true,
+  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,compositionCitationRepair=true,compositionSchemaFailures=0,
   selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,allowEmptyDiscovery=false,recoverAfterFailure=false,
   compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
@@ -156,7 +156,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
     adapters: { deepseek: live?async request=>{
       providerInvocations++;
       if(request.responseSchema.key==='blog.subject.selection-attempt')selectionCalls++;
-      if(request.responseSchema.key==='blog.article.composition')compositionCalls++;
+      if(['blog.article.composition','blog.article.composition-attempt'].includes(request.responseSchema.key))compositionCalls++;
       return live.providerAdapter(request);
     }:async request => {
       providerInvocations += 1;
@@ -194,13 +194,15 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         if(selectionCalls<=selectionFailures){delete output.scores; delete output.decisionReasonCodes;}
         if(selectionCalls<=selectionIndexFailures)output.selectedIndexes=[candidateCount+1];
       }
-      if(request.responseSchema.key === 'blog.article.composition' && ++compositionCalls === 1&&compositionCitationRepair) {
+      const compositionCall=['blog.article.composition','blog.article.composition-attempt'].includes(request.responseSchema.key);
+      if(compositionCall && ++compositionCalls === 1&&compositionCitationRepair) {
         output.blocks.find(block => block.type === 'paragraph').citationIndexes = [1,3];
       }
-      if(request.responseSchema.key === 'blog.article.composition'&&compositionCalls<=compositionTitleFailures){
+      if(compositionCall&&compositionCalls<=compositionSchemaFailures)delete output.followUpQuestions;
+      if(compositionCall&&compositionCalls<=compositionTitleFailures){
         output.title=compositionInvalidTitle;
       }
-      const correction=request.responseSchema.key==='blog.article.composition'
+      const correction=compositionCall
         ?JSON.parse(request.request.messages[1].content).correction:null;
       if(correction&&compositionTitleFailures>0){
         assert.deepEqual(correction.validation.invalidTitleTokens,[...new Set(compositionInvalidTitle.match(/[A-Za-z]+/gu))]);

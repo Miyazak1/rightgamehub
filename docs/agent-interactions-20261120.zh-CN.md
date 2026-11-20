@@ -32,7 +32,7 @@
 
 1. 先核对实际服务器镜像、全部 Compose 叠加文件、未提交修改、备份和登录卷；保留原服务器兼容网关、资料卷与历史。此功能不需要重新打包或替换 QQ 网关。
 2. API/网页/QQ worker/公开调度器必须使用本分支同一版本。先升级原公开调度器并确认新鲜心跳含 `interactionProtocolVersion: 1`。原每日计划采用现有保留方式，不重建、不移动下一次运行时间。新交互任务有来源标记，调度器不得将其当作每日发布任务领取。执行器会拒绝旧版或停止的调度器。
-3. 在网站数据库应用迁移，再以原环境和原 Agent 执行 `node apps/api/src/agent-interaction-bootstrap-cli.mjs`。它只注册/激活对话、只读仓库、原有草稿工作流，不改密钥、能力授权、发布权或计划，不调用模型。
+3. 在网站数据库应用迁移，再以原环境和原 Agent 执行 `node apps/api/src/agent-interaction-bootstrap-cli.mjs`。它只注册/激活对话、只读仓库和交互草稿工作流 `blog.project.single.draft-shadow@3`，不改密钥、能力授权、发布权或计划，不调用模型。v3 保留原私有阶段并支持一次有账本的格式/内容纠正；原 v2 记录与合同保留，严格文章校验和发布门禁不变。
 4. API 和独立交互 worker 增加 `AGENT_INTERACTIONS_ENABLED=true`；`AGENT_INTERACTIONS_AGENT_USER_ID` 必须与 `AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID`、已启用 QQ 管理的 `QQ_ADMIN_AGENT_USER_ID` 一致。原 `AGENT_BLOG_PUBLIC_RUNTIME_ENABLED=true` 及其受限预算、模型和 GitHub 令牌配置沿用。论文相关开关继续关闭。
 5. 独立 worker 使用 API 镜像，命令 `node apps/api/src/agent-interaction-worker-cli.mjs`。复用 API 所需环境、网站数据库、内部网络、共享控制密钥只读挂载及必要的数据路径；不要复制 API 的对外端口，不启动 HTTP 服务。运行两个独立领取循环，不需要新模型 Key。
 6. QQ worker 增加 `QQ_AGENT_INTERACTIONS_ENABLED=true`、`QQ_AGENT_API_URL=http://api:3090`，复用原 `QQ_ADMIN_SECRET_FILE` 及 Agent ID；内部控制网络必须可解析 API。共享模式不读取 QQ 的 `DEEPSEEK_API_KEY`；旧配置保留。打包 worker 时需包含完整 QQ 源码、新 SQL，以及 API 的 `agent-channel-protocol.mjs`、`qq-admin-protocol.mjs` 和原依赖；不要复用缺少这些文件的旧离线包。
@@ -45,7 +45,8 @@
 - 单元/HTTP：身份、授权、签名用途隔离、真实 QQ client/API 对接、输出合同、长任务与对话分离；原助手、Provider Gateway、公开调度和 Runtime 回归。
 - 一次性 PostgreSQL 17：真实 Gateway、模型预算、权限版本审计、并发去重、不可改写输入、跨用户隔离、搜索/指定仓库/草稿/发布、真实文章与证据、回执重放、QQ 独立发送账本。模型和 GitHub 都用离线替身，未调用真实外部服务。
 - Edge：异步任务、继续聊天、刷新恢复、不重复提交；原聊天跨路由、练习上下文、重试和宿主 Chat 回归。验收截图输出到 `E:\CodexData\build\Right\qq-github-tools`。
-- 尚未做：此新功能的真实模型/独立 QQ 联合验收、生产镜像交付及上线。既有 QQ 登录验收不能代替本功能真实验收。
+- 真实模型/独立 QQ 联合验收已完成：未授权拒绝、授权后真实 GitHub 研究与草稿、最终回执经 worker 重启后只送一次，原生 Chat/QQ 请求重放不增加调用或文章。详细失败及修复、真实与离线验证边界见 [联合验收记录](agent-interactions-live-20261120.zh-CN.md)。
+- 尚未做：生产镜像交付及上线。本地联合验收不等于生产部署完成。
 - 下一阶段：将更多墨鱼工坊公共工具/目录接入共享 Agent；本阶段没有扩大 QQ 的任意工具权限或开放执行系统命令。
 
 复验命令：
