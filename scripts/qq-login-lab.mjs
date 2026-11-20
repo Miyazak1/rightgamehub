@@ -33,16 +33,28 @@ async function main(){
  const env={HOME:'/data/home',NAPCAT_WORKDIR:'/data/napcat',NAPCAT_QQ_DATA_DIR:'/data/qq',NAPCAT_DISABLE_MULTI_PROCESS:'1',NAPCAT_DISABLE_BYPASS:'1',QQ_WEBUI_TOKEN:token,QQ_ACCESS_TOKEN:randomBytes(32).toString('hex'),PAPER_STUDY_ENABLED:'false',PAPER_STUDY_WORKER_ENABLED:'false',PAPER_STUDY_MODELS_ENABLED:'false',PAPER_STUDY_PUBLISH_ENABLED:'false'};
  if(options.includes('--no-preload'))env.LD_PRELOAD='';
  if(options.includes('--no-library-path'))env.LD_LIBRARY_PATH='';
+ if(options.includes('--native-data-path'))env.NAPCAT_QQ_DATA_DIR='';
  const extraMounts=[];
+ if(options.includes('--qq-working-dir')){
+  if(isUpstream)throw Error('LAB_WORKDIR_COMPARISON_REQUIRES_ASSEMBLED');
+  extraMounts.push('--workdir','/opt/qq');
+ }
  if(options.includes('--without-packet-adapter')){
   const empty=path.join(privateDir,'empty-packet-adapter');fs.mkdirSync(empty);
   extraMounts.push('--mount',`type=bind,source=${empty},target=/opt/napcat/native/packet,readonly`);
  }
  if(isUpstream){
-  if(seedUsed)throw Error('LAB_UPSTREAM_REQUIRES_FRESH_DATA');
   const configDir=path.join(privateDir,'data/napcat/config');fs.mkdirSync(configDir,{recursive:true});
-  fs.writeFileSync(path.join(configDir,'webui.json'),JSON.stringify({host:'0.0.0.0',port:6099,prefix:'',token,loginRate:3,accessControlMode:'none',ipWhitelist:[],ipBlacklist:[],enableXForwardedFor:false}),{mode:0o600,flag:'wx'});
+  if(!seedUsed)fs.writeFileSync(path.join(configDir,'webui.json'),JSON.stringify({host:'0.0.0.0',port:6099,prefix:'',token,loginRate:3,accessControlMode:'none',ipWhitelist:[],ipBlacklist:[],enableXForwardedFor:false}),{mode:0o600,flag:'wx'});
   extraMounts.push('--user','1000:1000','--workdir','/app','--entrypoint','node');
+ }
+ if(options.includes('--assembled-main')){
+  if(!isUpstream)throw Error('LAB_MAIN_COMPARISON_REQUIRES_UPSTREAM');
+  const main='C:/Users/pc/.codex/worktrees/platform-agent-capabilities/Right/.runtime/qq-server-linux/context/napcat/napcat.mjs';
+  const code=fs.readFileSync(main),digest=createHash('sha256').update(code).digest('hex');
+  if(digest!=='7967149b1c4f3d30e0506c842f84b7b925c2d361e3c9c75ebf0d4ff24dbdedaa')throw Error('LAB_MAIN_HASH_CHANGED');
+  const candidate=path.join(evidence,'candidate-napcat.mjs');fs.writeFileSync(candidate,code,{flag:'wx'});
+  extraMounts.push('--mount',`type=bind,source=${candidate},target=/app/napcat/napcat.mjs,readonly`);
  }
  // Gateway only. The upstream image's shell entrypoint is deliberately never executed.
  docker(['run','-d','--name',name,'--label','mooyu.qq-login-lab='+id,...flags,'-p','127.0.0.1::6099','--mount',`type=bind,source=${path.join(privateDir,'data')},target=/data`,...extraMounts,...Object.entries(env).flatMap(([key,value])=>['--env',key+'='+value]),imageInfo.Id,...(isUpstream?['/app/load.cjs']:[])]);
@@ -51,7 +63,7 @@ async function main(){
  if(binding?.HostIp!=='127.0.0.1')throw Error('LAB_PORT_NOT_LOCAL');
  const origin='http://127.0.0.1:'+binding.HostPort;
  fs.writeFileSync(path.join(privateDir,'session.json'),JSON.stringify({container:name,imageId:imageInfo.Id,origin,token,evidence,paperEnabled:false},null,2),{mode:0o600,flag:'wx'});
- fs.writeFileSync(path.join(evidence,'baseline.json'),JSON.stringify({container:name,imageId:imageInfo.Id,platform:imageInfo.Os+'/'+imageInfo.Architecture,memory:initial.HostConfig.Memory,nanoCpus:initial.HostConfig.NanoCpus,readOnly:initial.HostConfig.ReadonlyRootfs,restartPolicy:initial.HostConfig.RestartPolicy.Name,bypassDisabled:true,packetAdapterDisabled:options.includes('--without-packet-adapter'),preloadOverride:options.includes('--no-preload')?'disabled':'image-default',libraryPathOverride:options.includes('--no-library-path')?'disabled':'image-default',mounts:initial.Mounts.map(m=>({destination:m.Destination,rw:m.RW,type:m.Type})),freshLoginData:!seedUsed,seedUsed,workerConnected:false,modelConfigured:false,paperEnabled:false},null,2));
+ fs.writeFileSync(path.join(evidence,'baseline.json'),JSON.stringify({container:name,imageId:imageInfo.Id,platform:imageInfo.Os+'/'+imageInfo.Architecture,workingDir:initial.Config.WorkingDir,memory:initial.HostConfig.Memory,nanoCpus:initial.HostConfig.NanoCpus,readOnly:initial.HostConfig.ReadonlyRootfs,restartPolicy:initial.HostConfig.RestartPolicy.Name,bypassDisabled:true,nativeDataPath:options.includes('--native-data-path'),packetAdapterDisabled:options.includes('--without-packet-adapter'),preloadOverride:options.includes('--no-preload')?'disabled':'image-default',libraryPathOverride:options.includes('--no-library-path')?'disabled':'image-default',mounts:initial.Mounts.map(m=>({destination:m.Destination,rw:m.RW,type:m.Type})),freshLoginData:!seedUsed,seedUsed,workerConnected:false,modelConfigured:false,paperEnabled:false},null,2));
  const probe=docker(['exec',name,'node','-e',componentProbe],true);if(probe.status===0)fs.writeFileSync(path.join(evidence,'components.json'),probe.stdout);
  let credential=null,state={phase:'starting',loggedIn:false,coreReady:false,offline:false},previous='',lastWrite=0,firstReady=null,stopped=false,checking=false;
  const timeline=path.join(evidence,'timeline.jsonl');
