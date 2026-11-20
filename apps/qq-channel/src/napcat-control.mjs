@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {qqAdminError} from '../../api/src/qq-admin-protocol.mjs';
-const phases=new Set(['waiting_qrcode','generating_qrcode','qrcode_scanned','initializing','ready','offline','failed']);
+const phases=new Set(['waiting_qrcode','generating_qrcode','qrcode_scanned','initializing','ready','offline','failed','reconnecting']);
+const activeLogin=status=>status.isLogin===true&&status.isOffline!==true&&status.loginPhase!=='offline';
 export class NapCatControl{
  constructor({token,accessToken,fetchImpl=fetch,origin='http://napcat:6099',workerUrl='ws://worker:6700/onebot/v11'}){
   if(!/^[a-f0-9]{64}$/iu.test(token??'')||!accessToken)throw qqAdminError('QQ_GATEWAY_CONFIG_REQUIRED',503);
@@ -22,7 +23,8 @@ export class NapCatControl{
  async inspect(config){
   try{
    const status=await this.post('/QQLogin/CheckLoginStatus');
-   const next={available:true,loggedIn:status.isLogin===true,coreReady:status.coreReady===true,accountMatches:false,groupReady:false,phase:phases.has(status.loginPhase)?status.loginPhase:'offline'};
+   const loggedIn=activeLogin(status);
+   const next={available:true,loggedIn,coreReady:loggedIn&&status.coreReady===true,accountMatches:false,groupReady:false,phase:phases.has(status.loginPhase)?status.loginPhase:'offline'};
    if(next.loggedIn&&next.coreReady){
     const info=await this.post('/QQLogin/GetQQLoginInfo');next.accountMatches=String(info.uin)===config.botId;
     if(next.accountMatches){
@@ -33,13 +35,13 @@ export class NapCatControl{
   }catch{this.readyGroup=null;return this.observed={available:false,loggedIn:false,coreReady:false,accountMatches:false,groupReady:false,phase:'offline'};}
  }
  async qr(){
-  const status=await this.post('/QQLogin/CheckLoginStatus');if(status.isLogin)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
+  const status=await this.post('/QQLogin/CheckLoginStatus');if(activeLogin(status))throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
   const value=await this.post('/QQLogin/GetQQLoginQrcode');let url;
   try{url=new URL(value.qrcode);}catch{throw qqAdminError('QQ_QR_UNAVAILABLE',503);}
   if(url.protocol!=='https:'||!(url.hostname==='qq.com'||url.hostname.endsWith('.qq.com'))||url.username||url.password||url.href.length>4096)throw qqAdminError('QQ_QR_UNAVAILABLE',503);
   return {qrText:url.href,expiresAt:new Date(Date.now()+60000).toISOString()};
  }
- async refresh(){const status=await this.post('/QQLogin/CheckLoginStatus');if(status.isLogin)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);await this.post('/QQLogin/RefreshQRcode');}
+ async refresh(){const status=await this.post('/QQLogin/CheckLoginStatus');if(activeLogin(status))throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);await this.post('/QQLogin/RefreshQRcode');}
  async passwordLogin(uin,password){
   const status=await this.post('/QQLogin/CheckLoginStatus');if(status.isLogin)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
   // NapCat's existing endpoint accepts an MD5 digest. Neither value is retained.

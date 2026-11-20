@@ -1,8 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {QRCodeSVG} from 'qrcode.react';
-import {buildQQSettings,qqForm,qqAdminErrorLabel} from './qq-admin-settings.mjs';
+import {buildQQSettings,qqForm,qqAdminErrorLabel,qqRuntimeView} from './qq-admin-settings.mjs';
 const numericFields=[['dailyCalls','群每日模型调用',1,200],['userDailyCalls','每人每日模型调用',1,100],['dailyTokens','每日预留 Token',1024,2000000],['userMinuteMessages','每人每分钟消息',1,10],['groupMinuteMessages','群每分钟消息',1,30]];
-const phaseLabels={waiting_qrcode:'等待扫码',generating_qrcode:'正在生成二维码',qrcode_scanned:'已扫码，请在手机确认',initializing:'正在登录',ready:'已登录',offline:'未连接',failed:'登录未完成'};
 export default function AgentQQAdmin({api,agentId}){
  const [snapshot,setSnapshot]=useState(null),[form,setForm]=useState(null),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[qr,setQR]=useState(null),[loginUin,setLoginUin]=useState('');
  const passwordInput=useRef(null);
@@ -13,7 +12,7 @@ export default function AgentQQAdmin({api,agentId}){
   try{const result=(await api.getAdminAgentQQ(agentId,{signal:controller.current.signal})).data;if(!alive.current||generation!==epoch.current)return;latest.current=result;setSnapshot(result);
    if(reset||!dirtyRef.current){setForm(qqForm(result.settings));revision.current=result.revision;dirtyRef.current=false;setDirty(false);}
    if(result.runtime.loggedIn){setQR(null);clearPassword();}if(!dirtyRef.current)setError('');
-  }catch(e){if(alive.current&&generation===epoch.current&&e.name!=='AbortError'){setError(qqAdminErrorLabel(e));if([401,403,404].includes(e.status)){clearPassword();setLoginUin('');setQR(null);setSnapshot(null);setForm(null);latest.current=null;}}}finally{if(generation===epoch.current)loading.current=false;}
+  }catch(e){if(alive.current&&generation===epoch.current&&e.name!=='AbortError'){setError(qqAdminErrorLabel(e));setSnapshot(current=>current?{...current,runtime:{...current.runtime,available:false,connected:false}}:current);if([401,403,404].includes(e.status)){clearPassword();setLoginUin('');setQR(null);setSnapshot(null);setForm(null);latest.current=null;}}}finally{if(generation===epoch.current)loading.current=false;}
  };
  useEffect(()=>{clearPassword();setLoginUin('');alive.current=true;epoch.current++;loading.current=false;controller.current=new AbortController();load();const timer=setInterval(()=>load(),5000);return()=>{clearPassword();alive.current=false;clearInterval(timer);controller.current.abort();};},[agentId,api]);
  useEffect(()=>{if(!qr)return;const timer=setTimeout(()=>setQR(null),Math.max(0,new Date(qr.expiresAt).getTime()-Date.now()));return()=>clearTimeout(timer);},[qr]);
@@ -42,12 +41,13 @@ export default function AgentQQAdmin({api,agentId}){
    setNotice(result.outcome==='verification_required'?(result.verification==='new_device'?'腾讯要求新设备验证，请使用下方扫码入口完成登录。':'腾讯要求验证码，请使用下方扫码入口完成登录。'):result.outcome==='rejected'?'密码登录未成功，请核对账号和密码，或使用扫码登录。':'登录请求已提交，请等待状态更新。');
   }finally{password='';clearPassword();}
  });
- const runtime=snapshot?.runtime,online=runtime?.loggedIn&&runtime?.coreReady&&runtime?.accountMatches&&runtime?.groupReady&&runtime?.connected;
+ const runtime=snapshot?.runtime,connection=qqRuntimeView(runtime);
  return <section className="agent-control-card agent-qq-admin" aria-label="QQ 接入管理">
-  <header className="agent-control-card__title"><div><span className="kicker">QQ CHANNEL</span><h3>QQ 接入</h3><p>管理专用 QQ 的登录、群内 @文字问答和调用预算。</p></div><span className={online?'agent-state is-ready':'agent-state'}>{online?'已连接':phaseLabels[runtime?.phase]??'读取中…'}</span></header>
+  <header className="agent-control-card__title"><div><span className="kicker">QQ CHANNEL</span><h3>QQ 接入</h3><p>管理专用 QQ 的登录、群内 @文字问答和调用预算。</p></div><span className={connection.online?'agent-state is-ready':'agent-state'}>{connection.label}</span></header>
   {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="admin-notice" role="status">{notice}</p>}
   {snapshot&&form?<>
    <div className="qq-admin-status"><span>回复：{snapshot.settings.enabled?'启用':'暂停'}</span><span>今日调用：{snapshot.status.budget.calls}/{snapshot.settings.dailyCalls}</span><span>预留 Token：{snapshot.status.budget.tokens}/{snapshot.settings.dailyTokens}</span><span>待核对发送：{snapshot.status.review.length}</span></div>
+   {connection.message&&<p className="admin-notice" role="status" aria-live="polite">{connection.message}</p>}
    {runtime.loggedIn&&!runtime.accountMatches&&<p role="alert" className="form-error">登录的 QQ 与专用账号不一致，回复已阻止。请联系运营者核对账号。</p>}
    {runtime.accountMatches&&!runtime.groupReady&&<p role="status">请确认专用 QQ 已加入设置的群。</p>}
    <div className="qq-admin-login">
