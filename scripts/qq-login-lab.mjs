@@ -16,7 +16,7 @@ async function main(){
  const privateDir=path.join(privateRoot,id),evidence=path.join('E:/CodexData/build/Right/qq-login-repro',id);
  const options=process.argv.slice(2),image=options.includes('--image')?options[options.indexOf('--image')+1]:'mooyu-qq-gateway:20261119-verified';
  const upstream='ghcr.io/napneko/nodenapcat@sha256:9f35df29e9f0a92f737143e123b9159b998c314a573139b5ac0e6bd4ab5af574',isUpstream=image===upstream;
- if(!['mooyu-qq-gateway:20261119-verified','mooyu-qq-lab-node20:20261120','mooyu-qq-lab-qq52194:20261120',upstream].includes(image))throw Error('LAB_IMAGE_NOT_ALLOWED');
+ if(!['mooyu-qq-gateway:20261119-verified','mooyu-qq-lab-node20:20261120','mooyu-qq-lab-qq52194:20261120','mooyu-qq-lab-system-zlib:20261120',upstream].includes(image))throw Error('LAB_IMAGE_NOT_ALLOWED');
  const name='mooyu-qq-login-lab-'+id,actionKey=randomBytes(24).toString('hex');let token=randomBytes(32).toString('hex'),seedUsed=false;
  fs.mkdirSync(path.join(privateDir,'data'),{recursive:true});fs.mkdirSync(evidence,{recursive:true});
  function docker(args,optional=false){const result=spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:15000,maxBuffer:2*1024**2});if(result.status!==0&&!optional)throw Error('LAB_DOCKER_'+args[0].toUpperCase()+'_FAILED');return result;}
@@ -32,6 +32,7 @@ async function main(){
  const flags=['--read-only','--init','--cap-drop','ALL','--security-opt','no-new-privileges:true','--memory','1g','--cpus','1','--ulimit','core=0','--restart','no','--tmpfs','/tmp:size=128m,nosuid','--log-driver','json-file','--log-opt','max-size=5m','--log-opt','max-file=2'];
  const env={HOME:'/data/home',NAPCAT_WORKDIR:'/data/napcat',NAPCAT_QQ_DATA_DIR:'/data/qq',NAPCAT_DISABLE_MULTI_PROCESS:'1',NAPCAT_DISABLE_BYPASS:'1',QQ_WEBUI_TOKEN:token,QQ_ACCESS_TOKEN:randomBytes(32).toString('hex'),PAPER_STUDY_ENABLED:'false',PAPER_STUDY_WORKER_ENABLED:'false',PAPER_STUDY_MODELS_ENABLED:'false',PAPER_STUDY_PUBLISH_ENABLED:'false'};
  if(options.includes('--no-preload'))env.LD_PRELOAD='';
+ if(options.includes('--no-library-path'))env.LD_LIBRARY_PATH='';
  const extraMounts=[];
  if(options.includes('--without-packet-adapter')){
   const empty=path.join(privateDir,'empty-packet-adapter');fs.mkdirSync(empty);
@@ -50,7 +51,7 @@ async function main(){
  if(binding?.HostIp!=='127.0.0.1')throw Error('LAB_PORT_NOT_LOCAL');
  const origin='http://127.0.0.1:'+binding.HostPort;
  fs.writeFileSync(path.join(privateDir,'session.json'),JSON.stringify({container:name,imageId:imageInfo.Id,origin,token,evidence,paperEnabled:false},null,2),{mode:0o600,flag:'wx'});
- fs.writeFileSync(path.join(evidence,'baseline.json'),JSON.stringify({container:name,imageId:imageInfo.Id,platform:imageInfo.Os+'/'+imageInfo.Architecture,memory:initial.HostConfig.Memory,nanoCpus:initial.HostConfig.NanoCpus,readOnly:initial.HostConfig.ReadonlyRootfs,restartPolicy:initial.HostConfig.RestartPolicy.Name,bypassDisabled:true,packetAdapterDisabled:options.includes('--without-packet-adapter'),preloadOverride:options.includes('--no-preload')?'disabled':'image-default',mounts:initial.Mounts.map(m=>({destination:m.Destination,rw:m.RW,type:m.Type})),freshLoginData:!seedUsed,seedUsed,workerConnected:false,modelConfigured:false,paperEnabled:false},null,2));
+ fs.writeFileSync(path.join(evidence,'baseline.json'),JSON.stringify({container:name,imageId:imageInfo.Id,platform:imageInfo.Os+'/'+imageInfo.Architecture,memory:initial.HostConfig.Memory,nanoCpus:initial.HostConfig.NanoCpus,readOnly:initial.HostConfig.ReadonlyRootfs,restartPolicy:initial.HostConfig.RestartPolicy.Name,bypassDisabled:true,packetAdapterDisabled:options.includes('--without-packet-adapter'),preloadOverride:options.includes('--no-preload')?'disabled':'image-default',libraryPathOverride:options.includes('--no-library-path')?'disabled':'image-default',mounts:initial.Mounts.map(m=>({destination:m.Destination,rw:m.RW,type:m.Type})),freshLoginData:!seedUsed,seedUsed,workerConnected:false,modelConfigured:false,paperEnabled:false},null,2));
  const probe=docker(['exec',name,'node','-e',componentProbe],true);if(probe.status===0)fs.writeFileSync(path.join(evidence,'components.json'),probe.stdout);
  let credential=null,state={phase:'starting',loggedIn:false,coreReady:false,offline:false},previous='',lastWrite=0,firstReady=null,stopped=false,checking=false;
  const timeline=path.join(evidence,'timeline.jsonl');
@@ -106,6 +107,19 @@ async function main(){
  fs.writeFileSync(path.join(evidence,'dashboard.json'),JSON.stringify({address,container:name,privateDir,evidence,paperEnabled:false},null,2));
  console.log(JSON.stringify({event:'login-lab-ready',address,container:name,evidence,privateDir,paperEnabled:false}));
  await observe();const timer=setInterval(()=>observe().catch(()=>{}),2000);
+ if(seedUsed&&options.includes('--restore-test-session')){
+  try{
+   let accounts;
+   for(let attempt=0;attempt<10;attempt++){
+    try{accounts=await post('/QQLogin/GetQuickLoginList');}catch{}
+    if(Array.isArray(accounts)&&accounts.length===1)break;
+    await new Promise(resolve=>setTimeout(resolve,2000));
+   }
+   if(Array.isArray(accounts)&&accounts.length===1&&/^[1-9][0-9]{4,15}$/u.test(accounts[0])&&!(await post('/QQLogin/CheckLoginStatus')).isLogin){
+    await post('/QQLogin/SetQuickLogin',{uin:accounts[0]});console.log('Isolated test session login submitted once.');
+   }else console.log('Isolated test session unavailable; use the local QR page.');
+  }catch{console.log('Isolated test session outcome uncertain; check status, no retry.');}
+ }
  const close=()=>{clearInterval(timer);server.close();console.log('Observer stopped; test container and login data retained.');};process.once('SIGINT',close);process.once('SIGTERM',close);
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)main().catch(()=>{console.error('QQ_LOGIN_LAB_SETUP_FAILED; existing services and test login data retained.');process.exitCode=1;});
