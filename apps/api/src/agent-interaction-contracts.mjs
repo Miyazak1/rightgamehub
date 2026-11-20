@@ -45,6 +45,7 @@ export const AGENT_GITHUB_INSPECT_WORKFLOW=Object.freeze({schemaVersion:'agent-w
  inputSchema:'agent-github-inspect-input-v1',outputSchema:'agent-github-inspect-output-v1',requiredCapabilities:[{key:'research.github.read',version:1}],
  defaultBudget:{providerCalls:0,toolCalls:3,inputTokens:0,outputTokens:0,wallClockSeconds:300},
  stages:[{key:'read',kind:'tool',dependsOn:[],maxAttempts:3,timeoutSeconds:90,capability:{key:'research.github.read',version:1},idempotencyMode:'key'}]});
+export const AGENT_CONVERSATION_ATTEMPT_WORKFLOW=Object.freeze({...AGENT_CONVERSATION_WORKFLOW,workflowVersion:2});
 export const INTERACTION_GITHUB_TOOLS=Object.freeze([
  {name:'github_answer_question',arguments:{question:'用户本次针对项目的问题、想了解的方面或总结要求',repositoryUrl:'可选，明确的GitHub仓库URL；当前会话仅有一个明确项目时可省略'},purpose:'围绕指定项目的实现、算法、调用链、亮点、限制或总结进行只读研究，定位源码/测试并按固定提交和行号回答；支持当前提问者连续追问。不创建文章、不发布。缺少项目且上下文不明确时先询问项目。'},
  {name:'github_search_projects',arguments:{topic:'用户要求的项目方向',repositoryUrl:'可选，用户指定的 GitHub 仓库 URL'},purpose:'交给小墨鱼现有 GitHub 研究器查询公开项目；返回持久任务编号，尚未完成查询。'},

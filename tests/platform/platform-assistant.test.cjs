@@ -4,6 +4,13 @@ const actor={userId:'owner'},batchId=randomUUID(),questionId='q1';
 const question={id:questionId,prompt:'3x+5=20',options:[{id:'A',text:'3'},{id:'B',text:'5'}],answer:null,checked:false};
 const batch={id:batchId,config:{subjectId:'mathematics',language:'zh'},items:[question]};
 const input=()=>({requestId:randomUUID(),message:'先给我提示',context:{batchId,questionId},history:[]});
+
+test('managed Agent history keeps assistant examples in JSON mode while preserving topic markers',async()=>{
+ const {createPlatformAssistantService}=await load();let messages;
+ const service=createPlatformAssistantService({practiceService:{},agentIdentity:{id:'agent',displayName:'小墨鱼',profile:{}},provider:async r=>{messages=r.messages;return '已收到追问。';}});
+ await service.send(actor,{requestId:randomUUID(),message:'它怎么实现？',history:[{role:'user',content:'研究项目'},{role:'assistant',content:'已完成。\n源码路径：finder.ts'}]});
+ const reply=JSON.parse(messages.find(m=>m.role==='assistant').content);assert.match(reply.reply,/历史消息所属题目：平台/);assert.match(reply.reply,/finder.ts/);
+});
 test('assistant resolves owned question server-side, binds original question and deduplicates retries',async()=>{
  const {createPlatformAssistantService}=await load();let release,calls=0,seen;
  const service=createPlatformAssistantService({practiceService:{get:async(a,id)=>{assert.deepEqual(a,actor);assert.equal(id,batchId);return batch;}},provider:async request=>{calls++;seen=request;await new Promise(r=>release=r);return '先消去常数项。';}});

@@ -97,7 +97,10 @@ export function createPlatformAssistantService({ practiceService, tools = null, 
         const messages = [{role:'system', content:system}];
         const references=new Set((input.history||[]).filter(m=>m.role==='assistant'&&m.requestId).slice(-3).map(m=>m.requestId));
         for(const item of input.history||[]) {
-          messages.push({role:item.role,content:'[历史消息所属题目：'+(item.questionId||'平台')+']\n'+item.content});
+          const historical='[历史消息所属题目：'+(item.questionId||'平台')+']\n'+item.content;
+          // Managed completions always use JSON-object mode. Keep assistant
+          // examples in that envelope instead of teaching a plain-text echo.
+          messages.push({role:item.role,content:agentIdentity&&item.role==='assistant'?JSON.stringify({reply:historical}):historical});
           if(tools&&item.role==='assistant'&&references.has(item.requestId)) {
             // Resolve references against this account's actual server receipts;
             // never accept client-supplied search cards or private query results.

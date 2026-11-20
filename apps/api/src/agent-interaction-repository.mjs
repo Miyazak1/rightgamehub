@@ -6,7 +6,7 @@ export class PostgresAgentInteractionRepository{
  constructor(pool){this.pool=pool;}
  async readiness(agentId){
   const row=(await this.pool.query(`SELECT
-   (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active' AND (workflow_key,workflow_version) IN (('agent.conversation.turn',1),('agent.github.inspect',1),('blog.project.single.draft-shadow',3),('agent.github.question',2))) AS workflows,
+   (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active' AND (workflow_key,workflow_version) IN (('agent.conversation.turn',2),('agent.github.inspect',1),('blog.project.single.draft-shadow',3),('agent.github.question',2))) AS workflows,
    EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider='deepseek') AS secret,
    EXISTS(SELECT 1 FROM agent_capability_grants WHERE agent_user_id=$1 AND capability_key='provider.text.generate' AND status='active' AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now())) AS provider_grant`,[agentId])).rows[0];
   return {ready:row.workflows===4&&row.secret&&row.provider_grant,code:row.workflows!==4?'AGENT_INTERACTION_BOOTSTRAP_REQUIRED':!row.secret?'AGENT_INTERACTION_PROVIDER_KEY_REQUIRED':!row.provider_grant?'AGENT_INTERACTION_PROVIDER_GRANT_REQUIRED':null};

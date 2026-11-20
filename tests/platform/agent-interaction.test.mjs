@@ -5,7 +5,7 @@ import {agentChannelSignature,verifyAgentChannelSignature} from '../../apps/api/
 import {qqSignature} from '../../apps/api/src/qq-admin-protocol.mjs';
 import {createAgentInteractionService} from '../../apps/api/src/agent-interaction-service.mjs';
 import {createAgentInteractionWorker} from '../../apps/api/src/agent-interaction-worker.mjs';
-import {validateConversationOutput} from '../../apps/api/src/agent-interaction-conversation.mjs';
+import {validateConversationOutput,validateConversationAttempt} from '../../apps/api/src/agent-interaction-conversation.mjs';
 import {loadAgentInteractionConfig} from '../../apps/api/src/agent-interaction-config.mjs';
 import {createRequire} from 'node:module';
 import {registerAgentInteractionRoutes} from '../../apps/api/src/agent-interaction-routes.mjs';
@@ -68,6 +68,9 @@ test('a long GitHub task does not hold the conversation processing slot',async()
 test('core output and enabled identity binding remain strict and papers cannot be enabled through the channel',()=>{
  assert.deepEqual(validateConversationOutput({reply:'你好'}),{reply:'你好'});
  assert.throws(()=>validateConversationOutput({reply:'你好',publish:true}));
+ assert.equal(validateConversationAttempt('[历史消息所属题目：平台] 回显').accepted,false);
+ assert.deepEqual(validateConversationAttempt('{"reply":"已收到"}'),{accepted:true,completion:{reply:'已收到'}});
+ assert.equal(validateConversationAttempt({reply:'你好',publish:true}).accepted,false);
  assert.equal(loadAgentInteractionConfig({}).enabled,false);
  const env={AGENT_INTERACTIONS_ENABLED:'true',AGENT_BLOG_PUBLIC_RUNTIME_ENABLED:'true',AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID:agentId};assert.equal(loadAgentInteractionConfig(env).agentId,agentId);
  assert.throws(()=>loadAgentInteractionConfig({...env,QQ_ADMIN_ENABLED:'true',QQ_ADMIN_AGENT_USER_ID:userId}));

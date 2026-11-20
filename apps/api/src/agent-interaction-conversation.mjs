@@ -2,9 +2,10 @@ import {randomUUID} from 'node:crypto';
 import {createPlatformAssistantProvider,createPlatformAssistantService} from './platform-assistant.mjs';
 import {parseAssistantOutput} from './assistant-output.mjs';
 import {createAgentRuntimeWorker} from './agent-runtime-worker.mjs';
-import {AGENT_CONVERSATION_WORKFLOW,interactionFail,interactionId} from './agent-interaction-contracts.mjs';
+import {AGENT_CONVERSATION_WORKFLOW,AGENT_CONVERSATION_ATTEMPT_WORKFLOW,interactionFail,interactionId} from './agent-interaction-contracts.mjs';
 
 export const CONVERSATION_RESPONSE_SCHEMA=Object.freeze({key:'agent.conversation.completion',version:1});
+export const CONVERSATION_ATTEMPT_SCHEMA=Object.freeze({key:'agent.conversation.attempt',version:1});
 export function validateConversationOutput(raw){
  const value=typeof raw==='string'?parseAssistantOutput(raw):raw;
  if(value&&typeof value==='object'&&!Array.isArray(value)){
@@ -14,17 +15,23 @@ export function validateConversationOutput(raw){
  }
  interactionFail('AGENT_INTERACTION_OUTPUT_INVALID',502);
 }
+export function validateConversationAttempt(raw){
+ if(Buffer.byteLength(typeof raw==='string'?raw:JSON.stringify(raw)??'')>65536)interactionFail('AGENT_INTERACTION_OUTPUT_INVALID',502);
+ try{return {accepted:true,completion:validateConversationOutput(raw)};}
+ catch{return {accepted:false,rawOutput:structuredClone(raw),validationCode:'AGENT_INTERACTION_OUTPUT_INVALID'};}
+}
 export function createAgentConversationExecutor({repository,service,ports,practiceService,platformTools}){
  const {runtimeRepository,providerGateway}=ports,pool=repository.pool;
- const readRun=async id=>(await pool.query('SELECT id,status,output_id,error_code FROM agent_runs WHERE id=$1 AND agent_user_id=$2',[id,service.agentId])).rows[0];
+ const readRun=async id=>(await pool.query('SELECT id,status,workflow_version,output_id,error_code FROM agent_runs WHERE id=$1 AND agent_user_id=$2',[id,service.agentId])).rows[0];
  return async function execute(row,{signal}={}){
   const {agent,principal}=await service.authorize(row.origin_json);
   const id=interactionId([row.id,'conversation-run']);let run=await readRun(id);
+  const workflow=run?.workflow_version===1||!ports.conversationAttempts?AGENT_CONVERSATION_WORKFLOW:AGENT_CONVERSATION_ATTEMPT_WORKFLOW;
   if(!run){
-   await runtimeRepository.createRun({id,agentUserId:agent.id,workflowKey:AGENT_CONVERSATION_WORKFLOW.workflowKey,workflowVersion:1,
+   await runtimeRepository.createRun({id,agentUserId:agent.id,workflowKey:workflow.workflowKey,workflowVersion:workflow.workflowVersion,
     triggerKind:'manual',triggerRef:'interaction:'+row.id,idempotencyKey:'interaction:'+row.id,
     input:{schemaVersion:'agent-conversation-input-v1',interactionId:row.id,message:row.input_json.message,context:row.input_json.context,history:await repository.history(row)},
-    config:{model:{provider:'deepseek',modelId:agent.model},agentIdentity:{id:agent.id,displayName:agent.display_name,profile:agent.profile}},budget:AGENT_CONVERSATION_WORKFLOW.defaultBudget});
+    config:{model:{provider:'deepseek',modelId:agent.model},agentIdentity:{id:agent.id,displayName:agent.display_name,profile:agent.profile}},budget:workflow.defaultBudget});
    run=await readRun(id);
   }
   await repository.setRun(row,id);
@@ -39,8 +46,9 @@ export function createAgentConversationExecutor({repository,service,ports,practi
      action:{actionKey:'conversation-'+n,actionKind:'provider',capabilityKey:'provider.text.generate',contractVersion:1,riskLevel:'L1'},
      idempotencyKey:'interaction:'+row.id+':completion:'+n,resource:{type:'provider.model',owner:agent.id},
      modelPolicy:{taskClass:'structured-generation',requiresJsonSchema:true,maxInputTokens:60000,maxOutputTokens:2400,maxCostMicrousd:50000000,latencyClass:'interactive',preferredProvider:'deepseek',preferredModel:context.run.configSnapshot.model.modelId},
-     promptTemplate:{key:'agent.conversation',version:1},responseSchema:CONVERSATION_RESPONSE_SCHEMA,request,tokenCeiling,timeoutSeconds,signal:execution.signal});
-    return {...generated,output:JSON.stringify(generated.output),responseRef:{finishReason:'stop'}};
+     promptTemplate:{key:'agent.conversation',version:workflow.workflowVersion},responseSchema:workflow.workflowVersion>=2?CONVERSATION_ATTEMPT_SCHEMA:CONVERSATION_RESPONSE_SCHEMA,request,tokenCeiling,timeoutSeconds,signal:execution.signal});
+    const output=workflow.workflowVersion>=2?(generated.output.accepted?JSON.stringify(generated.output.completion):typeof generated.output.rawOutput==='string'?generated.output.rawOutput:JSON.stringify(generated.output.rawOutput)):JSON.stringify(generated.output);
+    return {...generated,output,responseRef:{finishReason:'stop'}};
    }});
    const tools=await service.tools(current,{platformTools,actor:principal.actor});
    const assistant=createPlatformAssistantService({practiceService,tools,provider,agentIdentity:context.run.configSnapshot.agentIdentity,

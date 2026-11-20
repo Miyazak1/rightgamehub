@@ -1,7 +1,7 @@
 import {createAgentBlogPublicRuntime} from './agent-blog-public-runtime.mjs';
 import {createAgentDeepSeekProviderAdapter} from './agent-deepseek-provider-adapter.mjs';
 import {PostgresAgentInteractionRepository} from './agent-interaction-repository.mjs';
-import {createAgentConversationExecutor,validateConversationOutput} from './agent-interaction-conversation.mjs';
+import {createAgentConversationExecutor,validateConversationOutput,validateConversationAttempt} from './agent-interaction-conversation.mjs';
 import {createAgentGitHubInteractionExecutor} from './agent-interaction-github.mjs';
 import {createAgentInteractionWorker} from './agent-interaction-worker.mjs';
 import {loadAgentInteractionConfig} from './agent-interaction-config.mjs';
@@ -13,14 +13,14 @@ export function createAgentInteractionRuntime({env=process.env,pool,service,prac
  const config=loadAgentInteractionConfig(env);
  if(!config.enabled||!service||service.agentId!==config.agentId)throw Object.assign(new Error('AGENT_INTERACTION_RUNTIME_DISABLED'),{code:'AGENT_INTERACTION_RUNTIME_DISABLED'});
  const runtime=createAgentBlogPublicRuntime({env,pool,applicationName:'mooyu-agent-interactions',
-  additionalResponseSchemas:{'agent.conversation.completion@1':validateConversationOutput,...GITHUB_QUESTION_SCHEMAS},
+  additionalResponseSchemas:{'agent.conversation.completion@1':validateConversationOutput,'agent.conversation.attempt@1':validateConversationAttempt,...GITHUB_QUESTION_SCHEMAS},
   providerAdapter:async input=>{
    const result=await adapter(input);
    if(result.responseRef?.finishReason!=='stop')throw Object.assign(new Error('AGENT_PROVIDER_RESPONSE_TRUNCATED'),{code:'AGENT_PROVIDER_RESPONSE_TRUNCATED',acknowledged:true,usage:result.usage,providerRequestId:result.providerRequestId,responseRef:result.responseRef});
    return result;
   }});
  const repository=new PostgresAgentInteractionRepository(runtime.pool);
- const conversation=createAgentConversationExecutor({repository,service,ports:runtime.interactionPorts,practiceService,platformTools});
+ const conversation=createAgentConversationExecutor({repository,service,ports:{...runtime.interactionPorts,conversationAttempts:true},practiceService,platformTools});
  const legacyGithub=createAgentGitHubInteractionExecutor({repository,service,runtime});
  const question=createAgentGitHubQuestionExecutor({repository,service,ports:runtime.interactionPorts});
  const github=(row,options)=>(row.kind==='github-question'?question:legacyGithub)(row,options);
