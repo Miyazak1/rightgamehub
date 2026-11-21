@@ -3,6 +3,25 @@ const root=path.resolve(__dirname,'..'),file=path.resolve(process.argv[2]??''),o
 if(s.schemaVersion!=='agent-interaction-lab-v1')throw Error('ISOLATION_REQUIRED');
 function docker(args){const r=cp.spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:1000000});if(r.status!==0)throw Error('LAB_DOCKER_FAILED');return r.stdout.trim();}
 async function main(){
+ if(operation==='--recover-lab-after-host-restart'){
+  const inspect=name=>JSON.parse(docker(['inspect',name]))[0],names=[s.name+'-db',s.oldStack.gateway,s.name+'-proxy',s.qqWorker];
+  const before=names.map(inspect),originals=[s.oldStack.worker,s.oldStack.db].map(inspect);
+  for(const info of before){const expected=info.Name==='/'+s.oldStack.gateway?['mooyu.qq-login-lab',s.oldStack.id]:['mooyu.agent-lab',s.id];if(info.Config.Labels[expected[0]]!==expected[1]||!['running','exited','created'].includes(info.State.Status))throw Error('LAB_RECOVERY_IDENTITY_REQUIRED');}
+  if(!before[0].Mounts.some(m=>m.Type==='volume'&&m.Name===s.volume&&m.Destination==='/var/lib/postgresql/data'))throw Error('LAB_DATABASE_VOLUME_MISMATCH');
+  const saved=fs.readdirSync(s.privateRoot).filter(n=>/^gateway-recovery-.*\.private\.json$/.test(n)).sort().at(-1);
+  if(!saved)throw Error('GATEWAY_PRESERVATION_SNAPSHOT_REQUIRED');const prior=JSON.parse(fs.readFileSync(path.join(s.privateRoot,saved),'utf8'));
+  if(prior.Image!==before[1].Image||JSON.stringify(prior.Mounts)!==JSON.stringify(before[1].Mounts))throw Error('GATEWAY_PRESERVATION_MISMATCH');
+  const stamp=new Date().toISOString().replace(/[^0-9]/g,'');fs.writeFileSync(path.join(s.privateRoot,'host-recovery-'+stamp+'.private.json'),JSON.stringify({before,originals},null,2),{flag:'wx',mode:0o600});
+  const started=[],start=info=>{if(!info.State.Running){docker(['start',info.Name.slice(1)]);started.push(info.Name.slice(1));console.log(JSON.stringify({event:'local-container-started',name:info.Name.slice(1)}));}};
+  for(const info of before.slice(0,3))start(info);
+  let ready=false;for(let i=0;i<60;i++){const check=cp.spawnSync('docker',['exec',s.name+'-db','pg_isready','-U','qa_ledger_test'],{encoding:'utf8',windowsHide:true,timeout:3000});if(check.status===0){ready=true;break;}await new Promise(r=>setTimeout(r,1000));}if(!ready)throw Error('LAB_DATABASE_NOT_READY');
+  start(before[3]);
+  const after=names.map(inspect);for(let i=0;i<before.length;i++)if(before[i].Image!==after[i].Image||JSON.stringify(before[i].Mounts)!==JSON.stringify(after[i].Mounts))throw Error('LAB_RECOVERY_PRESERVATION_FAILED');
+  const port=(info,key)=>{const p=info.NetworkSettings.Ports[key]?.[0];if(p?.HostIp!=='127.0.0.1')throw Error('LAB_LOCAL_PORT_REQUIRED');return Number(p.HostPort);};
+  const database=new URL(s.databaseUrl);database.port=String(port(after[0],'5432/tcp'));s.databaseUrl=database.href;s.gatewayOrigin='http://127.0.0.1:'+port(after[1],'6099/tcp');s.qqControlPort=port(after[3],'6780/tcp');s.qqHealthPort=port(after[3],'6700/tcp');fs.writeFileSync(file,JSON.stringify(s,null,2));
+  const originalProcessesUnchanged=originals.every(v=>{const now=inspect(v.Name.slice(1));return now.State.StartedAt===v.State.StartedAt&&now.State.Status===v.State.Status;});
+  const report={at:new Date().toISOString(),reason:'local-host-restarted',started,imagesAndMountsRetained:true,databaseVolume:s.volume,originalProcessesUnchanged,productionConnected:false,paperEnabled:false};fs.writeFileSync(path.join(s.evidence,'host-recovery-'+stamp+'.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));if(!originalProcessesUnchanged)throw Error('ORIGINAL_PROCESS_CHANGED');return;
+ }
  if(['--reserve-recheck-budget','--reserve-research-budget','--reserve-conversation-budget'].includes(operation)){
   const location=new URL(s.databaseUrl);if(location.hostname!=='127.0.0.1'||!/^\/qa_ledger_test_[a-f0-9]{32}$/.test(location.pathname)||location.username!=='qa_ledger_test')throw Error('ISOLATED_DATABASE_REQUIRED');
   const {Pool}=require('node:module').createRequire(path.join(root,'apps/api/package.json'))('pg'),pool=new Pool({connectionString:s.databaseUrl}),client=await pool.connect();

@@ -60,3 +60,22 @@ node scripts/test-researcher-qa-db.mjs tests/platform/agent-github-question-db.t
 针对同样历史前缀回显的数据库复现验证首次无效、第二次有效的两条尝试账本，并验证重放不新增模型调用；旧对话 v1 和 QQ 发送回归通过。为补测这项真实故障，本地调用上限从 20 调到 24，17 次已用调用及成本全部保留，费用上限仍为 3000000 microusd，见 `budget-conversation.json`。这是有界补测，不重置失败记录或循环扩容。
 
 修复后的真实追问正在等待用户重发；本节将按实际结果补充。原文章功能的真实群验收记录见 `agent-interactions-live-20261120.zh-CN.md`。
+
+## 2026-11-21 本机重启后的现场恢复
+
+用户报告重发后没有回复。实际检查确认本机于北京时间 12:53 重启，原本地 API 端口没有监听，Docker Desktop 尚在启动，四个必要测试容器均以 255 退出；不是新追问在模型执行中再次报格式错误。
+
+未强制重启 Docker 或 WSL。观察到 Docker 磁盘同步等待结束后引擎正常就绪；原 PostgreSQL 自动执行数据目录 fsync 和崩溃恢复，在 13:08 完成检查点并接受连接。没有清库、重建容器或迁移目录。
+
+新增本地恢复命令：
+
+```powershell
+node scripts/agent-interaction-lab-control.cjs <原私有session文件> --recover-lab-after-host-restart
+node scripts/agent-interaction-lab.cjs <原私有session文件>
+```
+
+恢复工具先校验隔离标签、原数据库卷，以及原测试网关快照中的镜像与挂载；仅启动原数据库、测试网关、代理和新 worker。正在运行的容器不重复启动，数据库未就绪时不启动依赖它的 worker；若返回 `LAB_DATABASE_NOT_READY`，应继续观察同一数据库恢复过程，就绪后再继续命令，不能因等待超时清库或强制重启。恢复后重新发现本机动态端口，不修改容器内部连接地址。
+
+恢复记录确认原镜像和挂载一致，原独立 worker／数据库的停止现场未改变，登录目录保留。私有完整快照仅保存在原私有目录，公开恢复摘要保存在证据目录的 `host-recovery-20261121050730463.json`。
+
+业务库恢复后仍有 14 条原交互，QQ 仍有 8 条 delivered，模型调用计数保持 17。对话页恢复为 `http://127.0.0.1:51712`。QQ 登录状态为 `waiting_qrcode`，需要测试账号手机确认；在登录完成前，不将用户离线期间的追问算作已接收或已验收，不伪造群事件。论文关闭，线上服务未操作。
