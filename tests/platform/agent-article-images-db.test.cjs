@@ -22,16 +22,18 @@ test('real draft revision, signed image API and durable paginated QQ delivery pr
   let imageRequests=0;const client=createQQAgentClient({url:'http://127.0.0.1:12345',secret:'ab'.repeat(32),agentId,fetchImpl:async(_url,options)=>{if(JSON.parse(options.body).operation==='article-image')imageRequests++;const response=await app.inject({method:'POST',url:'/v1/internal/agent/qq',headers:options.headers,payload:options.body});return new Response(response.body,{status:response.statusCode});}});
   const database='mooyu_qq_local_test_'+crypto.randomBytes(8).toString('hex'),url=new URL(process.env.QA_LEDGER_TEST_URL);await pool.query('CREATE DATABASE '+database);url.pathname='/'+database;
   const qqPool=new pool.constructor({connectionString:url.href});t.after(()=>qqPool.end());
-  const {parseConfig}=await import('../../apps/qq-channel/src/config.mjs'),{QQRepository}=await import('../../apps/qq-channel/src/repository.mjs'),{QQService}=await import('../../apps/qq-channel/src/service.mjs');
+  const {parseConfig}=await import('../../apps/qq-channel/src/config.mjs'),{QQRepository}=await import('../../apps/qq-channel/src/repository.mjs'),{createQQChannelPluginHost}=await import('../../apps/qq-channel/src/plugin-catalog.mjs');
   const config=parseConfig({enabled:true,botId:origin.botId,groupId:origin.groupId,allowedUsers:[origin.actorRef]},{QQ_DATABASE_URL:url.href,QQ_ACCESS_TOKEN:'isolated-image-token-'.repeat(3)});
   let repo=new QQRepository(qqPool,config);await repo.initialize();await repo.enableControl();await repo.enableAgentBridge();
   // Attach the real completed task to an isolated transport request; no extra model call.
   await qqPool.query("INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint,status,reply,origin_group_id) VALUES($1,'42',$2,'write article','fixture','delivered','accepted',$3)",[config.channelId,origin.actorRef,origin.groupId]);
   await qqPool.query("INSERT INTO mooyu_qq.agent_links(channel_id,message_id,request_id,interaction_id,task_id) VALUES($1,'42',$2,$3,$4)",[config.channelId,crypto.randomUUID(),accepted.id,task.id]);
-  const sent=[],gateway={connected:()=>true,send:async row=>{assert.ok(Buffer.isBuffer(row.image_data));sent.push(row);return String(500+sent.length);}};
-  const make=()=>new QQService({config,repository:repo,bridge:new QQAgentBridge({repository:repo,client}),gateway});let worker=make();await worker.tick();assert.equal(sent.length,1);assert.equal(imageRequests,page0.pageCount);
+  const sent=[],gateway={start:async()=>({address:'127.0.0.1',port:0}),stop:async()=>{},connected:()=>true,send:async row=>{assert.ok(Buffer.isBuffer(row.image_data));sent.push(row);return String(500+sent.length);}};
+  const host=createQQChannelPluginHost({env:{}});
+  const make=async()=>{const runtime=await host.bindChannel({id:'mooyu.qq',version:'1.0.0'},{config,pool:qqPool,repository:repo,managed:true,useAgent:true,channelSecret:'ab'.repeat(32),env:{QQ_ADMIN_AGENT_USER_ID:agentId},client,gatewayFactory:()=>gateway,napcatFactory:()=>({readyGroup:config.groupId,maintain:async()=>{}}),controlFactory:async()=>({address:{port:0},close:async()=>{}})});await runtime.start();return runtime;};
+  let worker=await make();t.after(()=>worker.close());await worker.tick();assert.equal(sent.length,1);assert.equal(imageRequests,page0.pageCount);
   // Reconstruct the worker/repository after page one: queued bytes and ordering survive.
-  repo=new QQRepository(qqPool,config);await repo.enableControl();await repo.enableAgentBridge();worker=make();
+  await worker.close();repo=new QQRepository(qqPool,config);worker=await make();
   for(let i=1;i<page0.pageCount;i++)assert.equal((await worker.tick()).delivered,true);
   await worker.tick();assert.equal(sent.length,page0.pageCount);assert.equal(imageRequests,page0.pageCount);assert.equal(f.providerCalls(),beforeCalls);
   const pages=(await qqPool.query('SELECT p.page_no,p.revision_id,m.status FROM mooyu_qq.agent_image_pages p JOIN mooyu_qq.messages m USING(channel_id,message_id) ORDER BY p.page_no')).rows;

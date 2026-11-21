@@ -7,7 +7,8 @@ export function createAgentPluginHost({definitions=[],activePlugins=null}={}){
  for(const definition of definitions){
   const manifest=normalizeAgentPluginManifest(definition.manifest),key=pluginBindingKey({id:manifest.id,version:manifest.version});
   if(entries.has(key))pluginFail('AGENT_PLUGIN_DUPLICATE');
-  if(typeof definition.admit!=='function'||typeof definition.executeTask!=='function'||!Array.isArray(definition.descriptions)||!Array.isArray(definition.workflows)||!Array.isArray(definition.toolContracts))pluginFail('AGENT_PLUGIN_DEFINITION_INVALID');
+  const channel=manifest.kind==='channel';
+  if(!Array.isArray(definition.descriptions)||!Array.isArray(definition.workflows)||!Array.isArray(definition.toolContracts)||(channel?(typeof definition.createChannelRuntime!=='function'||manifest.tools.length||manifest.taskKinds.length||manifest.backendTools.length||manifest.workflows.length):(typeof definition.admit!=='function'||typeof definition.executeTask!=='function')))pluginFail('AGENT_PLUGIN_DEFINITION_INVALID');
   if(definition.descriptions.length!==manifest.tools.length||definition.descriptions.some(d=>!manifest.tools.includes(d.name))||new Set(definition.descriptions.map(d=>d.name)).size!==manifest.tools.length)pluginFail('AGENT_PLUGIN_EXPORT_MISMATCH');
   if(definition.workflows.length!==manifest.workflows.length||manifest.workflows.some(w=>!definition.workflows.some(m=>m.workflowKey===w.key&&m.workflowVersion===w.version))||definition.workflows.some(w=>w.requiredCapabilities?.some(c=>!manifest.capabilities.some(m=>m.key===c.key&&m.version===c.version))))pluginFail('AGENT_PLUGIN_EXPORT_MISMATCH');
   if(definition.toolContracts.length!==manifest.backendTools.length||manifest.backendTools.some(t=>!definition.toolContracts.some(c=>c.toolKey===t.key&&c.contractVersion===t.version))||definition.toolContracts.some(t=>!manifest.capabilities.some(c=>c.key===t.capabilityKey&&c.version===t.contractVersion)))pluginFail('AGENT_PLUGIN_EXPORT_MISMATCH');
@@ -46,6 +47,14 @@ export function createAgentPluginHost({definitions=[],activePlugins=null}={}){
    else{enabled.add(id);try{assertAvailable(selected.get(id));}catch(e){enabled.delete(id);throw e;}}
   },
   taskPolicy(row){const {entry}=resolveTask(row);return entry.manifest.taskKinds.find(t=>t.kind===row.kind);},
+  async bindChannel(raw,context){
+   const binding=normalizePluginBinding(raw),entry=assertAvailable(binding);
+   if(entry.manifest.kind!=='channel')pluginFail('AGENT_PLUGIN_KIND_MISMATCH');
+   const runtime=await entry.definition.createChannelRuntime({...context,binding:{...binding},assertAvailable:()=>assertAvailable(binding)});
+   try{if(!runtime||['start','run','receive','tick','stop','close'].some(name=>typeof runtime[name]!=='function'))pluginFail('AGENT_PLUGIN_CHANNEL_INVALID');assertAvailable(binding);}
+   catch(error){if(typeof runtime?.close==='function')await Promise.resolve().then(()=>runtime.close()).catch(()=>{});throw error;}
+   const channel={...runtime};for(const name of ['start','run','receive','tick'])channel[name]=async(...args)=>{assertAvailable(binding);return runtime[name](...args);};return channel;
+  },
   async admit(name,args,context){
    const id=owners.tools.get(name);if(!id)return null;const binding=selected.get(id),{definition,manifest}=assertAvailable(binding);
    const task=await definition.admit(name,args,context);if(task.error)return {name,...task};
