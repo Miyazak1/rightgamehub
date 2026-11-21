@@ -4,12 +4,12 @@ import {interactionFail,interactionHash,interactionId} from './agent-interaction
 
 export class PostgresAgentInteractionRepository{
  constructor(pool){this.pool=pool;}
- async readiness(agentId){
+ async readiness(agentId,{workflows=[{key:'agent.conversation.turn',version:2}]}={}){
   const row=(await this.pool.query(`SELECT
-   (SELECT count(*)::int FROM agent_workflow_definitions WHERE status='active' AND (workflow_key,workflow_version) IN (('agent.conversation.turn',2),('agent.github.inspect',1),('blog.project.single.draft-shadow',3),('agent.github.question',2))) AS workflows,
+   (SELECT count(*)::int FROM agent_workflow_definitions definition JOIN jsonb_to_recordset($2::jsonb) expected(key text,version int) ON definition.workflow_key=expected.key AND definition.workflow_version=expected.version WHERE definition.status='active') AS workflows,
    EXISTS(SELECT 1 FROM agent_provider_secrets WHERE agent_user_id=$1 AND provider='deepseek') AS secret,
-   EXISTS(SELECT 1 FROM agent_capability_grants WHERE agent_user_id=$1 AND capability_key='provider.text.generate' AND status='active' AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now())) AS provider_grant`,[agentId])).rows[0];
-  return {ready:row.workflows===4&&row.secret&&row.provider_grant,code:row.workflows!==4?'AGENT_INTERACTION_BOOTSTRAP_REQUIRED':!row.secret?'AGENT_INTERACTION_PROVIDER_KEY_REQUIRED':!row.provider_grant?'AGENT_INTERACTION_PROVIDER_GRANT_REQUIRED':null};
+   EXISTS(SELECT 1 FROM agent_capability_grants WHERE agent_user_id=$1 AND capability_key='provider.text.generate' AND status='active' AND valid_from<=now() AND (valid_until IS NULL OR valid_until>now())) AS provider_grant`,[agentId,JSON.stringify(workflows)])).rows[0];
+  return {ready:row.workflows===workflows.length&&row.secret&&row.provider_grant,code:row.workflows!==workflows.length?'AGENT_INTERACTION_BOOTSTRAP_REQUIRED':!row.secret?'AGENT_INTERACTION_PROVIDER_KEY_REQUIRED':!row.provider_grant?'AGENT_INTERACTION_PROVIDER_GRANT_REQUIRED':null};
  }
  async agent(agentId){
   const row=(await this.pool.query(`SELECT a.user_id AS id,a.operator_user_id,u.display_name,u.profile_handle,
@@ -78,10 +78,9 @@ export class PostgresAgentInteractionRepository{
   return rows.flatMap(item=>[{role:'user',content:item.input_json.message},{role:'assistant',content:item.result_json.reply,requestId:item.id},...(item.task_result?[{role:'assistant',content:item.task_result.reply,requestId:item.task_id}]:[])]);
  }
  async claim(agentId,kind){return withTransaction(this.pool,async c=>{
-  const kinds=kind==='message'?['message']:['github-search','github-article','github-question'];
-  const row=(await c.query(`SELECT * FROM agent_interactions WHERE agent_user_id=$1 AND kind=ANY($2::text[])
+  const row=(await c.query(`SELECT * FROM agent_interactions WHERE agent_user_id=$1 AND CASE WHEN $2::boolean THEN kind='message' ELSE kind<>'message' END
    AND ((state IN ('queued','waiting') AND next_attempt_at<=now()) OR (state='running' AND lease_until<=now()))
-   ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`,[agentId,kinds])).rows[0];if(!row)return null;
+   ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`,[agentId,kind==='message'])).rows[0];if(!row)return null;
   const token=randomUUID();return (await c.query(`UPDATE agent_interactions SET state='running',lease_token=$2,
    lease_until=now()+interval '180 seconds',attempts=attempts+1,updated_at=now() WHERE id=$1 RETURNING *`,[row.id,token])).rows[0];
  });}

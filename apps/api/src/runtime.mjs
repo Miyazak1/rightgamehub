@@ -3,6 +3,7 @@ import {readFileSync as readAgentChannelSecret} from 'node:fs';
 import {loadAgentInteractionConfig} from './agent-interaction-config.mjs';
 import {PostgresAgentInteractionRepository} from './agent-interaction-repository.mjs';
 import {createAgentInteractionService} from './agent-interaction-service.mjs';
+import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
 import {createAgentWebAssistantAdapter} from './agent-interaction-routes.mjs';
 import {createAgentQQAdminService} from './agent-qq-admin-service.mjs';
 import { createPlatformAgentTools } from './platform-agent-tools.mjs';
@@ -330,7 +331,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const practiceWorker = createPracticeWorker({repository: practiceRepository, engine: practiceEngine});
   const platformAgentTools=createPlatformAgentTools({practiceService,capabilityService:createAgentCapabilityService({catalogService,discoveryCampaignService,siteOrigin:config.gameShareSiteOrigin})});
   const interactionConfig=loadAgentInteractionConfig(env);
-  const agentInteractionService=interactionConfig.enabled?createAgentInteractionService({repository:new PostgresAgentInteractionRepository(database.pool),agentId:interactionConfig.agentId,
+  const agentInteractionService=interactionConfig.enabled?createAgentInteractionService({repository:new PostgresAgentInteractionRepository(database.pool),agentId:interactionConfig.agentId,pluginHost:createBuiltinAgentPluginHost({env}),
     readQQPolicy:async()=>{const value=await agentQQAdminService.readBoundChannelPolicy();if(value.binding?.interactionProtocolVersion!==1)throw Object.assign(new Error('AGENT_INTERACTION_QQ_UPGRADE_REQUIRED'),{code:'AGENT_INTERACTION_QQ_UPGRADE_REQUIRED',statusCode:503});return {agentId:interactionConfig.agentId,botId:value.binding.botId,...value.settings};}}):null;
   const agentChannelSecret=interactionConfig.enabled&&env.QQ_ADMIN_ENABLED==='true'?readAgentChannelSecret(env.QQ_ADMIN_SECRET_FILE,'utf8').trim():null;
   const platformAssistantService = agentInteractionService?createAgentWebAssistantAdapter(agentInteractionService):createPlatformAssistantService({practiceService,tools:platformAgentTools,

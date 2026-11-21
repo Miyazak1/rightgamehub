@@ -1,12 +1,12 @@
-export function createAgentInteractionWorker({repository,service,conversation,github,agentId,log=()=>{},pollMilliseconds=1000}){
+export function createAgentInteractionWorker({repository,service,conversation,taskExecutor,github,agentId,log=()=>{},pollMilliseconds=1000}){
  const shutdown=new AbortController();let stopping=false;const active=new Set();
  async function tick(kind){
   const row=await repository.claim(agentId,kind);if(!row)return {idle:true};
   const owner=new AbortController(),relay=()=>owner.abort(shutdown.signal.reason);if(shutdown.signal.aborted)relay();else shutdown.signal.addEventListener('abort',relay,{once:true});active.add(owner);
-  let renewing=false;const timer=setInterval(async()=>{if(renewing)return;renewing=true;try{await service.authorize(row.origin_json,{invoke:row.kind==='github-article'});await repository.heartbeat(row);}catch(error){owner.abort(error);}finally{renewing=false;}},30000);timer.unref?.();
+  let renewing=false;const timer=setInterval(async()=>{if(renewing)return;renewing=true;try{await (service.authorizeTask?service.authorizeTask(row):service.authorize(row.origin_json));await repository.heartbeat(row);}catch(error){owner.abort(error);}finally{renewing=false;}},30000);timer.unref?.();
   try{
-   await service.authorize(row.origin_json,{invoke:row.kind==='github-article'});
-   const result=await (row.kind==='message'?conversation:github)(row,{signal:owner.signal});
+   await (service.authorizeTask?service.authorizeTask(row):service.authorize(row.origin_json));
+   const result=await (row.kind==='message'?conversation:taskExecutor??github)(row,{signal:owner.signal});
    await repository.settle(row,{result});log({event:'interaction-completed',id:row.id,kind:row.kind});return {completed:true,id:row.id};
   }catch(error){
    const code=/^[A-Z0-9_]{1,120}$/u.test(error?.code??'')?error.code:'AGENT_INTERACTION_EXECUTION_FAILED';

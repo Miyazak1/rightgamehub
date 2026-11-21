@@ -1,9 +1,11 @@
 import { createAgentBlogPrivateCanaryRuntime } from './agent-blog-private-canary-runtime.mjs';
+import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
 import { PostgresAgentBlogPrivateScheduleRepository, createAgentBlogPrivateScheduleController,
   loadAgentBlogPrivateScheduleConfig } from './agent-blog-private-schedule.mjs';
 
 const scheduleConfig = loadAgentBlogPrivateScheduleConfig();
 if (!scheduleConfig.enabled) throw new Error('AGENT_BLOG_PRIVATE_SCHEDULE_DISABLED');
+createBuiltinAgentPluginHost().requirePlugin('mooyu.github');
 const runtime = createAgentBlogPrivateCanaryRuntime({
   applicationName: 'gamehub-agent-blog-private-scheduler',
 });

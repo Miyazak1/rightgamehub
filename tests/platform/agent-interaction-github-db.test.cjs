@@ -9,13 +9,16 @@ for(const mode of ['search','draft','draft-topic','draft-invalid','published','i
   const {PostgresAgentBlogPublicScheduleRepository}=await h.load('agent-blog-public-schedule.mjs'),schedule=new PostgresAgentBlogPublicScheduleRepository(pool);
   await schedule.ensureDaily({agentUserId:agentId,enabled:false});await schedule.heartbeat({agentUserId:agentId,instanceId:crypto.randomUUID()});
   const original=(await pool.query('SELECT topic_scope FROM agent_blog_automation_settings WHERE agent_user_id=$1',[agentId])).rows[0].topic_scope;
-  const {createAgentInteractionService}=await h.load('agent-interaction-service.mjs'),service=createAgentInteractionService({repository,agentId});
+  const {createAgentPluginHost}=await h.load('agent-plugin-host.mjs'),{githubAgentPlugin}=await h.load('agent-plugins/github/index.mjs');
+  const pluginHost=createAgentPluginHost({definitions:[{...githubAgentPlugin,createRuntime:()=>({config,interactionPorts:fixture})}]});
+  const {createAgentInteractionService}=await h.load('agent-interaction-service.mjs'),service=createAgentInteractionService({repository,agentId,pluginHost});
   const requestId=crypto.randomUUID(),origin={channel:'web',actorRef:operatorId,platformUserId:operatorId,conversationRef:crypto.randomUUID(),eventRef:requestId};
   const accepted=await service.receive(origin,{requestId,message:draft?'帮我写 GitHub 项目文章，只保存草稿，不要发布。':'研究有趣实用的开放工具'}),parent=await repository.get(accepted.id);
   const args={topic:'发现有趣实用且适合快速体验的开放工具',...(draft?{publication:'draft'}:{}),...(['draft','draft-invalid','inspect'].includes(mode)?{repositoryUrl:'https://github.com/owner/project'}:{})};
   const tools=await service.tools(parent),queued=await tools.execute(null,['search','inspect'].includes(mode)?'github_search_projects':'github_write_article',args);
   const task=await repository.claim(agentId,'task');assert.equal(task.id,queued.task.id);
-  const {createAgentGitHubInteractionExecutor}=await h.load('agent-interaction-github.mjs'),execute=createAgentGitHubInteractionExecutor({repository,service,runtime:{config,interactionPorts:fixture}});
+  const plugins=pluginHost.bindRuntime({repository,service}),execute=plugins.executeTask;
+  t.after(()=>plugins.close());assert.deepEqual(task.input_json.plugin,{id:'mooyu.github',version:'1.0.0'});
   if(mode==='draft-invalid'){
    await assert.rejects(execute(task),error=>error.details?.stageErrorCode==='AGENT_BLOG_COMPOSITION_SCHEMA_INVALID');assert.equal(fixture.providerCalls(),3);
    assert.equal((await pool.query('SELECT count(*)::int AS n FROM blog_articles WHERE author_user_id=$1',[agentId])).rows[0].n,0);
