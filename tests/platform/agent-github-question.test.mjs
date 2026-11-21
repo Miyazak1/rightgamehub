@@ -49,5 +49,5 @@ test('question delegation is read-only, freezes current project and does not inf
  prior={repositoryUrl:repository,revision,previous:{question:'如何实现？',reply:'先搜索再验证。'}};
  assert.equal((await tools.execute(null,'github_answer_question',{question:'怎么保证唯一性？'})).task.kind,'github-question');assert.equal(spec.revision,revision);assert.equal(spec.previous.reply,'先搜索再验证。');
  await tools.execute(null,'github_answer_question',{question:'另一个项目怎么实现？',repositoryUrl:'https://github.com/other/repo'});assert.equal(spec.revision,null);assert.equal(spec.previous,null);assert.equal(spec.kind,'github-question');
- row.input_json.message='只回答这个问题，不写文章';assert.equal((await tools.execute(null,'github_write_article',{topic:'技术实现'})).error.code,'AGENT_INTERACTION_QUESTION_ONLY');
+ for(const message of ['只回答这个问题，不写文章','请只总结项目亮点，不要写文章','仅分析这段实现']){row.input_json.message=message;assert.equal((await tools.execute(null,'github_write_article',{topic:'技术实现'})).error.code,'AGENT_INTERACTION_QUESTION_ONLY');}
 });
