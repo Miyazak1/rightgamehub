@@ -51,8 +51,8 @@ export function createAgentGitHubInteractionExecutor({repository,service,runtime
   const result=await repository.articleResult(service.agentId,article.outputId);
   if(!result)interactionFail('AGENT_INTERACTION_ARTICLE_RECEIPT_MISSING',503);
   const published=result.publication_state==='published'&&article.outputType==='blog.article';
-  return published?{reply:'小墨鱼已完成 GitHub 项目研究并发布文章：'+result.title+'\n/blog/'+encodeURIComponent(result.slug),publicationState:'published',articleId:result.id,url:'/blog/'+encodeURIComponent(result.slug),runId:article.id}
-   :{reply:'小墨鱼已完成 GitHub 项目研究并保存文章草稿，请到网站后台查看。',publicationState:'draft',articleId:result.id,runId:article.id};
+  return published?{reply:'小墨鱼已完成 GitHub 项目研究并发布文章：'+result.title+'\n/blog/'+encodeURIComponent(result.slug),publicationState:'published',articleId:result.id,articleRevisionId:result.revision_id,url:'/blog/'+encodeURIComponent(result.slug),runId:article.id}
+   :{reply:'小墨鱼已完成 GitHub 项目研究并保存文章草稿，请到网站后台查看。',publicationState:'draft',articleId:result.id,articleRevisionId:result.revision_id,runId:article.id};
  }
  return async function execute(row,{signal}={}){
   const {agent}=await service.authorize(row.origin_json,{invoke:row.kind==='github-article'});

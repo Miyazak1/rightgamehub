@@ -65,6 +65,10 @@ export class QQService {
       }
       // Persist send intent BEFORE touching the gateway. An uncertain send is
       // never retried automatically: OneBot has no exactly-once send primitive.
+      if(row.image_data){
+        try{if(!this.bridge?.verifyImageAccess)throw Object.assign(new Error('QQ_AGENT_IMAGE_ACCESS_REQUIRED'),{code:'QQ_AGENT_IMAGE_ACCESS_REQUIRED',retryable:true});await this.bridge.verifyImageAccess(row,this.config,this.controller.signal);}
+        catch(error){if(error.retryable)await this.repository.deferDelivery(c,row);else await this.repository.deny(c,row);return {imageAccessBlocked:true};}
+      }
       const claimed=await this.repository.beginSend(c,row);await this.fault('send-intent',claimed);
       let remoteId;
       try{remoteId=await this.gateway.send(claimed);}

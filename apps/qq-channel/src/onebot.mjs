@@ -55,9 +55,9 @@ export class OneBotGateway {
   async send(row){
     if(!this.connected())throw error('QQ_GATEWAY_OFFLINE',true);
     const socket=this.socket,echo=randomUUID();
-    const message=[{type:'reply',data:{id:row.reply_to_message_id??row.message_id}},{type:'at',data:{qq:row.user_id}},{type:'text',data:{text:' '+row.reply}}];
+    const message=[{type:'reply',data:{id:row.reply_to_message_id??row.message_id}},{type:'at',data:{qq:row.user_id}},{type:'text',data:{text:' '+row.reply}},...(row.image_data?[{type:'image',data:{file:'base64://'+Buffer.from(row.image_data).toString('base64')}}]:[])];
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));},this.timeout);timer.unref();
+      const timer=setTimeout(()=>{this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));},row.image_data?Math.max(60000,this.timeout):this.timeout);timer.unref();
       this.pending.set(echo,{socket,timer,resolve,reject});
       try{socket.send(JSON.stringify({action:'send_group_msg',params:{group_id:Number(row.origin_group_id??this.config.groupId),message},echo}),err=>{
         if(err){clearTimeout(timer);this.pending.delete(echo);reject(error('QQ_DELIVERY_UNCERTAIN'));}

@@ -1,6 +1,7 @@
 import {normalizeInteractionInput,normalizeInteractionOrigin,
  interactionFail,interactionUuid,INTERACTION_GITHUB_TOOLS} from './agent-interaction-contracts.mjs';
 import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
+import {renderAgentArticlePage} from './agent-article-images.mjs';
 
 const replies={queued:'已收到消息，正在交给小墨鱼处理。',running:'小墨鱼正在处理这条请求。',waiting:'任务已保留，正在等待执行条件恢复。',failed:'这次请求未能完成，请在后台查看状态或稍后重试。','needs-review':'任务结果需要核对，已保留记录。'};
 export function createAgentInteractionService({repository,agentId,readQQPolicy,pluginHost=createBuiltinAgentPluginHost()}){
@@ -23,6 +24,19 @@ export function createAgentInteractionService({repository,agentId,readQQPolicy,p
  }
  return {
   agentId,authorize,pluginHost,
+  async articleImageAccess(rawOrigin,id){
+   const origin=normalizeInteractionOrigin(rawOrigin);
+   if(origin.channel!=='qq'||!interactionUuid(id))interactionFail('AGENT_INTERACTION_NOT_FOUND',404);
+   const value=await this.status(origin,id);const row=await repository.get(id);await this.authorizeTask(row);
+   if(row.kind!=='github-article'||row.state!=='completed'||!row.result_json?.articleRevisionId)interactionFail('AGENT_ARTICLE_IMAGE_NOT_AVAILABLE',404);
+   return value;
+  },
+  async articleImage(rawOrigin,id,page){
+   const value=await this.articleImageAccess(rawOrigin,id);
+   const article=await repository.articleImageContent(agentId,value.articleId,value.articleRevisionId);
+   if(!article)interactionFail('AGENT_ARTICLE_IMAGE_NOT_AVAILABLE',404);
+   return renderAgentArticlePage({...article,publication_state:value.publicationState},page);
+  },
   async authorizeTask(row){const policy=row.kind==='message'?{requiresInvoke:false}:pluginHost.taskPolicy(row);return authorize(row.origin_json,{invoke:policy.requiresInvoke});},
   async capabilities(){const agent=await repository.agent(agentId),readiness=repository.readiness?await repository.readiness(agentId,{workflows:[{key:'agent.conversation.turn',version:2},...pluginHost.requiredWorkflows()]}):{ready:true};return {available:readiness.ready,reasonCode:readiness.code??null,mode:'agent',retention:'server-scoped',agent:{id:agent.id,displayName:agent.display_name},capabilities:['conversation',...pluginHost.publicCapabilities(),'agent-work'],plugins:pluginHost.status(),paperEnabled:false};},
   async receive(rawOrigin,rawInput){
