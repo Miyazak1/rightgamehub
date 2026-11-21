@@ -10,7 +10,9 @@
 
 候选目录：`E:\CodexData\build\Right\agent-plugin-release\candidate-1553c613`，`release-manifest.json` 为产物清单。候选 API 同时供共享交互执行器使用。此批候选冻结在 1553c613，不自动包含后续 QQ 渠道插件开发。
 
-本地 Linux 探针使用只读、无网络临时容器，不注入数据库或凭据。原基础 API 具有 `wqy-zenhei.ttc` 中文字体，当前分页代码生成 4 页 PNG，已检查中文字形。最终候选镜像还需通过相同探针及 worker 模块导入检查。
+本地 Linux 探针使用只读、无网络临时容器，不注入数据库或凭据。原基础 API 及最终候选 API 均具有 `wqy-zenhei.ttc` 中文字体，并生成 4 页 PNG，已检查中文字形；最终候选 worker 模块导入检查也通过。结果在 `E:\CodexData\build\Right\agent-plugin-release\candidate-linux\linux-probe.json` 与 `worker-probe.json`。
+
+已生成候选 API 镜像 ID `sha256:6cc4b0d5bc50ef64f0f595c279c0b680437ccd7087792b84287aae2933faeab2`，候选 worker 镜像 ID `sha256:103f654e3f1895aa337e04f31af7ef043b62a7a521d5c26d8bd6f09f14d39307`。这是本地构建／冒烟通过记录，尚无线上配置清单与切换验证，不表示已经部署。
 
 ## 发布前必须取得的现场证据
 
