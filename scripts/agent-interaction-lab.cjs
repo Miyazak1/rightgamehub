@@ -5,7 +5,7 @@ let application,execution,pool,timer;
 async function main(){
  const file=path.resolve(process.argv[2]??''),s=JSON.parse(fs.readFileSync(file,'utf8'));if(s.schemaVersion!=='agent-interaction-lab-v1'||!s.privateRoot.includes('private-deployments')||!s.databaseUrl.includes('/qa_ledger_test_'))throw Error('ISOLATION_REQUIRED');
  process.env.QA_LEDGER_TEST_ISOLATED='1';process.env.QA_LEDGER_TEST_URL=s.databaseUrl;
- const save=()=>fs.writeFileSync(file,JSON.stringify(s,null,2),{mode:0o600});
+ const save=()=>require('./agent-interaction-lab-session.cjs').saveLabSession(file,s);
  if(!s.agentId){
   const cleanups=[];
   await require('../tests/platform/agent-blog-public-pipeline-db.test.cjs').publicPipelineFixture({after:fn=>cleanups.push(fn)},{agentCallLimit:s.providerCallLimit,live:{modelId:s.modelId,apiKey:s.modelKey,masterKey:s.masterKey,githubAuthenticated:true},interactionExercise:async f=>{
@@ -22,9 +22,12 @@ async function main(){
   for(const close of cleanups.reverse())await close();
  }
  pool=new Pool({connectionString:s.databaseUrl,max:10});
+ console.log(JSON.stringify({event:'lab-database-starting'}));
  await (await load('migrations.mjs')).applyMigrations(pool,path.join(root,'apps/api/migrations'));
+ console.log(JSON.stringify({event:'lab-migrations-ready'}));
  const repository=new (await load('agent-interaction-repository.mjs')).PostgresAgentInteractionRepository(pool);
  await (await load('agent-interaction-bootstrap.mjs')).bootstrapAgentInteractions({repository,runtimeRepository:new (await load('agent-runtime-repository.mjs')).PostgresAgentRuntimeRepository(pool),agentId:s.agentId});
+ console.log(JSON.stringify({event:'lab-bootstrap-ready'}));
  const {qqSignature}=await load('qq-admin-protocol.mjs');
  const readQQPolicy=async()=>{
   const current=JSON.parse(fs.readFileSync(file,'utf8'));if(!current.qqControlPort)throw Object.assign(Error(),{code:'AGENT_INTERACTION_QQ_UNAVAILABLE'});
@@ -37,10 +40,11 @@ async function main(){
  const env={AGENT_INTERACTIONS_ENABLED:'true',AGENT_INTERACTIONS_AGENT_USER_ID:s.agentId,AGENT_BLOG_PUBLIC_RUNTIME_ENABLED:'true',AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID:s.agentId,AGENT_BLOG_PUBLIC_RUNTIME_MODEL_ID:s.modelId,AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_PROVIDER_CALL_LIMIT:String(s.providerCallLimit),AGENT_BLOG_PUBLIC_RUNTIME_MONTHLY_COST_MICROUSD_LIMIT:String(s.costMicrousdLimit),AGENT_GITHUB_RESEARCH_TOKEN:s.githubToken,AGENT_SECRET_ENCRYPTION_KEY:s.masterKey,PAPER_STUDY_ENABLED:'false',PAPER_STUDY_WORKER_ENABLED:'false',PAPER_STUDY_MODELS_ENABLED:'false',PAPER_STUDY_PUBLISH_ENABLED:'false'};
  const log=value=>{fs.appendFileSync(path.join(s.evidence,'worker.jsonl'),JSON.stringify({at:new Date().toISOString(),...value})+'\n');console.log(JSON.stringify(value));};
  execution=(await load('agent-interaction-runtime.mjs')).createAgentInteractionRuntime({env,pool,service,practiceService:{},platformTools:null,log});
+ log({event:'lab-execution-ready'});
  // The legacy schedule acceptance fixture is separate from the shared plugin kernel.
  const scheduled=(await load('agent-blog-public-runtime.mjs')).createAgentBlogPublicRuntime({env,pool});
  const {PostgresAgentBlogPublicScheduleRepository,createAgentBlogPublicScheduleController}=await load('agent-blog-public-schedule.mjs'),schedule=new PostgresAgentBlogPublicScheduleRepository(pool),controller=createAgentBlogPublicScheduleController({repository:schedule,preflightRepository:scheduled.interactionPorts.preflightRepository,runtimeConfig:scheduled.config,runner:scheduled.runner});
- const cycle=()=>requireAsyncCycle();let cycling=false;async function requireAsyncCycle(){if(cycling)return;cycling=true;try{await (await load('agent-blog-public-schedule-cycle.mjs')).runAgentBlogPublicScheduleCycle({controller,agentUserId:s.agentId,instanceId:instance});}catch(e){log({event:'lab-schedule-error',code:e.code??'LAB_SCHEDULER_ERROR'});}finally{cycling=false;}}const instance=crypto.randomUUID();await cycle();timer=setInterval(cycle,10000);
+ const cycle=()=>requireAsyncCycle();let cycling=false;async function requireAsyncCycle(){if(cycling)return;cycling=true;try{if(s.imageAcceptance){const plans=(await pool.query('SELECT enabled FROM agent_schedules WHERE agent_user_id=$1',[s.agentId])).rows;if(plans.some(p=>p.enabled))throw Object.assign(Error('LOCAL_IMAGE_SCHEDULE_MUST_REMAIN_DISABLED'),{code:'LOCAL_IMAGE_SCHEDULE_MUST_REMAIN_DISABLED'});await schedule.heartbeat({agentUserId:s.agentId,instanceId:instance});}else await (await load('agent-blog-public-schedule-cycle.mjs')).runAgentBlogPublicScheduleCycle({controller,agentUserId:s.agentId,instanceId:instance});}catch(e){log({event:'lab-schedule-error',code:e.code??'LAB_SCHEDULER_ERROR'});}finally{cycling=false;}}const instance=crypto.randomUUID();await cycle();timer=setInterval(cycle,10000);
  application=requireApi('fastify')({logger:false});
  const auth=async req=>{if(req.headers.authorization!=='Bearer '+s.browserToken&&!String(req.headers.cookie??'').split('; ').includes('mooyu_lab='+s.browserToken))throw Object.assign(Error('AUTH_REQUIRED'),{code:'AUTH_REQUIRED',statusCode:401});req.actor={userId:s.operatorId,profile:{role:'admin'}};};
  application.setErrorHandler((e,_r,reply)=>reply.code(e.statusCode??503).send({error:{code:e.code??'LAB_UNAVAILABLE',message:'本地验收请求未完成。'}}));
@@ -52,8 +56,10 @@ async function main(){
  application.get('/lab/qq/login-status',{preHandler:auth},async()=>{const v=await (await napcat()).post('/QQLogin/CheckLoginStatus');return {data:{loggedIn:v.isLogin===true,ready:v.coreReady===true,phase:v.loginPhase}};});
  application.post('/lab/qq/qrcode',{preHandler:auth},async()=>{const n=await napcat();await n.refresh();return {data:await n.qr()};});
  application.post('/lab/stop',{preHandler:auth},async()=>{setTimeout(()=>execution.worker.stop(),100);return {data:{stopping:true}};});
+ log({event:'lab-http-routes-ready'});
  const entry=`import React from 'react';import{createRoot}from'react-dom/client';import{PlatformAssistantProvider,AssistantWorkspace,AssistantToggle}from'./packages/platform-client/src/PlatformAssistant.jsx';import{I18nProvider}from'./packages/platform-client/src/I18n.jsx';import{createPracticeApiClient}from'./packages/platform-api-client/src/practice.mjs';const api=createPracticeApiClient();createRoot(document.getElementById('root')).render(<I18nProvider initialLocale='zh-CN'><PlatformAssistantProvider api={api} owner='${s.operatorId}' capabilities={{host:'browser'}} route='/'><AssistantWorkspace><h1>小墨鱼独立联合验收</h1><p>仅测试群 ${s.oldStack.groupId}，论文关闭。写作只保存本地草稿。</p><AssistantToggle/></AssistantWorkspace></PlatformAssistantProvider></I18nProvider>);`;
  const js=(await require('../tests/browser-build.cjs').build({stdin:{contents:entry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],logLevel:'silent'})).outputFiles[0].text;
+ log({event:'lab-browser-build-ready'});
  const css=await fsp.readFile(path.join(root,'packages/platform-client/src/styles.css'),'utf8');application.get('/fixture.js',async(_r,r)=>r.type('text/javascript').send(js));
  const qrEntry=`import React from 'react';import{createRoot}from'react-dom/client';import Login from './scripts/agent-interaction-lab-login.jsx';createRoot(document.getElementById('root')).render(<Login botId='${s.oldStack.botId}'/>);`;
  const qrJs=(await require('../tests/browser-build.cjs').build({stdin:{contents:qrEntry,loader:'jsx',resolveDir:root},bundle:true,write:false,format:'iife',platform:'browser',nodePaths:[path.join(root,'packages/platform-client/node_modules')],logLevel:'silent'})).outputFiles[0].text;
