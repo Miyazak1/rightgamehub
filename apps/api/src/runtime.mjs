@@ -4,6 +4,7 @@ import {loadAgentInteractionConfig} from './agent-interaction-config.mjs';
 import {PostgresAgentInteractionRepository} from './agent-interaction-repository.mjs';
 import {createAgentInteractionService} from './agent-interaction-service.mjs';
 import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
+import {createAgentPluginAdminService} from './agent-plugin-admin.mjs';
 import {createAgentWebAssistantAdapter} from './agent-interaction-routes.mjs';
 import {createAgentQQAdminService} from './agent-qq-admin-service.mjs';
 import { createPlatformAgentTools } from './platform-agent-tools.mjs';
@@ -334,6 +335,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const agentInteractionService=interactionConfig.enabled?createAgentInteractionService({repository:new PostgresAgentInteractionRepository(database.pool),agentId:interactionConfig.agentId,pluginHost:createBuiltinAgentPluginHost({env}),
     readQQPolicy:async()=>{const value=await agentQQAdminService.readBoundChannelPolicy();if(value.binding?.interactionProtocolVersion!==1)throw Object.assign(new Error('AGENT_INTERACTION_QQ_UPGRADE_REQUIRED'),{code:'AGENT_INTERACTION_QQ_UPGRADE_REQUIRED',statusCode:503});return {agentId:interactionConfig.agentId,botId:value.binding.botId,...value.settings};}}):null;
   const agentChannelSecret=interactionConfig.enabled&&env.QQ_ADMIN_ENABLED==='true'?readAgentChannelSecret(env.QQ_ADMIN_SECRET_FILE,'utf8').trim():null;
+  const agentPluginAdminService=createAgentPluginAdminService({pool:database.pool,interactionService:agentInteractionService,qqAdminService:agentQQAdminService});
   const platformAssistantService = agentInteractionService?createAgentWebAssistantAdapter(agentInteractionService):createPlatformAssistantService({practiceService,tools:platformAgentTools,
     provider: env.PLATFORM_ASSISTANT_ENABLED === 'true' ? createPlatformAssistantProvider({
       apiKey: config.deepSeekApiKey, modelId: env.PLATFORM_ASSISTANT_MODEL?.trim() || 'deepseek-chat' }) : null});
@@ -382,6 +384,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     blogService,
     agentAccountService,
     agentQQAdminService,
+    agentPluginAdminService,
     agentBlogAutomation,
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
@@ -412,6 +415,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     practiceService,
     platformAgentTools,
     agentQQAdminService,
+    agentPluginAdminService,
     config,
     database,
     migrations,

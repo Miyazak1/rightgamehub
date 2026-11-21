@@ -12,7 +12,9 @@ export function createQQChannelRuntime({config,pool,managed=false,useAgent=false
  if(!config||!pool||typeof managed!=='boolean'||typeof useAgent!=='boolean')fail('QQ_PLUGIN_CONFIG_REQUIRED');
  if(useAgent&&!managed)fail('QQ_AGENT_MANAGED_CHANNEL_REQUIRED');
  repository??=new QQRepository(pool,config);
- const controller=new AbortController();let service,gateway,napcat,control,starting=null,started=false,closed=false;
+ const controller=new AbortController();let service,gateway,napcat,control,starting=null,started=false,closed=false,lastFault=null;
+ const status=()=>({plugin:{...binding},started,stopped:controller.signal.aborted,managed,executionMode:useAgent?'agent':'legacy',lastFault,paperEnabled:false});
+ const pluginStatus=()=>{let enabled=true;try{assertAvailable();}catch{enabled=false;}return {plugins:[{...binding,kind:'channel',activeVersion:true,enabled}],channelRuntime:status()};};
  const available=()=>{assertAvailable();if(closed||controller.signal.aborted)fail('QQ_CHANNEL_RUNTIME_STOPPED');};
  const receive=async event=>{available();if(!started)fail('QQ_CHANNEL_NOT_STARTED');return service.receive(event);};
  const stop=()=>{controller.abort();service?.stop();};
@@ -30,7 +32,7 @@ export function createQQChannelRuntime({config,pool,managed=false,useAgent=false
    if(managed){
     napcat=napcatFactory({token:env.QQ_NAPCAT_TOKEN,accessToken:config.accessToken});
     service.readiness=current=>napcat.readyGroup===current.groupId;
-    control=await controlFactory({secret,agentUserId:env.QQ_ADMIN_AGENT_USER_ID,store:new QQControlStore(repository),napcat,gateway});available();
+    control=await controlFactory({secret,agentUserId:env.QQ_ADMIN_AGENT_USER_ID,store:new QQControlStore(repository),napcat,gateway,pluginStatus});available();
     log({event:'control-listening',port:control.address.port,plugin:{...binding}});
    }
   }catch(error){await close().catch(()=>{});throw error;}})();return starting;
@@ -42,10 +44,11 @@ export function createQQChannelRuntime({config,pool,managed=false,useAgent=false
   while(!controller.signal.aborted&&!service.controller.signal.aborted){
    try{await tick();failures=0;lastError=null;}catch(error){
     failures++;const code=/^[A-Z0-9_]{1,80}$/u.test(error.code??'')?error.code:'QQ_DATABASE_OR_WORKER_UNAVAILABLE';
+    lastFault={code,at:new Date().toISOString()};
     if(code!==lastError||Date.now()-lastLogged>60000){log({event:'worker-waiting',code,plugin:{...binding}});lastLogged=Date.now();lastError=code;}
    }
    await pause(Math.min(30000,1000*2**Math.min(failures,5)));
   }
  };
- return {start,run,receive,tick,stop,close,status:()=>({plugin:{...binding},started,stopped:controller.signal.aborted,managed,executionMode:useAgent?'agent':'legacy',paperEnabled:false})};
+ return {start,run,receive,tick,stop,close,status};
 }

@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {verifyQQSignature,validateQQCommand,qqUuid,qqAdminError} from '../../api/src/qq-admin-protocol.mjs';
-export async function startQQControlServer({secret,agentUserId,store,napcat,gateway,port=6780,host='0.0.0.0'}){
+export async function startQQControlServer({secret,agentUserId,store,napcat,gateway,pluginStatus=()=>({}),port=6780,host='0.0.0.0'}){
  if(!/^[a-f0-9]{64}$/iu.test(secret??'')||!qqUuid(agentUserId))throw qqAdminError('QQ_CONTROL_CONFIG_REQUIRED',503);
  let active=0;const rates=new Map();
  const server=http.createServer(async(req,res)=>{
@@ -24,7 +24,7 @@ export async function startQQControlServer({secret,agentUserId,store,napcat,gate
    if(command.operation==='status'){
     const view=await store.view(),runtime=await napcat.inspect(await store.repository.check());
     const binding=await store.repository.check();
-    data={...view,runtime:{...runtime,connected:gateway.connected()},binding:{botId:binding.botId,interactionProtocolVersion:1,executionMode:store.repository.agentBridge?'agent':'channel'}};
+    data={...view,...pluginStatus(),runtime:{...runtime,connected:gateway.connected()},binding:{botId:binding.botId,interactionProtocolVersion:1,executionMode:store.repository.agentBridge?'agent':'channel'}};
    }else if(command.operation==='qr'){
     const view=await store.view();data={...await napcat.qr(),loginRevision:view.loginRevision};
     const repo=store.repository,client=await repo.pool.connect();

@@ -60,6 +60,7 @@ import {AgentCapabilityHostError} from './agent-capability-host-service.mjs';
 import {AgentBlogPublicationOwnershipError} from './agent-blog-publication-ownership.mjs';
 import {registerAgentAccountRoutes} from './agent-account-routes.mjs';
 import {registerAgentQQAdminRoutes} from './agent-qq-admin-routes.mjs';
+import {registerAgentPluginAdminRoutes} from './agent-plugin-admin.mjs';
 import {QQAdminError} from './qq-admin-protocol.mjs';
 import {registerAgentCapabilityExecutionRoutes} from './agent-capability-execution-routes.mjs';
 import {registerAgentCapabilityHostRoutes} from './agent-capability-host-routes.mjs';
@@ -151,6 +152,7 @@ export function createApp(dependencies) {
     blogService,
     agentAccountService,
     agentQQAdminService,
+    agentPluginAdminService,
     agentBlogAutomation,
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
@@ -336,6 +338,7 @@ export function createApp(dependencies) {
   if (blogService) registerBlogRoutes(app,{service:blogService,followUpService:agentBlogFollowUpService,requireAuth,siteOrigin});
   if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,runtimeRead:agentRuntimeReadService,paperFollowUp:agentPaperFollowUpService,paperIntake:agentPaperIntakeService,paperDiscovery:agentPaperDiscoveryService,paperResearch:agentPaperResearchExecutionService,paperResearchOperations:agentPaperResearchOperationsService,publicationCutover:agentBlogPublicationCutoverService,publicOperations:agentBlogPublicOperationsService,requireAuth});
   if(agentQQAdminService)registerAgentQQAdminRoutes(app,{service:agentQQAdminService,requireAuth});
+  if(agentPluginAdminService)registerAgentPluginAdminRoutes(app,{service:agentPluginAdminService,requireAuth});
   if (agentCapabilityExecutionService) registerAgentCapabilityExecutionRoutes(app,{service:agentCapabilityExecutionService,requireAuth});
   if (agentCapabilityHostService) registerAgentCapabilityHostRoutes(app,{service:agentCapabilityHostService,requireAuth});
   if (agentExecutionNodeAccessService) registerAgentExecutionNodeAccessRoutes(app,{service:agentExecutionNodeAccessService,requireAuth});

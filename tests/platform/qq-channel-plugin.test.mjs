@@ -9,6 +9,19 @@ import {createRequire} from 'node:module';
 import {once} from 'node:events';
 import {parseConfig} from '../../apps/qq-channel/src/config.mjs';
 const binding={id:'mooyu.qq',version:'1.0.0'};
+test('managed control status reports actual plugin state and bounded fault codes without private errors',async()=>{
+ const {startQQControlServer}=await import('../../apps/qq-channel/src/control-server.mjs'),{qqSignature}=await import('../../apps/api/src/qq-admin-protocol.mjs'),{randomUUID}=await import('node:crypto');
+ const f=fixture(),host=createQQChannelPluginHost({env:{}});let inspect,runtime,server;
+ runtime=await host.bindChannel(binding,{...f.context,controlFactory:async options=>{inspect=options.pluginStatus;return server=await startQQControlServer({...options,store:{view:async()=>({}),repository:f.context.repository},host:'127.0.0.1',port:0});},napcatFactory:()=>({inspect:async()=>({loggedIn:true}),maintain:async()=>{throw Object.assign(Error('private credentials never returned'),{code:'QQ_GATEWAY_UNAVAILABLE'});}}),log:event=>{if(event.event==='worker-waiting')runtime.stop();}});
+ try{
+  await runtime.start();assert.equal(inspect().plugins[0].enabled,true);assert.equal(inspect().channelRuntime.started,true);
+  const at=String(Date.now()),id=randomUUID(),body=JSON.stringify({operation:'status',actorId:randomUUID(),agentUserId:f.context.env.QQ_ADMIN_AGENT_USER_ID,args:{}});
+  const response=await fetch('http://127.0.0.1:'+server.address.port+'/control',{method:'POST',headers:{'content-type':'application/json','x-qq-time':at,'x-qq-request':id,'x-qq-signature':qqSignature(f.context.channelSecret,at,id,body)},body});
+  assert.equal(response.status,200);const result=await response.json();assert.equal(result.data.plugins[0].id,'mooyu.qq');assert.equal(result.data.channelRuntime.executionMode,'agent');
+  await runtime.run();assert.equal(inspect().channelRuntime.lastFault.code,'QQ_GATEWAY_UNAVAILABLE');assert(!JSON.stringify(inspect()).includes('private credentials'));
+  host.setEnabled('mooyu.qq',false);assert.equal(inspect().plugins[0].enabled,false);
+ }finally{await runtime.close();}
+});
 function fixture({controlFailure=false}={}){
  const config=parseConfig({enabled:true,botId:'100000001',groupId:'100000002',allowedUsers:['100000003']},{QQ_ACCESS_TOKEN:'plugin-fixture-token-'.repeat(3),QQ_DATABASE_URL:'postgresql://127.0.0.1/mooyu_qq_local_plugin'}),events=[];
  const repository={control:true,enableControl:async()=>events.push('control-schema'),enableAgentBridge:async()=>events.push('bridge-schema'),check:async()=>config,locked:async fn=>fn({}),recover:async()=>events.push('recover'),next:async()=>null,agentPending:async()=>null,admit:async event=>{events.push(event);return {accepted:true};}};

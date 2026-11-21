@@ -130,6 +130,7 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch, ge
     publishBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/publish`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
     withdrawBlogArticle: (articleId, version, options) => request(`/v1/me/blog/articles/${encodeURIComponent(articleId)}/withdraw`, { ...options, method: 'POST', auth: true, idempotent: true, headers: { 'If-Match': `"article-${articleId}-${version}"`, ...(options?.headers ?? {}) } }),
     listAdminAgents: options => request('/v1/admin/agents', { ...options, auth: true }),
+    getAdminAgentPlugins: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/plugins`,{...options,auth:true}),
     getAdminAgentQQ: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/qq`,{...options,auth:true}),
     getAgentChannelParticipants: (id,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/channel-participants`,{...options,auth:true}),
     updateAgentChannelParticipant: (id,body,options) => request(`/v1/admin/agents/${encodeURIComponent(id)}/channel-participants`,{...options,method:'PUT',body,auth:true}),
