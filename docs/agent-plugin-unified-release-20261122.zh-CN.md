@@ -69,7 +69,7 @@ bash /private/new-cutover-record/upgrade.sh
 bash /private/new-cutover-record/rollback.sh
 ```
 
-`scene-spec.example.json` 列出所需字段，所有占位值必须据实填写。API、Web、QQ worker、共享交互执行器及所有可能处理 Agent 任务的现有调度进程均需列入；每个角色的实际容器名和原 Compose `--env-file` 列表显式提供。工具从容器标签读取项目名、工作目录、全部配置文件及顺序，再核对渲染配置、镜像、环境、挂载、共享 secret、数据库备份和登录卷身份。私有清单仅保存路径、指纹及必要标识，权限为0600，不打印密码或完整环境值。
+`scene-spec.example.json` 列出所需字段，所有占位值必须据实填写。API、Web、QQ worker、共享交互执行器及所有可能处理 Agent 任务的现有调度进程均需列入；每个角色的实际容器名和原 Compose `--env-file` 列表显式提供。工具从容器标签读取项目名、工作目录、全部配置文件及顺序，再核对渲染配置、镜像、环境、挂载、共享 secret、数据库备份和登录卷身份。覆盖业务源码、依赖或 Web 入口的开发目录挂载会阻止生成切换命令，以免新镜像仍运行旧源码。私有清单仅保存路径、指纹及必要标识，权限为0600，不打印密码或完整环境值。
 
 两库备份可用自定义 pg_dump 格式或 gzip SQL；清单工具检查可读性／压缩完整性及 SHA。角色数据库名、用户及容器由清单明确提供。原 `.env`、worker.env、config.json、secret、登录卷和 Compose 原文件都不被改写。
 

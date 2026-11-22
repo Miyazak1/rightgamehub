@@ -14,6 +14,8 @@ for(const item of spec.roles){
  if(!project||!service||!directory||!chain?.length||!Array.isArray(item.envFiles))throw Error('COMPOSE_METADATA_OR_EXPLICIT_ENV_FILES_REQUIRED');
  const args=['compose','--project-directory',directory,...item.envFiles.flatMap(f=>['--env-file',f]),'-p',project,...chain.flatMap(f=>['-f',f]),'config','--format','json'];
  const model=JSON.parse(docker(args)),configured=model.services?.[service],actual=env(c);if(!configured)throw Error('ORIGINAL_COMPOSE_SERVICE_MISSING');
+ const codeRoots=['/app/apps/api/src','/app/apps/api/migrations','/app/apps/qq-channel/src','/app/packages','/app/node_modules','/app/apps/api/node_modules','/app/apps/qq-channel/node_modules','/srv/gamehub/index.html','/srv/gamehub/assets'];
+ if(c.Mounts.some(m=>codeRoots.some(code=>code===m.Destination||code.startsWith(m.Destination+'/'))))modelAligned=false;
  if(JSON.parse(docker(['image','inspect',configured.image]))[0].Id!==c.Image||Object.entries(configured.environment??{}).some(([k,v])=>String(v)!==actual[k]))modelAligned=false;
  for(const mount of c.Mounts){const expected=configured.volumes?.find(v=>v.target===mount.Destination);if(!expected){modelAligned=false;continue;}const source=expected.type==='volume'?(model.volumes?.[expected.source]?.name??expected.source):expected.source;if(source!==(mount.Type==='volume'?mount.Name:mount.Source))modelAligned=false;if(mount.Type==='bind'&&fs.statSync(mount.Source).isFile())files.add(mount.Source);}
  for(const file of [...chain,...item.envFiles])files.add(file);
