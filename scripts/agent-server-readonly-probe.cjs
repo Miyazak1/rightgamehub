@@ -1,0 +1,49 @@
+// Execute in an ALREADY RUNNING API container. No files, migrations, providers,
+// Docker mutations, status refreshes or application runtime are invoked here.
+const crypto=require('node:crypto');
+const paperKeys=['PAPER_STUDY_ENABLED','PAPER_STUDY_WORKER_ENABLED','PAPER_STUDY_MODELS_ENABLED','PAPER_STUDY_PUBLISH_ENABLED','AGENT_PAPER_SEMANTIC_ENABLED','AGENT_PAPER_RESEARCH_WORKER_ENABLED'];
+const secretKeys=['AGENT_SECRET_ENCRYPTION_KEY','AGENT_GITHUB_RESEARCH_TOKEN','DEEPSEEK_API_KEY','QQ_ACCESS_TOKEN','QQ_NAPCAT_TOKEN'];
+const bindingKeys=['AGENT_INTERACTIONS_ENABLED','AGENT_INTERACTIONS_AGENT_USER_ID','AGENT_BLOG_PUBLIC_RUNTIME_ENABLED','AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID','AGENT_BLOG_PUBLIC_SCHEDULE_ENABLED','QQ_ADMIN_ENABLED','QQ_ADMIN_AGENT_USER_ID','QQ_ADMIN_SECRET_FILE','QQ_AGENT_INTERACTIONS_ENABLED','QQ_AGENT_API_URL','AGENT_PLUGINS_DISABLED'];
+const hash=v=>crypto.createHash('sha256').update(JSON.stringify(v)).digest('hex');
+const environment=c=>Object.fromEntries((c.Config?.Env??[]).map(v=>{const n=v.indexOf('=');return [v.slice(0,n),v.slice(n+1)];}));
+function databaseReference(value){try{const u=new URL(value);return {host:u.hostname,port:u.port||'5432',database:decodeURIComponent(u.pathname.slice(1)),user:decodeURIComponent(u.username)};}catch{return null;}}
+function summarizeContainers(containers){
+ const selected=containers.filter(c=>['gamehub-production','mooyu-qq'].includes(c.Config?.Labels?.['com.docker.compose.project']));
+ return {schemaVersion:'agent-server-readonly-metadata-v1',at:new Date().toISOString(),containers:selected.map(c=>{
+  const e=environment(c),labels=c.Config.Labels,command=(c.Config.Cmd??[]).join(' ');
+  const entryKind=command.includes('agent-interaction-worker-cli')?'shared-agent-executor':command.includes('agent-blog')&&/schedule|worker/u.test(command)?'agent-blog-executor':command.includes('qq-channel/src/cli')?'qq-worker':command.includes('api/src/server')?'api-server':'other';
+  return {name:c.Name?.replace(/^\//u,''),id:c.Id,imageId:c.Image,imageReference:c.Config.Image,project:labels['com.docker.compose.project'],service:labels['com.docker.compose.service'],directory:labels['com.docker.compose.project.working_dir'],composeFiles:labels['com.docker.compose.project.config_files']?.split(',')??[],environmentFileLabel:labels['com.docker.compose.project.environment_file']??null,entryKind,running:c.State?.Running===true,health:c.State?.Health?.Status??null,startedAt:c.State?.StartedAt,finishedAt:c.State?.FinishedAt,
+   bindings:Object.fromEntries(bindingKeys.filter(k=>e[k]!=null).map(k=>[k,k.endsWith('_URL')?databaseSafeURL(e[k]):e[k]])),paperFlags:Object.fromEntries(paperKeys.map(k=>[k,e[k]??null])),secretPresence:Object.fromEntries(secretKeys.map(k=>[k,!!e[k]])),database:databaseReference(e.DATABASE_URL??e.QQ_DATABASE_URL),
+   environmentSha256:hash((c.Config.Env??[]).slice().sort()),mounts:(c.Mounts??[]).map(m=>({type:m.Type,name:m.Name??null,source:m.Source,destination:m.Destination,rw:m.RW})),mountsSha256:hash((c.Mounts??[]).slice().sort((a,b)=>a.Destination.localeCompare(b.Destination))),
+   networks:Object.entries(c.NetworkSettings?.Networks??{}).map(([name,n])=>({name,aliases:n.Aliases??[]})),ports:c.NetworkSettings?.Ports??{},readOnlyRootfs:c.HostConfig?.ReadonlyRootfs,memoryBytes:c.HostConfig?.Memory,restartPolicy:c.HostConfig?.RestartPolicy?.Name};
+ }),readOnly:true,rawEnvironmentIncluded:false,credentialsIncluded:false};
+}
+function databaseSafeURL(value){try{const u=new URL(value);u.username='';u.password='';u.search='';u.hash='';return u.href;}catch{return 'UNRECOGNIZED_URL';}}
+function assertReadOnlySQL(sql){if(!/^\s*SELECT\b/iu.test(sql)||/;|\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|COPY|CALL|DO|VACUUM|ANALYZE|SET|RESET)\b/iu.test(sql))throw Error('NON_READONLY_QUERY_REJECTED');}
+async function probeDatabase(){
+ const {createRequire}=require('node:module'),{Pool}=createRequire('/app/apps/api/package.json')('pg');
+ if(!process.env.DATABASE_URL)throw Error('EXISTING_API_DATABASE_URL_REQUIRED');
+ const pool=new Pool({connectionString:process.env.DATABASE_URL,max:1,connectionTimeoutMillis:5000,options:'-c default_transaction_read_only=on -c statement_timeout=6000 -c lock_timeout=1000',...(process.env.DATABASE_SSL==='true'?{ssl:{rejectUnauthorized:true}}:{})});
+ const client=await pool.connect(),report={schemaVersion:'agent-server-readonly-db-v1',at:new Date().toISOString(),readOnly:true,results:{},errors:[]};let sequence=0;
+ const read=async(key,sql,params=[])=>{assertReadOnlySQL(sql);const save='probe_'+(++sequence);await client.query('SAVEPOINT '+save);try{const v=(await client.query(sql,params)).rows;report.results[key]=v;await client.query('RELEASE SAVEPOINT '+save);return v;}catch(e){await client.query('ROLLBACK TO SAVEPOINT '+save);report.errors.push({section:key,code:/^[A-Z0-9_]{1,40}$/u.test(e.code??'')?e.code:'READ_FAILED'});return [];}};
+ const exists=async table=>(await read('exists:'+table,'SELECT to_regclass($1) IS NOT NULL AS present',[table]))[0]?.present===true;
+ try{
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  await read('transaction','SELECT current_database() AS database,current_user AS db_user,current_setting(\'transaction_read_only\') AS read_only');
+  await read('migrations','SELECT count(*)::int AS count,max(version) AS latest,md5(jsonb_agg(jsonb_build_array(version,checksum_sha256) ORDER BY version)::text) AS catalog_hash FROM schema_migrations');
+  if(await exists('agent_accounts'))await read('agents',"SELECT a.user_id,a.operator_user_id,a.status,u.display_name FROM agent_accounts a JOIN users u ON u.id=a.user_id ORDER BY a.user_id LIMIT 30");
+  for(const [table,column]of [['agent_runs','status'],['agent_blog_runs','status'],['agent_schedule_fires','status'],['agent_interactions','state']])if(await exists(table))await read('counts:'+table,`SELECT ${column},count(*)::text AS count FROM ${table} GROUP BY ${column} ORDER BY ${column}`);
+  const views={
+   agent_schedules:['id','agent_user_id','workflow_key','workflow_version','enabled','timezone','schedule_spec_json','next_fire_at','last_fire_at','suspended_at'],
+   agent_channel_participants:['agent_user_id','channel','actor_ref','can_invoke','status','revision'],
+   agent_capability_grants:['agent_user_id','capability_key','contract_version','status','risk_ceiling','valid_from','valid_until'],
+   agent_blog_automation_settings:['agent_user_id','enabled','model','interval_hours','monthly_article_limit','next_run_at']};
+  for(const [table,keys]of Object.entries(views))if(await exists(table))await read('view:'+table,`SELECT jsonb_build_object(${keys.flatMap(k=>["'"+k+"'","to_jsonb(t)->'"+k+"'"]).join(',')},'row_hash',md5(to_jsonb(t)::text)) AS record FROM ${table} t ORDER BY md5(to_jsonb(t)::text) LIMIT 100`);
+  if(await exists('agent_policy_profile_assignments'))await read('activePolicies',"SELECT p.agent_user_id,p.version,p.policy_sha256,p.policy_json->'budgets' AS budgets FROM agent_policy_profile_assignments a JOIN agent_policy_profiles p ON p.id=a.active_policy_profile_id ORDER BY p.agent_user_id");
+  if(await exists('agent_provider_secrets'))await read('providerSecretMetadata',"SELECT agent_user_id,provider,updated_at FROM agent_provider_secrets ORDER BY agent_user_id,provider");
+  if(await exists('agent_budget_reservations'))await read('budgetUsage','SELECT agent_user_id,sum(charged_provider_calls)::text AS calls,sum(charged_input_tokens)::text AS input_tokens,sum(charged_output_tokens)::text AS output_tokens,sum(charged_cost_microusd)::text AS cost_microusd FROM agent_budget_reservations GROUP BY agent_user_id');
+  await client.query('ROLLBACK');return report;
+ }finally{client.release();await pool.end();}
+}
+module.exports={summarizeContainers,assertReadOnlySQL,probeDatabase};
+if(require.main===module){const mode=process.argv[2];Promise.resolve().then(()=>mode==='metadata'?summarizeContainers(JSON.parse(require('node:fs').readFileSync(0,'utf8'))):mode==='api-db'?probeDatabase():Promise.reject(Error('READONLY_MODE_REQUIRED'))).then(value=>console.log(JSON.stringify(value))).catch(e=>{console.error(JSON.stringify({error:/^[A-Z0-9_]+$/u.test(e.message)?e.message:'READONLY_PROBE_FAILED'}));process.exitCode=1;});}
