@@ -1,0 +1,31 @@
+# Append to the ORIGINAL ordered site Compose files; review first, never stand alone.
+services:
+  api:
+    image: ${TARGET_API_IMAGE_ID:?use the verified immutable API image ID}
+    environment: &shared-agent
+      AGENT_INTERACTIONS_ENABLED: "true"
+      AGENT_INTERACTIONS_AGENT_USER_ID: ${EXISTING_AGENT_USER_ID:?use the current Agent identity}
+      AGENT_BLOG_PUBLIC_RUNTIME_ENABLED: "true"
+      AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID: ${EXISTING_AGENT_USER_ID:?required}
+      AGENT_SECRET_ENCRYPTION_KEY: ${EXISTING_AGENT_MASTER_KEY:?reuse the original key without rotation}
+      AGENT_GITHUB_RESEARCH_TOKEN: ${EXISTING_GITHUB_RESEARCH_TOKEN:?reuse the original research credential}
+      QQ_ADMIN_ENABLED: "true"
+      QQ_ADMIN_AGENT_USER_ID: ${EXISTING_AGENT_USER_ID:?required}
+      PAPER_STUDY_ENABLED: "false"
+      PAPER_STUDY_WORKER_ENABLED: "false"
+      PAPER_STUDY_MODELS_ENABLED: "false"
+      PAPER_STUDY_PUBLISH_ENABLED: "false"
+      AGENT_PAPER_SEMANTIC_ENABLED: "false"
+      AGENT_PAPER_RESEARCH_WORKER_ENABLED: "false"
+  agent-interactions:
+    extends:
+      file: ${ORIGINAL_SITE_RESOLVED_CONFIG:?absolute private path from original compose config}
+      service: api
+    image: ${TARGET_API_IMAGE_ID:?required}
+    container_name: !reset null
+    ports: !reset []
+    profiles: !reset []
+    healthcheck:
+      disable: true
+    command: [node, apps/api/src/agent-interaction-worker-cli.mjs]
+    environment: *shared-agent

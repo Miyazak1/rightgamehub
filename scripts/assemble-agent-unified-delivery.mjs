@@ -4,6 +4,7 @@ const root=path.resolve(import.meta.dirname,'..'),release=path.resolve(process.a
 if(manifest.releaseRevision!=='r4'||fs.existsSync(out))throw Error('NEW_FINAL_DELIVERY_REQUIRED');
 const read=file=>JSON.parse(fs.readFileSync(path.join(release,file),'utf8'));
 const api=read('verification/image-local-acceptance.json'),web=read('verification/web-image-acceptance.json'),worker=read('signed-cold-start-verification/worker-image-acceptance.json'),cold=read('signed-cold-start-verification/worker-cold-start.json'),rollback=read('verification/rollback-history-final/rollback-image-compatibility.json'),data=read('verification/rollback-history-final/rollback-data-preservation.json');
+const initial=read('verification/first-install-config.json');if(initial.result!=='PASSED'||initial.servicesStarted!==false)throw Error('FIRST_INSTALL_CONFIG_PROOF_REQUIRED');
 if([api,web,worker,cold,rollback,data].some(p=>p.result!=='PASSED')||!api.apiPluginAndSourceTests||!web.oldStaticFilesPreserved||!worker.signedAgentHttp||cold.newOutboundMessages!==0||!data.historicalRequestId||!rollback.probes.some(p=>p.role==='rollback-api'&&p.image===manifest.rollbackImages.api.id&&p.status.ready))throw Error('FINAL_ACCEPTANCE_INCOMPLETE');
 for(const role of ['api','worker','web'])if(api.images[role].id!==manifest.images[role].id)throw Error('ACCEPTANCE_IMAGE_CHANGED');
 for(const image of Object.values(manifest.images)){
@@ -15,6 +16,8 @@ fs.mkdirSync(out);fs.linkSync(path.join(release,'images.tar'),path.join(out,'ima
 const copy=(source,target)=>{const file=path.join(out,target);fs.mkdirSync(path.dirname(file),{recursive:true});fs.copyFileSync(source,file);};
 for(const name of ['release-manifest.json','source.patch'])copy(path.join(release,name),name);
 for(const name of ['capture-agent-plugin-inventory.mjs','agent-plugin-release-plan.mjs'])copy(path.join(root,'scripts',name),'tools/'+name);
+for(const name of ['compose.first-install.api.yml','compose.first-install.qq.yml','compose.first-install.web.yml'])copy(path.join(root,'deploy/agent-plugins',name),'first-install/'+name);
+copy(path.join(release,'verification/first-install-config.json'),'verification/first-install-config.json');
 copy(path.join(root,'docs/agent-plugin-unified-release-20261122.zh-CN.md'),'README.zh-CN.md');
 const proofs={'verification/api-image-database-tests.log':'api-image-database-tests.log','verification/web-image-acceptance.json':'web-image-acceptance.json','verification/image-admin-desktop.png':'image-admin-desktop.png','verification/image-admin-mobile.png':'image-admin-mobile.png','signed-cold-start-verification/worker-image-acceptance.json':'worker-image-acceptance.json','signed-cold-start-verification/worker-cold-start.json':'worker-cold-start.json','signed-cold-start-verification/page-1.png':'chinese-page-example.png','verification/rollback-history-final/rollback-image-compatibility.json':'rollback-image-compatibility.json','verification/rollback-history-final/rollback-data-preservation.json':'rollback-data-preservation.json','verification/original-scene-preservation.json':'original-scene-preservation.json'};
 for(const [source,target]of Object.entries(proofs))copy(path.join(release,source),'verification/'+target);

@@ -48,6 +48,43 @@
 
 当前没有读取本轮服务器现场，因此尚未核实线上完整 Compose 链、共享交互执行器是否已开通及配置是否对齐。交付包含只读清单工具和受门禁保护的命令生成器；取得现场证据后才生成该服务器的可执行命令。缺少执行器或配置不齐时输出阻断原因，不猜造服务、挂载或密钥。首次开通共享交互执行器时，应先根据现场补齐该服务及配置的审查方案，再生成切换命令。
 
+### 首次接入共享执行器
+
+附带 `first-install/compose.first-install.api.yml`、`compose.first-install.qq.yml`、`compose.first-install.web.yml`。适用于旧版尚无共享执行器的准备阶段，常规计划器会先阻断 `missing-executor`，不能把这项证据手工改为通过。
+
+API 模板在原服务之外增加 `agent-interactions`，从原 API 的私有、完整渲染配置继承数据库、数据卷、网络、预算及策略；清除继承的 API 端口、容器名、profile 和 HTTP健康检查，命令固定为 `agent-interaction-worker-cli.mjs`。原 Agent ID、主密钥及 GitHub 研究凭据必须从现有配置复用；模板缺少这些输入会拒绝渲染。不得生成新主密钥替换旧密钥。QQ 模板保留原 secret 挂载、登录网关、白名单和数据库，开启共享 Agent 通道；六项论文开关明确为 false。
+
+本地已对合成原配置执行实际 `docker compose config`：新服务不继承 API 端口、容器名或暂停 profile，原数据库、卷、预算、调度开关和 QQ 凭据保持；没有启动服务。证据为 `verification/first-install-config.json`。若实际服务键不是 `api/web/worker`，应据现场调整模板键与 extends 的服务名后重新审查。
+
+后续现场阶段应先将**原有全部 Compose 参数**分别保存为 Bash 数组 `SITE_ORIGINAL`、`QQ_ORIGINAL`，并把全部原调度角色列入清单。仅在私有目录、`umask 077` 下生成原配置：
+
+```bash
+"${SITE_ORIGINAL[@]}" config --format json > /private/original-site-resolved.json
+```
+
+这个渲染文件含原环境值，应与原 .env 同等保护，不发送到聊天或放入交付包。私有 cutover.env 填写 `ORIGINAL_SITE_RESOLVED_CONFIG`、`EXISTING_AGENT_USER_ID`、`EXISTING_AGENT_MASTER_KEY`、`EXISTING_GITHUB_RESEARCH_TOKEN` 和三个目标镜像 ID；只复用现有值。由原参数再追加该 env-file 及三个模板构成 `SITE_NEW`、`QQ_NEW`（Web 模板附加到 SITE_NEW）。先执行两组 `config --format json` 到私有文件，核对共享 secret、`api`／`qq-control` 网络别名可达、原镜像及两库备份，并审查具体差异。
+
+首次切换的命令顺序如下；数组必须由现场清单生成，不能省略历史覆盖文件：
+
+```bash
+# 取得与常规脚本相同的主机锁，先运行 --check-window，再停入站和执行进程。
+exec 9>/var/lock/mooyu-agent-plugin-release.lock
+flock -n 9
+node tools/agent-plugin-release-plan.mjs --check-window /private/original-inventory.private.json
+"${QQ_ORIGINAL[@]}" stop --timeout 45 worker
+"${SITE_ORIGINAL[@]}" stop --timeout 45 api
+# 按清单停止原本正在运行的 Agent 执行/调度服务；保留原暂停角色及 DB计划不动。
+node tools/agent-plugin-release-plan.mjs --check-window /private/original-inventory.private.json
+"${SITE_NEW[@]}" run --rm --no-deps --pull never api node apps/api/src/migrate-cli.mjs
+"${SITE_NEW[@]}" run --rm --no-deps --pull never api node apps/api/src/agent-interaction-bootstrap-cli.mjs
+"${SITE_NEW[@]}" up -d --wait --wait-timeout 90 --no-deps --no-build --pull never api agent-interactions
+# 按清单恢复原先运行的调度角色；其原启用状态、计划与预算不改。
+"${QQ_NEW[@]}" up -d --wait --wait-timeout 90 --no-deps --no-build --pull never worker
+"${SITE_NEW[@]}" up -d --wait --wait-timeout 90 --no-deps --no-build --pull never web
+```
+
+首次回退前，使用**切换后现场**重新只读生成 current-inventory，复核空闲及完整原始配置记录。先 `--check-window`，再以 QQ_NEW 停 worker、SITE_NEW 停 api／agent-interactions 及原本运行的调度角色，第二次检查窗口；接着以**原参数链加回退镜像覆盖文件**恢复 API／调度、worker、Web（均用 `up -d --wait --no-deps --no-build --pull never`）。原 API 为 `c8243f…` 时回退覆盖使用本包 `22b7b1…` 兼容 API；worker/Web 使用切换前记录的 ID。新增的 agent-interactions 容器保持停止以留存日志。回退不用首次接入模板，以恢复原环境开关；所有追加 schema、权限和历史保留。完整服务器参数及回退覆盖文件须在现场阶段审查后生成，本轮未执行这些命令。
+
 以下为后续获准进入服务器阶段使用的命令。本轮没有执行：
 
 ```bash
