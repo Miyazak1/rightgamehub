@@ -1,0 +1,23 @@
+{
+  "agentId": "c98abda1-d115-4e05-9c2e-43f68119386a",
+  "adoptLegacyQQParticipants": false,
+  "allExecutionServicesInventoried": false,
+  "composeEnvironment": {
+    "AGENT_DOWNLOADS_DIR": "/www/gamehub-downloads/agent",
+    "DESKTOP_DOWNLOADS_DIR": "/www/gamehub-downloads/desktop"
+  },
+  "apiURL": "http://api:3090",
+  "gateway": "mooyu-qq-napcat-1",
+  "loginVolume": "mooyu-qq-compatible-55b2f7e8-088f12",
+  "databases": {
+    "api": "gamehub-production-postgres-1",
+    "qq": "mooyu-qq-postgres-1"
+  },
+  "roles": [
+    {"role": "api", "container": "gamehub-production-api-1"},
+    {"role": "web", "container": "gamehub-production-web-1"},
+    {"role": "worker", "container": "mooyu-qq-worker-1"},
+    {"role": "scheduler", "container": "gamehub-production-agent-blog-public-scheduler-1", "schema166Compatible": false, "schema166CompatibilityEvidence": null},
+    {"role": "paper", "container": "gamehub-production-agent-paper-research-worker-1"}
+  ]
+}

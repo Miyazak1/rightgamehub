@@ -2,6 +2,7 @@ import {normalizeInteractionInput,normalizeInteractionOrigin,
  interactionFail,interactionUuid,INTERACTION_GITHUB_TOOLS} from './agent-interaction-contracts.mjs';
 import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
 import {renderAgentArticlePage} from './agent-article-images.mjs';
+import {refreshTaskReceipt,checkTaskReply,taskStateReply,taskReplyNeedsCheck} from './agent-interaction-task-receipts.mjs';
 
 const replies={queued:'已收到消息，正在交给小墨鱼处理。',running:'小墨鱼正在处理这条请求。',waiting:'任务已保留，正在等待执行条件恢复。',failed:'这次请求未能完成，请在后台查看状态或稍后重试。','needs-review':'任务结果需要核对，已保留记录。'};
 export function createAgentInteractionService({repository,agentId,readQQPolicy,pluginHost=createBuiltinAgentPluginHost()}){
@@ -24,6 +25,7 @@ export function createAgentInteractionService({repository,agentId,readQQPolicy,p
  }
  return {
   agentId,authorize,pluginHost,
+  async historicalReceipt(row,requestId){await authorize(row.origin_json);return refreshTaskReceipt(repository,row,requestId);},
   async articleImageAccess(rawOrigin,id){
    const origin=normalizeInteractionOrigin(rawOrigin);
    if(origin.channel!=='qq'||!interactionUuid(id))interactionFail('AGENT_INTERACTION_NOT_FOUND',404);
@@ -57,13 +59,13 @@ export function createAgentInteractionService({repository,agentId,readQQPolicy,p
    await authorize(row.origin_json);
    const descriptions=[...pluginHost.descriptions(),INTERACTION_GITHUB_TOOLS.find(t=>t.name==='get_agent_work'),...(row.channel==='web'&&platformTools?platformTools.descriptions:[])];
    if(new Set(descriptions.map(d=>d.name)).size!==descriptions.length)interactionFail('AGENT_PLUGIN_EXPORT_COLLISION',503);
-   return {descriptions,async execute(_ignored,name,args={}){
+   return {descriptions,async checkReply({reply,results}){if(!taskReplyNeedsCheck(reply))return {accepted:true};await authorize(row.origin_json);return checkTaskReply({reply,results,tasks:await repository.ownTasks(row)});},async execute(_ignored,name,args={}){
     const admitted=await pluginHost.admit(name,args,{row,repository});
     if(admitted){
      if(admitted.error)return admitted;
      const task=admitted.task;await authorize(row.origin_json,{invoke:pluginHost.taskPolicy({...row,kind:task.kind,input_json:task}).requiresInvoke});
      const accepted=await repository.attachTask(row,task);
-     return {name,result:{status:'queued',taskId:accepted.id,kind:accepted.kind},task:{id:accepted.id,kind:accepted.kind,state:accepted.state},reply:'已交给小墨鱼处理，任务已保存，完成后会在当前会话回复。'};
+     return {name,result:{status:accepted.state,taskId:accepted.id,kind:accepted.kind},task:{id:accepted.id,kind:accepted.kind,state:accepted.state},reply:['queued','running','waiting'].includes(accepted.state)?'已交给小墨鱼处理，任务已保存，完成后会在当前会话回复。':taskStateReply(accepted)};
     }
     if(name==='get_agent_work'){
      if(Object.keys(args).some(k=>k!=='view')||!['articles','tasks'].includes(args.view))interactionFail('AGENT_INTERACTION_INPUT');

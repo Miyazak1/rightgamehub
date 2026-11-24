@@ -32,7 +32,7 @@ async function probeDatabase(){
   await read('transaction','SELECT current_database() AS database,current_user AS db_user,current_setting(\'transaction_read_only\') AS read_only');
   await read('migrations','SELECT count(*)::int AS count,max(version) AS latest,md5(jsonb_agg(jsonb_build_array(version,checksum_sha256) ORDER BY version)::text) AS catalog_hash FROM schema_migrations');
   if(await exists('agent_accounts'))await read('agents',"SELECT a.user_id,a.operator_user_id,a.status,u.display_name FROM agent_accounts a JOIN users u ON u.id=a.user_id ORDER BY a.user_id LIMIT 30");
-  for(const [table,column]of [['agent_runs','status'],['agent_blog_runs','status'],['agent_schedule_fires','status'],['agent_interactions','state']])if(await exists(table))await read('counts:'+table,`SELECT ${column},count(*)::text AS count FROM ${table} GROUP BY ${column} ORDER BY ${column}`);
+  for(const [table,column]of [['agent_runs','status'],['agent_blog_runs','status'],['agent_schedule_fires','status'],['agent_interactions','state'],['agent_run_stages','status'],['agent_execution_stage_leases','status'],['agent_runtime_outbox','status'],['agent_budget_reservations','status'],['agent_provider_calls','status'],['agent_paper_research_executions','status'],['agent_paper_research_queue_items','state']])if(await exists(table))await read('counts:'+table,`SELECT ${column},count(*)::text AS count FROM ${table} GROUP BY ${column} ORDER BY ${column}`);
   const views={
    agent_schedules:['id','agent_user_id','workflow_key','workflow_version','enabled','timezone','schedule_spec_json','next_fire_at','last_fire_at','suspended_at'],
    agent_channel_participants:['agent_user_id','channel','actor_ref','can_invoke','status','revision'],

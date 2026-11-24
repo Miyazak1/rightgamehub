@@ -71,6 +71,19 @@ test('shared Agent interactions preserve ownership, durable receipts, live permi
   await qqService.receive(event);await qqService.tick();assert.equal(sends.length,2);
   assert.equal((await qqPool.query('SELECT count(*)::int AS n FROM mooyu_qq.attempts WHERE channel_id=$1',[config.channelId])).rows[0].n,0);
  });
+ await t.test('historical submission reads current failed state without rewriting the old receipt or retrying the task',async()=>{
+  const leased=await repository.claim(agentId,'task');assert.equal(leased.id,task.id);
+  await repository.settle(leased,{errorCode:'AGENT_PROVIDER_OUTPUT_INVALID'});
+  const old=(await repository.get(row.id)).result_json;
+  assert.equal(old.task.state,'queued');
+  const receipt=await service.historicalReceipt(row,row.id);
+  assert.equal(receipt.results[0].task.state,'failed');assert.match(receipt.results[0].reply,/已失败/);
+  assert.deepEqual((await repository.get(row.id)).result_json,old);
+  const before=(await pool.query('SELECT count(*)::int AS n FROM agent_interactions WHERE parent_id=$1',[row.id])).rows[0].n;
+  const control=await service.tools(row),check=await control.checkReply({reply:'任务 '+task.id+' 目前仍是排队状态',results:[]});
+  assert.equal(check.accepted,false);assert.match(check.fallback,/已失败/);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM agent_interactions WHERE parent_id=$1',[row.id])).rows[0].n,before);
+ });
  assert.equal((await pool.query('SELECT topic_scope FROM agent_blog_automation_settings WHERE agent_user_id=$1',[agentId])).rows[0].topic_scope,'原每日计划选题保持不变');
 });
 

@@ -26,8 +26,9 @@ export class PostgresAgentBlogPublicRequestRepository {
       ON request.agent_user_id=run.agent_user_id AND request.request_id=$2
       WHERE run.agent_user_id=$1 AND run.id=$3 AND run.status='succeeded'
        AND request.snapshot_json->>'executionSource'='agent-interaction-v1'
-       AND ((run.idempotency_key=$4 AND run.workflow_key IN ('blog.project.discovery-shadow','agent.github.inspect')
+       AND ((run.idempotency_key=$4 AND ((run.workflow_key IN ('blog.project.discovery-shadow','agent.github.inspect')
           AND run.output_type IN ('blog.candidate-set','blog.discovery-skipped','agent.github.repository'))
+          OR (run.workflow_key='agent.github.search' AND run.output_type='agent.github.search-result')))
         OR (run.idempotency_key=$5 AND run.workflow_key IN ('blog.project.single','blog.project.single.draft-shadow')
           AND run.output_type IN ('blog.article','blog.private-draft','blog.publication-skipped')))
        AND ($6::uuid IS NULL OR run.output_id=$6::uuid)`,[agentUserId,requestId,id,`public-runtime:${requestId}:discovery`,`public-runtime:${requestId}:article`,result.articleId??null])).rows[0];
@@ -143,10 +144,10 @@ export class PostgresAgentBlogPublicRequestRepository {
   async runs(agentUserId,requestId) {
     const rows=(await this.pool.query(`SELECT id,workflow_key,status,output_type,output_id,input_json,config_snapshot,
       behavior_profile_id,trigger_kind,trigger_ref FROM agent_runs
-      WHERE agent_user_id=$1 AND ((workflow_key='blog.project.discovery-shadow' AND idempotency_key=$2)
+      WHERE agent_user_id=$1 AND ((workflow_key IN ('blog.project.discovery-shadow','agent.github.search') AND idempotency_key=$2)
         OR (workflow_key IN ('blog.project.single','blog.project.single.draft-shadow') AND idempotency_key=$3))`,
     [agentUserId,`public-runtime:${requestId}:discovery`,`public-runtime:${requestId}:article`])).rows;
-    return Object.fromEntries(rows.map(row=>[row.workflow_key==='blog.project.discovery-shadow'?'discovery':'publication',
+    return Object.fromEntries(rows.map(row=>[['blog.project.discovery-shadow','agent.github.search'].includes(row.workflow_key)?'discovery':'publication',
       {...row,outputType:row.output_type,outputId:row.output_id}]));
   }
 

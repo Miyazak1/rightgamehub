@@ -52,7 +52,7 @@ export function createAgentConversationExecutor({repository,service,ports,practi
    }});
    const tools=await service.tools(current,{platformTools,actor:principal.actor});
    const assistant=createPlatformAssistantService({practiceService,tools,provider,agentIdentity:context.run.configSnapshot.agentIdentity,
-    receiptResolver:async(_actor,requestId)=>{const previous=await repository.get(requestId);return previous?.agent_user_id===agent.id&&previous.channel===row.channel&&previous.actor_ref===row.actor_ref&&previous.conversation_ref===row.conversation_ref?previous.result_json:null;}});
+    receiptResolver:async(_actor,requestId)=>service.historicalReceipt(row,requestId)});
    const result=await assistant.send(principal.actor,{requestId:row.id,message:context.run.input.message,context:context.run.input.context,history:context.run.input.history});
    await repository.checkpoint(row,{...result,agent:{id:agent.id,displayName:context.run.configSnapshot.agentIdentity.displayName}});
    return {outputRef:{interactionId:row.id},runOutput:{type:'agent.interaction',id:row.id}};

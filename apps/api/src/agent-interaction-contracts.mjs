@@ -48,7 +48,7 @@ export const AGENT_GITHUB_INSPECT_WORKFLOW=Object.freeze({schemaVersion:'agent-w
 export const AGENT_CONVERSATION_ATTEMPT_WORKFLOW=Object.freeze({...AGENT_CONVERSATION_WORKFLOW,workflowVersion:2});
 export const INTERACTION_GITHUB_TOOLS=Object.freeze([
  {name:'github_answer_question',arguments:{question:'用户本次针对项目的问题、想了解的方面或总结要求',repositoryUrl:'可选，明确的GitHub仓库URL；当前会话仅有一个明确项目时可省略'},purpose:'围绕指定项目的实现、算法、调用链、亮点、限制或总结进行只读研究，定位源码/测试并按固定提交和行号回答；支持当前提问者连续追问。不创建文章、不发布。缺少项目且上下文不明确时先询问项目。'},
- {name:'github_search_projects',arguments:{topic:'用户要求的项目方向',repositoryUrl:'可选，用户指定的 GitHub 仓库 URL'},purpose:'交给小墨鱼现有 GitHub 研究器查询公开项目；返回持久任务编号，尚未完成查询。'},
+ {name:'github_search_projects',arguments:{topic:'完整搜索需求，保留用途、硬条件、偏好和排除项',repositoryUrl:'可选，用户指定的 GitHub 仓库 URL；普通搜索不需要链接'},purpose:'通用公开 GitHub 项目搜索、条件核验与证据比较；按需求规划查询并阅读候选材料，不以热门候选简介冒充已核验推荐。返回持久任务编号，尚未完成查询；不写文章。'},
  {name:'github_write_article',arguments:{topic:'这一次的写作要求',repositoryUrl:'可选，用户指定的 GitHub 仓库 URL',publication:'inherit 或 draft；遵循小墨鱼既有发布策略；用户要求草稿时用 draft'},purpose:'交给小墨鱼现有研究、证据采集、写作和发布工作流，不修改每日计划或全局选题。返回任务编号，不得声称已经写完。'},
  {name:'get_agent_work',arguments:{view:'articles 或 tasks'},purpose:'查询小墨鱼可向当前提问者展示的已发表文章或本人的任务状态；不是查询其他用户信息。'},
 ]);

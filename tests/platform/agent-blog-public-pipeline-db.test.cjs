@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
-  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,compositionCitationRepair=true,compositionSchemaFailures=0,
+  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,searchQuality=null,compositionCitationRepair=true,compositionSchemaFailures=0,
   selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,allowEmptyDiscovery=false,recoverAfterFailure=false,
   compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
@@ -104,7 +104,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   };
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
-    adapters: live?.toolAdapters??{
+    adapters: searchQuality?.toolAdapters??live?.toolAdapters??{
       'research.github.repository.search@1': async ({request}) => ({
         receiptId: 'github-search:'+request.query, output: {
           schemaVersion: 'github-repository-search-v1',
@@ -127,10 +127,10 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         responseRef: { canonicalUri: materialsOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
       }),
     },
-    inputSchemas: { 'github.repository.search.input@1': validateGitHubRepositorySearchInput,
+    inputSchemas: { ...searchQuality?.inputSchemas,'github.repository.search.input@1': validateGitHubRepositorySearchInput,
       'github.repository.read.input@1': validateGitHubRepositoryReadInput,
       'github.repository.materials.read.input@1': validateGitHubRepositoryMaterialsInput },
-    outputSchemas: { 'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
+    outputSchemas: { ...searchQuality?.outputSchemas,'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
       'github.repository.read.output@1': validateGitHubRepositoryReadOutput,
       'github.repository.materials.read.output@1': validateGitHubRepositoryMaterialsOutput },
   });
@@ -160,6 +160,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       return live.providerAdapter(request);
     }:async request => {
       providerInvocations += 1;
+      if(searchQuality)return {providerRequestId:'fixture-search:'+crypto.randomUUID(),output:await searchQuality.respond(request),responseRef:{},usage:{providerCalls:1,inputTokens:500,outputTokens:1200,costMicrousd:10}};
       const output = request.responseSchema.key === 'blog.discovery.query-plan'
         ? { queries: ['agent tool'],
           rationale: '选题范围关注可以快速体验的开放工具，因此先用普通关键词寻找具有明确用途和可观察结果的项目。',
@@ -210,7 +211,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       return { providerRequestId: `fixture:${crypto.randomUUID()}`, output, responseRef: {},
         usage: { providerCalls: 1, inputTokens: 500, outputTokens: 1200, costMicrousd: 10 } };
     } },
-    responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS },
+    responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS,...searchQuality?.responseSchemas },
   });
   const artifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
   const draftGateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime,

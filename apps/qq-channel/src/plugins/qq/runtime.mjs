@@ -12,12 +12,12 @@ export function createQQChannelRuntime({config,pool,managed=false,useAgent=false
  if(!config||!pool||typeof managed!=='boolean'||typeof useAgent!=='boolean')fail('QQ_PLUGIN_CONFIG_REQUIRED');
  if(useAgent&&!managed)fail('QQ_AGENT_MANAGED_CHANNEL_REQUIRED');
  repository??=new QQRepository(pool,config);
- const controller=new AbortController();let service,gateway,napcat,control,starting=null,started=false,closed=false,lastFault=null;
+ const controller=new AbortController();let service,gateway,napcat,control,starting=null,started=false,closed=false,lastFault=null,sampleTimer=null,sampling=null,lastSampleFault=null,lastSampleLogged=0;
  const status=()=>({plugin:{...binding},started,stopped:controller.signal.aborted,managed,executionMode:useAgent?'agent':'legacy',lastFault,paperEnabled:false});
  const pluginStatus=()=>{let enabled=true;try{assertAvailable();}catch{enabled=false;}return {plugins:[{...binding,kind:'channel',activeVersion:true,enabled}],channelRuntime:status()};};
  const available=()=>{assertAvailable();if(closed||controller.signal.aborted)fail('QQ_CHANNEL_RUNTIME_STOPPED');};
  const receive=async event=>{available();if(!started)fail('QQ_CHANNEL_NOT_STARTED');return service.receive(event);};
- const stop=()=>{controller.abort();service?.stop();};
+ const stop=()=>{controller.abort();clearTimeout(sampleTimer);napcat?.stop?.();service?.stop();};
  const close=async()=>{if(closed)return;closed=true;stop();const results=await Promise.allSettled([control?.close(),gateway?.stop()]);const failed=results.find(r=>r.status==='rejected');if(failed)throw failed.reason;};
  const start=async()=>{
   available();if(started)return;if(starting)return starting;
@@ -31,13 +31,22 @@ export function createQQChannelRuntime({config,pool,managed=false,useAgent=false
    log({event:'listening',host:address.address,port:address.port,plugin:{...binding},paperEnabled:false});
    if(managed){
     napcat=napcatFactory({token:env.QQ_NAPCAT_TOKEN,accessToken:config.accessToken});
-    service.readiness=current=>napcat.readyGroup===current.groupId;
+    service.readiness=current=>napcat.isReady?napcat.isReady(current):napcat.readyGroup===current.groupId;
     control=await controlFactory({secret,agentUserId:env.QQ_ADMIN_AGENT_USER_ID,store:new QQControlStore(repository),napcat,gateway,pluginStatus});available();
     log({event:'control-listening',port:control.address.port,plugin:{...binding}});
+    // One background owner samples native state independently of platform API
+    // task processing. Browser reads only return that owner's snapshot.
+    const sample=()=>{
+     if(controller.signal.aborted||sampling)return;
+     sampling=(async()=>{try{const current=await repository.check();if(!controller.signal.aborted)await napcat.maintain(current,()=>gateway.connected());lastSampleFault=null;}
+      catch(error){const code=/^[A-Z0-9_]{1,80}$/u.test(error.code??'')?error.code:'QQ_STATUS_SAMPLE_UNAVAILABLE';lastFault={code,at:new Date().toISOString()};if(code!==lastSampleFault||Date.now()-lastSampleLogged>60000){log({event:'worker-waiting',code,plugin:{...binding}});lastSampleLogged=Date.now();lastSampleFault=code;}}
+     })().finally(()=>{sampling=null;if(!controller.signal.aborted){sampleTimer=setTimeout(sample,5000);sampleTimer.unref();}});
+    };
+    sample();
    }
   }catch(error){await close().catch(()=>{});throw error;}})();return starting;
  };
- const tick=async()=>{if(controller.signal.aborted)return {idle:true};available();if(!started)fail('QQ_CHANNEL_NOT_STARTED');if(napcat)await napcat.maintain(await repository.check(),()=>gateway.connected());available();return service.tick();};
+ const tick=async()=>{if(controller.signal.aborted)return {idle:true};available();if(!started)fail('QQ_CHANNEL_NOT_STARTED');return service.tick();};
  const pause=ms=>new Promise(resolve=>{const timer=setTimeout(done,ms);function done(){clearTimeout(timer);controller.signal.removeEventListener('abort',done);resolve();}controller.signal.addEventListener('abort',done,{once:true});if(controller.signal.aborted)done();});
  const run=async()=>{
   if(!started)await start();let failures=0,lastError=null,lastLogged=0;

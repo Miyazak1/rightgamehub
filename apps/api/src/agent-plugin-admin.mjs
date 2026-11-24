@@ -28,7 +28,7 @@ export function createAgentPluginAdminService({pool,interactionService,qqAdminSe
    qq={id:'mooyu.qq',name:'QQ 沟通渠道',kind:'channel',version:installed?.version??null,enabled:installed?.enabled??null,
     state:!installed?'upgrade-required':runtime?.stopped?'stopped':runtime?.started?'running':'unknown',
     responseEnabled:typeof value.settings?.enabled==='boolean'?value.settings.enabled:null,
-    connection:{loggedIn:value.runtime?.loggedIn===true,connected:value.runtime?.connected===true,accountMatches:value.runtime?.accountMatches===true,phase:safeCode(value.runtime?.phase?.toUpperCase())},
+    connection:Object.fromEntries(['available','loggedIn','coreReady','groupReady','connected','accountMatches','accountState','phase','groupState','observation','checkedAt','verifiedAt','restartRequired'].map(key=>[key,value.runtime?.[key]])),
     lastFault:runtime?.lastFault?{code:safeCode(runtime.lastFault.code)??'QQ_WORKER_UNAVAILABLE',at:runtime.lastFault.at}:null,
     reasonCode:!installed?'QQ_PLUGIN_STATUS_UPGRADE_REQUIRED':null};
   }catch(e){qq={id:'mooyu.qq',name:'QQ 沟通渠道',kind:'channel',version:null,enabled:null,state:'unavailable',reasonCode:safeCode(e.code)??'QQ_CONTROL_UNAVAILABLE'};}

@@ -9,6 +9,7 @@ import {createAgentRuntimeWorker} from './agent-runtime-worker.mjs';
 import {executeAgentBlogPublicRun} from './agent-blog-public-runtime-manual-run.mjs';
 import {AGENT_GITHUB_RESEARCH_LIMITS} from './agent-github-research-runtime.mjs';
 import {interactionFail,interactionHash,interactionId,AGENT_GITHUB_INSPECT_WORKFLOW} from './agent-interaction-contracts.mjs';
+import {GITHUB_SEARCH_WORKFLOW,createSearchStageHandlers} from './agent-plugins/github/search.mjs';
 
 export function createAgentGitHubInteractionExecutor({repository,service,runtime}){
  const pool=repository.pool,ports=runtime.interactionPorts,requests=new PostgresAgentBlogPublicRequestRepository(pool);
@@ -35,6 +36,10 @@ export function createAgentGitHubInteractionExecutor({repository,service,runtime
   }
   if(spec.kind==='github-search'){
    const source=runs.discovery&&await readRun(runs.discovery.id);if(source?.status!=='succeeded')return null;
+   if(source.outputType==='agent.github.search-result'){
+    const artifact=await artifactRepository.read({runId:source.id,artifactId:source.outputId,expectedArtifactKey:'agent.github.search-result'});
+    return {...artifact.content,discoveryRunId:source.id};
+   }
    if(source.outputType==='blog.discovery-skipped')return {reply:'本次没有找到符合要求的 GitHub 项目。',repositories:[],discoveryRunId:source.id};
    const artifact=await artifactRepository.read({runId:source.id,artifactId:source.outputId,expectedArtifactKey:'blog.candidate-set'});
    const repositories=artifact.content.candidates.slice(0,5).map(item=>({name:item.name??item.key??item.canonicalUrl,url:item.canonicalUrl,description:item.description??''}));
@@ -91,6 +96,34 @@ export function createAgentGitHubInteractionExecutor({repository,service,runtime
    handlers:Object.fromEntries(Object.entries(handlers).map(([key,fn])=>[key,async(context,execution)=>{await requireSchedulerProtocol();await service.authorize(row.origin_json,{invoke:row.kind==='github-article'});return fn(context,execution);}]))});
   try{
    let discoveryRun=existing.discovery,articleRun=existing.publication;
+   if(row.kind==='github-search'&&!row.input_json.repositoryUrl&&row.input_json.searchProtocol===2){
+    const workflow=GITHUB_SEARCH_WORKFLOW;
+    discoveryRun??=await runtimeRepository.createRun({agentUserId:agent.id,workflowKey:workflow.workflowKey,workflowVersion:workflow.workflowVersion,triggerKind:'manual',triggerRef:'interaction:'+row.id,idempotencyKey:'public-runtime:'+row.id+':discovery',config,
+     input:{schemaVersion:'agent-github-search-input-v1',request:row.input_json.userRequest,asOf:new Date().toISOString()},budget:workflow.defaultBudget});
+    const id=discoveryRun.id;
+    // The frozen run input owns the clock and complete request on recovery.
+    const input=discoveryRun.input??discoveryRun.input_json??(await pool.query('SELECT input_json FROM agent_runs WHERE id=$1 AND agent_user_id=$2',[id,agent.id])).rows[0]?.input_json;
+    await repository.setRun(row,id);
+    const load=async key=>{const found=(await pool.query('SELECT id FROM agent_runtime_stage_artifacts WHERE run_id=$1 AND artifact_key=$2',[id,key])).rows[0];return found?artifactRepository.read({runId:id,artifactId:found.id,expectedArtifactKey:key}):null;};
+    const save=(ctx,ex,key,content,refs)=>artifactRepository.save({runId:id,stageId:ctx.stage.id,workerId:ex.workerId,leaseToken:ex.leaseToken,artifactKey:key,artifactKind:'validated-output',schema:{key,version:1},content,...refs});
+    const model=async(ctx,ex,key,schema,system,payload)=>{
+     const r=await ports.providerGateway.invoke({runId:id,stageId:ctx.stage.id,workerId:ex.workerId,leaseToken:ex.leaseToken,
+      action:{actionKey:key,actionKind:'provider',capabilityKey:'provider.text.generate',contractVersion:1,riskLevel:'L2'},idempotencyKey:'github-search:'+row.id+':'+key,resource:{type:'provider.model',owner:agent.id},
+      modelPolicy:{taskClass:'structured-generation',requiresJsonSchema:true,maxInputTokens:50000,maxOutputTokens:5000,maxCostMicrousd:50000000,latencyClass:'interactive',preferredProvider:runtime.config.provider,preferredModel:frozen.configuredModelId},
+      promptTemplate:{key:schema,version:1},responseSchema:{key:schema,version:1},request:{messages:[{role:'system',content:system},{role:'user',content:JSON.stringify(payload)}],temperature:0.1},tokenCeiling:5000,timeoutSeconds:key==='plan'?90:130,signal:ex.signal});
+     if(r.status!=='succeeded')interactionFail('AGENT_GITHUB_SEARCH_MODEL_INCOMPLETE',503);return r;
+    };
+    const tool=async(ctx,ex,key,toolKey,contractVersion,capabilityKey,request)=>{
+     await requireSchedulerProtocol();await service.authorize(row.origin_json);
+     const r=await ports.toolGateway.invoke({runId:id,stageId:ctx.stage.id,workerId:ex.workerId,leaseToken:ex.leaseToken,
+      action:{actionKey:key,actionKind:'tool',capabilityKey,contractVersion:1,riskLevel:'L1'},idempotencyKey:'github-search:'+row.id+':'+key,
+      resource:{type:capabilityKey==='research.github.read'?'github.repository':'github.repository-search',owner:'public',id:request.repository??interactionHash(request)},tool:{toolKey,contractVersion},request,signal:ex.signal});
+     if(r.status!=='succeeded')interactionFail('AGENT_GITHUB_SEARCH_READ_UNAVAILABLE',503);return r;
+    };
+    await executeAgentBlogPublicRun({worker:createWorker(id,createSearchStageHandlers({input,load,save,model,tool})),workflow,outputType:'agent.github.search-result',runId:id,readRun,signal:owner.signal});
+    const result=await receipt(row,{discovery:discoveryRun});if(!result)interactionFail('AGENT_INTERACTION_RESULT_MISSING',503);
+    await requests.settleInteraction(agent.id,row.id,checkpoint.lease_token,{result,safeForNext:true});return result;
+   }
    if(row.kind==='github-search'&&row.input_json.repositoryUrl){
     const workflow=AGENT_GITHUB_INSPECT_WORKFLOW,id=interactionId([row.id,'github-inspect']);
     let current=await readRun(id);

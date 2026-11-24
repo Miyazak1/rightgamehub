@@ -1,0 +1,7 @@
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';
+const out=process.argv[2];if(!out||!path.resolve(out).toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\')||fs.existsSync(out))throw Error('NEW_LOCAL_OUTPUT_REQUIRED');fs.mkdirSync(out,{recursive:true});
+const tests=['qq-group-readiness.test.mjs','qq-gateway-auth.test.mjs','qq-channel-plugin.test.mjs','qq-runtime-status.test.mjs'];
+const r=spawnSync(process.execPath,['--test',...tests.map(f=>'tests/platform/'+f)],{encoding:'utf8',windowsHide:true,timeout:90000,maxBuffer:4*1024*1024});
+fs.writeFileSync(path.join(out,'tests.tap'),r.stdout??'');fs.writeFileSync(path.join(out,'tests.stderr.txt'),r.stderr??'');
+const count=k=>Number((r.stdout??'').match(new RegExp('^# '+k+' (\\d+)$','m'))?.[1]??0),result={result:r.status===0?'PASSED':'FAILED',tests:count('tests'),passed:count('pass'),failed:count('fail'),skipped:count('skipped'),sourceSha256:crypto.createHash('sha256').update(fs.readFileSync('apps/qq-channel/src/napcat-control.mjs')).digest('hex'),gatewayResponses:'synthetic-fixtures',socketTests:'local-loopback-only',productionAccessed:false,servicesRestarted:false,loginDataTouched:false};
+fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));if(r.status!==0)process.exitCode=1;

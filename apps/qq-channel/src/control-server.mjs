@@ -22,15 +22,15 @@ export async function startQQControlServer({secret,agentUserId,store,napcat,gate
    }
    let data;
    if(command.operation==='status'){
-    const view=await store.view(),runtime=await napcat.inspect(await store.repository.check());
-    const binding=await store.repository.check();
+    const view=await store.view(),binding=await store.repository.check();
+    // Management reads never authenticate against, sample, or reconfigure QQ.
+    const runtime=napcat.snapshot?.(binding)??{available:false,observation:'unknown',phase:'unknown'};
     data={...view,...pluginStatus(),runtime:{...runtime,connected:gateway.connected()},binding:{botId:binding.botId,interactionProtocolVersion:1,executionMode:store.repository.agentBridge?'agent':'channel'}};
    }else if(command.operation==='qr'){
     const view=await store.view();data={...await napcat.qr(),loginRevision:view.loginRevision};
     const repo=store.repository,client=await repo.pool.connect();
     try{await repo.transaction(client,c=>repo.event(c,null,'admin-qr-viewed',{actorId:command.actorId,requestId}));}finally{client.release();}
    }else{
-    if(['refresh','password'].includes(command.operation)&&(await napcat.inspect(await store.repository.check())).loggedIn)throw qqAdminError('QQ_ALREADY_LOGGED_IN',409);
     if(command.operation==='password'){
      let password=command.args.password;delete command.args.password;
      try{data=await store.mutate(requestId,command,async()=>{

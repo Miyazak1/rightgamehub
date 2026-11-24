@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {qqRuntimeView} from './qq-admin-settings.mjs';
 
 const states={assembled:'已装配',running:'运行中',stopped:'已停止','not-configured':'尚未配置',unavailable:'暂时不可用','upgrade-required':'需要升级状态接口',unknown:'状态未确认'};
 const grantLabels={'research.github.read':'读取 GitHub','research.github.discover':'查找项目','provider.text.generate':'模型生成','blog.article.draft':'保存草稿','blog.article.publish':'发布文章'};
@@ -24,7 +25,7 @@ export default function AgentPluginAdmin({api,agentId}){
    <header><h4>{plugin.name}</h4><span className="agent-state">{states[plugin.state]??'状态未确认'}</span></header>
    <p className="agent-plugin-id">{plugin.id} · {plugin.version?`v${plugin.version}`:'版本未确认'}</p>
    <dl><div><dt>插件启用</dt><dd>{plugin.enabled===true?'已启用':plugin.enabled===false?'已停用':'尚未确认'}</dd></div>
-    {plugin.kind==='capability'?<><div><dt>交互入口</dt><dd>{plugin.enabled===false?'插件已停用':plugin.admission?.state==='ready'?'配置检查通过':plugin.admission?.state==='blocked'?'配置未就绪':'尚未确认'}</dd></div><div><dt>独立执行器</dt><dd>本页未探测，执行结果见运行记录</dd></div></>:<><div><dt>群内回复</dt><dd>{plugin.responseEnabled===true?'已启用':plugin.responseEnabled===false?'已暂停':'尚未确认'}</dd></div><div><dt>QQ 连接</dt><dd>{!plugin.connection?'尚未确认':plugin.connection.loggedIn&&plugin.connection.connected&&plugin.connection.accountMatches?'已登录并连接':plugin.connection.loggedIn?'已登录，连接待恢复':'需要恢复登录'}</dd></div></>}
+    {plugin.kind==='capability'?<><div><dt>交互入口</dt><dd>{plugin.enabled===false?'插件已停用':plugin.admission?.state==='ready'?'配置检查通过':plugin.admission?.state==='blocked'?'配置未就绪':'尚未确认'}</dd></div><div><dt>独立执行器</dt><dd>本页未探测，执行结果见运行记录</dd></div></>:<><div><dt>群内回复</dt><dd>{plugin.responseEnabled===true?'已启用':plugin.responseEnabled===false?'已暂停':'尚未确认'}</dd></div><div><dt>QQ 连接</dt><dd>{qqRuntimeView(plugin.connection).label}</dd></div></>}
    </dl>
    {(plugin.reasonCode||plugin.admission?.reasonCode)&&<p role="status">{describe(plugin.reasonCode??plugin.admission.reasonCode)}</p>}
    {plugin.grants&&<details><summary>已有能力授权</summary><ul>{plugin.grants.map((grant,index)=><li key={`${grant.key}:${grant.version}:${index}`}>{grantLabels[grant.key]??grant.key} · v{grant.version} · {grant.effective?'有效':'未生效'}</li>)}</ul><p>仍受原策略、范围和预算约束；插件启用不会新增授权。</p></details>}

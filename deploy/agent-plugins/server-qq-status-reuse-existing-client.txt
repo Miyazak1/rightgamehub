@@ -1,0 +1,15 @@
+docker exec -i gamehub-production-api-1 node --input-type=module <<'NODE'
+import {createRequire} from 'node:module';
+import {createAgentQQAdminService} from '/app/apps/api/src/agent-qq-admin-service.mjs';
+const {Pool}=createRequire('/app/apps/api/package.json')('pg');
+const pool=new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:4000,options:'-c default_transaction_read_only=on -c statement_timeout=5000'});
+try {
+ const service=createAgentQQAdminService({pool,env:process.env});
+ const data=await service.readBoundChannelPolicy(),r=data.runtime??{};
+ console.log(JSON.stringify({controlAvailable:true,loginStatusAvailable:r.available===true,loggedIn:r.loggedIn===true,coreReady:r.coreReady===true,accountMatches:r.accountMatches===true,groupReady:r.groupReady===true,phase:r.phase,connected:r.connected===true,revision:data.revision,loginRevision:data.loginRevision,usedExistingWorkerClient:true}));
+ console.log('READONLY_COMPLETE_NO_NEW_GATEWAY_CLIENT_NO_RESTART');
+} catch(e) {
+ console.log(JSON.stringify({controlAvailable:false,errorCode:/^QQ_[A-Z0-9_]+$/.test(e.code??'')?e.code:'STATUS_READ_FAILED'}));
+ process.exitCode=1;
+} finally {await pool.end();}
+NODE

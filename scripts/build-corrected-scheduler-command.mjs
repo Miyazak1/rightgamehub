@@ -1,0 +1,20 @@
+// Builds a paste-only hotfix handoff. Reuses the already uploaded image/proof.
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';
+const out=path.resolve(process.argv[2]??'');if(!process.argv[2]||!out.toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\')||fs.existsSync(out))throw Error('NEW_LOCAL_OUTPUT_DIRECTORY_REQUIRED');
+const source=fs.readFileSync(new URL('./switch-scheduler-interaction-compat.mjs',import.meta.url),'utf8'),digest=crypto.createHash('sha256').update(source).digest('hex');
+const test=JSON.parse(fs.readFileSync('E:/CodexData/build/Right/agent-server-preflight/20261123/scheduler-switch-json-contract-r1/result.json','utf8'));if(test.result!=='PASSED'||!test.realPsqlTupleFailureReproduced||!test.fixedBeforeAndAfterHeartbeatRowsVerified||!test.freshProtocolHeartbeatVerified)throw Error('REAL_PSQL_REGRESSION_PROOF_REQUIRED');
+if(spawnSync(process.execPath,['--input-type=module','--check'],{input:source,encoding:'utf8'}).status!==0)throw Error('FIXED_TOOL_SYNTAX_FAILED');
+const bootstrap=`import fs from 'node:fs';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';
+const stage='/www/backup/gamehub/agent-scheduler-compat-20261123-r1',original=stage+'/switch-scheduler-interaction-compat.mjs';
+const hash=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+if(hash(original)!=='18cbbdbf5fa741c1b96e45c4ca8ad099f845127e2e1713eede05fab244440939')throw Error('ORIGINAL_STAGED_TOOL_CHANGED');
+const bytes=Buffer.from('${Buffer.from(source).toString('base64')}','base64');if(crypto.createHash('sha256').update(bytes).digest('hex')!=='${digest}')throw Error('FIXED_TOOL_HASH_MISMATCH');
+const directory=fs.mkdtempSync('/www/backup/gamehub/agent-scheduler-compat-hotfix-20261123-');fs.chmodSync(directory,0o700);
+const file=directory+'/switch-scheduler-interaction-compat.mjs';fs.writeFileSync(file,bytes,{flag:'wx',mode:0o600});fs.writeFileSync(directory+'/hotfix-receipt.private.json',JSON.stringify({correctedToolSha256:'${digest}',originalToolPreserved:true,scope:'scheduler-only',fixes:['psql-plan-json-array','psql-heartbeat-json-array','fixed-rollback-source-copy'],authorization:'explicit-existing-scheduler-switch'}),{flag:'wx',mode:0o600});
+console.log('修正版工具目录：'+directory);const r=spawnSync(process.execPath,[file,'switch'],{stdio:'inherit',env:{...process.env,MOOYU_SCHEDULER_COMPAT_AUTH:'20261123'}});if(r.error||r.status!==0)process.exitCode=1;
+`;
+if(spawnSync(process.execPath,['--input-type=module','--check'],{input:bootstrap,encoding:'utf8'}).status!==0)throw Error('BOOTSTRAP_SYNTAX_FAILED');
+const shell="(\nset -euo pipefail\numask 077\nexec 9>/var/lock/mooyu-agent-plugin-release.lock\nflock -n 9\nnice -n 10 /www/backup/gamehub/agent-plugins-stage-20261122-r3/node --input-type=module <<'NODE'\n"+bootstrap+"NODE\n)\n";
+const bash=process.platform==='win32'?'C:\\Program Files\\Git\\bin\\bash.exe':'bash';if(spawnSync(bash,['-n'],{input:shell,encoding:'utf8'}).status!==0)throw Error('SHELL_SYNTAX_FAILED');
+fs.mkdirSync(out);fs.writeFileSync(path.join(out,'switch-scheduler-interaction-compat.fixed.mjs'),source,{flag:'wx'});const command=path.join(out,'server-corrected-switch-only-scheduler-command.txt');fs.writeFileSync(command,shell,{flag:'wx'});
+const result={result:'CORRECTED_SCHEDULER_COMMAND_PREPARED',command,correctedToolSha256:digest,realPsqlRegressionPassed:true,nodeAndShellSyntaxPassed:true,imageUploadRequired:false,originalServerFilesReplaced:false,serverCommandExecuted:false};fs.writeFileSync(path.join(out,'local-validation.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));

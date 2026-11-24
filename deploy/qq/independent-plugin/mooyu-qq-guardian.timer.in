@@ -1,0 +1,11 @@
+[Unit]
+Description=Check independent QQ recovery policy
+
+[Timer]
+OnBootSec=90
+OnUnitInactiveSec=20
+AccuracySec=2
+Unit=mooyu-qq-guardian.service
+
+[Install]
+WantedBy=timers.target

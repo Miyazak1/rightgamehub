@@ -12,5 +12,8 @@ export async function admitGitHubTask(name,args,{row,repository}){
  }
  if(name==='github_write_article'&&/(?:不(?:要)?写.{0,3}文章|只(?:需|要)?(?:回答|总结|分析)|仅(?:回答|总结|分析))/u.test(row.input_json.message))return {error:{code:'AGENT_INTERACTION_QUESTION_ONLY',message:'用户只要求回答、总结或分析，不应创建文章；请使用 github_answer_question。'}};
  if(!['github_search_projects','github_write_article'].includes(name)||Object.keys(args).some(k=>!['topic','repositoryUrl','publication'].includes(k)))interactionFail('AGENT_INTERACTION_GITHUB_INPUT');
- return forceExplicitDraft(row.input_json.message,normalizeGitHubInteraction({kind:name==='github_write_article'?'github-article':'github-search',...args}));
+ const task=forceExplicitDraft(row.input_json.message,normalizeGitHubInteraction({kind:name==='github_write_article'?'github-article':'github-search',...args}));
+ // Freeze the user's complete request instead of trusting a shortened model
+ // topic to retain every constraint. Existing admitted tasks are unchanged.
+ return name==='github_search_projects'&&!task.repositoryUrl?{...task,searchProtocol:2,userRequest:row.input_json.message}:task;
 }

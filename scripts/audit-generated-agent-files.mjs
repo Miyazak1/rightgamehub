@@ -1,0 +1,39 @@
+// Server stdout only. Never executes generated scripts or application modules.
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+const RECORD='/www/backup/gamehub/agent-cutover-files-20261122-r1';
+const STAGE='/www/backup/gamehub/agent-plugins-stage-20261122-r3';
+const keys=['PAPER_STUDY_ENABLED','PAPER_STUDY_WORKER_ENABLED','PAPER_STUDY_MODELS_ENABLED','PAPER_STUDY_PUBLISH_ENABLED','AGENT_PAPER_SEMANTIC_ENABLED','AGENT_PAPER_RESEARCH_WORKER_ENABLED'];
+const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
+const read=f=>JSON.parse(fs.readFileSync(f,'utf8'));
+const env=c=>Object.fromEntries((c.Config.Env??[]).map(v=>{const n=v.indexOf('=');return[v.slice(0,n),v.slice(n+1)];}));
+function docker(args){if(!['inspect','ps'].includes(args[0]))throw Error('READONLY_DOCKER_REQUIRED');const r=spawnSync('docker',args,{encoding:'utf8',timeout:30000,maxBuffer:32*1024*1024});if(r.status!==0)throw Error('DOCKER_READ_FAILED');return r.stdout.trim();}
+function fingerprint(c){return hash(JSON.stringify({image:c.Image,env:(c.Config.Env??[]).slice().sort(),mounts:(c.Mounts??[]).map(m=>[m.Type,m.Name??'',m.Source,m.Destination,m.RW]).sort(),networks:Object.entries(c.NetworkSettings.Networks??{}).map(([n,v])=>[n,(v.Aliases??[]).slice().sort()]).sort(),entry:c.Config.Entrypoint,cmd:c.Config.Cmd,restart:c.HostConfig.RestartPolicy}));}
+export function checkPaperOverlay(s,image){return s.image===image&&s.restart==='no'&&s.profiles?.includes('paper-disabled')&&keys.every(k=>s.environment?.[k]==='false')&&JSON.stringify(s.entrypoint)===JSON.stringify(['node','-e','process.exit(0)'])&&Array.isArray(s.command)&&s.command.length===0;}
+function sameDatabase(a,b){try{const x=new URL(a),y=new URL(b);return x.hostname===y.hostname&&(x.port||'5432')===(y.port||'5432')&&x.pathname===y.pathname;}catch{return null;}}
+export function audit(){
+ const state=read(path.join(RECORD,'state.private.json')),result=read(path.join(RECORD,'generation-result.json')),manifest=read(path.join(RECORD,'generation-files.sha256.json'));
+ const integrity=[];for(const f of manifest.files){if(!/^[A-Za-z0-9_.-]+$/.test(f.name))throw Error('INVALID_RECORDED_FILENAME');const p=path.join(RECORD,f.name),st=fs.lstatSync(p);integrity.push({name:f.name,regularFile:st.isFile()&&!st.isSymbolicLink(),checksumMatches:st.isFile()&&!st.isSymbolicLink()&&hash(fs.readFileSync(p))===f.sha256,privateMode:(st.mode&0o077)===0});}
+ const ids=docker(['ps','-aq']).split(/\s+/).filter(Boolean);const containers=ids.length?JSON.parse(docker(['inspect',...ids])):[];
+ const byName=new Map(containers.map(c=>[c.Name.replace(/^\//,''),c]));
+ const roles=state.roles.map(r=>{const c=byName.get(r.container);return{role:r.role,container:r.container,image:c?.Image??null,configurationMatches:!!c&&fingerprint(c)===r.expectedFingerprint,runningMatches:!!c&&c.State.Running===r.expectedRunning,currentlyRunning:c?.State.Running??null,composeProject:r.compose.project,composeFiles:r.compose.files};});
+ const chainFiles=[...new Set(state.roles.flatMap(r=>r.compose.files))].map(p=>({path:p,exists:fs.existsSync(p),recordedChecksumMatches:state.files.some(f=>f.path===p&&fs.existsSync(p)&&hash(fs.readFileSync(p))===f.sha256)}));
+ const frozenFiles=state.files.map(f=>({path:f.path,checksumMatches:fs.existsSync(f.path)&&hash(fs.readFileSync(f.path))===f.sha256}));
+ const overlayReport=[];for(const name of manifest.files.map(f=>f.name).filter(n=>/^(?:target-|original-|paper-\d)/.test(n)&&n.endsWith('.json'))){
+  const document=read(path.join(RECORD,name));for(const [service,s]of Object.entries(document.services??{})){const paper=state.roles.find(r=>r.role==='paper'&&r.compose.service===service);overlayReport.push({file:name,service,image:s.image,paperFlagsAllOff:keys.every(k=>s.environment?.[k]==='false'),paperDisableOverlayValid:name.startsWith('paper-')?!!paper&&checkPaperOverlay(s,paper.image):null});}
+ }
+ const executor=read(path.join(RECORD,'executor.private.json')).services['agent-interactions'];
+ const executorReport={image:executor.image,usesExpectedImage:executor.image===state.manifest.images.api.id,noPublishedPorts:Array.isArray(executor.ports)&&executor.ports.length===0,aliases:Object.fromEntries(Object.entries(executor.networks??{}).map(([n,v])=>[n,v.aliases??[]])),allPaperFlagsOff:keys.every(k=>executor.environment?.[k]==='false'),inheritedEnvironmentUsesReferences:(state.inheritEnvKeys??[]).every(k=>executor.environment?.[k]==='${MOOYU_CUTOVER_API_'+k+'?existing API environment required}'||['false','true',state.agentId].includes(executor.environment?.[k]))};
+ const protectedContainers=[...state.roles.map(r=>r.container),state.gateway.container,...(state.protectedDatabases??[]).map(d=>d.container)].map(n=>byName.get(n)).filter(Boolean);
+ const sharedVolumes=new Set(protectedContainers.flatMap(c=>(c.Mounts??[]).filter(m=>m.Type==='volume').map(m=>m.Name)));
+ const outside=read(path.join(RECORD,'paper-outside-scope-review.private.json')).outside.map(r=>{const c=byName.get(r.container),e=c?env(c):{},api=byName.get(state.roles.find(x=>x.role==='api').container),commonNetworks=c?Object.keys(c.NetworkSettings.Networks??{}).filter(n=>api.NetworkSettings.Networks?.[n]):[];
+  const s=read(path.join(RECORD,r.overlay)).services[r.compose.service];return{container:r.container,project:r.project,image:r.image,currentImageMatches:c?.Image===r.image,currentlyRunning:c?.State.Running??null,composeDirectory:r.compose.directory,composeFiles:r.compose.files,paperFlags:Object.fromEntries(keys.map(k=>[k,['true','false'].includes(e[k])?e[k]:e[k]===undefined?'unset':'unexpected'])),disableOverlayValid:checkPaperOverlay(s,r.image),applyAuthorized:r.applyAuthorized,sharedProductionVolumeNames:(c?.Mounts??[]).filter(m=>m.Type==='volume'&&sharedVolumes.has(m.Name)).map(m=>m.Name),commonApiNetworks:commonNetworks,sameDatabaseEndpointAsApi:c?sameDatabase(e.DATABASE_URL,env(api).DATABASE_URL):null};});
+ const gateway=byName.get(state.gateway.container);const protectedState={gatewayConfigurationMatches:!!gateway&&fingerprint(gateway)===state.gateway.fingerprint,gatewayStartedAtMatches:gateway?.State.StartedAt===state.gateway.startedAt,loginVolumeMatches:gateway?.Mounts.some(m=>m.Destination==='/data'&&m.Name===state.gateway.loginVolume)??false,databases:(state.protectedDatabases??[]).map(d=>{const c=byName.get(d.container);return{container:d.container,configurationMatches:!!c&&fingerprint(c)===d.fingerprint,startedAtMatches:c?.State.StartedAt===d.startedAt};})};
+ const scripts=manifest.files.map(f=>f.name).filter(n=>n.endsWith('.sh')).map(name=>{const source=fs.readFileSync(path.join(RECORD,name),'utf8');return{name,invokesRecordedTool:source.includes(path.join(RECORD,'agent-server-cutover.mjs')),scriptExecuted:false};});
+ const recorded=new Set(manifest.files.map(f=>f.name).concat(['generation-files.sha256.json','generation-result.json']));
+ console.log(JSON.stringify({audit:'GENERATED_FILES_READONLY_REVIEW',record:RECORD,reportedFilesGenerated:result.filesGenerated,executionLocked:state.executionLocked===true,generationManifestFiles:integrity.length,allGeneratedFilesMatch:integrity.every(f=>f.regularFile&&f.checksumMatches&&f.privateMode),unrecordedFiles:fs.readdirSync(RECORD).filter(n=>!recorded.has(n)),allFrozenFilesMatch:frozenFiles.every(f=>f.checksumMatches),changedFrozenFiles:frozenFiles.filter(f=>!f.checksumMatches),roles,chainFiles,overlays:overlayReport,executor:executorReport,protectedState,scripts,outsidePaper:outside,review:read(path.join(RECORD,'execution-review.required.json')),productionChanged:false,scriptsExecuted:false},null,2));
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)try{audit();}catch(e){console.error(/^[A-Z0-9_]+$/.test(e.message)?e.message:'READONLY_AUDIT_FAILED');process.exitCode=1;}

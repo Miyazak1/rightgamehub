@@ -10,7 +10,10 @@ for(const mode of ['search','draft','draft-topic','draft-invalid','published','i
   await schedule.ensureDaily({agentUserId:agentId,enabled:false});await schedule.heartbeat({agentUserId:agentId,instanceId:crypto.randomUUID()});
   const original=(await pool.query('SELECT topic_scope FROM agent_blog_automation_settings WHERE agent_user_id=$1',[agentId])).rows[0].topic_scope;
   const {createAgentPluginHost}=await h.load('agent-plugin-host.mjs'),{githubAgentPlugin}=await h.load('agent-plugins/github/index.mjs');
-  const pluginHost=createAgentPluginHost({definitions:[{...githubAgentPlugin,createRuntime:()=>({config,interactionPorts:fixture})}]});
+  // Keep this regression exercising the retained, previously admitted search
+  // protocol. New search admissions have their own governed DB acceptance.
+  const admit=async(...args)=>{const admitted=await githubAgentPlugin.admit(...args);if(mode==='search'){delete admitted.searchProtocol;delete admitted.userRequest;}return admitted;};
+  const pluginHost=createAgentPluginHost({definitions:[{...githubAgentPlugin,admit,createRuntime:()=>({config,interactionPorts:fixture})}]});
   const {createAgentInteractionService}=await h.load('agent-interaction-service.mjs'),service=createAgentInteractionService({repository,agentId,pluginHost});
   const requestId=crypto.randomUUID(),origin={channel:'web',actorRef:operatorId,platformUserId:operatorId,conversationRef:crypto.randomUUID(),eventRef:requestId};
   const accepted=await service.receive(origin,{requestId,message:draft?'帮我写 GitHub 项目文章，只保存草稿，不要发布。':'研究有趣实用的开放工具'}),parent=await repository.get(accepted.id);
