@@ -696,7 +696,9 @@ export class PostgresAgentRuntimeRepository {
   async chargeGitHubRequest({runId,stageId,workerId,leaseToken,actionId}) {
     return withTransaction(this.pool,async client=>{
       const run=(await client.query(`SELECT workflow_key,workflow_version,idempotency_key,agent_user_id FROM agent_runs WHERE id=$1`,[runId])).rows[0];
-      if(!run||run.workflow_version!==4||!['blog.project.single','blog.project.discovery-shadow'].includes(run.workflow_key))return;
+      if(!run||!((run.workflow_version===4&&['blog.project.single','blog.project.discovery-shadow'].includes(run.workflow_key))
+        ||([2,3].includes(run.workflow_version)&&run.workflow_key==='blog.project.single.draft-shadow')
+        ||(run.workflow_version===1&&run.workflow_key==='agent.github.inspect')))return;
       const requestId=/^public-runtime:([a-f0-9-]{36}):(discovery|article)$/u.exec(run.idempotency_key)?.[1];
       if(!requestId)return; // Other explicit canaries retain their own contract.
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['public-network:'+run.agent_user_id+':'+requestId]);
@@ -715,11 +717,12 @@ export class PostgresAgentRuntimeRepository {
   }
 
   async recoveryActionKey({stageId,workerId,leaseToken,actionKey,idempotencyKey}) {
-    const stage=(await this.pool.query(`SELECT stage.attempt,stage.kind,run.workflow_key,run.workflow_version,
+    const stage=(await this.pool.query(`SELECT stage.attempt,stage.kind,run.workflow_key,run.workflow_version,run.idempotency_key AS run_key,
       (stage.leased_by=$2 AND stage.lease_token=$3 AND stage.status IN ('leased','running') AND stage.lease_until>now()) AS valid
       FROM agent_run_stages stage JOIN agent_runs run ON run.id=stage.run_id WHERE stage.id=$1`,[stageId,workerId,leaseToken])).rows[0];
     if(!stage)fail('AGENT_RUNTIME_LEASE_LOST');
-    if(stage.workflow_version!==4||!['blog.project.single','blog.project.discovery-shadow'].includes(stage.workflow_key))return idempotencyKey;
+    if(!((stage.workflow_version===4&&['blog.project.single','blog.project.discovery-shadow'].includes(stage.workflow_key))
+      ||([2,3].includes(stage.workflow_version)&&stage.workflow_key==='blog.project.single.draft-shadow'&&stage.run_key?.startsWith('public-runtime:'))))return idempotencyKey;
     if(!stage.valid)fail('AGENT_RUNTIME_LEASE_LOST');
     if(stage.attempt<2)return idempotencyKey;
     const keys=Array.from({length:stage.attempt},(_,i)=>i?`${idempotencyKey}:recovery:${i+1}`:idempotencyKey);

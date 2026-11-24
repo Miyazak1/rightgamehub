@@ -1,0 +1,38 @@
+// Read-only control/status probes. No QR, refresh, password, reconnect, config
+// mutation, queued task retry, message send or service restart.
+import {spawnSync}from'node:child_process';
+const docker=args=>{const r=spawnSync('docker',args,{encoding:'utf8',timeout:45000,maxBuffer:2000000});if(r.status!==0)throw Error('READONLY_DOCKER_FAILED');return r.stdout.trim();};
+const safe=e=>/^[A-Z0-9_]{1,100}$/u.test(e?.code??'')?e.code:'READ_FAILED';
+const apiCode=String.raw`
+import fs from'node:fs';import crypto from'node:crypto';import dns from'node:dns/promises';import{createRequire}from'node:module';import{qqSignature}from'/app/apps/api/src/qq-admin-protocol.mjs';
+const {Pool}=createRequire('/app/apps/api/package.json')('pg'),report={atMs:Date.now(),adminEnabled:process.env.QQ_ADMIN_ENABLED==='true'},pool=new Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:4000,options:'-c default_transaction_read_only=on -c statement_timeout=5000'});
+const code=e=>/^[A-Z0-9_]{1,100}$/.test(e?.code??'')?e.code:'READ_FAILED';
+try{
+ const agent=process.env.QQ_ADMIN_AGENT_USER_ID,secret=fs.readFileSync(process.env.QQ_ADMIN_SECRET_FILE,'utf8').trim();report.secretHash=crypto.createHash('sha256').update(secret).digest('hex');
+ try{report.controlAddresses=(await dns.lookup('qq-control',{all:true})).map(a=>a.address);}catch(e){report.dnsError=code(e);}
+ const actor=(await pool.query('SELECT operator_user_id FROM agent_accounts WHERE user_id=$1',[agent])).rows[0]?.operator_user_id;
+ if(!actor)throw Error('AGENT_NOT_BOUND');const body=JSON.stringify({operation:'status',actorId:actor,agentUserId:agent,args:{}}),id=crypto.randomUUID(),at=String(Date.now());
+ try{const response=await fetch('http://qq-control:6780/control',{method:'POST',redirect:'error',signal:AbortSignal.timeout(14000),headers:{'content-type':'application/json','x-qq-time':at,'x-qq-request':id,'x-qq-signature':qqSignature(secret,at,id,body)},body});const v=await response.json();report.control={httpStatus:response.status,errorCode:/^QQ_[A-Z0-9_]+$/.test(v.error?.code??'')?v.error.code:null,...(v.data?{revision:v.data.revision,loginRevision:v.data.loginRevision,runtime:{available:v.data.runtime?.available,loggedIn:v.data.runtime?.loggedIn,coreReady:v.data.runtime?.coreReady,accountMatches:v.data.runtime?.accountMatches,groupReady:v.data.runtime?.groupReady,phase:v.data.runtime?.phase,connected:v.data.runtime?.connected}}:{})};}
+ catch(e){report.control={reachable:false,errorCode:code(e),causeCode:code(e.cause)};}
+}catch(e){report.readError=code(e);}finally{await pool.end();}console.log(JSON.stringify(report));
+`;
+const workerCode=String.raw`
+import fs from'node:fs';import crypto from'node:crypto';import dns from'node:dns/promises';import{NapCatControl}from'/app/apps/qq-channel/src/napcat-control.mjs';
+const report={atMs:Date.now()},code=e=>/^QQ_[A-Z0-9_]+$/.test(e?.code??'')?e.code:'READ_FAILED';
+try{report.secretHash=crypto.createHash('sha256').update(fs.readFileSync(process.env.QQ_ADMIN_SECRET_FILE,'utf8').trim()).digest('hex');}catch{report.secretReadFailed=true;}
+try{report.gatewayDnsResolves=(await dns.lookup('napcat',{all:true})).length>0;}catch{report.gatewayDnsResolves=false;}
+try{const config=JSON.parse(fs.readFileSync('/config/config.json','utf8')),r=await fetch('http://127.0.0.1:'+String(config.port??6700)+'/health',{signal:AbortSignal.timeout(4000)}),v=await r.json();report.transport={httpStatus:r.status,connected:v.connected===true};}catch{report.transport={readFailed:true};}
+const control=new NapCatControl({token:process.env.QQ_NAPCAT_TOKEN,accessToken:process.env.QQ_ACCESS_TOKEN});
+try{const s=await control.post('/QQLogin/CheckLoginStatus');report.login={isLogin:s.isLogin===true,isOffline:s.isOffline===true,coreReady:s.coreReady===true,phase:['ready','offline','reconnecting','waiting_qrcode','generating_qrcode','qrcode_scanned','initializing','failed'].includes(s.loginPhase)?s.loginPhase:'unknown'};const i=await control.post('/QQLogin/GetQQLoginInfo');report.nativeCore={online:i.online===true,expectedBotMatches:String(i.uin)==='3922489710'};}catch(e){report.gatewayError=code(e);}
+console.log(JSON.stringify(report));
+`;
+try{
+ const names=['gamehub-production-api-1','gamehub-production-agent-interactions-1','mooyu-qq-worker-1','mooyu-qq-napcat-1'],cs=JSON.parse(docker(['inspect',...names]));
+ console.log('containers '+JSON.stringify(cs.map(c=>({name:c.Name.slice(1),image:c.Image,running:c.State.Running,startedAt:c.State.StartedAt,restarts:c.RestartCount,health:c.State.Health?.Status??null,networks:Object.keys(c.NetworkSettings.Networks??{})}))));
+ const api=JSON.parse(docker(['exec',names[0],'node','--input-type=module','-e',apiCode])),worker=JSON.parse(docker(['exec',names[2],'node','--input-type=module','-e',workerCode]));
+ const ips=Object.values(cs.find(c=>c.Name==='/'+names[2]).NetworkSettings.Networks??{}).flatMap(n=>[n.IPAddress,n.GlobalIPv6Address]).filter(Boolean);
+ const checks={sharedSecretMatches:!!api.secretHash&&api.secretHash===worker.secretHash,apiDnsResolvesToWorker:!!api.controlAddresses?.length&&api.controlAddresses.every(ip=>ips.includes(ip)),probeTimestampGapMs:Math.abs((api.atMs??0)-(worker.atMs??0))};
+ delete api.secretHash;delete worker.secretHash;delete api.controlAddresses;
+ console.log('apiToControl '+JSON.stringify(api));console.log('workerToGateway '+JSON.stringify(worker));console.log('connectionChecks '+JSON.stringify(checks));
+ console.log('READONLY_COMPLETE_NO_LOGIN_NO_RESTART_NO_CONFIGURATION_WRITES');
+}catch(e){console.error(safe(e));process.exitCode=1;}

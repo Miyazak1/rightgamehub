@@ -1,0 +1,42 @@
+nice -n 10 /www/backup/gamehub/agent-plugins-stage-20261122-r3/node --input-type=module <<'NODE'
+// Narrow read-only diagnostics. Never dispatches events or modifies a ledger.
+import fs from 'node:fs';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';
+import {Cutover} from '/www/backup/gamehub/agent-cutover-generator-20261122-r1/agent-server-cutover.mjs';
+const SCHEDULE_AUDIT_SQL="SELECT COALESCE(json_agg(json_build_object('id',id,'workflow',workflow_key,'enabled',enabled,'timezone',timezone,'spec',schedule_spec_json,'lastFireAt',last_fire_at,'nextFireAt',next_fire_at,'suspended',config_json ? 'suspendedAt','workerState',config_json#>>'{worker,state}','workerHeartbeatAt',config_json#>>'{worker,heartbeatAt}')),'[]'::json) FROM agent_schedules";
+export const OUTBOX_SUMMARY_SQL="SELECT COALESCE(json_agg(x),'[]'::json) FROM (SELECT status,event_type,aggregate_type,count(*)::int AS count,min(created_at) AS oldest,max(created_at) AS newest,min(attempts) AS min_attempts,max(attempts) AS max_attempts FROM agent_runtime_outbox WHERE status<>'delivered' GROUP BY status,event_type,aggregate_type ORDER BY status,event_type,aggregate_type) x";
+export const OUTBOX_DETAILS_SQL="SELECT COALESCE(json_agg(x),'[]'::json) FROM (SELECT o.id,o.status,o.event_type,o.aggregate_type,o.attempts,o.created_at,o.available_at,o.lease_until,o.lease_until>now() AS lease_active,s.id AS stage_id,s.stage_key,s.status AS stage_status,r.id AS run_id,r.workflow_key,r.status AS run_status,r.created_at AS run_created_at,r.finished_at AS run_finished_at FROM agent_runtime_outbox o LEFT JOIN agent_run_stages s ON o.aggregate_type='stage' AND s.id=o.aggregate_id LEFT JOIN agent_runs r ON r.id=CASE WHEN o.aggregate_type='run' THEN o.aggregate_id ELSE s.run_id END WHERE o.status<>'delivered' ORDER BY o.created_at,o.id LIMIT 50) x";
+export function classifyPendingEvent(e){return e.aggregate_type==='stage'&&e.event_type==='stage.available'&&e.status==='pending'&&e.attempts===0&&!e.lease_until&&e.stage_id&&e.run_id&&['succeeded','skipped','failed','cancelled'].includes(e.stage_status)&&['succeeded','rejected','failed','cancelled'].includes(e.run_status)?'PENDING_NOTIFICATION_FOR_TERMINAL_STAGE':'REQUIRES_EVENT_SPECIFIC_REVIEW';}
+const ROOT='/www/backup/gamehub/agent-cutover-files-post-paper-20261122-r1';
+const fail=m=>{throw Error(m);};
+const env=c=>Object.fromEntries((c.Config.Env??[]).map(v=>{const i=v.indexOf('=');return[v.slice(0,i),v.slice(i+1)];}));
+export function diagnose(){
+ const state=JSON.parse(fs.readFileSync(ROOT+'/state.private.json','utf8')),dbs=Object.values(state.databases),errors=[],reports={};
+ const section=(name,fn)=>{try{reports[name]=fn();}catch(e){errors.push({section:name,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'READ_FAILED'});reports[name]={readFailed:true};}};
+ const sourceCode="const fs=require('node:fs'),crypto=require('node:crypto');for(const file of ['apps/api/src/agent-runtime-worker.mjs','apps/api/src/agent-blog-public-runtime-compat.mjs']){try{const b=fs.readFileSync(file),s=b.toString();console.log(JSON.stringify({file,sha256:crypto.createHash('sha256').update(b).digest('hex'),targetRunIdPresent:s.includes('targetRunId'),targetedOutboxBypassPresent:/const outbox\\s*=\\s*isolated(?:\\s*\\|\\|\\s*scopeRecoveryToHandlers)?\\s*\\?/.test(s),publicFactoryUsesTargetRunId:/targetRunId\\s*:\\s*runId/.test(s)}))}catch{console.log(JSON.stringify({file,readFailed:true}))}}";
+ const scheduler=state.roles.find(r=>r.role==='scheduler').container;
+ const run=(args,options={})=>{
+  let allowed=args[0]==='inspect';
+  if(args[0]==='exec'&&args.length===5&&args[1]===scheduler&&args[2]==='node'&&args[3]==='-e'&&args[4]===sourceCode)allowed=true;
+  const sql=args.at(-1);if(args[0]==='exec'&&args[1]==='-e'&&args[2]==='PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=8000 -c lock_timeout=1000'&&dbs.some(d=>d.container===args[3])&&args[4]==='psql'&&args.at(-2)==='-c'&&/^SELECT\b/.test(sql)&&!/[;]|\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|COPY|CALL|DO|VACUUM|ANALYZE|SET|RESET)\b/i.test(sql))allowed=true;
+  if(!allowed)fail('DIAGNOSTIC_MUTATION_REFUSED');
+  const actual=args[4]==='psql'?[...args.slice(0,-2),'-v','VERBOSITY=sqlstate',...args.slice(-2)]:args;
+  const r=spawnSync('docker',actual,{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024,...options});if(r.error||r.status!==0){const code=r.stderr?.match(/ERROR:\s*([A-Z0-9]{5})\b/)?.[1];fail(code?'SQLSTATE_'+code:'DIAGNOSTIC_READ_FAILED');}return r.stdout?.trim()??'';
+ };
+ const reader=new Cutover(ROOT,{run});reader.state=state;reader.processEnv={...process.env,...state.composeEnvironment};
+ const q=(role,sql)=>reader.sql(state.databases[role],sql),json=(role,sql)=>JSON.parse(q(role,sql));
+ section('identityPermissionsAndScheduleCorrected',()=>{
+  const names=['api','worker','scheduler'].map(role=>state.roles.find(r=>r.role===role).container),cs=JSON.parse(run(['inspect',...names])),a=env(cs[0]),w=env(cs[1]),s=env(cs[2]),current=reader.invariants();
+  const changed=Object.keys(state.invariants).filter(k=>current[k]!==state.invariants[k]);
+  return{agentIdsMatch:a.AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID===state.agentId&&a.QQ_ADMIN_AGENT_USER_ID===state.agentId&&w.QQ_ADMIN_AGENT_USER_ID===state.agentId&&s.AGENT_BLOG_PUBLIC_RUNTIME_AGENT_USER_ID===state.agentId,keysMatchWithoutValues:!!a.AGENT_SECRET_ENCRYPTION_KEY&&a.AGENT_SECRET_ENCRYPTION_KEY===s.AGENT_SECRET_ENCRYPTION_KEY&&!!a.AGENT_GITHUB_RESEARCH_TOKEN&&a.AGENT_GITHUB_RESEARCH_TOKEN===s.AGENT_GITHUB_RESEARCH_TOKEN&&!w.AGENT_SECRET_ENCRYPTION_KEY&&!w.AGENT_GITHUB_RESEARCH_TOKEN,changedDomains:changed,schedules:json('api',SCHEDULE_AUDIT_SQL),qqPolicy:json('qq',"SELECT COALESCE(json_agg(json_build_object('channel',channel_id,'enabled',policy->'enabled','groupId',policy->'groupId','allowedUsers',policy->'allowedUsers')),'[]'::json) FROM mooyu_qq.control_settings"),budgetUsage:json('api',"SELECT COALESCE(json_agg(x),'[]'::json) FROM (SELECT status,count(*)::int AS count,sum(charged_provider_calls)::text AS calls,sum(charged_cost_microusd)::text AS cost_microusd FROM agent_budget_reservations GROUP BY status) x")};
+ });
+ section('outboxSummary',()=>json('api',OUTBOX_SUMMARY_SQL));
+ section('outboxEventContext',()=>json('api',OUTBOX_DETAILS_SQL).map(e=>({...e,classification:classifyPendingEvent(e)})));
+ section('recentRuntimeWorkerStates',()=>json('api',"SELECT COALESCE(json_agg(x),'[]'::json) FROM (SELECT status,count(*)::int AS count,max(last_seen_at) AS latest_seen FROM agent_runtime_workers WHERE last_seen_at>now()-interval '15 minutes' GROUP BY status) x"));
+ section('schedulerImageReadOnlyCodeMarkers',()=>{const rows=run(['exec',scheduler,'node','-e',sourceCode]).split(/\r?\n/).map(x=>JSON.parse(x));if(rows.some(x=>x.readFailed))errors.push({section:'schedulerImageReadOnlyCodeMarkers',code:'SOURCE_FILE_READ_FAILED'});return rows;});
+ for(const [name,r]of Object.entries(reports))console.log(name+' '+JSON.stringify(r));
+ const total=(reports.outboxSummary??[]).reduce?.((n,r)=>n+r.count,0),inspected=Array.isArray(reports.outboxEventContext)?reports.outboxEventContext.length:null;
+ console.log('DIAGNOSTIC '+JSON.stringify({result:errors.length?'READONLY_DIAGNOSTIC_HAS_ERRORS':'READONLY_DIAGNOSTIC_COMPLETE',errors,eventContextLimit:50,totalNonDelivered:total??null,contextsInspected:inspected,allPendingEventsShown:total===inspected,executionLockedStillTrue:JSON.parse(fs.readFileSync(ROOT+'/state.private.json','utf8')).executionLocked===true,eventsDispatched:false,eventStatusesModified:false,serverFilesWritten:false,servicesChanged:false,paperServicesStarted:false,interpretationDoesNotAuthorizeQueueChanges:true}));
+}
+
+try { diagnose(); } catch(e) { console.error(JSON.stringify({result:'READONLY_DIAGNOSTIC_FAILED',code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'READ_FAILED',serverFilesWritten:false,servicesChanged:false,eventStatusesModified:false}));process.exitCode=1; }
+NODE

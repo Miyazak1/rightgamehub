@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const harness = require('./support/researcher-qa-db.cjs');
 
 async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit = 20,
-  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,
+  expectedFailure = null, expectedCalls = 5,candidateCount=1,materialCount=1,longEvidence=false,live=null,interactionExercise=null,searchQuality=null,compositionCitationRepair=true,compositionSchemaFailures=0,
   selectionIndexFailures=0,compositionTitleFailures=0,continuity=null,afterPublication=null,allowEmptyDiscovery=false,recoverAfterFailure=false,
   compositionInvalidTitle='用几条样式规则画生成艺术：css-doodle 上手笔记' } = {}) {
   const { admin } = await harness.setup();
@@ -104,7 +104,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   };
   const toolGateway = createAgentToolGateway({
     runtimeRepository: runtime, toolRepository, policyService,
-    adapters: live?.toolAdapters??{
+    adapters: searchQuality?.toolAdapters??live?.toolAdapters??{
       'research.github.repository.search@1': async ({request}) => ({
         receiptId: 'github-search:'+request.query, output: {
           schemaVersion: 'github-repository-search-v1',
@@ -127,10 +127,10 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         responseRef: { canonicalUri: materialsOutput.sourceVersion.canonicalUri, revision }, usage: { toolCalls: 1 },
       }),
     },
-    inputSchemas: { 'github.repository.search.input@1': validateGitHubRepositorySearchInput,
+    inputSchemas: { ...searchQuality?.inputSchemas,'github.repository.search.input@1': validateGitHubRepositorySearchInput,
       'github.repository.read.input@1': validateGitHubRepositoryReadInput,
       'github.repository.materials.read.input@1': validateGitHubRepositoryMaterialsInput },
-    outputSchemas: { 'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
+    outputSchemas: { ...searchQuality?.outputSchemas,'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
       'github.repository.read.output@1': validateGitHubRepositoryReadOutput,
       'github.repository.materials.read.output@1': validateGitHubRepositoryMaterialsOutput },
   });
@@ -142,7 +142,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
   await governance.registerModel({ provider: 'deepseek', modelId, catalogVersion: 1, status: 'active',
     taskClasses: ['structured-generation'], supportsJsonSchema: true, maxInputTokens: 60000, maxOutputTokens: 7000,
     inputPriceMicrousdPerMillion: 2000000, outputPriceMicrousdPerMillion: 4000000, config: { fixture: true } });
-  const masterKey=live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32);
+  const masterKey=live?.masterKey??(live?crypto.randomBytes(32).toString('hex'):'cd'.repeat(32));
   const vault = createAgentSecretVault({ masterKey });
   const encrypted = vault.encrypt(account.agentUserId, 'deepseek', live?.apiKey??'fixture-shadow-secret-key');
   await admin.query(`INSERT INTO agent_provider_secrets(
@@ -156,10 +156,11 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
     adapters: { deepseek: live?async request=>{
       providerInvocations++;
       if(request.responseSchema.key==='blog.subject.selection-attempt')selectionCalls++;
-      if(request.responseSchema.key==='blog.article.composition')compositionCalls++;
+      if(['blog.article.composition','blog.article.composition-attempt'].includes(request.responseSchema.key))compositionCalls++;
       return live.providerAdapter(request);
     }:async request => {
       providerInvocations += 1;
+      if(searchQuality)return {providerRequestId:'fixture-search:'+crypto.randomUUID(),output:await searchQuality.respond(request),responseRef:{},usage:{providerCalls:1,inputTokens:500,outputTokens:1200,costMicrousd:10}};
       const output = request.responseSchema.key === 'blog.discovery.query-plan'
         ? { queries: ['agent tool'],
           rationale: '选题范围关注可以快速体验的开放工具，因此先用普通关键词寻找具有明确用途和可观察结果的项目。',
@@ -194,13 +195,15 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
         if(selectionCalls<=selectionFailures){delete output.scores; delete output.decisionReasonCodes;}
         if(selectionCalls<=selectionIndexFailures)output.selectedIndexes=[candidateCount+1];
       }
-      if(request.responseSchema.key === 'blog.article.composition' && ++compositionCalls === 1) {
+      const compositionCall=['blog.article.composition','blog.article.composition-attempt'].includes(request.responseSchema.key);
+      if(compositionCall && ++compositionCalls === 1&&compositionCitationRepair) {
         output.blocks.find(block => block.type === 'paragraph').citationIndexes = [1,3];
       }
-      if(request.responseSchema.key === 'blog.article.composition'&&compositionCalls<=compositionTitleFailures){
+      if(compositionCall&&compositionCalls<=compositionSchemaFailures)delete output.followUpQuestions;
+      if(compositionCall&&compositionCalls<=compositionTitleFailures){
         output.title=compositionInvalidTitle;
       }
-      const correction=request.responseSchema.key==='blog.article.composition'
+      const correction=compositionCall
         ?JSON.parse(request.request.messages[1].content).correction:null;
       if(correction&&compositionTitleFailures>0){
         assert.deepEqual(correction.validation.invalidTitleTokens,[...new Set(compositionInvalidTitle.match(/[A-Za-z]+/gu))]);
@@ -208,7 +211,7 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       return { providerRequestId: `fixture:${crypto.randomUUID()}`, output, responseRef: {},
         usage: { providerCalls: 1, inputTokens: 500, outputTokens: 1200, costMicrousd: 10 } };
     } },
-    responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS },
+    responseSchemas: { ...BLOG_DISCOVERY_RESPONSE_SCHEMAS, ...BLOG_FOUNDATION_RESPONSE_SCHEMAS,...searchQuality?.responseSchemas },
   });
   const artifactRepository = new PostgresAgentRuntimeStageArtifactRepository(admin);
   const draftGateway = createAgentBlogFoundationDraftGateway({ runtimeRepository: runtime,
@@ -271,6 +274,9 @@ async function publicPipelineFixture(t, { selectionFailures = 1, agentCallLimit 
       WHERE id=$1 AND agent_user_id=$2`, [runId,account.agentUserId])).rows[0];
       return row ? { id: row.id, status: row.status, outputType: row.output_type, outputId: row.output_id,
         errorCode:row.error_code,completedStageCount:row.completed_stage_count } : null; } });
+  if(interactionExercise)return interactionExercise({pool:admin,agentId:account.agentUserId,operatorId,config,runtimeRepository:runtime,toolGateway,providerGateway,artifactRepository,draftGateway,publicationGateway,
+    discoveryHandlers,publicationHandlers:handlers,researchEvidenceRepository:new PostgresAgentResearchEvidenceRepository(admin),
+    inputRepository:new PostgresAgentBlogPrivateCanaryInputRepository(admin),preflightRepository:new PostgresAgentBlogPublicRuntimePreflightRepository(admin),providerCalls:()=>providerInvocations});
   let result;
   try { result = await runner.run({ requestId: crypto.randomUUID() }); }
   catch (error) {

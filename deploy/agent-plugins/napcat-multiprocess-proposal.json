@@ -1,0 +1,9 @@
+{
+  "services": {
+    "napcat": {
+      "environment": {
+        "NAPCAT_DISABLE_MULTI_PROCESS": "0"
+      }
+    }
+  }
+}

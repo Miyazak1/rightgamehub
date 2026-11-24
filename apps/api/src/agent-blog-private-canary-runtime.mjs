@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
+import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
 import { loadAgentBlogPrivateCanaryConfig,
   PostgresAgentBlogPrivateCanaryPreflightRepository } from './agent-blog-private-canary-preflight.mjs';
 import { PostgresAgentBlogPrivateCanaryInputRepository,
@@ -9,15 +10,6 @@ import { createAgentRuntimeWorker } from './agent-runtime-worker.mjs';
 import { createAgentRuntimePolicyService } from './agent-runtime-policy-service.mjs';
 import { PostgresAgentToolGatewayRepository } from './agent-tool-gateway-repository.mjs';
 import { createAgentToolGateway } from './agent-tool-gateway.mjs';
-import { GITHUB_REPOSITORY_SEARCH_TOOL, createGitHubRepositorySearchAdapter,
-  validateGitHubRepositorySearchInput,
-  validateGitHubRepositorySearchOutput } from './agent-github-repository-search-tool.mjs';
-import { GITHUB_REPOSITORY_READ_TOOL, createGitHubRepositoryReadAdapter,
-  validateGitHubRepositoryReadInput,
-  validateGitHubRepositoryReadOutput } from './agent-github-repository-tool.mjs';
-import { GITHUB_REPOSITORY_MATERIALS_TOOL, createGitHubRepositoryMaterialsAdapter,
-  validateGitHubRepositoryMaterialsInput,
-  validateGitHubRepositoryMaterialsOutput } from './agent-github-repository-materials-tool.mjs';
 import { ARXIV_PAPER_READ_TOOL, createArxivPaperReadAdapter, validateArxivPaperReadInput,
   validateArxivPaperReadOutput } from './agent-arxiv-paper-tool.mjs';
 import { PostgresAgentProviderGatewayRepository } from './agent-provider-gateway-repository.mjs';
@@ -36,7 +28,6 @@ import { PostgresAgentBlogCanaryAcceptanceRepository,
   createAgentBlogCanaryAcceptanceService } from './agent-blog-canary-acceptance.mjs';
 import { createAgentBlogPrivateCanarySupervisor } from './agent-blog-private-canary-supervisor.mjs';
 import { PostgresAgentResearchEvidenceRepository } from './agent-research-evidence-repository.mjs';
-import { normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
 import { PAPER_SEMANTIC_RESPONSE_SCHEMAS } from './agent-paper-semantic-contracts.mjs';
 import { createPaperSemanticCanary } from './agent-paper-semantic-workflow.mjs';
 import { PostgresAgentPaperSemanticRepository,
@@ -53,7 +44,8 @@ export function createAgentBlogPrivateCanaryRuntime({ env = process.env, applica
   if (!env.AGENT_SECRET_ENCRYPTION_KEY) throw new Error('AGENT_SECRET_ENCRYPTION_KEY is required');
   const config = loadAgentBlogPrivateCanaryConfig(env);
   if (!config.enabled) throw new Error('AGENT_BLOG_PRIVATE_CANARY_DISABLED');
-  const githubResearchToken = normalizeGitHubResearchToken(env.AGENT_GITHUB_RESEARCH_TOKEN);
+  const pluginHost=createBuiltinAgentPluginHost({env});
+  const githubTools=pluginHost.toolConfiguration({env});
   const ownsPool = !suppliedPool;
   const pool = suppliedPool ?? new pg.Pool({
     connectionString: env.DATABASE_URL, max: 3, connectionTimeoutMillis: 5000,
@@ -67,27 +59,18 @@ export function createAgentBlogPrivateCanaryRuntime({ env = process.env, applica
   const toolGateway = createAgentToolGateway({
     runtimeRepository, toolRepository: new PostgresAgentToolGatewayRepository(pool), policyService,
     adapters: {
-      [`${GITHUB_REPOSITORY_SEARCH_TOOL.toolKey}@${GITHUB_REPOSITORY_SEARCH_TOOL.contractVersion}`]:
-        createGitHubRepositorySearchAdapter({ token: githubResearchToken }),
-      [`${GITHUB_REPOSITORY_READ_TOOL.toolKey}@${GITHUB_REPOSITORY_READ_TOOL.contractVersion}`]:
-        createGitHubRepositoryReadAdapter({ token: githubResearchToken }),
-      [`${GITHUB_REPOSITORY_MATERIALS_TOOL.toolKey}@${GITHUB_REPOSITORY_MATERIALS_TOOL.contractVersion}`]:
-        createGitHubRepositoryMaterialsAdapter({ token: githubResearchToken }),
+      ...githubTools.adapters,
       ...(arxivEnabled ? {
         [`${ARXIV_PAPER_READ_TOOL.toolKey}@${ARXIV_PAPER_READ_TOOL.contractVersion}`]:
           createArxivPaperReadAdapter({ contactEmail: env.AGENT_ARXIV_CONTACT_EMAIL }),
       } : {}),
     },
     inputSchemas: {
-      'github.repository.search.input@1': validateGitHubRepositorySearchInput,
-      'github.repository.read.input@1': validateGitHubRepositoryReadInput,
-      'github.repository.materials.read.input@1': validateGitHubRepositoryMaterialsInput,
+      ...githubTools.inputSchemas,
       ...(arxivEnabled ? { 'paper.arxiv.read.input@1': validateArxivPaperReadInput } : {}),
     },
     outputSchemas: {
-      'github.repository.search.output@1': validateGitHubRepositorySearchOutput,
-      'github.repository.read.output@1': validateGitHubRepositoryReadOutput,
-      'github.repository.materials.read.output@1': validateGitHubRepositoryMaterialsOutput,
+      ...githubTools.outputSchemas,
       ...(arxivEnabled ? { 'paper.arxiv.read.output@2': validateArxivPaperReadOutput } : {}),
     },
   });
@@ -125,7 +108,7 @@ export function createAgentBlogPrivateCanaryRuntime({ env = process.env, applica
     pollMilliseconds: 1000, recoveryBatch: 1, outboxBatch: 25,
     metadata: { role: kind, agentUserId: config.agentUserId },
   });
-  const runner = createAgentBlogPrivateCanaryManualRunner({
+  const originalRunner = createAgentBlogPrivateCanaryManualRunner({
     config,
     preflightRepository: new PostgresAgentBlogPrivateCanaryPreflightRepository(pool),
     inputRepository: new PostgresAgentBlogPrivateCanaryInputRepository(pool),
@@ -136,6 +119,7 @@ export function createAgentBlogPrivateCanaryRuntime({ env = process.env, applica
     createDiscoveryWorker: (runId, requestId) => worker(requestId, runId, discoveryHandlers, 'discovery'),
     createDraftWorker: (runId, requestId) => worker(requestId, runId, draftHandlers, 'draft'),
   });
+  const runner={...originalRunner,run:async(...args)=>{pluginHost.requirePlugin('mooyu.github');return originalRunner.run(...args);}};
   const acceptanceService = createAgentBlogCanaryAcceptanceService({
     repository: new PostgresAgentBlogCanaryAcceptanceRepository(pool),
   });

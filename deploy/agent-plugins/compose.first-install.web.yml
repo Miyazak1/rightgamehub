@@ -1,0 +1,3 @@
+services:
+  web:
+    image: ${TARGET_WEB_IMAGE_ID:?use the verified immutable Web image ID}

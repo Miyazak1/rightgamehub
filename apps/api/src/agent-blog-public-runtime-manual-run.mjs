@@ -110,6 +110,8 @@ export function createAgentBlogPublicRuntimeManualRunner({
         || triggerRef.length < 1 || triggerRef.length > 240) {
         fail('AGENT_BLOG_PUBLIC_RUNTIME_TRIGGER_INVALID');
       }
+      const ownerCheckpoint=await requestRepository?.checkpoint?.(config.agentUserId,requestId);
+      if(ownerCheckpoint?.snapshot_json?.executionSource==='agent-interaction-v1')fail('AGENT_PUBLIC_REQUEST_EXECUTOR_MISMATCH');
       const completed = await requestRepository?.findCompleted({ agentUserId:config.agentUserId, requestId });
       if (completed) {
         await requestRepository?.reconcileCompleted?.(config.agentUserId,requestId,completed);

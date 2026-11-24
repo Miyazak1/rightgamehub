@@ -1,0 +1,12 @@
+import React,{useEffect,useState} from 'react';
+export default function AgentChannelParticipants({api,agentId}){
+ const [rows,setRows]=useState(null),[channel,setChannel]=useState('qq'),[actorRef,setActorRef]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const load=async()=>{const {data}=await api.getAgentChannelParticipants(agentId);setRows(data);};
+ useEffect(()=>{let alive=true;api.getAgentChannelParticipants?.(agentId).then(({data})=>{if(alive)setRows(data);}).catch(e=>{if(alive&&e.status!==404)setError(e.message);});return()=>{alive=false;};},[api,agentId]);
+ if(!rows)return error?<p role="alert">{error}</p>:null;
+ async function save(entry,canInvoke){setBusy(true);setError('');try{await api.updateAgentChannelParticipant(agentId,{channel:entry.channel,actorRef:entry.actor_ref,canInvoke,expectedRevision:entry.revision??0});await load();setActorRef('');}catch(e){setError(e.message);await load().catch(()=>{});}finally{setBusy(false);}}
+ return <section className="agent-control-card"><h3>小墨鱼任务发起权限</h3><p>Chat 和 QQ 共同使用小墨鱼的工具、预算和发布策略。这里授权谁能发起研究写作；QQ 仍需通过原群和提问者白名单。网站操作者拥有管理权限，论文保持关闭。</p>
+  {rows.map(r=><p key={r.channel+':'+r.actor_ref}>{r.channel==='qq'?'QQ':'Chat'} · {r.actor_ref} · {r.can_invoke&&r.status==='active'?'允许发起':'仅对话'} <button disabled={busy} onClick={()=>save(r,!r.can_invoke)}>{r.can_invoke?'收回任务权限':'允许发起任务'}</button></p>)}
+  <form onSubmit={e=>{e.preventDefault();const ref=actorRef.trim();const old=rows.find(r=>r.channel===channel&&r.actor_ref===ref);save(old??{channel,actor_ref:ref,revision:0},true);}}><label>入口 <select value={channel} onChange={e=>setChannel(e.target.value)}><option value="qq">QQ</option><option value="web">网站 Chat</option></select></label><label>{channel==='qq'?'QQ 号':'网站用户 UUID'} <input value={actorRef} maxLength={160} onChange={e=>setActorRef(e.target.value)}/></label><button disabled={busy||!actorRef.trim()}>授权发起任务</button></form>{error&&<p role="alert">{error}</p>}
+ </section>;
+}

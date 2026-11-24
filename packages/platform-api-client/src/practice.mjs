@@ -106,6 +106,7 @@ export function createPracticeApiClient({ baseUrl = '', fetchImpl = globalThis.f
   }
   return {
     getAssistantCapabilities: options => request('/v1/me/assistant/capabilities', { ...options, auth: true }),
+    getAgentInteraction: (id, options) => request('/v1/me/agent/interactions/'+encodeURIComponent(id),{...options,auth:true}),
     sendAssistantMessage: (body, options) => request('/v1/me/assistant/messages', { requestTimeoutMs:80000,...options, method: 'POST', body, auth: true }),
     executeAgentTool: (name,args={},options) => request('/v1/me/agent/tools',{...options,method:'POST',body:{name,arguments:args},auth:true}),
     getLearningInsights: (query={},options) => request('/v1/me/learning/insights?'+new URLSearchParams(Object.entries(query).filter(([,v])=>v!==undefined&&v!==null&&v!=='')),{...options,auth:true}),

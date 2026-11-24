@@ -1,4 +1,5 @@
 import { registerPlatformAssistantRoutes } from './platform-assistant.mjs';
+import {registerAgentInteractionRoutes} from './agent-interaction-routes.mjs';
 import { registerPlatformAgentRoutes } from './platform-agent-tools.mjs';
 import { PracticeError } from './practice/error.mjs';
 import { registerPracticeRoutes } from './practice/routes.mjs';
@@ -59,6 +60,7 @@ import {AgentCapabilityHostError} from './agent-capability-host-service.mjs';
 import {AgentBlogPublicationOwnershipError} from './agent-blog-publication-ownership.mjs';
 import {registerAgentAccountRoutes} from './agent-account-routes.mjs';
 import {registerAgentQQAdminRoutes} from './agent-qq-admin-routes.mjs';
+import {registerAgentPluginAdminRoutes} from './agent-plugin-admin.mjs';
 import {QQAdminError} from './qq-admin-protocol.mjs';
 import {registerAgentCapabilityExecutionRoutes} from './agent-capability-execution-routes.mjs';
 import {registerAgentCapabilityHostRoutes} from './agent-capability-host-routes.mjs';
@@ -150,6 +152,7 @@ export function createApp(dependencies) {
     blogService,
     agentAccountService,
     agentQQAdminService,
+    agentPluginAdminService,
     agentBlogAutomation,
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
@@ -325,6 +328,7 @@ export function createApp(dependencies) {
   const requireAuth = async request => { request.actor = await authService.authenticateBearer(request.headers.authorization); };
   if (practiceService) registerPracticeRoutes(app, {service:practiceService, requireAuth});
   if (dependencies.platformAssistantService) registerPlatformAssistantRoutes(app, {service:dependencies.platformAssistantService, requireAuth});
+  if(dependencies.agentInteractionService)registerAgentInteractionRoutes(app,{service:dependencies.agentInteractionService,requireAuth,channelSecret:dependencies.agentChannelSecret});
   if (dependencies.platformAgentTools) registerPlatformAgentRoutes(app, {tools:dependencies.platformAgentTools,requireAuth});
   if (dependencies.paperStudyService) registerPaperStudyRoutes(app,{service:dependencies.paperStudyService,requireAuth});
   if (researchQaHttpGateway) registerResearchQaHttpRoutes(app,{gateway:researchQaHttpGateway,requireAuth});
@@ -334,6 +338,7 @@ export function createApp(dependencies) {
   if (blogService) registerBlogRoutes(app,{service:blogService,followUpService:agentBlogFollowUpService,requireAuth,siteOrigin});
   if (agentAccountService && agentBlogAutomation) registerAgentAccountRoutes(app,{accountService:agentAccountService,automation:agentBlogAutomation,runtimeRead:agentRuntimeReadService,paperFollowUp:agentPaperFollowUpService,paperIntake:agentPaperIntakeService,paperDiscovery:agentPaperDiscoveryService,paperResearch:agentPaperResearchExecutionService,paperResearchOperations:agentPaperResearchOperationsService,publicationCutover:agentBlogPublicationCutoverService,publicOperations:agentBlogPublicOperationsService,requireAuth});
   if(agentQQAdminService)registerAgentQQAdminRoutes(app,{service:agentQQAdminService,requireAuth});
+  if(agentPluginAdminService)registerAgentPluginAdminRoutes(app,{service:agentPluginAdminService,requireAuth});
   if (agentCapabilityExecutionService) registerAgentCapabilityExecutionRoutes(app,{service:agentCapabilityExecutionService,requireAuth});
   if (agentCapabilityHostService) registerAgentCapabilityHostRoutes(app,{service:agentCapabilityHostService,requireAuth});
   if (agentExecutionNodeAccessService) registerAgentExecutionNodeAccessRoutes(app,{service:agentExecutionNodeAccessService,requireAuth});

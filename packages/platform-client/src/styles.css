@@ -2929,3 +2929,14 @@ footer.community-actions > .community-report-button {
 .agent-qq-admin details{margin-top:18px;font-size:12px}
 .agent-qq-admin details li{margin:8px 0;overflow-wrap:anywhere}
 @media(max-width:680px){.qq-admin-fields{grid-template-columns:1fr}.qq-admin-status{flex-direction:column;gap:6px}}
+/* Plugin inventory shares the existing Agent administration controls. */
+.agent-plugin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin:18px 0}
+.agent-plugin-card{min-width:0;padding:18px;border:1px solid var(--gh-border);border-radius:12px}
+.agent-plugin-card>header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.agent-plugin-card h4{margin:0;font-size:1.05rem}
+.agent-plugin-card p,.agent-plugin-card li{overflow-wrap:anywhere}
+.agent-plugin-card dl{margin:16px 0}
+.agent-plugin-card dl>div{display:grid;grid-template-columns:90px 1fr;gap:10px;margin:10px 0}
+.agent-plugin-card dt{opacity:.7}.agent-plugin-card dd{margin:0;overflow-wrap:anywhere}
+.agent-plugin-card details{margin:14px 0}.agent-plugin-card summary{cursor:pointer}
+.agent-plugin-id{font-size:.85rem;opacity:.7}

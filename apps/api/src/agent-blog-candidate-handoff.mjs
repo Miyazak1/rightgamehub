@@ -1,5 +1,5 @@
 import { normalizeAgentBehaviorProfile } from './agent-behavior-profile.mjs';
-import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,
+import { BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW,
   BLOG_PROJECT_SINGLE_WORKFLOW } from './agent-blog-foundation-workflows.mjs';
 import { normalizeBlogFoundationPublicInput,
   normalizeBlogFoundationShadowInput } from './agent-blog-foundation-shadow.mjs';
@@ -123,4 +123,10 @@ export function createAgentBlogCandidatePublicHandoff(dependencies = {}) {
     handoffKind: 'blog.candidate-set-to-public-article',
     disabledCode: 'AGENT_BLOG_PUBLIC_HANDOFF_DISABLED',
   });
+}
+
+export function createAgentBlogCandidateInteractionDraftHandoff(dependencies={}){
+ return createCandidateHandoff(dependencies,{workflow:BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW,
+  normalizeInput:normalizeBlogFoundationShadowInput,inputSchemaVersion:'blog-project-single-shadow-input-v2',
+  handoffKind:'blog.candidate-set-to-private-draft',disabledCode:'AGENT_BLOG_HANDOFF_CANARY_DISABLED'});
 }

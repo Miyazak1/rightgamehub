@@ -1,0 +1,1968 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-24",
+  "branch": "codex/qq-github-release-sync-20261124",
+  "prBaseBranch": "codex/qq-password-login",
+  "baseCommit": "55b2f7e8144a4f279facd888bb208079a3459dc9",
+  "sourceSnapshotTag": "source-alignment-20261124-r1",
+  "sourceSnapshotTagIsProductionRelease": false,
+  "previousLocalHead": "a3197ea112f5d3b0e15d7659006da9c3a1c48f8d",
+  "previousUnpublishedCommits": [
+    "c1823ffa7da0601de6fd0ef9eecb4ab287bbeeb7",
+    "5beeec952ad08a55e69bd27acd5d65aa765a7df0",
+    "d9367638afb4559fa188e4d9a74ec2906c971aac",
+    "e685acfb103f6ed108b2e066f627e844788b8ef6",
+    "45ad7c6e43930cc495924ccbb76aa376aa36b5d2",
+    "d2aefc5d5e39ec192c4047543a45e2d16fb06157",
+    "73b44ddd6dcbc04c720cba32ec22ba0e0410b84f",
+    "ca64cc08a53a8c94022270cb1ca04d2b47301ebb",
+    "d6456fcb5699e0975a22ceba7a8db00639dc9291",
+    "bdc2ca83e0fe41821b4df42be62493f5bf1083b3",
+    "488e4eda279004cdb52caef4873c2ae44872db68",
+    "e48b2d452b54bc5c0f35d764d8885913b7118f61",
+    "073b4817808a8ec504d82e82f6a03629597b0d32",
+    "5c3cac3ea1ef9d542345f862e9dbdefc052168df",
+    "3d6d973d1dcefa2b4843928581896bf21a7637cd",
+    "1553c613a2bdfa86095cb9f200d454d76a9b0c54",
+    "dc505a7d8f62525d188b75bb84363d2a166890d7",
+    "c97f185ecc124d1aaa9925bcb79df51b7b8580f1",
+    "5cd4ec812686b6fa780b33fc563efc5f01c2d93e",
+    "d4066e1e8b5691d82627ff3e9495e199a1cf566a",
+    "fd71918a6bdd155871ecf1be345caa7ad866ed6e",
+    "8e5991cae5a64c83f6ccde9870aa5ab387cd6fd0",
+    "fefdcad67b69b01b9293da34708f9619f8edb0ed",
+    "179b4e11c10c94d094e004b6cd979a7ef0bff589",
+    "926c5101e24d0636359438852d62304d9cf6d3b4",
+    "a3197ea112f5d3b0e15d7659006da9c3a1c48f8d"
+  ],
+  "excludedLocalFiles": [
+    "deploy/agent-plugins/server-all-paper-plan-generate-only-command.txt",
+    "deploy/agent-plugins/server-desktop-paper-readonly-command.txt",
+    "deploy/agent-plugins/server-final-post-paper-readonly-command-v2.txt",
+    "deploy/agent-plugins/server-final-post-paper-readonly-command-v3.txt",
+    "deploy/agent-plugins/server-final-post-paper-readonly-command-v4.txt",
+    "deploy/agent-plugins/server-final-post-paper-readonly-command.txt",
+    "deploy/agent-plugins/server-post-paper-generate-only-command.txt",
+    "docs/paper-only-close-execution-review-20261122.zh-CN.md",
+    "scripts/build-final-readonly-command.mjs",
+    "scripts/build-locked-cutover-handoff.mjs",
+    "scripts/desktop-paper-close-plan.mjs",
+    "scripts/desktop-paper-readonly-probe.mjs",
+    "scripts/execute-paper-only-close.mjs",
+    "scripts/final-post-paper-readonly-audit.mjs",
+    "scripts/generate-all-paper-plan.mjs",
+    "scripts/paper-close-command-plan.mjs",
+    "scripts/post-paper-generation-tail.mjs",
+    "scripts/verify-desktop-paper-close-compose.mjs",
+    "scripts/verify-paper-only-close-local.mjs",
+    "tests/platform/all-paper-plan-preservation.test.mjs",
+    "tests/platform/desktop-paper-close-plan.test.mjs",
+    "tests/platform/execute-paper-only-close.test.mjs",
+    "tests/platform/final-post-paper-readonly-audit.test.mjs",
+    "tests/platform/locked-cutover-handoff.test.mjs",
+    "tests/platform/paper-close-command-plan.test.mjs",
+    "tests/platform/post-paper-generation-tail.test.mjs"
+  ],
+  "excludedFilesPreserved": true,
+  "sourceFiles": [
+    {
+      "path": "apps/api/migrations/0164_agent_interactions.sql",
+      "normalization": "lf",
+      "sha256": "ad7b4b36ff83586c6b47412e032bd3a48afc9855624577d8de42842791b0ee4d"
+    },
+    {
+      "path": "apps/api/migrations/0165_agent_github_question.sql",
+      "normalization": "lf",
+      "sha256": "a1d82b22344da5a42275020156f2903db7254c6e70129c0ad3afca85e03acccd"
+    },
+    {
+      "path": "apps/api/migrations/0166_agent_plugin_tasks.sql",
+      "normalization": "lf",
+      "sha256": "0d3683d6d7155b7bdada9c83175777fb542971f896082bbee56116a868921e93"
+    },
+    {
+      "path": "apps/api/package.json",
+      "normalization": "lf",
+      "sha256": "6e1772cc03d47df95786de5a3c9967e75c50e015e220aa27c801ea4dc9f700fb"
+    },
+    {
+      "path": "apps/api/src/agent-article-images.mjs",
+      "normalization": "lf",
+      "sha256": "c766b039cf329b53829b64d6dfcc60395a82c47b6ef1161b431029830145d0cb"
+    },
+    {
+      "path": "apps/api/src/agent-blog-candidate-handoff.mjs",
+      "normalization": "lf",
+      "sha256": "06d3f06633f9ff781aff7a29a5c12bd2c3f34c7860465c78b372a08fe201e25e"
+    },
+    {
+      "path": "apps/api/src/agent-blog-foundation-generation.mjs",
+      "normalization": "lf",
+      "sha256": "bc459b33284cb388092dd0e541afca9b21dd77cd51d20da398f2e78118391451"
+    },
+    {
+      "path": "apps/api/src/agent-blog-foundation-workflows.mjs",
+      "normalization": "lf",
+      "sha256": "6e674783297ff114de60bb9129d3b2e3939985c59d3a4eb1fa4f63c375c0df61"
+    },
+    {
+      "path": "apps/api/src/agent-blog-private-canary-manual-run-cli.mjs",
+      "normalization": "lf",
+      "sha256": "e2849d4a38084cba9c1cad0ea785c0dfe5ba7e7e07a9df913df9e3ac250e5ae0"
+    },
+    {
+      "path": "apps/api/src/agent-blog-private-canary-runtime.mjs",
+      "normalization": "lf",
+      "sha256": "aa43953522031df4828a8337779df3d114e7f2b3964ec6f8f1a6db2a2682cd69"
+    },
+    {
+      "path": "apps/api/src/agent-blog-private-schedule-worker-cli.mjs",
+      "normalization": "lf",
+      "sha256": "611fdf41fd6a05beb74ecabd9ec9e5c27537b5c3bba2d0055b133b2261aaf6fc"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-request-repository.mjs",
+      "normalization": "lf",
+      "sha256": "03b7ea6c36bb519f62cac959a8b87955d2872bc5517f5d8caeaecd43cca56e8b"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-runtime-bootstrap.mjs",
+      "normalization": "lf",
+      "sha256": "46e29889776912bc89e639d3dbd2c91ecea5c933c97df9356e88cb598ccbf285"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-runtime-compat.mjs",
+      "normalization": "lf",
+      "sha256": "59d95df59df815368307fed5c92901c8b0c03fae43a9609aff3816a5ea05591f"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-runtime-manual-run.mjs",
+      "normalization": "lf",
+      "sha256": "674ccd24f8d839d7e1c9a0772523d3d5c44913eee811ca24eb83eba481e82df4"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-runtime.mjs",
+      "normalization": "lf",
+      "sha256": "99e6e1e6f90b0dd311dd7c8c4478cbd9c37c428b171799d1cdf7782de9840197"
+    },
+    {
+      "path": "apps/api/src/agent-blog-public-schedule.mjs",
+      "normalization": "lf",
+      "sha256": "e5eb4a860aee762ba8a497a87b98ee0eec61cf24d738c9e74b88771bca08eb71"
+    },
+    {
+      "path": "apps/api/src/agent-channel-protocol.mjs",
+      "normalization": "lf",
+      "sha256": "eba207bf178cfa1e24b66159bdec7f34c8180413edb85eeb768be213205e611d"
+    },
+    {
+      "path": "apps/api/src/agent-github-code-tool.mjs",
+      "normalization": "lf",
+      "sha256": "b3214e9b768bec2affa4e29ffad8eaa138ea5ca92f42e497e3496d48ef5e1579"
+    },
+    {
+      "path": "apps/api/src/agent-github-question.mjs",
+      "normalization": "lf",
+      "sha256": "1222016982f57ab12506fdb8ea0f701f5a08c323df35b7ee460ba9d1c78bacf0"
+    },
+    {
+      "path": "apps/api/src/agent-github-repository-search-tool.mjs",
+      "normalization": "lf",
+      "sha256": "56deee10747d91c8d85414640b2f360755b7b3dfee01cc4a300174da21fb565d"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-bootstrap-cli.mjs",
+      "normalization": "lf",
+      "sha256": "cb8ccbc36f4b1f6126e3662daf3a9b80bd793995f878dec9bcdc0f0e2fdf2750"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-bootstrap.mjs",
+      "normalization": "lf",
+      "sha256": "f8f3797f790552848370ff808c9db90a8afd7c676de1c93a81030365be6e282d"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-config.mjs",
+      "normalization": "lf",
+      "sha256": "02f715a83cf2722869c46d2cf2201111c5008e5dc3b22ed6db75be149db53bac"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-contracts.mjs",
+      "normalization": "lf",
+      "sha256": "6e8d04e566acb208b308cfea274a85729f64efb40e536aea2b746472aeb34940"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-conversation.mjs",
+      "normalization": "lf",
+      "sha256": "0a77a8601821bd5f6df886af27bb2d75e9335f8d1c810c3b2da593d8f025b5c5"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-github.mjs",
+      "normalization": "lf",
+      "sha256": "144ee2781ce22dc1d814ad42b6b4a0eb7d54b116c9d5970b7d11a06c43ba6769"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-repository.mjs",
+      "normalization": "lf",
+      "sha256": "5ce206110cb6e51973bc8a949d6a9cfaf4c66e6fd340123da9273742b981d181"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-routes.mjs",
+      "normalization": "lf",
+      "sha256": "c5e5e18f4289f81628c2887a271cdc184c5d846cd0df7480245e7a6bf1c45171"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-runtime.mjs",
+      "normalization": "lf",
+      "sha256": "26f246c0615f77ba1d796066c99b999845ad7961418c1ada71b7ae509c225ed1"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-service.mjs",
+      "normalization": "lf",
+      "sha256": "75b03586a6caa37e37f149df4f6553f079d6e948569f13d2af92a55fa5744659"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-task-receipts.mjs",
+      "normalization": "lf",
+      "sha256": "5a0abe8f1f4bad4dffb311cb21eb3d88711a06b23b283eac3c6c1f3ed9b6c105"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-worker-cli.mjs",
+      "normalization": "lf",
+      "sha256": "2384ae0d78f49f1ef215d6e5f026d8baba7a56a9e9f0ed9417621a0443d7dbc2"
+    },
+    {
+      "path": "apps/api/src/agent-interaction-worker.mjs",
+      "normalization": "lf",
+      "sha256": "2724e52e3158ca08d53f74aab3a78834f956f0a88dd5a6e8a5eee5c3b39d3e1e"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-admin.mjs",
+      "normalization": "lf",
+      "sha256": "57db8eef5eec25220c639b1a47648588cb5f61e00cab7a393293f81ca10405ee"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-catalog.mjs",
+      "normalization": "lf",
+      "sha256": "8b97bc50c8232059739fb7fdc625455954c1ca55910e536cbbee696f61b73da5"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-config.mjs",
+      "normalization": "lf",
+      "sha256": "bdc0856ab54e032b0c911dc215db44bbf4b9769d6c149e0a1a981a3f3fb5c41e"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-contract.mjs",
+      "normalization": "lf",
+      "sha256": "aae156ab1c14d55fe17fbb2e47f4fdfa963510392bf1879875793fbf1f07b7f4"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-host.mjs",
+      "normalization": "lf",
+      "sha256": "04db169a56d8e8287f7a23855783880892b76c2222e16ac4d7402d5f7e00d34e"
+    },
+    {
+      "path": "apps/api/src/agent-plugin-release-readiness.mjs",
+      "normalization": "lf",
+      "sha256": "e6c83cf4589bab581a41156a7eb27d7a8f17d9fdbc72f74d90ca6c2044cf31c3"
+    },
+    {
+      "path": "apps/api/src/agent-plugins/github/admission.mjs",
+      "normalization": "lf",
+      "sha256": "07cb8334570c8f90b1fc7df6e5cbbf6282f27d43eaea4b352b5d0e80036687f4"
+    },
+    {
+      "path": "apps/api/src/agent-plugins/github/index.mjs",
+      "normalization": "lf",
+      "sha256": "438e291c7a1118d3f38a1a12f921f4b7e8f7d64db78eb27fbcf9ae384cbfdbb3"
+    },
+    {
+      "path": "apps/api/src/agent-plugins/github/runtime.mjs",
+      "normalization": "lf",
+      "sha256": "2dce832493493fe13910b33219d0b76dcfd69f6540efaea290ba09de44005846"
+    },
+    {
+      "path": "apps/api/src/agent-plugins/github/search.mjs",
+      "normalization": "lf",
+      "sha256": "0bd0ec7aeec713775fdaff1d13f6ba0200e385fce3da8477368b6b0b61b6a09b"
+    },
+    {
+      "path": "apps/api/src/agent-plugins/github/tools.mjs",
+      "normalization": "lf",
+      "sha256": "e8df41f628b3da965c9eeba666b51c4821991bc2da88ab6eb0ac634f486fdec4"
+    },
+    {
+      "path": "apps/api/src/agent-qq-admin-service.mjs",
+      "normalization": "lf",
+      "sha256": "ae4330ee4a1a83c88814ded83d6e821e287903d56eb228d4fd9567fd2ea74629"
+    },
+    {
+      "path": "apps/api/src/agent-runtime-repository.mjs",
+      "normalization": "lf",
+      "sha256": "ce62df00b23b6931e3fecbb7576dddf3503f4c913bb98fba076123826350fda4"
+    },
+    {
+      "path": "apps/api/src/agent-runtime-services.mjs",
+      "normalization": "lf",
+      "sha256": "908b9be5e10b7fa56eaaebd700e93e8205280b0a972a7227c058405690973a7c"
+    },
+    {
+      "path": "apps/api/src/app.mjs",
+      "normalization": "lf",
+      "sha256": "7b1d771ddbefe53a58273d81bc3615bfa54505ce50839478d0e895d8bca24142"
+    },
+    {
+      "path": "apps/api/src/platform-assistant.mjs",
+      "normalization": "lf",
+      "sha256": "ccc3af8fe7dbef763f8cbbc60d1beb7b43d291b7431c72d4323a177a533c6bd8"
+    },
+    {
+      "path": "apps/api/src/runtime.mjs",
+      "normalization": "lf",
+      "sha256": "9541820c96062c1cf688f81f292b15b66d2be760e4909756167c8dbd9ffe78e9"
+    },
+    {
+      "path": "apps/qq-channel/src/agent-bridge.mjs",
+      "normalization": "lf",
+      "sha256": "532c45ea94ac8cb3560468b4637dc8bf42f189da2ced84e3c6cc8bd6b473276e"
+    },
+    {
+      "path": "apps/qq-channel/src/agent-schema.sql",
+      "normalization": "lf",
+      "sha256": "ac27d9de63af4bbdd045f01d71b2b5d9c8fb1d042f61fd885155d7e0304311ee"
+    },
+    {
+      "path": "apps/qq-channel/src/article-image.mjs",
+      "normalization": "lf",
+      "sha256": "13b0f2be0e9d75717b1f43226d20d466ae7ada66f4218298ef0fe3e358a3550a"
+    },
+    {
+      "path": "apps/qq-channel/src/cli.mjs",
+      "normalization": "lf",
+      "sha256": "8d7276e6c11b921df057560381312a5a8d892db0f3a0d3ef135c693dcf57808d"
+    },
+    {
+      "path": "apps/qq-channel/src/control-server.mjs",
+      "normalization": "lf",
+      "sha256": "362e81121bcb2589ad4e406b2ba31942fb985ad75afc67ee50971647d2cdd47b"
+    },
+    {
+      "path": "apps/qq-channel/src/control-store.mjs",
+      "normalization": "lf",
+      "sha256": "f46deb153a85aba8a97fc75531e0287a18b13e4ef2bfded26f4982564fcf3410"
+    },
+    {
+      "path": "apps/qq-channel/src/napcat-control.mjs",
+      "normalization": "lf",
+      "sha256": "cc43df6caad259729669481b4d3b2f008b9a2e730f99e732adad3b8359b22398"
+    },
+    {
+      "path": "apps/qq-channel/src/onebot.mjs",
+      "normalization": "lf",
+      "sha256": "baad514c1ff0bdf22afe002a2f335a4d426ba2c3c3eaa132401c6c2513d377de"
+    },
+    {
+      "path": "apps/qq-channel/src/plugin-catalog.mjs",
+      "normalization": "lf",
+      "sha256": "c3ecb916175470076978077438748cb17b4f104e9ee873f9ec01e4637088c2fd"
+    },
+    {
+      "path": "apps/qq-channel/src/plugins/qq/index.mjs",
+      "normalization": "lf",
+      "sha256": "e37c2fe0880ee10548c5b64194e33bf2e49a88d52acef76b4d65e3825dd2d2a4"
+    },
+    {
+      "path": "apps/qq-channel/src/plugins/qq/manifest.mjs",
+      "normalization": "lf",
+      "sha256": "f9477c9c69222870948b2f4922af94024c1b021ca7737750e46cea03207b9e2c"
+    },
+    {
+      "path": "apps/qq-channel/src/plugins/qq/runtime.mjs",
+      "normalization": "lf",
+      "sha256": "66632c127360c598e62d78cbee6bb23c48a2fc1849f707f8dfba2645fd17b3aa"
+    },
+    {
+      "path": "apps/qq-channel/src/recovery-policy.mjs",
+      "normalization": "lf",
+      "sha256": "591b1180494cf5977fcd7ff56aacf389cc0254dae2f5c6e99c2b033548cf0416"
+    },
+    {
+      "path": "apps/qq-channel/src/repository.mjs",
+      "normalization": "lf",
+      "sha256": "5f42024ff795b71acf997c4ba0a19724d2154fd9e08223b75ae0a38c9abe5432"
+    },
+    {
+      "path": "apps/qq-channel/src/service.mjs",
+      "normalization": "lf",
+      "sha256": "db240ad124648af5dbf6f49b1b2f57f2cdc71696189e847d8700971489da78d9"
+    },
+    {
+      "path": "deploy/agent-plugins/bootstrap-cutover-runtime.sh",
+      "normalization": "lf",
+      "sha256": "71fb71b4432dfd26427b5db15649f4423edc182c59524e96b2f79e95b19d6ecb"
+    },
+    {
+      "path": "deploy/agent-plugins/compose.first-install.api.yml",
+      "normalization": "lf",
+      "sha256": "b8a935b6696990f0bbaab56d2de0a3dd5f380248ffece3812d79c706fb403d85"
+    },
+    {
+      "path": "deploy/agent-plugins/compose.first-install.qq.yml",
+      "normalization": "lf",
+      "sha256": "fa4e6f5012b3e61c6b000826b6fb8543ae23a4740f1eba9971ecab4a77a93319"
+    },
+    {
+      "path": "deploy/agent-plugins/compose.first-install.web.yml",
+      "normalization": "lf",
+      "sha256": "00c3df0689cc9f8025a2f6a84af9b9346d0c982e9ecfba864c79c84146b461b8"
+    },
+    {
+      "path": "deploy/agent-plugins/export-original-scheduler-image.sh",
+      "normalization": "lf",
+      "sha256": "223347c9fa48ed9782053d430dee169906f2f94f1bd1a7ddba071c0539e833aa"
+    },
+    {
+      "path": "deploy/agent-plugins/napcat-multiprocess-proposal.json",
+      "normalization": "lf",
+      "sha256": "57e36433a1a7543b8799a40852f99d6472e377995b882abf9ddf7bb79fc3d1bd"
+    },
+    {
+      "path": "deploy/agent-plugins/napcat-single-process-rollback-proposal.json",
+      "normalization": "lf",
+      "sha256": "8344e7d5355d17b5a43995458422ea38a1fd06fe9f012afe4eabc9f773a35677"
+    },
+    {
+      "path": "deploy/agent-plugins/server-authorized-upgrade-20261123-command.txt",
+      "normalization": "lf",
+      "sha256": "c4efc4554996829738f038ed9ebbc1bcbd8a8b4e9e4666fccadd7e299a50cf9b"
+    },
+    {
+      "path": "deploy/agent-plugins/server-cutover-spec.example.json",
+      "normalization": "lf",
+      "sha256": "cd5dfb30d369f6f65dde94f22448186fa355b8b5786681c5be18c92512ffbc72"
+    },
+    {
+      "path": "deploy/agent-plugins/server-databases-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "15214d3860ab72f0c49fc67f7489521e8241301a330671ac7b370da0ab7919a0"
+    },
+    {
+      "path": "deploy/agent-plugins/server-final-audit-blockers-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "1ba7392ce1f7112bcc272c1449802cbecf027e9d0b7967ac41001a6616aa9d5d"
+    },
+    {
+      "path": "deploy/agent-plugins/server-final-audit-compact-readonly-command-v2.txt",
+      "normalization": "lf",
+      "sha256": "404186a5344711a221c7130a87f82e3ceafcebf63788c7c57a92eb27212e5a00"
+    },
+    {
+      "path": "deploy/agent-plugins/server-generated-files-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "6cdd445fd6ffba6264b1d8bbc22fe777b6fd32e73b1c7a1ea480b343ccd122a4"
+    },
+    {
+      "path": "deploy/agent-plugins/server-github-search-online-preflight.txt",
+      "normalization": "lf",
+      "sha256": "dbdc0225a1df51a407f7d08ce7c1fc2c88f32af49e2d1c39ff61c0c1e91b0633"
+    },
+    {
+      "path": "deploy/agent-plugins/server-github-search-recreation-readonly.txt",
+      "normalization": "lf",
+      "sha256": "82c7603c26e7350172f32b2ae3b496cb07946a7f08da3a61b372b94cf9d64929"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-admin-after-search-update-readonly.txt",
+      "normalization": "lf",
+      "sha256": "4c63b21aa6140a07101fa5f02953bbf1182a8b4c78b32bc2f34d8d761a3f366e"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-gateway-exact-error-readonly.txt",
+      "normalization": "lf",
+      "sha256": "6f21228cfe17865e7182a0017b796951cbacd7235bb0f1eba9aaac811871bf1a"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-gateway-recovery-once-command.txt",
+      "normalization": "lf",
+      "sha256": "48f7ec33becce9c808ba2483bc011c689db9f1296a1b96fdef0c17c3f3522ad8"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-gateway-ulimits-readonly.txt",
+      "normalization": "lf",
+      "sha256": "d44463292d9965c144af942204b6a0632142b81daee01b0a3a039887c879eb58"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-github-failure-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "25458229a05f9760548e9c54f9889f5484f3bc6c3f183b8030a11f49dc67e3a6"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-login-state-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "b69b8747078aa9b5e49f47a0bbf97a117427bf628a7607b1a91006e6972ca27b"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-post-upgrade-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "7b5239cc8dc273e2a86fccb63f2e757779469ee9f02c66221d4ecce3c4e58a45"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-search-after-switch-readonly.txt",
+      "normalization": "lf",
+      "sha256": "fc85d6d061e617ad5577707b377177e8f0b9d3e378e6f4d22c5a51cd01bdfa1e"
+    },
+    {
+      "path": "deploy/agent-plugins/server-qq-status-reuse-existing-client.txt",
+      "normalization": "lf",
+      "sha256": "3fe7b61127db821d553286d9d41e162955a99e198a99f9d3819869b8f4c5317e"
+    },
+    {
+      "path": "deploy/agent-plugins/server-scheduler-switch-preflight-readonly-command-v2.txt",
+      "normalization": "lf",
+      "sha256": "92d787e32d635e7bd3a76d32d76f0d9bd4a6065d62685052cd6892de796513e1"
+    },
+    {
+      "path": "deploy/agent-plugins/server-scheduler-switch-preflight-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "35b1df025b8c916cdcd2323435e5cb06802d3c9d9c6a00de54b9eb7cdc4a74fc"
+    },
+    {
+      "path": "deploy/agent-plugins/server-startup-details-readonly-command.txt",
+      "normalization": "lf",
+      "sha256": "6b195f158875c8a968329ad3ce4cf4333954216ada7fecb2234b1fd3bcd6f4fb"
+    },
+    {
+      "path": "deploy/agent-plugins/server-three-live-backups-command.txt",
+      "normalization": "lf",
+      "sha256": "b4302fe742a3bf20c72b564a4f0ebf269337cf21e984695d2afe4c2fd0e577a6"
+    },
+    {
+      "path": "deploy/qq/independent-plugin/guardian-config.example.json",
+      "normalization": "lf",
+      "sha256": "28bbdb3b4c2f7c4922a49ccfdedeafa0e49c8ad020f800d58f83af6cafc522b1"
+    },
+    {
+      "path": "deploy/qq/independent-plugin/mooyu-qq-guardian.service.in",
+      "normalization": "lf",
+      "sha256": "90099089dff5db1f895bdf892ad8144918b9071df69ee7c1b9d8d5c33a67c8c4"
+    },
+    {
+      "path": "deploy/qq/independent-plugin/mooyu-qq-guardian.timer.in",
+      "normalization": "lf",
+      "sha256": "74083b931fbd676c0fcc32db3ab5c8c1f24ae1575be2832e6e5f4704875d338c"
+    },
+    {
+      "path": "deploy/qq/switch-compatible.py",
+      "normalization": "lf",
+      "sha256": "199651790ea81d448c136ed90991f6296539c33849ee91f1f97efbd89cef22b7"
+    },
+    {
+      "path": "docs/agent-authorized-deployment-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "c8267d73a03bde4a4f04df98ac6c780de2572d0c2049d17b36edddcb6e2ae2f1"
+    },
+    {
+      "path": "docs/agent-final-files-generation-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "825c8045fb669fdb13b5a25ca62527dd1e909ea9022c7872b12d9c950dcd29ef"
+    },
+    {
+      "path": "docs/agent-final-upgrade-scope-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "12c7c662fe6e60f5135bcc1533bf6e505c010723a751f30dbfe223883e75489d"
+    },
+    {
+      "path": "docs/agent-github-question-20261120.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "81a520072dcbb635192acc163803762eff688ad7000a70b16432d0e1d31e648e"
+    },
+    {
+      "path": "docs/agent-interactions-20261120.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "d9fb436fb2fe5b50959383277b01d8a997e009051c5ad07caecd1801169df2eb"
+    },
+    {
+      "path": "docs/agent-interactions-live-20261120.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "1c68155d67cdfdff6ebad6c946217d51026bed80e6f977eefcad74b1dd9d790a"
+    },
+    {
+      "path": "docs/agent-local-gates-and-qq-review-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "03024afc4ddf2f0f450c6a678787a885232fb07cf673a2e6a811f29ea9f6367f"
+    },
+    {
+      "path": "docs/agent-plugin-admin-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "cc74dcecf66a3470e4c45ab7411e012f17e33123b14ad6479d03561fb17a7854"
+    },
+    {
+      "path": "docs/agent-plugin-github-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "5f2e14c7a6f092ace22a85c2cc166d3f7d211dd47dc474db0eaf342bdd6b4f66"
+    },
+    {
+      "path": "docs/agent-plugin-qq-live-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "60cbdf43eb36bd23e89fa6f60543d6341c8541b2c7d9589139df42dec37a5e4e"
+    },
+    {
+      "path": "docs/agent-plugin-release-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "b5f2cae3fb59e22d399ac8db94644f4beb1d672082dd08d2824754424d53b160"
+    },
+    {
+      "path": "docs/agent-plugin-source-recheck-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "5c6e0718d09fc39d879fc3d56764c61e0beca5e3df55b8e73719b925463cd002"
+    },
+    {
+      "path": "docs/agent-plugin-unified-release-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "5f47b6bdacaed7cd6abc475e6a029f2685f0e101c72232b93bc0707a5f439630"
+    },
+    {
+      "path": "docs/agent-server-cutover-tools-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "b18c0b2a0fa2c039c729ab972e1c5ed350c0f885f53940cf15027c67e1a60afe"
+    },
+    {
+      "path": "docs/agent-server-readonly-preflight-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "0f09be8d5f5ef79c5c7b4de811bb8de8f142fe86b9d7751f90f9f12d8dbff530"
+    },
+    {
+      "path": "docs/agent-server-remaining-blockers-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "f6980c34ae79ac19d494d4fa545faca6605de6e1e08532c3e116df6362026314"
+    },
+    {
+      "path": "docs/agent-server-upgrade-rollback-draft-20261122.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "43093504755621a54ffef0d3ea5f8e6347f53c4c81be58385a1c9582e81ebdad"
+    },
+    {
+      "path": "docs/github-search-online-update-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "92a9ae45a5c333a89dc7c12e4e1092f00480b69a99483909fcae56410235e600"
+    },
+    {
+      "path": "docs/github-search-plan-format-followup-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "ba1037515033d11b29957f8d37b35cc9ccbfb599bd62e414e58c5ac07acd4e5d"
+    },
+    {
+      "path": "docs/github-search-quality-local-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "dcecafed01d1991d99d82a1adb3d7fe6acb6f3e21d0a0cf9c0a374c1c91cf4d9"
+    },
+    {
+      "path": "docs/github-search-recovery-release-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "437765458e47249b8e25765a6042c2cc3e69a4f93ac38b17acfe1327900c5705"
+    },
+    {
+      "path": "docs/github-search-recovery-six-new-requests-20261124.txt",
+      "normalization": "lf",
+      "sha256": "65c73c388eadc924990407af9ddb9c00cd3864ec7d02ff1327c74425bdc0704f"
+    },
+    {
+      "path": "docs/github-search-requirement-scopes-local-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "21dff748c4e1174c8f901049bec5178303a0e64e52f54b51f1da149170619c8c"
+    },
+    {
+      "path": "docs/github-search-scopes-release-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "a1395905ff31ab511df47b49f4e6e21fce0a3fc68405d76606cc4a9d96571804"
+    },
+    {
+      "path": "docs/github-search-six-failures-local-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "6e87da2517e9366923018fcd7cb4d88f3245ffc31848edc5633a0fbdd79f0ab3"
+    },
+    {
+      "path": "docs/github-search-task-receipts-followup-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "fb243192926de1f34c35189067091e59a7c4a81906e4717c0706169679356620"
+    },
+    {
+      "path": "docs/github-search-verification-followup-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "7c50c648d5dfc58138ed7519c8e12ef5ee0fdddf21c3b500aa31e3b7a5599711"
+    },
+    {
+      "path": "docs/non-paper-github-alignment-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "bef4423c115047e8cfcc107f1e5a832af4787e92ecde23a3d55972727841419c"
+    },
+    {
+      "path": "docs/qq-article-images-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "21a07632bc58c2112631cb4edb99057b10c0abf6598d6f48f88c52a809b5d656"
+    },
+    {
+      "path": "docs/qq-article-images-live-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "a456f8124029f663b4b52c27593f284d33df5759604804e3490f1382dd899282"
+    },
+    {
+      "path": "docs/qq-auth-client-recovery-review-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "35be8c515fa40f21921622e67d97d2c329bad303525ffcccb48431ffadabaf08"
+    },
+    {
+      "path": "docs/qq-channel-plugin-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "c15ba025640d8730fa715abdbcfada81730d5172920a7353cd98fed0712d331c"
+    },
+    {
+      "path": "docs/qq-channel-plugin-live-20261121.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "ff63bd01efbf7133595ec78bfbb793f5dd80b1b090ef8516c9b18d028e677ad5"
+    },
+    {
+      "path": "docs/qq-compatible-candidate-20261120.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "3699ad49467723a4f26ea69b65011a3ef8c1b1cfa970c174488a029f2dc0211e"
+    },
+    {
+      "path": "docs/qq-gateway-mode-repair-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "324e630714d453941c6a1fd66d4d65a8a1fe2a14b52cdcddf74edad8296409e0"
+    },
+    {
+      "path": "docs/qq-group-ready-release-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "49697ed536dfb3aaca25bd2450666da423fb6b8c68033fe139b128db5e3c86a9"
+    },
+    {
+      "path": "docs/qq-independent-plugin-local-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "e5b331e904c3f1a7f8c01fd70afde6fbc99d3a79fa06f07ed8d40c2e5b9a2cc7"
+    },
+    {
+      "path": "docs/qq-independent-plugin-release-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "45cea4ef3368487fed2cd298a8770bd0c9104a80a2f5c27de49790551f2396ce"
+    },
+    {
+      "path": "docs/qq-native-recovery-root-cause-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "3285f4edc972a098152c8f1d4ba7db6432c61043da436a2501a6fe1db3c5bbb8"
+    },
+    {
+      "path": "docs/qq-update-stability-audit-20261124.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "fc49dea009e2c3784eebb5e646f0635692f18efe20eeaf2dc4e9a16487f8863b"
+    },
+    {
+      "path": "docs/scheduler-compat-authorized-switch-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "47d054789069d5797c113095d8a0f4a6ae6f68af353ceb62f9baa60bfcf6969a"
+    },
+    {
+      "path": "docs/scheduler-interaction-compat-review-20261123.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "b6cc1db8a12fd5cd47df68b00890909abc32a5423036c6d1c20c40d3b8b81e6b"
+    },
+    {
+      "path": "packages/platform-api-client/src/index.mjs",
+      "normalization": "lf",
+      "sha256": "1e0604c49008cd8a2bb2966c8d500b5235b30d8230ca11aaabb314e3521d489c"
+    },
+    {
+      "path": "packages/platform-api-client/src/practice.mjs",
+      "normalization": "lf",
+      "sha256": "1d32e8b895bf63f8e28de32e7f84cda3f6f08423aa650f32399c20435dcf4ac0"
+    },
+    {
+      "path": "packages/platform-client/src/AgentAdmin.jsx",
+      "normalization": "lf",
+      "sha256": "13931c46f26a32764d001c089fc24981123654644936a93beb8fa250cdbe005e"
+    },
+    {
+      "path": "packages/platform-client/src/AgentChannelParticipants.jsx",
+      "normalization": "lf",
+      "sha256": "e9ee7c4040b915615e14a5ffed55e5e3f764855739f36ea3bad348c80abb3915"
+    },
+    {
+      "path": "packages/platform-client/src/AgentPluginAdmin.jsx",
+      "normalization": "lf",
+      "sha256": "6e90a413e9f8e8a726dac2234af5d2478cdb5a1c3d325cc5258bace77cd1baaf"
+    },
+    {
+      "path": "packages/platform-client/src/AgentQQAdmin.jsx",
+      "normalization": "lf",
+      "sha256": "6ea7ce1cb31898594324d3bdc0122ae02e4c3e2ad9c5e264ab2b2e94f1fced45"
+    },
+    {
+      "path": "packages/platform-client/src/PlatformAssistant.css",
+      "normalization": "lf",
+      "sha256": "65693e599f11671e958b4f83b187a12b2512e133af8c3d0bdee5b4c81c43f327"
+    },
+    {
+      "path": "packages/platform-client/src/PlatformAssistant.jsx",
+      "normalization": "lf",
+      "sha256": "63b247479488897655aa9e8a6d5e3ae386717e22acb522029a44072bb12dfa36"
+    },
+    {
+      "path": "packages/platform-client/src/qq-admin-settings.mjs",
+      "normalization": "lf",
+      "sha256": "a4ad5ad119bcd0eea5ff5a93439bafecc43dc18c804271f49093789dd2c564df"
+    },
+    {
+      "path": "packages/platform-client/src/styles.css",
+      "normalization": "lf",
+      "sha256": "ad1f686fe718ee84f04eeb66c6391ce15675bb8a5295eb08ddcd2986c2ff254e"
+    },
+    {
+      "path": "scripts/agent-interaction-lab-control.cjs",
+      "normalization": "lf",
+      "sha256": "755bcced2e5a5a83a9a3e33bab0ce492a103f77a8febace9e09679def089e2db"
+    },
+    {
+      "path": "scripts/agent-interaction-lab-login.jsx",
+      "normalization": "lf",
+      "sha256": "729f141280e715b9b6424320f46a89850ff2f9187b474a0824d07e3c9c5ae2d4"
+    },
+    {
+      "path": "scripts/agent-interaction-lab-session.cjs",
+      "normalization": "lf",
+      "sha256": "28e3ebf40695a79eefa6e690d5b9630a210b6e6b99d2cb9e69a775014bce46a3"
+    },
+    {
+      "path": "scripts/agent-interaction-lab-worker.mjs",
+      "normalization": "lf",
+      "sha256": "465f891de46ffae432ab2228fc2afe3862c93968b5627014f5f7da09de9dec89"
+    },
+    {
+      "path": "scripts/agent-interaction-lab.cjs",
+      "normalization": "lf",
+      "sha256": "7574cddc225f01b84e8bd5ab7e638b333168ccc66c78da74c4c955f6a9996cee"
+    },
+    {
+      "path": "scripts/agent-plugin-live-acceptance.cjs",
+      "normalization": "lf",
+      "sha256": "8c28d4375d9349aa2f655e01cc2fa3ca9a46e4233c8f69b2d55c307289bc6464"
+    },
+    {
+      "path": "scripts/agent-plugin-release-plan.mjs",
+      "normalization": "lf",
+      "sha256": "55631f45245966cb332132e0baee310f291727b5941ee6cff6565b80966f0a2b"
+    },
+    {
+      "path": "scripts/agent-plugin-release-probe.mjs",
+      "normalization": "lf",
+      "sha256": "9fbacf9e8e3dfe61307ac7bd9c7da0b26dbad5f71ce6d34ddfd19617fc655897"
+    },
+    {
+      "path": "scripts/agent-plugin-source-recheck.cjs",
+      "normalization": "lf",
+      "sha256": "458373ce4356241746e75ef88625f7efd07187af2ccfc55b67eeec5118e411b2"
+    },
+    {
+      "path": "scripts/agent-plugin-worker-probe.mjs",
+      "normalization": "lf",
+      "sha256": "5257187982fe86b33a69d933d78bc04e8c2c46cfa4107658d5fd642dba262a5d"
+    },
+    {
+      "path": "scripts/agent-schedule-audit-sql.mjs",
+      "normalization": "lf",
+      "sha256": "9b77e863f7f97b8ade75350e4b8dddc7c95cd07674bc2990525e613d9eb6fcce"
+    },
+    {
+      "path": "scripts/agent-server-cutover.mjs",
+      "normalization": "lf",
+      "sha256": "1dcbf5e2e9202867fec8f76de9f3f63b43585c87b27f1bcbd784cf8c352606b6"
+    },
+    {
+      "path": "scripts/agent-server-execution-readonly.py",
+      "normalization": "lf",
+      "sha256": "5267fe3aa6c28fa455de42e29a0125327f8b66d4776404ca756bf81099661d87"
+    },
+    {
+      "path": "scripts/agent-server-readonly-probe.cjs",
+      "normalization": "lf",
+      "sha256": "4cd895878c18e662871a23e05a583a03b9dacdeec0db2b5662935134c5d2e608"
+    },
+    {
+      "path": "scripts/agent-server-startup-details-readonly.py",
+      "normalization": "lf",
+      "sha256": "ac7f890cc333c3aaa5daf245e81e793ed417f47d9d0caba797689b9b6ec8471e"
+    },
+    {
+      "path": "scripts/agent-unified-worker-acceptance.mjs",
+      "normalization": "lf",
+      "sha256": "46b145684fed44830898869439f4813f4aeec7ab1c1649382f86bd7cd13eb459"
+    },
+    {
+      "path": "scripts/assemble-agent-unified-delivery.mjs",
+      "normalization": "lf",
+      "sha256": "cd7468dbba3a50c52d6db01979ec4aa8330faec6fcc648ec2a9803ff78a988c9"
+    },
+    {
+      "path": "scripts/audit-agent-interaction-lab.cjs",
+      "normalization": "lf",
+      "sha256": "025907d74cacac2495b8e281f4eccff99ea1891c1da0d517b6d33c208da1af7c"
+    },
+    {
+      "path": "scripts/audit-generated-agent-files.mjs",
+      "normalization": "lf",
+      "sha256": "0222c156d1ff6f612cf07f254a95af1ee9561a2bcff554b20a337610377b4f4c"
+    },
+    {
+      "path": "scripts/audit-qq-update-coupling-local.mjs",
+      "normalization": "lf",
+      "sha256": "cb32c36dd393842d136a5ab69c48a3233c553825a4f4a2ec98fcd68de41b1306"
+    },
+    {
+      "path": "scripts/authorized-agent-upgrade.mjs",
+      "normalization": "lf",
+      "sha256": "3edb2a410aaa2cd306b277088ba842881195eaca2556bf66e030eb7e3c9fc732"
+    },
+    {
+      "path": "scripts/build-agent-staging-bundle.mjs",
+      "normalization": "lf",
+      "sha256": "5717a6f87c6683e58ccb968a97c6fd58aa9db2099dfc9913f0af932a26e35fcb"
+    },
+    {
+      "path": "scripts/build-authorized-upgrade-command.mjs",
+      "normalization": "lf",
+      "sha256": "87be536899fb1da69f121c93ebe76f973fdfd4bb4968c1bb210a6c564d66de46"
+    },
+    {
+      "path": "scripts/build-corrected-scheduler-command.mjs",
+      "normalization": "lf",
+      "sha256": "83c0814177137e57d8a16e6abd6c5e46f2adf1b8b761dccfbf019e2d691d4306"
+    },
+    {
+      "path": "scripts/build-github-batch-acceptance-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "8efeda43c9ca899bd897ee0328a9aecd504b2c0c7e1ff705d5ce4a5ef3d1fa7d"
+    },
+    {
+      "path": "scripts/build-github-plan-format-release.mjs",
+      "normalization": "lf",
+      "sha256": "c76fcd72ab65371176c851eb9dd14cdc38f48536047642ba96ef9b76adeac0ad"
+    },
+    {
+      "path": "scripts/build-github-search-candidate.mjs",
+      "normalization": "lf",
+      "sha256": "389dd24c602ed1e0208dcf00f0f5ecdf4cf4c66c83594cff7f89efa4090c9a8c"
+    },
+    {
+      "path": "scripts/build-github-search-resume-command.mjs",
+      "normalization": "lf",
+      "sha256": "13de241b20f2085e7fe0b2cb9d06978c0340775998af172b4b9dcbae24293982"
+    },
+    {
+      "path": "scripts/build-napcat-mode-readonly-command.mjs",
+      "normalization": "lf",
+      "sha256": "44908fc009e0a1cf55035f721e77130edefbad8293116292a252c69a6862f45c"
+    },
+    {
+      "path": "scripts/build-napcat-mode-repair-command.mjs",
+      "normalization": "lf",
+      "sha256": "0d2b5121167ce8710d0aacdcf15f7ec24729a5200389297a46b370568ebb48d8"
+    },
+    {
+      "path": "scripts/build-qq-auth-client-candidate.mjs",
+      "normalization": "lf",
+      "sha256": "698a51c29c32969a05bcde26517e818cf491933e0789c4ae13e4aad198368157"
+    },
+    {
+      "path": "scripts/build-qq-auth-recovery-command.mjs",
+      "normalization": "lf",
+      "sha256": "23bd6cf61a0f7a2128e45b34aa42e7bac0fa57e53c44631955809a4330ec7c16"
+    },
+    {
+      "path": "scripts/build-qq-comprehensive-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "f06f38383925d5ee2ff120c1dc72c6e784c31034329d999c8c04af24a0cdde8f"
+    },
+    {
+      "path": "scripts/build-qq-duplicate-login-recovery-command.mjs",
+      "normalization": "lf",
+      "sha256": "a320b8aab5d61c1ec52fee1ee508dc5e835ae83aa5d04bd96d1219f977f79e88"
+    },
+    {
+      "path": "scripts/build-qq-gateway-recovery-command.mjs",
+      "normalization": "lf",
+      "sha256": "7fcf18baa01ea08648cfacde3330bb17dce53820755d3e23550daadb05f9d908"
+    },
+    {
+      "path": "scripts/build-qq-group-readiness-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "f004827056aea0345a85f9d93da401e5453de4d59c6ec6175f9f070e0991bd55"
+    },
+    {
+      "path": "scripts/build-qq-group-ready-release.mjs",
+      "normalization": "lf",
+      "sha256": "f9331d7b4b0d319471ac87e172f88b92dcb5ab80007a946d996bf4526c96ba66"
+    },
+    {
+      "path": "scripts/build-qq-independent-release.mjs",
+      "normalization": "lf",
+      "sha256": "5338fdda12c026ffaee4774b2494622761019b0d18080dbc8b7413248d0e8240"
+    },
+    {
+      "path": "scripts/build-qq-recurrence-readonly-command.mjs",
+      "normalization": "lf",
+      "sha256": "b7c14d4c96de95f25f71edd37049d1819f7e94e0bcae437c044f62dd90c7aca8"
+    },
+    {
+      "path": "scripts/build-scheduler-interaction-compat.mjs",
+      "normalization": "lf",
+      "sha256": "ae7e3094c00ead1f9949e763aa09d44142ac9d345b3af74c414c6ffb10593cbc"
+    },
+    {
+      "path": "scripts/capture-agent-plugin-inventory.mjs",
+      "normalization": "lf",
+      "sha256": "5b583881f68a21288241b693752ca89e3b98560b7fd6da322c276a346305a3d0"
+    },
+    {
+      "path": "scripts/create-three-live-backups.mjs",
+      "normalization": "lf",
+      "sha256": "0b15f8f2d74dce4a367fe0adb6df0691c813bbf35b553fa31703dca061b3cb4a"
+    },
+    {
+      "path": "scripts/deploy-qq-independent-plugin.mjs",
+      "normalization": "lf",
+      "sha256": "6e5a51b83b4046664947b049f4578fe6a9bcec79bfd665cc6591b9119d856969"
+    },
+    {
+      "path": "scripts/diagnose-final-audit-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "547b94f03db948c9586b08c81c4365785b1a8209abc2a1e5a17d7c63a5b98dd7"
+    },
+    {
+      "path": "scripts/diagnose-github-search-recreation.mjs",
+      "normalization": "lf",
+      "sha256": "1b2d0cb7c242fc7681925ea696073ae621c3919cd20f023f3feeec3f7cf37c63"
+    },
+    {
+      "path": "scripts/diagnose-scheduler-switch-preflight.mjs",
+      "normalization": "lf",
+      "sha256": "b06bed02baf8dd9fd8003342450c8463c99faf2cd9cde4fc9d70700c5f68e5e4"
+    },
+    {
+      "path": "scripts/finalize-agent-plugin-unified-release.mjs",
+      "normalization": "lf",
+      "sha256": "aaf07707ce6f6b0418bf1ca547ac4ded59bc3731249603592fcdabfe914f8ea9"
+    },
+    {
+      "path": "scripts/generate-agent-cutover-files.mjs",
+      "normalization": "lf",
+      "sha256": "2ef932036bf608a8279318939df25b6dee0c56fd07f71afae19e8ffd4f75cfc7"
+    },
+    {
+      "path": "scripts/github-search-online-preflight.mjs",
+      "normalization": "lf",
+      "sha256": "d9b93f7d7235de4e5082ebb75c6ff48543a7af48b4509674055c45fbc31f7e2f"
+    },
+    {
+      "path": "scripts/github-search-runtime-verification.mjs",
+      "normalization": "lf",
+      "sha256": "d98c12e2c1faf5911f4cc36b223b9e1dee3c3b0f73a2075d7c73b68c33649e61"
+    },
+    {
+      "path": "scripts/github-search-scopes-release.mjs",
+      "normalization": "lf",
+      "sha256": "d48d1cedbd23c28c26ded024fe89b3a9f7bd05103e2c3c40171b4c7f9f8a9abd"
+    },
+    {
+      "path": "scripts/integrate-qq-release-guard.mjs",
+      "normalization": "lf",
+      "sha256": "00ce198f7e2bd399c7beccd957ae4b613897c09f479c75bde889697575b049e1"
+    },
+    {
+      "path": "scripts/package-github-plan-format-release.mjs",
+      "normalization": "lf",
+      "sha256": "b75e08661e71e83d88c1f65c564ba6fc8017311d5d3e6ad7309d3e091cdec7fc"
+    },
+    {
+      "path": "scripts/package-github-search-update.mjs",
+      "normalization": "lf",
+      "sha256": "145f9219c460c6a9169fdbfebea0d5301127e07fe7879596c0502adeb7d0e1f4"
+    },
+    {
+      "path": "scripts/package-qq-group-ready-release.mjs",
+      "normalization": "lf",
+      "sha256": "e9ab5578b65b9160490a03c83a71b6a4cc46dc6aae86afb2d8cd34d3917f475b"
+    },
+    {
+      "path": "scripts/package-qq-independent-release.mjs",
+      "normalization": "lf",
+      "sha256": "e90023333977ea1af77bfca07d35f44fab78723e90c18fc4ac2621135c5afd2f"
+    },
+    {
+      "path": "scripts/package-scheduler-interaction-compat.mjs",
+      "normalization": "lf",
+      "sha256": "6ae20bf35fe68f66be1565719d1e02ba13a04df1f811d2f8697a00454416b005"
+    },
+    {
+      "path": "scripts/package-scheduler-switch-handoff.mjs",
+      "normalization": "lf",
+      "sha256": "71430908c74e410b665227afa1d772efdae773631991d67f9b543e677c3004fd"
+    },
+    {
+      "path": "scripts/prepare-agent-plugin-release.mjs",
+      "normalization": "lf",
+      "sha256": "b761a9095fd6d30f1692a6886f4424c8e2f5526b7550c6f6deba52280947eeab"
+    },
+    {
+      "path": "scripts/prepare-agent-plugin-unified-release.mjs",
+      "normalization": "lf",
+      "sha256": "4212e514ad0a48e78e971de783b3d7ba8fa4cd7056d8ec03d8b39ce9588eea87"
+    },
+    {
+      "path": "scripts/prepare-qq-independent-web-acceptance.mjs",
+      "normalization": "lf",
+      "sha256": "1a9484519afad98a8011cf3f03ce21efdd21752634a99cb21c31563a99209043"
+    },
+    {
+      "path": "scripts/qq-admin-after-search-update-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "927b7d3fd4352e911bc330bdf78289273dc491895f0c5b66fa34b48ff41148b4"
+    },
+    {
+      "path": "scripts/qq-article-images-live.cjs",
+      "normalization": "lf",
+      "sha256": "8401e78ed6f8b61ce2c477df9d86a7671fdd88ecee2c7b2a47f643a1d3fa68a1"
+    },
+    {
+      "path": "scripts/qq-channel-plugin-lab-worker.mjs",
+      "normalization": "lf",
+      "sha256": "b25563248963dbe43afcb13d9da3c97126f5521e3b58e64eba131f09ef7416b3"
+    },
+    {
+      "path": "scripts/qq-channel-plugin-live.cjs",
+      "normalization": "lf",
+      "sha256": "0a12d223890d0f6a757e876579fd1a6540e6e30bb0b9d856cff2d40428d81df5"
+    },
+    {
+      "path": "scripts/qq-channel-plugin-probe.mjs",
+      "normalization": "lf",
+      "sha256": "124f0379c43aa4b1469444a96e1aae05d8c1975ac92b5772292d67d85293ae69"
+    },
+    {
+      "path": "scripts/qq-gateway-exact-error-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "dd9210dc043e57c960024d4ad8e40c67a737506cce16c7d342acba39b874511b"
+    },
+    {
+      "path": "scripts/qq-github-failure-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "212b0524a33127f7c2a1351301484f65634594dcc3404ee2afed133bfaf7f8a5"
+    },
+    {
+      "path": "scripts/qq-independent-release-common.mjs",
+      "normalization": "lf",
+      "sha256": "a27804ad360be058535dddb8fb118580b85e70c01f64a5ac4b0a154c30d7b371"
+    },
+    {
+      "path": "scripts/qq-login-state-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "c92da82840b35d05ba64e5fcea59afb88d64e6eba408640246f77e70da514644"
+    },
+    {
+      "path": "scripts/qq-plugin-guardian.mjs",
+      "normalization": "lf",
+      "sha256": "c6928c34a13ae3f72cc65a9ba81278d01462cd936c206f5b87f6e525f737a513"
+    },
+    {
+      "path": "scripts/qq-plugin-release-guard.mjs",
+      "normalization": "lf",
+      "sha256": "d9d2d123420b2552d65872fac50e8e3110bbf18404a504d26ca1d322a497b78d"
+    },
+    {
+      "path": "scripts/qq-post-upgrade-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "3b6e0aa815df74425e0bfe6ef8fdfb90237a12f792d5fe138f7cf19a19a2f972"
+    },
+    {
+      "path": "scripts/qq-recurrence-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "4c052e78d331dd2e3c26126d632ea825e0294facc37e611b101864669c4c58da"
+    },
+    {
+      "path": "scripts/recover-qq-auth-client.mjs",
+      "normalization": "lf",
+      "sha256": "4eceb265ede94eaa2f1664d3d18ada379fe322931d250d9f897614079b249361"
+    },
+    {
+      "path": "scripts/recover-qq-gateway-once.mjs",
+      "normalization": "lf",
+      "sha256": "7598f30ce50443cd328b17e83e5a16510d118d69b8f490a2c12e0f8b1633da9f"
+    },
+    {
+      "path": "scripts/render-agent-article-preview.cjs",
+      "normalization": "lf",
+      "sha256": "98b87e92e440cdfe15f16b388de4815f75a66956584633c78c62a078a998b27f"
+    },
+    {
+      "path": "scripts/repair-napcat-process-mode.mjs",
+      "normalization": "lf",
+      "sha256": "65766b260cd24ea7ef30be7138f52d3cfbbe86a3cdc39ef172f8503b7272d482"
+    },
+    {
+      "path": "scripts/repair-qq-independent-local-worker.mjs",
+      "normalization": "lf",
+      "sha256": "b384c9592b51a423db81744c6d055347f2c23c79f425a09e9996341deadb892f"
+    },
+    {
+      "path": "scripts/resume-github-search-update.mjs",
+      "normalization": "lf",
+      "sha256": "bdb564a8dcc678493c1f5d055bb08c3ca1ff07aec42bdb81fe9e16780a7e1357"
+    },
+    {
+      "path": "scripts/scheduler-interaction-compat.mjs",
+      "normalization": "lf",
+      "sha256": "8f0d10a141709d767cda5affe89d020453eb50f8d8c9dea3f804db9f25fccd4c"
+    },
+    {
+      "path": "scripts/setup-agent-interaction-lab.cjs",
+      "normalization": "lf",
+      "sha256": "c4a1808f25adb86b4364b97510502071e3bf1a184ea12ae2ee4dbd3f7b6f8054"
+    },
+    {
+      "path": "scripts/stage-agent-release.mjs",
+      "normalization": "lf",
+      "sha256": "2ab04a12318f9be205be5d01d54cc0cb470cd4ac0044ec428f9e3079e68685e1"
+    },
+    {
+      "path": "scripts/switch-scheduler-interaction-compat.mjs",
+      "normalization": "lf",
+      "sha256": "331120f8ef110a7c04925bea8d1b2c514020da538d6e57a5e42c7a97c8853e44"
+    },
+    {
+      "path": "scripts/test-agent-plugin-rollback.mjs",
+      "normalization": "lf",
+      "sha256": "27d4927c395500cf890a9a1cfd15855c897deff5f71c8f39f6710637a6703584"
+    },
+    {
+      "path": "scripts/test-agent-plugin-unified-release.mjs",
+      "normalization": "lf",
+      "sha256": "39af1f08cf7e7d3931838537a779cba3b7785f3449c654e9644d7127685c64c1"
+    },
+    {
+      "path": "scripts/test-agent-unified-web.cjs",
+      "normalization": "lf",
+      "sha256": "d39cbf25a900a848229e5fdb050a7cb8617ff20f3b4c08e410fccc900a07086d"
+    },
+    {
+      "path": "scripts/update-github-search-online.mjs",
+      "normalization": "lf",
+      "sha256": "efe4ceddcfa22c9b0eaaf9884b3f02a864a2943191ceb6e3663ce2e5aebd9c83"
+    },
+    {
+      "path": "scripts/verify-agent-cutover-local.mjs",
+      "normalization": "lf",
+      "sha256": "73f88a52166a005ce050b216224f6c66ac603d28d5c52b10849b45c98428acef"
+    },
+    {
+      "path": "scripts/verify-agent-legacy-scheduler.cjs",
+      "normalization": "lf",
+      "sha256": "54f84d212ff5db5c0781312c9fe9e10d27bfd482e78b29b9df4bcf1872c67dc0"
+    },
+    {
+      "path": "scripts/verify-final-audit-sql-local.mjs",
+      "normalization": "lf",
+      "sha256": "51e9381760618ea2a9b24627827f3d67b0d5eb1773df9d00cc93fc8071f41d70"
+    },
+    {
+      "path": "scripts/verify-github-search-image-switch-local.mjs",
+      "normalization": "lf",
+      "sha256": "b4c300cfdbd77a312649c975ca931be571559ec16ee4d04ea1d128557c1a3ec2"
+    },
+    {
+      "path": "scripts/verify-github-search-local.mjs",
+      "normalization": "lf",
+      "sha256": "6b6f25fc879128cdbc117d0788a00e50ef831f1ab1fc753dcea2b1da8399173b"
+    },
+    {
+      "path": "scripts/verify-github-search-private-runtime-local.mjs",
+      "normalization": "lf",
+      "sha256": "d10b63f5e216338b2dfe8111d11f4ce69a0da1c44bad0e69bc8818e94ef62463"
+    },
+    {
+      "path": "scripts/verify-github-search-public-local.mjs",
+      "normalization": "lf",
+      "sha256": "c9d2f05455e422e6d5fa209c1722ff9c8fa87c9fb4142787742ed8fb80e2f680"
+    },
+    {
+      "path": "scripts/verify-github-search-requirement-scopes.mjs",
+      "normalization": "lf",
+      "sha256": "6ffb3085aad240f92263a6fd9ad598d97fe8392b78c716bb48cff1bb66754f35"
+    },
+    {
+      "path": "scripts/verify-napcat-mode-compose-local.mjs",
+      "normalization": "lf",
+      "sha256": "694144ccce2fd3f7f09292243dc30907aca944401653249d1f064eacd04b3d78"
+    },
+    {
+      "path": "scripts/verify-napcat-mode-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "78a3d0e3476484e5ac8582a9ebcf52fb42a4dd3f8b7cd647634344791024a2ed"
+    },
+    {
+      "path": "scripts/verify-napcat-multiprocess-isolated.mjs",
+      "normalization": "lf",
+      "sha256": "389d10f125c822707aa83ad92068cb55c255fb8c2e6436ab9da91c2681aed3eb"
+    },
+    {
+      "path": "scripts/verify-napcat-runtime-bootstrap-local.mjs",
+      "normalization": "lf",
+      "sha256": "1d95989e73f116f3d3cbfdac8529ecdb117a663725fd7cc446bd059b16f5b296"
+    },
+    {
+      "path": "scripts/verify-original-scheduler-image.mjs",
+      "normalization": "lf",
+      "sha256": "eb122a1be368c5b9b4c3e4000b19eaaf591cb8337d20249a1a4a2a8fa464b934"
+    },
+    {
+      "path": "scripts/verify-qq-auth-client-image.mjs",
+      "normalization": "lf",
+      "sha256": "860c832aa35310e020efadb1e24ae2acfd5ade19a3d3a6ce5bf7b191321afb96"
+    },
+    {
+      "path": "scripts/verify-qq-group-readiness-local.mjs",
+      "normalization": "lf",
+      "sha256": "085a984171445b4a9ea76aa8737ae37478ad3a7a3bd45bf12f179667db692f2e"
+    },
+    {
+      "path": "scripts/verify-qq-group-worker-switch-local.mjs",
+      "normalization": "lf",
+      "sha256": "b16d79d1527f976e9953e822f7b2bb9218f7961405bba70ee132973bee90d77e"
+    },
+    {
+      "path": "scripts/verify-qq-independent-final-ops.mjs",
+      "normalization": "lf",
+      "sha256": "43a0977444938db65ce042e232f97eef5f9529f94775c8b58dc007479e480787"
+    },
+    {
+      "path": "scripts/verify-qq-independent-images.mjs",
+      "normalization": "lf",
+      "sha256": "85ab503f41ad39e121832e33e4467bc221fe961bb9daa15c4e337cf591f95863"
+    },
+    {
+      "path": "scripts/verify-qq-independent-switch.mjs",
+      "normalization": "lf",
+      "sha256": "79ed78e26acf0d4a76e031b7d5e202b69af087b48b133ca5e51d79cc10001cc9"
+    },
+    {
+      "path": "scripts/verify-qq-login-backup-local.mjs",
+      "normalization": "lf",
+      "sha256": "ae4c3e9eb1c19f9c9da1d5c15e0ffefda1593375447c498eab72f3c878793cfa"
+    },
+    {
+      "path": "scripts/verify-qq-plugin-stability-local.mjs",
+      "normalization": "lf",
+      "sha256": "5804fff277daa001997248521b676f08d6c47822ca838f39de574fe6f8459798"
+    },
+    {
+      "path": "scripts/verify-qq-source-private-mode-local.mjs",
+      "normalization": "lf",
+      "sha256": "046846fb48f2f23c06adbe4f5e5a21968314b17fd6386dee62e700503e59d5cf"
+    },
+    {
+      "path": "scripts/verify-scheduler-compat-switch-local.mjs",
+      "normalization": "lf",
+      "sha256": "da561d4b48e31e6d77cda68df8419e50d708a6f419051f167d369e412815165f"
+    },
+    {
+      "path": "scripts/verify-scheduler-image-archive.mjs",
+      "normalization": "lf",
+      "sha256": "227ccc5eaecd005ab0ed57896b717ce58cb44ffab2756159f61f7d0749c074f1"
+    },
+    {
+      "path": "scripts/verify-scheduler-switch-sql-local.mjs",
+      "normalization": "lf",
+      "sha256": "15ee6bd12356e7dc79f0ecbf24a4e3139ac76ff77e2e18e96bd3680bfbae4b2b"
+    },
+    {
+      "path": "scripts/verify-source-release-alignment.mjs",
+      "normalization": "lf",
+      "sha256": "ed2be1fe0f56322fb61d90430079d8dcbd806e30862b13fd8b6f9cf161f5dbde"
+    },
+    {
+      "path": "scripts/verify-stopped-agent-lab.mjs",
+      "normalization": "lf",
+      "sha256": "a28306bd42f929a303fcb2f260c1296045bac22ba86b41f472d43efb8c873372"
+    },
+    {
+      "path": "scripts/verify-three-live-backups-local.mjs",
+      "normalization": "lf",
+      "sha256": "dd6e6cd7ca983810dd4dcb4daf3d063f3dcd6ae2d386348c29bdad6af014cb48"
+    },
+    {
+      "path": "tests/client/agent-interaction-browser.test.cjs",
+      "normalization": "lf",
+      "sha256": "882992033e17e1d88ec1efe2d31b65f1ee5b511b24ccf4469af8578dac3cf5e5"
+    },
+    {
+      "path": "tests/client/agent-lab-login-browser.test.cjs",
+      "normalization": "lf",
+      "sha256": "20c71f0cd1ec8f74f5efc237a694dfe21db4c505c35c70a05845da085e5c0dd2"
+    },
+    {
+      "path": "tests/client/agent-plugin-admin-browser.test.cjs",
+      "normalization": "lf",
+      "sha256": "fa8c922951f45e75acd8338ae2125c92d97ad900200ccd381f983928ba43b9dc"
+    },
+    {
+      "path": "tests/client/agent-qq-admin-browser.test.cjs",
+      "normalization": "lf",
+      "sha256": "7adbdc576354623879d9d1e4feb30eb6219c9adce8ed818e6749e166d1b89f69"
+    },
+    {
+      "path": "tests/client/platform-assistant-browser.test.cjs",
+      "normalization": "lf",
+      "sha256": "511a753e89067f7c98b7d8fcd8cc3403d5542358d50a40f3bf3a84bcf9505964"
+    },
+    {
+      "path": "tests/platform/agent-article-images-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "f1b4ea022806ccc1b9c3567cae0af02dda516aada2315637350d2f85ebc9fbdf"
+    },
+    {
+      "path": "tests/platform/agent-article-images.test.mjs",
+      "normalization": "lf",
+      "sha256": "93de5fd5cd3de5bac17ff3f2352f0e420bdc333785d92734052ca010457eb50e"
+    },
+    {
+      "path": "tests/platform/agent-blog-public-pipeline-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "490a5c73de3bf4322bc1c0ec45134426105314f67539a54de8ea08fdac2769d9"
+    },
+    {
+      "path": "tests/platform/agent-github-question-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "6af1a2270d7be0da6d287706140dba308ad8bd87fd08a7b3729322a25507db15"
+    },
+    {
+      "path": "tests/platform/agent-github-question.test.mjs",
+      "normalization": "lf",
+      "sha256": "cb37d054fedfa6b5571c65255a719e08e1fcac19527ed5f3453bec62f609f67e"
+    },
+    {
+      "path": "tests/platform/agent-interaction-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "ea769b91a57d331302aae55021b6c642eaf9281313cacbd4d16df3bc0c09fe2d"
+    },
+    {
+      "path": "tests/platform/agent-interaction-github-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "ae5f03c5027a628788754ae0df77f4535d3e42f4827d6290615cada5bc3a72b3"
+    },
+    {
+      "path": "tests/platform/agent-interaction-lab-session.test.cjs",
+      "normalization": "lf",
+      "sha256": "eb063cc19956983d1c702cf43f6d278b2dbfa27b269c982a1c1d76e5c829f164"
+    },
+    {
+      "path": "tests/platform/agent-interaction.test.mjs",
+      "normalization": "lf",
+      "sha256": "7953a37e94d3bfaaaff403270014b4f46c858a7952901903d741110ce481d459"
+    },
+    {
+      "path": "tests/platform/agent-original-image-export.test.mjs",
+      "normalization": "lf",
+      "sha256": "71db840a2611112e7d8412a04fd0bc124799a7cfdbc1c40e59714d20080c47ed"
+    },
+    {
+      "path": "tests/platform/agent-plugin-admin-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "0c375478829d2da7ef6561fb9dfd35dbccc9f0fbd5569aef560bf0872891bec3"
+    },
+    {
+      "path": "tests/platform/agent-plugin-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "f0d6eff61fe9f25b09685effbd90a7c18b34303949a19705392d35cc64ec5762"
+    },
+    {
+      "path": "tests/platform/agent-plugin-host.test.mjs",
+      "normalization": "lf",
+      "sha256": "b581bfff1bf7dfcc058979090e271a62ff1a0b9d46cb3aa37a9db0b8ff4298ef"
+    },
+    {
+      "path": "tests/platform/agent-plugin-release-plan.test.mjs",
+      "normalization": "lf",
+      "sha256": "22e7a0c56bfb59ecd131b7b7b7470baa31cc567fb9093fbd7df5beeb6d9ea37c"
+    },
+    {
+      "path": "tests/platform/agent-plugin-release-readiness.test.mjs",
+      "normalization": "lf",
+      "sha256": "41be4061f45800fc113585c3bd3657f9a156b2343df4d39427ddb5825a573d2d"
+    },
+    {
+      "path": "tests/platform/agent-plugin-runtime.test.mjs",
+      "normalization": "lf",
+      "sha256": "c2e78fc3eff3db2dcf5f398b39ce685eba46a67ad82abcf4476109a51acbd2da"
+    },
+    {
+      "path": "tests/platform/agent-release-upgrade-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "2d6c0b1a938829c1119c4f1ba30998b6bd396caf306a3f6aeabf6d795df140d7"
+    },
+    {
+      "path": "tests/platform/agent-server-cutover.test.mjs",
+      "normalization": "lf",
+      "sha256": "7dd9354df4fa879d0698a5a2a23e4407487f3dffbb20daa42dfd7e9fa66da590"
+    },
+    {
+      "path": "tests/platform/agent-server-readonly-probe.test.cjs",
+      "normalization": "lf",
+      "sha256": "8a457c3f27489865f26f86fe0a77a8eeefb6420a41fd5b82a7c45af6be402378"
+    },
+    {
+      "path": "tests/platform/agent-task-receipt-grounding.test.mjs",
+      "normalization": "lf",
+      "sha256": "cafbd916aa241edd41e819ef85509067920def42eac5bdecacece3dbe6ad0f5d"
+    },
+    {
+      "path": "tests/platform/agent-tool-gateway.test.cjs",
+      "normalization": "lf",
+      "sha256": "b6f349d3b436a400551cd0e4c1579fa9d4e64bac55b4e0f9c90b70f1d6b2c562"
+    },
+    {
+      "path": "tests/platform/audit-generated-agent-files.test.mjs",
+      "normalization": "lf",
+      "sha256": "1a7fd564972b2c77a706208f959975b851daeb54c2deebfdab8965657fa282a4"
+    },
+    {
+      "path": "tests/platform/authorized-agent-upgrade.test.mjs",
+      "normalization": "lf",
+      "sha256": "559ff4c80f68e138d3672fae5b1fbc6d3e8a2251dc3cd9e0607c7bc178b83f05"
+    },
+    {
+      "path": "tests/platform/final-audit-diagnostic.test.mjs",
+      "normalization": "lf",
+      "sha256": "861067251738c1df6af795f360aa47cb9667f1be2c82db9522dc3ca3b9b74fa1"
+    },
+    {
+      "path": "tests/platform/generate-agent-cutover-files.test.mjs",
+      "normalization": "lf",
+      "sha256": "6cdf205df48320a21847cf451e6e0f729c104a7d8d5fc62e719565a947df36c4"
+    },
+    {
+      "path": "tests/platform/github-search-online-sql-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "a9c4eb1a0e3fce67ca63fdaae8951e1aff67f4647f0a6fc9ce3dd4738a7963c2"
+    },
+    {
+      "path": "tests/platform/github-search-online-update.test.mjs",
+      "normalization": "lf",
+      "sha256": "eacbbf71cfd5260e97a379e774540eb57cf013c1becff287c6ef840e051dcfda"
+    },
+    {
+      "path": "tests/platform/github-search-plan-format.test.mjs",
+      "normalization": "lf",
+      "sha256": "c2ec1e02f0f5b63df5b63f68ef1e5dfe03566afae0d38c385627c1bad94d6bb9"
+    },
+    {
+      "path": "tests/platform/github-search-quality-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "aa7af53f276779681c728f96418580f0521da120063a3ce5d1eddaad69bcf474"
+    },
+    {
+      "path": "tests/platform/github-search-quality.test.mjs",
+      "normalization": "lf",
+      "sha256": "8f02bc4a07ac0b063055b59f7a97136259b0d52e62c370d207c840af7ddc4c02"
+    },
+    {
+      "path": "tests/platform/github-search-requirement-scopes.test.mjs",
+      "normalization": "lf",
+      "sha256": "ef5b28649de5fbc8a8aa6f8fe7c150f0a3844cd419ced7d0249c4fa77bb963b4"
+    },
+    {
+      "path": "tests/platform/github-search-runtime-verification.test.mjs",
+      "normalization": "lf",
+      "sha256": "60dcfc00bb047a7ea1b9c895a5083f9c2ea88389f95cc0667b063e4493c8320c"
+    },
+    {
+      "path": "tests/platform/github-search-scopes-release.test.mjs",
+      "normalization": "lf",
+      "sha256": "0c02bc1fc11750ae02c9667afe6aea77eee99e7a79fd1ed5fe1f10d09ec2d016"
+    },
+    {
+      "path": "tests/platform/github-search-verification-format.test.mjs",
+      "normalization": "lf",
+      "sha256": "0474a8399fd44bd5d8e06439c07f9523190800c4143bad5c2cdf6fe2ec0ebff3"
+    },
+    {
+      "path": "tests/platform/github-search-verification-recovery.test.mjs",
+      "normalization": "lf",
+      "sha256": "c358f51584886f31d220a54b45aa57355b7c5b7491d77376154d3d8eed2e614f"
+    },
+    {
+      "path": "tests/platform/napcat-process-mode.test.mjs",
+      "normalization": "lf",
+      "sha256": "9018c6d72faf864bd37caa1e4103defd5b962f93d4a00ff382e98b35d1079cdc"
+    },
+    {
+      "path": "tests/platform/outbox-window-proof.test.mjs",
+      "normalization": "lf",
+      "sha256": "4d75ae7c3d24ab9df9922b78eac6b2fe28edd85f0330c72cbb924aa9e6da8ce6"
+    },
+    {
+      "path": "tests/platform/platform-assistant.test.cjs",
+      "normalization": "lf",
+      "sha256": "c791fb53451f7a1303049b9984dc29f6a5908fd1a008edf9733309f195fc37e1"
+    },
+    {
+      "path": "tests/platform/qq-auth-recovery-sequence.test.mjs",
+      "normalization": "lf",
+      "sha256": "addbbed3822e4683ec9e7e4739efa3380f7b58a4c9d7a60c5b3227559ddd3153"
+    },
+    {
+      "path": "tests/platform/qq-channel-plugin.test.mjs",
+      "normalization": "lf",
+      "sha256": "d0069b13120ab2967f57e26e31078085e972d21ca0f707470bc70afd29871710"
+    },
+    {
+      "path": "tests/platform/qq-compatible-switch.test.cjs",
+      "normalization": "lf",
+      "sha256": "db2fd18d5b07c6eeebc65ce8364991eae9eaf759cf8459aedce3ea8be0b897ce"
+    },
+    {
+      "path": "tests/platform/qq-gateway-auth.test.mjs",
+      "normalization": "lf",
+      "sha256": "4180072bbba110259b6afa4c7afd245485fe949b50fda653d12c77cacbcb2b41"
+    },
+    {
+      "path": "tests/platform/qq-group-readiness.test.mjs",
+      "normalization": "lf",
+      "sha256": "69d655622ce2d5e7eab34fdbf469b987cf47c7694d5acfe4f8c213e83cbd3178"
+    },
+    {
+      "path": "tests/platform/qq-group-worker-release.test.mjs",
+      "normalization": "lf",
+      "sha256": "62515f9e0497ae8b97641c65743380c48b5f82a3f39369b5a45d7615369fa67f"
+    },
+    {
+      "path": "tests/platform/qq-independent-release-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "2bb702440a554249f7db9b91f9946f439141b909640b4efa9156a7244e451e11"
+    },
+    {
+      "path": "tests/platform/qq-independent-release.test.mjs",
+      "normalization": "lf",
+      "sha256": "e899dd8a42d66fa19ff13a4df25a9cdb6dec81b565d7f8383b0ec3755cfa6390"
+    },
+    {
+      "path": "tests/platform/qq-plugin-guardian-linux.test.mjs",
+      "normalization": "lf",
+      "sha256": "52fb89628c7a332cd3c151f95ad8a27a33dcd15686c9bbe0f1e616ff66750369"
+    },
+    {
+      "path": "tests/platform/qq-plugin-stability.test.mjs",
+      "normalization": "lf",
+      "sha256": "8e1b1efafacfbdcb000c3424c8f3c69f0d910919695a888689237f3d9446e47d"
+    },
+    {
+      "path": "tests/platform/recover-qq-gateway-once.test.mjs",
+      "normalization": "lf",
+      "sha256": "df402f1aed3cbee4873effc487fe52c9cb8062f689ef9274e909b2e884bd2bcf"
+    },
+    {
+      "path": "tests/platform/scheduler-compat-switch.test.mjs",
+      "normalization": "lf",
+      "sha256": "77dfb2c1bb19f90e80caba77b6d24d8f69bbf97f62dd39f2de0d5c7ae1b95cfe"
+    },
+    {
+      "path": "tests/platform/scheduler-interaction-compat.test.mjs",
+      "normalization": "lf",
+      "sha256": "8548ec7140dc74e4323edfe8933220f098c239d517c76a96055679c1ce2fc3d4"
+    },
+    {
+      "path": "tests/platform/stage-agent-release.test.mjs",
+      "normalization": "lf",
+      "sha256": "7f84d7f2e48be3a3a27435bc64da2a5264c738af85a6266c7d6df35eb14d4edc"
+    },
+    {
+      "path": "tests/platform/three-live-backups.test.mjs",
+      "normalization": "lf",
+      "sha256": "85d6a2244fce2eba07a65a574bf2de62a1ff32d6c073420ef0f85d881eb62b09"
+    }
+  ],
+  "runtimeBindings": [
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-blog-public-request-repository.mjs",
+      "artifactSourceSha256": "44e8842d7050c08d63d81347d1c589cc73297ffc808b5ef945bbea0ca29ad719",
+      "gitBlob": "adb3696fe39da981212d05f69c2f1a583d314990",
+      "normalizedSourceSha256": "03b7ea6c36bb519f62cac959a8b87955d2872bc5517f5d8caeaecd43cca56e8b"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-github-repository-search-tool.mjs",
+      "artifactSourceSha256": "70eeedcddae98669cb2751c09d002908a7d3b4af3c62c70997a4968acdbf12b7",
+      "gitBlob": "43cf8547dbd2afb92d18ef7bf77ef3015341fe94",
+      "normalizedSourceSha256": "56deee10747d91c8d85414640b2f360755b7b3dfee01cc4a300174da21fb565d"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-interaction-contracts.mjs",
+      "artifactSourceSha256": "4cf35ac93a9f1fb7d8c503ee9c71c1028cea6e97dbf380d6008fa29476ba0dd1",
+      "gitBlob": "9994384f97aacb38e2fd090d77b3a9cf7696b4a7",
+      "normalizedSourceSha256": "6e8d04e566acb208b308cfea274a85729f64efb40e536aea2b746472aeb34940"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-interaction-conversation.mjs",
+      "artifactSourceSha256": "a2b88ee2fb8a3255604d4689a2ef7c5f99b72f4866526d63b1946a1273a336fe",
+      "gitBlob": "06f16075f83e28aedf578c28ce7f5dcccaa6eccb",
+      "normalizedSourceSha256": "0a77a8601821bd5f6df886af27bb2d75e9335f8d1c810c3b2da593d8f025b5c5"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-interaction-github.mjs",
+      "artifactSourceSha256": "30bb09364f2c48d3f9898f2882e7f73686e62031ba00010b0b62938c4731cc30",
+      "gitBlob": "e0a7fca92dbaf477afaf2e736f3c6711300a2f10",
+      "normalizedSourceSha256": "144ee2781ce22dc1d814ad42b6b4a0eb7d54b116c9d5970b7d11a06c43ba6769"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-interaction-service.mjs",
+      "artifactSourceSha256": "2a84b5d58c09603dc16a9680f3a49c1a1390d857fc284cfa692a3d0d463127e7",
+      "gitBlob": "241f05c7582181c259c62c402e8a0c8256159131",
+      "normalizedSourceSha256": "75b03586a6caa37e37f149df4f6553f079d6e948569f13d2af92a55fa5744659"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-plugins/github/admission.mjs",
+      "artifactSourceSha256": "0f4953cf9fe7fb7bcff4a9fb0f2ecb926c1ba02b7737a943bb1068fc229d6483",
+      "gitBlob": "84b95b78e3c3aa2901cda4f47240b177181b25d1",
+      "normalizedSourceSha256": "07cb8334570c8f90b1fc7df6e5cbbf6282f27d43eaea4b352b5d0e80036687f4"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-plugins/github/index.mjs",
+      "artifactSourceSha256": "401f397263e6a8a865d1f5aca107cb3269193c7cda2f0e4496e888387eacf42e",
+      "gitBlob": "42f402b4820a3c71216396077cb2626b9af5b54f",
+      "normalizedSourceSha256": "438e291c7a1118d3f38a1a12f921f4b7e8f7d64db78eb27fbcf9ae384cbfdbb3"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-plugins/github/tools.mjs",
+      "artifactSourceSha256": "1c60aa1367037b5ab0674644b08c619f5d6f072ea3b7c7c06022796a72e23312",
+      "gitBlob": "c87ed2029311446e6f514c5ad6c90852632bab95",
+      "normalizedSourceSha256": "e8df41f628b3da965c9eeba666b51c4821991bc2da88ab6eb0ac634f486fdec4"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/platform-assistant.mjs",
+      "artifactSourceSha256": "9b56b0175deafde686fa7e491d6ba48076ee08f85e57c5523da034b402ddc8b6",
+      "gitBlob": "237da4b3b2f9df51287d444e68074a6b9598bc4d",
+      "normalizedSourceSha256": "ccc3af8fe7dbef763f8cbbc60d1beb7b43d291b7431c72d4323a177a533c6bd8"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-interaction-task-receipts.mjs",
+      "artifactSourceSha256": "5a0abe8f1f4bad4dffb311cb21eb3d88711a06b23b283eac3c6c1f3ed9b6c105",
+      "gitBlob": "37f39d55fe44610f1cd5822ad6dfd4e70e828995",
+      "normalizedSourceSha256": "5a0abe8f1f4bad4dffb311cb21eb3d88711a06b23b283eac3c6c1f3ed9b6c105"
+    },
+    {
+      "component": "github-search-api",
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "path": "apps/api/src/agent-plugins/github/search.mjs",
+      "artifactSourceSha256": "0bd0ec7aeec713775fdaff1d13f6ba0200e385fce3da8477368b6b0b61b6a09b",
+      "gitBlob": "6c0366e1052c90f9391f875e1a9cee86367c8965",
+      "normalizedSourceSha256": "0bd0ec7aeec713775fdaff1d13f6ba0200e385fce3da8477368b6b0b61b6a09b"
+    },
+    {
+      "component": "qq-worker-reference",
+      "image": "sha256:3937053e1a51582a187284aecc46c14c8fd664ec81db0863b9e2905ece021d6e",
+      "path": "apps/qq-channel/src/napcat-control.mjs",
+      "artifactSourceSha256": "2a2a0fc28e6abc77b64278fa37d88d949d8a85f10ea5c5dd66bbdb6679efc49b",
+      "gitBlob": "1a93a1083f7d525e0bffb4a07500e64b707d41e9",
+      "normalizedSourceSha256": "cc43df6caad259729669481b4d3b2f008b9a2e730f99e732adad3b8359b22398"
+    },
+    {
+      "component": "qq-worker-reference",
+      "image": "sha256:3937053e1a51582a187284aecc46c14c8fd664ec81db0863b9e2905ece021d6e",
+      "path": "apps/qq-channel/src/control-server.mjs",
+      "artifactSourceSha256": "9f2965af83672215acc79aa40ff1bced2910bbc8839c73f15b1e2c705e5fc247",
+      "gitBlob": "81df4c0bc9f607cf387774b446dc0310a2d88d29",
+      "normalizedSourceSha256": "362e81121bcb2589ad4e406b2ba31942fb985ad75afc67ee50971647d2cdd47b"
+    },
+    {
+      "component": "qq-worker-reference",
+      "image": "sha256:3937053e1a51582a187284aecc46c14c8fd664ec81db0863b9e2905ece021d6e",
+      "path": "apps/qq-channel/src/control-store.mjs",
+      "artifactSourceSha256": "453080b190e283172c44d42924533627ee11d09d048644bbe2d07db4a0a43586",
+      "gitBlob": "1baca912c559929ea7798eba09f021a9a683c8e5",
+      "normalizedSourceSha256": "f46deb153a85aba8a97fc75531e0287a18b13e4ef2bfded26f4982564fcf3410"
+    },
+    {
+      "component": "qq-worker-reference",
+      "image": "sha256:3937053e1a51582a187284aecc46c14c8fd664ec81db0863b9e2905ece021d6e",
+      "path": "apps/qq-channel/src/plugins/qq/runtime.mjs",
+      "artifactSourceSha256": "634527f5bd330271e88da93ffa12c17839aba90d9e07c8d312efcfb392048a33",
+      "gitBlob": "220656b8631e3f740a2e6493a18cd1c31e3c14df",
+      "normalizedSourceSha256": "66632c127360c598e62d78cbee6bb23c48a2fc1849f707f8dfba2645fd17b3aa"
+    },
+    {
+      "component": "qq-admin-api",
+      "image": "sha256:e6f615617368eefd5fe18a4ea86afe79c513a6a26bb997965d7edbdba890144b",
+      "path": "apps/api/src/agent-plugin-admin.mjs",
+      "artifactSourceSha256": "57db8eef5eec25220c639b1a47648588cb5f61e00cab7a393293f81ca10405ee",
+      "gitBlob": "4b7e694ee8dfae906955be3ac846c3193692fcaf",
+      "normalizedSourceSha256": "57db8eef5eec25220c639b1a47648588cb5f61e00cab7a393293f81ca10405ee"
+    },
+    {
+      "component": "qq-admin-web-input",
+      "image": "sha256:617e51376cc11595057f6ea73f82ae5520a9ad9360698d08769829798d726516",
+      "path": "packages/platform-client/src/AgentPluginAdmin.jsx",
+      "artifactSourceSha256": "6e90a413e9f8e8a726dac2234af5d2478cdb5a1c3d325cc5258bace77cd1baaf",
+      "gitBlob": "790d891189f19e1dd5ef749822ee9e83a90501eb",
+      "normalizedSourceSha256": "6e90a413e9f8e8a726dac2234af5d2478cdb5a1c3d325cc5258bace77cd1baaf"
+    },
+    {
+      "component": "qq-admin-web-input",
+      "image": "sha256:617e51376cc11595057f6ea73f82ae5520a9ad9360698d08769829798d726516",
+      "path": "packages/platform-client/src/qq-admin-settings.mjs",
+      "artifactSourceSha256": "2f631eaf9d7209fd8a81063a6e8a2266329c5057b14c6fd3b3aa3a54117edad0",
+      "gitBlob": "dff0f767894bb3fa904df10385345434ebf68ce8",
+      "normalizedSourceSha256": "a4ad5ad119bcd0eea5ff5a93439bafecc43dc18c804271f49093789dd2c564df"
+    },
+    {
+      "component": "qq-admin-web-input",
+      "image": "sha256:617e51376cc11595057f6ea73f82ae5520a9ad9360698d08769829798d726516",
+      "path": "packages/platform-client/src/AgentQQAdmin.jsx",
+      "artifactSourceSha256": "ccfd73a9e64d8fecb253a4cf5a8ffc7e63d99738c1506f690c136e00c507a210",
+      "gitBlob": "291dfddad417264c68870b11998600eba79d8bf0",
+      "normalizedSourceSha256": "6ea7ce1cb31898594324d3bdc0122ae02e4c3e2ad9c5e264ab2b2e94f1fced45"
+    }
+  ],
+  "currentArtifacts": [
+    {
+      "name": "github-search-recovery-20261124-r1.tar.gz",
+      "sha256": "ccf4139bff4da660774835acde8db3993f3bc89c992ccab26185adf133ec770d",
+      "bytes": 277902522,
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "buildDirectory": "github-search-recovery-release-r1",
+      "deploymentStatus": "previously-reported-deployed-not-redeployed-by-source-sync"
+    },
+    {
+      "name": "qq-independent-plugin-20261124-r1.tar.gz",
+      "sha256": "513fbdda8b8fe12eace75947fa88cd686337a9820d2651d22193119a435e413e",
+      "bytes": 485145522,
+      "images": {
+        "api": {
+          "tag": "mooyu-qq-independent-api:20261124-r1",
+          "id": "sha256:e6f615617368eefd5fe18a4ea86afe79c513a6a26bb997965d7edbdba890144b",
+          "baseImage": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+          "configPreserved": true,
+          "baseLayersPreserved": true
+        },
+        "worker": {
+          "tag": "mooyu-qq-independent-worker:20261124-r2",
+          "id": "sha256:3937053e1a51582a187284aecc46c14c8fd664ec81db0863b9e2905ece021d6e",
+          "baseImage": "sha256:59aa36815825b97d4acddc02b1dd29cb6d6fb3779aac8a5357cf9c626972ba63",
+          "configPreserved": true,
+          "baseLayersPreserved": true,
+          "fileCopyMode": "individual-files-0444",
+          "nonrootReadVerified": true
+        },
+        "web": {
+          "tag": "mooyu-qq-independent-web:20261124-r1",
+          "id": "sha256:617e51376cc11595057f6ea73f82ae5520a9ad9360698d08769829798d726516",
+          "baseImage": "sha256:b41b96165cfce091ef8890debda68c2920cc0fc18f775f21e70572ee6613fdcb",
+          "configPreserved": true,
+          "baseLayersPreserved": true
+        }
+      },
+      "buildDirectory": "qq-independent-plugin-release-r2",
+      "deploymentStatus": "prepared-not-confirmed-deployed"
+    }
+  ],
+  "historicalArchives": [
+    {
+      "archive": "github-search-plan-format-20261123-r1.tar.gz",
+      "sha256": "445c5c124056ca1df6353472cf6bf044702177a436a927e6c92257176b237195",
+      "bytes": 277844706,
+      "image": "sha256:a48de95df41613c4e0c455850a47cbfd83abfdda052ca4516125e85c780fcf3a",
+      "sourceMapping": "historical-binary-retained-exact-source-commit-not-asserted"
+    },
+    {
+      "archive": "github-search-receipts-20261123-r1.tar.gz",
+      "sha256": "8601a1718e4638f9d33972c23b476f92a1d084fe488d7b31da803a7c857204c3",
+      "bytes": 277857022,
+      "image": "sha256:990c3a3c6b229e99afd3cf903ccc0392dae3c906ab8897df6ee68fe96308d61b",
+      "sourceMapping": "historical-binary-retained-exact-source-commit-not-asserted"
+    },
+    {
+      "archive": "github-search-20261123-r1.tar.gz",
+      "sha256": "25bc1e5767bfe5c413be85026836c6736e555df8862b51dd28490bc5d557c10b",
+      "bytes": 277834395,
+      "image": "sha256:8f72cb8afcbfe2fb33730c467668f007b6cdc23a8a1a3f9c70851155efcab1e2",
+      "sourceMapping": "historical-binary-retained-exact-source-commit-not-asserted"
+    },
+    {
+      "archive": "github-search-verification-20261123-r1.tar.gz",
+      "sha256": "f9b92e54637503d727a1d32267e2bb975524e3dce72739a563fb983e51befbbc",
+      "bytes": 277869564,
+      "image": "sha256:ca9f31fca496b2d78942c6e2fb5c9d33534caddf5d3a935285e011e9a4f33ad6",
+      "sourceMapping": "historical-binary-retained-exact-source-commit-not-asserted"
+    },
+    {
+      "archive": "github-search-recovery-20261124-r1.tar.gz",
+      "sha256": "ccf4139bff4da660774835acde8db3993f3bc89c992ccab26185adf133ec770d",
+      "bytes": 277902522,
+      "image": "sha256:2b6e0cbc637cdbb1081b803e5b0600053ed3c005a07a7a85e1eee9353b8c5a32",
+      "sourceMapping": "current-github-search-runtime-verified"
+    },
+    {
+      "archive": "github-search-scopes-20261124-r1.tar.gz",
+      "sha256": "a2453d5218b8cb196bb8103c75165fe47b8fabcb4404f04e37a6618c6bd92e2d",
+      "bytes": 277885584,
+      "image": "sha256:e07646378c71ebe44af6b8a50dd17cff4e92f458f9c3b7ceeac830c9cdc700b8",
+      "sourceMapping": "historical-binary-retained-exact-source-commit-not-asserted"
+    }
+  ],
+  "acceptance": {
+    "result": "PASSED",
+    "exitCode": 0,
+    "tests": 242,
+    "passed": 242,
+    "failed": 0,
+    "skipped": 0,
+    "sourceFilesFromCurrentWorktree": true,
+    "runtimeDependencyImage": "sha256:a9ac3c4e880ac9605bc63168b2c20234987c1e9f8cd23b1678cfca7e687edf44",
+    "isolatedPostgres": true,
+    "providersAndQQ": "synthetic fixtures only",
+    "productionAccessed": false,
+    "oldTasksRetried": false,
+    "existingServicesRestarted": false,
+    "sourceBindingInputs": 20,
+    "sourceSyntaxFilesChecked": 141,
+    "historicalCredentialPatternScan": {
+      "introducedDiffBytes": 1023861,
+      "findings": 0
+    },
+    "shellPortabilityFixed": true
+  },
+  "boundaries": {
+    "productionAccessed": false,
+    "servicesRestarted": false,
+    "oldTasksRetried": false,
+    "paperDevelopmentSubmitted": false,
+    "paperClosureGuardsRetained": true,
+    "mainChanged": false,
+    "otherWorktreesChanged": false
+  }
+}

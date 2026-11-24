@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "enabled": false,
+  "gateway": "mooyu-qq-napcat-1",
+  "worker": "mooyu-qq-worker-1",
+  "image": "FILL_REVIEWED_GATEWAY_IMAGE_DIGEST",
+  "identityHash": "FILL_REVIEWED_GATEWAY_IDENTITY_HASH",
+  "loginVolume": "FILL_EXISTING_LOGIN_VOLUME_NAME",
+  "botId": "3922489710",
+  "groupId": "905757031"
+}

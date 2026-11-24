@@ -39,7 +39,7 @@ export class QQControlStore{
    // Passwords and credential-derived hashes are excluded from durable identity.
    // Unknown outcomes are checked through status, never automatically replayed.
    let outcome;
-   try{outcome=await refresh();}catch{throw qqAdminError('QQ_ACTION_UNCERTAIN',409);}
+   try{outcome=await refresh();}catch(error){if(['QQ_ALREADY_LOGGED_IN','QQ_GATEWAY_RESTART_REQUIRED'].includes(error.code))throw error;throw qqAdminError('QQ_ACTION_UNCERTAIN',409);}
    const saved=command.operation==='password'?{loginRevision:intent.loginRevision,outcome:outcome?.outcome==='verification_required'?'verification_required':outcome?.outcome==='rejected'?'rejected':'submitted',...(outcome?.outcome==='verification_required'?{verification:outcome.verification==='new_device'?'new_device':'captcha'}:{})}:{loginRevision:intent.loginRevision,refreshed:true};
    await repo.transaction(client,async c=>{
     await c.query('UPDATE mooyu_qq.control_requests SET result=$3 WHERE channel_id=$1 AND request_id=$2',[repo.id,requestId,JSON.stringify(saved)]);

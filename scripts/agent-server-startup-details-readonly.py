@@ -1,0 +1,67 @@
+"""Read-only startup classification; no job execution or raw command output."""
+import hashlib
+import json
+import re
+import subprocess
+from pathlib import Path
+
+files = {Path('/etc/systemd/system/mooyu-qq-backup.service'),
+         Path('/etc/systemd/system/mooyu-qq-backup.timer'),
+         Path('/var/spool/cron/crontabs/root'), Path('/etc/crontab')}
+for root in ['/www/server/cron', '/etc/cron.d']:
+    p = Path(root)
+    if p.is_dir():
+        files.update(x for x in p.iterdir() if x.is_file() and '.log' not in x.name)
+queue, seen = list(sorted(files)), set()
+results, errors = [], []
+while queue and len(seen) < 100:
+    p = queue.pop(0)
+    try:
+        p = p.resolve()
+        if p in seen or not p.is_file():
+            continue
+        seen.add(p)
+        if p.stat().st_size > 262144:
+            errors.append({'file': str(p), 'error': 'SIZE_LIMIT'})
+            continue
+        data = p.read_bytes()
+        text = data.decode(errors='replace')
+        active = '\n'.join(s for s in text.splitlines() if not s.lstrip().startswith('#'))
+        if not re.search(r'mooyu|gamehub|docker|podman|/www/server/cron/', active, re.I):
+            continue
+        actions = {}
+        patterns = {
+            'dockerExec': r'\b(?:docker|podman)\s+exec\b',
+            'dockerInspect': r'\b(?:docker|podman)\s+(?:image\s+)?inspect\b',
+            'dockerStartRestartRun': r'\b(?:docker|podman)\s+(?:start|restart|run)\b',
+            'composeUpStartRestart': r'\b(?:compose|docker-compose)\b[^\n;&|]*\b(?:up|start|restart)\b',
+            'systemctlStartRestart': r'\bsystemctl\s+(?:start|restart|enable)\b',
+            'databaseDump': r'\b(?:pg_dump|pg_dumpall)\b',
+            'databaseRestore': r'\b(?:pg_restore)\b',
+            'paperReference': r'paper|论文',
+            'shellSource': r'(?:^|\n)\s*(?:source|\.)\s+',
+            'dynamicEvaluation': r'\beval\b|\$\(',
+            'processManager': r'\b(?:pm2|supervisord|supervisorctl)\b'
+        }
+        for key, pattern in patterns.items():
+            actions[key] = bool(re.search(pattern, active, re.I))
+        # Follow only static script references in named local administration trees.
+        refs = sorted(set(re.findall(r'(?<![A-Za-z0-9_])(/(?:www|usr/local|opt|root)/[A-Za-z0-9_./-]+\.(?:sh|py|mjs|cjs))\b', active)))
+        for ref in refs:
+            if '..' not in Path(ref).parts:
+                queue.append(Path(ref))
+        scheduling = [s.strip() for s in active.splitlines()
+                      if re.fullmatch(r'\s*(?:OnCalendar|OnBootSec|OnUnitActiveSec|Persistent|Unit)=[A-Za-z0-9_ .*:/=+-]+\s*', s)]
+        results.append({'file': str(p), 'sha256': hashlib.sha256(data).hexdigest(),
+                        'actions': actions, 'referencedScripts': refs,
+                        'timerSettings': scheduling})
+    except OSError as error:
+        errors.append({'file': str(p), 'error': type(error).__name__})
+print(json.dumps({'startupDetails': results, 'errors': errors,
+                  'queueTruncated': bool(queue), 'reviewRequired': True}, ensure_ascii=False, indent=2))
+for unit in ['mooyu-qq-backup.service', 'mooyu-qq-backup.timer']:
+    r = subprocess.run(['systemctl', 'show', unit, '--no-pager',
+                        '--property=ActiveState,SubState,UnitFileState,LastTriggerUSec,NextElapseUSecRealtime'],
+                       capture_output=True, text=True, timeout=20)
+    print(unit)
+    print(r.stdout.strip() if r.returncode == 0 else 'STATUS_UNAVAILABLE')

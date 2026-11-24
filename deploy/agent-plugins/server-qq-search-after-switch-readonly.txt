@@ -1,0 +1,23 @@
+docker exec -i gamehub-production-api-1 node --input-type=module <<'NODE'
+import {createRequire} from 'node:module';
+const {Pool}=createRequire('/app/apps/api/package.json')('pg');
+const pool=new Pool({connectionString:process.env.DATABASE_URL,max:1,connectionTimeoutMillis:5000,options:'-c default_transaction_read_only=on -c statement_timeout=8000 -c lock_timeout=1000'});
+let c;
+try {
+ c=await pool.connect();
+ await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+ const agent='c98abda1-d115-4e05-9c2e-43f68119386a';
+ const roots=(await c.query("SELECT id,state,error_code,created_at FROM agent_interactions WHERE agent_user_id=$1 AND channel='qq' AND origin_json->>'groupId'='905757031' AND kind='message' ORDER BY created_at DESC,id DESC LIMIT 5",[agent])).rows;
+ console.log('recentMessages '+JSON.stringify(roots));
+ const children=(await c.query('SELECT parent_id,id,kind,state,error_code,run_id,created_at FROM agent_interactions WHERE agent_user_id=$1 AND parent_id=ANY($2::uuid[]) ORDER BY created_at DESC',[agent,roots.map(r=>r.id)])).rows;
+ console.log('actualToolTasks '+JSON.stringify(children));
+ console.log('messagesWithoutTask '+JSON.stringify(roots.filter(r=>!children.some(t=>t.parent_id===r.id)).map(r=>({id:r.id,created_at:r.created_at}))));
+ console.log('scheduler '+JSON.stringify((await c.query("SELECT enabled,config_json#>>'{worker,state}' AS state,config_json#>>'{worker,interactionProtocolVersion}' AS protocol,config_json#>>'{worker,heartbeatAt}' AS heartbeat_at FROM agent_schedules WHERE agent_user_id=$1 AND workflow_key='blog.project.discovery-shadow'",[agent])).rows));
+ await c.query('ROLLBACK');
+ console.log('READONLY_COMPLETE no_retry_no_restart_no_changes');
+} catch(e) {
+ if(c)await c.query('ROLLBACK').catch(()=>{});
+ console.log('READ_FAILED '+(/^[A-Z0-9_]{1,80}$/.test(e.code??'')?e.code:'UNKNOWN'));
+ process.exitCode=1;
+} finally {c?.release();await pool.end();}
+NODE

@@ -12,8 +12,8 @@ export function createQQProvider({apiKey,model,invoke=createAgentDeepSeekProvide
   };
 }
 export class QQService {
-  constructor({config,repository,provider,gateway,log=()=>{},fault=async()=>{}}){
-    Object.assign(this,{config,repository,provider,gateway,log,fault});this.controller=new AbortController();
+  constructor({config,repository,provider,gateway,bridge=null,log=()=>{},fault=async()=>{}}){
+    Object.assign(this,{config,repository,provider,gateway,bridge,log,fault});this.controller=new AbortController();
   }
   async receive(event){
     if(this.repository.control){const result=await this.repository.admit(event);if(result.accepted&&!result.duplicate)this.log({event:'admission',messageId:String(event.message_id),accepted:true});return result;}
@@ -41,9 +41,11 @@ export class QQService {
       if(!this.config.enabled)return {paused:true};
       if(this.readiness&&!this.readiness(this.config))return {accountNotReady:true};
       if(!this.gateway.connected())return {offline:true};
+      if(this.bridge)await this.bridge.poll(c,this.config,this.controller.signal);
       const row=await this.repository.next(c);if(!row)return {idle:true};
       if(!this.config.allowedUsers.includes(row.user_id)||(row.origin_group_id&&row.origin_group_id!==this.config.groupId)){await this.repository.deny(c,row);return {policyRejected:true};}
       if(row.status==='queued'){
+        if(this.bridge)return this.bridge.queued(c,row,this.config,this.controller.signal);
         const messages=this.messages(await this.repository.history(c,row),row);
         // UTF-8 bytes plus envelope overhead conservatively reserve input tokens.
         const tokens=Buffer.byteLength(JSON.stringify(messages))+1024+this.config.maxReplyTokens;
@@ -63,6 +65,10 @@ export class QQService {
       }
       // Persist send intent BEFORE touching the gateway. An uncertain send is
       // never retried automatically: OneBot has no exactly-once send primitive.
+      if(row.image_data){
+        try{if(!this.bridge?.verifyImageAccess)throw Object.assign(new Error('QQ_AGENT_IMAGE_ACCESS_REQUIRED'),{code:'QQ_AGENT_IMAGE_ACCESS_REQUIRED',retryable:true});await this.bridge.verifyImageAccess(row,this.config,this.controller.signal);}
+        catch(error){if(error.retryable)await this.repository.deferDelivery(c,row);else await this.repository.deny(c,row);return {imageAccessBlocked:true};}
+      }
       const claimed=await this.repository.beginSend(c,row);await this.fault('send-intent',claimed);
       let remoteId;
       try{remoteId=await this.gateway.send(claimed);}

@@ -198,6 +198,19 @@ test('GitHub repository tool keeps strict response limits for metadata and refer
     error => error.code === 'AGENT_GITHUB_RESPONSE_TOO_LARGE');
 });
 
+test('GitHub search handles a real-sized raw page while keeping normalized output bounded and cancels oversized streams',async()=>{
+ const {createGitHubRepositorySearchAdapter}=await load('agent-github-repository-search-tool.mjs');
+ const input={query:'browser ui helper tool',limit:20,sort:'stars',minStars:10,pushedAfter:null};
+ const body=JSON.stringify({items:[{name:'helper',owner:{login:'team'},description:'x'.repeat(680000),stargazers_count:20,forks_count:1,topics:[],license:{spdx_id:'MIT'}}]});
+ const result=await createGitHubRepositorySearchAdapter({fetchImpl:async()=>new Response(body)})({request:input});
+ assert.equal(result.output.candidates.length,1);assert.equal(result.output.candidates[0].description.length,1000);assert.ok(Buffer.byteLength(JSON.stringify(result.output))<10000);
+ let cancelled=false,pulled=0;
+ const oversized=()=>new Response(new ReadableStream({pull(controller){pulled++;controller.enqueue(new Uint8Array(65536));},cancel(){cancelled=true;}}));
+ await assert.rejects(createGitHubRepositorySearchAdapter({fetchImpl:async()=>oversized()})({request:input}),{code:'AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE'});
+ assert.equal(cancelled,true);assert.ok(pulled<=18,'reading stops at the raw transport ceiling');
+ await assert.rejects(createGitHubRepositorySearchAdapter({fetchImpl:async()=>new Response('{invalid')})({request:input}),{code:'AGENT_GITHUB_SEARCH_RESPONSE_INVALID'});
+});
+
 test('GitHub discovery tool accepts only plain bounded queries and returns non-evidentiary candidates', async () => {
   const {
     createGitHubRepositorySearchAdapter, validateGitHubRepositorySearchInput,

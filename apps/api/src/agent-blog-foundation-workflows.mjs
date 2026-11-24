@@ -116,6 +116,12 @@ export const BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW = Object.freeze({
   ],
 });
 
+// Interactive requests retain the private-only stages while allowing one typed
+// composition repair. Keep the v2 acceptance contract and its history intact.
+export const BLOG_PROJECT_SINGLE_INTERACTION_DRAFT_WORKFLOW=Object.freeze({
+  ...BLOG_PROJECT_SINGLE_DRAFT_SHADOW_WORKFLOW,workflowVersion:3,
+});
+
 export async function ensureBlogShadowReplayWorkflow(runtimeRepository, actorUserId) {
   const registered = await runtimeRepository.registerWorkflow({
     actorUserId, manifest: BLOG_SINGLE_SHADOW_REPLAY_WORKFLOW, status: 'draft',

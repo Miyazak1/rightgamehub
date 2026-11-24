@@ -1,0 +1,1 @@
+export const QQ_CHANNEL_PLUGIN_MANIFEST=Object.freeze({schemaVersion:'agent-plugin-v1',id:'mooyu.qq',version:'1.0.0',hostApiVersion:1,kind:'channel',displayName:'QQ 沟通渠道',defaultEnabled:true,dependencies:[],capabilities:[],tools:[],backendTools:[],taskKinds:[],workflows:[],publicCapabilities:['qq-channel'],legacyTaskKinds:[]});

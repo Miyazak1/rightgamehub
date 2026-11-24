@@ -1,0 +1,15 @@
+# Append to the ORIGINAL ordered QQ Compose files. Gateway and DB are unchanged.
+services:
+  worker:
+    image: ${TARGET_QQ_WORKER_IMAGE_ID:?use the verified immutable worker image ID}
+    environment:
+      QQ_AGENT_INTERACTIONS_ENABLED: "true"
+      QQ_AGENT_API_URL: http://api:3090
+      QQ_ADMIN_ENABLED: "true"
+      QQ_ADMIN_AGENT_USER_ID: ${EXISTING_AGENT_USER_ID:?use the current Agent identity}
+      PAPER_STUDY_ENABLED: "false"
+      PAPER_STUDY_WORKER_ENABLED: "false"
+      PAPER_STUDY_MODELS_ENABLED: "false"
+      PAPER_STUDY_PUBLISH_ENABLED: "false"
+      AGENT_PAPER_SEMANTIC_ENABLED: "false"
+      AGENT_PAPER_RESEARCH_WORKER_ENABLED: "false"

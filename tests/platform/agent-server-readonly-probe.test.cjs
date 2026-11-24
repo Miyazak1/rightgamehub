@@ -1,0 +1,9 @@
+const test=require('node:test'),assert=require('node:assert/strict'),{summarizeContainers,assertReadOnlySQL}=require('../../scripts/agent-server-readonly-probe.cjs');
+test('server metadata probe emits references and fingerprints, never raw secrets or credential URLs',()=>{
+ const secret='sensitive-credential-not-for-output',container={Name:'/gamehub-production-api-1',Id:'a'.repeat(64),Image:'sha256:'+'b'.repeat(64),Config:{Image:'verified-api:existing',Env:['AGENT_SECRET_ENCRYPTION_KEY='+secret,'DEEPSEEK_API_KEY='+secret,'DATABASE_URL=postgresql://app:'+secret+'@postgres:5432/gamehub','QQ_AGENT_API_URL=http://user:'+secret+'@api:3090/path?token='+secret],Cmd:['node','apps/api/src/server.mjs','--private='+secret],Labels:{'com.docker.compose.project':'gamehub-production','com.docker.compose.service':'api','com.docker.compose.project.config_files':'/a.yml,/b.json'}},State:{Running:true},Mounts:[],NetworkSettings:{Networks:{},Ports:{}},HostConfig:{}};
+ const result=summarizeContainers([container]);assert(!JSON.stringify(result).includes(secret));assert.equal(result.containers[0].secretPresence.AGENT_SECRET_ENCRYPTION_KEY,true);assert.deepEqual(result.containers[0].composeFiles,['/a.yml','/b.json']);assert.equal(result.containers[0].entryKind,'api-server');assert.equal(result.containers[0].bindings.QQ_AGENT_API_URL,'http://api:3090/path');assert.equal(result.readOnly,true);
+});
+test('readonly probe rejects writes and multi-statements before reaching PostgreSQL',()=>{
+ for(const sql of ['UPDATE users SET role=\'admin\'','SELECT 1; DELETE FROM users','WITH erased AS (DELETE FROM users RETURNING id) SELECT * FROM erased','COPY users TO STDOUT','SELECT 1;','CALL dangerous()'])assert.throws(()=>assertReadOnlySQL(sql),/NON_READONLY_QUERY_REJECTED/);
+ assert.doesNotThrow(()=>assertReadOnlySQL('SELECT updated_at FROM agent_provider_secrets'));assert.doesNotThrow(()=>assertReadOnlySQL("SELECT current_setting('transaction_read_only')"));
+});

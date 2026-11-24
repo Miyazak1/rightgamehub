@@ -1,0 +1,20 @@
+[Unit]
+Description=MOOYU QQ bounded native gateway recovery
+After=docker.service
+Requisite=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+# Fill these paths from a NEW reviewed release; this template is not installed.
+ExecStart=@VERIFIED_PRIVATE_NODE@ @NEW_RELEASE_ROOT@/scripts/qq-plugin-guardian.mjs recover @PRIVATE_STATE_ROOT@/config.private.json @PRIVATE_STATE_ROOT@
+TimeoutStartSec=600
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=@PRIVATE_STATE_ROOT@ /var/lock
+StandardOutput=journal
+StandardError=journal

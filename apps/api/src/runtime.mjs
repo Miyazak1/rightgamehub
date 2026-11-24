@@ -1,4 +1,11 @@
 import { createPlatformAssistantProvider, createPlatformAssistantService } from './platform-assistant.mjs';
+import {readFileSync as readAgentChannelSecret} from 'node:fs';
+import {loadAgentInteractionConfig} from './agent-interaction-config.mjs';
+import {PostgresAgentInteractionRepository} from './agent-interaction-repository.mjs';
+import {createAgentInteractionService} from './agent-interaction-service.mjs';
+import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
+import {createAgentPluginAdminService} from './agent-plugin-admin.mjs';
+import {createAgentWebAssistantAdapter} from './agent-interaction-routes.mjs';
 import {createAgentQQAdminService} from './agent-qq-admin-service.mjs';
 import { createPlatformAgentTools } from './platform-agent-tools.mjs';
 import { createAgentCapabilityService } from './agent-capability-service.mjs';
@@ -324,10 +331,17 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const practiceService = createPracticeService({repository: practiceRepository, engine: practiceEngine});
   const practiceWorker = createPracticeWorker({repository: practiceRepository, engine: practiceEngine});
   const platformAgentTools=createPlatformAgentTools({practiceService,capabilityService:createAgentCapabilityService({catalogService,discoveryCampaignService,siteOrigin:config.gameShareSiteOrigin})});
-  const platformAssistantService = createPlatformAssistantService({practiceService,tools:platformAgentTools,
+  const interactionConfig=loadAgentInteractionConfig(env);
+  const agentInteractionService=interactionConfig.enabled?createAgentInteractionService({repository:new PostgresAgentInteractionRepository(database.pool),agentId:interactionConfig.agentId,pluginHost:createBuiltinAgentPluginHost({env}),
+    readQQPolicy:async()=>{const value=await agentQQAdminService.readBoundChannelPolicy();if(value.binding?.interactionProtocolVersion!==1)throw Object.assign(new Error('AGENT_INTERACTION_QQ_UPGRADE_REQUIRED'),{code:'AGENT_INTERACTION_QQ_UPGRADE_REQUIRED',statusCode:503});return {agentId:interactionConfig.agentId,botId:value.binding.botId,...value.settings};}}):null;
+  const agentChannelSecret=interactionConfig.enabled&&env.QQ_ADMIN_ENABLED==='true'?readAgentChannelSecret(env.QQ_ADMIN_SECRET_FILE,'utf8').trim():null;
+  const agentPluginAdminService=createAgentPluginAdminService({pool:database.pool,interactionService:agentInteractionService,qqAdminService:agentQQAdminService});
+  const platformAssistantService = agentInteractionService?createAgentWebAssistantAdapter(agentInteractionService):createPlatformAssistantService({practiceService,tools:platformAgentTools,
     provider: env.PLATFORM_ASSISTANT_ENABLED === 'true' ? createPlatformAssistantProvider({
       apiKey: config.deepSeekApiKey, modelId: env.PLATFORM_ASSISTANT_MODEL?.trim() || 'deepseek-chat' }) : null});
   const app = createApp({
+    agentInteractionService,
+    agentChannelSecret,
     platformAgentTools,
     platformAssistantService,
     practiceService,
@@ -370,6 +384,7 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
     blogService,
     agentAccountService,
     agentQQAdminService,
+    agentPluginAdminService,
     agentBlogAutomation,
     agentBlogFollowUpService,
     agentBlogPublicationCutoverService,
@@ -396,6 +411,11 @@ export function createRuntime({ env = process.env, mailer, loadTrustedRules = tr
   const runtimeEdgeApp = createRuntimeEdgeApp({ repository: new PostgresRuntimeEdgeRepository(database.pool), objectStore: runtimeStore, runtimeDomain: config.runtimeDomain, logger: config.nodeEnv !== 'test' });
   app.addHook('onClose', async () => { await practiceWorker.stop(); agentBlogAutomation.stop(); changeRadarWorker.stop(); researchTopicWorker.stop(); await gameShareService.stop(); await saveMetrics?.close(); guessBaikeAutomation.stop(); storageCapacityService.stop(); await multiplayerMatchPublisher.close(); await multiplayerRoomPublisher.close(); await realtimeTicketStore.close(); await paperStudyRuntime?.close(); await database.close(); });
   return {
+    agentInteractionService,
+    practiceService,
+    platformAgentTools,
+    agentQQAdminService,
+    agentPluginAdminService,
     config,
     database,
     migrations,

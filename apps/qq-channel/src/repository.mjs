@@ -2,8 +2,36 @@ import {createHash,randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {reject,parseInbound,applyQQControlPolicy} from './config.mjs';
 import {qqPolicyView,qqAdminError} from '../../api/src/qq-admin-protocol.mjs';
+import {agentRequestId} from './agent-bridge.mjs';
+import {validateArticleImage} from './article-image.mjs';
 const day="date_trunc('day',now() AT TIME ZONE 'Asia/Shanghai') AT TIME ZONE 'Asia/Shanghai'";
 export class QQRepository {
+  async enableAgentBridge(){await this.pool.query(await readFile(new URL('./agent-schema.sql',import.meta.url),'utf8'));this.agentBridge=true;}
+  async agentLink(c,row){return (await c.query(`INSERT INTO mooyu_qq.agent_links(channel_id,message_id,request_id) VALUES($1,$2,$3)
+    ON CONFLICT(channel_id,message_id) DO UPDATE SET request_id=mooyu_qq.agent_links.request_id RETURNING *`,[this.id,row.message_id,agentRequestId([this.id,row.message_id])])).rows[0];}
+  async agentLinked(c,row,value){await c.query('UPDATE mooyu_qq.agent_links SET interaction_id=$3,task_id=coalesce(task_id,$4) WHERE channel_id=$1 AND message_id=$2',[this.id,row.message_id,value.id,value.task?.id??null]);}
+  async agentDefer(c,row){await c.query("UPDATE mooyu_qq.messages SET next_at=now()+interval '2 seconds',updated_at=now() WHERE channel_id=$1 AND message_id=$2 AND status='queued'",[this.id,row.message_id]);}
+  async agentReady(c,row,reply){await this.transaction(c,async client=>{const result=await client.query("UPDATE mooyu_qq.messages SET status='ready',reply=$3,error_code=NULL,updated_at=now() WHERE channel_id=$1 AND message_id=$2 AND status='queued'",[this.id,row.message_id,reply]);if(result.rowCount!==1)reject('QQ_JOB_STATE_CHANGED');await this.event(client,row.message_id,'agent-response-ready');});}
+  async agentPending(c){return (await c.query(`SELECT m.*,l.task_id FROM mooyu_qq.agent_links l JOIN mooyu_qq.messages m USING(channel_id,message_id)
+    WHERE l.channel_id=$1 AND l.task_id IS NOT NULL AND NOT l.task_settled AND l.next_poll_at<=now() AND m.status='delivered' ORDER BY l.next_poll_at LIMIT 1`,[this.id])).rows[0];}
+  async agentPollLater(c,row){await c.query("UPDATE mooyu_qq.agent_links SET next_poll_at=now()+interval '5 seconds' WHERE channel_id=$1 AND message_id=$2",[this.id,row.message_id]);}
+  async deferDelivery(c,row){await c.query("UPDATE mooyu_qq.messages SET next_at=now()+interval '5 seconds' WHERE channel_id=$1 AND message_id=$2 AND status='ready'",[this.id,row.message_id]);}
+  async agentFinish(c,row,{reply,denied=false,pages=[],presentationError=null}){
+   if(presentationError&&!/^AGENT_ARTICLE_IMAGE_[A-Z_]+$/u.test(presentationError))reject('QQ_AGENT_IMAGE_INVALID');
+   pages=pages.map(validateArticleImage);
+   if(pages.length&&(pages.length!==pages[0].pageCount||pages.some((p,i)=>p.page!==i||p.revisionId!==pages[0].revisionId||p.pageCount!==pages.length)))reject('QQ_AGENT_IMAGE_INVALID');
+   await this.transaction(c,async client=>{
+    const link=await client.query('UPDATE mooyu_qq.agent_links SET task_settled=true WHERE channel_id=$1 AND message_id=$2 AND NOT task_settled RETURNING task_id',[this.id,row.message_id]);if(!link.rowCount)return;
+    if(denied){await this.event(client,row.message_id,'agent-result-policy-rejected');return;}
+    for(const page of pages.length?pages:[null]){
+    const id='-'+BigInt('0x'+createHash('sha256').update(this.id+':'+row.task_id+(page?':page:'+page.page:'')).digest('hex').slice(0,12)).toString();
+    await client.query(`INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint,status,reply,origin_group_id,error_code)
+      VALUES($1,$2,$3,'',$4,'ready',$5,$6,$7) ON CONFLICT DO NOTHING`,[this.id,id,row.user_id,'agent-task:'+row.task_id+(page?':page:'+page.page:''),page?`${page.page===0?reply+'\n':''}文章全文 · ${page.page+1}/${page.pageCount}`:reply,row.origin_group_id,presentationError?'QQ_AGENT_IMAGE_RENDER_FAILED':'QQ_AGENT_TASK_RESULT']);
+    await client.query('INSERT INTO mooyu_qq.agent_deliveries(channel_id,message_id,source_message_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[this.id,id,row.message_id]);
+    if(page)await client.query('INSERT INTO mooyu_qq.agent_image_pages(channel_id,message_id,task_id,revision_id,page_no,page_count,image_data,sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING',[this.id,id,row.task_id,page.revisionId,page.page,page.pageCount,Buffer.from(page.data,'base64'),page.sha256]);
+    }
+    await this.event(client,row.message_id,'agent-result-queued',{taskId:row.task_id,...(presentationError?{presentationError}:{})});
+  });}
   constructor(pool,config){this.pool=pool;this.config=config;this.bootstrap=structuredClone(config);this.id=config.channelId;this.control=false;}
   async transaction(client,fn){
     try{await client.query('BEGIN');await client.query("SET LOCAL lock_timeout='3s'");await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,1))',[this.id]);
@@ -99,7 +127,8 @@ export class QQRepository {
       WHERE channel_id=$1 AND status='generating' RETURNING message_id`,[this.id])).rows;
     for(const row of generating)await this.event(client,row.message_id,'generation-recovered');
   });}
-  async next(c){return (await c.query(`SELECT * FROM mooyu_qq.messages WHERE channel_id=$1 AND status IN ('ready','queued') AND next_at<=now()
+  async next(c){return (await c.query(`SELECT * ${this.agentBridge?',(SELECT source_message_id FROM mooyu_qq.agent_deliveries d WHERE d.channel_id=mooyu_qq.messages.channel_id AND d.message_id=mooyu_qq.messages.message_id) AS reply_to_message_id,(SELECT image_data FROM mooyu_qq.agent_image_pages p WHERE p.channel_id=mooyu_qq.messages.channel_id AND p.message_id=mooyu_qq.messages.message_id) AS image_data,(SELECT task_id FROM mooyu_qq.agent_image_pages p WHERE p.channel_id=mooyu_qq.messages.channel_id AND p.message_id=mooyu_qq.messages.message_id) AS image_task_id':''} FROM mooyu_qq.messages WHERE channel_id=$1 AND status IN ('ready','queued') AND next_at<=now()
+    ${this.agentBridge?`AND NOT EXISTS(SELECT 1 FROM mooyu_qq.agent_image_pages current JOIN mooyu_qq.agent_image_pages previous ON previous.channel_id=current.channel_id AND previous.task_id=current.task_id AND previous.page_no<current.page_no JOIN mooyu_qq.messages pending ON pending.channel_id=previous.channel_id AND pending.message_id=previous.message_id WHERE current.channel_id=mooyu_qq.messages.channel_id AND current.message_id=mooyu_qq.messages.message_id AND pending.status<>'delivered')`:''}
     ORDER BY CASE WHEN status='ready' THEN 0 ELSE 1 END,created_at,message_id LIMIT 1`,[this.id])).rows[0]??null;}
   async history(c,row){
     const messages=(await c.query(`SELECT input_text,reply FROM mooyu_qq.messages WHERE channel_id=$1 AND user_id=$2 AND status='delivered' AND error_code IS NULL
@@ -146,7 +175,7 @@ export class QQRepository {
     const token=randomUUID();return this.transaction(c,async client=>{
       const saved=(await client.query(`UPDATE mooyu_qq.messages SET status='sending',run_token=$3,updated_at=now()
         WHERE channel_id=$1 AND message_id=$2 AND status='ready' RETURNING *`,[this.id,row.message_id,token])).rows[0];
-      if(!saved)reject('QQ_JOB_STATE_CHANGED');await this.event(client,row.message_id,'send-started');return saved;
+      if(!saved)reject('QQ_JOB_STATE_CHANGED');await this.event(client,row.message_id,'send-started');return {...saved,reply_to_message_id:row.reply_to_message_id,...(row.image_data?{image_data:row.image_data}:{})};
     });
   }
   async sent(c,row,remoteId){return this.transaction(c,async client=>{

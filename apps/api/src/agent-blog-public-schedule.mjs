@@ -198,7 +198,7 @@ export class PostgresAgentBlogPublicScheduleRepository {
     }
     const row = (await this.pool.query(`UPDATE agent_schedules SET
         config_json=jsonb_set(config_json,'{worker}',jsonb_build_object(
-          'instanceId',$2::text,'state',$3::text,'heartbeatAt',clock_timestamp()),true),
+          'instanceId',$2::text,'state',$3::text,'heartbeatAt',clock_timestamp(),'interactionProtocolVersion',1),true),
         updated_at=clock_timestamp()
       WHERE agent_user_id=$1 AND workflow_key=$4
         AND config_json->>'mode'='foundation-public'

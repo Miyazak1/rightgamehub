@@ -126,3 +126,5 @@
   .assistant-retention { margin-top:6px; }
 }
 @media(prefers-reduced-motion:reduce) { .platform-assistant button { transition:none; } }
+.assistant-task { margin-top:12px; padding:12px; border:1px solid var(--gh-border,#d6d4dd); border-radius:10px; overflow-wrap:anywhere; }
+.assistant-task p { margin:8px 0 0; white-space:pre-wrap; }

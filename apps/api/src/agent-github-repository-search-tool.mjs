@@ -3,7 +3,9 @@ import { stableHash } from './researcher-qa-protocol/stable-json.mjs';
 import { githubRateLimitBackoffSeconds, githubRequestHeaders,
   normalizeGitHubResearchToken } from './agent-github-research-runtime.mjs';
 
-const MAX_RESPONSE_BYTES = 262144;
+// GitHub search can include large owner/description metadata even for a short
+// result page. Bound raw transport separately from the normalized tool output.
+const MAX_RESPONSE_BYTES = 1048576;
 const QUERY = /^[\p{L}\p{N} ._+#-]{2,120}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
 
@@ -94,21 +96,29 @@ export function validateGitHubRepositorySearchOutput(value) {
 
 async function readResponse(response) {
   const declared = Number(response.headers.get('content-length') ?? 0);
-  if (declared > MAX_RESPONSE_BYTES) fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > MAX_RESPONSE_BYTES) fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
-  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  if (declared > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel();fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');
+  }
+  const reader=response.body?.getReader();if(!reader)fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID');
+  const chunks=[];let size=0;
+  try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;
+    if(size>MAX_RESPONSE_BYTES){await reader.cancel();fail('AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE');}
+    chunks.push(Buffer.from(value));
+  }}finally{reader.releaseLock();}
+  return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks,size));
 }
 
 export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fetch,
-  userAgent = 'GameHub-Agent-Discovery/1.0', token = null } = {}) {
+  userAgent = 'GameHub-Agent-Discovery/1.0', token = null, contractVersion = 1 } = {}) {
   if (typeof fetchImpl !== 'function') fail('AGENT_GITHUB_SEARCH_FETCH_REQUIRED', { notDispatched: true });
   const researchToken = normalizeGitHubResearchToken(token);
   return async ({ request: raw, timeoutSeconds = 30 }) => {
-    const input = validateGitHubRepositorySearchInput(raw);
+    const input = contractVersion===2?validateGitHubRepositorySearchV2Input(raw):validateGitHubRepositorySearchInput(raw);
     const search = `${input.query} archived:false fork:false stars:>=${input.minStars}`
       + (input.pushedAfter ? ` pushed:>=${input.pushedAfter}` : '');
-    const params = new URLSearchParams({ q: search, sort: input.sort, order: 'desc', per_page: String(input.limit) });
+    const qualifiers=contractVersion===2?Object.entries(input.filters).filter(([,v])=>v!==null).map(([key,v])=>({language:'language:',license:'license:',createdAfter:'created:>=',createdBefore:'created:<=',pushedBefore:'pushed:<=',maxStars:'stars:<='}[key])+v):[];
+    const params = new URLSearchParams({ q: [search,...qualifiers].join(' '), order: 'desc', per_page: String(input.limit) });
+    if(input.sort!=='best-match')params.set('sort',input.sort);
     const canonicalUri = `https://api.github.com/search/repositories?${params.toString()}`;
     let response;
     try {
@@ -128,7 +138,10 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
     }
     let payload;
     try { payload = JSON.parse(await readResponse(response)); }
-    catch (error) { fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID', { cause: error }); }
+    catch (error) {
+      if(error?.code==='AGENT_GITHUB_SEARCH_RESPONSE_TOO_LARGE')throw error;
+      fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID', { cause: error });
+    }
     if (!Array.isArray(payload?.items)) fail('AGENT_GITHUB_SEARCH_RESPONSE_INVALID');
     const candidates = payload.items.slice(0, input.limit).map(item => {
       const owner = String(item?.owner?.login ?? '').slice(0, 100);
@@ -143,19 +156,44 @@ export function createGitHubRepositorySearchAdapter({ fetchImpl = globalThis.fet
         topics: Array.isArray(item.topics) ? item.topics.filter(topic => typeof topic === 'string').slice(0, 20) : [],
         licenseSpdx: typeof item.license?.spdx_id === 'string' ? item.license.spdx_id.slice(0, 80) : null,
         pushedAt: typeof item.pushed_at === 'string' && !Number.isNaN(Date.parse(item.pushed_at)) ? item.pushed_at : null,
+        ...(contractVersion===2?{createdAt:typeof item.created_at==='string'&&!Number.isNaN(Date.parse(item.created_at))?item.created_at:null}:{}),
       };
     }).filter(Boolean);
     const unique = [...new Map(candidates.map(candidate => [candidate.key, candidate])).values()];
     const contentSha256 = stableHash(unique);
     const output = {
-      schemaVersion: 'github-repository-search-v1',
-      query: { text: input.query, sort: input.sort, minStars: input.minStars, pushedAfter: input.pushedAfter },
+      schemaVersion: `github-repository-search-v${contractVersion}`,
+      query: { text: input.query, sort: input.sort, minStars: input.minStars, pushedAfter: input.pushedAfter,...(contractVersion===2?{filters:input.filters}:{}) },
       source: { canonicalUri, fetchedAt: new Date().toISOString(), contentSha256 },
       candidates: unique,
+      ...(contractVersion===2?{incompleteResults:payload.incomplete_results!==false,totalCount:Number.isSafeInteger(payload.total_count)?payload.total_count:null}:{}),
     };
-    validateGitHubRepositorySearchOutput(output);
+    if(contractVersion===2)validateGitHubRepositorySearchV2Output(output);else validateGitHubRepositorySearchOutput(output);
     return { receiptId: `github-search:${stableHash({ input, contentSha256 })}`, output,
       responseRef: { sourceType: 'github.repository-search', canonicalUri, contentSha256 },
       usage: { toolCalls: 1, networkRequests: 1, candidates: unique.length } };
   };
+}
+
+// V1 remains immutable for scheduled discovery and historical runs. V2 exposes
+// typed qualifiers only: model text cannot inject arbitrary GitHub operators.
+export const GITHUB_REPOSITORY_SEARCH_V2_TOOL=Object.freeze({...GITHUB_REPOSITORY_SEARCH_TOOL,toolKey:'research.github.repository.search-conditions',contractVersion:1,
+ inputSchema:{key:'github.repository.search.input',version:2},outputSchema:{key:'github.repository.search.output',version:2}});
+const FILTER_KEYS=['language','license','createdAfter','createdBefore','pushedBefore','maxStars'];
+export function validateGitHubRepositorySearchV2Input(v){
+ if(!exact(v,['query','limit','sort','minStars','pushedAfter','filters'])||!exact(v.filters,FILTER_KEYS)||!['best-match','stars','updated'].includes(v.sort))fail('AGENT_GITHUB_SEARCH_INPUT_INVALID',{notDispatched:true});
+ const base=validateGitHubRepositorySearchInput({query:v.query,limit:v.limit,sort:v.sort==='best-match'?'stars':v.sort,minStars:v.minStars,pushedAfter:v.pushedAfter});
+ const f=v.filters;
+ for(const k of ['language','license'])if(f[k]!==null&&(typeof f[k]!=='string'||! /^[A-Za-z0-9+#._-]{1,60}$/u.test(f[k])))fail('AGENT_GITHUB_SEARCH_INPUT_INVALID',{notDispatched:true});
+ for(const k of ['createdAfter','createdBefore','pushedBefore'])if(f[k]!==null&&new Date(isoDay(f[k])+'T00:00:00Z').toISOString().slice(0,10)!==f[k])fail('AGENT_GITHUB_SEARCH_INPUT_INVALID',{notDispatched:true});
+ if(f.maxStars!==null&&(!integer(f.maxStars,0,10000000)||f.maxStars<v.minStars)||f.createdAfter&&f.createdBefore&&f.createdAfter>f.createdBefore||v.pushedAfter&&f.pushedBefore&&v.pushedAfter>f.pushedBefore)fail('AGENT_GITHUB_SEARCH_INPUT_INVALID',{notDispatched:true});
+ return {...base,sort:v.sort,filters:structuredClone(f)};
+}
+export function validateGitHubRepositorySearchV2Output(v){
+ if(!exact(v,['schemaVersion','query','source','candidates','incompleteResults','totalCount'])||v.schemaVersion!=='github-repository-search-v2'||typeof v.incompleteResults!=='boolean'||v.totalCount!==null&&!integer(v.totalCount,0,Number.MAX_SAFE_INTEGER)||!Array.isArray(v.candidates))fail('AGENT_GITHUB_SEARCH_OUTPUT_INVALID');
+ const q=v.query;if(!exact(q,['text','sort','minStars','pushedAfter','filters']))fail('AGENT_GITHUB_SEARCH_OUTPUT_INVALID');
+ validateGitHubRepositorySearchV2Input({query:q.text,limit:20,sort:q.sort,minStars:q.minStars,pushedAfter:q.pushedAfter,filters:q.filters});
+ for(const c of v.candidates)if(!Object.hasOwn(c,'createdAt')||c.createdAt!==null&&(typeof c.createdAt!=='string'||Number.isNaN(Date.parse(c.createdAt))))fail('AGENT_GITHUB_SEARCH_OUTPUT_INVALID');
+ validateGitHubRepositorySearchOutput({schemaVersion:'github-repository-search-v1',query:{text:q.text,sort:q.sort==='best-match'?'stars':q.sort,minStars:q.minStars,pushedAfter:q.pushedAfter},source:v.source,candidates:v.candidates.map(({createdAt,...c})=>c)});
+ return structuredClone(v);
 }

@@ -6,6 +6,7 @@ import { GITHUB_REPOSITORY_MATERIALS_TOOL } from './agent-github-repository-mate
 import { ARXIV_PAPER_READ_TOOL } from './agent-arxiv-paper-tool.mjs';
 import { PAPER_ANALYSIS_READ_TOOL } from './agent-paper-analysis-tool.mjs';
 import { PAPER_ARTICLE_DRAFT_SHADOW_WORKFLOW } from './agent-paper-article-workflow.mjs';
+import {createBuiltinAgentPluginHost} from './agent-plugin-catalog.mjs';
 
 export class AgentBlogPublicRuntimeBootstrapError extends Error {
   constructor(code) {
@@ -48,7 +49,7 @@ async function registerActiveWorkflow(repository, actorUserId, manifest) {
 }
 
 export function createAgentBlogPublicRuntimeBootstrap({
-  config, identityRepository, runtimeRepository, toolRepository, providerRepository,
+  config, identityRepository, runtimeRepository, toolRepository, providerRepository,pluginHost=createBuiltinAgentPluginHost(),
 } = {}) {
   if (!config || config.schemaVersion !== 'agent-blog-public-runtime-config-v1'
     || !identityRepository || !runtimeRepository || !toolRepository || !providerRepository) {
@@ -57,6 +58,7 @@ export function createAgentBlogPublicRuntimeBootstrap({
   if (!config.enabled) fail('AGENT_BLOG_PUBLIC_RUNTIME_DISABLED');
   return {
     async run() {
+      pluginHost.requirePlugin('mooyu.github');
       const catalog = catalogFor(config);
       const identity = await identityRepository.load(config.agentUserId);
       const tools = [];

@@ -1,0 +1,82 @@
+// Explicitly authorized API + interaction executor image update only. No
+// migrations, task retries, permission/budget edits or other service restarts.
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {spawnSync}from'node:child_process';import {pathToFileURL}from'node:url';
+import {Cutover,composeArgs,fingerprint,PAPER_KEYS}from'./agent-server-cutover.mjs';
+const ROOT='/www/backup/gamehub',AGENT='c98abda1-d115-4e05-9c2e-43f68119386a';
+export const UPDATE_NAMES=['gamehub-production-api-1','gamehub-production-agent-interactions-1'];
+export const ONLINE_SQL=Object.freeze({
+ participants:"SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY agent_user_id,channel,actor_ref)::text,'')) FROM agent_channel_participants t",
+ usage:"SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY id)::text,'')) FROM agent_budget_reservations t",
+ interactions:"SELECT count(*) FROM agent_interactions WHERE state IN ('queued','running','waiting','needs-review')",
+ runs:"SELECT count(*) FROM agent_runs WHERE status IN ('queued','running','waiting','uncertain')",
+ stages:"SELECT count(*) FROM agent_run_stages WHERE status IN ('queued','leased','running','waiting','uncertain','blocked')",
+ blockingEvents:"SELECT count(*) FROM agent_runtime_outbox o LEFT JOIN agent_run_stages s ON o.aggregate_type='stage' AND o.aggregate_id=s.id WHERE o.status<>'delivered' AND (s.id IS NULL OR s.status NOT IN ('succeeded','failed','cancelled'))",
+ registered:"SELECT count(*) FROM agent_workflow_definitions WHERE workflow_key='agent.github.search' AND workflow_version=1 AND status='active'"
+});
+const BASE='sha256:b67910da86d687e0485b14b583ce31ac814a89f9421069abe125ce36b69c7abe';
+const fail=code=>{throw Error(code);},read=f=>JSON.parse(fs.readFileSync(f,'utf8'));
+const canon=v=>Array.isArray(v)?v.map(canon):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canon(v[k])])):v;
+const hash=v=>crypto.createHash('sha256').update(JSON.stringify(canon(v))).digest('hex');
+const env=c=>Object.fromEntries(c.Config.Env.map(v=>{const n=v.indexOf('=');return[v.slice(0,n),v.slice(n+1)];}));
+export function comparableUpdate(c){const config={...c.Config};delete config.Image;delete config.Hostname;config.Env=config.Env.slice().sort();config.Labels=Object.fromEntries(Object.entries(config.Labels??{}).filter(([k])=>!k.startsWith('com.docker.compose.')));return {config,host:c.HostConfig,mounts:c.Mounts.map(m=>[m.Type,m.Name??'',m.Source,m.Destination,m.RW]).sort(),networks:Object.entries(c.NetworkSettings.Networks??{}).map(([k,v])=>[k,v.Aliases.slice().sort()]).sort()};}
+export async function updateSequence(a){await a.preflight();await a.record();await a.stopExecutor();await a.stopApi();await a.recheck();await a.backup();await a.startApi();await a.bootstrap();await a.startExecutor();await a.verify();}
+function sha(f){const h=crypto.createHash('sha256');for(const fd=fs.openSync(f,'r'),b=Buffer.alloc(1048576);;){try{let n;while((n=fs.readSync(fd,b,0,b.length,null)))h.update(b.subarray(0,n));}finally{fs.closeSync(fd);}break;}return h.digest('hex');}
+function docker(args,options={}){const r=spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:180000,maxBuffer:12000000,...options});if(r.status!==0)fail('DOCKER_'+args[0].replaceAll('-','_').toUpperCase()+'_FAILED');return r.stdout?.trim()??'';}
+const inspect=n=>JSON.parse(docker(['inspect',n]))[0];
+const all=()=>{const ids=docker(['ps','-aq']).split(/\s+/).filter(Boolean);return ids.length?JSON.parse(docker(['inspect',...ids])):[];};
+const opaque=c=>({id:c.Id,name:c.Name,image:c.Image,running:c.State.Running,started:c.State.StartedAt,restarts:c.RestartCount,fingerprint:fingerprint(c)});
+const protectedSnapshot=cs=>cs.filter(c=>!UPDATE_NAMES.includes(c.Name.slice(1))).map(opaque).sort((a,b)=>a.id.localeCompare(b.id));
+export function database(c,container,key='DATABASE_URL'){const u=new URL(env(c)[key]);const d={container,user:decodeURIComponent(u.username),database:decodeURIComponent(u.pathname.slice(1))};if(![d.user,d.database].every(v=>/^[A-Za-z_][A-Za-z0-9_]*$/u.test(v)))fail('DATABASE_IDENTITY_INVALID');return d;}
+function lockedFiles(){return ['agent-cutover-files-20261122-r1','agent-cutover-files-post-paper-20261122-r1','agent-cutover-files-post-paper-20261123-r2'].map(dir=>{const root=ROOT+'/'+dir;if(read(root+'/state.private.json').executionLocked!==true)fail('ORIGINAL_EXECUTION_LOCK_CHANGED');return fs.readdirSync(root,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).map(e=>{if(!e.isFile()||e.isSymbolicLink())fail('ORIGINAL_RECORD_LAYOUT_CHANGED');const p=root+'/'+e.name;return[p,sha(p),fs.statSync(p).mode&0o777];});});}
+function papers(cs){for(const name of ['gamehub-production-agent-paper-research-worker-1','mooyu-desktop-business-test-business-paper-worker-1']){const c=cs.find(c=>c.Name==='/'+name);if(!c||c.State.Running||c.HostConfig.RestartPolicy.Name!=='no'||PAPER_KEYS.some(k=>env(c)[k]!=='false'))fail('PAPERS_NOT_PERSISTENTLY_CLOSED');}const desktop=cs.find(c=>c.Name==='/mooyu-desktop-business-test-business-api-1');if(!desktop?.State.Running||env(desktop).DESKTOP_BUSINESS_TEST_PAPER_ENABLED!=='false')fail('DESKTOP_PAPER_ADMISSION_NOT_CLOSED');}
+export function ensureUpdateWindow({interactions,runs,stages,blockingEvents,nextFire},now=Date.now()){
+ if([interactions,runs,stages,blockingEvents].some(n=>n!==0))fail('ACTIVE_TASKS_OR_DELIVERIES');
+ if(!Number.isFinite(Date.parse(nextFire))||Date.parse(nextFire)-now<45*60000)fail('SCHEDULE_WINDOW_TOO_CLOSE');
+}
+export async function updateGitHubSearch(mode,stage,recordArg){
+ if(!['upgrade','rollback'].includes(mode)||!stage?.startsWith(ROOT+'/github-search-release-')||fs.lstatSync(stage).isSymbolicLink())fail('AUDITED_STAGE_REQUIRED');
+ const manifest=read(stage+'/manifest.json'),reader=new Cutover(stage),roles=[],state={},processEnv={...process.env};let directory=null,phase='preflight',lock=false,protectedBefore,domainBefore,historyBefore,locksBefore,apiBefore;
+ const setPhase=v=>{phase=v;console.log('GitHub更新阶段：'+v);if(directory)fs.writeFileSync(directory+'/phase.private.json',JSON.stringify({phase,mode,at:new Date().toISOString()})+'\n',{mode:0o600});};
+ const q=(db,sql)=>reader.sql(state.databases[db],sql),json=(db,sql)=>JSON.parse(q(db,sql));
+ const snapshot=()=>({domain:reader.invariants(),participants:q('api',ONLINE_SQL.participants),usage:q('api',ONLINE_SQL.usage)});
+ const history=()=>Object.fromEntries(['agent_runs','agent_run_stages','agent_interactions','agent_interaction_events','agent_runtime_outbox','blog_articles','blog_article_revisions'].map(t=>[t,q('api',`SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY id)::text,'')) FROM ${t} t`)]).concat([['qqMessages',q('qq',"SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY channel_id,message_id)::text,'')) FROM mooyu_qq.messages t")]]));
+ function guards(){if(hash(protectedSnapshot(all()))!==hash(protectedBefore)||hash(lockedFiles())!==hash(locksBefore))fail('PROTECTED_SERVICE_OR_OLD_RECORD_CHANGED');for(const f of state.files)if(sha(f.path)!==f.sha256)fail('ORIGINAL_COMPOSE_FILE_CHANGED');papers(all());}
+ function idle(){const schedule=json('api',"SELECT COALESCE(json_agg(json_build_object('enabled',enabled,'nextFire',next_fire_at,'protocol',config_json#>>'{worker,interactionProtocolVersion}')),'[]'::json) FROM agent_schedules WHERE agent_user_id='"+AGENT+"'");if(schedule.length!==1||schedule[0].protocol!=='1')fail('SCHEDULER_PROTOCOL_NOT_READY');
+  ensureUpdateWindow({interactions:Number(q('api',ONLINE_SQL.interactions)),runs:Number(q('api',ONLINE_SQL.runs)),stages:Number(q('api',ONLINE_SQL.stages)),blockingEvents:Number(q('api',ONLINE_SQL.blockingEvents)),nextFire:schedule[0].nextFire});
+ }
+ function composed(role,overlay,tail){return docker([...role.compose.args,...(overlay?['-f',overlay]:[]),...tail],{cwd:role.compose.directory,env:processEnv});}
+ function compareModel(role){const model=JSON.parse(composed(role,null,['--profile','*','config','--format','json'])),s=model.services[role.compose.service],image=JSON.parse(docker(['image','inspect',s.image]))[0],expected={...env(image),...Object.fromEntries(Object.entries(s.environment??{}).map(([k,v])=>[k,String(v)]))};if(image.Id!==role.image||hash(expected)!==hash(env(inspect(role.container))))fail('CURRENT_COMPOSE_MODEL_DRIFT');}
+ async function waitApi(){for(let i=0;i<40;i++){const c=inspect(UPDATE_NAMES[0]);if(c.State.Running&&c.State.Health?.Status==='healthy')return;await new Promise(r=>setTimeout(r,1500));}fail('API_HEALTH_NOT_READY');}
+ function assertRecreated(role,selected,overlay){const c=inspect(role.container);if(!c.State.Running||c.Image!==selected||hash(comparableUpdate(c))!==role.comparableHash||hash(composeArgs(c).args)!==hash([...role.compose.args,'-f',overlay]))fail('RECREATED_CONFIGURATION_MISMATCH');}
+ async function backup(db){const d=state.databases[db],file=directory+'/'+db+'.dump',fd=fs.openSync(file,'wx',0o600);try{docker(['exec',d.container,'pg_dump','-U',d.user,'-d',d.database,'--format=custom'],{stdio:['ignore',fd,'pipe']});}finally{fs.closeSync(fd);}if(fs.statSync(file).size<4096)fail('BACKUP_TOO_SMALL');for(const args of [['--list'],['--file=/dev/null']]){const input=fs.openSync(file,'r');try{docker(['exec','-i',d.container,'pg_restore',...args],{stdio:[input,'pipe','pipe']});}finally{fs.closeSync(input);}}return {database:db,bytes:fs.statSync(file).size,sha256:sha(file),fullDecodeVerified:true,wholeDatabaseQuiesced:false};}
+ try{
+  if(process.env.MOOYU_GITHUB_SEARCH_AUTH!=='20261123')fail('EXPLICIT_UPDATE_ENTRY_REQUIRED');
+  fs.mkdirSync('/var/lock/mooyu-agent-plugin-cutover.lock',{mode:0o700});lock=true;
+  for(const f of manifest.files)if(!/^[A-Za-z0-9_.-]+$/u.test(f.name)||sha(stage+'/'+f.name)!==f.sha256)fail('STAGED_FILE_CHANGED');
+  const target=mode==='upgrade'?manifest.image:BASE;if(!/^sha256:[a-f0-9]{64}$/u.test(target)||manifest.baseImage!==BASE||JSON.parse(docker(['image','inspect',target]))[0].Id!==target)fail('VERIFIED_IMAGE_REQUIRED');
+  let previous;if(mode==='rollback'){if(!recordArg?.startsWith(ROOT+'/github-search-operation-')||fs.lstatSync(recordArg).isSymbolicLink())fail('ROLLBACK_RECORD_REQUIRED');previous=read(recordArg+'/state.private.json');if(previous.targetImage!==manifest.image)fail('ROLLBACK_VERSION_MISMATCH');}
+  await updateSequence({
+   preflight:async()=>{
+    setPhase('preflight-current-scene');const cs=all();papers(cs);apiBefore=inspect(UPDATE_NAMES[0]);const values=env(apiBefore);
+    for(const [k,v]of Object.entries(values))processEnv['MOOYU_CUTOVER_API_'+k]=v;
+    const web=cs.find(c=>c.Name==='/gamehub-production-web-1');for(const [key,dest]of [['AGENT_DOWNLOADS_DIR','/srv/agent-downloads'],['DESKTOP_DOWNLOADS_DIR','/srv/desktop-downloads']]){const m=web?.Mounts.find(m=>m.Destination===dest);if(m?.Type==='bind')processEnv[key]=m.Source;}
+    state.databases={api:database(apiBefore,'gamehub-production-postgres-1'),qq:database(inspect('mooyu-qq-worker-1'),'mooyu-qq-postgres-1','QQ_DATABASE_URL')};reader.state=state;
+    for(const [i,name]of UPDATE_NAMES.entries()){const c=inspect(name);if(mode==='upgrade'&&!c.State.Running||!(mode==='upgrade'?[BASE]:[BASE,manifest.image]).includes(c.Image)||PAPER_KEYS.some(k=>env(c)[k]!=='false'))fail('REVIEWED_ROLE_IMAGE_OR_PAPER_FLAGS_CHANGED');const role={container:name,image:c.Image,compose:composeArgs(c),comparableHash:hash(comparableUpdate(c)),fingerprint:fingerprint(c)};if(role.compose.project!=='gamehub-production'||role.compose.service!==['api','agent-interactions'][i])fail('EXACT_TWO_ROLE_SCOPE_REQUIRED');compareModel(role);roles.push(role);}
+    state.files=[...new Set(roles.flatMap(r=>r.compose.files))].map(p=>({path:p,sha256:sha(p)}));
+    if(Number(q('api','SELECT count(*) FROM schema_migrations'))!==166)fail('EXPECTED_SCHEMA_166_REQUIRED');idle();protectedBefore=protectedSnapshot(cs);locksBefore=lockedFiles();domainBefore=snapshot();historyBefore=history();
+    if(mode==='rollback'&&hash(roles.map(r=>r.comparableHash))!==hash(previous.roles.map(r=>r.comparableHash)))fail('ROLLBACK_CONFIG_DRIFT');
+   },
+   record:async()=>{directory=fs.mkdtempSync(ROOT+'/github-search-operation-20261123-');fs.chmodSync(directory,0o700);state.roles=roles;state.targetImage=manifest.image;state.baseImage=BASE;state.protectedBefore=protectedBefore;state.domainBefore=domainBefore;state.historyBefore=historyBefore;state.locksBefore=locksBefore;fs.writeFileSync(directory+'/state.private.json',JSON.stringify(state,null,2)+'\n',{flag:'wx',mode:0o600});for(const r of roles){fs.writeFileSync(directory+'/'+r.compose.service+'.json',JSON.stringify({services:{[r.compose.service]:{image:target}}})+'\n',{flag:'wx',mode:0o600});}fs.writeFileSync(directory+'/rollback.sh',"#!/bin/sh\nset -eu\nexport MOOYU_GITHUB_SEARCH_AUTH=20261123\nexec /www/backup/gamehub/agent-plugins-stage-20261122-r3/node '"+stage+"/update-github-search-online.mjs' rollback '"+stage+"' '"+directory+"'\n",{flag:'wx',mode:0o700});console.log('维护记录：'+directory);},
+   stopExecutor:async()=>{guards();idle();setPhase('stop-only-interaction-executor');if(inspect(UPDATE_NAMES[1]).State.Running)docker(['stop','--timeout','-1',UPDATE_NAMES[1]],{timeout:90000});if(inspect(UPDATE_NAMES[1]).State.Running)fail('EXECUTOR_NOT_STOPPED');},
+   stopApi:async()=>{guards();idle();setPhase('stop-only-api');if(inspect(UPDATE_NAMES[0]).State.Running)docker(['stop','--timeout','-1',UPDATE_NAMES[0]],{timeout:90000});if(inspect(UPDATE_NAMES[0]).State.Running)fail('API_NOT_STOPPED');},
+   recheck:async()=>{guards();idle();if(hash(snapshot())!==hash(domainBefore)||hash(history())!==hash(historyBefore))fail('STATE_CHANGED_BEFORE_UPDATE');},
+   backup:async()=>{setPhase('fresh-protection-backups');const backups=[];for(const db of ['api','qq'])backups.push(await backup(db));fs.writeFileSync(directory+'/backups.private.json',JSON.stringify(backups,null,2)+'\n',{flag:'wx',mode:0o600});guards();idle();},
+   startApi:async()=>{setPhase('recreate-only-api');composed(roles[0],directory+'/api.json',['up','-d','--no-deps','--no-build','--pull','never','api']);await waitApi();assertRecreated(roles[0],target,directory+'/api.json');},
+   bootstrap:async()=>{if(mode==='upgrade'){setPhase('register-additive-search-contract-and-workflow');docker(['exec',UPDATE_NAMES[0],'node','apps/api/src/agent-interaction-bootstrap-cli.mjs']);if(Number(q('api',ONLINE_SQL.registered))!==1)fail('SEARCH_WORKFLOW_NOT_REGISTERED');}},
+   startExecutor:async()=>{setPhase('recreate-only-interaction-executor');composed(roles[1],directory+'/agent-interactions.json',['up','-d','--no-deps','--no-build','--pull','never','agent-interactions']);assertRecreated(roles[1],target,directory+'/agent-interactions.json');},
+   verify:async()=>{setPhase('verify-preservation');await new Promise(r=>setTimeout(r,4000));for(const r of roles)assertRecreated(r,target,directory+'/'+r.compose.service+'.json');guards();idle();if(hash(snapshot())!==hash(domainBefore)||hash(history())!==hash(historyBefore))fail('PRESERVED_STATE_CHANGED');if(Number(q('api','SELECT count(*) FROM schema_migrations'))!==166)fail('SCHEMA_CHANGED');const result={result:mode==='upgrade'?'GITHUB_SEARCH_UPDATE_VERIFIED':'GITHUB_SEARCH_IMAGE_ROLLBACK_VERIFIED',directory,image:target,onlyApiAndInteractionExecutorRecreated:true,otherServicesUnchanged:true,permissionsBudgetPlansLoginAndHistoryPreserved:true,papersStillClosed:true,databaseMigrated:false,databaseRestored:false,tasksRetried:false,oldLocksUnchanged:true,realQQAcceptanceRequired:mode==='upgrade',rollbackKeepsAdditiveCatalogEntries:true};fs.writeFileSync(directory+'/result.private.json',JSON.stringify(result,null,2)+'\n',{flag:'wx',mode:0o600});console.log(JSON.stringify(result,null,2));}
+  });
+ }catch(e){const failure={result:'GITHUB_SEARCH_UPDATE_STOPPED_REVIEW_REQUIRED',mode,directory,phase,code:/^[A-Z0-9_]+$/.test(e.message??'')?e.message:/^[A-Z0-9_]+$/.test(e.code??'')?e.code:'OPERATION_FAILED',automaticRetry:false,automaticRollback:false};if(directory)fs.writeFileSync(directory+'/failure.private.json',JSON.stringify(failure)+'\n',{mode:0o600});console.error(JSON.stringify(failure));process.exitCode=1;
+ }finally{if(lock)fs.rmdirSync('/var/lock/mooyu-agent-plugin-cutover.lock');}
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)updateGitHubSearch(process.argv[2],process.argv[3],process.argv[4]).catch(()=>{console.error('UPDATE_ENTRY_REFUSED');process.exitCode=1;});
