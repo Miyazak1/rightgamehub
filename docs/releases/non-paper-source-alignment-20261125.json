@@ -4,7 +4,7 @@
   "branch": "codex/qq-observation-repair-20261125",
   "prBaseBranch": "codex/qq-github-release-sync-20261124",
   "baseCommit": "f820f95806897ca810aa6ec4709631782e6fca43",
-  "sourceSnapshotTag": "qq-observation-source-20261125-r3",
+  "sourceSnapshotTag": "qq-observation-source-20261125-r4",
   "sourceSnapshotTagIsProductionRelease": false,
   "previousLedger": "docs/releases/non-paper-source-alignment-20261124.json",
   "excludedLocalFiles": [
@@ -733,6 +733,11 @@
       "sha256": "0b0e03188ec6c2c8f4a29764fb77f93a8dcde90267360ea20a8119e0e0d8007d"
     },
     {
+      "path": "docs/qq-native-reception-recovery-review-20261125.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "8497bf9fb621e855e004fc85d38a53f2f904ffc571afd6ecf8701aaf694a63bf"
+    },
+    {
       "path": "docs/qq-native-recovery-root-cause-20261123.zh-CN.md",
       "normalization": "lf",
       "sha256": "3285f4edc972a098152c8f1d4ba7db6432c61043da436a2501a6fe1db3c5bbb8"
@@ -1098,6 +1103,11 @@
       "sha256": "e90023333977ea1af77bfca07d35f44fab78723e90c18fc4ac2621135c5afd2f"
     },
     {
+      "path": "scripts/package-qq-native-reception-recovery.mjs",
+      "normalization": "lf",
+      "sha256": "ea8b1d240c93eba456fdfa2f90814c4884c541a92be697e2f8a236f01250795e"
+    },
+    {
       "path": "scripts/package-qq-observation-release.mjs",
       "normalization": "lf",
       "sha256": "b4c544e3d0aa76a762de9d99523f0b06f79e221b7c8ea6f96361fe183a54c352"
@@ -1231,6 +1241,11 @@
       "path": "scripts/recover-qq-gateway-once.mjs",
       "normalization": "lf",
       "sha256": "7598f30ce50443cd328b17e83e5a16510d118d69b8f490a2c12e0f8b1633da9f"
+    },
+    {
+      "path": "scripts/recover-qq-native-reception-once.mjs",
+      "normalization": "lf",
+      "sha256": "babb1eae2e19e010c2d17ecd3fa00df44e07128aca3264791a1c90fe101604cd"
     },
     {
       "path": "scripts/render-agent-article-preview.cjs",
@@ -1396,6 +1411,16 @@
       "path": "scripts/verify-qq-login-backup-local.mjs",
       "normalization": "lf",
       "sha256": "ae4c3e9eb1c19f9c9da1d5c15e0ffefda1593375447c498eab72f3c878793cfa"
+    },
+    {
+      "path": "scripts/verify-qq-native-recovery-isolated.mjs",
+      "normalization": "lf",
+      "sha256": "389d436559e471e1f4aa5013d28203b4239f17334f12fccd87963dcce9939cd1"
+    },
+    {
+      "path": "scripts/verify-qq-native-recovery-package.mjs",
+      "normalization": "lf",
+      "sha256": "6f9959ea07b2065faf1af34fff9301c429e3b6e6975b267f526c5a9c4bddb16f"
     },
     {
       "path": "scripts/verify-qq-plugin-stability-local.mjs",
@@ -1716,6 +1741,11 @@
       "path": "tests/platform/qq-native-reception-readonly.test.mjs",
       "normalization": "lf",
       "sha256": "3df92d384d4c25cd8bcd56f2f9ec31dd9ffbb6f3361354e2d99c6b83014ab61c"
+    },
+    {
+      "path": "tests/platform/qq-native-reception-recovery.test.mjs",
+      "normalization": "lf",
+      "sha256": "f31bfb3721a692e3b54c7b0fe16d141d59cbea005462aa1cc4946e237192cc92"
     },
     {
       "path": "tests/platform/qq-observation-deadline.test.mjs",
@@ -2059,5 +2089,18 @@
     "productionUpdated": false,
     "realQQReplyRestored": false,
     "notes": "docs/qq-native-reception-incident-20261125.zh-CN.md"
+  },
+  "manualRecoveryReviewAcceptance": {
+    "policyAndFailureTestsPassed": 5,
+    "isolatedStopStartAndDataRetention": true,
+    "isolatedResourcesRemoved": true,
+    "packageStageRoundtrip": true,
+    "productionPreflightExecuted": false,
+    "productionRecoveryExecuted": false,
+    "authorizationPending": true,
+    "proofBuildDirectory": "qq-native-recovery-isolated-r3",
+    "reviewBuildDirectory": "qq-native-reception-recovery-review-r2",
+    "reviewedBundleSha256": "9a0337dbe32b485432342b36b347a5a0fa9313cc62210dfcc3f235cc03f1b8f4",
+    "notes": "docs/qq-native-reception-recovery-review-20261125.zh-CN.md"
   }
 }
