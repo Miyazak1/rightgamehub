@@ -4,7 +4,7 @@
   "branch": "codex/qq-observation-repair-20261125",
   "prBaseBranch": "codex/qq-github-release-sync-20261124",
   "baseCommit": "f820f95806897ca810aa6ec4709631782e6fca43",
-  "sourceSnapshotTag": "qq-observation-source-20261125-r2",
+  "sourceSnapshotTag": "qq-observation-source-20261125-r3",
   "sourceSnapshotTagIsProductionRelease": false,
   "previousLedger": "docs/releases/non-paper-source-alignment-20261124.json",
   "excludedLocalFiles": [
@@ -718,6 +718,21 @@
       "sha256": "45cea4ef3368487fed2cd298a8770bd0c9104a80a2f5c27de49790551f2396ce"
     },
     {
+      "path": "docs/qq-message-route-followup-20261125.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "140c11fc0fc5d56fdaf67ff8e3c31958dd21a49197f14670ad36008987c96cab"
+    },
+    {
+      "path": "docs/qq-message-route-incident-20261125.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "7531677168fa0bb543a642f38e58cfaae153ca2aaa388d2c9fd144e1416e4670"
+    },
+    {
+      "path": "docs/qq-native-reception-incident-20261125.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "0b0e03188ec6c2c8f4a29764fb77f93a8dcde90267360ea20a8119e0e0d8007d"
+    },
+    {
       "path": "docs/qq-native-recovery-root-cause-20261123.zh-CN.md",
       "normalization": "lf",
       "sha256": "3285f4edc972a098152c8f1d4ba7db6432c61043da436a2501a6fe1db3c5bbb8"
@@ -770,7 +785,7 @@
     {
       "path": "packages/platform-client/src/AgentChannelParticipants.jsx",
       "normalization": "lf",
-      "sha256": "e9ee7c4040b915615e14a5ffed55e5e3f764855739f36ea3bad348c80abb3915"
+      "sha256": "524511ddc2fb63214beb7c3b443576938f460d8095757a82437a4da18ef6f662"
     },
     {
       "path": "packages/platform-client/src/AgentPluginAdmin.jsx",
@@ -800,7 +815,7 @@
     {
       "path": "packages/platform-client/src/styles.css",
       "normalization": "lf",
-      "sha256": "ad1f686fe718ee84f04eeb66c6391ce15675bb8a5295eb08ddcd2986c2ff254e"
+      "sha256": "1c5513a31093a07ad4d508a7d7fb49e5b9e578b1e5fb20482d78c57d7d44572f"
     },
     {
       "path": "scripts/agent-interaction-lab-control.cjs",
@@ -1148,6 +1163,11 @@
       "sha256": "212b0524a33127f7c2a1351301484f65634594dcc3404ee2afed133bfaf7f8a5"
     },
     {
+      "path": "scripts/qq-group-history-shape-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "d2d819fe3fef9dc5f8f3e2e318205655f783b5e0b237d8c72a24ac7379215836"
+    },
+    {
       "path": "scripts/qq-independent-incident-readonly.mjs",
       "normalization": "lf",
       "sha256": "19225eb757ed5cb2680cd347b9039409db1b44b8e473fa41c8a3f8c212d144de"
@@ -1163,9 +1183,19 @@
       "sha256": "c92da82840b35d05ba64e5fcea59afb88d64e6eba408640246f77e70da514644"
     },
     {
+      "path": "scripts/qq-message-route-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "3d3e8f4a726dda6d623889f9ecc1e3e4c92dba49dfa858f97927832014e3ea53"
+    },
+    {
       "path": "scripts/qq-native-management-readonly.mjs",
       "normalization": "lf",
       "sha256": "32c3bfe6d841ce162b74487528e85d73094d5e9424236598b48e7561c26bc44a"
+    },
+    {
+      "path": "scripts/qq-native-reception-readonly.mjs",
+      "normalization": "lf",
+      "sha256": "d6506a8ec9bbc0b789da48eb6210cfd8822545394cab1804dca8d9fa9440130e"
     },
     {
       "path": "scripts/qq-observation-chain-readonly.mjs",
@@ -1643,6 +1673,11 @@
       "sha256": "4180072bbba110259b6afa4c7afd245485fe949b50fda653d12c77cacbcb2b41"
     },
     {
+      "path": "tests/platform/qq-group-history-shape-readonly.test.mjs",
+      "normalization": "lf",
+      "sha256": "3fb812fe3b042d96a1141c6cb396f068ddf41fe22a464c142484a7f62f22f01c"
+    },
+    {
       "path": "tests/platform/qq-group-readiness.test.mjs",
       "normalization": "lf",
       "sha256": "69d655622ce2d5e7eab34fdbf469b987cf47c7694d5acfe4f8c213e83cbd3178"
@@ -1668,9 +1703,19 @@
       "sha256": "e899dd8a42d66fa19ff13a4df25a9cdb6dec81b565d7f8383b0ec3755cfa6390"
     },
     {
+      "path": "tests/platform/qq-message-route-readonly.test.mjs",
+      "normalization": "lf",
+      "sha256": "e8bb361fbdd627d48e279a7844ee000d89078cc19f4aaa70d47c33653ce1f0aa"
+    },
+    {
       "path": "tests/platform/qq-native-management-readonly.test.mjs",
       "normalization": "lf",
       "sha256": "767332aac2ef15229c0873361d653824079f343e9b93ed969377d678bc34e3f8"
+    },
+    {
+      "path": "tests/platform/qq-native-reception-readonly.test.mjs",
+      "normalization": "lf",
+      "sha256": "3df92d384d4c25cd8bcd56f2f9ec31dd9ffbb6f3361354e2d99c6b83014ab61c"
     },
     {
       "path": "tests/platform/qq-observation-deadline.test.mjs",
@@ -1879,7 +1924,9 @@
     }
   ],
   "unreleasedArtifactChanges": [
-    "packages/platform-client/src/AgentQQAdmin.jsx"
+    "packages/platform-client/src/AgentQQAdmin.jsx",
+    "packages/platform-client/src/AgentChannelParticipants.jsx",
+    "packages/platform-client/src/styles.css"
   ],
   "currentArtifacts": [
     {
@@ -1998,5 +2045,19 @@
     "oldRecordsChanged": false,
     "mainChanged": false,
     "productionUpdated": false
+  },
+  "followupAcceptance": {
+    "nativeReceptionReadOnlyTestsPassed": 3,
+    "immutableGatewaySourceProbePassed": true,
+    "uiBrowser": {
+      "desktopWidth": 1100,
+      "mobileWidth": 390,
+      "horizontalOverflow": false,
+      "simulatedRevokeRestoreAndCreatePassed": true,
+      "consoleErrors": 0
+    },
+    "productionUpdated": false,
+    "realQQReplyRestored": false,
+    "notes": "docs/qq-native-reception-incident-20261125.zh-CN.md"
   }
 }
