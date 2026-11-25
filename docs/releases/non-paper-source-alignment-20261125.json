@@ -4,7 +4,7 @@
   "branch": "codex/qq-observation-repair-20261125",
   "prBaseBranch": "codex/qq-github-release-sync-20261124",
   "baseCommit": "f820f95806897ca810aa6ec4709631782e6fca43",
-  "sourceSnapshotTag": "qq-observation-source-20261125-r1",
+  "sourceSnapshotTag": "qq-observation-source-20261125-r2",
   "sourceSnapshotTagIsProductionRelease": false,
   "previousLedger": "docs/releases/non-paper-source-alignment-20261124.json",
   "excludedLocalFiles": [
@@ -725,12 +725,12 @@
     {
       "path": "docs/qq-observation-deadline-local-20261125.zh-CN.md",
       "normalization": "lf",
-      "sha256": "537d4f1b4248029c78d3b71241b330413aadcd695e3dd4a052fbe0d3399a024d"
+      "sha256": "a4db9a59e7c833452d341fcd82dc5031581b17527f6332f4a0ceb039894d22eb"
     },
     {
       "path": "docs/qq-observation-release-20261125.zh-CN.md",
       "normalization": "lf",
-      "sha256": "04663d710e48af9c8e056fefb61586e60d00ea1d5cbdb15d9bb9fa0719eadbd7"
+      "sha256": "4f349f13eb443f1657c4fc5b24696e9bb58ebb646c66421b1ec61293c4e84eec"
     },
     {
       "path": "docs/qq-update-stability-audit-20261124.zh-CN.md",
@@ -1085,7 +1085,7 @@
     {
       "path": "scripts/package-qq-observation-release.mjs",
       "normalization": "lf",
-      "sha256": "be32d23b47c5ce14288e98e840811997babc784308e2974b26bcf95256c36b72"
+      "sha256": "b4c544e3d0aa76a762de9d99523f0b06f79e221b7c8ea6f96361fe183a54c352"
     },
     {
       "path": "scripts/package-scheduler-interaction-compat.mjs",
@@ -1265,7 +1265,7 @@
     {
       "path": "scripts/update-qq-observation.mjs",
       "normalization": "lf",
-      "sha256": "2e7e41cf456aa073f32ef67b98e214ec48e639dc2f432b1cb0f58b6ec9a1346f"
+      "sha256": "be3b59abc528887f5f2a506709747d7262ab37d352423f2630034b9262e4d18d"
     },
     {
       "path": "scripts/verify-agent-cutover-local.mjs",
@@ -1685,7 +1685,7 @@
     {
       "path": "tests/platform/qq-observation-release.test.mjs",
       "normalization": "lf",
-      "sha256": "4215688b85ed74832697e3441dde0057a8dc872b66f218f177a627e15875f431"
+      "sha256": "699bec5a1a241d4321f5636db4a9b873794c37ffae9e8af4b990983593da2aad"
     },
     {
       "path": "tests/platform/qq-plugin-guardian-linux.test.mjs",
@@ -1884,9 +1884,9 @@
   "currentArtifacts": [
     {
       "name": "qq-observation-worker-20261125-r1.tar.gz",
-      "buildDirectory": "qq-observation-release-r2",
-      "sha256": "162b281b6cbddec2e28e43acd37e7a02294c03b17de2bf4c7f0e4efa42418c87",
-      "bytes": 37140,
+      "buildDirectory": "qq-observation-release-r3",
+      "sha256": "a9fe1c9e8cb2599bb6a83c63702385d23e339be389719d4446353cca9b1fa1df",
+      "bytes": 37280,
       "deploymentStatus": "worker-only-prepared-not-deployed"
     }
   ],
@@ -1955,15 +1955,15 @@
     },
     "operations": {
       "result": "PASSED",
-      "tests": 5,
-      "passed": 5,
+      "tests": 6,
+      "passed": 6,
       "failed": 0,
       "skipped": 0,
       "isolatedPostgres": true,
       "realGuardianFilesystemAndTar": true,
       "systemDockerMutations": "simulated",
       "productionAccessed": false,
-      "updaterSourceSha256": "2e7e41cf456aa073f32ef67b98e214ec48e639dc2f432b1cb0f58b6ec9a1346f"
+      "updaterSourceSha256": "be3b59abc528887f5f2a506709747d7262ab37d352423f2630034b9262e4d18d"
     },
     "compose": {
       "result": "PASSED",
@@ -1975,7 +1975,7 @@
     },
     "archive": {
       "result": "PASSED",
-      "archiveSha256": "162b281b6cbddec2e28e43acd37e7a02294c03b17de2bf4c7f0e4efa42418c87",
+      "archiveSha256": "a9fe1c9e8cb2599bb6a83c63702385d23e339be389719d4446353cca9b1fa1df",
       "manifestFilesVerified": 12,
       "allPackagedModulesParse": true,
       "hostUpdaterImportsResolve": true,

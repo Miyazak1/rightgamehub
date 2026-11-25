@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
-import {observationSequence,assertWorkerSources,OLD_WORKER_SOURCES,assertDeploymentBaseline,observationRollbackCommand,newMessageAcceptanceSQL,OBSERVATION_RECORD} from '../../scripts/update-qq-observation.mjs';
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {observationSequence,assertWorkerSources,OLD_WORKER_SOURCES,assertDeploymentBaseline,observationRollbackCommand,newMessageAcceptanceSQL,OBSERVATION_RECORD,createWorkerBuildContext} from '../../scripts/update-qq-observation.mjs';
 import {runtimeComparable,objectHash} from '../../scripts/qq-independent-release-common.mjs';
 test('worker repair refuses image/config drift and unidentified prior deployments before any stop',()=>{
  const before={Image:'sha256:'+'a'.repeat(64),Config:{Env:['KEEP=original'],Labels:{}},HostConfig:{Binds:[]},Mounts:[],NetworkSettings:{Networks:{}}};
@@ -17,4 +18,9 @@ test('rollback accepts only its private runtime and new record, and shell argume
  assert.equal(spawnSync(bash,['-n'],{input:s,encoding:'utf8'}).status,0);assert(s.includes('flock -n 9'));assert(s.includes('flock -w 20 8'));
  for(const args of [['/usr/bin/node',record],[runtime+'; bad',record],[runtime,record+'/../old'],[runtime,'/www/backup/gamehub/old']])assert.throws(()=>observationRollbackCommand(...args));
  assert.throws(()=>newMessageAcceptanceSQL("invalid' OR true"));
+});
+test('Docker build context contains only its Dockerfile and patch, never private operation state or backups',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qq-observation-context-'));t.after(()=>{assert(path.resolve(dir).startsWith(path.resolve(os.tmpdir())+path.sep));fs.rmSync(dir,{recursive:true,force:true});});
+ fs.writeFileSync(path.join(dir,'state.private.json'),'SYNTHETIC_PRIVATE_STATE');fs.writeFileSync(path.join(dir,'qq-before.dump'),'SYNTHETIC_PRIVATE_BACKUP');const source=path.join(dir,'source.mjs');fs.writeFileSync(source,'export const patch=true;\n');
+ const context=createWorkerBuildContext(dir,source,'mooyu-qq-observation-base:20261125-Test12');assert.deepEqual(fs.readdirSync(context).sort(),['Dockerfile','napcat-control.mjs']);assert.equal(fs.readFileSync(path.join(context,'napcat-control.mjs'),'utf8'),'export const patch=true;\n');assert.throws(()=>createWorkerBuildContext(dir,source,'bad\nCOPY private /app'));
 });
