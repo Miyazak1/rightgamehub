@@ -7,7 +7,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const ledgerName=['non-paper-source-alignment-20261125.json','non-paper-source-alignment-20261124.json'].find(name=>fs.existsSync(path.join(root,'docs/releases',name)));
+const ledgerName=['non-paper-source-alignment-20261127.json','non-paper-source-alignment-20261125.json','non-paper-source-alignment-20261124.json'].find(name=>fs.existsSync(path.join(root,'docs/releases',name)));
 const ledger=JSON.parse(fs.readFileSync(path.join(root,'docs/releases',ledgerName),'utf8'));
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const git=args=>{
