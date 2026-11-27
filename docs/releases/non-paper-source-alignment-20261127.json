@@ -4,8 +4,8 @@
   "branch": "codex/qq-observation-repair-20261125",
   "prBaseBranch": "codex/qq-github-release-sync-20261124",
   "baseCommit": "f820f95806897ca810aa6ec4709631782e6fca43",
-  "previousSourceCommit": "142e8432b592ecf94a4354e70ccdf35c45035a2c",
-  "sourceSnapshotTag": "qq-websocket-owner-source-20261127-r1",
+  "previousSourceCommit": "232dab4656b1b943a9f3ffe1a9f7b55a848ce9c2",
+  "sourceSnapshotTag": "qq-websocket-release-source-20261127-r1",
   "sourceSnapshotTagIsProductionRelease": false,
   "previousLedger": "docs/releases/non-paper-source-alignment-20261125.json",
   "excludedLocalFiles": [
@@ -764,6 +764,11 @@
       "sha256": "963a0870ac313f6e2dd8a7374f42002989d59f24448f0d79d87139c9b21e4a46"
     },
     {
+      "path": "docs/qq-websocket-owner-release-20261127.zh-CN.md",
+      "normalization": "lf",
+      "sha256": "00577574c4f0fd0e0996b577752ea77d5364f237697fdace178d4ab60a7fe24e"
+    },
+    {
       "path": "docs/releases/non-paper-source-alignment-20261124.json",
       "normalization": "lf",
       "sha256": "4a0847889592b75cb5dd3da9e75c5a473e6c9c5413e54ba59eedc576f85177bd"
@@ -772,6 +777,11 @@
       "path": "docs/releases/qq-owner-local-acceptance-20261127.json",
       "normalization": "lf",
       "sha256": "46e7dcfebb5324a57d49256e16bd3e389a9b6754a5536fde46c80073149066e8"
+    },
+    {
+      "path": "docs/releases/qq-websocket-release-acceptance-20261127.json",
+      "normalization": "lf",
+      "sha256": "1320078c1e0f4ff966a03b96331dfb4e9a1a1a645b14e865631243db4cac9ac0"
     },
     {
       "path": "docs/scheduler-compat-authorized-switch-20261123.zh-CN.md",
@@ -1129,6 +1139,11 @@
       "sha256": "b4c544e3d0aa76a762de9d99523f0b06f79e221b7c8ea6f96361fe183a54c352"
     },
     {
+      "path": "scripts/package-qq-websocket-release.mjs",
+      "normalization": "lf",
+      "sha256": "86dcc65ac9e19ed2061b541a5cc171ba74654bae6c58b84e67404fa074a1985b"
+    },
+    {
       "path": "scripts/package-scheduler-interaction-compat.mjs",
       "normalization": "lf",
       "sha256": "6ae20bf35fe68f66be1565719d1e02ba13a04df1f811d2f8697a00454416b005"
@@ -1264,6 +1279,11 @@
       "sha256": "4c052e78d331dd2e3c26126d632ea825e0294facc37e611b101864669c4c58da"
     },
     {
+      "path": "scripts/qq-websocket-release-common.mjs",
+      "normalization": "lf",
+      "sha256": "c3fd2978d00e5589e13431afe3cd1020243c654dd38f671974445eb33963cd24"
+    },
+    {
       "path": "scripts/recover-qq-auth-client.mjs",
       "normalization": "lf",
       "sha256": "4eceb265ede94eaa2f1664d3d18ada379fe322931d250d9f897614079b249361"
@@ -1347,6 +1367,11 @@
       "path": "scripts/update-qq-observation.mjs",
       "normalization": "lf",
       "sha256": "be3b59abc528887f5f2a506709747d7262ab37d352423f2630034b9262e4d18d"
+    },
+    {
+      "path": "scripts/update-qq-websocket-owner.mjs",
+      "normalization": "lf",
+      "sha256": "6be68abfb3843ec3a6f5decb0f96318f6ebf46b261c3ffc0ded76dc058a0e449"
     },
     {
       "path": "scripts/verify-agent-cutover-local.mjs",
@@ -1472,6 +1497,21 @@
       "path": "scripts/verify-qq-source-private-mode-local.mjs",
       "normalization": "lf",
       "sha256": "046846fb48f2f23c06adbe4f5e5a21968314b17fd6386dee62e700503e59d5cf"
+    },
+    {
+      "path": "scripts/verify-qq-ws-compose-local.mjs",
+      "normalization": "lf",
+      "sha256": "7651d3aad107459684237d4bfffc66f77bf356f12201f7c3b82a2cc28d339d8c"
+    },
+    {
+      "path": "scripts/verify-qq-ws-operations-local.mjs",
+      "normalization": "lf",
+      "sha256": "bf01d28f4c4fda4395047f21027adafb80bfb09fda03dc77b917b01e50eface7"
+    },
+    {
+      "path": "scripts/verify-qq-ws-package-local.mjs",
+      "normalization": "lf",
+      "sha256": "815a4792645029aa7d3e4e0c88f1fa7a840d6960e2344e39301f3a677fff0bdf"
     },
     {
       "path": "scripts/verify-scheduler-compat-switch-local.mjs",
@@ -1659,6 +1699,11 @@
       "sha256": "58ca83ed1a321a983f993a8004ddbbebafe51b9f435d33ea492d9730da686360"
     },
     {
+      "path": "tests/platform/fixtures/qq-websocket-ops/fake-docker.cjs",
+      "normalization": "lf",
+      "sha256": "2704bc2a6faf8821ef54ed319f0ba02507a9434725b02dafd6bf55808ae5e3c6"
+    },
+    {
       "path": "tests/platform/generate-agent-cutover-files.test.mjs",
       "normalization": "lf",
       "sha256": "6cdf205df48320a21847cf451e6e0f729c104a7d8d5fc62e719565a947df36c4"
@@ -1832,6 +1877,21 @@
       "path": "tests/platform/qq-plugin-stability.test.mjs",
       "normalization": "lf",
       "sha256": "8e1b1efafacfbdcb000c3424c8f3c69f0d910919695a888689237f3d9446e47d"
+    },
+    {
+      "path": "tests/platform/qq-websocket-acceptance-db.test.cjs",
+      "normalization": "lf",
+      "sha256": "40e4c0ee09b55f66d448e2cf6b32d38df9c6102dcdabe6287524e4fa05c5703a"
+    },
+    {
+      "path": "tests/platform/qq-websocket-release-linux.test.mjs",
+      "normalization": "lf",
+      "sha256": "ba82e1ade9c3a54fa18e6187ae423ccaf8fef4f99b1e172b36c06a539e7d0427"
+    },
+    {
+      "path": "tests/platform/qq-websocket-release.test.mjs",
+      "normalization": "lf",
+      "sha256": "706b84a05fdf3ac38ad0ba3dfcdfa1170a2892deb323aa7b1afb9334c1006045"
     },
     {
       "path": "tests/platform/recover-qq-gateway-once.test.mjs",
@@ -2014,7 +2074,22 @@
       "normalizedSourceSha256": "8156a30b0cd1886068b237e891da88494ca2f43bf07fd2f68cd49f2103d7366c"
     }
   ],
-  "currentArtifacts": [],
+  "currentArtifacts": [
+    {
+      "name": "qq-websocket-owner-20261127-r1.tar.gz",
+      "buildDirectory": "qq-ws-release-package-r2",
+      "sha256": "454bd226a1b98845900e48697627e786f0799373903a7d6986ddf6702be26a2e",
+      "bytes": 41521,
+      "deploymentStatus": "prepared-not-deployed"
+    },
+    {
+      "name": "qq-websocket-owner-20261127-r1-release-files.zip",
+      "buildDirectory": "qq-ws-release-package-r2",
+      "sha256": "afb8870676d30ac6cb88dca01758c7919f09766445b2a727c9bf7333467a937d",
+      "bytes": 51382,
+      "deploymentStatus": "prepared-not-deployed"
+    }
+  ],
   "retainedArtifactsLedger": "docs/releases/non-paper-source-alignment-20261125.json",
   "runtimeBindingsMeaning": "Retained API and QQ worker bindings from the previous release ledger; new native candidate has a separate deterministic patch recipe.",
   "nativeCandidate": {
@@ -2023,7 +2098,7 @@
     "patchedSourceSha256": "0af3b82fcb931bcb1f859f1536f905aaca1964ecff6981a191aab9b4e9a32d3c",
     "localImage": "sha256:7448b7d8f917f76676dc67d864c2183b030be4a0fe05646d5c106527d6dd4274",
     "patchScript": "scripts/patch-napcat-websocket-owner.mjs",
-    "productionReleasePrepared": false,
+    "productionReleasePrepared": true,
     "productionDeployed": false
   },
   "acceptance": {
@@ -2050,5 +2125,19 @@
     "mainChanged": false,
     "oldPackagesAndTagsChanged": false,
     "oldLoginAndHistoryChanged": false
+  },
+  "fixSourceSnapshotTag": "qq-websocket-owner-source-20261127-r1",
+  "releasePreparation": {
+    "result": "PASSED",
+    "proof": "docs/releases/qq-websocket-release-acceptance-20261127.json",
+    "operationsTests": 9,
+    "operationsFailed": 0,
+    "operationsSkipped": 0,
+    "realComposeSwitchAndRollback": true,
+    "manifestFiles": 13,
+    "modulesParsedAndImported": 9,
+    "bashCommandsParsed": 6,
+    "serverCommandsExecuted": false,
+    "productionAccessed": false
   }
 }
