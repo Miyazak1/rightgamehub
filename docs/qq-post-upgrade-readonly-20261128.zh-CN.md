@@ -1,8 +1,31 @@
 # r2 更新后 QQ 收发与恢复配置的只读验收
 
 用户提供的发布输出为 `QQ_WEBSOCKET_UPDATED_SCAN_REQUIRED`，并已确认重新扫码后
-群内直接 @ 收到了预期回复。这证明用户观察到的真实扫码和收发恢复；
-服务端新消息送达回执、当前恢复守护状态与短时在线采样仍待本命令输出核对。
+群内直接 @ 收到了预期回复。后续截图又显示：1 条指定新请求有 1 条确认送达回复，
+六次采样均健康且快照持续更新，恢复策略十二项模拟全部通过，恢复次数为 0、剩余 2 次。
+首次报告未通过的两项均涉及定时器的加载间隔和最近触发时间；其余检查通过。
+原工具直接对 systemctl 展示值做数字或字符串匹配，时间未解析时变成 null，
+不能据此认定 timer 停止。实际定时器原始数值仍待修正后的只读重查。
+
+## 定时器的针对性重查
+
+`qqPostUpgradeReadonlyCommand({timerOnly:true})` 生成 `server-recovery-timer-readonly.txt`。
+只重查当前升级身份、worker、guardian 和定时器，不重复消息数据库查询或六次采样，
+不需要重发消息、扫码、上传发布包或重启服务。
+
+通过 `busctl --system get-property` 读取 Timer 的 `TimersMonotonic`、`LastTriggerUSec`、`Unit`。
+严格验证 D-Bus 类型、数组结构与无符号 64 位数值；使用原始 20000000 微秒核对 20 秒间隔，
+用实时钟的原始最近触发时间计算距今秒数，避免把展示字符串或不同单调时钟混作数字。
+查询失败、从未触发、记录过期、指向其他 service 或间隔不符时均不放行。
+
+该命令通过标记为 `QQ_RECOVERY_TIMER_READONLY_CONFIRMED`；否则为
+`QQ_RECOVERY_TIMER_READONLY_REVIEW_REQUIRED`，并输出每项检查及 `timerEvidence`。
+不根据展示格式猜测服务正常，也不把读取失败当作 0 秒或成功。
+
+接口依据：[systemd Timer D-Bus 定义](https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.systemd1.html#Timer%20Unit%20Objects)、
+[busctl get-property](https://www.freedesktop.org/software/systemd/man/latest/busctl.html#get-property%20SERVICE%20OBJECT%20INTERFACE%20PROPERTY%E2%80%A6)。
+
+## 完整只读验收命令
 
 使用 `scripts/qq-websocket-post-upgrade-readonly.mjs` 的
 `qqPostUpgradeReadonlyCommand()` 生成 `server-post-upgrade-readonly.txt`，
@@ -35,9 +58,12 @@
 仍保持不变：此次没有人为切断线上连接，不把策略模拟、配置检查或短时采样描述为
 真实线上故障恢复或长期稳定性验收。
 
-本地验收：27 项主机测试与 1 项隔离 Linux guardian 测试通过，无失败或跳过。
+本地验收：最新 29 项主机测试通过，无失败或跳过；此前 1 项隔离 Linux guardian 测试保持有效，
+guardian 与恢复策略源码未修改。
 生成命令使用只读文件、Docker 和 systemd 夹具验证；缺失送达回执、关闭 timer 或策略版本不同
-均不能通过。Linux 测试无网络、无 Docker 套接字，Docker 操作为模拟，但实际生成并解码合成登录备份。
+均不能通过。新增回归覆盖展示值不可解析但原始数值有效，以及间隔不符、触发过期、读取失败、
+UInt64 最大值、畸形结构、未触发和未来时间；针对性重查不访问消息数据库或启动采样循环。
+Linux 测试无网络、无 Docker 套接字，Docker 操作为模拟，但实际生成并解码合成登录备份。
 
 这是源码中的独立只读跟进。r2 发布归档、源码快照标签和 388 文件发布清单均保持不变，
 新增工具和测试通过专用分支与 PR 同步；不包含论文开发或生产配置变更。

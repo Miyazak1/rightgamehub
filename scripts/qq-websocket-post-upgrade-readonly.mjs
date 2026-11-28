@@ -1,6 +1,34 @@
 // Source-only follow-up; the frozen r2 archive is not modified.
 import { WS_RELEASE, WS_STAGE } from './qq-websocket-release-common.mjs';
 
+// busctl's typed D-Bus values are independent of systemctl's display formatting.
+export function parseQQTimerBus({ timers, lastTrigger, unit }, now) {
+  const invalid = () => { throw Error('INVALID_TIMER_BUS_VALUE'); };
+  if (!Number.isSafeInteger(now) || now < 0) invalid();
+  const uint = value => {
+    if (!/^[0-9]{1,20}$/.test(value ?? '')) invalid();
+    const n = BigInt(value); if (n > 18446744073709551615n) invalid(); return n;
+  };
+  const array = timers?.match(/^a\(stt\)\s+(\d+)\s*([\s\S]*)$/);
+  if (!array || Number(array[1]) > 32) invalid();
+  const tokens = array[2].match(/"(?:[^"\\]|\\.)*"|[^\s]+/g) ?? [];
+  if (tokens.length !== Number(array[1]) * 3) invalid();
+  let intervalMatches = false;
+  for (let n = 0; n < tokens.length; n += 3) {
+    let base; try { base = JSON.parse(tokens[n]); } catch { invalid(); }
+    if (typeof base !== 'string' || base.length > 80) invalid();
+    const offset = uint(tokens[n + 1]); uint(tokens[n + 2]);
+    if (base === 'OnUnitInactiveUSec' && offset === 20000000n) intervalMatches = true;
+  }
+  const last = lastTrigger?.match(/^t\s+([0-9]+)$/), target = unit?.match(/^s\s+("(?:[^"\\]|\\.)*")$/);
+  if (!last || !target) invalid();
+  let targetName; try { targetName = JSON.parse(target[1]); } catch { invalid(); }
+  const micros = uint(last[1]), age = micros === 0n ? null : Number(BigInt(now) * 1000n - micros) / 1e6;
+  return { readFailed: false, intervalMatches, targetMatches: targetName === 'mooyu-qq-guardian.service',
+    recentlyTriggered: age !== null && age >= 0 && age <= 120,
+    lastTriggerAgeSeconds: age === null ? null : Math.round(age), intervalSeconds: intervalMatches ? 20 : null };
+}
+
 export function simulateQQRecovery(decide, now) {
   const base = { version: 1, attempts: [], manualRequired: false };
   const broken = at => ({ runtime: { available: true, loggedIn: false, restartRequired: true,
@@ -79,7 +107,7 @@ export async function collectQQPostUpgrade(io, decide, emit = console.log) {
   emit(JSON.stringify(result)); return result;
 }
 
-export function qqPostUpgradeReadonlyCommand() {
+export function qqPostUpgradeReadonlyCommand({ timerOnly = false } = {}) {
   const header = `(
 set -euo pipefail
 umask 077
@@ -109,6 +137,7 @@ const inspect=name=>JSON.parse(run('docker',['inspect',name]))[0];
 const privateJSON=file=>{const s=fs.lstatSync(file);if(!s.isFile()||s.isSymbolicLink()||s.uid!==0||(s.mode&0o077)||s.size>32*1024*1024)fail('PRIVATE_RECORD_REQUIRED');return JSON.parse(fs.readFileSync(file,'utf8'));};
 const safeText=file=>{const s=fs.lstatSync(file);if(!s.isFile()||s.isSymbolicLink()||s.uid!==0||(s.mode&0o022)||s.size>2*1024*1024)fail('ROOT_SOURCE_FILE_REQUIRED');return fs.readFileSync(file,'utf8');};
 const unit=name=>{const text=run('systemctl',['show',name,'-p','LoadState','-p','ActiveState','-p','SubState','-p','UnitFileState','-p','Result','-p','ExecMainStatus','-p','FragmentPath','-p','DropInPaths','-p','ExecStart','-p','TimersMonotonic','-p','Triggers','-p','LastTriggerUSecMonotonic']);return Object.fromEntries(text.split('\n').map(line=>{const i=line.indexOf('=');return[line.slice(0,i),line.slice(i+1)];}));};
+const timerBus=()=>{try{const args=['--system','get-property','org.freedesktop.systemd1','/org/freedesktop/systemd1/unit/mooyu_2dqq_2dguardian_2etimer','org.freedesktop.systemd1.Timer'];return parseQQTimerBus({timers:run('busctl',[...args,'TimersMonotonic']),lastTrigger:run('busctl',[...args,'LastTriggerUSec']),unit:run('busctl',[...args,'Unit'])},Date.now());}catch{return {readFailed:true,code:'TIMER_BUS_READ_FAILED',intervalMatches:false,targetMatches:false,recentlyTriggered:false,lastTriggerAgeSeconds:null};}};
 try{
  const root='/www/backup/gamehub/qq-independent-guardian-20261124-r1',index=privateJSON(stage+'/last-operation.private.json');
  if(index.releaseId!==release||index.mode!=='upgrade')fail('EXACT_R2_UPGRADE_REQUIRED');
@@ -127,7 +156,7 @@ try{
   const loadedExec=service.ExecStart?.match(/argv\[\]=([^;]+);/)?.[1].trim();
   const codeMatches=pathValid&&fileHash(args[1])===fileHash(stage+'/scripts/qq-plugin-guardian.mjs')&&fileHash(installedRoot+'/apps/qq-channel/src/recovery-policy.mjs')===fileHash(stage+'/apps/qq-channel/src/recovery-policy.mjs')&&fileHash(args[0])===fileHash(process.execPath);
   const unitHashesMatch=[serviceFile,timerFile].every(file=>state.files.some(entry=>entry.path===file&&entry.sha256===fileHash(file)));
-  const lastTriggerAgeSeconds=(Number(fs.readFileSync('/proc/uptime','utf8').split(' ')[0])*1e6-Number(timer.LastTriggerUSecMonotonic))/1e6;
+  const timerEvidence=timerBus();
   decideQQRecovery(caps,{runtime:{}},Date.now());
   const checks={gatewayPatchMatches:run('docker',['exec','mooyu-qq-napcat-1','node','-e',sourceProbe])===WS_PATCH_SHA256,
    gatewayImageMatchesUpgrade:g.Image===upgrade.image,workerSameContainerAndImage:w.Id===state.workerBefore.Id&&w.Image===state.workerBefore.Image,
@@ -135,8 +164,8 @@ try{
    guardianCodeAndPolicyMatch:codeMatches,guardianUnitsMatchUpgrade:unitHashesMatch,
    loadedServiceMatches:service.FragmentPath===serviceFile&&!service.DropInPaths&&loadedExec===exec,
    timerActive:timer.LoadState==='loaded'&&timer.ActiveState==='active'&&timer.UnitFileState==='enabled',
-   loadedTimerMatches:timer.FragmentPath===timerFile&&!timer.DropInPaths&&timer.Triggers?.split(' ').includes('mooyu-qq-guardian.service')&&/OnUnitInactiveSec=20(?:\r?\n|$)/.test(timerText)&&/OnUnitInactiveUSec=20s(?:\s|;)/.test(timer.TimersMonotonic??''),
-   timerRecentlyTriggered:Number.isFinite(lastTriggerAgeSeconds)&&lastTriggerAgeSeconds>=0&&lastTriggerAgeSeconds<=120,
+   loadedTimerMatches:timer.FragmentPath===timerFile&&!timer.DropInPaths&&timer.Triggers?.split(' ').includes('mooyu-qq-guardian.service')===true&&/OnUnitInactiveSec=20(?:\r?\n|$)/.test(timerText)&&timerEvidence.intervalMatches===true&&timerEvidence.targetMatches===true,
+   timerRecentlyTriggered:timerEvidence.recentlyTriggered===true,
    guardianServiceSuccessful:service.LoadState==='loaded'&&service.Result==='success'&&service.ExecMainStatus==='0'&&['inactive','active','activating'].includes(service.ActiveState),
    recoveryNotManuallyBlocked:caps.manualRequired===false};
   const recent=caps.attempts.filter(at=>Date.now()-at<86400000),attempts=recent.length;
@@ -144,15 +173,16 @@ try{
    workerId:w.Id.slice(0,12),workerStartedAt:w.State.StartedAt,recentRecoveryAttempts:attempts,dailyLimit:2,cooldownSeconds:900,
    recoveryAllowanceRemaining:Math.max(0,2-attempts),recoveryCooldownRemainingSeconds:recent.length?Math.max(0,Math.ceil((recent.at(-1)+900000-Date.now())/1000)):0,
    guardianServiceState:service.ActiveState,guardianServiceSubState:service.SubState,
-   timerLastTriggerAgeSeconds:Math.round(lastTriggerAgeSeconds),upgradeCompletedAt:upgrade.completedAt};
+   timerEvidence,timerLastTriggerAgeSeconds:timerEvidence.lastTriggerAgeSeconds,upgradeCompletedAt:upgrade.completedAt};
  };
  const io={now:()=>Date.now(),wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),context,
   sample:async()=>{const s=JSON.parse(run('docker',['exec','mooyu-qq-worker-1','node','--input-type=module','-e',WORKER_SNAPSHOT_PROBE]));assertGuardianSnapshot(s,privateJSON(root+'/config.private.json'));return {runtime:s.runtime,contractValid:true};},
   receipt:async()=>{const messages=JSON.parse(reader.sql(state.databases.qq,wsNewMessageSQL(upgrade.completedAt)));if(!Array.isArray(messages))fail('MESSAGE_RECEIPT_INVALID');return {matchingRequests:messages.length,confirmedReplies:messages.filter(m=>m.replyDelivered===true).length};}};
- await collectQQPostUpgrade(io,decideQQRecovery);
+ if(timerOnly){const current=await context();console.log(JSON.stringify({section:'recoveryTimerContext',...current}));console.log(JSON.stringify({result:current.checksPassed?'QQ_RECOVERY_TIMER_READONLY_CONFIRMED':'QQ_RECOVERY_TIMER_READONLY_REVIEW_REQUIRED',servicesRestartedByAudit:false,stateFilesWrittenByAudit:false,oldTasksRetried:false,messagesSent:false,qrOrLoginRequested:false,liveDisconnectRecoveryTested:false}));}
+ else await collectQQPostUpgrade(io,decideQQRecovery);
 }catch(e){console.log(JSON.stringify({result:'QQ_POST_UPGRADE_READONLY_READ_FAILED',code:/^[A-Z0-9_]+$/.test(e.message??'')?e.message:'READ_FAILED',servicesRestartedByAudit:false,recoveryAppliedByAudit:false,stateFilesWrittenByAudit:false,oldTasksRetried:false,rawMessagesOrCredentialsPrinted:false}));process.exitCode=1;}
 `;
-  return header + simulateQQRecovery.toString() + '\n' + collectQQPostUpgrade.toString()
-    + '\nconst stage=' + JSON.stringify(WS_STAGE) + ',release=' + JSON.stringify(WS_RELEASE) + ';\n'
+  return header + parseQQTimerBus.toString() + '\n' + (timerOnly ? '' : simulateQQRecovery.toString() + '\n' + collectQQPostUpgrade.toString())
+    + '\nconst stage=' + JSON.stringify(WS_STAGE) + ',release=' + JSON.stringify(WS_RELEASE) + ',timerOnly=' + JSON.stringify(timerOnly) + ';\n'
     + body + '\nNODE\n)\n';
 }
