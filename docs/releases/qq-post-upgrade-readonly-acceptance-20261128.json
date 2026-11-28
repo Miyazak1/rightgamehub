@@ -1,0 +1,40 @@
+{
+  "result": "PASSED",
+  "host": {
+    "tests": 27,
+    "pass": 27,
+    "fail": 0,
+    "skipped": 0
+  },
+  "linux": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0
+  },
+  "generatedCommandTestedWithReadOnlyAdapters": true,
+  "policySimulationCases": 12,
+  "linuxGuardianUsesSimulatedDocker": true,
+  "realLoginBackupArchiveDecodeTested": true,
+  "productionAccessed": false,
+  "liveDisconnectRecoveryTested": false,
+  "existingServicesRestarted": false,
+  "oldTasksRetried": false,
+  "commandBytes": 14024,
+  "commandSha256": "b8f7b762c2f2be3988e9c8b43d2bd95b9ee18bf55238bd1bad4b7a19f6afb0c9",
+  "r2ArchiveUnchanged": true,
+  "scope": "Source-only read-only acceptance follow-up; r2 archive and snapshot are unchanged",
+  "userReportedProductionUpgrade": "QQ_WEBSOCKET_UPDATED_SCAN_REQUIRED",
+  "userReportedQrLoginAndExpectedGroupReply": true,
+  "serverReceiptAndRecoveryConfiguration": "Awaiting read-only server output",
+  "sourceFiles": [
+    {
+      "path": "scripts/qq-websocket-post-upgrade-readonly.mjs",
+      "normalizedSourceSha256": "fcfd212c4860509c54d53aeb166e70e423e02d056b863848d92713e6f6be39ee"
+    },
+    {
+      "path": "tests/platform/qq-post-upgrade-readonly.test.mjs",
+      "normalizedSourceSha256": "f29271f429244a034ac9f44b7f0397b8d46f7fd54d496f1b7497bf67f03bf4b4"
+    }
+  ]
+}
