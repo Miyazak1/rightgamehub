@@ -5,7 +5,8 @@ import { randomBytes, createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), argv = process.argv.slice(2);
-if (argv.length !== 2 || argv[0] !== '--out-dir') throw Error('EXPLICIT_OUT_DIR_REQUIRED');
+if (![2,4].includes(argv.length) || argv[0] !== '--out-dir' || (argv.length===4&&(argv[2]!=='--suite'||argv[3]!=='channels'))) throw Error('EXPLICIT_OUT_DIR_REQUIRED');
+const channelSuite=argv.length===4;
 const out = path.resolve(argv[1]); if (fs.existsSync(out)) throw Error('FRESH_OUTPUT_DIRECTORY_REQUIRED');
 fs.mkdirSync(out, { recursive: true });
 const owner = 'agent-context-d2-' + randomBytes(16).toString('hex'), database = 'qa_ledger_test_' + randomBytes(16).toString('hex'), password = randomBytes(20).toString('hex');
@@ -15,10 +16,13 @@ const tests = ['tests/platform/agent-context-v2.test.mjs', 'tests/platform/agent
   'tests/platform/agent-memory-readonly.test.mjs', 'tests/platform/agent-memory-readonly-db.test.cjs',
   'tests/platform/agent-interaction.test.mjs', 'tests/platform/agent-interaction-db.test.cjs',
   'tests/platform/platform-assistant.test.cjs', 'tests/platform/agent-editorial-memory.test.cjs', 'tests/platform/agent-research-evidence-contract.test.cjs'];
+if(channelSuite)tests.push('tests/platform/agent-channel-context.test.mjs','tests/platform/agent-channel-context-db.test.cjs','tests/platform/qq-channel.test.mjs','tests/platform/agent-qq-channel-db.test.cjs');
 const sources = ['apps/api/src/agent-context-service.mjs', 'apps/api/src/agent-context-conversation.mjs', 'apps/api/src/agent-message-envelope.mjs',
   'apps/api/src/agent-interaction-conversation.mjs', 'apps/api/src/platform-assistant.mjs', 'apps/api/src/agent-memory-readonly.mjs',
   'apps/api/src/agent-memory-readonly-contracts.mjs', 'apps/api/src/agent-memory-readonly-adapters.mjs', 'apps/api/src/agent-memory-readonly-transaction.mjs',
   'scripts/verify-agent-context-local.mjs', ...tests];
+if(channelSuite)sources.push('apps/api/src/agent-channel-message-contracts.mjs','apps/api/src/agent-channel-context-protocol.mjs','apps/api/src/agent-channel-message-service.mjs','apps/api/src/agent-channel-message-routes.mjs',
+ 'apps/qq-channel/src/message-context.mjs','apps/qq-channel/src/repository.mjs','apps/qq-channel/src/service.mjs','apps/qq-channel/src/agent-bridge.mjs','apps/qq-channel/src/onebot.mjs');
 const sha = value => createHash('sha256').update(value).digest('hex');
 const hashes = () => Object.fromEntries(sources.map(file => [file, sha(fs.readFileSync(path.join(root, file)))]));
 const before = hashes(); let created = false;
@@ -48,7 +52,7 @@ try {
   { encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
   fs.writeFileSync(path.join(out, 'tests.tap'), run.stdout ?? ''); fs.writeFileSync(path.join(out, 'tests.stderr.txt'), run.stderr ?? '');
   if (run.error || run.status !== 0) { process.stdout.write((run.stdout ?? '').slice(-17000)); throw Error('LOCAL_CONTEXT_ACCEPTANCE_FAILED'); }
-  const proofs = ['AGENT_CONTEXT_D2_DB_ACCEPTED', 'AGENT_MEMORY_READONLY_DB_ACCEPTED'].map(result => {
+  const proofs = ['AGENT_CONTEXT_D2_DB_ACCEPTED', 'AGENT_MEMORY_READONLY_DB_ACCEPTED',...(channelSuite?['AGENT_CHANNEL_CONTEXT_DB_ACCEPTED']:[])].map(result => {
     const line = run.stdout.split('\n').find(line => line.startsWith('# {"result":"' + result + '"'));
     if (!line) throw Error('DATABASE_ACCEPTANCE_PROOF_REQUIRED'); return JSON.parse(line.slice(2));
   });
@@ -57,13 +61,14 @@ try {
   // integration modules. All QQ control/runtime/recovery code stays identical.
   const ledger = JSON.parse(fs.readFileSync(path.join(root, 'docs/releases/non-paper-source-alignment-20261128.json'), 'utf8'));
   const allowed = new Set(['apps/api/src/agent-interaction-conversation.mjs', 'apps/api/src/platform-assistant.mjs']);
+  if(channelSuite)for(const file of ['apps/qq-channel/src/repository.mjs','apps/qq-channel/src/service.mjs','apps/qq-channel/src/agent-bridge.mjs'])allowed.add(file);
   const delta = [];
   for (const entry of ledger.sourceFiles) {
     const bytes = fs.readFileSync(path.join(root, entry.path));
     const current = sha(entry.normalization === 'lf' ? Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n')) : bytes);
     if (current !== entry.sha256) { if (!allowed.has(entry.path)) throw Error('UNEXPECTED_FROZEN_SOURCE_CHANGE:' + entry.path); delta.push({ path: entry.path, before: entry.sha256, after: current }); }
   }
-  const result = { result: 'AGENT_CONTEXT_D2_LOCAL_ACCEPTED', capturedAt: new Date().toISOString(), sourceSha256: before,
+  const result = { result: channelSuite?'AGENT_CHANNEL_CONTEXT_LOCAL_ACCEPTED':'AGENT_CONTEXT_D2_LOCAL_ACCEPTED', capturedAt: new Date().toISOString(), sourceSha256: before,
     passedTests: Number(run.stdout.match(/^# pass (\d+)$/m)[1]), proofs, tests, pgImage, nodeImage,
     frozenSourcesChecked: ledger.sourceFiles.length, intentionalIntegrationDelta: delta, liveServicesTouched: false,
     onlineUpdated: false, oldLiveTasksRetried: false, realProviderCalls: 0, paperSystemsActivated: false };

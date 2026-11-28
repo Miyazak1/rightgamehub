@@ -31,6 +31,7 @@ export function createAgentConversationExecutor({repository,service,ports,practi
   const id=interactionId([row.id,'conversation-run']);let run=await readRun(id);
   if(run?.workflow_version===3&&mode!=='unified')interactionFail('AGENT_CONTEXT_RESUME_DISABLED',409);
   const unified=run?run.workflow_version===3:mode==='unified';
+  if(row.input_json.messageV2?.requiredContextVersion===2&&!unified)interactionFail('AGENT_CHANNEL_CONTEXT_EXECUTOR_REQUIRED',409);
   const workflow=unified?AGENT_CONTEXT_CONVERSATION_WORKFLOW:run?.workflow_version===1||!ports.conversationAttempts?AGENT_CONVERSATION_WORKFLOW:AGENT_CONVERSATION_ATTEMPT_WORKFLOW;
   const access={origin:row.origin_json,interactionId:row.id};
   if(!run){

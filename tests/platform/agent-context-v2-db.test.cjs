@@ -26,8 +26,8 @@ test('D2 isolated shadow and opt-in ordinary chat preserve scope, sources and ru
       badgeLabel: 'AI 助手', operatorLabel: 'Local QA', capabilities: ['blog:auto-publish'], metadata: {} });
   const agentId = account.agentUserId, runtime = new PostgresAgentRuntimeRepository(db), repository = new PostgresAgentInteractionRepository(db);
   await bootstrapAgentInteractions({ repository, runtimeRepository: runtime, agentId });
-  await runtime.registerWorkflow({ actorUserId: owner, manifest: AGENT_CONTEXT_CONVERSATION_WORKFLOW });
-  await runtime.activateWorkflow(AGENT_CONTEXT_CONVERSATION_WORKFLOW.workflowKey, 3);
+  const registeredContextWorkflow=await runtime.registerWorkflow({ actorUserId: owner, manifest: AGENT_CONTEXT_CONVERSATION_WORKFLOW });
+  if(registeredContextWorkflow.status==='draft')await runtime.activateWorkflow(AGENT_CONTEXT_CONVERSATION_WORKFLOW.workflowKey, 3);
   for (const key of ['provider.text.generate', 'research.github.read']) await db.query(`INSERT INTO agent_capability_grants(id,agent_user_id,capability_key,contract_version,scope_json,risk_ceiling,status,granted_by_user_id,reason)
     VALUES($1,$2,$3,1,'{}','L1','active',$4,'Isolated D2 fixture') ON CONFLICT DO NOTHING`, [randomUUID(), agentId, key, owner]);
   await db.query("INSERT INTO agent_blog_automation_settings(agent_user_id,model,topic_scope,updated_by_user_id) VALUES($1,'fixture-context-d2','Preserved schedule fixture',$2)", [agentId, owner]);

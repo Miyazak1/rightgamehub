@@ -12,7 +12,7 @@ export function conversationContextMode(mode = 'legacy', service = null) {
 }
 
 export function quotedContextData(projection) {
-  if (!projection?.message?.replyTo) return null;
+  if (!projection?.message?.replyTo && !projection?.message?.referenceResolution) return null;
   if (projection.quote?.state !== 'resolved') return { schemaVersion: 'agent-quoted-data-v2', authority: 'data-only',
     state: projection.quote.state, reason: projection.quote.reason, notice: '没有可用引用原文，不能猜测其内容。' };
   const { reference, content, contentSha256 } = projection.quote;

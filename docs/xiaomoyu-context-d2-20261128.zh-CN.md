@@ -2,6 +2,8 @@
 
 日期：2026-11-28。承接 [统一架构](xiaomoyu-unified-memory-and-tools-architecture-20261128.zh-CN.md) 与 [D1 只读记忆](xiaomoyu-memory-readonly-d1-20261128.zh-CN.md)。
 
+本稿记录 D2 内部上下文阶段；后续新增的显式 Web/QQ 引用入口与本地验收见 [D2 渠道入口闭环](xiaomoyu-channel-context-d2-20261128.zh-CN.md)。
+
 本轮提供独立 V2 消息适配、基于 D1 的 Context Service、无调用/无发送的影子比较，以及显式启用的普通问答执行接入。
 默认仍为旧链路，不改变生产环境变量、现有入口、运行进程或 QQ 连接。
 研究/编辑内部记忆保留 D1 的运营管理员边界，本轮不将其自动注入聊天。
