@@ -93,6 +93,16 @@ test('Agent durable runtime foundation on isolated PostgreSQL', { skip: !harness
   await runtime.completeStage({ stageId: publish.id, workerId: publish.leasedBy, leaseToken: publish.leaseToken, outputRef: { ready: true } });
   const outputId = crypto.randomUUID();
   assert.equal((await runtime.finalizeRun({ runId: run.id, outputType: 'blog.article', outputId })).status, 'succeeded');
+  assert.equal(await runtime.claimNextStage('terminal-success-proof',60,null,run.id),null);
+  const failedRun=await runtime.createRun({...request,idempotencyKey:'terminal-failed:'+crypto.randomUUID()});
+  const failedClaim=await runtime.claimNextStage('terminal-failed-proof',60,null,failedRun.id);
+  assert(failedClaim);
+  await runtime.startStage({stageId:failedClaim.id,workerId:failedClaim.leasedBy,leaseToken:failedClaim.leaseToken});
+  await runtime.failStage({stageId:failedClaim.id,workerId:failedClaim.leasedBy,leaseToken:failedClaim.leaseToken,errorCode:'FIXTURE_TERMINAL',errorMessage:'Terminal fixture.',retryable:false});
+  assert.equal((await admin.query('SELECT status FROM agent_runs WHERE id=$1',[failedRun.id])).rows[0].status,'failed');
+  const terminalOutboxBefore=(await admin.query('SELECT jsonb_agg(to_jsonb(o) ORDER BY id) AS snapshot FROM agent_runtime_outbox o WHERE payload_json->>\'runId\'=ANY($1::text[])',[[run.id,failedRun.id]])).rows[0].snapshot;
+  assert.equal(await runtime.claimNextStage('terminal-failed-proof',60,null,failedRun.id),null);
+  assert.deepEqual((await admin.query('SELECT jsonb_agg(to_jsonb(o) ORDER BY id) AS snapshot FROM agent_runtime_outbox o WHERE payload_json->>\'runId\'=ANY($1::text[])',[[run.id,failedRun.id]])).rows[0].snapshot,terminalOutboxBefore);
   assert.equal(Number((await admin.query('SELECT count(*)::int AS n FROM agent_run_events WHERE run_id=$1', [run.id])).rows[0].n) >= 5, true);
   await assert.rejects(admin.query("UPDATE agent_runs SET status='running',finished_at=NULL WHERE id=$1", [run.id]));
   await assert.rejects(admin.query('DELETE FROM agent_run_events WHERE run_id=$1', [run.id]));

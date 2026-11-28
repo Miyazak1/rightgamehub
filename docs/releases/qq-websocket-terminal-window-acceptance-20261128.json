@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-28",
+  "result": "PASSED",
+  "productionAccessed": false,
+  "productionUpgradeExecuted": false,
+  "observedReadonlyWindow": {
+    "total": 139,
+    "legacyRetained": 70,
+    "blocking": 69,
+    "classificationGroups": 21,
+    "truncated": false,
+    "conversationSucceededNotifications": 20,
+    "githubSucceededOrFailedNotifications": 49,
+    "eventAttempts": 0,
+    "eventAndStageLeasesPresent": false,
+    "payloadLinksMatched": true
+  },
+  "scope": "QQ gateway-only release preflight; terminal notifications retained without dispatch or mutation",
+  "operations": {
+    "result": "PASSED",
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "skipped": 0,
+    "isolatedLinuxOperatorTested": true,
+    "dockerAndSystemctlForProductionNames": "simulated inside disposable Linux container without Docker socket",
+    "realLoginTarRead": true,
+    "realPostgresNewMessageAcceptance": true,
+    "terminalRuntimeClaimsRefused": true,
+    "windowPolicySourceSha256": "37982631b5b21bea01cafbc5b37c351a4e754c5e4d89379f89bb06bc42edef4a",
+    "phaseFailureGates": true,
+    "buildFailureDoesNotStopServices": true,
+    "coldBackupFailureRecoverableByExplicitRollback": true,
+    "scanRequiredStateHandled": true,
+    "guardianAttemptsAndOldLocksPreserved": true,
+    "productionAccessed": false,
+    "existingServicesRestarted": false,
+    "updaterSourceSha256": "ae43d989f528a41583bfeae803ecacc1f00ce32d9d95d2030ac2b445708563e8",
+    "commonSourceSha256": "843920648227875aa29243dc153d9daa35483c66a5d0851ba7dff27e45872034",
+    "testSources": [
+      {
+        "path": "tests/platform/qq-websocket-release.test.mjs",
+        "sha256": "706b84a05fdf3ac38ad0ba3dfcdfa1170a2892deb323aa7b1afb9334c1006045"
+      },
+      {
+        "path": "tests/platform/qq-websocket-release-linux.test.mjs",
+        "sha256": "4aadbc474da012543037e648e8563e5c9377968102da1e12c8326084002344b2"
+      },
+      {
+        "path": "tests/platform/qq-websocket-acceptance-db.test.cjs",
+        "sha256": "40e4c0ee09b55f66d448e2cf6b32d38df9c6102dcdabe6287524e4fa05c5703a"
+      },
+      {
+        "path": "tests/platform/fixtures/qq-websocket-ops/fake-docker.cjs",
+        "sha256": "79c71f6e8545d53373f588a4e523be0b84a30119a99c5fd1c0e0030fbbe30fca"
+      }
+    ]
+  },
+  "terminalWindowDatabase": {
+    "result": "PASSED",
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "realIsolatedPostgres": true,
+    "fixtureOnly": true,
+    "recordsUnchanged": true,
+    "activeAttemptedLeasedUnknownAndMismatchedEventsBlocked": true,
+    "releaseWindowApproved": false,
+    "productionAccessed": false,
+    "existingServicesRestarted": false,
+    "policySourceSha256": "37982631b5b21bea01cafbc5b37c351a4e754c5e4d89379f89bb06bc42edef4a",
+    "testSourceSha256": "ee84af36723669ce1543bcf2ac43aacb6c41465ba69b588863fb8eb95c3bd635"
+  },
+  "compose": {
+    "result": "PASSED",
+    "realComposeGatewaySwitchAndRollback": true,
+    "workerSameContainerAndImage": true,
+    "loginVolumeAndDataRetained": true,
+    "originalHostnameAndRuntimePreserved": true,
+    "sourceModeVerified": {
+      "owner": 1000,
+      "mode": 292
+    },
+    "baseImageConfigurationAndLayersPreserved": true,
+    "otherExistingContainersUnchanged": true,
+    "fixtureOnly": true,
+    "realQQStarted": false,
+    "productionAccessed": false,
+    "updaterSourceSha256": "ae43d989f528a41583bfeae803ecacc1f00ce32d9d95d2030ac2b445708563e8",
+    "commonSourceSha256": "843920648227875aa29243dc153d9daa35483c66a5d0851ba7dff27e45872034"
+  },
+  "archive": {
+    "result": "PASSED",
+    "archiveSha256": "9b2c8b209632d74d9f467c7d1bb721b1411d46bf0197268464a2dbc0db274c66",
+    "manifestFiles": 15,
+    "archiveMembers": 17,
+    "modulesParsed": 10,
+    "linuxImportsResolved": 10,
+    "nonProductionEntryRefused": true,
+    "bashCommandsParsed": 6,
+    "privateLoginOrDatabaseDataIncluded": false,
+    "serverCommandsExecuted": false,
+    "productionAccessed": false
+  },
+  "delivery": {
+    "result": "PASSED",
+    "zip": "qq-websocket-owner-20261128-r2-release-files.zip",
+    "zipMembers": 12,
+    "zipBytes": 53617,
+    "zipSha256": "493dcfa25fb8d9f504eae341efde13b4be5c555b797518184ba97b664459b55d",
+    "archiveSha256": "9b2c8b209632d74d9f467c7d1bb721b1411d46bf0197268464a2dbc0db274c66",
+    "productionAccessed": false,
+    "oldArchivePreserved": true
+  },
+  "terminalClaimTest": {
+    "path": "tests/platform/agent-runtime-foundation-db.test.cjs",
+    "sha256": "9f2a061276c99c5a8906d7e07875a24483355c574f2a33faa5583d737498ae37",
+    "realFullSchemaPostgres": true,
+    "succeededAndFailedRunsNotReclaimed": true,
+    "outboxUnchanged": true
+  },
+  "nativeFixSourceRef": "refs/tags/qq-websocket-owner-source-20261127-r1",
+  "realQQAcceptanceReused": "docs/releases/qq-owner-local-acceptance-20261127.json",
+  "realQQAcceptanceLimit": "Native patch is unchanged; this r2 only changes operator preflight. Real production login, new-message reply and recovery acceptance remain pending.",
+  "oldR1ArchiveSha256": "454bd226a1b98845900e48697627e786f0799373903a7d6986ddf6702be26a2e",
+  "oldR1ArchivePreserved": true,
+  "updatedServices": [
+    "mooyu-qq-napcat-1"
+  ],
+  "stopStartSameContainer": [
+    "mooyu-qq-worker-1"
+  ],
+  "guardianFieldsChanged": [
+    "image",
+    "identityHash"
+  ],
+  "permissionsSchedulesLoginHistoryOldLocksPreserved": true,
+  "papersStillClosed": true,
+  "oldTasksRetried": false,
+  "databasesOrDesktopRestarted": false
+}

@@ -1,0 +1,7 @@
+{
+  "sourceBaseSha256": "7967149b1c4f3d30e0506c842f84b7b925c2d361e3c9c75ebf0d4ff24dbdedaa",
+  "classSha256": "bdce0215c45bd5095f83e0113cc0ad3359a1f3b54ac4d145c6ee77f29c3ad886",
+  "normalization": "lf",
+  "extraction": "The exact class pO extends vd from the pinned vendor source, ending before var G_",
+  "scope": "Audited reverse WebSocket JavaScript class only; no native binaries, dependencies, credentials or login data"
+}

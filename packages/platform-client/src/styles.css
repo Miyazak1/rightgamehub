@@ -2922,6 +2922,16 @@ footer.community-actions > .community-report-button {
 .qq-admin-qr svg{max-width:100%;height:auto}
 .qq-admin-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;border:1px solid var(--gh-border,#ded9eb);padding:18px;margin:0 0 18px}
 .qq-admin-fields label{display:grid;gap:7px;min-width:0}
+.agent-channel-participants__list{list-style:none;margin:18px 0;padding:0;display:grid;gap:10px}
+.agent-channel-participants__row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--gh-border,#ded9eb);border-radius:6px}
+.agent-channel-participants__identity{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-width:0;overflow-wrap:anywhere}
+.agent-channel-participants__identity .agent-state{font-size:12px;white-space:nowrap}
+.agent-channel-participants__row>.button{flex-shrink:0}
+.agent-channel-participants__form{display:grid;grid-template-columns:minmax(110px,.55fr) minmax(0,1fr) auto;align-items:end;gap:12px}
+.agent-channel-participants__form label{display:grid;gap:7px;min-width:0}
+.agent-channel-participants__form input,.agent-channel-participants__form select{width:100%;min-width:0;box-sizing:border-box;min-height:42px;padding:10px;border:1px solid var(--gh-border,#ded9eb);border-radius:5px;background:var(--gh-panel,#fff);color:inherit;font:inherit}
+.agent-channel-participants__form>.button{min-height:42px}
+@media(max-width:680px){.agent-channel-participants__row{align-items:stretch;flex-direction:column}.agent-channel-participants__form{grid-template-columns:1fr}.agent-channel-participants__form>.button{width:100%}}
 .qq-admin-fields input:not([type=checkbox]),.qq-admin-fields textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--gh-border,#ded9eb);border-radius:5px;background:var(--gh-panel,#fff);color:inherit;font:inherit}
 .qq-admin-fields small,.qq-admin-note{font-size:12px;line-height:1.6;opacity:.8}
 .qq-admin-fields .qq-admin-enabled{grid-column:1/-1;display:flex;align-items:center;gap:10px}

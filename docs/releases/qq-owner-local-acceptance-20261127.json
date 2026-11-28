@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "result": "PASSED",
+  "at": "2026-11-27T14:31:51.946Z",
+  "scope": "Local QQ native transport and management; no production deployment",
+  "regression": {
+    "host": {
+      "tests": 74,
+      "pass": 74,
+      "fail": 0,
+      "skipped": 0
+    },
+    "linuxAndDatabase": {
+      "tests": 50,
+      "pass": 50,
+      "fail": 0,
+      "skipped": 0
+    },
+    "fixtureResponses": "synthetic; counted separately from real QQ below"
+  },
+  "realQQ": {
+    "login": true,
+    "inbound": true,
+    "outboundAcknowledged": true,
+    "userConfirmedReplies": true,
+    "deliveredMessages": 4,
+    "fixedLocalProvider": true,
+    "realUnifiedAgentOrModelTested": false,
+    "messages": [
+      {
+        "state": "delivered",
+        "attempts": 1,
+        "remoteConfirmed": true,
+        "testMarker": true,
+        "replyExpected": true,
+        "expectedGroup": true,
+        "allowedCaller": true,
+        "createdAt": "2026-11-27T07:14:48.287791+00:00",
+        "updatedAt": "2026-11-27T07:14:50.385652+00:00"
+      },
+      {
+        "state": "delivered",
+        "attempts": 1,
+        "remoteConfirmed": true,
+        "testMarker": true,
+        "replyExpected": true,
+        "expectedGroup": true,
+        "allowedCaller": true,
+        "createdAt": "2026-11-27T07:22:21.238089+00:00",
+        "updatedAt": "2026-11-27T07:22:23.202344+00:00"
+      },
+      {
+        "state": "delivered",
+        "attempts": 1,
+        "remoteConfirmed": true,
+        "testMarker": true,
+        "replyExpected": true,
+        "expectedGroup": true,
+        "allowedCaller": true,
+        "createdAt": "2026-11-27T13:01:22.406612+00:00",
+        "updatedAt": "2026-11-27T13:01:23.816346+00:00"
+      },
+      {
+        "state": "delivered",
+        "attempts": 1,
+        "remoteConfirmed": true,
+        "testMarker": true,
+        "replyExpected": true,
+        "expectedGroup": true,
+        "allowedCaller": true,
+        "createdAt": "2026-11-27T14:31:15.196537+00:00",
+        "updatedAt": "2026-11-27T14:31:16.80955+00:00"
+      }
+    ],
+    "budget": {
+      "calls": 4,
+      "reserved": 12064,
+      "actual": 24
+    }
+  },
+  "recovery": {
+    "workerReconnect": true,
+    "nativeSelfOfflineObserved": true,
+    "explicitKickedReasonObserved": false,
+    "nativeLoginWorkerRecreationObserved": true,
+    "qrAfterOfflineAvailable": true,
+    "rescanRestoredRealReplies": true,
+    "selfOfflineCause": "unconfirmed; not attributed to another device or Tencent policy"
+  },
+  "stability": {
+    "result": "PASSED",
+    "startedAt": "2026-11-27T13:03:43.149Z",
+    "endedAt": "2026-11-27T13:13:48.012Z",
+    "seconds": 604.863,
+    "samples": 60,
+    "file": "stability-2026-11-27T13-03-43-149Z.json",
+    "newMessageAfterWindow": true,
+    "historyAndPolicyUnchanged": true
+  },
+  "preservation": {
+    "priorMessagesUnchanged": true,
+    "policyUnchanged": true,
+    "sameGatewayAndLoginMount": true,
+    "sameDatabase": true,
+    "otherContainersUnchanged": true,
+    "paperEnabled": false,
+    "productionAccessed": false,
+    "oldTasksRetried": false
+  },
+  "evidenceDigests": {
+    "realFinalAcceptanceSha256": "b5cd29435d4c3e6d2fb56bb8fa3392febe11224bf05a028f8d75a1c029376b9e",
+    "stabilitySha256": "83ec2fe6fe4a6fcbed634671de07fa3a72c18bee01f534c3e8b7de9418d0e674",
+    "regressionSha256": "e6e7a3d2b325d163abff98bd3d96ee25158cb7748d21e9ed2b4d174074f47605"
+  },
+  "limits": [
+    "The confirmed socket-ownership defect is not proven to be the sole cause of every production incident.",
+    "The bounded observation does not establish that QQ can never go offline.",
+    "This real QQ lab used a fixed local provider; full model/Agent business execution was not tested against Tencent."
+  ]
+}

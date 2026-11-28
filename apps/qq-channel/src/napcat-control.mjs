@@ -7,7 +7,7 @@ const activeLogin=status=>status.isLogin===true&&status.isOffline!==true&&status
 export const NAPCAT_CREDENTIAL_REUSE_MS=50*60*1000;
 export const QQ_OBSERVATION_TTL_MS=30000;
 const configKey=c=>JSON.stringify([c.botId,c.groupId]);
-const emptyObservation=()=>({available:false,loggedIn:false,coreReady:false,accountMatches:false,accountState:'unknown',groupReady:false,phase:'unknown',groupState:'unknown',restartRequired:false,qrAvailable:false,checkedAt:null,verifiedAt:null,observation:'unknown'});
+const emptyObservation=()=>({available:false,loggedIn:false,coreReady:false,accountMatches:false,accountState:'unknown',groupReady:false,phase:'unknown',groupState:'unknown',restartRequired:false,qrAvailable:false,checkedAt:null,verifiedAt:null,observation:'unknown',probeFailure:null});
 const qrURL=value=>{try{const u=new URL(value);return u.protocol==='https:'&&(u.hostname==='qq.com'||u.hostname.endsWith('.qq.com'))&&!u.username&&!u.password&&u.href.length<=4096?u.href:null;}catch{return null;}};
 async function bounded(promise,signal){
  signal.throwIfAborted();let abort;
@@ -18,7 +18,7 @@ export class NapCatControl{
  constructor({token,accessToken,fetchImpl=fetch,origin='http://napcat:6099',workerUrl='ws://worker:6700/onebot/v11',now=Date.now,sampleTimeoutMs=8000}){
   if(!/^[a-f0-9]{64}$/iu.test(token??'')||!accessToken)throw qqAdminError('QQ_GATEWAY_CONFIG_REQUIRED',503);
   Object.assign(this,{token,accessToken,fetchImpl,origin,workerUrl,now,sampleTimeoutMs});this.credential=null;this.authAt=0;this.authRetryAt=0;this.authRetryCode='QQ_GATEWAY_UNAVAILABLE';this.authPending=null;this.nextCheck=0;this.readyGroup=null;this.observed=emptyObservation();
-  this.observedKey=null;this.requestedKey=null;this.generation=0;this.inspection=null;this.maintenance=null;this.disconnectedAt=null;this.configRetryAt=0;this.configFailures=0;this.transport={state:'unknown',checkedAt:null};
+  this.observedKey=null;this.requestedKey=null;this.generation=0;this.inspection=null;this.maintenance=null;this.disconnectedAt=null;this.configRetryAt=0;this.configFailures=0;this.transport={state:'unknown',checkedAt:null};this.memberRetryAt=0;this.memberRetryKey=null;
  }
  async post(path,body={},auth=true,signal=AbortSignal.timeout(10000)){
   signal.throwIfAborted();
@@ -62,9 +62,10 @@ export class NapCatControl{
   const key=configKey(config);
   if(this.inspection?.key===key)return this.inspection.promise;
   this.requestedKey=key;const generation=++this.generation,signal=AbortSignal.timeout(this.sampleTimeoutMs);
-  const promise=(async()=>{let next;
-   try{next=await bounded(this.readObservation(config,signal),signal);}
-   catch{next={...(this.observedKey===key?this.observed:emptyObservation()),available:false,observation:'unavailable'};}
+  const promise=(async()=>{let next,progress=null,progressStage='login';
+   try{next=await bounded(this.readObservation(config,signal,(value,stage)=>{progress={...value};progressStage=stage;}),signal);}
+   catch(error){const probeFailure={stage:progressStage,code:signal.aborted?'QQ_GATEWAY_TIMEOUT':/^QQ_[A-Z0-9_]{1,70}$/u.test(error?.code??'')?error.code:'QQ_GATEWAY_UNAVAILABLE'};
+    next=progress?{...progress,observation:'partial',probeFailure}:{...(this.observedKey===key?this.observed:emptyObservation()),available:false,observation:'unavailable',probeFailure};}
    if(!this.stopped&&generation===this.generation){
     next.checkedAt=new Date(this.now()).toISOString();this.observed=next;this.observedKey=key;
     this.readyGroup=next.accountMatches&&next.groupReady?config.groupId:null;
@@ -73,40 +74,52 @@ export class NapCatControl{
   })().finally(()=>{if(this.inspection?.promise===promise)this.inspection=null;});
   this.inspection={key,promise};return promise;
  }
- async readObservation(config,signal){
-  const post=(path,body)=>{signal.throwIfAborted();return this.post(path,body,true,signal);};
+ async readObservation(config,signal,onProgress=()=>{}){
+  // Secondary reads have their own smaller deadlines. A slow member lookup
+  // must leave time for group-list fallback and cannot erase a verified login.
+  const secondaryMs=Math.max(1,Math.min(2000,Math.floor(this.sampleTimeoutMs/4)));
+  const post=async(path,body,secondary=false)=>{signal.throwIfAborted();const requestSignal=secondary?AbortSignal.any([signal,AbortSignal.timeout(secondaryMs)]):signal;
+   try{return await bounded(this.post(path,body,true,requestSignal),requestSignal);}catch(error){if(requestSignal.aborted)throw qqAdminError('QQ_GATEWAY_TIMEOUT',503);throw error;}};
+  const failure=(stage,error)=>({stage,code:/^QQ_[A-Z0-9_]{1,70}$/u.test(error?.code??'')?error.code:'QQ_GATEWAY_UNAVAILABLE'});
   try{
    const status=await post('/QQLogin/CheckLoginStatus');
    if(!status||typeof status.isLogin!=='boolean')throw qqAdminError('QQ_GATEWAY_UNAVAILABLE',503);
    const loggedIn=activeLogin(status);
    const next={...emptyObservation(),available:true,loggedIn,coreReady:loggedIn&&status.coreReady===true,phase:phases.has(status.loginPhase)?status.loginPhase:'unknown',verifiedAt:new Date(this.now()).toISOString(),observation:'fresh',qrAvailable:!!qrURL(status.qrcodeurl),restartRequired:!loggedIn&&/重启功能未初始化|登录服务重启失败/u.test(String(status.loginError??''))};
+   onProgress(next,'identity');
    if(next.loggedIn&&next.coreReady){
-    let info;try{info=await post('/QQLogin/GetQQLoginInfo');}catch{return {...next,observation:'partial'};}
+    let info;try{info=await post('/QQLogin/GetQQLoginInfo',undefined,true);}catch(error){return {...next,observation:'partial',probeFailure:failure('identity',error)};}
     if(!['string','number'].includes(typeof info?.uin))return {...next,observation:'partial'};
     next.accountMatches=String(info.uin)===config.botId;next.accountState=next.accountMatches?'match':'mismatch';
+    onProgress(next,'group');
     if(next.accountMatches){
      try{
-      const group=this.unwrap(await post('/Debug/call',{action:'get_group_info',params:{group_id:Number(config.groupId)}}));
+      const group=this.unwrap(await post('/Debug/call',{action:'get_group_info',params:{group_id:Number(config.groupId)}},true));
       if(group?.group_id==null)throw qqAdminError('QQ_GROUP_STATUS_UNAVAILABLE',503);
       next.groupState='not-member';
       if(String(group?.group_id)===config.groupId){
        try{
-        const member=this.unwrap(await post('/Debug/call',{action:'get_group_member_info',params:{group_id:Number(config.groupId),user_id:Number(config.botId)}}));
+        if(this.memberRetryKey===configKey(config)&&this.now()<this.memberRetryAt)throw qqAdminError('QQ_GATEWAY_UNAVAILABLE',503);
+        const member=this.unwrap(await post('/Debug/call',{action:'get_group_member_info',params:{group_id:Number(config.groupId),user_id:Number(config.botId)}},true));
         if(member?.user_id==null)throw qqAdminError('QQ_GROUP_STATUS_UNAVAILABLE',503);
+        this.memberRetryAt=0;this.memberRetryKey=null;
         next.groupReady=String(member.user_id)===config.botId;
        }catch(error){
         // Member-detail lookup may fail while this account is online and its
         // group list is healthy. Confirm membership from that same account's
         // explicit list; never infer it from a live socket or group info alone.
         // An explicit OneBot rejection or wrong member identity remains closed.
-        if(error.code!=='QQ_GATEWAY_UNAVAILABLE')throw error;
-        const groups=this.unwrap(await post('/Debug/call',{action:'get_group_list',params:{}}));
+        if(!['QQ_GATEWAY_UNAVAILABLE','QQ_GATEWAY_TIMEOUT'].includes(error.code))throw error;
+        // Do not accumulate a new stuck native member RPC on every poll.
+        // During cooldown the same account's group list is checked afresh.
+        if(this.memberRetryKey!==configKey(config)||this.now()>=this.memberRetryAt){this.memberRetryKey=configKey(config);this.memberRetryAt=this.now()+300000;}
+        const groups=this.unwrap(await post('/Debug/call',{action:'get_group_list',params:{}},true));
         if(!Array.isArray(groups))throw qqAdminError('QQ_GROUP_STATUS_UNAVAILABLE',503);
         next.groupReady=groups.some(g=>String(g?.group_id)===config.groupId);
        }
       }
       next.groupState=next.groupReady?'member':'not-member';
-     }catch(error){next.groupState=error.code==='QQ_GROUP_NOT_READY'?'not-member':'unknown';next.observation='partial';}
+     }catch(error){next.groupState=error.code==='QQ_GROUP_NOT_READY'?'not-member':'unknown';next.observation='partial';next.probeFailure=failure('group',error);}
     }
    }
    return next;

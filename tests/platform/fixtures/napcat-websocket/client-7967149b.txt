@@ -1,0 +1,100 @@
+class pO extends vd {
+  connection = null;
+  heartbeatRef = null;
+  get isActive() {
+    return this.isEnable && !!this.connection && this.connection.readyState === Sn.OPEN;
+  }
+  async onEvent(e) {
+    this.connection && this.connection.readyState === Sn.OPEN && this.connection.send(JSON.stringify(e));
+  }
+  async open() {
+    if (!this.connection) {
+      this.config.heartInterval > 0 && (this.heartbeatRef = setInterval(() => {
+        this.connection && this.connection.readyState === Sn.OPEN && this.connection.send(JSON.stringify(new z0(this.core, this.config.heartInterval, this.core.selfInfo.online ?? !0, !0)));
+      }, this.config.heartInterval)), this.isEnable = !0;
+      try {
+        await this.tryConnect();
+      } catch (e) {
+        this.logger.logError("[OneBot] [WebSocket Client] TryConnect Error , info -> ", e);
+      }
+    }
+  }
+  close() {
+    if (!this.isEnable) {
+      this.logger.logDebug("Cannot close a closed WebSocket connection");
+      return;
+    }
+    this.isEnable = !1, this.connection && (this.connection.close(), this.connection = null), this.heartbeatRef && (clearInterval(this.heartbeatRef), this.heartbeatRef = null);
+  }
+  async checkStateAndReply(e) {
+    return new Promise((r, n) => {
+      this.connection && this.connection.readyState === Sn.OPEN ? (this.connection.send(JSON.stringify(e)), r()) : n(new Error("WebSocket is not open"));
+    });
+  }
+  async tryConnect() {
+    if (!this.connection && this.isEnable) {
+      let e = !1;
+      const r = {
+        maxPayload: 50 * 1024 * 1024,
+        // 50 MB
+        handshakeTimeout: 2e3,
+        perMessageDeflate: !1,
+        headers: {
+          "X-Self-ID": this.core.selfInfo.uin,
+          Authorization: `Bearer ${this.config.token}`,
+          "x-client-role": "Universal",
+          // 为koishi adpter适配
+          "User-Agent": "OneBot/11"
+        }
+      };
+      this.config.verifyCertificate !== void 0 && (r.rejectUnauthorized = this.config.verifyCertificate), this.connection = new Sn(this.config.url, r), this.connection.on("pong", () => {
+      }), this.connection.on("open", () => {
+        try {
+          this.connectEvent(this.core).catch((n) => this.logger.logError("[OneBot] [WebSocket Client] 发送连接生命周期失败", n));
+        } catch (n) {
+          this.logger.logError("[OneBot] [WebSocket Client] 发送连接生命周期失败", n);
+        }
+      }), this.connection.on("message", (n) => {
+        this.handleMessage(n);
+      }), this.connection.once("close", () => {
+        e || (this.logger.logError(`[OneBot] [WebSocket Client] 反向WebSocket (${this.config.url}) 连接意外关闭`), this.logger.logError(`[OneBot] [WebSocket Client] 在 ${Math.floor(this.config.reconnectInterval / 1e3)} 秒后尝试重新连接`), this.isEnable && (this.connection = null, setTimeout(() => this.tryConnect(), this.config.reconnectInterval)));
+      }), this.connection.on("error", (n) => {
+        e = !0, this.logger.logError(`[OneBot] [WebSocket Client] 反向WebSocket (${this.config.url}) 连接错误`, n), this.logger.logError(`[OneBot] [WebSocket Client] 在 ${Math.floor(this.config.reconnectInterval / 1e3)} 秒后尝试重新连接`), this.isEnable && (this.connection = null, setTimeout(() => this.tryConnect(), this.config.reconnectInterval));
+      });
+    }
+  }
+  async connectEvent(e) {
+    try {
+      await this.checkStateAndReply(new Vy(e, wh.CONNECT));
+    } catch (r) {
+      this.logger.logError("[OneBot] [WebSocket Client] 发送生命周期失败", r);
+    }
+  }
+  async handleMessage(e) {
+    let r = { action: ne.Unknown, params: {} }, n;
+    try {
+      r = Gn.parse(e.toString()), n = r.echo, this.logger.logDebug("[OneBot] [WebSocket Client] 收到正向Websocket消息", r);
+    } catch {
+      await this.checkStateAndReply(jt.error("json解析失败,请检查数据格式", 1400, n));
+      return;
+    }
+    r.params = r?.params ? r.params : {};
+    const i = this.actions.get(r.action);
+    if (!i) {
+      this.logger.logError("[OneBot] [WebSocket Client] 发生错误", "不支持的Api " + r.action), await this.checkStateAndReply(jt.error("不支持的Api " + r.action, 1404, n));
+      return;
+    }
+    const o = await i.websocketHandle(r.params, n ?? "", this.name, this.config, {
+      send: async (s) => {
+        await this.checkStateAndReply({ ...jt.ok(s, n ?? "", !0) });
+      }
+    });
+    await this.checkStateAndReply({ ...o });
+  }
+  async reload(e) {
+    const r = this.isEnable, n = this.config.url, i = this.config.heartInterval;
+    return this.config = e, e.enable && !r ? (this.open(), lr.NetWorkOpen) : !e.enable && r ? (this.close(), lr.NetWorkClose) : n !== e.url ? (this.close(), e.enable && this.open(), lr.NetWorkReload) : i !== e.heartInterval ? (this.heartbeatRef && (clearInterval(this.heartbeatRef), this.heartbeatRef = null), e.heartInterval > 0 && this.isEnable && (this.heartbeatRef = setInterval(() => {
+      this.connection && this.connection.readyState === Sn.OPEN && this.connection.send(JSON.stringify(new z0(this.core, e.heartInterval, this.core.selfInfo.online ?? !0, !0)));
+    }, e.heartInterval)), lr.NetWorkReload) : lr.Normal;
+  }
+}

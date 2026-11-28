@@ -1,0 +1,74 @@
+{
+  "result": "PASSED",
+  "host": {
+    "tests": 29,
+    "pass": 29,
+    "fail": 0,
+    "skipped": 0
+  },
+  "targetedTimerOnly": true,
+  "usesTypedReadOnlyBusProperties": true,
+  "repeatsMessageQueries": false,
+  "repeatsSampleLoop": false,
+  "sourceOnly": true,
+  "productionAccessed": false,
+  "servicesRestarted": false,
+  "stateFilesWritten": false,
+  "oldTasksRetried": false,
+  "commandBytes": 10617,
+  "commandSha256": "df23a579e340d9c98c96ce121b912ab6e6c3d8c1734efbc623aab67068017c13",
+  "r2ArchiveUnchanged": true,
+  "priorLinuxGuardianEvidence": {
+    "result": "PASSED",
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "reference": "E:/CodexData/build/Right/agent-server-preflight/20261128/qq-post-upgrade-readonly-r2/result.json",
+    "guardianAndRecoveryPolicyChanged": false
+  },
+  "userProvidedServerEvidence": {
+    "confirmedReplies": 1,
+    "healthySamples": 6,
+    "distinctFreshSnapshots": 6,
+    "observedMilliseconds": 53033,
+    "recoveryPolicySimulationPassed": true,
+    "recentRecoveryAttempts": 0,
+    "recoveryAllowanceRemaining": 2,
+    "timerRawEvidence": {
+      "result": "QQ_RECOVERY_TIMER_READONLY_CONFIRMED",
+      "checksPassed": true,
+      "readFailed": false,
+      "intervalMatches": true,
+      "targetMatches": true,
+      "recentlyTriggered": true,
+      "intervalSeconds": 20,
+      "lastTriggerAgeSeconds": 11,
+      "timerActive": true,
+      "guardianServiceSuccessful": true,
+      "guardianCodeAndPolicyMatch": true,
+      "guardianUnitsMatchUpgrade": true,
+      "recoveryNotManuallyBlocked": true
+    },
+    "liveDisconnectRecoveryTested": false,
+    "evidenceProvenance": "User-provided screenshots of operator-executed read-only commands; assistant did not access production directly",
+    "dailyLimit": 2,
+    "cooldownSeconds": 900,
+    "recoveryCooldownRemainingSeconds": 0,
+    "combinedAcceptance": "NEW_REPLY_FRESH_SHORT_WINDOW_AND_RECOVERY_CONFIGURATION_CONFIRMED",
+    "servicesRestartedByAudit": false,
+    "stateFilesWrittenByAudit": false,
+    "oldTasksRetried": false,
+    "longTermStabilityProven": false
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/qq-websocket-post-upgrade-readonly.mjs",
+      "normalizedSourceSha256": "501593430b09e649220466ba215decc7667d8f380a1ac680c2ceed53754c0774"
+    },
+    {
+      "path": "tests/platform/qq-post-upgrade-readonly.test.mjs",
+      "normalizedSourceSha256": "6de4d9672f371fbca8b90287bc1b9b20fa3f65522dee742a489dd98fdb83d22d"
+    }
+  ]
+}
