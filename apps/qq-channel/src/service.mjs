@@ -13,11 +13,12 @@ export function createQQProvider({apiKey,model,invoke=createAgentDeepSeekProvide
 }
 export class QQService {
   constructor({config,repository,provider,gateway,bridge=null,log=()=>{},fault=async()=>{}}){
+    if(repository?.messageContext&&(!repository.agentBridge||!bridge?.contextClient))reject('QQ_CONTEXT_AGENT_BRIDGE_REQUIRED');
     Object.assign(this,{config,repository,provider,gateway,bridge,log,fault});this.controller=new AbortController();
   }
   async receive(event){
     if(this.repository.control){const result=await this.repository.admit(event);if(result.accepted&&!result.duplicate)this.log({event:'admission',messageId:String(event.message_id),accepted:true});return result;}
-    const input=parseInbound(this.config,event);if(!input)return {accepted:false,code:'QQ_IGNORED'};
+    const input=(this.repository.messageContext?.parseInbound??parseInbound)(this.config,event);if(!input)return {accepted:false,code:'QQ_IGNORED'};
     const result=await this.repository.accept(input);
     // Duplicate and rejected flood traffic must not become unbounded logs.
     if(result.accepted&&!result.duplicate)this.log({event:'admission',messageId:input.messageId,accepted:true});return result;
@@ -68,6 +69,10 @@ export class QQService {
       if(row.image_data){
         try{if(!this.bridge?.verifyImageAccess)throw Object.assign(new Error('QQ_AGENT_IMAGE_ACCESS_REQUIRED'),{code:'QQ_AGENT_IMAGE_ACCESS_REQUIRED',retryable:true});await this.bridge.verifyImageAccess(row,this.config,this.controller.signal);}
         catch(error){if(error.retryable)await this.repository.deferDelivery(c,row);else await this.repository.deny(c,row);return {imageAccessBlocked:true};}
+      }
+      if(this.bridge?.verifyReplyAccess){
+        try{await this.bridge.verifyReplyAccess(c,row,this.config,this.controller.signal);}
+        catch(error){if(error.retryable)await this.repository.deferDelivery(c,row);else await this.repository.deny(c,row);return {messageAccessBlocked:true};}
       }
       const claimed=await this.repository.beginSend(c,row);await this.fault('send-intent',claimed);
       let remoteId;

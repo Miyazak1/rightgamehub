@@ -37,6 +37,7 @@ export function createAgentContextService({ pool, interactionService, memoryServ
     while (bytes(project(retained)) > limits.maxHistoryBytes && retained.length) { retained.shift(); omittedTurns++; }
     const history = project(retained), selected = retained.flat();
     let quote = { state: 'missing', reason: 'no-reference', reference: null };
+    if(message.referenceResolution && message.referenceResolution.state !== 'resolved') quote={state:message.referenceResolution.state,reason:message.referenceResolution.reason,reference:null};
     if (message.replyTo) {
       const target = message.replyTo;
       quote = { state: 'forbidden', reason: 'scope-mismatch', reference: null };
@@ -45,7 +46,8 @@ export function createAgentContextService({ pool, interactionService, memoryServ
         quote = { state: 'missing', reason: 'outside-authorized-four-turn-window', reference: target.reference };
         if (record) {
           const age = Date.parse(capturedAt) - Date.parse(record.provenance.createdAt);
-          if (age < 0 || age > limits.quoteMaxAgeSeconds * 1000) quote = { state: 'expired', reason: 'quote-context-age-limit', reference: target.reference };
+          if(message.referenceResolution?.sourceValueSha256 && message.referenceResolution.sourceValueSha256!==stableHash(record.content.text))quote={state:'missing',reason:'native-source-text-mismatch',reference:target.reference};
+          else if (age < 0 || age > limits.quoteMaxAgeSeconds * 1000) quote = { state: 'expired', reason: 'quote-context-age-limit', reference: target.reference };
           else if (bytes(record.content) > limits.maxQuoteBytes) quote = { state: 'missing', reason: 'quote-context-byte-limit', reference: target.reference };
           else quote = { state: 'resolved', reference: record.reference, content: record.content, provenance: record.provenance,
             contentSha256: record.contentSha256, authority: 'data-only' };

@@ -1,14 +1,16 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {agentChannelSignature} from '../../api/src/agent-channel-protocol.mjs';
 import {validateArticleImage} from './article-image.mjs';
+import {agentContextChannelSignature,AGENT_CHANNEL_CONTEXT_PATH} from '../../api/src/agent-channel-context-protocol.mjs';
 const fail=(code,retryable=false)=>{throw Object.assign(new Error(code),{code,retryable});};
 export function agentRequestId(parts){const h=createHash('sha256').update(JSON.stringify(parts)).digest('hex');return h.slice(0,8)+'-'+h.slice(8,12)+'-5'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32);}
-export function createQQAgentClient({url,secret,agentId,fetchImpl=fetch}){
- const endpoint=new URL('/v1/internal/agent/qq',url);
+export function createQQAgentClient({url,secret,agentId,fetchImpl=fetch,protocol='v1'}){
+ if(!['v1','context-v2'].includes(protocol))fail('QQ_AGENT_CONFIG_INVALID');
+ const endpoint=new URL(protocol==='context-v2'?AGENT_CHANNEL_CONTEXT_PATH:'/v1/internal/agent/qq',url),sign=protocol==='context-v2'?agentContextChannelSignature:agentChannelSignature;
  if(!['api','localhost','127.0.0.1','[::1]'].includes(endpoint.hostname)||endpoint.protocol!=='http:'||endpoint.username||endpoint.password||!/^[a-f0-9]{64}$/i.test(secret??'')||!/^[a-f0-9-]{36}$/i.test(agentId??''))fail('QQ_AGENT_CONFIG_INVALID');
  return async(body,{signal}={})=>{
   const timestamp=String(Date.now()),requestId=randomUUID(),payload={agentId,...body};
-  let response;try{response=await fetchImpl(endpoint,{method:'POST',redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(10000),...(signal?[signal]:[])]),headers:{'content-type':'application/json','x-agent-channel-time':timestamp,'x-agent-channel-request':requestId,'x-agent-channel-signature':agentChannelSignature(secret,timestamp,requestId,payload)},body:JSON.stringify(payload)});}catch{fail('QQ_AGENT_UNAVAILABLE',true);}
+  let response;try{response=await fetchImpl(endpoint,{method:'POST',redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(10000),...(signal?[signal]:[])]),headers:{'content-type':'application/json','x-agent-channel-time':timestamp,'x-agent-channel-request':requestId,'x-agent-channel-signature':sign(secret,timestamp,requestId,payload)},body:JSON.stringify(payload)});}catch{fail('QQ_AGENT_UNAVAILABLE',true);}
   const reader=response.body.getReader();let size=0;const chunks=[];
    try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>(body.operation==='article-image'?1500000:131072)){await reader.cancel();fail('QQ_AGENT_RESPONSE_TOO_LARGE');}chunks.push(Buffer.from(value));}}finally{reader.releaseLock();}
   let result;try{result=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail('QQ_AGENT_RESPONSE_INVALID',true);}
@@ -18,15 +20,24 @@ export function createQQAgentClient({url,secret,agentId,fetchImpl=fetch}){
   return result.data;
  };
 }
+export const createQQContextAgentClient=options=>createQQAgentClient({...options,protocol:'context-v2'});
 export const qqAgentReply=text=>{const bytes=Buffer.from(String(text));return bytes.length<=8000?String(text):bytes.subarray(0,7900).toString('utf8').replace(/\uFFFD$/u,'')+'\n（完整结果请查看任务记录）';};
 export class QQAgentBridge{
- constructor({repository,client}){Object.assign(this,{repository,client});}
+ constructor({repository,client,contextClient=null}){Object.assign(this,{repository,client,contextClient});}
  origin(row,config){return {channel:'qq',actorRef:row.user_id,botId:config.botId,groupId:row.origin_group_id??config.groupId,conversationRef:[config.botId,row.origin_group_id??config.groupId,row.user_id].join(':'),eventRef:row.message_id};}
  async verifyImageAccess(row,config,signal){return this.client({operation:'article-image-access',origin:this.origin(row,config),interactionId:row.image_task_id},{signal});}
+ async verifyReplyAccess(c,row,config,signal){
+  if(!this.contextClient||!this.repository.messageContext||!await this.repository.messageContext.isContextMessage(c,row))return;
+  const interactionId=await this.repository.messageContext.linkedInteraction(c,row);
+  if(!interactionId)fail('QQ_CONTEXT_DELIVERY_SOURCE_REQUIRED');
+  const value=await this.contextClient({operation:'delivery-check',origin:this.origin(row,config),interactionId},{signal});
+  if(!['completed','failed','needs-review'].includes(value.state)||qqAgentReply(value.reply)!==row.reply)fail('QQ_CONTEXT_DELIVERY_CHANGED');
+ }
  async queued(c,row,config,signal){
   const repo=this.repository,link=await repo.agentLink(c,row),origin=this.origin(row,config);
   try{
-   const value=link.interaction_id?await this.client({operation:'status',origin,interactionId:link.interaction_id},{signal}):await this.client({operation:'submit',origin,input:{requestId:link.request_id,message:row.input_text}},{signal});
+   const contextInput=!link.interaction_id&&this.contextClient&&repo.messageContext?await repo.messageContext.prepare(c,row,config,link.request_id):null;
+   const value=link.interaction_id?await this.client({operation:'status',origin,interactionId:link.interaction_id},{signal}):contextInput?await this.contextClient({operation:'submit',origin,input:contextInput},{signal}):await this.client({operation:'submit',origin,input:{requestId:link.request_id,message:row.input_text}},{signal});
    await repo.agentLinked(c,row,value);
    if(!['completed','failed','needs-review'].includes(value.state)){await repo.agentDefer(c,row);return {agentWaiting:true};}
    await repo.agentReady(c,row,qqAgentReply(value.reply));return {generated:true};

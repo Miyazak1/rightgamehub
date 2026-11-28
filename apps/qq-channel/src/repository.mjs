@@ -32,7 +32,7 @@ export class QQRepository {
     }
     await this.event(client,row.message_id,'agent-result-queued',{taskId:row.task_id,...(presentationError?{presentationError}:{})});
   });}
-  constructor(pool,config){this.pool=pool;this.config=config;this.bootstrap=structuredClone(config);this.id=config.channelId;this.control=false;}
+  constructor(pool,config,{messageContext=null}={}){this.pool=pool;this.config=config;this.bootstrap=structuredClone(config);this.id=config.channelId;this.control=false;this.messageContext=messageContext;}
   async transaction(client,fn){
     try{await client.query('BEGIN');await client.query("SET LOCAL lock_timeout='3s'");await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,1))',[this.id]);
       const value=await fn(client);await client.query('COMMIT');return value;
@@ -98,7 +98,7 @@ export class QQRepository {
     const disconnected=()=>{destroy=true;};client.on('error',disconnected);
     try{return await this.transaction(client,async c=>{
       await this.check(c);
-      if(inbound){input=parseInbound(this.config,input);if(!input)return {accepted:false,code:'QQ_IGNORED'};}
+      if(inbound){input=(this.messageContext?.parseInbound??parseInbound)(this.config,input);if(!input)return {accepted:false,code:'QQ_IGNORED'};}
       else if(this.control&&!this.config.enabled)return {accepted:false,code:'QQ_DISABLED'};
       const fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex');
       const prior=(await c.query('SELECT fingerprint,status FROM mooyu_qq.messages WHERE channel_id=$1 AND message_id=$2',[this.id,input.messageId])).rows[0];
@@ -115,6 +115,7 @@ export class QQRepository {
         return {accepted:false,code:'QQ_RATE_LIMITED'};
       if(this.control)await c.query('INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint,origin_group_id) VALUES($1,$2,$3,$4,$5,$6)',[this.id,input.messageId,input.userId,input.text,fingerprint,this.config.groupId]);
       else await c.query('INSERT INTO mooyu_qq.messages(channel_id,message_id,user_id,input_text,fingerprint) VALUES($1,$2,$3,$4,$5)',[this.id,input.messageId,input.userId,input.text,fingerprint]);
+      if(this.messageContext){if(!this.control)reject('QQ_CONTEXT_MANAGED_REQUIRED');await this.messageContext.record(c,input,this.config);}
       await this.event(c,input.messageId,'accepted');return {accepted:true,duplicate:false};
     });}finally{client.removeListener('error',disconnected);client.release(destroy||Boolean(client.qqBroken));}
   }
