@@ -28,7 +28,7 @@ else if(a[0]==='exec'){
   else if(sql.startsWith('SELECT count(*) FROM schema_migrations'))out('166');
   else if(sql.includes('pg_database_size'))out('4096');
   else if(sql.startsWith('SELECT count(*)'))out('0');
-  else if(sql.includes("'retainedCompleted'"))out({total:1,retainedCompleted:1});
+  else if(sql.includes("'retainedCompleted'"))out(s.outboxProof??{total:139,retainedCompleted:139});
   else if(sql.includes("'protocol'"))out([{enabled:true,next:new Date(Date.now()+86400000).toISOString(),protocol:'1'}]);
   else if(sql.includes('QQ连接修复验收20261127R1'))out(s.newMessage?[{createdAt:new Date().toISOString(),state:'delivered',replyDelivered:true}]:[]);
   else if(sql.includes('md5('))out('unchanged-'+name);

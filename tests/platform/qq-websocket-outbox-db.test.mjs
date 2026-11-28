@@ -5,6 +5,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { Cutover, OUTBOX_WINDOW_SQL } from '../../scripts/agent-server-cutover.mjs';
 import { collectOutboxClassification } from '../../scripts/qq-websocket-outbox-readonly.mjs';
+import { WS_OUTBOX_WINDOW_SQL } from '../../scripts/qq-websocket-window-policy.mjs';
 
 test('real isolated PostgreSQL classifies retained, terminal, active, orphan and mismatched events without writes',
   { skip: process.env.QQ_OUTBOX_READONLY_DB_TEST !== '1' }, async () => {
@@ -30,7 +31,7 @@ test('real isolated PostgreSQL classifies retained, terminal, active, orphan and
       lease = false, mismatch = false, orphan = false } = {}) => {
       const id = uuid(++sequence), payload = JSON.stringify({ stageId: id, runId: mismatch ? uuid(999999) : id, stageKey: 'verify' });
       return `${orphan ? '' : `INSERT INTO agent_runs VALUES ('${id}','${runState}','${workflow}',${runState === 'running' ? 'NULL' : 'now()'});
-        INSERT INTO agent_run_stages VALUES ('${id}','${id}','${stageState}','verify',NULL,NULL);`}
+        INSERT INTO agent_run_stages(id,run_id,status,stage_key,lease_token,lease_until) VALUES ('${id}','${id}','${stageState}','verify',NULL,NULL);`}
         INSERT INTO agent_runtime_outbox VALUES ('${id}','stage','${id}','stage.available','${payload}'::jsonb,
           '${lease ? 'dispatching' : 'pending'}',${attempts},25,${lease ? `'${id}'` : 'NULL'},${lease ? 'now()' : 'NULL'},NULL,now());`;
     };
@@ -69,9 +70,30 @@ test('real isolated PostgreSQL classifies retained, terminal, active, orphan and
       assert(proof.groups.some(g => !g.stagePresent)); assert(proof.groups.some(g => !g.payloadRunMatches && g.stagePresent));
       assert(proof.groups.some(g => g.eventLeasePresent)); assert(proof.groups.some(g => g.runState === 'running'));
       assert.equal(fingerprint(), before); assert.equal(proof.releaseWindowApproved, false);
+      fixtureSQL('ALTER TABLE agent_run_stages ADD COLUMN finished_at timestamptz DEFAULT now(), ADD COLUMN leased_by text, ADD COLUMN attempt_started_at timestamptz');
+      const policyRead = () => JSON.parse(reader.sql(db, WS_OUTBOX_WINDOW_SQL));
+      const policyBefore = fingerprint();
+      assert.deepEqual(policyRead(), { total: 145, retainedCompleted: 140 });
+      assert.equal(fingerprint(), policyBefore);
+      const rejected = [
+        event({ workflow: 'unreviewed.workflow' }), event({ runState: 'uncertain' }),
+        event({ stageState: 'failed' }),
+      ];
+      for (const change of ["stage_key='unreviewed'", 'finished_at=NULL',
+        "lease_token=id,lease_until=now(),leased_by='fixture'", 'attempt_started_at=now()',
+        "finished_at=now()+interval '1 day'"]) {
+        rejected.push(event() + `UPDATE agent_run_stages SET ${change} WHERE id='${uuid(sequence)}';`);
+      }
+      rejected.push(event() + `UPDATE agent_runs SET finished_at=NULL WHERE id='${uuid(sequence)}';`);
+      rejected.push(event() + `UPDATE agent_runtime_outbox SET event_type='run.available' WHERE id='${uuid(sequence)}';`);
+      rejected.push(event() + `UPDATE agent_runtime_outbox SET delivered_at=now() WHERE id='${uuid(sequence)}';`);
+      fixtureSQL(rejected.join('\n'));
+      const rejectedBefore = fingerprint(), rejectedProof = policyRead();
+      assert.equal(rejectedProof.total, 156); assert.equal(rejectedProof.retainedCompleted, 140);
+      assert.equal(fingerprint(), rejectedBefore);
       fixtureSQL(Array.from({ length: 81 }, (_, i) => event({ workflow: 'qa.fixture-' + i })).join('\n'));
       const truncatedBefore = fingerprint(), truncated = read();
-      assert.equal(truncated.total, 226); assert.equal(truncated.groups.length, 80);
+      assert.equal(truncated.total, 237); assert.equal(truncated.groups.length, 80);
       assert.equal(truncated.groupsTruncated, true); assert.equal(truncated.retainedCompleted, 70);
       assert.equal(fingerprint(), truncatedBefore);
     } finally {

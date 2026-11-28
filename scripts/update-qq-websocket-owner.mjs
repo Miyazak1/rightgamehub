@@ -2,7 +2,8 @@
 // Replaces only the audited native WebSocket class; preserves worker image,
 // login volume, databases, old records and bounded recovery state.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {spawnSync} from 'node:child_process';import {fileURLToPath,pathToFileURL} from 'node:url';
-import {Cutover,composeArgs,PAPER_KEYS,WINDOW_QUERIES,assessOutboxWindow,OUTBOX_WINDOW_SQL} from './agent-server-cutover.mjs';
+import {Cutover,composeArgs,PAPER_KEYS,WINDOW_QUERIES,assessOutboxWindow} from './agent-server-cutover.mjs';
+import {WS_OUTBOX_WINDOW_SQL} from './qq-websocket-window-policy.mjs';
 import {objectHash,fileHash,containerEnv,runtimeComparable} from './qq-independent-release-common.mjs';
 import {assertGuardianIdentity,assertGuardianSnapshot,acquireGuardianLease,WORKER_SNAPSHOT_PROBE} from './qq-plugin-guardian.mjs';
 import {verifyDeclaredRuntime} from './github-search-runtime-verification.mjs';
@@ -33,7 +34,7 @@ export async function updateQQWebSocket(mode,previous){
  const protectedNow=()=>containers().filter(c=>!['/'+G,'/'+W].includes(c.Name)).map(snapshot).sort((a,b)=>a.name.localeCompare(b.name));
  const domain=()=>({invariants:reader.invariants(),api:Object.fromEntries(['schema_migrations','agent_channel_participants','agent_budget_reservations','agent_runs','agent_run_stages','agent_interactions','agent_interaction_events','agent_runtime_outbox','agent_provider_calls','blog_articles','blog_article_revisions'].map(t=>[t,q('api',`SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text,'')) FROM ${t} t`)])),qq:Object.fromEntries(['messages','attempts','events','agent_links','agent_deliveries','agent_image_pages'].map(t=>[t,q('qq',`SELECT md5(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text,'')) FROM mooyu_qq.${t} t`)]))});
  const idle=()=>{
-  for(const [db,table,where,optional]of WINDOW_QUERIES){if(!reader.exists(state.databases[db],table)){if(optional)continue;fail('REQUIRED_LEDGER_MISSING');}const n=table==='agent_runtime_outbox'?assessOutboxWindow(json('api',OUTBOX_WINDOW_SQL)).blocking:Number(q(db,`SELECT count(*) FROM ${table} t WHERE ${where}`));if(!Number.isSafeInteger(n)||n!==0)fail('ACTIVE_OR_UNCERTAIN_WORK_NO_RETRY');}
+  for(const [db,table,where,optional]of WINDOW_QUERIES){if(!reader.exists(state.databases[db],table)){if(optional)continue;fail('REQUIRED_LEDGER_MISSING');}const n=table==='agent_runtime_outbox'?assessOutboxWindow(json('api',WS_OUTBOX_WINDOW_SQL)).blocking:Number(q(db,`SELECT count(*) FROM ${table} t WHERE ${where}`));if(!Number.isSafeInteger(n)||n!==0)fail('ACTIVE_OR_UNCERTAIN_WORK_NO_RETRY');}
   if(Number(q('api',"SELECT count(*) FROM agent_run_stages WHERE status IN ('blocked','queued','leased','running','waiting','uncertain')")))fail('ACTIVE_STAGE_NO_RETRY');
   const s=json('api',"SELECT COALESCE(json_agg(json_build_object('enabled',enabled,'next',next_fire_at,'protocol',config_json#>>'{worker,interactionProtocolVersion}')),'[]'::json) FROM agent_schedules WHERE agent_user_id='c98abda1-d115-4e05-9c2e-43f68119386a'");
   if(s.length!==1||s[0].protocol!=='1'||s[0].enabled&&Date.parse(s[0].next)-Date.now()<45*60000)fail('SAFE_SCHEDULE_WINDOW_REQUIRED');

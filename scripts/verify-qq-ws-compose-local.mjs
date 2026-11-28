@@ -2,7 +2,7 @@
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
 import {runtimeComparable,objectHash,fileHash} from './qq-independent-release-common.mjs';
 import {WS_BASE_IMAGE,WS_PATCH_SHA256,assertWSRuntime} from './qq-websocket-release-common.mjs';
-const out=path.resolve(process.argv[2]??'');assert(out.toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\20261127\\')&&!fs.existsSync(out),'NEW_E_BUILD_DIRECTORY_REQUIRED');fs.mkdirSync(out,{recursive:true});
+const out=path.resolve(process.argv[2]??'');assert(out.toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\20261128\\')&&!fs.existsSync(out),'NEW_E_BUILD_DIRECTORY_REQUIRED');fs.mkdirSync(out,{recursive:true});
 const nonce=crypto.randomBytes(12).toString('hex'),project='qq-ws-switch-'+nonce,base=WS_BASE_IMAGE,candidate='sha256:7448b7d8f917f76676dc67d864c2183b030be4a0fe05646d5c106527d6dd4274',source=path.resolve('scripts/update-qq-websocket-owner.mjs');
 const run=(args,options={})=>{const r=spawnSync('docker',args,{encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:4*1024*1024,...options});if(r.status!==0)throw Error('OWN_COMPOSE_'+args[0].toUpperCase()+'_FAILED');return r.stdout.trim();};
 const inspect=name=>JSON.parse(run(['inspect',name]))[0],composeArgs=['compose','--project-directory',out,'-p',project,'-f',out+'/compose.json'];

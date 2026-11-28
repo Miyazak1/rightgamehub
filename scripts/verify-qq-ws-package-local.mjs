@@ -1,7 +1,7 @@
 // Extract and validate only a newly prepared local release, never run its updater.
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';import {fileHash} from './qq-independent-release-common.mjs';
 const packageDir=path.resolve(process.argv[2]??''),out=path.resolve(process.argv[3]??'');
-for(const p of [packageDir,out])assert(p.toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\20261127\\'));assert(!fs.existsSync(out));fs.mkdirSync(out,{recursive:true});
+for(const p of [packageDir,out])assert(p.toLowerCase().startsWith('e:\\codexdata\\build\\right\\agent-server-preflight\\20261128\\'));assert(!fs.existsSync(out));fs.mkdirSync(out,{recursive:true});
 const info=JSON.parse(fs.readFileSync(packageDir+'/package-result.json','utf8'));assert.equal(info.result,'QQ_WEBSOCKET_RELEASE_PREPARED_NOT_DEPLOYED');assert.equal(fileHash(info.archive),info.sha256);
 const call=(command,args,options={})=>{const r=spawnSync(command,args,{encoding:'utf8',windowsHide:true,timeout:30000,maxBuffer:4*1024*1024,...options});assert.equal(r.status,0,command+'_FAILED');return r.stdout;};
 const list=call('tar',['-tzf',info.archive]).trim().split(/\r?\n/);assert(list.every(p=>/^[A-Za-z0-9_./-]+$/.test(p)&&!p.startsWith('/')&&!p.split('/').includes('..')));call('tar',['-xzf',info.archive,'-C',out]);
